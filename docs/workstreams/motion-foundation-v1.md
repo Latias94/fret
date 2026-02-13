@@ -2,6 +2,11 @@
 
 Status: Draft (notes only; ADRs remain the source of truth)
 
+See:
+
+- Milestones: `docs/workstreams/motion-foundation-v1-milestones.md`
+- TODO tracker: `docs/workstreams/motion-foundation-v1-todo.md`
+
 This workstream defines a reusable **motion/animation foundation** for Fret’s ecosystem layers
 (shadcn/Radix-inspired, Material 3-inspired, MagicUI-inspired), while keeping `crates/fret-ui`
 mechanism-only.
@@ -73,6 +78,10 @@ Mechanism vs policy:
   - `repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss`
 - shadcn/ui v4 usage (durations + easings in recipes):
   - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/*.tsx` (e.g. `sheet.tsx`, `sidebar.tsx`)
+- Animata (recipe inspiration; Framer Motion / DOM-based, treat as “spec” not “runtime”):
+  - Local mirror root (this workstation): `F:\SourceCodes\Rust\fret\repo-ref\animata`
+  - `repo-ref/animata/README.md`
+  - `repo-ref/animata/animata/overlay/*.tsx`
 
 ## Proposed foundation (v1)
 
@@ -142,13 +151,129 @@ Use existing theme token surfaces:
 
 - `Theme::duration_ms_by_key(...)`
 - `Theme::easing_by_key(...)`
+- `Theme::number_by_key(...)`
 
 Add a first-class convention for motion keys (ecosystem policy):
 
 - `md.sys.motion.duration.*` / `md.sys.motion.easing.*` / `md.sys.motion.spring.*` (M3-aligned)
-- `shadcn.motion.duration.*` / `shadcn.motion.easing.*` (shadcn-aligned aliases)
+- `duration.shadcn.motion.*` / `easing.shadcn.motion.*` / `number.shadcn.motion.*` (shadcn-aligned)
 
 Component ecosystems should request motion by **semantic key**, not hard-coded numbers.
+
+Token taxonomy (v1; conventions we can keep stable):
+
+- Duration keys:
+  - Prefer *semantic* keys for recipes/components (stable, future-proof):
+    - `duration.shadcn.motion.overlay.open`
+    - `duration.shadcn.motion.overlay.close`
+    - `duration.shadcn.motion.toast.enter`
+    - `duration.shadcn.motion.toast.exit`
+    - `duration.shadcn.motion.sidebar.toggle`
+  - Keep the existing numeric scale as leaf-level defaults and for quick authoring:
+    - `duration.shadcn.motion.{100|200|300|500}`
+- Easing keys:
+  - Use semantic keys where a component needs a specific curve (don’t assume 1 curve fits all):
+    - `easing.shadcn.motion.overlay`
+    - `easing.shadcn.motion.toast`
+  - Keep `easing.shadcn.motion` as a simple global default.
+- Spring keys:
+  - For duration+bounce (shadcn-style):
+    - `duration.shadcn.motion.spring.<surface>.<intent>`
+    - `number.shadcn.motion.spring.<surface>.<intent>.bounce`
+  - For damping+stiffness (M3 scheme):
+    - `md.sys.motion.spring.{default|fast|slow}.{spatial|effects}.{damping|stiffness}`
+
+Seeded defaults (New York v4 presets):
+
+- The built-in shadcn New York v4 theme presets seed the motion tokens above so recipes can
+  request semantic keys without hard-coding numbers.
+- Toast/Sonner timing is tuned slightly faster than the numeric `200ms` scale to better match the
+  “web-like” feel while staying deterministic under fixed-delta diagnostics:
+  - `duration.shadcn.motion.toast.enter = 160ms`
+  - `duration.shadcn.motion.toast.exit = 120ms`
+
+Implementation note:
+
+- The semantic keys above are a *convention* we can migrate toward without requiring Theme-level
+  aliasing. Pilot surfaces (Dialog / AlertDialog / Sidebar) already read semantic keys with numeric
+  fallbacks; most other shadcn surfaces still read the numeric scale tokens directly. The goal is
+  to gradually switch recipe code to semantic keys while keeping numeric scale keys as fallbacks.
+
+Pragmatic mapping table (shadcn numeric durations ↔ M3 duration tokens):
+
+| shadcn key | ms | closest M3 token | Notes |
+| --- | ---: | --- | --- |
+| `duration.shadcn.motion.100` | 100 | `md.sys.motion.duration.short2` | exact match in v30 |
+| `duration.shadcn.motion.200` | 200 | `md.sys.motion.duration.short4` | exact match in v30 |
+| `duration.shadcn.motion.300` | 300 | `md.sys.motion.duration.medium2` | exact match in v30 |
+| `duration.shadcn.motion.500` | 500 | `md.sys.motion.duration.long2` | exact match in v30 |
+
+Easing mapping note:
+
+- `easing.shadcn.motion` (default: `cubic-bezier(0.22,1,0.36,1)`) does not have an exact match in
+  Material Web v30’s sys easings. When bridging across ecosystems, treat easing as a per-recipe
+  choice and pick the closest `md.sys.motion.easing.*` (or define an explicit shadcn curve key for
+  that recipe).
+
+Spring tokens (v1):
+
+- Represent a spring using two theme tokens: `duration_ms` + `number` (bounce).
+- Prefer authoring-friendly "duration + bounce" (Flutter-style) and derive physical params in
+  headless math (`SpringDescription::with_duration_and_bounce`).
+- Bounce semantics (mirrors Flutter):
+  - `bounce = 0.0` is critically damped (no overshoot),
+  - `bounce in (0, 1)` is underdamped (overshoot),
+  - negative values are overdamped,
+  - values must be `> -1.0` to keep damping derivation finite.
+
+Current shadcn drawer spring keys (ecosystem policy; overrideable via theme JSON):
+
+- `duration.shadcn.motion.spring.drawer.settle` (ms)
+- `number.shadcn.motion.spring.drawer.settle.bounce`
+- `duration.shadcn.motion.spring.drawer.inertia_bounce` (ms)
+- `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`
+
+Theme JSON example:
+
+```json
+{
+  "durations_ms": {
+    "duration.shadcn.motion.spring.drawer.settle": 240,
+    "duration.shadcn.motion.spring.drawer.inertia_bounce": 240
+  },
+  "numbers": {
+    "number.shadcn.motion.spring.drawer.settle.bounce": 0.0,
+    "number.shadcn.motion.spring.drawer.inertia_bounce.bounce": 0.25
+  }
+}
+```
+
+Spring cookbook (starter presets; tune with diag gates):
+
+| Preset | duration_ms | bounce | Notes |
+| --- | --- | --- | --- |
+| `snappy` | 180 | 0.0 | fast, no overshoot |
+| `standard` | 240 | 0.0 | baseline critical-damped |
+| `emphasized` | 320 | 0.15 | mild overshoot for "hero" motions |
+| `bouncy` | 300 | 0.35 | noticeable overshoot; use sparingly |
+| `overdamped` | 260 | -0.20 | heavier feel; no overshoot |
+
+Material 3 spring taxonomy (tokens already exist in `ecosystem/fret-ui-material3`):
+
+- M3 expresses springs as **damping ratio + stiffness** (not duration+bounce):
+  - `md.sys.motion.spring.{default|fast|slow}.{spatial|effects}.{damping|stiffness}`
+- In Fret's M3 ecosystem today, these map to `SpringSpec { damping, stiffness }` and are advanced
+  deterministically by `FrameId` (see `ecosystem/fret-ui-material3/src/motion.rs` and
+  `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`).
+
+Bridging guidance (spec-only; no required unification yet):
+
+- Prefer **duration+bounce** for shadcn-style "recipe motion" where authors think in wall-time.
+- Prefer **damping ratio + stiffness** for M3 "motion scheme" where tokens are already published in
+  that form.
+- If/when we unify on a single headless spring kernel, both shapes should remain supported:
+  - duration+bounce -> `SpringDescription::with_duration_and_bounce`
+  - (ratio, stiffness) -> `SpringDescription::with_damping_ratio(mass=1.0, stiffness, ratio)`
 
 ### 6) Reduced motion policy (ecosystem-level)
 
@@ -184,6 +309,43 @@ Suggested steps:
    - `NavigationMenu` viewport motion.
 3) Keep tick-driven `TransitionTimeline` for fully deterministic unit tests where it is useful,
    but stop encoding production UX durations as “60fps ticks”.
+
+## Animata alignment notes (how to use it safely)
+
+Animata is a curated set of interaction recipes built for web (React/DOM) with Framer Motion. We
+should not try to port its runtime model, but it is still valuable as a **source of “what moves,
+when, and how it feels”**.
+
+Recommended approach:
+
+1) Treat Animata as a **UX spec** (timing curves, sequencing, variant breakdown), not an API to
+   reproduce.
+2) Translate each recipe into a small, portable “motion recipe” vocabulary (tween + spring +
+   inertia + timeline/stagger).
+3) Implement only the missing primitives in `fret-ui-headless` + `fret-ui-kit` (ecosystem policy),
+   and keep `crates/fret-ui` mechanism-only.
+4) Add deterministic diag gates under fixed `delta` for every feel-sensitive recipe.
+
+High-value pilot recipes to align next (draft):
+
+- Sidebar collapse/expand (layout-affecting + perceived snappiness)
+- Drawer/sheet (drag → release inertia/spring settle)
+- Modal/dialog (presence + focus/dismiss choreography)
+- Tabs underline / navigation indicator (timeline + easing polish)
+- Toast stack (stagger + interrupt/re-target behavior)
+
+### Recipe alignment matrix (draft)
+
+This table is intentionally spec-first. The goal is to make the intended feel explicit, then
+land deterministic gates before polishing implementation details.
+
+| Pilot | Recipe | Spec sources | Fret target | Motion channels & primitives | Tokens & gates | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| P1 | Sidebar collapse/expand | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/sidebar.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` (`sidebar_collapse_motion`) | width / rail reveal (+ optional opacity)<br>tween timeline<br>optional: layout-aware choreography (future) | tokens (current): `duration.shadcn.motion.200`, `easing.shadcn.motion`<br>gate: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json` | Landed (baseline) |
+| P1 | Drawer / Sheet settle | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`, `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/drawer.rs`<br>`ecosystem/fret-ui-shadcn/src/sheet.rs` | translate + scrim opacity<br>drag velocity projection -> inertia -> spring settle<br>retarget mid-flight (no restart stutter) | tokens (current): `duration.shadcn.motion.spring.drawer.settle`, `number.shadcn.motion.spring.drawer.settle.bounce`<br>`duration.shadcn.motion.spring.drawer.inertia_bounce`, `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`<br>gates: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`, `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json` | Landed (baseline) |
+| P1 | Dialog / Modal presence | Animata modal: `repo-ref/animata/animata/overlay/modal.tsx`<br>shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`, `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs`<br>`ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | opacity + scale (and optional blur)<br>barrier fade + focus/dismiss choreography<br>optional: spring-based settle for native-like feel | tokens (current): shadcn overlay motion tokens (duration/easing)<br>gates: `tools/diag-scripts/ui-gallery-overlay-dialog-open-motion-snapshots.json`, `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json` | Landed (baseline) |
+| P2 | Tabs indicator | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/tabs.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | indicator translate + width<br>tween or spring (theme-controlled)<br>layout measurement coherence | tokens (planned): semantic tabs motion keys<br>gate (perf-only today): `tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json` | Planned |
+| P2 | Toast stack (Sonner) | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/toast.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/toast.rs`<br>`ecosystem/fret-ui-shadcn/src/sonner.rs` | enter/exit presence + stack shift<br>stagger + interrupt/re-target behavior<br>swipe dismiss inertia (future) | tokens: `duration.shadcn.motion.toast.{enter|exit}`, `easing.shadcn.motion.toast`<br>gates: `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`, `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json` | Landed (baseline) |
 
 ## Acceptance criteria (v1)
 
@@ -232,3 +394,13 @@ Diag gates:
 - Sidebar toggle under fixed frame delta: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
 - Dropdown menu open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-dropdown-open-fixed-frame-delta.json`
 - Drawer snap points drag + settle: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`
+- Drawer snap points retarget + settle under fixed frame delta: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json`
+- Overlay dialog open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
+- Sonner open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`
+- Sonner interrupt under fixed frame delta: `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`
+
+Refresh-rate sanity (local):
+
+- Run the same suite at 60Hz-ish and 120Hz-ish fixed deltas; wall-time completion should feel consistent:
+  - `cargo run -p fretboard -- diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 16 --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard -- diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 8 --launch -- cargo run -p fret-ui-gallery --release`

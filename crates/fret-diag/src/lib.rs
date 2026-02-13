@@ -4583,6 +4583,8 @@ See: `docs/tracy.md`.\n";
             let is_ui_gallery_suite = suite_args.len() == 1 && suite_args[0] == "ui-gallery";
             let is_ui_gallery_overlay_steady_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-overlay-steady";
+            let is_ui_gallery_motion_pilot_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-motion-pilot";
             let is_ui_gallery_code_editor_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-code-editor";
             let is_ui_gallery_layout_suite =
@@ -4680,6 +4682,45 @@ See: `docs/tracy.md`.\n";
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_motion_pilot_suite {
+                    // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
+                    // redaction disabled so any role-and-name selectors remain usable in scripts.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
+                                ),
+                            ),
+                        ],
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_code_editor_suite {
@@ -11585,6 +11626,9 @@ fn devtools_select_session_id(
 
     if list.sessions.len() == 1 {
         return Ok(list.sessions[0].session_id.clone());
+    }
+    if list.sessions.is_empty() {
+        return Err("no DevTools sessions available (is the app connected?)".to_string());
     }
 
     let web_apps = list

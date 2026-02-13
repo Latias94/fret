@@ -35,10 +35,11 @@ Therefore:
 
 ## Policy sketch (v1)
 
-- iOS: Metal-first.
-- Android: Vulkan-first.
+- iOS: prefer Metal (platform-native).
+- Android: prefer Vulkan (platform-native on real devices).
 - Explicit override wins (`FRET_WGPU_BACKEND`).
-- Fallback/downlevel is opt-in (dev only) and must be fully diagnosable.
+- Default posture is fail-fast on init failure (CI/release).
+- Fallback/downlevel is opt-in (debug/dev only) and must be fully diagnosable.
 
 ## Developer knobs (v1)
 

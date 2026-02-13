@@ -82,3 +82,16 @@ pub struct FontCatalogMetadata {
 /// shaping/metrics: font family overrides, user font loading, web font injection, etc.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextFontStackKey(pub u64);
+
+/// Best-effort status for the runner-owned system font rescan pipeline (native-only).
+///
+/// Desktop runners may run a one-time async system font rescan at startup to populate font
+/// catalogs. Diagnostics and perf scripts can use this state to avoid including that one-time
+/// work inside measured windows.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SystemFontRescanState {
+    /// True while the runner is performing a background system font rescan.
+    pub in_flight: bool,
+    /// True when another rescan was requested while a rescan was already in flight.
+    pub pending: bool,
+}

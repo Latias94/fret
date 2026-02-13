@@ -54,6 +54,22 @@ Defaults if unclear:
 If the mismatch is “interaction policy” (dismiss rules, focus restore, hover intent, menu navigation),
 it almost never belongs in `crates/fret-ui`.
 
+### 1.5) Motion parity in a custom renderer (important)
+
+shadcn/Radix sources are DOM-first and often assume CSS/Framer Motion behavior. Fret is a GPU-first
+custom renderer, so you **cannot** port the runtime model 1:1. The goal is parity in *outcomes*:
+timing, sequencing, interruption rules, and accessibility behavior.
+
+Rules of thumb:
+
+- Treat upstream motion (Framer Motion variants, CSS transitions) as a **UX spec**, not an API.
+- Prefer ecosystem motion drivers (`ecosystem/fret-ui-kit`) over ad-hoc per-component math.
+- Keep motion tunable via theme tokens (durations/easings/springs), not hard-coded numbers.
+- Be explicit about hit-testing semantics:
+  - DOM `transform` moves hit-testing with visuals; in Fret, choose `RenderTransform` when you want
+    hit-testing to track motion, and `VisualTransform` when you want paint-only motion.
+- Lock motion-sensitive changes with a deterministic diag gate (`--fixed-frame-delta-ms 16`).
+
 ### 2) Find the upstream reference (source of truth)
 
 1. Start with public docs (good enough for most alignment work):
@@ -88,6 +104,22 @@ Use Base UI as an additional reference for:
 3. Add an interaction repro script when state machines are involved.
    - Create `tools/diag-scripts/<scenario>.json` and gate it via `fretboard diag run`.
    - Always add/keep stable `test_id` targets in the Fret UI so scripts survive refactors.
+
+Motion token guidance (ecosystem-level; keep stable for parity work):
+
+- shadcn durations/easing (existing numeric scale):
+  - `duration.shadcn.motion.{100|200|300|500}`
+  - `easing.shadcn.motion`
+- shadcn semantic keys (preferred for long-term authoring; numeric fallback):
+  - `duration.shadcn.motion.overlay.{open|close}`
+  - `easing.shadcn.motion.overlay`
+  - `duration.shadcn.motion.sidebar.toggle`
+  - `easing.shadcn.motion.sidebar`
+- shadcn spring tokens (duration+bounce, Flutter-style):
+  - `duration.shadcn.motion.spring.drawer.settle` + `number.shadcn.motion.spring.drawer.settle.bounce`
+  - `duration.shadcn.motion.spring.drawer.inertia_bounce` + `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`
+- Material 3 scheme tokens (damping+stiffness):
+  - `md.sys.motion.spring.{default|fast|slow}.{spatial|effects}.{damping|stiffness}`
 
 ### 4) When a golden is missing
 

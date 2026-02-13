@@ -22,6 +22,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
     SemanticsDecoration, SizeStyle, TextInputProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_headless::cmdk_score;
@@ -1348,6 +1349,7 @@ pub struct CommandPalette {
     scroll: LayoutRefinement,
     test_id_input: Option<Arc<str>>,
     test_id_item_prefix: Option<Arc<str>>,
+    pub(crate) input_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
 }
 
 #[derive(Clone)]
@@ -1558,6 +1560,7 @@ impl std::fmt::Debug for CommandPalette {
                 "test_id_item_prefix",
                 &self.test_id_item_prefix.as_ref().map(|s| s.as_ref()),
             )
+            .field("input_id_out_cell", &self.input_id_out_cell.is_some())
             .finish()
     }
 }
@@ -1592,6 +1595,7 @@ impl CommandPalette {
                 .min_w_0(),
             test_id_input: None,
             test_id_item_prefix: None,
+            input_id_out_cell: None,
         }
     }
 
@@ -1696,6 +1700,11 @@ impl CommandPalette {
     /// Installs stable `test_id`s on item rows using `{prefix}{sanitized_value}`.
     pub fn test_id_item_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         self.test_id_item_prefix = Some(prefix.into());
+        self
+    }
+
+    pub(crate) fn input_id_out_cell(mut self, cell: Rc<Cell<Option<GlobalElementId>>>) -> Self {
+        self.input_id_out_cell = Some(cell);
         self
     }
 
@@ -2255,6 +2264,9 @@ impl CommandPalette {
                 input = input.attach_semantics(SemanticsDecoration::default().test_id(test_id));
             }
             let input_id = input.id;
+            if let Some(cell) = self.input_id_out_cell.clone() {
+                cell.set(Some(input_id));
+            }
 
             let icon_fg = theme.color_token("muted-foreground");
             let icon = decl_icon::icon_with(

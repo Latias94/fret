@@ -88,7 +88,7 @@ Tip (diag scripts trigger stamp):
 
 - `script.touch` uses edge detection and treats the first observed value as a baseline.
   - If you reuse a diagnostics directory, bump the stamp twice to ensure the script runs:
-    - `echo "$(date +%s%3N)" > "${diag_dir}/script.touch"; sleep 1; echo "$(date +%s%3N)" > "${diag_dir}/script.touch"`
+    - `python3 - <<'PY' "${diag_dir}"\nimport sys, time, pathlib\np = pathlib.Path(sys.argv[1]) / \"script.touch\"\np.write_text(f\"{int(time.time()*1000)}\\n\")\ntime.sleep(1.0)\np.write_text(f\"{int(time.time()*1000)}\\n\")\nPY`
 
 5) Capture a diagnostics bundle (Android filesystem transport)
 

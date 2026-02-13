@@ -231,9 +231,9 @@ impl Dialog {
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 is_open,
-                overlay_motion::shadcn_motion_duration_200(cx),
-                overlay_motion::shadcn_motion_duration_200(cx),
-                overlay_motion::shadcn_motion_ease_bezier(cx),
+                overlay_motion::shadcn_overlay_open_duration(cx),
+                overlay_motion::shadcn_overlay_close_duration(cx),
+                overlay_motion::shadcn_overlay_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
                 .with_state(DialogOpenChangeCallbackState::default, |state| {

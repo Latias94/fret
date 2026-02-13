@@ -52,6 +52,28 @@ Rule of thumb:
 
 If the change is “interaction policy”, it almost never belongs in `crates/fret-ui`.
 
+### 1.5) Motion changes (feel + determinism)
+
+If you are changing motion/animation behavior (especially overlays, drawers, sidebars):
+
+- Optimize for “parity of outcomes” (timing, sequencing, interrupt/re-target rules), not “port the
+  DOM runtime”.
+- Keep authoring in wall-time (`Duration` / `durations_ms` theme tokens), not in “60fps ticks”.
+- Keep motion parameters themeable (durations/easings/springs) so ecosystems can tune “hand feel”
+  without editing code.
+- Require at least one deterministic diag gate under fixed delta:
+  - `fretboard diag run ... --fixed-frame-delta-ms 16`
+  - or `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`
+- Be explicit about the custom renderer differences:
+  - DOM `transform` affects hit-testing; in Fret, choose `RenderTransform` vs `VisualTransform`
+    intentionally to match pointer semantics.
+
+Recommended token shapes (current ecosystem direction):
+
+- shadcn recipes: durations + cubic-bezier easings + duration+bounce springs (Flutter-style).
+- Material 3: published tokens are damping ratio + stiffness (motion scheme).
+- Unification is optional; if we unify later, keep both shapes supported and provide a bridge.
+
 ### 2) Contract-first changes (ADRs + alignment)
 
 If you change a contract surface (input/focus/overlays/text/diagnostics):
@@ -108,6 +130,7 @@ If the change affects publishable crates or release automation:
 ## Evidence anchors
 
 - Architecture/layering: `docs/architecture.md`, `docs/dependency-policy.md`
+- Motion foundation workstream: `docs/workstreams/motion-foundation-v1.md`
 - ADRs + alignment: `docs/adr/`, `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
 - Diagnostics/perf runbook: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 - Upstream parity: `.agents/skills/fret-shadcn-source-alignment/SKILL.md`
@@ -119,6 +142,7 @@ If the change affects publishable crates or release automation:
 - Fixing policy mismatches by adding runtime knobs in `crates/fret-ui`.
 - Not leaving worst bundle paths for perf work (attribution becomes non-deterministic).
 - Doing parity work without locking it with a test/script (drift returns quickly).
+- Tweaking motion “by feel” without fixed-delta diag gates (flake + no regression signal).
 
 ## Related skills
 

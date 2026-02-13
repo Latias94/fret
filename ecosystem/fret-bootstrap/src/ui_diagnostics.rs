@@ -385,6 +385,7 @@ impl Default for UiDiagnosticsConfig {
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
     per_window: HashMap<AppWindowId, WindowRing>,
+    text_font_stack_key_stability: HashMap<AppWindowId, TextFontStackKeyStability>,
     known_windows: Vec<AppWindowId>,
     last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
@@ -430,6 +431,12 @@ pub struct UiDiagnosticsService {
 struct PendingForceDumpRequest {
     label: String,
     dump_max_snapshots: Option<usize>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct TextFontStackKeyStability {
+    last_key: Option<u64>,
+    stable_frames: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -482,6 +489,30 @@ impl UiDiagnosticsService {
 
     pub fn is_enabled(&self) -> bool {
         self.cfg.enabled
+    }
+
+    fn update_text_font_stack_key_stability(&mut self, app: &App, window: AppWindowId) -> u32 {
+        let key = app.global::<fret_runtime::TextFontStackKey>().map(|k| k.0);
+        let state = self
+            .text_font_stack_key_stability
+            .entry(window)
+            .or_default();
+
+        match (key, state.last_key) {
+            (Some(key), Some(prev)) if key == prev => {
+                state.stable_frames = state.stable_frames.saturating_add(1);
+            }
+            (Some(key), _) => {
+                state.last_key = Some(key);
+                state.stable_frames = 0;
+            }
+            (None, _) => {
+                state.last_key = None;
+                state.stable_frames = 0;
+            }
+        }
+
+        state.stable_frames
     }
 
     /// Returns the index of the next script step to execute for `window`, if a script is active.
@@ -909,6 +940,15 @@ impl UiDiagnosticsService {
         }
 
         self.note_window_seen(window);
+        let text_font_stack_key_stable_frames =
+            self.update_text_font_stack_key_stability(app, window);
+        let font_catalog_populated = app
+            .global::<fret_runtime::FontCatalog>()
+            .is_some_and(|catalog| !catalog.families.is_empty());
+        let system_font_rescan_idle = match app.global::<fret_runtime::SystemFontRescanState>() {
+            Some(state) => !state.in_flight && !state.pending,
+            None => true,
+        };
 
         self.ensure_ready_file();
         self.poll_script_trigger();
@@ -1664,6 +1704,11 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
+                            text_font_stack_key_stable_frames >= *stable_frames
+                        }
+                        UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
+                        UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
                         _ => {
                             let Some(snapshot) = semantics_snapshot else {
                                 force_dump_label = Some(format!(
@@ -1701,6 +1746,9 @@ impl UiDiagnosticsService {
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                                 self.known_windows.as_slice(),
                                 docking_diag,
+                                text_font_stack_key_stable_frames,
+                                font_catalog_populated,
+                                system_font_rescan_idle,
                                 &predicate,
                             )
                         }
@@ -1876,6 +1924,11 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
+                            text_font_stack_key_stable_frames >= *stable_frames
+                        }
+                        UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
+                        UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
                         _ => {
                             let Some(snapshot) = semantics_snapshot else {
                                 force_dump_label = Some(format!(
@@ -1911,6 +1964,9 @@ impl UiDiagnosticsService {
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                                 self.known_windows.as_slice(),
                                 docking_diag,
+                                text_font_stack_key_stable_frames,
+                                font_catalog_populated,
+                                system_font_rescan_idle,
                                 &predicate,
                             )
                         }
@@ -3397,6 +3453,9 @@ impl UiDiagnosticsService {
                             app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                             self.known_windows.as_slice(),
                             docking_diag,
+                            text_font_stack_key_stable_frames,
+                            font_catalog_populated,
+                            system_font_rescan_idle,
                             &state.predicate,
                         )
                     {
@@ -3926,6 +3985,9 @@ impl UiDiagnosticsService {
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                         self.known_windows.as_slice(),
                         docking_diag,
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
                         &predicate,
                     ) {
                         active.v2_step_state = None;
@@ -4012,6 +4074,9 @@ impl UiDiagnosticsService {
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                         self.known_windows.as_slice(),
                         docking_diag,
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
                         &target_predicate,
                     );
                     let container_ok = if require_fully_within_container {
@@ -14816,6 +14881,9 @@ fn eval_predicate(
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
     known_windows: &[AppWindowId],
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+    text_font_stack_key_stable_frames: u32,
+    font_catalog_populated: bool,
+    system_font_rescan_idle: bool,
     pred: &UiPredicateV1,
 ) -> bool {
     match pred {
@@ -14993,6 +15061,11 @@ fn eval_predicate(
                 .iter()
                 .any(|e| e.missing_glyphs > 0 && !e.families.is_empty())
         }
+        UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
+            text_font_stack_key_stable_frames >= *stable_frames
+        }
+        UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
+        UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
@@ -16651,6 +16724,9 @@ mod tests {
             None,
             &[],
             None,
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -16673,6 +16749,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected padding to shrink the allowed window rect"
@@ -16725,6 +16804,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected node to satisfy the min-size gate"
@@ -16795,6 +16877,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected roving focus to satisfy active_item_is"
@@ -16837,6 +16922,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected active_descendant to satisfy active_item_is"
@@ -16880,8 +16968,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -16906,8 +16998,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
     }
@@ -16947,8 +17043,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -16960,8 +17060,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -16984,8 +17088,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
     }
@@ -17029,8 +17137,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -17042,8 +17154,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -17055,8 +17171,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
         let pred = UiPredicateV1::DockGraphNodeCountLe { max: 9 };
@@ -17068,8 +17188,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 Some(&docking),
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected node_count <= 9 to fail when snapshot reports node_count=10"
@@ -17083,8 +17207,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
         let pred = UiPredicateV1::DockGraphMaxSplitDepthLe { max: 2 };
@@ -17096,8 +17224,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 Some(&docking),
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected max_split_depth <= 2 to fail when snapshot reports max_split_depth=3"
@@ -17113,8 +17245,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -17128,8 +17264,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -17141,8 +17281,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             Some(&docking),
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -17155,8 +17299,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 Some(&docking),
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected canonical=false to fail when snapshot reports canonical_ok=true"

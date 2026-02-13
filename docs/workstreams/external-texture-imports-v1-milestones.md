@@ -82,3 +82,4 @@ Evidence:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
     - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)
     - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
+    - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`

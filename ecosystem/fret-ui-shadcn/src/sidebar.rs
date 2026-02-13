@@ -172,9 +172,9 @@ fn sidebar_collapse_motion<H: UiHost>(
     let motion = transition_prim::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
         cx,
         !collapsed,
-        overlay_motion::shadcn_motion_duration_200(cx),
-        overlay_motion::shadcn_motion_duration_200(cx),
-        overlay_motion::shadcn_motion_ease_bezier(cx),
+        overlay_motion::shadcn_sidebar_toggle_duration(cx),
+        overlay_motion::shadcn_sidebar_toggle_duration(cx),
+        overlay_motion::shadcn_sidebar_ease_bezier(cx),
         false,
     );
 
