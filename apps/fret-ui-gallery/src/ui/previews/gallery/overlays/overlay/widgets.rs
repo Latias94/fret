@@ -151,28 +151,32 @@ fn context_menu(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
 fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
     let context_menu_edge_open = models.context_menu_edge_open.clone();
 
-    shadcn::ContextMenu::new(context_menu_edge_open).into_element(
-        cx,
-        |cx| {
-            shadcn::Button::new("ContextMenu (edge, right click)")
-                .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-context-trigger-edge")
-                .into_element(cx)
-        },
-        |_cx| {
-            vec![
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Action")
-                        .test_id("ui-gallery-context-edge-item-action")
-                        .on_select(CMD_MENU_CONTEXT_ACTION),
-                ),
-                shadcn::ContextMenuEntry::Separator,
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Disabled").disabled(true),
-                ),
-            ]
-        },
-    )
+    // Keep this trigger near the window edge so the default `side=Right` placement is forced to flip.
+    shadcn::ContextMenu::new(context_menu_edge_open)
+        .min_width(Px(240.0))
+        .window_margin(Px(8.0))
+        .into_element(
+            cx,
+            |cx| {
+                shadcn::Button::new("ContextMenu (edge, right click)")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-context-trigger-edge")
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Action (long label to force edge flip)")
+                            .test_id("ui-gallery-context-edge-item-action")
+                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                    shadcn::ContextMenuEntry::Separator,
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Disabled").disabled(true),
+                    ),
+                ]
+            },
+        )
 }
 
 fn underlay(cx: &mut ElementContext<'_, App>) -> AnyElement {
