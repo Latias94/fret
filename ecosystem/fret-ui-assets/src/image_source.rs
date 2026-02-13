@@ -415,7 +415,9 @@ impl ImageSourceRuntime {
                 ImageSourceEntryState::Loading { inflight_id, .. } => {
                     *inflight_id == msg.inflight_id
                 }
-                ImageSourceEntryState::Decoded { inflight_id, .. } => *inflight_id == msg.inflight_id,
+                ImageSourceEntryState::Decoded { inflight_id, .. } => {
+                    *inflight_id == msg.inflight_id
+                }
                 ImageSourceEntryState::Idle
                 | ImageSourceEntryState::Ready { .. }
                 | ImageSourceEntryState::Failed { .. } => false,
