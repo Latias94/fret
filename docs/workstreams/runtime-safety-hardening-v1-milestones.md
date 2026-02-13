@@ -23,8 +23,9 @@ Exit criteria:
 Deliverables:
 
 - ADR for `ModelStore v2` is written and accepted (or explicitly gated as proposed).
+  - Current (this branch): `docs/adr/0269-modelstore-v2-lease-and-unwind-safety-v1.md` (Proposed)
 - Public leasing is removed/privatized; closure-based APIs are the only supported access path.
-- `get_copied/get_cloned` are non-panicking and return explicit errors for `AlreadyLeased/TypeMismatch`.
+- `get_copied/get_cloned` are non-panicking by default; `try_get_*` returns explicit errors for `AlreadyLeased/TypeMismatch`.
 - Regression tests exist for:
   - non-panicking lease violations,
   - unwind does not poison store state (when `panic=unwind`).
@@ -39,8 +40,10 @@ Exit criteria:
 Deliverables:
 
 - Theme token contract ADR is written.
+  - Current (this branch): `docs/adr/0270-theme-token-contract-tiers-and-missing-token-policy-v1.md` (Proposed)
 - Mechanism layer uses typed keys for core tokens.
 - Missing tokens never panic by default; missing extension tokens generate diagnostics.
+  - Missing-token diagnostics are warn-once (stable key), and strict mode can opt back into panics.
 
 Exit criteria:
 
@@ -68,4 +71,3 @@ Deliverables:
 Exit criteria:
 
 - Perf-neutrality validated by existing perf baselines (where available).
-

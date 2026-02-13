@@ -46,11 +46,13 @@ This workstream hardens the runtime by making the core/mechanism layers:
 
 ### 3.1 `ModelStore` lease hazards (`crates/fret-runtime`)
 
-- Lease Drop panics:
-  - `crates/fret-runtime/src/model/store.rs:79` (`ModelLease<T>::drop`)
-  - `crates/fret-runtime/src/model/store.rs:106` (`ModelLeaseAny::drop`)
-- `get_copied` / `get_cloned` panics on `AlreadyLeased` and `TypeMismatch`:
-  - `crates/fret-runtime/src/model/store.rs:338` (and below)
+Historical hazards:
+
+- Lease Drop panics (when public leases were exposed):
+  - `crates/fret-runtime/src/model/store.rs` (`ModelLease<T>::drop`)
+  - `crates/fret-runtime/src/model/store.rs` (`ModelLeaseAny::drop`)
+- `get_copied` / `get_cloned` panics on `AlreadyLeased` and `TypeMismatch` (historical default behavior):
+  - `crates/fret-runtime/src/model/store.rs` (`get_copied` / `get_cloned`)
 
 Risk summary:
 
@@ -58,39 +60,70 @@ Risk summary:
 - Worse: if a caller leases and unwinds without ending the lease, the model value can be left
   removed from storage, causing persistent `AlreadyLeased` errors (state poisoning).
 
+Workstream status (this branch):
+
+- No public lease handles (`ModelLease` is not re-exported; `lease/end_lease` are not part of the public surface).
+- Unwind-safe invariant restoration (`catch_unwind` + `end_lease_*` + `resume_unwind`).
+- Non-panicking reads by default (`get_copied/get_cloned -> Option<T>`; `try_get_* -> Result<Option<T>, ModelUpdateError>`).
+- Optional strict mode via `FRET_STRICT_RUNTIME=1`.
+
 ### 3.2 Menu patch `unsafe` (`crates/fret-runtime`)
+
+Historical hazard:
 
 - Raw-pointer reborrow in patch application:
   - `crates/fret-runtime/src/menu/apply.rs:27` (and below)
 
-This is avoidable `unsafe` and should be rewritten in safe Rust.
+Workstream status (this branch):
+
+- Patch descent is rewritten in safe Rust (no avoidable `unsafe` in the menu patch application path).
 
 ### 3.3 Theme token panics (`crates/fret-ui`)
 
-- Missing token panics:
-  - `crates/fret-ui/src/theme/mod.rs:458` (`color_required`)
-  - `crates/fret-ui/src/theme/mod.rs:546` (`Theme::color_required`, etc.)
+- Historically, missing token panics:
+  - `crates/fret-ui/src/theme/mod.rs` (`color_required`, `metric_required`, `shadow_required`, `text_style_required`)
 
 Risk summary:
 
 - Missing tokens are often configuration/upgrade errors and should not terminate the process.
 - The runtime should provide diagnostics and stable fallback behavior.
 
+Workstream status (this branch):
+
+- Default behavior is non-panicking and uses a stable fallback with warn-once diagnostics.
+- `FRET_STRICT_RUNTIME=1` can opt back into panics for development.
+
 ### 3.4 Global lease panics (`crates/fret-app`)
 
-- Global lease marker panics:
-  - `crates/fret-app/src/app.rs:134` (`assert_global_not_leased`, `with_global_mut_impl`)
+- Global lease marker panics / re-entrancy hazards (historical):
+  - `crates/fret-app/src/app.rs` (`set_global`, `global`, `with_global_mut_impl`)
 
 This is useful as a debug invariant, but should not be a default runtime crash mode.
+
+Workstream status (this branch):
+
+- Default behavior is non-panicking:
+  - `App::global<T>()` returns `None` when the global is leased.
+  - `App::set_global<T>()` defers writes during a lease and applies them after the lease ends.
+- `FRET_STRICT_RUNTIME=1` can opt back into panics for development.
+- `try_global` / `try_set_global` provide an explicit `Result` surface for callers that want to handle lease violations.
 
 ### 3.5 Hot-path env reads (`crates/fret-ui`)
 
 Multiple `FRET_*` flags are read directly inside `fret-ui` hot paths (layout/tree). These should be
 parsed once and cached for the duration of the process or frame.
 
+Workstream status (this branch):
+
+- `FRET_*` parsing is centralized in a cached config struct (`UiRuntimeEnvConfig`), and hot-path code reads the cached values instead of calling `std::env::*` directly.
+
 ## 4) Proposed direction (v1)
 
 ### 4.1 `ModelStore v2`: remove public leasing, enforce closure-based access
+
+ADR:
+
+- `docs/adr/0269-modelstore-v2-lease-and-unwind-safety-v1.md`
 
 Design intent:
 
@@ -132,6 +165,10 @@ Contract note:
   the target `Vec<MenuItem>`.
 
 ### 4.3 Theme v2: normalize + validate; no panicking “required tokens”
+
+ADR:
+
+- `docs/adr/0270-theme-token-contract-tiers-and-missing-token-policy-v1.md`
 
 Direction:
 
@@ -181,4 +218,3 @@ Add at least one targeted test per hazard category:
 
 - TODO tracker: `docs/workstreams/runtime-safety-hardening-v1-todo.md`
 - Milestones: `docs/workstreams/runtime-safety-hardening-v1-milestones.md`
-
