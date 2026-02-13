@@ -25,7 +25,7 @@ fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
 fret-render = { path = "../../crates/fret-render" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
-fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["image-decode", "image-metadata"] }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["ui", "image-decode", "image-metadata"] }
 fret-ui-ai = { path = "../../ecosystem/fret-ui-ai" }
 fret-ui-magic = { path = "../../ecosystem/fret-ui-magic", features = ["app-integration"] }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }

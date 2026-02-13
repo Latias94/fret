@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use fret_ui_kit::declarative::style as decl_style;
+use ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub(in crate::ui) fn preview_card(
     cx: &mut ElementContext<'_, App>,
@@ -183,7 +184,33 @@ pub(in crate::ui) fn preview_card(
             );
 
             cx.container(props, move |cx| {
-                let image = shadcn::MediaImage::model(event_cover_image.clone())
+                let event_cover_fallback = cx.watch_model(&event_cover_image).copied().flatten();
+
+                #[cfg(not(target_arch = "wasm32"))]
+                let event_cover = {
+                    static EVENT_COVER_TEST_JPG: OnceLock<Option<ui_assets::ImageSource>> =
+                        OnceLock::new();
+                    let source = EVENT_COVER_TEST_JPG.get_or_init(|| {
+                        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                            .join("../../assets/textures/test.jpg");
+                        if path.exists() {
+                            Some(ui_assets::ImageSource::from_path(Arc::new(path)))
+                        } else {
+                            None
+                        }
+                    });
+                    let image = source.as_ref().and_then(|source| {
+                        let state = cx.use_image_source_state(source);
+                        state.image
+                    });
+
+                    image.or(event_cover_fallback)
+                };
+
+                #[cfg(target_arch = "wasm32")]
+                let event_cover = event_cover_fallback;
+
+                let image = shadcn::MediaImage::maybe(event_cover)
                     .loading(true)
                     .refine_layout(LayoutRefinement::default().size_full())
                     .into_element(cx)
