@@ -147,7 +147,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut inspect_path: Option<PathBuf> = None;
     let mut inspect_trigger_path: Option<PathBuf> = None;
     let mut inspect_consume_clicks: Option<bool> = None;
-    let mut timeout_ms: u64 = 30_000;
+    let mut timeout_ms: u64 = 240_000;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
