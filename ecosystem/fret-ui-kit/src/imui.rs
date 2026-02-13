@@ -3093,10 +3093,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
             let (popover, border) = {
                 let theme = fret_ui::Theme::global(&*cx.app);
-                (
-                    theme.color_token("popover"),
-                    theme.color_token("border"),
-                )
+                (theme.color_token("popover"), theme.color_token("border"))
             };
 
             let nav_items = Rc::new(RefCell::new(Vec::<GlobalElementId>::new()));
@@ -3222,10 +3219,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
             let (popover, border) = {
                 let theme = fret_ui::Theme::global(&*cx.app);
-                (
-                    theme.color_token("popover"),
-                    theme.color_token("border"),
-                )
+                (theme.color_token("popover"), theme.color_token("border"))
             };
 
             let dim = fret_core::Color {
