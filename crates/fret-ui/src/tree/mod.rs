@@ -1412,6 +1412,10 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(1);
     }
 
+    pub(crate) fn hover_edge_changed_this_frame(&self) -> bool {
+        self.debug_hover_edge_this_frame
+    }
+
     pub(crate) fn debug_record_hover_declarative_invalidation(
         &mut self,
         node: NodeId,
@@ -2328,7 +2332,6 @@ impl<H: UiHost> UiTree<H> {
                 .interactive_resize_last_bounds_delta
                 .is_some_and(|(dw, dh)| {
                     dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
-                        && dh.0.abs() <= 1.0
                         && (dw.0 != 0.0 || dh.0 != 0.0)
                 });
             if !small_step {
@@ -2361,7 +2364,6 @@ impl<H: UiHost> UiTree<H> {
                 .interactive_resize_last_bounds_delta
                 .is_some_and(|(dw, dh)| {
                     dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
-                        && dh.0.abs() <= 1.0
                         && (dw.0 != 0.0 || dh.0 != 0.0)
                 })
     }
