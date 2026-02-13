@@ -90,14 +90,14 @@ component API yet; we only commit to the semantic intent + gate.
 | ID | Recipe | Animata source(s) | Fret target(s) | Semantic intent | Gate (deterministic) | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | AR-OVERLAY-001 | Modal presence (blur + spring) | `repo-ref/animata/animata/overlay/modal.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs`, `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | `presence.enter/exit` (+ optional `hover_micro`) | `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json` | Landed (baseline; blur/rotate variant TODO) |
-| AR-ACCORDION-001 | FAQ accordion (height:auto + fade) | `repo-ref/animata/animata/accordion/faq.tsx` | `ecosystem/fret-ui-shadcn/src/accordion.rs` (or `collapsible` primitives) | `collapsible.toggle` | Add: `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json` | Planned |
+| AR-ACCORDION-001 | FAQ accordion (height:auto + fade) | `repo-ref/animata/animata/accordion/faq.tsx` | UI Gallery shadcn accordion demo | `collapsible.toggle` | `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-accordion-demo-returns-item`) | Landed (gate script) |
 | AR-TABS-001 | Nav tabs shared indicator | `repo-ref/animata/animata/container/nav-tabs.tsx` | `ecosystem/fret-ui-material3/src/tabs.rs` + shadcn tabs recipes | `shared_indicator.move` | Landed (M3): `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json` | Landed (M3) / Planned (shadcn) |
 | AR-TABS-002 | Fluid tabs (indicator + content switch) | `repo-ref/animata/animata/card/fluid-tabs.tsx` | shadcn tabs + content presence | `shared_indicator.move` + `presence.enter/exit` | Add a fixed-delta script after shadcn tabs MVP | Planned |
 | AR-NAV-001 | Navigation active pill (bar/rail) | (Animata: reuse `shared_indicator.move` intent) | `ecosystem/fret-ui-material3/src/navigation_bar.rs`, `ecosystem/fret-ui-material3/src/navigation_rail.rs` | `shared_indicator.move` | `tools/diag-scripts/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json` + `tools/diag-scripts/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json` | Landed |
 | AR-CAROUSEL-001 | Expandable carousel (flex-grow + blur) | `repo-ref/animata/animata/carousel/expandable.tsx` | `ecosystem/fret-ui-*/carousel` (or a UI gallery recipe page) | `layout.expand` (+ `hover_micro`) | Add: `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json` | Planned |
 | AR-TOAST-001 | Toast stack shift + interrupt | (Animata: use `stack.shift` intent) | `ecosystem/fret-ui-shadcn/src/sonner.rs` | `stack.shift` | `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json` | Landed (baseline) |
 | AR-TOAST-002 | Swipe-to-dismiss inertia | (Animata: use `drag_release_settle` intent) | `ecosystem/fret-ui-shadcn/src/sonner.rs` | `drag_release_settle` | Add: `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json` | Planned |
-| AR-NAVMENU-001 | NavigationMenu viewport motion | (Animata: use `presence.enter/exit` + `layout.expand`) | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `layout.expand` + interruption | Add: `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json` | Planned |
+| AR-NAVMENU-001 | NavigationMenu viewport motion | (Animata: use `presence.enter/exit` + `layout.expand`) | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `layout.expand` + interruption | `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-navigation-menu-demo-viewport`) | Landed (gate script) |
 
 ## Definition of done (for a recipe row)
 
@@ -105,4 +105,3 @@ component API yet; we only commit to the semantic intent + gate.
 - A deterministic diag script exists under fixed `delta` (prefer `--fixed-frame-delta-ms 16`).
 - The recipe uses `fret-ui-kit` drivers (Duration-first) rather than per-component frame math.
 - Any DOM-specific assumptions are translated explicitly (hit-testing, overlay capture, focus).
-

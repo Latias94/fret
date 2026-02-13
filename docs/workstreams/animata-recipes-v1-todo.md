@@ -29,21 +29,25 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## P1 — Add deterministic gates for “missing rows”
 
-- [ ] AR-GATE-001 Add a fixed-delta diag gate for Animata FAQ accordion (height:auto + fade).
+- [x] AR-GATE-001 Add a fixed-delta diag gate for Animata FAQ accordion (height:auto + fade).
   - Animata source:
     - `repo-ref/animata/animata/accordion/faq.tsx`
   - Expected Fret target:
     - shadcn accordion/collapsible recipe surface
   - Output:
     - `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json`
+  - Evidence:
+    - `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json`
 
-- [ ] AR-GATE-002 Add a fixed-delta diag gate for NavigationMenu viewport motion (size interpolation + placement stability).
+- [x] AR-GATE-002 Add a fixed-delta diag gate for NavigationMenu viewport motion (size interpolation + placement stability).
   - Upstream references:
     - shadcn: `repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx`
     - Radix: navigation menu primitives
   - Fret target:
     - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
   - Output:
+    - `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json`
+  - Evidence:
     - `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json`
 
 - [ ] AR-GATE-003 Add a fixed-delta diag gate for Sonner swipe-to-dismiss inertia + settle.
@@ -74,4 +78,3 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - Avoid re-implementing per-recipe ad-hoc stagger math.
   - Gate:
     - one deterministic script demonstrating staggered toast stack or list insert.
-
