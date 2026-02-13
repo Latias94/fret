@@ -30,11 +30,30 @@ const THEME_DURATION_SHADCN_MOTION_300: &str = "duration.shadcn.motion.300";
 const THEME_DURATION_SHADCN_MOTION_500: &str = "duration.shadcn.motion.500";
 const THEME_EASING_SHADCN_MOTION: &str = "easing.shadcn.motion";
 
+const THEME_DURATION_SHADCN_MOTION_OVERLAY_OPEN: &str = "duration.shadcn.motion.overlay.open";
+const THEME_DURATION_SHADCN_MOTION_OVERLAY_CLOSE: &str = "duration.shadcn.motion.overlay.close";
+const THEME_EASING_SHADCN_MOTION_OVERLAY: &str = "easing.shadcn.motion.overlay";
+
+const THEME_DURATION_SHADCN_MOTION_SIDEBAR_TOGGLE: &str = "duration.shadcn.motion.sidebar.toggle";
+const THEME_EASING_SHADCN_MOTION_SIDEBAR: &str = "easing.shadcn.motion.sidebar";
+
 fn theme_duration_ms_by_key<H: UiHost>(cx: &ElementContext<'_, H>, key: &str) -> Option<Duration> {
     let theme = Theme::global(&*cx.app);
     theme
         .duration_ms_by_key(key)
         .map(|ms| Duration::from_millis(ms as u64))
+}
+
+fn theme_duration_ms_by_keys<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    keys: &[&str],
+) -> Option<Duration> {
+    for key in keys {
+        if let Some(duration) = theme_duration_ms_by_key(cx, key) {
+            return Some(duration);
+        }
+    }
+    None
 }
 
 /// shadcn overlay duration token (100ms).
@@ -61,11 +80,75 @@ pub fn shadcn_motion_duration_500<H: UiHost>(cx: &ElementContext<'_, H>) -> Dura
         .unwrap_or(SHADCN_MOTION_DURATION_500)
 }
 
+/// shadcn semantic overlay open duration (defaults to `duration.shadcn.motion.200`).
+pub fn shadcn_overlay_open_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_keys(
+        cx,
+        &[
+            THEME_DURATION_SHADCN_MOTION_OVERLAY_OPEN,
+            THEME_DURATION_SHADCN_MOTION_200,
+        ],
+    )
+    .unwrap_or(SHADCN_MOTION_DURATION_200)
+}
+
+/// shadcn semantic overlay close duration (defaults to `duration.shadcn.motion.200`).
+pub fn shadcn_overlay_close_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_keys(
+        cx,
+        &[
+            THEME_DURATION_SHADCN_MOTION_OVERLAY_CLOSE,
+            THEME_DURATION_SHADCN_MOTION_200,
+        ],
+    )
+    .unwrap_or(SHADCN_MOTION_DURATION_200)
+}
+
 /// shadcn overlay cubic-bezier easing curve (`ease-[cubic-bezier(0.22,1,0.36,1)]` by default).
 pub fn shadcn_motion_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
     let theme = Theme::global(&*cx.app);
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION)
+        .unwrap_or(CubicBezier {
+            x1: crate::headless::easing::SHADCN_EASE.x1,
+            y1: crate::headless::easing::SHADCN_EASE.y1,
+            x2: crate::headless::easing::SHADCN_EASE.x2,
+            y2: crate::headless::easing::SHADCN_EASE.y2,
+        })
+}
+
+/// shadcn semantic overlay easing curve (defaults to `easing.shadcn.motion`).
+pub fn shadcn_overlay_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
+    let theme = Theme::global(&*cx.app);
+    theme
+        .easing_by_key(THEME_EASING_SHADCN_MOTION_OVERLAY)
+        .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
+        .unwrap_or(CubicBezier {
+            x1: crate::headless::easing::SHADCN_EASE.x1,
+            y1: crate::headless::easing::SHADCN_EASE.y1,
+            x2: crate::headless::easing::SHADCN_EASE.x2,
+            y2: crate::headless::easing::SHADCN_EASE.y2,
+        })
+}
+
+/// shadcn semantic sidebar toggle duration (defaults to `duration.shadcn.motion.200`).
+pub fn shadcn_sidebar_toggle_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_keys(
+        cx,
+        &[
+            THEME_DURATION_SHADCN_MOTION_SIDEBAR_TOGGLE,
+            THEME_DURATION_SHADCN_MOTION_200,
+        ],
+    )
+    .unwrap_or(SHADCN_MOTION_DURATION_200)
+}
+
+/// shadcn semantic sidebar easing curve (defaults to `easing.shadcn.motion`).
+pub fn shadcn_sidebar_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
+    let theme = Theme::global(&*cx.app);
+    theme
+        .easing_by_key(THEME_EASING_SHADCN_MOTION_SIDEBAR)
+        .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
         .unwrap_or(CubicBezier {
             x1: crate::headless::easing::SHADCN_EASE.x1,
             y1: crate::headless::easing::SHADCN_EASE.y1,

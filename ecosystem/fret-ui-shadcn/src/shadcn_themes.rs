@@ -6,9 +6,81 @@
 
 use std::collections::HashMap;
 
+use fret_ui::theme::CubicBezier;
 use fret_ui::{Theme, ThemeConfig, UiHost};
 use fret_ui_kit::theme_tokens;
 use serde::Deserialize;
+
+fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
+    // Keep these values aligned with the motion workstream doc and the UI kit defaults.
+    // The goal is to make "web-like" motion outcomes explicit and theme-tunable.
+
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.100".to_string())
+        .or_insert(100);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.200".to_string())
+        .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.300".to_string())
+        .or_insert(300);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.500".to_string())
+        .or_insert(500);
+
+    // Semantic duration keys (preferred by recipes; numeric scale remains as fallback).
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.overlay.open".to_string())
+        .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.overlay.close".to_string())
+        .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.sidebar.toggle".to_string())
+        .or_insert(200);
+
+    // Toast/Sonner: tuned to feel less "sticky" than a full 200ms both ways, while remaining
+    // deterministic under fixed-frame-delta diagnostics.
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.toast.enter".to_string())
+        .or_insert(160);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.toast.exit".to_string())
+        .or_insert(120);
+
+    // Drawer springs (duration + bounce) are read from theme tokens when present.
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.spring.drawer.settle".to_string())
+        .or_insert(240);
+    cfg.numbers
+        .entry("number.shadcn.motion.spring.drawer.settle.bounce".to_string())
+        .or_insert(0.0);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.spring.drawer.inertia_bounce".to_string())
+        .or_insert(240);
+    cfg.numbers
+        .entry("number.shadcn.motion.spring.drawer.inertia_bounce.bounce".to_string())
+        .or_insert(0.25);
+
+    let shadcn_ease = CubicBezier {
+        x1: 0.22,
+        y1: 1.0,
+        x2: 0.36,
+        y2: 1.0,
+    };
+    cfg.easings
+        .entry("easing.shadcn.motion".to_string())
+        .or_insert(shadcn_ease);
+    cfg.easings
+        .entry("easing.shadcn.motion.overlay".to_string())
+        .or_insert(shadcn_ease);
+    cfg.easings
+        .entry("easing.shadcn.motion.sidebar".to_string())
+        .or_insert(shadcn_ease);
+    cfg.easings
+        .entry("easing.shadcn.motion.toast".to_string())
+        .or_insert(shadcn_ease);
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShadcnColorScheme {
@@ -400,14 +472,16 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
 
     seed_syntax_colors(&mut colors);
 
-    ThemeConfig {
+    let mut cfg = ThemeConfig {
         name: format!("shadcn/new-york-v4/{}/{}", base.as_str(), scheme.as_str()),
         author: Some("shadcn/ui".to_string()),
         url: Some("https://ui.shadcn.com".to_string()),
         colors,
         metrics,
         ..Default::default()
-    }
+    };
+    seed_shadcn_motion_tokens(&mut cfg);
+    cfg
 }
 
 fn seed_syntax_colors(colors: &mut HashMap<String, String>) {

@@ -48,6 +48,7 @@ struct ToasterConfigState {
     max_toasts: Option<usize>,
     toaster_id: Option<Arc<str>>,
     duration: Option<Duration>,
+    close_duration: Option<Duration>,
     swipe_directions: Option<ToastSwipeDirections>,
 }
 
@@ -251,32 +252,47 @@ impl Toaster {
         cx.scope(|cx| {
             let id = cx.root_id();
             let store = OverlayController::toast_store(&mut *cx.app);
-            let (max_toasts_changed, duration_changed, prev_toaster_id, swipe_changed) = cx
-                .with_state(ToasterConfigState::default, |st| {
-                    let max_toasts_changed = st.max_toasts != self.max_toasts;
-                    let duration_changed =
-                        st.toaster_id.as_ref() != self.id.as_ref() || st.duration != self.duration;
-                    let swipe_changed = st.swipe_directions != self.swipe_directions;
-                    let prev_toaster_id = st.toaster_id.clone();
+            let close_duration =
+                fret_ui_kit::declarative::toast_motion::shadcn_toast_exit_duration_opt(cx)
+                    .unwrap_or(
+                        fret_ui_kit::declarative::toast_motion::DEFAULT_SHADCN_TOAST_EXIT_DURATION,
+                    );
+            let (
+                max_toasts_changed,
+                duration_changed,
+                prev_toaster_id,
+                close_duration_changed,
+                swipe_changed,
+            ) = cx.with_state(ToasterConfigState::default, |st| {
+                let max_toasts_changed = st.max_toasts != self.max_toasts;
+                let duration_changed =
+                    st.toaster_id.as_ref() != self.id.as_ref() || st.duration != self.duration;
+                let close_duration_changed = st.close_duration != Some(close_duration);
+                let swipe_changed = st.swipe_directions != self.swipe_directions;
+                let prev_toaster_id = st.toaster_id.clone();
 
-                    if max_toasts_changed {
-                        st.max_toasts = self.max_toasts;
-                    }
-                    if duration_changed {
-                        st.toaster_id = self.id.clone();
-                        st.duration = self.duration;
-                    }
-                    if swipe_changed {
-                        st.swipe_directions = self.swipe_directions;
-                    }
+                if max_toasts_changed {
+                    st.max_toasts = self.max_toasts;
+                }
+                if duration_changed {
+                    st.toaster_id = self.id.clone();
+                    st.duration = self.duration;
+                }
+                if close_duration_changed {
+                    st.close_duration = Some(close_duration);
+                }
+                if swipe_changed {
+                    st.swipe_directions = self.swipe_directions;
+                }
 
-                    (
-                        max_toasts_changed,
-                        duration_changed,
-                        prev_toaster_id,
-                        swipe_changed,
-                    )
-                });
+                (
+                    max_toasts_changed,
+                    duration_changed,
+                    prev_toaster_id,
+                    close_duration_changed,
+                    swipe_changed,
+                )
+            });
 
             if max_toasts_changed {
                 let _ = cx.app.models_mut().update(&store, |st| {
@@ -290,6 +306,11 @@ impl Toaster {
                 });
                 let _ = cx.app.models_mut().update(&store, |st| {
                     st.set_window_default_duration(cx.window, self.id.clone(), self.duration)
+                });
+            }
+            if close_duration_changed {
+                let _ = cx.app.models_mut().update(&store, |st| {
+                    st.set_window_close_duration(cx.window, close_duration)
                 });
             }
             if swipe_changed {
