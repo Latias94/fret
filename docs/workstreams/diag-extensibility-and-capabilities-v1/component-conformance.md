@@ -113,6 +113,14 @@ When you need a placement/collision matrix (many cases):
 - Use `wait_bounds_stable` for placement/size “settle” phases (flip/shift, transform-only updates, estimate -> measured).
 - Use `diag lint --all-test-ids` when you want out-of-window hints for all targeted nodes, not only focused ones.
 
+Example (Combobox long list):
+
+- `tools/diag-scripts/ui-gallery-combobox-long-list-scroll-select-last.json`
+  - Scrolls a long listbox until the last item becomes visible.
+  - Commits selection and reopens to assert the item is still selected after re-scrolling.
+  - This is intended to remain valid under future virtualization: the invariant is “selection persists even when items
+    are mounted/unmounted”, not “every item is always present in the semantics tree”.
+
 ## Page-level layout sweeps (UI Gallery)
 
 When the goal is “does the app still lay out correctly?”, a component-by-component suite can miss page integration bugs.
