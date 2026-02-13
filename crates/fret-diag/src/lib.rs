@@ -2969,6 +2969,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let connected = connect_filesystem_tooling(
                 &fs_transport_cfg,
                 &resolved_ready_path,
+                launch.is_some(),
                 timeout_ms,
                 poll_ms,
             )?;
@@ -5625,6 +5626,7 @@ See: `docs/tracy.md`.\n";
                     Some(connect_filesystem_tooling(
                         &fs_transport_cfg,
                         &resolved_ready_path,
+                        child.is_some(),
                         timeout_ms,
                         poll_ms,
                     )?)
@@ -5671,6 +5673,7 @@ See: `docs/tracy.md`.\n";
                         connected_fs_iter = connect_filesystem_tooling(
                             &fs_transport_cfg,
                             &resolved_ready_path,
+                            child.is_some(),
                             timeout_ms,
                             poll_ms,
                         )?;
@@ -12178,25 +12181,28 @@ fn connect_devtools_ws_tooling(
 fn connect_filesystem_tooling(
     cfg: &crate::transport::FsDiagTransportConfig,
     ready_path: &Path,
+    require_ready: bool,
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<ConnectedToolingTransport, String> {
     use crate::transport::ToolingDiagClient;
 
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
-    let mut ready = false;
-    while Instant::now() < deadline {
-        if std::fs::metadata(ready_path).is_ok() {
-            ready = true;
-            break;
+    if require_ready {
+        let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+        let mut ready = false;
+        while Instant::now() < deadline {
+            if std::fs::metadata(ready_path).is_ok() {
+                ready = true;
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
         }
-        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
-    }
-    if !ready {
-        return Err(format!(
-            "timeout waiting for readiness signal (ready.touch): {}",
-            ready_path.display()
-        ));
+        if !ready {
+            return Err(format!(
+                "timeout waiting for readiness signal (ready.touch): {}",
+                ready_path.display()
+            ));
+        }
     }
 
     let client = ToolingDiagClient::connect_fs(cfg.clone())?;
