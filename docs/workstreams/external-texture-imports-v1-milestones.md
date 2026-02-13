@@ -55,7 +55,15 @@ Evidence:
 
 ## M3 — Web zero-copy (blocked)
 
-- [!] EXT-m3-300 Web v1 zero-copy import via WebGPU `ExternalTexture` is implemented and gated
-      (with deterministic fallback).
+- [!] EXT-m3-300 / EXT-web-100 Web v1 zero-copy import via WebGPU `ExternalTexture` is implemented
+      and gated (with deterministic fallback).
   - Blocker: wgpu WebGPU backend missing `ExternalTexture` implementation (wgpu v28).
 
+## M4 — Follow-ups (v1.x; not required for closure)
+
+- [ ] EXT-meta-110 Consume `RenderTargetMetadata` for sampling transforms where applicable
+      (alpha/orientation).
+- [ ] EXT-native-120 Native “true external import” adapter seam (platform-decoder produced GPU
+      frame, capability-gated, deterministic fallback).
+- [ ] EXT-perf-130 Comparative diag/perf baselines for copy paths (native CPU upload vs GPU
+      offscreen; web GPU copy when stable).
