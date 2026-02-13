@@ -4,6 +4,7 @@
 
 - Measurement protocol documented and repeatable.
 - Perf suites run from release binaries with stable env knobs.
+- UI gallery perf suites make cache+shell + VirtualList known-heights defaults implicit (caller-overridable).
 
 ## M1 — Resize Probes Majority-Pass
 
