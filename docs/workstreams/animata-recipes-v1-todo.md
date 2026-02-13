@@ -1,0 +1,77 @@
+# Animata Recipes Alignment (v1) — TODO Tracker
+
+Status: Active (semantic-first; recipe selection in progress)
+
+This document tracks TODOs for:
+
+- `docs/workstreams/animata-recipes-v1.md`
+- Motion foundation dependencies: `docs/workstreams/motion-foundation-v1.md`
+
+Tracking format:
+
+- Status: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
+- ID: `AR-{area}-{nnn}`
+
+When completing an item, prefer leaving 1–3 evidence anchors:
+
+- file paths + key functions/tests
+- and/or a `tools/diag-scripts/*.json` gate
+
+## P0 — Semantics and scope (document-first)
+
+- [ ] AR-SEM-001 Finalize the semantic motion vocabulary list (v1) and keep it stable across ecosystems.
+  - Evidence:
+    - `docs/workstreams/animata-recipes-v1.md` (section "Semantic motion vocabulary (v1)")
+- [ ] AR-SEM-002 Decide whether `duration.motion.*` becomes the canonical semantic namespace or stays as an alias layer over `duration.shadcn.motion.*`.
+  - Decision notes:
+    - Avoid mechanism coupling in `crates/fret-ui`.
+    - Keep Material 3 `md.sys.motion.*` as the primary source for M3 ecosystems.
+
+## P1 — Add deterministic gates for “missing rows”
+
+- [ ] AR-GATE-001 Add a fixed-delta diag gate for Animata FAQ accordion (height:auto + fade).
+  - Animata source:
+    - `repo-ref/animata/animata/accordion/faq.tsx`
+  - Expected Fret target:
+    - shadcn accordion/collapsible recipe surface
+  - Output:
+    - `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json`
+
+- [ ] AR-GATE-002 Add a fixed-delta diag gate for NavigationMenu viewport motion (size interpolation + placement stability).
+  - Upstream references:
+    - shadcn: `repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx`
+    - Radix: navigation menu primitives
+  - Fret target:
+    - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
+  - Output:
+    - `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json`
+
+- [ ] AR-GATE-003 Add a fixed-delta diag gate for Sonner swipe-to-dismiss inertia + settle.
+  - Fret target:
+    - `ecosystem/fret-ui-shadcn/src/sonner.rs`
+  - Output:
+    - `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json`
+
+- [ ] AR-GATE-004 Add a fixed-delta diag gate for Animata expandable carousel (layout.expand).
+  - Animata source:
+    - `repo-ref/animata/animata/carousel/expandable.tsx`
+  - Output:
+    - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+
+## P1 — Optional: bring Animata “blurred backdrop” into a reusable recipe
+
+- [ ] AR-OVERLAY-010 Add a dialog variant or a separate recipe that uses backdrop blur (reduce-transparency aware).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-kit/src/recipes/glass.rs`
+    - `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+  - Note:
+    - Keep default shadcn dialog baseline conservative; make blur an explicit opt-in recipe.
+
+## P2 — Missing primitives (only if needed by multiple recipes)
+
+- [ ] AR-PRIM-001 Add a small “stagger/sequence” helper surface in `fret-ui-headless` + `fret-ui-kit` if multiple recipes need it.
+  - Goal:
+    - Avoid re-implementing per-recipe ad-hoc stagger math.
+  - Gate:
+    - one deterministic script demonstrating staggered toast stack or list insert.
+
