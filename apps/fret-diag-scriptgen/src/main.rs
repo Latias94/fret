@@ -742,6 +742,20 @@ fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
             },
             timeout_frames: 240,
         })
+        .push(UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::ImeCursorAreaIsSome { is_some: true },
+            timeout_frames: 240,
+        })
+        .push(UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::ImeCursorAreaWithinWindow {
+                padding_px: 0.0,
+                padding_insets_px: None,
+                eps_px: 2.0,
+            },
+            timeout_frames: 240,
+        })
         .press_key("tab")
         .wait_shortcut_routing_trace(
             UiShortcutRoutingTraceQueryV1 {
@@ -775,6 +789,7 @@ fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
         &[
             "diag.script_v2",
             "diag.inject_ime",
+            "diag.text_input_snapshot",
             "diag.shortcut_routing_trace",
         ],
     )

@@ -524,6 +524,9 @@ Recent additions:
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 - `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
 - `text_composition_is` (assert whether a text surface is currently composing via IME)
+- `ime_cursor_area_is_some` (assert whether a window-level IME cursor area snapshot exists)
+- `ime_cursor_area_within_window` (assert the IME cursor area stays within the current window bounds; coarse “caret teleported” gate)
+- `ime_cursor_area_min_size` (assert the IME cursor area has a meaningful size; catches “zero rect” bugs)
 - `wait_shortcut_routing_trace` (assert keyboard routing outcomes like `reserved_for_ime`)
 - `wait_overlay_placement_trace` (assert overlay placement decisions by geometry trace rather than screenshots)
 

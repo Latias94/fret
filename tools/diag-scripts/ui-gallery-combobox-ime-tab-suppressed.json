@@ -4,6 +4,7 @@
     "required_capabilities": [
       "diag.script_v2",
       "diag.inject_ime",
+      "diag.text_input_snapshot",
       "diag.shortcut_routing_trace"
     ]
   },
@@ -182,6 +183,23 @@
           "id": "ui-gallery-combobox-demo-input"
         },
         "composing": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "ime_cursor_area_is_some",
+        "is_some": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "ime_cursor_area_within_window",
+        "padding_px": 0.0,
+        "eps_px": 2.0
       },
       "timeout_frames": 240
     },

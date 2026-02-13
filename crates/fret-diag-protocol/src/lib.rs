@@ -793,6 +793,38 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         composing: bool,
     },
+    /// True when the diagnostics runtime has a window-level IME cursor area snapshot.
+    ///
+    /// Notes:
+    /// - This reads `WindowTextInputSnapshot.ime_cursor_area`.
+    /// - Coordinates are window logical pixels.
+    ImeCursorAreaIsSome {
+        is_some: bool,
+    },
+    /// True when the window-level IME cursor area snapshot is within the current window bounds.
+    ///
+    /// This is a coarse regression gate for IME geometry bugs (caret/candidate window
+    /// teleportation, negative coordinates, far-offscreen rects).
+    ImeCursorAreaWithinWindow {
+        #[serde(default)]
+        padding_px: f32,
+        /// Optional per-edge padding (added on top of `padding_px`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        padding_insets_px: Option<UiPaddingInsetsV1>,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the window-level IME cursor area snapshot has at least the specified size.
+    ///
+    /// This can catch "zero rect" bugs where the IME caret geometry is missing meaningful size.
+    ImeCursorAreaMinSize {
+        #[serde(default)]
+        min_w_px: f32,
+        #[serde(default)]
+        min_h_px: f32,
+        #[serde(default)]
+        eps_px: f32,
+    },
     CheckedIsNone {
         target: UiSelectorV1,
     },

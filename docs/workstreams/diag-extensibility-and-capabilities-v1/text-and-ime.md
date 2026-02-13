@@ -67,6 +67,13 @@ For deterministic scripts, prefer injecting IME events explicitly (instead of re
   `delete_surrounding` events.
 - Declare `diag.inject_ime` in `meta.required_capabilities` for scripts that use IME injection.
 - Declare `diag.shortcut_routing_trace` for scripts that assert `wait_shortcut_routing_trace`.
+- Declare `diag.text_input_snapshot` for scripts that gate IME caret geometry (`ime_cursor_area_*` predicates).
+
+Practical “caret stays sane” gates:
+
+- After entering composition (preedit), wait for:
+  - `ime_cursor_area_is_some` (`is_some=true`),
+  - `ime_cursor_area_within_window` (small `eps_px` to tolerate rounding).
 
 In-repo examples:
 

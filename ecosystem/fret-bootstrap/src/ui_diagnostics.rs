@@ -1565,6 +1565,8 @@ impl UiDiagnosticsService {
                                 window_bounds,
                                 window,
                                 element_runtime,
+                                app.global::<fret_runtime::WindowTextInputSnapshotService>()
+                                    .and_then(|svc| svc.snapshot(window)),
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                                 self.known_windows.as_slice(),
@@ -1771,6 +1773,8 @@ impl UiDiagnosticsService {
                                 window_bounds,
                                 window,
                                 element_runtime,
+                                app.global::<fret_runtime::WindowTextInputSnapshotService>()
+                                    .and_then(|svc| svc.snapshot(window)),
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                                 self.known_windows.as_slice(),
@@ -3243,6 +3247,8 @@ impl UiDiagnosticsService {
                             window_bounds,
                             window,
                             element_runtime,
+                            app.global::<fret_runtime::WindowTextInputSnapshotService>()
+                                .and_then(|svc| svc.snapshot(window)),
                             app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                             app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                             self.known_windows.as_slice(),
@@ -3770,6 +3776,8 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        app.global::<fret_runtime::WindowTextInputSnapshotService>()
+                            .and_then(|svc| svc.snapshot(window)),
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                         self.known_windows.as_slice(),
@@ -3854,6 +3862,8 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        app.global::<fret_runtime::WindowTextInputSnapshotService>()
+                            .and_then(|svc| svc.snapshot(window)),
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                         self.known_windows.as_slice(),
@@ -14571,6 +14581,7 @@ fn eval_predicate(
     window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
+    text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
     known_windows: &[AppWindowId],
@@ -14624,6 +14635,61 @@ fn eval_predicate(
                 return false;
             };
             node.text_composition.is_some() == *composing
+        }
+        UiPredicateV1::ImeCursorAreaIsSome { is_some } => {
+            text_input_snapshot
+                .and_then(|snapshot| snapshot.ime_cursor_area)
+                .is_some()
+                == *is_some
+        }
+        UiPredicateV1::ImeCursorAreaWithinWindow {
+            padding_px,
+            padding_insets_px,
+            eps_px,
+        } => {
+            let Some(area) = text_input_snapshot.and_then(|snapshot| snapshot.ime_cursor_area)
+            else {
+                return false;
+            };
+
+            let pad = padding_px.max(0.0);
+            let pad_insets = padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(0.0));
+            let eps = eps_px.max(0.0);
+
+            let window_left = window_bounds.origin.x.0 + pad + pad_insets.left_px.max(0.0);
+            let window_top = window_bounds.origin.y.0 + pad + pad_insets.top_px.max(0.0);
+            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0
+                - pad
+                - pad_insets.right_px.max(0.0);
+            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0
+                - pad
+                - pad_insets.bottom_px.max(0.0);
+
+            let area_left = area.origin.x.0;
+            let area_top = area.origin.y.0;
+            let area_right = area.origin.x.0 + area.size.width.0.max(0.0);
+            let area_bottom = area.origin.y.0 + area.size.height.0.max(0.0);
+
+            area_left >= window_left - eps
+                && area_top >= window_top - eps
+                && area_right <= window_right + eps
+                && area_bottom <= window_bottom + eps
+        }
+        UiPredicateV1::ImeCursorAreaMinSize {
+            min_w_px,
+            min_h_px,
+            eps_px,
+        } => {
+            let Some(area) = text_input_snapshot.and_then(|snapshot| snapshot.ime_cursor_area)
+            else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+            let min_w = min_w_px.max(0.0);
+            let min_h = min_h_px.max(0.0);
+
+            area.size.width.0.max(0.0) + eps >= min_w && area.size.height.0.max(0.0) + eps >= min_h
         }
         UiPredicateV1::CheckedIsNone { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
