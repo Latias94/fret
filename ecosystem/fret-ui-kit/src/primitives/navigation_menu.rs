@@ -18,6 +18,7 @@ use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::Side;
+use fret_ui::theme::CubicBezier;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt;
@@ -1733,6 +1734,167 @@ pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
     }
 }
 
+pub fn navigation_menu_content_transition_with_durations_and_cubic_bezier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: fret_ui::elements::GlobalElementId,
+    open: bool,
+    selected: Option<Arc<str>>,
+    values: &[Arc<str>],
+    open_ticks: u64,
+    close_ticks: u64,
+    bezier: CubicBezier,
+) -> NavigationMenuContentTransitionOutput {
+    if !open {
+        cx.with_state_for(id, ContentTransitionState::default, |st| {
+            st.last_selected = None;
+            st.last_selected_idx = None;
+            st.from_idx = None;
+            st.to_idx = None;
+        });
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            st.seq = 0;
+            st.tick = 0;
+            st.timeline = TransitionTimeline::default();
+            st.lease = None;
+        });
+        return NavigationMenuContentTransitionOutput::default();
+    }
+
+    let selected_idx = selected
+        .as_deref()
+        .and_then(|v| values.iter().position(|it| it.as_ref() == v));
+
+    let (seq, from_idx, to_idx) = cx.with_state_for(id, ContentTransitionState::default, |st| {
+        let changed = selected.is_some()
+            && st.last_selected.is_some()
+            && selected != st.last_selected
+            && selected_idx.is_some()
+            && st.last_selected_idx.is_some();
+
+        if changed {
+            st.from_idx = st.last_selected_idx;
+            st.to_idx = selected_idx;
+            st.seq = st.seq.saturating_add(1);
+        }
+
+        st.last_selected = selected.clone();
+        st.last_selected_idx = selected_idx;
+
+        (st.seq, st.from_idx, st.to_idx)
+    });
+
+    let (Some(from_idx), Some(to_idx)) = (from_idx, to_idx) else {
+        return NavigationMenuContentTransitionOutput::default();
+    };
+
+    let (open_ticks, close_ticks) =
+        crate::declarative::transition::effective_transition_durations_for_cx(
+            cx,
+            open_ticks,
+            close_ticks,
+        );
+
+    let app_tick = cx.app.tick_id().0;
+    let frame_tick = cx.frame_id.0;
+
+    let (out, start_lease, stop_lease) =
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
+                st.configured_open_ticks = open_ticks;
+                st.configured_close_ticks = close_ticks;
+                st.timeline.set_durations(open_ticks, close_ticks);
+            }
+
+            if st.seq != seq {
+                st.seq = seq;
+                st.last_app_tick = app_tick;
+                st.last_frame_tick = frame_tick;
+                st.tick = 0;
+                st.timeline = TransitionTimeline::default();
+                st.timeline.set_durations(open_ticks, close_ticks);
+            }
+
+            if st.last_frame_tick != frame_tick {
+                st.last_frame_tick = frame_tick;
+                st.tick = st.tick.saturating_add(1);
+            } else if st.last_app_tick != app_tick {
+                st.last_app_tick = app_tick;
+                st.tick = st.tick.saturating_add(1);
+            } else {
+                st.tick = st.tick.saturating_add(1);
+            }
+
+            let out = st.timeline.update_with_cubic_bezier(
+                true, st.tick, bezier.x1, bezier.y1, bezier.x2, bezier.y2,
+            );
+            let start_lease = out.animating && st.lease.is_none();
+            let stop_lease = !out.animating && st.lease.is_some();
+            (out, start_lease, stop_lease)
+        });
+
+    if start_lease {
+        let lease = cx.begin_continuous_frames();
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            st.lease = Some(lease);
+        });
+    } else if stop_lease {
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            st.lease = None;
+        });
+
+        cx.with_state_for(id, ContentTransitionState::default, |st| {
+            st.from_idx = None;
+            st.to_idx = None;
+        });
+    }
+
+    if out.animating {
+        cx.request_frame();
+    } else {
+        // If no continuous-frames lease was acquired (e.g. a 1-tick transition), still clear the
+        // switch state immediately.
+        cx.with_state_for(id, ContentTransitionState::default, |st| {
+            st.from_idx = None;
+            st.to_idx = None;
+        });
+    }
+
+    let (from_motion, to_motion) = content_motion(from_idx, to_idx);
+    NavigationMenuContentTransitionOutput {
+        from_idx: Some(from_idx),
+        to_idx: Some(to_idx),
+        switching: true,
+        progress: out.progress,
+        animating: out.animating,
+        from_motion,
+        to_motion,
+    }
+}
+
+pub fn navigation_menu_content_transition_with_durations_and_cubic_bezier_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: fret_ui::elements::GlobalElementId,
+    open: bool,
+    selected: Option<Arc<str>>,
+    values: &[Arc<str>],
+    open_duration: Duration,
+    close_duration: Duration,
+    bezier: CubicBezier,
+) -> NavigationMenuContentTransitionOutput {
+    let open_ticks = crate::declarative::transition::ticks_60hz_for_duration(open_duration);
+    let close_ticks = crate::declarative::transition::ticks_60hz_for_duration(close_duration);
+    navigation_menu_content_transition_with_durations_and_cubic_bezier(
+        cx,
+        id,
+        open,
+        selected,
+        values,
+        open_ticks,
+        close_ticks,
+        bezier,
+    )
+}
+
 /// Convenience wrapper that uses shadcn-style defaults.
 pub fn navigation_menu_content_transition<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -1741,15 +1903,15 @@ pub fn navigation_menu_content_transition<H: UiHost>(
     selected: Option<Arc<str>>,
     values: &[Arc<str>],
 ) -> NavigationMenuContentTransitionOutput {
-    navigation_menu_content_transition_with_durations_and_easing(
+    navigation_menu_content_transition_with_durations_and_cubic_bezier_duration(
         cx,
         id,
         open,
         selected,
         values,
-        crate::declarative::overlay_motion::SHADCN_MOTION_TICKS_200,
-        crate::declarative::overlay_motion::SHADCN_MOTION_TICKS_200,
-        crate::declarative::overlay_motion::shadcn_ease,
+        crate::declarative::overlay_motion::shadcn_motion_duration_200(cx),
+        crate::declarative::overlay_motion::shadcn_motion_duration_200(cx),
+        crate::declarative::overlay_motion::shadcn_motion_ease_bezier(cx),
     )
 }
 
