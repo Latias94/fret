@@ -6730,6 +6730,32 @@ See: `docs/tracy.md`.\n";
             let launched_by_fretboard = reuse_launch && launch.is_some();
             let mut perf_launch_env = launch_env.clone();
             let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+            if let Some(name) = suite_name.as_deref() {
+                // Make the common UI gallery perf suites reproducible without requiring callers
+                // to remember a pile of `--env` flags. Callers can still override them explicitly
+                // via `--env KEY=...`.
+                if matches!(
+                    name,
+                    "ui-gallery"
+                        | "ui-gallery-steady"
+                        | "ui-resize-probes"
+                        | "ui-code-editor-resize-probes"
+                ) {
+                    let _ = ensure_env_var(&mut perf_launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    let _ = ensure_env_var(
+                        &mut perf_launch_env,
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+                        "1",
+                    );
+                }
+                if matches!(name, "ui-gallery" | "ui-gallery-steady") {
+                    let _ = ensure_env_var(
+                        &mut perf_launch_env,
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
+                        "1",
+                    );
+                }
+            }
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
