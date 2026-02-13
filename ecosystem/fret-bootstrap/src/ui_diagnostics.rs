@@ -6531,8 +6531,23 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         return true;
     }
 
-    if active.v2_step_state.is_some() {
-        return false;
+    if let Some(state) = active.v2_step_state.as_ref() {
+        // Multi-frame script steps may still need fresh semantics snapshots to make progress.
+        // In particular, scroll/visibility + "stable" gates must observe updated bounds as the
+        // UI reacts to injected events.
+        return matches!(
+            state,
+            V2StepState::ClickStable(_)
+                | V2StepState::WaitBoundsStable(_)
+                | V2StepState::EnsureVisible(_)
+                | V2StepState::ScrollIntoView(_)
+                | V2StepState::TypeTextInto(_)
+                | V2StepState::MenuSelect(_)
+                | V2StepState::MenuSelectPath(_)
+                | V2StepState::DragPointerUntil(_)
+                | V2StepState::DragTo(_)
+                | V2StepState::SetSliderValue(_)
+        );
     }
 
     let Some(step) = active.steps.get(active.next_step) else {
