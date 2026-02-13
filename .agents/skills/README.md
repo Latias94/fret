@@ -96,6 +96,7 @@ Pick **one primary skill** based on intent, then pull in the adjacent ones only 
 - Measure or gate performance (numbers/baselines) + attribute worst-frame hitches: `fret-diag-workflow`
 - Maintain/author framework components (parity work + gates): `fret-shadcn-source-alignment` (framework/eco authors)
 - Maintain the framework safely (contracts + gates): `fret-framework-maintainer-guide`
+- Debug on real mobile devices (Android + iOS evidence): `fret-mobile-real-device-debug`
 - Refactor safely across crates/layers: `fret-boundary-checks`
 - Ship releases: `fret-release-check-and-publish`
 
@@ -112,6 +113,7 @@ Common adjacent pulls:
 - `fret-app-ui-builder`: Product-oriented golden path: pick a baseline style, apply token overrides, compose shadcn recipes, and leave diag/perf gates early.
 - `fret-ui-review`: Review/audit Fret UI code for framework-aligned UX correctness (tokens, focus-visible, overlays, commands gating, `test_id`, and regression gates).
 - `fret-framework-maintainer-guide`: Maintainer playbook for contracts/ADRs, boundaries, diagnostics/perf gates, upstream alignment (shadcn/Radix/Base UI), and evidence discipline.
+- `fret-mobile-real-device-debug`: Real-device mobile debugging workflow (Android + iOS): run the smallest mobile target, verify Vulkan/Metal constraints, and capture diagnostics bundle evidence for ADRs/workstreams.
 - `fret-diag-workflow`: Diagnostics for correctness + perf: scripted repros, bundles/screenshots, triage/compare, perf gates (`diag perf`), and worst-frame attribution.
 - `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
 - `fret-crate-audits`: Crate-by-crate code-quality audits for fearless refactors (purpose/exports/deps/hazards) and a small gate set.
