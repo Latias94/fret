@@ -140,7 +140,8 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
   - [x] Align listbox a11y selection semantics with combobox expectations (active descendant + checked selection).
   - [x] Add a starter `ui-gallery-combobox` suite (open/select/focus restore; keyboard/typeahead commit; dismiss; roving skips disabled).
   - [x] Cover: placement sanity + collision/flip/shift evidence.
-  - [ ] Cover: long-list scroll + (future) virtualization invariants.
+  - [x] Cover: long-list scroll invariants (scroll into view + commit + selected state).
+  - [ ] Cover: (future) virtualization invariants (same script should stay valid under virtualization).
   - [ ] Cover: text + IME behavior while open:
     - [x] composition lifecycle + shortcut routing (IME injection + `wait_shortcut_routing_trace`).
     - [x] caret/candidate geometry (cursor-area evidence + in-window bounds gates).
