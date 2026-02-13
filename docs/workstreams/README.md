@@ -165,3 +165,6 @@ Active workstreams:
 - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
 - `docs/workstreams/bottom-up-fearless-refactor-v1-todo.md`
 - `docs/workstreams/bottom-up-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/runtime-safety-hardening-v1.md`
+- `docs/workstreams/runtime-safety-hardening-v1-todo.md`
+- `docs/workstreams/runtime-safety-hardening-v1-milestones.md`
