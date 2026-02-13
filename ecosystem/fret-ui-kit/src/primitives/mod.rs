@@ -33,6 +33,7 @@ pub mod collapsible;
 pub mod collection;
 pub mod combobox;
 pub mod context_menu;
+pub mod control_registry;
 pub mod controllable_state;
 pub mod dialog;
 pub mod direction;
