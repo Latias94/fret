@@ -17,7 +17,7 @@ The Android Emulator *can* expose Vulkan, but the feature surface and stability 
 For Fret’s purposes:
 
 - Treat the emulator as **best-effort** for UI iteration and non-GPU smoke tests.
-- Use **real Android devices** as the acceptance signal for Vulkan-first posture (M3).
+- Use **real Android devices** as the acceptance signal for the preferred Vulkan default (M3).
 
 ## Quick checks
 
@@ -78,4 +78,3 @@ If emulator Vulkan is used for iteration, still archive the same fields as on re
 
 - Android Emulator graphics acceleration docs (Vulkan notes are host-OS specific).
 - Android Emulator release notes (gfxstream/Vulkan changes are often called out per version).
-

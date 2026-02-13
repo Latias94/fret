@@ -48,7 +48,8 @@ Evidence:
 
 Definition of done:
 
-- Android Vulkan-first path runs on at least one real device without crashes during init.
+- Android preferred-backend path (Vulkan by default) runs on at least one real device without
+  crashes during init.
 - The device recipe is documented and repeatable.
 
 Evidence:
