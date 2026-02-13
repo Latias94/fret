@@ -25,6 +25,8 @@ mod shrink;
 mod stats;
 mod suite_summary;
 pub mod transport;
+mod run_artifacts;
+mod tooling_failures;
 mod util;
 
 use compare::{
@@ -121,6 +123,11 @@ use stats::{
     check_report_for_hover_layout_invalidations, clear_script_result_files,
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
+};
+use run_artifacts::{run_id_artifact_dir, write_run_id_bundle_json, write_run_id_script_result};
+use tooling_failures::{
+    mark_existing_script_result_tooling_failure, write_tooling_failure_script_result,
+    write_tooling_failure_script_result_if_missing, push_tooling_event_log_entry,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
@@ -12231,110 +12238,6 @@ fn write_script_result_capability_missing(
     );
 }
 
-fn script_result_has_stable_reason_code(script_result_path: &Path) -> bool {
-    read_json_value(script_result_path)
-        .and_then(|v| {
-            v.get("reason_code")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-        })
-        .is_some()
-}
-
-fn write_tooling_failure_script_result(
-    script_result_path: &Path,
-    reason_code: &str,
-    reason: &str,
-    kind: &str,
-    note: Option<String>,
-) {
-    let now = now_unix_ms();
-    let evidence = UiScriptEvidenceV1 {
-        event_log: vec![UiScriptEventLogEntryV1 {
-            unix_ms: now,
-            kind: kind.to_string(),
-            step_index: None,
-            note,
-            bundle_dir: None,
-        }],
-        ..UiScriptEvidenceV1::default()
-    };
-    let result = UiScriptResultV1 {
-        schema_version: 1,
-        run_id: 0,
-        updated_unix_ms: now,
-        window: None,
-        stage: UiScriptStageV1::Failed,
-        step_index: None,
-        reason_code: Some(reason_code.to_string()),
-        reason: Some(reason.to_string()),
-        evidence: Some(evidence),
-        last_bundle_dir: None,
-        last_bundle_artifact: None,
-    };
-
-    let _ = write_json_value(
-        script_result_path,
-        &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-    );
-}
-
-fn write_tooling_failure_script_result_if_missing(
-    script_result_path: &Path,
-    reason_code: &str,
-    reason: &str,
-    kind: &str,
-    note: Option<String>,
-) {
-    if script_result_has_stable_reason_code(script_result_path) {
-        return;
-    }
-
-    write_tooling_failure_script_result(script_result_path, reason_code, reason, kind, note);
-}
-
-fn push_tooling_event_log_entry(result: &mut UiScriptResultV1, kind: &str, note: Option<String>) {
-    let now = now_unix_ms();
-    let evidence = result
-        .evidence
-        .get_or_insert_with(UiScriptEvidenceV1::default);
-    evidence.event_log.push(UiScriptEventLogEntryV1 {
-        unix_ms: now,
-        kind: kind.to_string(),
-        step_index: result.step_index,
-        note,
-        bundle_dir: result.last_bundle_dir.clone(),
-    });
-}
-
-fn mark_existing_script_result_tooling_failure(
-    out_dir: &Path,
-    script_result_path: &Path,
-    reason_code: &str,
-    reason: &str,
-    kind: &str,
-    note: Option<String>,
-) {
-    if let Ok(bytes) = std::fs::read(script_result_path) {
-        if let Ok(mut parsed) = serde_json::from_slice::<UiScriptResultV1>(&bytes) {
-            push_tooling_event_log_entry(&mut parsed, kind, note.clone());
-            if matches!(parsed.stage, UiScriptStageV1::Passed) {
-                parsed.stage = UiScriptStageV1::Failed;
-                parsed.reason_code = Some(reason_code.to_string());
-                parsed.reason = Some(reason.to_string());
-            }
-            let _ = write_json_value(
-                script_result_path,
-                &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
-            );
-            write_run_id_script_result(out_dir, parsed.run_id, &parsed);
-            return;
-        }
-    }
-
-    write_tooling_failure_script_result(script_result_path, reason_code, reason, kind, note);
-}
-
 fn gate_required_capabilities_with_script_result(
     out_path: &Path,
     script_result_path: &Path,
@@ -13148,33 +13051,6 @@ fn dump_bundle_over_transport(
     })?;
 
     materialize_devtools_bundle_dumped(out_dir, &dumped)
-}
-
-fn run_id_artifact_dir(out_dir: &Path, run_id: u64) -> PathBuf {
-    out_dir.join(run_id.to_string())
-}
-
-fn write_run_id_script_result(out_dir: &Path, run_id: u64, result: &UiScriptResultV1) {
-    let dir = run_id_artifact_dir(out_dir, run_id);
-    let path = dir.join("script.result.json");
-    let _ = write_json_value(
-        &path,
-        &serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({})),
-    );
-}
-
-fn write_run_id_bundle_json(out_dir: &Path, run_id: u64, bundle_json_path: &Path) {
-    if !bundle_json_path.is_file() {
-        return;
-    }
-    let dir = run_id_artifact_dir(out_dir, run_id);
-    let dst = dir.join("bundle.json");
-    if let Some(parent) = dst.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    // Best-effort alias: keep a stable per-run path even when the underlying bundle export directory
-    // is timestamp/label-based (filesystem) or message-derived (WS).
-    let _ = std::fs::copy(bundle_json_path, &dst);
 }
 
 fn run_script_suite_collect_bundles(
