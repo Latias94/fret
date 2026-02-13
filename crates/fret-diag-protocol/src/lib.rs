@@ -1220,6 +1220,8 @@ pub struct UiScriptEvidenceV1 {
     pub event_log: Vec<UiScriptEventLogEntryV1>,
     #[serde(default, skip_serializing_if = "is_zero_u64")]
     pub event_log_dropped: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capabilities_check: Option<UiCapabilitiesCheckV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1238,6 +1240,18 @@ pub struct UiScriptEvidenceV1 {
     pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCapabilitiesCheckV1 {
+    pub schema_version: u32,
+    pub source: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub available: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub missing: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

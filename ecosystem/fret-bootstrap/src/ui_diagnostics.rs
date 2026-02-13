@@ -13729,6 +13729,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
     Some(UiScriptEvidenceV1 {
         event_log: active.event_log.clone(),
         event_log_dropped: active.event_log_dropped,
+        capabilities_check: None,
         selector_resolution_trace: active.selector_resolution_trace.clone(),
         hit_test_trace: active.hit_test_trace.clone(),
         click_stable_trace: active.click_stable_trace.clone(),

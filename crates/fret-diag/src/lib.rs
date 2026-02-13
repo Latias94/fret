@@ -6,7 +6,8 @@ use std::process::Child;
 use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, UiArtifactStatsV1, UiScriptResultV1,
+    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, UiArtifactStatsV1, UiCapabilitiesCheckV1,
+    UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
 };
 
 use zip::write::FileOptions;
@@ -2716,6 +2717,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     exit_after_run,
                     timeout_ms,
                     poll_ms,
+                    &resolved_script_result_path,
+                    &resolved_out_dir.join("check.capabilities.json"),
                 )?;
 
                 let _ = write_json_value(
@@ -2938,10 +2941,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let required_caps = script_required_capabilities(&src);
             if !required_caps.is_empty() {
                 let available_caps = read_filesystem_capabilities(&resolved_out_dir);
-                gate_required_capabilities(
+                gate_required_capabilities_with_script_result(
                     &resolved_out_dir.join("check.capabilities.json"),
+                    &resolved_script_result_path,
                     &required_caps,
                     &available_caps,
+                    "filesystem",
                 )?;
             }
             let mut result = run_script_and_wait(
@@ -3937,10 +3942,12 @@ See: `docs/tracy.md`.\n";
             let mut pack_items: Vec<ReproPackItem> = Vec::new();
 
             if !required_caps.is_empty() {
-                if let Err(err) = gate_required_capabilities(
+                if let Err(err) = gate_required_capabilities_with_script_result(
                     &capabilities_check_path,
+                    &resolved_script_result_path,
                     &required_caps,
                     &available_caps,
+                    "filesystem",
                 ) {
                     overall_error = Some(err);
                 }
@@ -5657,8 +5664,9 @@ See: `docs/tracy.md`.\n";
 
                     let required_caps = script_required_capabilities_value(&script_json);
                     if !required_caps.is_empty() {
-                        gate_required_capabilities_with_source(
+                        gate_required_capabilities_with_script_result(
                             &resolved_out_dir.join("check.capabilities.json"),
+                            &resolved_script_result_path,
                             &required_caps,
                             &devtools_ws_available_caps,
                             "devtools_ws",
@@ -11632,20 +11640,11 @@ fn normalize_capability_string(raw: &str) -> Option<String> {
     Some(mapped.to_string())
 }
 
-fn gate_required_capabilities(
-    out_path: &Path,
-    required: &[String],
-    available: &[String],
-) -> Result<(), String> {
-    gate_required_capabilities_with_source(out_path, required, available, "filesystem")
-}
-
-fn gate_required_capabilities_with_source(
-    out_path: &Path,
-    required: &[String],
-    available: &[String],
+fn capabilities_check_v1(
     source: &str,
-) -> Result<(), String> {
+    required: &[String],
+    available: &[String],
+) -> UiCapabilitiesCheckV1 {
     let available_set: std::collections::HashSet<&str> =
         available.iter().map(|s| s.as_str()).collect();
     let mut missing: Vec<String> = required
@@ -11656,10 +11655,71 @@ fn gate_required_capabilities_with_source(
     missing.sort();
     missing.dedup();
 
-    if missing.is_empty() {
+    UiCapabilitiesCheckV1 {
+        schema_version: 1,
+        source: source.to_string(),
+        required: required.to_vec(),
+        available: available.to_vec(),
+        missing,
+    }
+}
+
+fn write_script_result_capability_missing(
+    script_result_path: &Path,
+    check: &UiCapabilitiesCheckV1,
+) {
+    let now = now_unix_ms();
+    let missing = check.missing.join(", ");
+    let reason = format!(
+        "missing required diagnostics capabilities: {} (source={})",
+        missing, check.source
+    );
+
+    let evidence = UiScriptEvidenceV1 {
+        event_log: vec![UiScriptEventLogEntryV1 {
+            unix_ms: now,
+            kind: "capability_missing".to_string(),
+            step_index: None,
+            note: Some(missing),
+            bundle_dir: None,
+        }],
+        capabilities_check: Some(check.clone()),
+        ..UiScriptEvidenceV1::default()
+    };
+
+    let result = UiScriptResultV1 {
+        schema_version: 1,
+        run_id: 0,
+        updated_unix_ms: now,
+        window: None,
+        stage: UiScriptStageV1::Failed,
+        step_index: None,
+        reason_code: Some("capability.missing".to_string()),
+        reason: Some(reason),
+        evidence: Some(evidence),
+        last_bundle_dir: None,
+        last_bundle_artifact: None,
+    };
+
+    let _ = write_json_value(
+        script_result_path,
+        &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+    );
+}
+
+fn gate_required_capabilities_with_script_result(
+    out_path: &Path,
+    script_result_path: &Path,
+    required: &[String],
+    available: &[String],
+    source: &str,
+) -> Result<(), String> {
+    let check = capabilities_check_v1(source, required, available);
+    if check.missing.is_empty() {
         return Ok(());
     }
 
+    let missing = check.missing.clone();
     let payload = serde_json::json!({
         "schema_version": 1,
         "status": "failed",
@@ -11670,9 +11730,11 @@ fn gate_required_capabilities_with_source(
     });
     let _ = write_json_value(out_path, &payload);
 
+    write_script_result_capability_missing(script_result_path, &check);
+
     Err(format!(
         "missing required diagnostics capabilities: {} (see {})",
-        missing.join(", "),
+        check.missing.join(", "),
         out_path.display()
     ))
 }
@@ -11702,6 +11764,7 @@ mod capability_tests {
         let out_dir = make_temp_dir("fret-diag-capabilities-gate");
         let script_path = out_dir.join("script.json");
         let check_path = out_dir.join("check.capabilities.json");
+        let script_result_path = out_dir.join("script.result.json");
 
         let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
             schema_version: 1,
@@ -11732,13 +11795,87 @@ mod capability_tests {
         let available = read_filesystem_capabilities(&out_dir);
         assert_eq!(available, vec!["diag.script_v2".to_string()]);
 
-        let err = gate_required_capabilities(&check_path, &required, &available).unwrap_err();
+        let err = gate_required_capabilities_with_script_result(
+            &check_path,
+            &script_result_path,
+            &required,
+            &available,
+            "filesystem",
+        )
+        .unwrap_err();
         assert!(err.contains("missing required diagnostics capabilities"));
         assert!(check_path.is_file());
 
         let value: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&check_path).unwrap()).unwrap();
         let missing = value
+            .get("missing")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .collect::<Vec<_>>();
+        assert!(missing.contains(&"diag.screenshot_png".to_string()));
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn gates_missing_capability_writes_script_result_with_structured_evidence() {
+        let out_dir = make_temp_dir("fret-diag-capabilities-script-result");
+        let script_path = out_dir.join("script.json");
+        let check_path = out_dir.join("check.capabilities.json");
+        let script_result_path = out_dir.join("script.result.json");
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["diag.script_v2".to_string()],
+        };
+        std::fs::write(
+            out_dir.join("capabilities.json"),
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "steps": [
+                { "type": "capture_screenshot", "label": null, "timeout_frames": 30 }
+            ]
+        });
+        std::fs::write(
+            &script_path,
+            serde_json::to_string_pretty(&script).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let required = script_required_capabilities(&script_path);
+        let available = read_filesystem_capabilities(&out_dir);
+        let err = gate_required_capabilities_with_script_result(
+            &check_path,
+            &script_result_path,
+            &required,
+            &available,
+            "filesystem",
+        )
+        .unwrap_err();
+        assert!(err.contains("missing required diagnostics capabilities"));
+        assert!(check_path.is_file());
+        assert!(script_result_path.is_file());
+
+        let value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&script_result_path).unwrap()).unwrap();
+        assert_eq!(
+            value.get("reason_code").and_then(|v| v.as_str()),
+            Some("capability.missing")
+        );
+        let check = value
+            .get("evidence")
+            .and_then(|v| v.get("capabilities_check"))
+            .cloned()
+            .unwrap_or_default();
+        let missing = check
             .get("missing")
             .and_then(|v| v.as_array())
             .cloned()
@@ -12039,6 +12176,8 @@ fn run_script_over_devtools_ws(
     exit_after_run: bool,
     timeout_ms: u64,
     poll_ms: u64,
+    script_result_path: &Path,
+    capabilities_check_path: &Path,
 ) -> Result<(UiScriptResultV1, Option<PathBuf>), String> {
     use crate::transport::{
         ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
@@ -12087,8 +12226,9 @@ fn run_script_over_devtools_ws(
         available_caps.sort();
         available_caps.dedup();
 
-        gate_required_capabilities_with_source(
-            &out_dir.join("check.capabilities.json"),
+        gate_required_capabilities_with_script_result(
+            capabilities_check_path,
+            script_result_path,
             &required_caps,
             &available_caps,
             "devtools_ws",
@@ -12178,10 +12318,12 @@ fn run_script_suite_collect_bundles(
     required_caps.dedup();
     if !required_caps.is_empty() {
         let available_caps = read_filesystem_capabilities(&paths.out_dir);
-        if let Err(e) = gate_required_capabilities(
+        if let Err(e) = gate_required_capabilities_with_script_result(
             &paths.out_dir.join("check.capabilities.json"),
+            &paths.script_result_path,
             &required_caps,
             &available_caps,
+            "filesystem",
         ) {
             let _ = stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
             return Err(e);
