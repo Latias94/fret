@@ -47,9 +47,7 @@ struct PendingGlobalSet {
 
 fn strict_runtime_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| {
-        std::env::var_os("FRET_STRICT_RUNTIME").is_some_and(|v| v != std::ffi::OsStr::new("0"))
-    })
+    *ENABLED.get_or_init(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
 }
 
 pub struct App {
@@ -173,15 +171,15 @@ impl App {
         let changed_at = std::panic::Location::caller();
         let type_id = TypeId::of::<T>();
 
-        if let Some(existing) = self.globals.get(&type_id) {
-            if let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>() {
-                return Err(GlobalAccessError::Leased {
-                    type_name: marker.type_name,
-                    type_id,
-                    leased_at: marker.leased_at,
-                    accessed_at: changed_at,
-                });
-            }
+        if let Some(existing) = self.globals.get(&type_id)
+            && let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>()
+        {
+            return Err(GlobalAccessError::Leased {
+                type_name: marker.type_name,
+                type_id,
+                leased_at: marker.leased_at,
+                accessed_at: changed_at,
+            });
         }
 
         self.set_global_at(value, changed_at);
@@ -247,19 +245,19 @@ impl App {
         changed_at: &'static std::panic::Location<'static>,
     ) {
         let type_id = TypeId::of::<T>();
-        if let Some(existing) = self.globals.get(&type_id) {
-            if let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>() {
-                Self::report_global_access_while_leased::<T>(marker, changed_at);
-                self.pending_globals.insert(
-                    type_id,
-                    PendingGlobalSet {
-                        type_name: std::any::type_name::<T>(),
-                        changed_at,
-                        value: Box::new(value),
-                    },
-                );
-                return;
-            }
+        if let Some(existing) = self.globals.get(&type_id)
+            && let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>()
+        {
+            Self::report_global_access_while_leased::<T>(marker, changed_at);
+            self.pending_globals.insert(
+                type_id,
+                PendingGlobalSet {
+                    type_name: std::any::type_name::<T>(),
+                    changed_at,
+                    value: Box::new(value),
+                },
+            );
+            return;
         }
         self.globals.insert(type_id, Box::new(value));
         self.global_type_names
@@ -311,26 +309,26 @@ impl App {
             .entry(type_id)
             .or_insert(std::any::type_name::<T>());
 
-        if let Some(existing) = self.globals.get(&type_id) {
-            if let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>() {
-                if strict_runtime_enabled() {
-                    panic!(
-                        "global already leased: {} (type_id={type_id:?}); leased at {}; accessed at {}",
-                        marker.type_name, marker.leased_at, leased_at
-                    );
-                }
-
-                Self::report_global_access_while_leased::<T>(marker, leased_at);
-                #[cfg(debug_assertions)]
-                {
-                    eprintln!(
-                        "skipping nested global lease mutation; running closure against a temporary value: {} (type_id={type_id:?}); leased at {}; accessed at {}",
-                        marker.type_name, marker.leased_at, leased_at
-                    );
-                }
-                let mut tmp = init();
-                return f(&mut tmp, self);
+        if let Some(existing) = self.globals.get(&type_id)
+            && let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>()
+        {
+            if strict_runtime_enabled() {
+                panic!(
+                    "global already leased: {} (type_id={type_id:?}); leased at {}; accessed at {}",
+                    marker.type_name, marker.leased_at, leased_at
+                );
             }
+
+            Self::report_global_access_while_leased::<T>(marker, leased_at);
+            #[cfg(debug_assertions)]
+            {
+                eprintln!(
+                    "skipping nested global lease mutation; running closure against a temporary value: {} (type_id={type_id:?}); leased at {}; accessed at {}",
+                    marker.type_name, marker.leased_at, leased_at
+                );
+            }
+            let mut tmp = init();
+            return f(&mut tmp, self);
         }
 
         let marker = GlobalLeaseMarker {
@@ -708,7 +706,7 @@ mod global_lease_tests {
         if strict_runtime_enabled() {
             let panicked = catch_unwind(AssertUnwindSafe(|| {
                 app.with_global_mut(Counter::default, |_counter, app| {
-                    let _ = app.with_global_mut(Counter::default, |_nested, _app| {});
+                    app.with_global_mut(Counter::default, |_nested, _app| {});
                 });
             }))
             .is_err();

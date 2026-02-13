@@ -121,7 +121,8 @@ fn window_metrics_service_insets_commit_to_environment_queries() {
         },
     );
 
-    let observed: Arc<Mutex<Option<(Option<Edges>, Option<Edges>)>>> = Arc::new(Mutex::new(None));
+    type ObservedInsets = Arc<Mutex<Option<(Option<Edges>, Option<Edges>)>>>;
+    let observed: ObservedInsets = Arc::new(Mutex::new(None));
     let observed_ref = observed.clone();
     render_root(
         &mut ui,

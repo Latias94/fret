@@ -556,15 +556,13 @@ impl TaffyLayoutEngine {
                     };
                     if let Some(size) = measure_cache.get(&key) {
                         measure_cache_hits = measure_cache_hits.saturating_add(1);
-                        if enable_profile {
-                            if let Some(by_node) = by_node.as_mut() {
-                                if by_node.get(ctx.node).is_none() {
-                                    by_node.insert(ctx.node, MeasureNodeProfile::default());
-                                }
-                                let profile =
-                                    by_node.get_mut(ctx.node).expect("profile entry inserted");
-                                profile.cache_hits = profile.cache_hits.saturating_add(1);
+                        if enable_profile && let Some(by_node) = by_node.as_mut() {
+                            if by_node.get(ctx.node).is_none() {
+                                by_node.insert(ctx.node, MeasureNodeProfile::default());
                             }
+                            let profile =
+                                by_node.get_mut(ctx.node).expect("profile entry inserted");
+                            profile.cache_hits = profile.cache_hits.saturating_add(1);
                         }
                         return *size;
                     }

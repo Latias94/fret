@@ -1,6 +1,6 @@
 # Runtime Safety Hardening v1 (Core + Mechanism Crates)
 
-Status: Draft (workstream notes only; ADRs remain the source of truth)
+Status: Complete (landed on main; ADRs remain the source of truth)
 
 Tracking files:
 

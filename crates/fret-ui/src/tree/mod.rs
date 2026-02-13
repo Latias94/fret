@@ -393,6 +393,7 @@ pub struct UiTree<H: UiHost> {
     paint_pass: u64,
     scratch_pending_invalidations: HashMap<NodeId, u8>,
     scratch_node_stack: Vec<NodeId>,
+    scratch_element_nodes: Vec<(GlobalElementId, NodeId)>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     layout_invalidations_count: u32,
@@ -502,10 +503,7 @@ struct LayoutNodeProfileConfig {
 
 impl LayoutNodeProfileConfig {
     fn from_env() -> Option<Self> {
-        let Some(cfg) = crate::runtime_config::ui_runtime_config().layout_node_profile else {
-            return None;
-        };
-
+        let cfg = crate::runtime_config::ui_runtime_config().layout_node_profile?;
         Some(Self {
             top_n: cfg.top_n,
             min_elapsed: cfg.min_elapsed,
@@ -621,10 +619,7 @@ struct MeasureNodeProfileConfig {
 
 impl MeasureNodeProfileConfig {
     fn from_env() -> Option<Self> {
-        let Some(cfg) = crate::runtime_config::ui_runtime_config().measure_node_profile else {
-            return None;
-        };
-
+        let cfg = crate::runtime_config::ui_runtime_config().measure_node_profile?;
         Some(Self {
             top_n: cfg.top_n,
             min_elapsed: cfg.min_elapsed,
@@ -762,6 +757,7 @@ impl<H: UiHost> Default for UiTree<H> {
             paint_pass: 0,
             scratch_pending_invalidations: HashMap::new(),
             scratch_node_stack: Vec::new(),
+            scratch_element_nodes: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             layout_invalidations_count: 0,

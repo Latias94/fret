@@ -39,7 +39,7 @@ fn apply_patch_op(
             .find(|m| m.title.as_ref() == *first)?;
 
         fn resolve_submenu_items_mut<'a>(
-            items: &'a mut Vec<MenuItem>,
+            items: &'a mut [MenuItem],
             path: &[&str],
         ) -> Option<&'a mut Vec<MenuItem>> {
             let (first, rest) = path.split_first()?;

@@ -185,7 +185,7 @@ impl DockGraph {
                 let inv_total = if total > 0.0 { 1.0 / total } else { 0.0 };
 
                 let mut cursor = 0.0;
-                for i in 0..children.len() {
+                for (i, child) in children.iter().copied().enumerate() {
                     let f = if total > 0.0 {
                         cleaned_share_at(i) * inv_total
                     } else {
@@ -211,7 +211,7 @@ impl DockGraph {
                     };
 
                     cursor = next_cursor;
-                    self.compute_layout(children[i], child_rect, out);
+                    self.compute_layout(child, child_rect, out);
                 }
             }
             DockNode::Floating { child } => {

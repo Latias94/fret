@@ -53,6 +53,7 @@ impl AnyElement {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum ElementKind {
     Container(ContainerProps),
@@ -656,22 +657,13 @@ impl Default for SemanticsProps {
 ///
 /// This is a mechanism-only primitive: breakpoint tables and hysteresis policies live in the
 /// component ecosystem (ADR 0066 / ADR 0231).
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct LayoutQueryRegionProps {
     pub layout: LayoutStyle,
     /// Optional name used for diagnostics and audit readability.
     ///
     /// This is not a stable identifier and must not be used for equality.
     pub name: Option<Arc<str>>,
-}
-
-impl Default for LayoutQueryRegionProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            name: None,
-        }
-    }
 }
 
 /// A transparent focus-scope wrapper that can trap focus traversal within its subtree.

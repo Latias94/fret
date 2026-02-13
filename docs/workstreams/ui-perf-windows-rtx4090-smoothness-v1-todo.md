@@ -14,6 +14,7 @@
 ## P1 — Tooling / Protocol
 
 - [x] Add a perf log entry (commit-addressable): command lines + out dirs + worst bundle anchors.
+- [x] Lock UI gallery perf env defaults (cache+shell, VirtualList known heights) so `diag perf ui-gallery(-steady)` matches the baseline without manual flags.
 - [ ] If needed, add a dedicated `ui-gallery-*` script that isolates a single failing steady workload.
 
 ## P1 — Hardening

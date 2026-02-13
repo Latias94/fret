@@ -6619,16 +6619,97 @@ impl UiDiagnosticsService {
         #[cfg(feature = "diagnostics-ws")]
         {
             let embed = self.cfg.devtools_embed_bundle || cfg!(target_arch = "wasm32");
-            let bundle_value = embed.then(|| serde_json::to_value(&bundle).ok()).flatten();
-            let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
-                schema_version: 1,
-                exported_unix_ms: ts,
-                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
-                dir: display_path(&self.cfg.out_dir, &dir),
-                bundle: bundle_value,
-            })
-            .unwrap_or(serde_json::Value::Null);
-            self.ws_send("bundle.dumped", payload);
+            const DEVTOOLS_BUNDLE_CHUNK_THRESHOLD_BYTES: usize = 512 * 1024;
+            const DEVTOOLS_BUNDLE_CHUNK_BYTES: usize = 256 * 1024;
+
+            fn chunk_utf8_string(s: &str, max_bytes: usize) -> Vec<String> {
+                let max_bytes = max_bytes.max(1);
+                let mut chunks = Vec::<String>::new();
+                let mut start = 0usize;
+                while start < s.len() {
+                    let mut end = (start + max_bytes).min(s.len());
+                    while end > start && !s.is_char_boundary(end) {
+                        end -= 1;
+                    }
+                    if end == start {
+                        // This should be unreachable for valid UTF-8 strings, but avoid infinite
+                        // loops in case of unexpected invariants.
+                        end = (start + 1).min(s.len());
+                        while end < s.len() && !s.is_char_boundary(end) {
+                            end += 1;
+                        }
+                    }
+                    chunks.push(s[start..end].to_string());
+                    start = end;
+                }
+                chunks
+            }
+
+            if embed {
+                // Prefer the existing JSON Value embedding for small bundles. For larger bundles,
+                // stream a chunked JSON string to avoid oversized WS messages.
+                let bundle_json = serde_json::to_string(&bundle).ok();
+                if let Some(bundle_json) = bundle_json {
+                    if bundle_json.len() >= DEVTOOLS_BUNDLE_CHUNK_THRESHOLD_BYTES {
+                        let chunks = chunk_utf8_string(&bundle_json, DEVTOOLS_BUNDLE_CHUNK_BYTES);
+                        let chunk_count = chunks.len().min(u32::MAX as usize) as u32;
+                        for (idx, chunk) in chunks.into_iter().enumerate() {
+                            let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                                schema_version: 1,
+                                exported_unix_ms: ts,
+                                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                                dir: display_path(&self.cfg.out_dir, &dir),
+                                bundle: None,
+                                bundle_json_chunk: Some(chunk),
+                                bundle_json_chunk_index: Some(idx as u32),
+                                bundle_json_chunk_count: Some(chunk_count),
+                            })
+                            .unwrap_or(serde_json::Value::Null);
+                            self.ws_send("bundle.dumped", payload);
+                        }
+                    } else {
+                        let bundle_value = serde_json::to_value(&bundle).ok();
+                        let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                            schema_version: 1,
+                            exported_unix_ms: ts,
+                            out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                            dir: display_path(&self.cfg.out_dir, &dir),
+                            bundle: bundle_value,
+                            bundle_json_chunk: None,
+                            bundle_json_chunk_index: None,
+                            bundle_json_chunk_count: None,
+                        })
+                        .unwrap_or(serde_json::Value::Null);
+                        self.ws_send("bundle.dumped", payload);
+                    }
+                } else {
+                    let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                        schema_version: 1,
+                        exported_unix_ms: ts,
+                        out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                        dir: display_path(&self.cfg.out_dir, &dir),
+                        bundle: None,
+                        bundle_json_chunk: None,
+                        bundle_json_chunk_index: None,
+                        bundle_json_chunk_count: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send("bundle.dumped", payload);
+                }
+            } else {
+                let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                    schema_version: 1,
+                    exported_unix_ms: ts,
+                    out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                    dir: display_path(&self.cfg.out_dir, &dir),
+                    bundle: None,
+                    bundle_json_chunk: None,
+                    bundle_json_chunk_index: None,
+                    bundle_json_chunk_count: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send("bundle.dumped", payload);
+            }
         }
 
         Some(dir)
@@ -6863,8 +6944,23 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         return true;
     }
 
-    if active.v2_step_state.is_some() {
-        return false;
+    if let Some(state) = active.v2_step_state.as_ref() {
+        // Multi-frame script steps may still need fresh semantics snapshots to make progress.
+        // In particular, scroll/visibility + "stable" gates must observe updated bounds as the
+        // UI reacts to injected events.
+        return matches!(
+            state,
+            V2StepState::ClickStable(_)
+                | V2StepState::WaitBoundsStable(_)
+                | V2StepState::EnsureVisible(_)
+                | V2StepState::ScrollIntoView(_)
+                | V2StepState::TypeTextInto(_)
+                | V2StepState::MenuSelect(_)
+                | V2StepState::MenuSelectPath(_)
+                | V2StepState::DragPointerUntil(_)
+                | V2StepState::DragTo(_)
+                | V2StepState::SetSliderValue(_)
+        );
     }
 
     let Some(step) = active.steps.get(active.next_step) else {

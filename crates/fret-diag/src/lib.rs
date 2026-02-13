@@ -25,6 +25,8 @@ mod shrink;
 mod stats;
 mod suite_summary;
 pub mod transport;
+mod run_artifacts;
+mod tooling_failures;
 mod util;
 
 use compare::{
@@ -122,6 +124,15 @@ use stats::{
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
 };
+use run_artifacts::{
+    materialize_bundle_json_from_manifest_chunks_if_missing,
+    materialize_run_id_bundle_json_from_chunks_if_missing, run_id_artifact_dir,
+    write_run_id_bundle_json, write_run_id_script_result,
+};
+use tooling_failures::{
+    mark_existing_script_result_tooling_failure, write_tooling_failure_script_result,
+    write_tooling_failure_script_result_if_missing, push_tooling_event_log_entry,
+};
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
 #[derive(Debug, Clone)]
@@ -161,7 +172,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut inspect_path: Option<PathBuf> = None;
     let mut inspect_trigger_path: Option<PathBuf> = None;
     let mut inspect_consume_clicks: Option<bool> = None;
-    let mut timeout_ms: u64 = 30_000;
+    let mut timeout_ms: u64 = 240_000;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
@@ -1658,6 +1669,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "FRET_DIAG_FIXED_FRAME_DELTA_MS",
             &ms.to_string(),
         );
+    }
+    if check_pixels_changed_test_id.is_some() {
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
     }
 
     let resource_footprint_thresholds = ResourceFootprintThresholds {
@@ -3366,6 +3380,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut baseline_run: Option<usize> = None;
             let mut baseline_bundle: Option<PathBuf> = None;
 
+            let mut tooling_error_reason_code: Option<String> = None;
+
             let mut failed_runs: u64 = 0;
             let mut differing_runs: u64 = 0;
             let mut first_failed_run: Option<usize> = None;
@@ -3390,6 +3406,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             fn read_script_result_typed(path: &Path) -> Option<UiScriptResultV1> {
                 let bytes = std::fs::read(path).ok()?;
                 serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
+            }
+
+            fn read_tooling_reason_code(path: &Path) -> Option<String> {
+                read_json_value(path).and_then(|v| {
+                    v.get("reason_code")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+            }
+
+            fn repeat_tooling_reason_code_from_error(err: &str) -> &'static str {
+                if err.contains("timeout waiting for script result") {
+                    "timeout.tooling.script_result"
+                } else {
+                    "tooling.repeat.failed"
+                }
             }
 
             fn push_count(map: &mut std::collections::BTreeMap<String, u64>, key: &str) {
@@ -3808,6 +3840,19 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         })
                     }
                     Err(err) => {
+                        let code = read_tooling_reason_code(&resolved_script_result_path)
+                            .unwrap_or_else(|| {
+                                repeat_tooling_reason_code_from_error(&err).to_string()
+                            });
+                        tooling_error_reason_code =
+                            tooling_error_reason_code.or_else(|| Some(code.clone()));
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            &code,
+                            &err,
+                            "tooling_error",
+                            Some(format!("repeat run index={run_index}")),
+                        );
                         failed_runs += 1;
                         if first_failed_run.is_none() {
                             first_failed_run = Some(run_index);
@@ -3816,6 +3861,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         serde_json::json!({
                             "index": run_index,
                             "stage": "error",
+                            "reason_code": code,
                             "error": err,
                         })
                     }
@@ -3870,6 +3916,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 "repeat": repeat,
                 "baseline_run": baseline_run,
                 "highlights": highlights,
+                "error_reason_code": tooling_error_reason_code,
                 "options": {
                     "warmup_frames": warmup_frames,
                     "compare_eps_px": compare_eps_px,
@@ -3906,6 +3953,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     "missing script path or suite name (try: fretboard diag repro ui-gallery | fretboard diag repro ./script.json)"
                         .to_string(),
                 );
+            }
+
+            fn read_tooling_reason_code(path: &Path) -> Option<String> {
+                read_json_value(path).and_then(|v| {
+                    v.get("reason_code")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
             }
 
             let mut pack_defaults = (
@@ -3952,6 +4007,15 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
 
             let summary_path = resolved_out_dir.join("repro.summary.json");
+
+            let mut required_caps: Vec<String> = Vec::new();
+            for src in scripts.iter() {
+                required_caps.extend(script_required_capabilities(src));
+            }
+            required_caps.sort();
+            required_caps.dedup();
+
+            let mut overall_reason_code: Option<String> = None;
 
             let mut repro_launch = launch.clone();
             let mut repro_launch_env = launch_env.clone();
@@ -4010,7 +4074,7 @@ See: `docs/tracy.md`.\n";
                 renderdoc_autocapture_after_frames = Some(after);
             }
 
-            let mut child = maybe_launch_demo(
+            let mut child = match maybe_launch_demo(
                 &repro_launch,
                 &repro_launch_env,
                 &workspace_root,
@@ -4022,22 +4086,72 @@ See: `docs/tracy.md`.\n";
                     || scripts.iter().any(|p| script_requests_screenshots(p)),
                 timeout_ms,
                 poll_ms,
-            )?;
+            ) {
+                Ok(v) => v,
+                Err(err) => {
+                    write_tooling_failure_script_result(
+                        &resolved_script_result_path,
+                        "tooling.launch.failed",
+                        &err,
+                        "tooling_error",
+                        Some("maybe_launch_demo".to_string()),
+                    );
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": now_unix_ms(),
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "suite": suite_name,
+                        "scripts": scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                        "capabilities": serde_json::json!({
+                            "required": required_caps,
+                            "available": [],
+                            "check_file": None::<String>,
+                        }),
+                        "error_reason_code": "tooling.launch.failed",
+                        "error": err,
+                    });
+                    let _ = write_json_value(&summary_path, &payload);
+                    return Err("repro setup failed (see repro.summary.json)".to_string());
+                }
+            };
 
-            let mut required_caps: Vec<String> = Vec::new();
-            for src in scripts.iter() {
-                required_caps.extend(script_required_capabilities(src));
-            }
-            required_caps.sort();
-            required_caps.dedup();
-
-            let connected = connect_filesystem_tooling(
+            let connected = match connect_filesystem_tooling(
                 &fs_transport_cfg,
                 &resolved_ready_path,
                 false,
                 timeout_ms,
                 poll_ms,
-            )?;
+            ) {
+                Ok(v) => v,
+                Err(err) => {
+                    write_tooling_failure_script_result(
+                        &resolved_script_result_path,
+                        "tooling.connect.failed",
+                        &err,
+                        "tooling_error",
+                        Some("connect_filesystem_tooling".to_string()),
+                    );
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": now_unix_ms(),
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "suite": suite_name,
+                        "scripts": scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                        "capabilities": serde_json::json!({
+                            "required": required_caps,
+                            "available": [],
+                            "check_file": None::<String>,
+                        }),
+                        "error_reason_code": "tooling.connect.failed",
+                        "error": err,
+                    });
+                    let _ = write_json_value(&summary_path, &payload);
+                    if repro_launch.is_some() {
+                        let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    }
+                    return Err("repro setup failed (see repro.summary.json)".to_string());
+                }
+            };
             let available_caps = connected.available_caps.clone();
             let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
 
@@ -4059,6 +4173,8 @@ See: `docs/tracy.md`.\n";
                     &available_caps,
                     "filesystem",
                 ) {
+                    overall_reason_code = read_tooling_reason_code(&resolved_script_result_path)
+                        .or_else(|| Some("capability.missing".to_string()));
                     overall_error = Some(err);
                 }
             }
@@ -4067,9 +4183,39 @@ See: `docs/tracy.md`.\n";
                 if overall_error.is_some() {
                     break;
                 }
+                let script_json_bytes = match std::fs::read(&src) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        let err = e.to_string();
+                        overall_reason_code = Some("tooling.script.read_failed".to_string());
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.script.read_failed",
+                            &err,
+                            "tooling_error",
+                            Some(src.display().to_string()),
+                        );
+                        overall_error = Some(err);
+                        break;
+                    }
+                };
                 let script_json: serde_json::Value =
-                    serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-                        .map_err(|e| e.to_string())?;
+                    match serde_json::from_slice(&script_json_bytes) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            let err = e.to_string();
+                            overall_reason_code = Some("tooling.script.parse_failed".to_string());
+                            write_tooling_failure_script_result(
+                                &resolved_script_result_path,
+                                "tooling.script.parse_failed",
+                                &err,
+                                "tooling_error",
+                                Some(src.display().to_string()),
+                            );
+                            overall_error = Some(err);
+                            break;
+                        }
+                    };
 
                 let (raw_result, _bundle_path) = match run_script_over_transport(
                     &resolved_out_dir,
@@ -4085,6 +4231,9 @@ See: `docs/tracy.md`.\n";
                 ) {
                     Ok(v) => v,
                     Err(err) => {
+                        overall_reason_code =
+                            read_tooling_reason_code(&resolved_script_result_path)
+                                .or_else(|| Some("tooling.run.failed".to_string()));
                         overall_error = Some(err);
                         break;
                     }
@@ -4166,6 +4315,20 @@ See: `docs/tracy.md`.\n";
                             bundle_path = Some(p);
                         }
                         Err(err) => {
+                            let code = if err.contains("timed out waiting") {
+                                "timeout.tooling.bundle_dump"
+                            } else {
+                                "tooling.bundle_dump.failed"
+                            };
+                            overall_reason_code = Some(code.to_string());
+                            mark_existing_script_result_tooling_failure(
+                                &resolved_out_dir,
+                                &resolved_script_result_path,
+                                code,
+                                &err,
+                                "tooling_bundle_dump_failed",
+                                Some(src.display().to_string()),
+                            );
                             overall_error = Some(err);
                             break;
                         }
@@ -4285,6 +4448,8 @@ See: `docs/tracy.md`.\n";
 
                     if wants_post_run_checks_for_script {
                         let Some(bundle_path) = bundle_path.as_ref() else {
+                            overall_reason_code =
+                                Some("tooling.bundle_missing_for_post_run_checks".to_string());
                             overall_error = Some(
                                 "script passed but no bundle.json was found (required for post-run checks)"
                                     .to_string(),
@@ -4387,11 +4552,17 @@ See: `docs/tracy.md`.\n";
                             check_retained_vlist_keep_alive_budget,
                             warmup_frames,
                         ) {
+                            overall_reason_code =
+                                Some("tooling.post_run_checks.failed".to_string());
                             overall_error = Some(err);
                             break;
                         }
                     }
                 } else {
+                    overall_reason_code = result
+                        .reason_code
+                        .clone()
+                        .or_else(|| Some("script.failed".to_string()));
                     overall_error = Some(format!(
                         "script failed: {} (run_id={}, step={:?}, reason={:?})",
                         src.display(),
@@ -4658,6 +4829,7 @@ See: `docs/tracy.md`.\n";
                     "reason": r.reason,
                     "last_bundle_dir": r.last_bundle_dir,
                 })),
+                "error_reason_code": overall_reason_code,
                 "error": overall_error,
             });
 
@@ -4723,6 +4895,7 @@ See: `docs/tracy.md`.\n";
                         warmup_frames,
                     ) {
                         overall_error = Some(format!("failed to pack repro zip: {err}"));
+                        overall_reason_code = Some("tooling.pack.failed".to_string());
                     } else {
                         packed_zip = Some(zip_out.clone());
                     }
@@ -4731,6 +4904,7 @@ See: `docs/tracy.md`.\n";
                         "no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
                             .to_string(),
                     );
+                    overall_reason_code = Some("tooling.bundle_missing".to_string());
                 }
 
                 if overall_error.is_some() {
@@ -4747,6 +4921,12 @@ See: `docs/tracy.md`.\n";
                                         overall_error.clone().unwrap_or_default(),
                                     ),
                                 );
+                                if let Some(code) = overall_reason_code.as_ref() {
+                                    obj.insert(
+                                        "error_reason_code".to_string(),
+                                        serde_json::Value::String(code.clone()),
+                                    );
+                                }
                                 serde_json::Value::Object(obj)
                             })
                             .unwrap_or(summary_json.clone()),
@@ -4763,6 +4943,7 @@ See: `docs/tracy.md`.\n";
                     r.failures,
                     r.evidence_path.display()
                 ));
+                overall_reason_code = Some("tooling.resource_footprint.failed".to_string());
             }
             if let Some(r) = redraw_hitches_gate.as_ref()
                 && r.failures > 0
@@ -4773,6 +4954,7 @@ See: `docs/tracy.md`.\n";
                     r.failures,
                     r.evidence_path.display()
                 ));
+                overall_reason_code = Some("tooling.redraw_hitches.failed".to_string());
             }
 
             let final_summary_json = summary_json
@@ -4781,6 +4963,12 @@ See: `docs/tracy.md`.\n";
                 .map(|mut obj| {
                     if let Some(err) = overall_error.as_ref() {
                         obj.insert("error".to_string(), serde_json::Value::String(err.clone()));
+                    }
+                    if let Some(code) = overall_reason_code.as_ref() {
+                        obj.insert(
+                            "error_reason_code".to_string(),
+                            serde_json::Value::String(code.clone()),
+                        );
                     }
                     serde_json::Value::Object(obj)
                 })
@@ -5742,6 +5930,16 @@ See: `docs/tracy.md`.\n";
                 || devtools_token.is_some()
                 || devtools_session_id.is_some();
 
+            let suite_summary_path = resolved_out_dir.join("suite.summary.json");
+            let suite_summary_suite = (rest.len() == 1).then(|| rest[0].clone());
+            let suite_summary_generated_unix_ms = now_unix_ms();
+            let mut suite_stage_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut suite_reason_code_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut suite_rows: Vec<serde_json::Value> = Vec::new();
+            let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
+
             let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
                 if launch.is_some() || reuse_launch {
                     return Err(
@@ -5759,13 +5957,47 @@ See: `docs/tracy.md`.\n";
                         .to_string()
                 })?;
 
-                Some(connect_devtools_ws_tooling(
+                match connect_devtools_ws_tooling(
                     ws_url.as_str(),
                     token.as_str(),
                     devtools_session_id.as_deref(),
                     timeout_ms,
                     poll_ms,
-                )?)
+                ) {
+                    Ok(v) => Some(v),
+                    Err(err) => {
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.connect.failed",
+                            &err,
+                            "tooling_error",
+                            Some("connect_devtools_ws_tooling".to_string()),
+                        );
+                        suite_rows.push(serde_json::json!({
+                            "error_code": "tooling.connect.failed",
+                            "reason_code": "tooling.connect.failed",
+                            "error": err,
+                        }));
+                        let payload = serde_json::json!({
+                            "schema_version": 1,
+                            "generated_unix_ms": suite_summary_generated_unix_ms,
+                            "kind": "suite_summary",
+                            "status": "error",
+                            "error_reason_code": "tooling.connect.failed",
+                            "suite": suite_summary_suite,
+                            "out_dir": resolved_out_dir.display().to_string(),
+                            "warmup_frames": warmup_frames,
+                            "reuse_launch": reuse_launch,
+                            "wants_screenshots": suite_wants_screenshots,
+                            "stage_counts": suite_stage_counts,
+                            "reason_code_counts": suite_reason_code_counts,
+                            "evidence_aggregate": suite_evidence_agg.as_json(),
+                            "rows": suite_rows,
+                        });
+                        let _ = write_json_value(&suite_summary_path, &payload);
+                        return Err("suite setup failed (see suite.summary.json)".to_string());
+                    }
+                }
             } else {
                 None
             };
@@ -5774,7 +6006,7 @@ See: `docs/tracy.md`.\n";
             let mut child = if use_devtools_ws {
                 None
             } else if reuse_process {
-                maybe_launch_demo(
+                match maybe_launch_demo(
                     &launch,
                     &suite_launch_env,
                     &workspace_root,
@@ -5784,38 +6016,100 @@ See: `docs/tracy.md`.\n";
                     suite_wants_screenshots,
                     timeout_ms,
                     poll_ms,
-                )?
+                ) {
+                    Ok(v) => v,
+                    Err(err) => {
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.launch.failed",
+                            &err,
+                            "tooling_error",
+                            Some("maybe_launch_demo".to_string()),
+                        );
+                        suite_rows.push(serde_json::json!({
+                            "error_code": "tooling.launch.failed",
+                            "reason_code": "tooling.launch.failed",
+                            "error": err,
+                        }));
+                        let payload = serde_json::json!({
+                            "schema_version": 1,
+                            "generated_unix_ms": suite_summary_generated_unix_ms,
+                            "kind": "suite_summary",
+                            "status": "error",
+                            "error_reason_code": "tooling.launch.failed",
+                            "suite": suite_summary_suite,
+                            "out_dir": resolved_out_dir.display().to_string(),
+                            "warmup_frames": warmup_frames,
+                            "reuse_launch": reuse_launch,
+                            "wants_screenshots": suite_wants_screenshots,
+                            "stage_counts": suite_stage_counts,
+                            "reason_code_counts": suite_reason_code_counts,
+                            "evidence_aggregate": suite_evidence_agg.as_json(),
+                            "rows": suite_rows,
+                        });
+                        let _ = write_json_value(&suite_summary_path, &payload);
+                        return Err("suite setup failed (see suite.summary.json)".to_string());
+                    }
+                }
             } else {
                 None
             };
 
             let connected_fs: Option<ConnectedToolingTransport> =
                 if !use_devtools_ws && reuse_process {
-                    Some(connect_filesystem_tooling(
+                    match connect_filesystem_tooling(
                         &fs_transport_cfg,
                         &resolved_ready_path,
                         child.is_some(),
                         timeout_ms,
                         poll_ms,
-                    )?)
+                    ) {
+                        Ok(v) => Some(v),
+                        Err(err) => {
+                            write_tooling_failure_script_result(
+                                &resolved_script_result_path,
+                                "tooling.connect.failed",
+                                &err,
+                                "tooling_error",
+                                Some("connect_filesystem_tooling".to_string()),
+                            );
+                            suite_rows.push(serde_json::json!({
+                                "error_code": "tooling.connect.failed",
+                                "reason_code": "tooling.connect.failed",
+                                "error": err,
+                            }));
+                            let payload = serde_json::json!({
+                                "schema_version": 1,
+                                "generated_unix_ms": suite_summary_generated_unix_ms,
+                                "kind": "suite_summary",
+                                "status": "error",
+                                "error_reason_code": "tooling.connect.failed",
+                                "suite": suite_summary_suite,
+                                "out_dir": resolved_out_dir.display().to_string(),
+                                "warmup_frames": warmup_frames,
+                                "reuse_launch": reuse_launch,
+                                "wants_screenshots": suite_wants_screenshots,
+                                "stage_counts": suite_stage_counts,
+                                "reason_code_counts": suite_reason_code_counts,
+                                "evidence_aggregate": suite_evidence_agg.as_json(),
+                                "rows": suite_rows,
+                            });
+                            if !keep_open {
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            }
+                            let _ = write_json_value(&suite_summary_path, &payload);
+                            return Err("suite setup failed (see suite.summary.json)".to_string());
+                        }
+                    }
                 } else {
                     None
                 };
 
-            let suite_summary_path = resolved_out_dir.join("suite.summary.json");
-            let suite_summary_suite = (rest.len() == 1).then(|| rest[0].clone());
-            let suite_summary_generated_unix_ms = now_unix_ms();
-            let mut suite_stage_counts: std::collections::BTreeMap<String, u64> =
-                std::collections::BTreeMap::new();
-            let mut suite_reason_code_counts: std::collections::BTreeMap<String, u64> =
-                std::collections::BTreeMap::new();
-            let mut suite_rows: Vec<serde_json::Value> = Vec::new();
-            let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
-
             let script_count = scripts.len();
             for (idx, src) in scripts.into_iter().enumerate() {
+                let script_key = normalize_repo_relative_path(&workspace_root, &src);
                 if !reuse_process {
-                    child = maybe_launch_demo(
+                    child = match maybe_launch_demo(
                         &launch,
                         &suite_launch_env,
                         &workspace_root,
@@ -5825,7 +6119,45 @@ See: `docs/tracy.md`.\n";
                         suite_wants_screenshots,
                         timeout_ms,
                         poll_ms,
-                    )?;
+                    ) {
+                        Ok(v) => v,
+                        Err(err) => {
+                            write_tooling_failure_script_result(
+                                &resolved_script_result_path,
+                                "tooling.launch.failed",
+                                &err,
+                                "tooling_error",
+                                Some(script_key.clone()),
+                            );
+                            suite_rows.push(serde_json::json!({
+                                "script": script_key,
+                                "error_code": "tooling.launch.failed",
+                                "reason_code": "tooling.launch.failed",
+                                "error": err,
+                            }));
+                            let payload = serde_json::json!({
+                                "schema_version": 1,
+                                "generated_unix_ms": suite_summary_generated_unix_ms,
+                                "kind": "suite_summary",
+                                "status": "error",
+                                "error_reason_code": "tooling.launch.failed",
+                                "suite": suite_summary_suite,
+                                "out_dir": resolved_out_dir.display().to_string(),
+                                "warmup_frames": warmup_frames,
+                                "reuse_launch": reuse_launch,
+                                "wants_screenshots": suite_wants_screenshots,
+                                "stage_counts": suite_stage_counts,
+                                "reason_code_counts": suite_reason_code_counts,
+                                "evidence_aggregate": suite_evidence_agg.as_json(),
+                                "rows": suite_rows,
+                            });
+                            if !keep_open {
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            }
+                            let _ = write_json_value(&suite_summary_path, &payload);
+                            return Err("suite run failed (see suite.summary.json)".to_string());
+                        }
+                    };
                 }
                 let result: Result<crate::stats::ScriptResultSummary, String> = (|| {
                     let connected_fs_iter: ConnectedToolingTransport;
@@ -5844,13 +6176,43 @@ See: `docs/tracy.md`.\n";
                             child.is_some(),
                             timeout_ms,
                             poll_ms,
-                        )?;
+                        )
+                        .map_err(|err| {
+                            write_tooling_failure_script_result(
+                                &resolved_script_result_path,
+                                "tooling.connect.failed",
+                                &err,
+                                "tooling_error",
+                                Some(script_key.clone()),
+                            );
+                            err
+                        })?;
                         &connected_fs_iter
                     };
 
                     let script_json: serde_json::Value =
-                        serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-                            .map_err(|e| e.to_string())?;
+                        serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
+                            let err = e.to_string();
+                            write_tooling_failure_script_result(
+                                &resolved_script_result_path,
+                                "tooling.script.read_failed",
+                                &err,
+                                "tooling_error",
+                                Some(script_key.clone()),
+                            );
+                            err
+                        })?)
+                        .map_err(|e| {
+                            let err = e.to_string();
+                            write_tooling_failure_script_result(
+                                &resolved_script_result_path,
+                                "tooling.script.parse_failed",
+                                &err,
+                                "tooling_error",
+                                Some(script_key.clone()),
+                            );
+                            err
+                        })?;
 
                     // Always dump a bounded bundle for suite runs so lint and post-run checks can
                     // operate on a local artifact (parity across transports).
@@ -5892,7 +6254,17 @@ See: `docs/tracy.md`.\n";
                         poll_ms,
                         &resolved_script_result_path,
                         &resolved_out_dir.join("check.capabilities.json"),
-                    )?;
+                    )
+                    .map_err(|err| {
+                        write_tooling_failure_script_result_if_missing(
+                            &resolved_script_result_path,
+                            "tooling.run.failed",
+                            &err,
+                            "tooling_error",
+                            Some(script_key.clone()),
+                        );
+                        err
+                    })?;
 
                     let stage = match script_result.stage {
                         fret_diag_protocol::UiScriptStageV1::Passed => "passed",
@@ -5915,9 +6287,19 @@ See: `docs/tracy.md`.\n";
                 let result = match result {
                     Ok(v) => v,
                     Err(e) => {
-                        let script_key = normalize_repo_relative_path(&workspace_root, &src);
+                        let tooling_reason_code = read_json_value(&resolved_script_result_path)
+                            .and_then(|v| {
+                                v.get("reason_code")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                            });
+                        let error_reason_code = tooling_reason_code
+                            .clone()
+                            .unwrap_or_else(|| "tooling.suite.error".to_string());
                         suite_rows.push(serde_json::json!({
-                            "script": script_key,
+                            "script": script_key.clone(),
+                            "error_code": "tooling.suite.error",
+                            "reason_code": tooling_reason_code,
                             "error": e,
                         }));
                         let payload = serde_json::json!({
@@ -5925,6 +6307,7 @@ See: `docs/tracy.md`.\n";
                             "generated_unix_ms": suite_summary_generated_unix_ms,
                             "kind": "suite_summary",
                             "status": "error",
+                            "error_reason_code": error_reason_code,
                             "suite": suite_summary_suite,
                             "out_dir": resolved_out_dir.display().to_string(),
                             "warmup_frames": warmup_frames,
@@ -7144,6 +7527,32 @@ See: `docs/tracy.md`.\n";
             let launched_by_fretboard = reuse_launch && launch.is_some();
             let mut perf_launch_env = launch_env.clone();
             let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+            if let Some(name) = suite_name.as_deref() {
+                // Make the common UI gallery perf suites reproducible without requiring callers
+                // to remember a pile of `--env` flags. Callers can still override them explicitly
+                // via `--env KEY=...`.
+                if matches!(
+                    name,
+                    "ui-gallery"
+                        | "ui-gallery-steady"
+                        | "ui-resize-probes"
+                        | "ui-code-editor-resize-probes"
+                ) {
+                    let _ = ensure_env_var(&mut perf_launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    let _ = ensure_env_var(
+                        &mut perf_launch_env,
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+                        "1",
+                    );
+                }
+                if matches!(name, "ui-gallery" | "ui-gallery-steady") {
+                    let _ = ensure_env_var(
+                        &mut perf_launch_env,
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
+                        "1",
+                    );
+                }
+            }
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
@@ -9606,10 +10015,27 @@ fn pack_bundle_dir_to_zip(
 
     let bundle_json = bundle_dir.join("bundle.json");
     if !bundle_json.is_file() {
-        return Err(format!(
-            "bundle_dir does not contain bundle.json: {}",
-            bundle_dir.display()
-        ));
+        match materialize_bundle_json_from_manifest_chunks_if_missing(bundle_dir) {
+            Ok(Some(p)) if p.is_file() => {
+                // `bundle.json` has been materialized from v2 chunks for compatibility.
+            }
+            Ok(_) => {
+                return Err(format!(
+                    "bundle_dir does not contain bundle.json: {}",
+                    bundle_dir.display()
+                ));
+            }
+            Err(err) => {
+                record_tooling_artifact_integrity_failure_for_dir(
+                    bundle_dir,
+                    &format!("failed to materialize bundle.json from chunks: {err}"),
+                );
+                return Err(format!(
+                    "bundle_dir does not contain bundle.json: {}",
+                    bundle_dir.display()
+                ));
+            }
+        }
     }
 
     if let Some(parent) = out_path.parent() {
@@ -10481,6 +10907,56 @@ fn expand_script_inputs(workspace_root: &Path, inputs: &[String]) -> Result<Vec<
     Ok(set.into_iter().collect())
 }
 
+fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
+    let reason_code = "tooling.artifact.integrity.failed";
+    let kind = "tooling_artifact_integrity_failed";
+
+    let direct = dir.join("script.result.json");
+    let from_parent = dir
+        .parent()
+        .map(|p| p.join("script.result.json"))
+        .unwrap_or_else(|| direct.clone());
+    let script_result_path = if direct.is_file() {
+        direct
+    } else if from_parent.is_file() {
+        from_parent
+    } else {
+        return;
+    };
+
+    let bytes = std::fs::read(&script_result_path).ok();
+    let parsed = bytes
+        .as_deref()
+        .and_then(|b| serde_json::from_slice::<UiScriptResultV1>(b).ok());
+    let Some(parsed) = parsed else {
+        return;
+    };
+
+    let mut out_dir = script_result_path
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| dir.to_path_buf());
+    if let Some(parent) = script_result_path.parent() {
+        if parent
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s == parsed.run_id.to_string())
+            .unwrap_or(false)
+        {
+            out_dir = parent.parent().unwrap_or(parent).to_path_buf();
+        }
+    }
+
+    mark_existing_script_result_tooling_failure(
+        &out_dir,
+        &script_result_path,
+        reason_code,
+        err,
+        kind,
+        Some(format!("dir={}", dir.display())),
+    );
+}
+
 fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     if !path.is_dir() {
         return path.to_path_buf();
@@ -10489,6 +10965,19 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     let direct = path.join("bundle.json");
     if direct.is_file() {
         return direct;
+    }
+
+    match materialize_bundle_json_from_manifest_chunks_if_missing(path) {
+        Ok(Some(v2)) if v2.is_file() => {
+            return v2;
+        }
+        Ok(_) => {}
+        Err(err) => {
+            record_tooling_artifact_integrity_failure_for_dir(
+                path,
+                &format!("failed to materialize bundle.json from chunks: {err}"),
+            );
+        }
     }
 
     // Prefer the stable per-run artifact directory if `script.result.json` is present.
@@ -10500,6 +10989,18 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         let run_id_bundle = run_id_artifact_dir(path, run_id).join("bundle.json");
         if run_id_bundle.is_file() {
             return run_id_bundle;
+        }
+        match materialize_run_id_bundle_json_from_chunks_if_missing(path, run_id) {
+            Ok(Some(v2)) if v2.is_file() => {
+                return v2;
+            }
+            Ok(_) => {}
+            Err(err) => {
+                record_tooling_artifact_integrity_failure_for_dir(
+                    &run_id_artifact_dir(path, run_id),
+                    &format!("failed to materialize bundle.json from chunks: {err}"),
+                );
+            }
         }
     }
 
@@ -11836,72 +12337,6 @@ fn write_script_result_capability_missing(
     );
 }
 
-fn script_result_has_stable_reason_code(script_result_path: &Path) -> bool {
-    read_json_value(script_result_path)
-        .and_then(|v| {
-            v.get("reason_code")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-        })
-        .is_some()
-}
-
-fn write_tooling_failure_script_result_if_missing(
-    script_result_path: &Path,
-    reason_code: &str,
-    reason: &str,
-    kind: &str,
-    note: Option<String>,
-) {
-    if script_result_has_stable_reason_code(script_result_path) {
-        return;
-    }
-
-    let now = now_unix_ms();
-    let evidence = UiScriptEvidenceV1 {
-        event_log: vec![UiScriptEventLogEntryV1 {
-            unix_ms: now,
-            kind: kind.to_string(),
-            step_index: None,
-            note,
-            bundle_dir: None,
-        }],
-        ..UiScriptEvidenceV1::default()
-    };
-    let result = UiScriptResultV1 {
-        schema_version: 1,
-        run_id: 0,
-        updated_unix_ms: now,
-        window: None,
-        stage: UiScriptStageV1::Failed,
-        step_index: None,
-        reason_code: Some(reason_code.to_string()),
-        reason: Some(reason.to_string()),
-        evidence: Some(evidence),
-        last_bundle_dir: None,
-        last_bundle_artifact: None,
-    };
-
-    let _ = write_json_value(
-        script_result_path,
-        &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-    );
-}
-
-fn push_tooling_event_log_entry(result: &mut UiScriptResultV1, kind: &str, note: Option<String>) {
-    let now = now_unix_ms();
-    let evidence = result
-        .evidence
-        .get_or_insert_with(UiScriptEvidenceV1::default);
-    evidence.event_log.push(UiScriptEventLogEntryV1 {
-        unix_ms: now,
-        kind: kind.to_string(),
-        step_index: result.step_index,
-        note,
-        bundle_dir: result.last_bundle_dir.clone(),
-    });
-}
-
 fn gate_required_capabilities_with_script_result(
     out_path: &Path,
     script_result_path: &Path,
@@ -12210,6 +12645,99 @@ fn wait_for_devtools_message<T>(
     }
 }
 
+fn wait_for_devtools_bundle_dumped(
+    devtools: &DevtoolsOps,
+    selected_session_id: &str,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<DevtoolsBundleDumpedV1, String> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
+
+    let mut chunk_exported_unix_ms: Option<u64> = None;
+    let mut chunk_out_dir: Option<String> = None;
+    let mut chunk_dir: Option<String> = None;
+    let mut chunks: Vec<Option<String>> = Vec::new();
+
+    loop {
+        while let Some(msg) = devtools.try_recv() {
+            if msg.r#type != "bundle.dumped"
+                || msg.session_id.as_deref() != Some(selected_session_id)
+            {
+                continue;
+            }
+            let Ok(dumped) = serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload) else {
+                continue;
+            };
+
+            if dumped.bundle.is_some() {
+                return Ok(dumped);
+            }
+
+            if let (
+                Some(chunk),
+                Some(chunk_index),
+                Some(chunk_count_value),
+            ) = (
+                dumped.bundle_json_chunk.clone(),
+                dumped.bundle_json_chunk_index,
+                dumped.bundle_json_chunk_count,
+            ) {
+                if chunk_exported_unix_ms.is_none() {
+                    chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
+                    chunk_out_dir = Some(dumped.out_dir.clone());
+                    chunk_dir = Some(dumped.dir.clone());
+                    chunks = vec![None; chunk_count_value.max(1) as usize];
+                }
+
+                if chunk_exported_unix_ms != Some(dumped.exported_unix_ms)
+                    || chunk_dir.as_deref() != Some(dumped.dir.as_str())
+                {
+                    // A new dump started (or messages interleaved); reset to the latest seen.
+                    chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
+                    chunk_out_dir = Some(dumped.out_dir.clone());
+                    chunk_dir = Some(dumped.dir.clone());
+                    chunks = vec![None; chunk_count_value.max(1) as usize];
+                }
+
+                if let Some(slot) = chunks.get_mut(chunk_index as usize) {
+                    *slot = Some(chunk);
+                }
+
+                if chunks.iter().all(|c| c.is_some()) {
+                    let mut json = String::new();
+                    for part in chunks.iter().flatten() {
+                        json.push_str(part);
+                    }
+                    let bundle = serde_json::from_str::<serde_json::Value>(&json).map_err(|e| {
+                        format!("bundle.dumped chunked JSON was not valid JSON: {e}")
+                    })?;
+                    return Ok(DevtoolsBundleDumpedV1 {
+                        schema_version: dumped.schema_version,
+                        exported_unix_ms: chunk_exported_unix_ms.unwrap_or(dumped.exported_unix_ms),
+                        out_dir: chunk_out_dir.clone().unwrap_or(dumped.out_dir),
+                        dir: chunk_dir.clone().unwrap_or(dumped.dir),
+                        bundle: Some(bundle),
+                        bundle_json_chunk: None,
+                        bundle_json_chunk_index: None,
+                        bundle_json_chunk_count: None,
+                    });
+                }
+
+                continue;
+            }
+
+            // Non-embedded bundle (native filesystem case): allow materialization to fall back to
+            // reading the runtime's bundle.json.
+            return Ok(dumped);
+        }
+
+        if Instant::now() >= deadline {
+            return Err("timed out waiting for DevTools WS bundle.dumped".to_string());
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
+    }
+}
+
 fn materialize_devtools_bundle_dumped(
     out_dir: &Path,
     dumped: &DevtoolsBundleDumpedV1,
@@ -12258,9 +12786,19 @@ fn materialize_devtools_bundle_dumped(
     }
 
     let dumped_path = export_dir.join("bundle.dumped.json");
+    let dumped_meta = DevtoolsBundleDumpedV1 {
+        schema_version: dumped.schema_version,
+        exported_unix_ms: dumped.exported_unix_ms,
+        out_dir: dumped.out_dir.clone(),
+        dir: dumped.dir.clone(),
+        bundle: None,
+        bundle_json_chunk: None,
+        bundle_json_chunk_index: None,
+        bundle_json_chunk_count: None,
+    };
     write_json_value(
         &dumped_path,
-        &serde_json::to_value(dumped).unwrap_or_else(|_| serde_json::json!({})),
+        &serde_json::to_value(dumped_meta).unwrap_or_else(|_| serde_json::json!({})),
     )?;
     let _ = std::fs::write(out_dir.join("latest.txt"), export_dir_name.as_bytes());
 
@@ -12619,15 +13157,12 @@ fn run_script_over_transport(
         } else {
             connected.devtools.bundle_dump(None, bundle_label);
         }
-        let dumped =
-            match wait_for_devtools_message(&connected.devtools, timeout_ms, poll_ms, |msg| {
-                if msg.r#type != "bundle.dumped"
-                    || msg.session_id.as_deref() != Some(&connected.selected_session_id)
-                {
-                    return None;
-                }
-                serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
-            }) {
+        let dumped = match wait_for_devtools_bundle_dumped(
+            &connected.devtools,
+            &connected.selected_session_id,
+            timeout_ms,
+            poll_ms,
+        ) {
                 Ok(v) => v,
                 Err(err) => {
                     let reason_code = if err.contains("timed out waiting") {
@@ -12705,43 +13240,14 @@ fn dump_bundle_over_transport(
         connected.devtools.bundle_dump(None, bundle_label);
     }
 
-    let dumped = wait_for_devtools_message(&connected.devtools, timeout_ms, poll_ms, |msg| {
-        if msg.r#type != "bundle.dumped"
-            || msg.session_id.as_deref() != Some(&connected.selected_session_id)
-        {
-            return None;
-        }
-        serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
-    })?;
+    let dumped = wait_for_devtools_bundle_dumped(
+        &connected.devtools,
+        &connected.selected_session_id,
+        timeout_ms,
+        poll_ms,
+    )?;
 
     materialize_devtools_bundle_dumped(out_dir, &dumped)
-}
-
-fn run_id_artifact_dir(out_dir: &Path, run_id: u64) -> PathBuf {
-    out_dir.join(run_id.to_string())
-}
-
-fn write_run_id_script_result(out_dir: &Path, run_id: u64, result: &UiScriptResultV1) {
-    let dir = run_id_artifact_dir(out_dir, run_id);
-    let path = dir.join("script.result.json");
-    let _ = write_json_value(
-        &path,
-        &serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({})),
-    );
-}
-
-fn write_run_id_bundle_json(out_dir: &Path, run_id: u64, bundle_json_path: &Path) {
-    if !bundle_json_path.is_file() {
-        return;
-    }
-    let dir = run_id_artifact_dir(out_dir, run_id);
-    let dst = dir.join("bundle.json");
-    if let Some(parent) = dst.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    // Best-effort alias: keep a stable per-run path even when the underlying bundle export directory
-    // is timestamp/label-based (filesystem) or message-derived (WS).
-    let _ = std::fs::copy(bundle_json_path, &dst);
 }
 
 fn run_script_suite_collect_bundles(
@@ -14191,6 +14697,93 @@ mod tests {
     }
 
     #[test]
+    fn resolve_bundle_json_path_records_integrity_failure_reason_code_on_chunk_hash_mismatch() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-resolve-bundle-chunks-integrity-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let run_id = 1u64;
+        let run_id_dir = root.join(run_id.to_string());
+        std::fs::create_dir_all(&run_id_dir).expect("create run_id dir");
+
+        let initial = UiScriptResultV1 {
+            schema_version: 1,
+            run_id,
+            updated_unix_ms: 0,
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        std::fs::write(
+            run_id_dir.join("script.result.json"),
+            serde_json::to_vec_pretty(&initial).expect("script.result json"),
+        )
+        .expect("write script.result.json");
+
+        let chunks_dir = run_id_dir.join("chunks").join("bundle_json");
+        std::fs::create_dir_all(&chunks_dir).expect("create chunks dir");
+        let chunk_path = chunks_dir.join("chunk-000000");
+        let chunk_bytes = br#"{ "schema_version": 1, "windows": [] }"#.to_vec();
+        std::fs::write(&chunk_path, &chunk_bytes).expect("write chunk");
+
+        // Intentionally wrong hash values to force an integrity failure.
+        let manifest = serde_json::json!({
+            "schema_version": 2,
+            "generated_unix_ms": 0,
+            "run_id": run_id,
+            "bundle_json": {
+                "mode": "chunks.v1",
+                "total_bytes": chunk_bytes.len() as u64,
+                "chunk_bytes": chunk_bytes.len() as u64,
+                "blake3": "deadbeef",
+                "chunks": [
+                    {
+                        "index": 0,
+                        "path": "chunks/bundle_json/chunk-000000",
+                        "bytes": chunk_bytes.len() as u64,
+                        "blake3": "deadbeef",
+                    }
+                ]
+            }
+        });
+        std::fs::write(
+            run_id_dir.join("manifest.json"),
+            serde_json::to_vec_pretty(&manifest).expect("manifest json"),
+        )
+        .expect("write manifest.json");
+
+        let _ = resolve_bundle_json_path(&run_id_dir);
+
+        let bytes = std::fs::read(run_id_dir.join("script.result.json")).expect("read script.result.json");
+        let parsed: UiScriptResultV1 =
+            serde_json::from_slice(&bytes).expect("parse script.result.json");
+        assert!(matches!(parsed.stage, UiScriptStageV1::Failed));
+        assert_eq!(
+            parsed.reason_code.as_deref(),
+            Some("tooling.artifact.integrity.failed")
+        );
+        assert!(
+            parsed
+                .evidence
+                .as_ref()
+                .and_then(|e| e.event_log.last())
+                .map(|e| e.kind.as_str())
+                == Some("tooling_artifact_integrity_failed")
+        );
+    }
+
+    #[test]
     fn materialize_devtools_bundle_dumped_embedded_writes_bundle_json_and_latest() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-devtools-dumped-embedded-{}",
@@ -14211,6 +14804,9 @@ mod tests {
                 "schema_version": 1,
                 "windows": [],
             })),
+            bundle_json_chunk: None,
+            bundle_json_chunk_index: None,
+            bundle_json_chunk_count: None,
         };
 
         let bundle_path =
@@ -14266,6 +14862,9 @@ mod tests {
             out_dir: runtime_root.to_string_lossy().to_string(),
             dir: "456-runtime".to_string(),
             bundle: None,
+            bundle_json_chunk: None,
+            bundle_json_chunk_index: None,
+            bundle_json_chunk_count: None,
         };
 
         let bundle_path =
@@ -14523,6 +15122,42 @@ mod tests {
                 .map(|e| e.kind.as_str())
                 == Some("tooling_timeout")
         );
+    }
+
+    #[test]
+    fn write_tooling_failure_script_result_overwrites_existing_reason_code() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-tooling-failure-overwrite-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let path = root.join("script.result.json");
+        write_tooling_failure_script_result(
+            &path,
+            "tooling.old",
+            "old failure",
+            "tooling_error",
+            Some("old".to_string()),
+        );
+        write_tooling_failure_script_result(
+            &path,
+            "tooling.new",
+            "new failure",
+            "tooling_error",
+            Some("new".to_string()),
+        );
+
+        let bytes = std::fs::read(&path).expect("read script.result.json");
+        let parsed: fret_diag_protocol::UiScriptResultV1 =
+            serde_json::from_slice(&bytes).expect("parse script.result.json");
+        assert_eq!(parsed.reason_code.as_deref(), Some("tooling.new"));
+        assert_eq!(parsed.reason.as_deref(), Some("new failure"));
     }
 
     #[test]

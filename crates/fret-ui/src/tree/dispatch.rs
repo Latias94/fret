@@ -213,6 +213,7 @@ impl<H: UiHost> UiTree<H> {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_hover_state_from_hit(
         &mut self,
         app: &mut H,
@@ -867,6 +868,24 @@ impl<H: UiHost> UiTree<H> {
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
+            let pointer_hit_is_text_input =
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+                    && let Some(window) = self.window
+                {
+                    chain.iter().any(|(node_id, _)| {
+                        crate::declarative::element_record_for_node(app, window, *node_id)
+                            .is_some_and(|record| {
+                                matches!(
+                                    &record.instance,
+                                    crate::declarative::ElementInstance::TextInput(_)
+                                        | crate::declarative::ElementInstance::TextArea(_)
+                                        | crate::declarative::ElementInstance::TextInputRegion(_)
+                                )
+                            })
+                    })
+                } else {
+                    false
+                };
             for (node_id, event_for_node) in chain {
                 let (
                     invalidations,
@@ -892,6 +911,7 @@ impl<H: UiHost> UiTree<H> {
                         event_window_position,
                         event_window_wheel_delta,
                         input_ctx: input_ctx.clone(),
+                        pointer_hit_is_text_input,
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
@@ -1062,6 +1082,7 @@ impl<H: UiHost> UiTree<H> {
                     event_window_position,
                     event_window_wheel_delta,
                     input_ctx: input_ctx.clone(),
+                    pointer_hit_is_text_input: false,
                     prevented_default_actions: &mut prevented_default_actions,
                     children,
                     focus: tree.focus,
@@ -1286,8 +1307,6 @@ impl<H: UiHost> UiTree<H> {
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
         let (active_layers, barrier_root) = self.active_input_layers();
-        let active_pointer_down_outside_layers =
-            self.active_pointer_down_outside_layer_roots(barrier_root);
         self.enforce_modal_barrier_scope(&active_layers);
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
@@ -2080,6 +2099,24 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 self.build_unmapped_event_chain(node_id, event)
             };
+            let pointer_hit_is_text_input =
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+                    && let Some(window) = self.window
+                {
+                    chain.iter().any(|(node_id, _)| {
+                        crate::declarative::element_record_for_node(app, window, *node_id)
+                            .is_some_and(|record| {
+                                matches!(
+                                    &record.instance,
+                                    crate::declarative::ElementInstance::TextInput(_)
+                                        | crate::declarative::ElementInstance::TextArea(_)
+                                        | crate::declarative::ElementInstance::TextInputRegion(_)
+                                )
+                            })
+                    })
+                } else {
+                    false
+                };
             let should_run_capture_phase = match event {
                 Event::Pointer(PointerEvent::Down { .. })
                 | Event::Pointer(PointerEvent::Up { .. })
@@ -2123,6 +2160,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: capture_ctx.clone(),
+                            pointer_hit_is_text_input,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2281,6 +2319,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: bubble_ctx.clone(),
+                            pointer_hit_is_text_input,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2454,6 +2493,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: capture_ctx.clone(),
+                            pointer_hit_is_text_input: false,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2581,6 +2621,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: bubble_ctx.clone(),
+                            pointer_hit_is_text_input: false,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2735,6 +2776,7 @@ impl<H: UiHost> UiTree<H> {
                         event_window_position,
                         event_window_wheel_delta,
                         input_ctx: input_ctx.clone(),
+                        pointer_hit_is_text_input: false,
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,

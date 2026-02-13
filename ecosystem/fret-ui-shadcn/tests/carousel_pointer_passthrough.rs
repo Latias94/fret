@@ -21,6 +21,7 @@ fn render_frame(
     bounds: Rect,
     down_seen: Model<bool>,
     activated: Model<bool>,
+    drag_threshold_px: Px,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -73,6 +74,7 @@ fn render_frame(
             let slide_2 = cx.container(Default::default(), move |_cx| vec![]);
 
             let carousel = fret_ui_shadcn::Carousel::new([slide_1, slide_2])
+                .drag_threshold_px(drag_threshold_px)
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)
                 .item_basis_main_px(Px(200.0))
@@ -115,6 +117,7 @@ fn carousel_pointer_region_does_not_swallow_descendant_pressable_down() {
         bounds,
         down_seen.clone(),
         activated.clone(),
+        Px(10.0),
     );
 
     ui.dispatch_event(
@@ -157,6 +160,7 @@ fn carousel_drag_from_descendant_pressable_suppresses_activation() {
         bounds,
         down_seen.clone(),
         activated.clone(),
+        Px(10.0),
     );
 
     let pointer_id = PointerId(0);
@@ -210,6 +214,82 @@ fn carousel_drag_from_descendant_pressable_suppresses_activation() {
 }
 
 #[test]
+fn carousel_drag_from_descendant_pressable_suppresses_activation_touch() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let down_seen = app.models_mut().insert(false);
+    let activated = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(200.0)),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        down_seen.clone(),
+        activated.clone(),
+        Px(10.0),
+    );
+
+    let pointer_id = PointerId(0);
+    let start = Point::new(Px(20.0), Px(20.0));
+    let moved = Point::new(Px(40.0), Px(20.0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id,
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Touch,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position: moved,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Touch,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id,
+            position: moved,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&down_seen), Some(true));
+    assert_eq!(app.models().get_copied(&activated), Some(false));
+}
+
+#[test]
 fn carousel_click_on_descendant_pressable_still_activates() {
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -232,6 +312,7 @@ fn carousel_click_on_descendant_pressable_still_activates() {
         bounds,
         down_seen.clone(),
         activated.clone(),
+        Px(10.0),
     );
 
     let pointer_id = PointerId(0);
@@ -256,6 +337,158 @@ fn carousel_click_on_descendant_pressable_still_activates() {
         &Event::Pointer(PointerEvent::Up {
             pointer_id,
             position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&down_seen), Some(true));
+    assert_eq!(app.models().get_copied(&activated), Some(true));
+}
+
+#[test]
+fn carousel_drag_threshold_can_be_lowered_to_start_drag_earlier() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let down_seen = app.models_mut().insert(false);
+    let activated = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(200.0)),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        down_seen.clone(),
+        activated.clone(),
+        Px(1.0),
+    );
+
+    let pointer_id = PointerId(0);
+    let start = Point::new(Px(20.0), Px(20.0));
+    let moved = Point::new(Px(22.0), Px(20.0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id,
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position: moved,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id,
+            position: moved,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&down_seen), Some(true));
+    assert_eq!(app.models().get_copied(&activated), Some(false));
+}
+
+#[test]
+fn carousel_drag_threshold_can_be_raised_to_allow_small_moves_to_click() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let down_seen = app.models_mut().insert(false);
+    let activated = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(200.0)),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        down_seen.clone(),
+        activated.clone(),
+        Px(20.0),
+    );
+
+    let pointer_id = PointerId(0);
+    let start = Point::new(Px(20.0), Px(20.0));
+    let moved = Point::new(Px(30.0), Px(20.0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id,
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position: moved,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id,
+            position: moved,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             is_click: true,

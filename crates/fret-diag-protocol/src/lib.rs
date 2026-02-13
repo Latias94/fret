@@ -1173,6 +1173,17 @@ pub struct DevtoolsBundleDumpedV1 {
     pub dir: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundle: Option<serde_json::Value>,
+    /// Optional chunked representation of the embedded bundle JSON.
+    ///
+    /// When present, the runtime may send multiple `bundle.dumped` messages (same `exported_unix_ms`
+    /// + `dir`) each carrying one chunk. Tooling should reassemble chunks in order to reconstruct
+    /// the full JSON payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_chunk: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_chunk_index: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_chunk_count: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
