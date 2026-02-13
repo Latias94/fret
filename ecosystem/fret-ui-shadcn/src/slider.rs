@@ -813,6 +813,7 @@ pub fn slider<H: UiHost>(
             let pointer = PointerRegionProps {
                 layout: semantics_layout,
                 enabled: !disabled,
+                ..Default::default()
             };
 
             let pointer_el = cx.pointer_region(pointer, |cx| {

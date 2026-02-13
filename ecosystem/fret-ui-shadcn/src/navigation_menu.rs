@@ -1091,6 +1091,7 @@ impl NavigationMenu {
                             let pointer_props = PointerRegionProps {
                                 layout: LayoutStyle::default(),
                                 enabled: true,
+                                ..Default::default()
                             };
 
                             let trigger_children = item.trigger.clone();

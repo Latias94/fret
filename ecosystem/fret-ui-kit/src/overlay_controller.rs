@@ -1223,6 +1223,7 @@ mod tests {
                             layout
                         },
                         enabled: true,
+                        ..Default::default()
                     },
                     |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {

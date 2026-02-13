@@ -2751,6 +2751,7 @@ fn select_impl<H: UiHost>(
                                                                                                 layout
                                                                                             },
                                                                                             enabled: true,
+                                                                                            ..Default::default()
                                                                                          },
                                                                                          move |cx| {
                                                                                               vec![cx.container(

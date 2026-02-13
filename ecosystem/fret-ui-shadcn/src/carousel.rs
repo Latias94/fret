@@ -683,6 +683,7 @@ impl Carousel {
                 PointerRegionProps {
                     layout: pointer_layout,
                     enabled: items_len > 1,
+                    capture_phase_pointer_moves: true,
                 },
                 move |cx| {
                     cx.pointer_region_on_pointer_down(on_down);

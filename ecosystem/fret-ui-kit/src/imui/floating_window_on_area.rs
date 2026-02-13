@@ -520,6 +520,7 @@ where
                         PointerRegionProps {
                             layout,
                             enabled: true,
+                            ..Default::default()
                         },
                         move |cx| {
                             let region_id = cx.root_id();
@@ -599,6 +600,7 @@ where
                     PointerRegionProps {
                         layout,
                         enabled: true,
+                        ..Default::default()
                     },
                     move |cx| {
                         cx.pointer_region_clear_on_pointer_down();

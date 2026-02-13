@@ -190,6 +190,16 @@ pub struct PointerRegionState {
 pub struct PointerRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
+    /// When set, `PointerEvent::Move` is dispatched to this region during the Capture phase
+    /// (root → target) rather than Bubble.
+    ///
+    /// This is a mechanism-only knob intended for "gesture arena" style arbitration where a
+    /// parent wrapper must observe pointer moves even when a descendant would otherwise stop
+    /// bubbling (e.g. pressables capturing/stopping on pointer down).
+    ///
+    /// When enabled, Bubble-phase handling for `PointerEvent::Move` is skipped to avoid
+    /// double-dispatch.
+    pub capture_phase_pointer_moves: bool,
 }
 
 /// A focusable event region that participates in text input / IME routing.
@@ -252,6 +262,7 @@ impl Default for PointerRegionProps {
         Self {
             layout: LayoutStyle::default(),
             enabled: true,
+            capture_phase_pointer_moves: false,
         }
     }
 }
