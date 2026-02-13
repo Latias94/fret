@@ -79,9 +79,10 @@ Evidence pointers:
 ## Phase 5: Artifact format v2 (manifest + chunks)
 
 - [x] Tooling writes a minimal per-run `manifest.json` (index + size stats) alongside v1 artifacts.
-- [ ] Define `manifest.json` + chunk directory layout (v2 artifact format).
-- [ ] Keep `bundle.json` as a compatibility artifact (either generated or optional).
-- [ ] Update pack/triage/lint to accept both v1 and v2 artifact layouts.
+- [x] Define an initial v2 chunk layout for bundle payloads: `<run_id>/chunks/bundle_json/*` with `manifest.json` recording chunk list + sizes + hashes.
+- [ ] Define `manifest.json` + chunk directory layout (v2 artifact format; beyond bundle payload).
+- [x] Keep `bundle.json` as a compatibility artifact (can be materialized on-demand from v2 chunks).
+- [x] Update pack/triage/lint to accept both v1 and v2 artifact layouts.
 - [ ] Introduce chunking policy for WS:
   - [x] avoid giant single messages (chunked `bundle.dumped` payloads)
   - [ ] support content-addressing or chunk ids (future)
