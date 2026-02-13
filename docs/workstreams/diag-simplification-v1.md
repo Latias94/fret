@@ -8,6 +8,7 @@ Current state (as of 2026-02-13):
 - Artifact size stats are reported in `script.result.json` for locally materialized bundles (bytes + bounded counts).
 - Bundle path resolution now prefers the stable per-run `<out_dir>/<run_id>/bundle.json` when `script.result.json` is present (less reliance on `latest.txt`).
 - Tooling failures now produce a deterministic `script.result.json` with stable `reason_code` (e.g. `tooling.*`, `timeout.tooling.*`) instead of degrading to "no artifact + timeout".
+- Tooling-side "failure artifact" helpers are now isolated into focused modules (`crates/fret-diag/src/tooling_failures.rs`, `crates/fret-diag/src/run_artifacts.rs`) to reduce monolith churn risk.
 - `diag repro` setup/driver failures now write `repro.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `diag repeat` setup/driver failures now write `repeat.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `script.result.json` now includes a bounded per-run event log (step start/end + bundle dump events) with clipped counts reported.
