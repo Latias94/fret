@@ -5,6 +5,7 @@
 
 pub mod calendar;
 pub mod calendar_solar_hijri;
+pub mod carousel;
 pub mod checked_state;
 pub mod cmdk_score;
 pub mod cmdk_selection;

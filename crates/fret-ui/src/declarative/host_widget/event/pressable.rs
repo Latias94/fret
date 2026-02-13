@@ -312,6 +312,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         modifiers: *modifiers,
                         click_count: *click_count,
                         pointer_type: *pointer_type,
+                        hit_is_text_input: cx.pointer_hit_is_text_input,
                     };
 
                     let mut host = PressablePointerHookHost {

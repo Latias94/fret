@@ -1666,6 +1666,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &ms.to_string(),
         );
     }
+    if check_pixels_changed_test_id.is_some() {
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+    }
 
     let resource_footprint_thresholds = ResourceFootprintThresholds {
         max_working_set_bytes,

@@ -12,12 +12,12 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::carousel as headless_carousel;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space};
 
 use crate::{Button, ButtonSize, ButtonVariant};
 
 const CAROUSEL_SETTLE_TICKS: u64 = 12;
-const CAROUSEL_DRAG_START_PX: f32 = 10.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CarouselOrientation {
@@ -42,10 +42,7 @@ pub struct Carousel {
 
 #[derive(Debug, Clone, Copy, Default)]
 struct CarouselRuntime {
-    armed: bool,
-    dragging: bool,
-    start: Point,
-    start_offset: Px,
+    drag: headless_carousel::CarouselDragState,
     settling: bool,
     settle_from: Px,
     settle_to: Px,
@@ -253,16 +250,21 @@ impl Carousel {
                 if down.button != MouseButton::Left {
                     return false;
                 }
+                if down.hit_is_text_input {
+                    return false;
+                }
                 let start_offset = host
                     .models_mut()
                     .read(&offset_for_down, |v| *v)
                     .ok()
                     .unwrap_or(Px(0.0));
                 let _ = host.models_mut().update(&runtime_for_down, |st| {
-                    st.armed = true;
-                    st.dragging = false;
-                    st.start = down.position;
-                    st.start_offset = start_offset;
+                    headless_carousel::on_pointer_down(
+                        &mut st.drag,
+                        true,
+                        down.position,
+                        start_offset,
+                    );
                     st.settling = false;
                     st.settle_tick = 0;
                 });
@@ -277,14 +279,13 @@ impl Carousel {
                     .read(&runtime_for_move, |st| *st)
                     .ok()
                     .unwrap_or_default();
-                if !runtime.armed && !runtime.dragging {
+                if !runtime.drag.armed && !runtime.drag.dragging {
                     return false;
                 }
 
                 if !mv.buttons.left {
                     let _ = host.models_mut().update(&runtime_for_move, |st| {
-                        st.armed = false;
-                        st.dragging = false;
+                        st.drag = headless_carousel::CarouselDragState::default();
                     });
                     return false;
                 }
@@ -302,27 +303,40 @@ impl Carousel {
                 }
                 let max_offset = Px((extent.0 * (items_len.saturating_sub(1) as f32)).max(0.0));
 
-                let delta = match track_direction {
-                    fret_core::Axis::Horizontal => mv.position.x.0 - runtime.start.x.0,
-                    fret_core::Axis::Vertical => mv.position.y.0 - runtime.start.y.0,
-                };
+                let mut steal_capture = false;
+                let mut consumed = false;
+                let mut next_offset = None;
 
-                if !runtime.dragging && runtime.armed && delta.abs() < CAROUSEL_DRAG_START_PX {
-                    return false;
-                }
+                let _ = host.models_mut().update(&runtime_for_move, |st| {
+                    let out = headless_carousel::on_pointer_move(
+                        headless_carousel::CarouselDragConfig::default(),
+                        &mut st.drag,
+                        track_direction,
+                        mv.position,
+                        mv.buttons.left,
+                        match mv.pointer_type {
+                            fret_core::PointerType::Touch => {
+                                headless_carousel::CarouselDragInputKind::Touch
+                            }
+                            _ => headless_carousel::CarouselDragInputKind::Mouse,
+                        },
+                        max_offset,
+                    );
+                    steal_capture = out.steal_capture;
+                    consumed = out.consumed;
+                    next_offset = out.next_offset;
+                });
 
-                if !runtime.dragging && runtime.armed {
+                if steal_capture {
                     host.capture_pointer();
-                    let _ = host.models_mut().update(&runtime_for_move, |st| {
-                        st.armed = false;
-                        st.dragging = true;
-                    });
                 }
 
-                let next = Px((runtime.start_offset.0 - delta).clamp(0.0, max_offset.0));
-                let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
-                host.request_redraw(_cx.window);
-                true
+                if let Some(next) = next_offset {
+                    let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
+                    host.request_redraw(_cx.window);
+                }
+
+                consumed
             });
 
             let runtime_for_up = runtime_model.clone();
@@ -334,10 +348,9 @@ impl Carousel {
                     .read(&runtime_for_up, |st| *st)
                     .ok()
                     .unwrap_or_default();
-                if !runtime.dragging {
+                if !runtime.drag.dragging {
                     let _ = host.models_mut().update(&runtime_for_up, |st| {
-                        st.armed = false;
-                        st.dragging = false;
+                        st.drag = headless_carousel::CarouselDragState::default();
                     });
                     return false;
                 }
@@ -359,47 +372,25 @@ impl Carousel {
                     .ok()
                     .unwrap_or(Px(0.0));
 
-                let max_index = items_len.saturating_sub(1);
-                let start_index = if extent.0 > 0.0 {
-                    (runtime.start_offset.0 / extent.0)
-                        .round()
-                        .clamp(0.0, max_index as f32) as usize
-                } else {
-                    0
-                };
+                let mut drag = runtime.drag;
+                let release = headless_carousel::on_pointer_up(
+                    headless_carousel::CarouselDragConfig::default(),
+                    &mut drag,
+                    track_direction,
+                    up.position,
+                    extent,
+                    items_len,
+                )
+                .expect("release output when dragging");
 
-                let delta = match track_direction {
-                    fret_core::Axis::Horizontal => up.position.x.0 - runtime.start.x.0,
-                    fret_core::Axis::Vertical => up.position.y.0 - runtime.start.y.0,
-                };
-
-                let mut next_index = start_index;
-                if extent.0 > 0.0 {
-                    let threshold = extent.0 * 0.25;
-                    if delta.abs() > threshold {
-                        if delta > 0.0 {
-                            next_index = start_index.saturating_sub(1);
-                        } else {
-                            next_index = (start_index + 1).min(max_index);
-                        }
-                    } else {
-                        next_index = start_index;
-                    }
-                }
-
-                let target = if extent.0 > 0.0 {
-                    Px((next_index as f32) * extent.0)
-                } else {
-                    Px(0.0)
-                };
-
-                let _ = host.models_mut().update(&index_for_up, |v| *v = next_index);
+                let _ = host
+                    .models_mut()
+                    .update(&index_for_up, |v| *v = release.next_index);
                 let _ = host.models_mut().update(&runtime_for_up, |st| {
-                    st.armed = false;
-                    st.dragging = false;
+                    st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = true;
                     st.settle_from = offset;
-                    st.settle_to = target;
+                    st.settle_to = release.target_offset;
                     st.settle_tick = 0;
                 });
                 host.request_redraw(cx.window);
@@ -413,14 +404,13 @@ impl Carousel {
                     .read(&runtime_for_cancel, |st| *st)
                     .ok()
                     .unwrap_or_default();
-                if !runtime.dragging && !runtime.armed {
+                if !runtime.drag.dragging && !runtime.drag.armed {
                     return false;
                 }
 
                 host.release_pointer_capture();
                 let _ = host.models_mut().update(&runtime_for_cancel, |st| {
-                    st.armed = false;
-                    st.dragging = false;
+                    st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = false;
                     st.settle_tick = 0;
                 });
@@ -463,7 +453,7 @@ impl Carousel {
                         .models_mut()
                         .update(&index_for_prev, |v| *v = target_index);
                     let _ = host.models_mut().update(&runtime_for_prev, |st| {
-                        st.dragging = false;
+                        st.drag = headless_carousel::CarouselDragState::default();
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
@@ -508,7 +498,7 @@ impl Carousel {
                         .models_mut()
                         .update(&index_for_next, |v| *v = target_index);
                     let _ = host.models_mut().update(&runtime_for_next, |st| {
-                        st.dragging = false;
+                        st.drag = headless_carousel::CarouselDragState::default();
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
@@ -574,7 +564,7 @@ impl Carousel {
                         .models_mut()
                         .update(&index_for_key, |v| *v = target_index);
                     let _ = host.models_mut().update(&runtime_for_key, |st| {
-                        st.dragging = false;
+                        st.drag = headless_carousel::CarouselDragState::default();
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;

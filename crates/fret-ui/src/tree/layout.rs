@@ -7,10 +7,6 @@ use crate::layout_engine::TaffyLayoutEngine;
 use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
-fn layout_profile_enabled() -> bool {
-    std::env::var_os("FRET_LAYOUT_PROFILE").is_some_and(|v| !v.is_empty() && v != "0")
-}
-
 impl<H: UiHost> UiTree<H> {
     fn virtual_list_scroll_handle_requires_layout(
         app: &mut H,
@@ -1943,8 +1939,9 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(window) = window
             {
                 let mut engine = self.take_layout_engine();
-                engine
-                    .set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+                engine.set_measure_profiling_enabled(
+                    self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
+                );
 
                 let reuse_cached_flow = self.interactive_resize_active();
 
@@ -2164,7 +2161,9 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+        engine.set_measure_profiling_enabled(
+            self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
+        );
         crate::layout_engine::build_viewport_flow_subtree(
             &mut engine,
             app,
@@ -2325,7 +2324,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+        engine.set_measure_profiling_enabled(
+            self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
+        );
         for &(root, root_bounds) in &batch {
             crate::layout_engine::build_viewport_flow_subtree(
                 &mut engine,
