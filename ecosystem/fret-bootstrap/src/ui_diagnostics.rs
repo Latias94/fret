@@ -1907,12 +1907,15 @@ impl UiDiagnosticsService {
                         record_hit_test_trace_for_selector(
                             &mut active.hit_test_trace,
                             ui,
+                            element_runtime,
+                            window,
                             Some(snapshot),
                             &target,
                             step_index as u32,
                             pos,
                             Some(node),
                             Some("click"),
+                            self.cfg.max_debug_string_bytes,
                         );
                     }
                     record_overlay_placement_trace(
@@ -2693,12 +2696,15 @@ impl UiDiagnosticsService {
                         record_hit_test_trace_for_selector(
                             &mut active.hit_test_trace,
                             ui,
+                            element_runtime,
+                            window,
                             Some(snapshot),
                             &target,
                             step_index as u32,
                             pos,
                             Some(node),
                             Some("pointer_down"),
+                            self.cfg.max_debug_string_bytes,
                         );
                     }
 
@@ -3119,12 +3125,15 @@ impl UiDiagnosticsService {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
+                                    element_runtime,
+                                    window,
                                     Some(snapshot),
                                     &target,
                                     step_index as u32,
                                     start,
                                     Some(node),
                                     Some("drag_pointer.start"),
+                                    self.cfg.max_debug_string_bytes,
                                 );
                             }
                             let end = Point::new(
@@ -3148,12 +3157,15 @@ impl UiDiagnosticsService {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
                                 ui,
+                                element_runtime,
+                                window,
                                 semantics_snapshot,
                                 &target,
                                 step_index as u32,
                                 state.end,
                                 None,
                                 Some("drag_pointer.end"),
+                                self.cfg.max_debug_string_bytes,
                             );
                         }
                         active.v2_step_state = None;
