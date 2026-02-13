@@ -15,6 +15,13 @@ pub struct DockDragDiagnostics {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DockFloatingDragDiagnostics {
+    pub pointer_id: PointerId,
+    pub floating: DockNodeId,
+    pub activated: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ViewportCaptureDiagnostics {
     pub pointer_id: PointerId,
     pub target: RenderTargetId,
@@ -23,6 +30,7 @@ pub struct ViewportCaptureDiagnostics {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct DockingInteractionDiagnostics {
     pub dock_drag: Option<DockDragDiagnostics>,
+    pub floating_drag: Option<DockFloatingDragDiagnostics>,
     pub dock_drop_resolve: Option<DockDropResolveDiagnostics>,
     pub viewport_capture: Option<ViewportCaptureDiagnostics>,
     /// Best-effort dock graph stats snapshot for the current window.
