@@ -1,6 +1,6 @@
 # Animata Recipes Alignment (v1)
 
-Status: Draft (semantic-first; outcomes gated with deterministic diag scripts)
+Status: Active (semantic-first; v1 semantics frozen; outcomes gated with deterministic diag scripts)
 
 See:
 
@@ -47,6 +47,16 @@ Non-goals:
 These are “recipe intents” (what the user perceives), not implementation details. The main value is
 that multiple ecosystems can reuse the same intent keys and share diag gates.
 
+Frozen list (v1):
+
+- `presence.enter`, `presence.exit`
+- `shared_indicator.move`
+- `collapsible.toggle`
+- `layout.expand`
+- `hover_micro` (micro-interactions; short, non-layout motion)
+- `drag_release_settle` (inertia continuity → settle)
+- `stack.shift` (stack reflow + interruption rules)
+
 | Intent (semantic) | Typical channels | Primitive(s) | Notes |
 | --- | --- | --- | --- |
 | `presence.enter/exit` | opacity + scale + optional blur | Duration tween or spring | Used by dialogs, popovers, toast stacks |
@@ -62,6 +72,15 @@ that multiple ecosystems can reuse the same intent keys and share diag gates.
 We already have shadcn and Material 3 token schemes. For Animata-style recipes, prefer **semantic**
 keys and provide aliases rather than inventing a separate numeric scale.
 
+Decision (v1):
+
+- `duration.motion.*` / `easing.motion.*` / `number.motion.spring.*` are the **canonical** cross-ecosystem
+  semantic keys for motion authoring.
+- `duration.shadcn.motion.*` / `easing.shadcn.motion.*` remain supported as **ecosystem-scoped aliases**
+  (useful when shadcn wants per-ecosystem tuning without polluting the global semantic namespace).
+- Material 3 ecosystems keep `md.sys.motion.*` as their primary scheme; mapping to `*.motion.*` is optional
+  and theme-driven (not a hard contract).
+
 Recommended semantic keys (ecosystem-level; optional):
 
 - Duration:
@@ -76,9 +95,10 @@ Recommended semantic keys (ecosystem-level; optional):
 
 Mapping rule of thumb:
 
-- If a shadcn semantic key exists, keep it as the first lookup target and treat `*.motion.*` as an
-  alias (or the other way around if we decide `duration.motion.*` becomes the “canonical” semantic
-  namespace).
+- When resolving a token for a shadcn recipe, prefer shadcn-scoped keys first, then fall back to the
+  canonical semantic keys:
+  - `duration.shadcn.motion.<...>` → `duration.motion.<...>`
+  - `easing.shadcn.motion.<...>` → `easing.motion.<...>`
 - Material 3 ecosystems should continue to use `md.sys.motion.*` keys; semantic keys can map to M3
   values in themes when desired, but must remain optional.
 
@@ -96,7 +116,7 @@ component API yet; we only commit to the semantic intent + gate.
 | AR-NAV-001 | Navigation active pill (bar/rail) | (Animata: reuse `shared_indicator.move` intent) | `ecosystem/fret-ui-material3/src/navigation_bar.rs`, `ecosystem/fret-ui-material3/src/navigation_rail.rs` | `shared_indicator.move` | `tools/diag-scripts/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json` + `tools/diag-scripts/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json` | Landed |
 | AR-CAROUSEL-001 | Expandable carousel (flex-grow + blur) | `repo-ref/animata/animata/carousel/expandable.tsx` | `ecosystem/fret-ui-*/carousel` (or a UI gallery recipe page) | `layout.expand` (+ `hover_micro`) | Add: `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json` | Planned |
 | AR-TOAST-001 | Toast stack shift + interrupt | (Animata: use `stack.shift` intent) | `ecosystem/fret-ui-shadcn/src/sonner.rs` | `stack.shift` | `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json` | Landed (baseline) |
-| AR-TOAST-002 | Swipe-to-dismiss inertia | (Animata: use `drag_release_settle` intent) | `ecosystem/fret-ui-shadcn/src/sonner.rs` | `drag_release_settle` | Add: `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json` | Planned |
+| AR-TOAST-002 | Swipe-to-dismiss inertia | (Animata: use `drag_release_settle` intent) | `ecosystem/fret-ui-shadcn/src/sonner.rs` | `drag_release_settle` | `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-sonner-demo-toast-swipe`) | Landed (gate script) |
 | AR-NAVMENU-001 | NavigationMenu viewport motion | (Animata: use `presence.enter/exit` + `layout.expand`) | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `layout.expand` + interruption | `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-navigation-menu-demo-viewport`) | Landed (gate script) |
 
 ## Definition of done (for a recipe row)

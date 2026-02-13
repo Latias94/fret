@@ -19,13 +19,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## P0 — Semantics and scope (document-first)
 
-- [ ] AR-SEM-001 Finalize the semantic motion vocabulary list (v1) and keep it stable across ecosystems.
+- [x] AR-SEM-001 Finalize the semantic motion vocabulary list (v1) and keep it stable across ecosystems.
   - Evidence:
     - `docs/workstreams/animata-recipes-v1.md` (section "Semantic motion vocabulary (v1)")
-- [ ] AR-SEM-002 Decide whether `duration.motion.*` becomes the canonical semantic namespace or stays as an alias layer over `duration.shadcn.motion.*`.
+- [x] AR-SEM-002 Decide whether `duration.motion.*` becomes the canonical semantic namespace or stays as an alias layer over `duration.shadcn.motion.*`.
   - Decision notes:
     - Avoid mechanism coupling in `crates/fret-ui`.
     - Keep Material 3 `md.sys.motion.*` as the primary source for M3 ecosystems.
+    - Decision (v1):
+      - `duration.motion.*` / `easing.motion.*` / `number.motion.spring.*` are canonical semantic keys.
+      - `duration.shadcn.motion.*` / `easing.shadcn.motion.*` are supported as ecosystem-scoped aliases.
+  - Evidence:
+    - `docs/workstreams/animata-recipes-v1.md` (section "Token guidance (semantic-first; optional)")
 
 ## P1 — Add deterministic gates for “missing rows”
 
@@ -50,10 +55,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json`
 
-- [ ] AR-GATE-003 Add a fixed-delta diag gate for Sonner swipe-to-dismiss inertia + settle.
+- [x] AR-GATE-003 Add a fixed-delta diag gate for Sonner swipe-to-dismiss inertia + settle.
   - Fret target:
     - `ecosystem/fret-ui-shadcn/src/sonner.rs`
   - Output:
+    - `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json`
+  - Evidence:
     - `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json`
 
 - [ ] AR-GATE-004 Add a fixed-delta diag gate for Animata expandable carousel (layout.expand).
