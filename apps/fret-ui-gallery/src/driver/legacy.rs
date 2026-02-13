@@ -957,9 +957,9 @@ impl UiGalleryDriver {
         let resizable_h_fractions = app.models_mut().insert(vec![0.5, 0.5]);
         let resizable_v_fractions = app.models_mut().insert(vec![0.25, 0.75]);
 
-        let data_table_state = app
-            .models_mut()
-            .insert(fret_ui_headless::table::TableState::default());
+        let mut data_table_state_value = fret_ui_headless::table::TableState::default();
+        data_table_state_value.pagination.page_size = 25;
+        let data_table_state = app.models_mut().insert(data_table_state_value);
         let data_grid_selected_row = app.models_mut().insert(None::<u64>);
         let tabs_value = app
             .models_mut()

@@ -471,6 +471,88 @@ impl DataTable {
     where
         TData: 'static,
     {
+        self.into_element_with_header_cell_opt(
+            cx,
+            data,
+            data_revision,
+            state,
+            columns,
+            get_row_key,
+            header_label,
+            None::<
+                Arc<
+                    dyn Fn(
+                        &mut ElementContext<'_, H>,
+                        &ColumnDef<TData>,
+                        Option<bool>,
+                    ) -> Option<Vec<AnyElement>>,
+                >,
+            >,
+            cell_at,
+        )
+    }
+
+    /// Like [`Self::into_element`], but allows overriding header cell rendering for specific columns.
+    ///
+    /// Return `Some(Vec<AnyElement>)` to fully replace the default header content for that column.
+    /// Return `None` to fall back to the default (label + sort indicator + optional column menu).
+    #[track_caller]
+    pub fn into_element_with_header_cell<H: UiHost, TData>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: Model<TableState>,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        header_cell_at: impl Fn(
+            &mut ElementContext<'_, H>,
+            &ColumnDef<TData>,
+            Option<bool>,
+        ) -> Option<Vec<AnyElement>>
+        + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        TData: 'static,
+    {
+        self.into_element_with_header_cell_opt(
+            cx,
+            data,
+            data_revision,
+            state,
+            columns,
+            get_row_key,
+            header_label,
+            Some(Arc::new(header_cell_at)),
+            cell_at,
+        )
+    }
+
+    fn into_element_with_header_cell_opt<H: UiHost, TData>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: Model<TableState>,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        header_cell_at: Option<
+            Arc<
+                dyn Fn(
+                    &mut ElementContext<'_, H>,
+                    &ColumnDef<TData>,
+                    Option<bool>,
+                ) -> Option<Vec<AnyElement>>,
+            >,
+        >,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        TData: 'static,
+    {
         let DataTable {
             overscan,
             keep_alive,
@@ -531,6 +613,7 @@ impl DataTable {
             let state_for_header = state.clone();
             let state_for_column_actions_header = state.clone();
             let column_actions_menu_enabled = column_actions_menu;
+            let header_cell_at = header_cell_at.clone();
             let columns = columns.clone();
             let state = state.clone();
             let data = data.clone();
@@ -546,6 +629,12 @@ impl DataTable {
                 view_props,
                 |_row| None,
                 move |cx, col, sort_state| {
+                    if let Some(header_cell_at) = header_cell_at.as_ref() {
+                        if let Some(custom) = header_cell_at(cx, col, sort_state) {
+                            return custom;
+                        }
+                    }
+
                     if !column_actions_menu_enabled {
                         let theme = Theme::global(&*cx.app).clone();
                         let label = (header_label)(col);

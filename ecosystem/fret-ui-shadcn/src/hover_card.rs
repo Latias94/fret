@@ -797,6 +797,7 @@ impl HoverCard {
                             PointerRegionProps {
                                 layout: panel_layout,
                                 enabled: true,
+                                ..Default::default()
                             },
                             move |cx| {
                                 let pointer_down_model_for_down =

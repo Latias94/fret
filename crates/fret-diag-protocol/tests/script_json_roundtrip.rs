@@ -178,6 +178,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_toggle() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_select_and_row_actions() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-guide-demo-select-and-row-actions.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_wait_bounds_stable() {
     assert_script_v2_roundtrip(
         r#"{

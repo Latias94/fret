@@ -1476,19 +1476,27 @@ pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
     } else {
         select_modal_barrier_layout()
     };
-    cx.pointer_region(PointerRegionProps { layout, enabled }, move |cx| {
-        let guard_for_pointer_up = guard.clone();
-        cx.pointer_region_on_pointer_up(Arc::new(move |_host, _action_cx, up: PointerUpCx| {
-            match select_mouse_open_guard_pointer_up_decision_shared(&guard_for_pointer_up, up) {
-                SelectMouseOpenGuardPointerUpDecision::NoGuard => false,
-                SelectMouseOpenGuardPointerUpDecision::Suppress => true,
-                // Outside the click slop this element should not be hit, but keep the behavior
-                // conservative in case the host routing changes.
-                SelectMouseOpenGuardPointerUpDecision::Allow => false,
-            }
-        }));
-        Vec::new()
-    })
+    cx.pointer_region(
+        PointerRegionProps {
+            layout,
+            enabled,
+            capture_phase_pointer_moves: false,
+        },
+        move |cx| {
+            let guard_for_pointer_up = guard.clone();
+            cx.pointer_region_on_pointer_up(Arc::new(move |_host, _action_cx, up: PointerUpCx| {
+                match select_mouse_open_guard_pointer_up_decision_shared(&guard_for_pointer_up, up)
+                {
+                    SelectMouseOpenGuardPointerUpDecision::NoGuard => false,
+                    SelectMouseOpenGuardPointerUpDecision::Suppress => true,
+                    // Outside the click slop this element should not be hit, but keep the behavior
+                    // conservative in case the host routing changes.
+                    SelectMouseOpenGuardPointerUpDecision::Allow => false,
+                }
+            }));
+            Vec::new()
+        },
+    )
 }
 
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed

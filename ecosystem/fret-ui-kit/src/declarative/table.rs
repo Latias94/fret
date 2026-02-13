@@ -4091,6 +4091,7 @@ where
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             enabled: true,
+                                                                                            capture_phase_pointer_moves: false,
                                                                                         },
                                                                                         |cx| {
                                                                                             let state_model_down = state_model.clone();

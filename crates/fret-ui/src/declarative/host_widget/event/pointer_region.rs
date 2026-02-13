@@ -25,15 +25,18 @@ pub(super) fn handle_pointer_region<H: UiHost>(
     //
     // Bubble-phase handling is skipped to avoid double-dispatch (capture + bubble) once
     // `event_capture_impl` opts a given event into capture-phase dispatch for PointerRegion.
-    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble
-        && matches!(
-            event,
+    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble {
+        match event {
             Event::Pointer(fret_core::PointerEvent::Down { .. })
-                | Event::Pointer(fret_core::PointerEvent::Up { .. })
-                | Event::PointerCancel(_)
-        )
-    {
-        return;
+            | Event::Pointer(fret_core::PointerEvent::Up { .. })
+            | Event::PointerCancel(_) => return,
+            Event::Pointer(fret_core::PointerEvent::Move { .. })
+                if props.capture_phase_pointer_moves || cx.captured.is_some() =>
+            {
+                return;
+            }
+            _ => {}
+        }
     }
 
     let pixels_per_point = cx

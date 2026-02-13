@@ -636,6 +636,7 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
                                 ..Default::default()
                             },
                             enabled: true,
+                            ..Default::default()
                         },
                         |cx| {
                             cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, down| {
@@ -677,4 +678,80 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
     );
 
     assert_eq!(ui.focus(), Some(semantics_node));
+}
+
+#[test]
+fn declarative_pointer_region_capture_phase_pointer_moves_do_not_double_dispatch() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let moves = app.models_mut().insert(0u32);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-capture-phase-moves-no-double-dispatch",
+        |cx| {
+            let on_move = Arc::new({
+                let moves = moves.clone();
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      _mv: crate::action::PointerMoveCx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&moves, |v: &mut u32| *v = v.saturating_add(1));
+                    host.request_redraw(cx.window);
+                    false
+                }
+            });
+
+            vec![cx.pointer_region(
+                crate::element::PointerRegionProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Fill;
+                        layout.size.height = crate::element::Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    capture_phase_pointer_moves: true,
+                },
+                move |cx| {
+                    cx.pointer_region_on_pointer_move(on_move);
+                    Vec::new()
+                },
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&moves), Some(1));
 }

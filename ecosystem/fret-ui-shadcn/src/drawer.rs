@@ -883,6 +883,7 @@ impl Drawer {
                 PointerRegionProps {
                     layout: LayoutStyle::default(),
                     enabled: is_open,
+                    ..Default::default()
                 },
                 move |cx| {
                     cx.pointer_region_on_pointer_down(on_down);
