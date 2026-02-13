@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
@@ -111,10 +112,15 @@ pub enum PopoverModalMode {
     TrapFocus,
 }
 
-const POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY_FRAMES: u32 =
-    overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+const POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY: Duration = Duration::from_millis(300);
 const POPOVER_OPEN_ON_HOVER_DEFAULT_CLOSE_DELAY_FRAMES: u32 = 0;
 const POPOVER_OPEN_ON_HOVER_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
+
+fn popover_open_on_hover_default_open_delay_frames() -> u32 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+        POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY,
+    ) as u32
+}
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -284,7 +290,7 @@ impl Popover {
             consume_outside_pointer_events: false,
             modal_mode: PopoverModalMode::NonModal,
             open_on_hover: false,
-            hover_open_delay_frames: POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY_FRAMES,
+            hover_open_delay_frames: popover_open_on_hover_default_open_delay_frames(),
             hover_close_delay_frames: POPOVER_OPEN_ON_HOVER_DEFAULT_CLOSE_DELAY_FRAMES,
             auto_focus: None,
             initial_focus: None,

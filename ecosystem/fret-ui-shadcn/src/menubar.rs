@@ -5303,7 +5303,10 @@ mod tests {
             "ArrowLeft should restore focus to the submenu trigger"
         );
 
-        for _ in 0..overlay_motion::SHADCN_MOTION_TICKS_100 {
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        );
+        for _ in 0..settle_frames {
             render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
         }
 
