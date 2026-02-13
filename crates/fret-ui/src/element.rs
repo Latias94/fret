@@ -1397,8 +1397,12 @@ pub struct ResizablePanelGroupProps {
 
 impl ResizablePanelGroupProps {
     pub fn new(axis: fret_core::Axis, model: Model<Vec<f32>>) -> Self {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+
         Self {
-            layout: LayoutStyle::default(),
+            layout,
             axis,
             model,
             min_px: Vec::new(),
