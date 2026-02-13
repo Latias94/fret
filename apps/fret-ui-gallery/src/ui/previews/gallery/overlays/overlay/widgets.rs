@@ -158,8 +158,9 @@ fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -
         .into_element(
             cx,
             |cx| {
-                shadcn::Button::new("ContextMenu (edge, right click)")
+                shadcn::Button::new("ContextMenu (edge)")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
                     .test_id("ui-gallery-context-trigger-edge")
                     .into_element(cx)
             },

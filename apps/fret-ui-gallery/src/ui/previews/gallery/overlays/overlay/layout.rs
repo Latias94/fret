@@ -20,7 +20,7 @@ fn row(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>) -> 
     )
 }
 
-fn row_no_wrap(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
+fn row_end(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
     let layout = cx.with_theme(|theme| {
         decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0())
     });
@@ -30,7 +30,7 @@ fn row_no_wrap(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyEleme
             direction: fret_core::Axis::Horizontal,
             gap,
             padding: Edges::all(Px(0.0)),
-            justify: fret_ui::element::MainAlign::Start,
+            justify: fret_ui::element::MainAlign::End,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,
         },
@@ -51,20 +51,17 @@ pub(super) fn compose_body(
             let gap =
                 cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
 
-            let edge_spacer = cx.spacer(Default::default());
-
             vec![
-                row_no_wrap(
+                row(
                     cx,
                     gap,
                     vec![
                         widgets.dropdown,
                         widgets.context_menu,
                         widgets.overlay_reset,
-                        edge_spacer,
-                        widgets.context_menu_edge,
                     ],
                 ),
+                row_end(cx, gap, vec![widgets.context_menu_edge]),
                 row(
                     cx,
                     gap,
