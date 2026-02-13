@@ -16,8 +16,8 @@ Exit criteria:
 
 - [x] `diag run` and `diag suite` use a single orchestration path with a pluggable transport.
   - Evidence: `crates/fret-diag/src/lib.rs` (`ConnectedToolingTransport`, `run_script_over_transport`)
-- [ ] No behavior change for existing filesystem workflows (not audited yet).
-  - Evidence: `crates/fret-diag/src/lib.rs` (filesystem baseline-race retouch), `crates/fret-diag/src/transport/fs.rs` (filesystem `session.list` shim)
+- [x] No behavior change for existing filesystem workflows (tooling-side contract audited).
+  - Evidence: `crates/fret-diag/src/lib.rs` (baseline-race retouch + incremental writes), `crates/fret-diag/src/lib.rs` (tests: `run_script_over_transport_retouches_in_filesystem_mode_to_avoid_baseline_race`, `dump_bundle_over_transport_materializes_filesystem_latest_pointer`)
 
 ## M2: Artifact parity (WS -> local materialization)
 

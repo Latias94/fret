@@ -14118,6 +14118,191 @@ mod tests {
     }
 
     #[test]
+    fn run_script_over_transport_retouches_in_filesystem_mode_to_avoid_baseline_race() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-script-retouch-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["script_v2".to_string()],
+        };
+        crate::util::write_json_value(
+            &root.join("capabilities.json"),
+            &serde_json::to_value(caps).expect("capabilities json"),
+        )
+        .expect("write capabilities.json");
+
+        let cfg = crate::transport::FsDiagTransportConfig {
+            out_dir: root.clone(),
+            trigger_path: root.join("trigger.touch"),
+            script_path: root.join("runtime.script.json"),
+            script_trigger_path: root.join("runtime.script.touch"),
+            script_result_path: root.join("runtime.script.result.json"),
+            script_result_trigger_path: root.join("runtime.script.result.touch"),
+            pick_trigger_path: root.join("pick.touch"),
+            pick_result_path: root.join("pick.result.json"),
+            pick_result_trigger_path: root.join("pick.result.touch"),
+            inspect_path: root.join("inspect.json"),
+            inspect_trigger_path: root.join("inspect.touch"),
+            screenshots_request_path: root.join("screenshots.request.json"),
+            screenshots_trigger_path: root.join("screenshots.touch"),
+            screenshots_result_path: root.join("screenshots.result.json"),
+            screenshots_result_trigger_path: root.join("screenshots.result.touch"),
+        };
+
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let saw_retouch = Arc::new(AtomicBool::new(false));
+
+        let runtime_cfg = cfg.clone();
+        let runtime_saw_retouch = saw_retouch.clone();
+        std::thread::spawn(move || {
+            fn read_stamp(path: &Path) -> Option<u64> {
+                let s = std::fs::read_to_string(path).ok()?;
+                s.lines().last()?.trim().parse::<u64>().ok()
+            }
+
+            let deadline = Instant::now() + Duration::from_secs(3);
+            let mut first_stamp: Option<u64> = None;
+            while Instant::now() < deadline {
+                let Some(stamp) = read_stamp(&runtime_cfg.script_trigger_path) else {
+                    std::thread::sleep(Duration::from_millis(5));
+                    continue;
+                };
+                match first_stamp {
+                    None => first_stamp = Some(stamp),
+                    Some(prev) if stamp > prev => {
+                        runtime_saw_retouch.store(true, Ordering::Relaxed);
+                        break;
+                    }
+                    _ => {}
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+
+            if !runtime_saw_retouch.load(Ordering::Relaxed) {
+                return;
+            }
+
+            let passed = fret_diag_protocol::UiScriptResultV1 {
+                schema_version: 1,
+                run_id: 1,
+                updated_unix_ms: crate::util::now_unix_ms(),
+                window: None,
+                stage: fret_diag_protocol::UiScriptStageV1::Passed,
+                step_index: Some(0),
+                reason_code: None,
+                reason: None,
+                evidence: None,
+                last_bundle_dir: None,
+                last_bundle_artifact: None,
+            };
+            let _ = crate::util::write_json_value(
+                &runtime_cfg.script_result_path,
+                &serde_json::to_value(passed).unwrap_or_else(|_| serde_json::json!({})),
+            );
+            let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+        });
+
+        let connected =
+            connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 5_000, 5)
+                .expect("connect fs tooling");
+
+        let tool_script_result_path = root.join("tool.script.result.json");
+        let capabilities_check_path = root.join("check.capabilities.json");
+        let script_json = serde_json::json!({
+            "schema_version": 2,
+            "steps": [],
+        });
+
+        let (result, _bundle_path) = run_script_over_transport(
+            &root,
+            &connected,
+            script_json,
+            false,
+            None,
+            None,
+            5_000,
+            5,
+            &tool_script_result_path,
+            &capabilities_check_path,
+        )
+        .expect("run_script_over_transport");
+
+        assert!(matches!(
+            result.stage,
+            fret_diag_protocol::UiScriptStageV1::Passed
+        ));
+        assert!(
+            saw_retouch.load(Ordering::Relaxed),
+            "expected tooling retouch to advance script stamp"
+        );
+    }
+
+    #[test]
+    fn dump_bundle_over_transport_materializes_filesystem_latest_pointer() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-bundle-dump-fs-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["script_v2".to_string()],
+        };
+        crate::util::write_json_value(
+            &root.join("capabilities.json"),
+            &serde_json::to_value(caps).expect("capabilities json"),
+        )
+        .expect("write capabilities.json");
+
+        let latest_dir = "123-latest";
+        let export_dir = root.join(latest_dir);
+        std::fs::create_dir_all(&export_dir).expect("create export dir");
+        std::fs::write(root.join("latest.txt"), latest_dir.as_bytes()).expect("write latest.txt");
+        crate::util::write_json_value(
+            &export_dir.join("bundle.json"),
+            &serde_json::json!({
+                "schema_version": 1,
+                "windows": [],
+            }),
+        )
+        .expect("write bundle.json");
+
+        let cfg = crate::transport::FsDiagTransportConfig::from_out_dir(&root);
+        let connected =
+            connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 2_000, 5)
+                .expect("connect fs tooling");
+
+        let bundle_path =
+            dump_bundle_over_transport(&root, &connected, Some("test"), None, 2_000, 5)
+                .expect("dump bundle");
+        assert!(bundle_path.is_file());
+        assert_eq!(
+            bundle_path
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str()),
+            Some(latest_dir)
+        );
+    }
+
+    #[test]
     fn stale_scene_check_fails_when_label_changes_without_scene_change() {
         let bundle = json!({
             "schema_version": 1,
