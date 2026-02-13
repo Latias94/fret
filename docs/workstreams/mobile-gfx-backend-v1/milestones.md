@@ -56,3 +56,5 @@ Evidence:
 - A short “device smoke test” log/diag record attached to the workstream.
 - Real-device smoke recipe + bundle anchors:
   - `docs/workstreams/mobile-gfx-backend-v1/m3-real-device-smoke-oppo-plg110.md`
+- iOS Simulator supporting smoke recipe:
+  - `docs/workstreams/mobile-gfx-backend-v1/m3-ios-simulator-smoke.md`
