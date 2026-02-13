@@ -1,8 +1,9 @@
 use super::{EffectQuality, Rect};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum BlendMode {
     /// Premultiplied alpha-over (the baseline compositing contract; ADR 0040).
+    #[default]
     Over,
     /// Additive blending (used for glow/beam).
     Add,
@@ -10,12 +11,6 @@ pub enum BlendMode {
     Multiply,
     /// Screen blending (used for light overlays).
     Screen,
-}
-
-impl Default for BlendMode {
-    fn default() -> Self {
-        Self::Over
-    }
 }
 
 /// Descriptor for an isolated compositing group (ADR 0247).

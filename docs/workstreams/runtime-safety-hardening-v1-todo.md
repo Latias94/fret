@@ -102,3 +102,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-ui/src/runtime_config.rs` (`UiRuntimeEnvConfig`, `ui_runtime_config`)
   - Evidence: `crates/fret-ui/src/tree/layout.rs` (layout profiling/taffy dump/fallback-solve gates read cached config)
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (gate-sync, pointer-down-outside, semantics profiling read cached config)
+
+## M5 — Clippy hygiene (warnings-as-errors, local gates)
+
+- [x] RSH-clippy-001 Make `cargo clippy` pass with `-D warnings` for the workstream crates.
+  - Evidence: `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+  - Evidence: `cargo clippy -p fret-app --all-targets -- -D warnings`: PASS

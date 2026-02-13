@@ -20,10 +20,7 @@ struct ScrollLayoutProfileConfig {
 
 impl ScrollLayoutProfileConfig {
     fn from_env() -> Option<Self> {
-        let Some(cfg) = crate::runtime_config::ui_runtime_config().scroll_layout_profile else {
-            return None;
-        };
-
+        let cfg = crate::runtime_config::ui_runtime_config().scroll_layout_profile?;
         Some(Self {
             min_elapsed: cfg.min_elapsed,
             min_self_measure: cfg.min_self_measure,

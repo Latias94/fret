@@ -33,6 +33,7 @@ impl Default for WindowFrame {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub(crate) enum ElementInstance {
     Container(ContainerProps),
