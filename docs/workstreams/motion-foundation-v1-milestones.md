@@ -84,7 +84,7 @@ Deliverables:
   - define tokens (duration/easing and, if needed, spring params),
   - add a deterministic diag gate under fixed `delta`.
 
-Status: In progress (spec mapping landed; gates pending)
+Status: In progress (spec mapping + fixed-delta gates landed; interrupt pending)
 
 Exit criteria:
 
@@ -95,6 +95,9 @@ Exit criteria:
 Evidence:
 
 - `docs/workstreams/motion-foundation-v1.md` (section "Recipe alignment matrix (draft)")
+- `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
+- `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`
+- `crates/fret-diag/src/lib.rs` (builtin suite: `ui-gallery-motion-pilot`)
 
 ## M5 — Motion token taxonomy (shadcn ↔ Material 3)
 
