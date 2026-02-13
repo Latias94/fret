@@ -169,6 +169,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
+    let mut keep_open: bool = false;
     let mut script_tool_write: bool = false;
     let mut script_tool_check: bool = false;
     let mut script_tool_check_out: Option<PathBuf> = None;
@@ -1608,6 +1609,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 reuse_launch = true;
                 i += 1;
             }
+            "--keep-open" => {
+                keep_open = true;
+                i += 1;
+            }
             "--launch" => {
                 i += 1;
                 let launch_args = args.get(i..).unwrap_or_default();
@@ -1684,6 +1689,15 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     }
     if sub != "run" && exit_after_run {
         return Err("--exit-after-run is only supported with `diag run`".to_string());
+    }
+    if keep_open && sub != "run" && sub != "suite" {
+        return Err("--keep-open is only supported with `diag run` or `diag suite`".to_string());
+    }
+    if keep_open && launch.is_none() {
+        return Err("--keep-open requires --launch".to_string());
+    }
+    if keep_open && exit_after_run {
+        return Err("--keep-open conflicts with --exit-after-run".to_string());
     }
     if sub != "suite" && !suite_script_inputs.is_empty() {
         return Err("--glob/--script-dir are only supported with `diag suite`".to_string());
@@ -2909,10 +2923,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms,
                 poll_ms,
             )?;
-            let _stop_guard = StopLaunchedDemoOnDrop {
-                child: &mut child,
-                exit_path: &resolved_exit_path,
-                poll_ms,
+            let _stop_guard = if keep_open {
+                None
+            } else {
+                Some(StopLaunchedDemoOnDrop {
+                    child: &mut child,
+                    exit_path: &resolved_exit_path,
+                    poll_ms,
+                })
             };
 
             let required_caps = script_required_capabilities(&src);
@@ -3191,6 +3209,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
             }
 
+            drop(_stop_guard);
             report_result_and_exit(&result);
         }
         "repeat" => {
@@ -5606,6 +5625,7 @@ See: `docs/tracy.md`.\n";
             let mut suite_rows: Vec<serde_json::Value> = Vec::new();
             let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
 
+            let script_count = scripts.len();
             for (idx, src) in scripts.into_iter().enumerate() {
                 if !reuse_process {
                     child = maybe_launch_demo(
@@ -5782,7 +5802,9 @@ See: `docs/tracy.md`.\n";
                             "evidence_aggregate": suite_evidence_agg.as_json(),
                             "rows": suite_rows,
                         });
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        if !keep_open {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        }
                         let _ = write_json_value(&suite_summary_path, &payload);
                         return Err("suite run failed (see suite.summary.json)".to_string());
                     }
@@ -5845,7 +5867,9 @@ See: `docs/tracy.md`.\n";
                             "evidence_aggregate": suite_evidence_agg.as_json(),
                             "rows": suite_rows,
                         });
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        if !keep_open {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        }
                         let _ = write_json_value(&suite_summary_path, &payload);
                         std::process::exit(1);
                     }
@@ -5881,7 +5905,9 @@ See: `docs/tracy.md`.\n";
                             "evidence_aggregate": suite_evidence_agg.as_json(),
                             "rows": suite_rows,
                         });
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        if !keep_open {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        }
                         let _ = write_json_value(&suite_summary_path, &payload);
                         std::process::exit(1);
                     }
@@ -6698,11 +6724,16 @@ See: `docs/tracy.md`.\n";
                 }));
 
                 if !reuse_process {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    let is_last = idx.saturating_add(1) >= script_count;
+                    if !(keep_open && is_last) {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    }
                 }
             }
 
-            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+            if !keep_open {
+                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+            }
             let payload = serde_json::json!({
                 "schema_version": 1,
                 "generated_unix_ms": suite_summary_generated_unix_ms,

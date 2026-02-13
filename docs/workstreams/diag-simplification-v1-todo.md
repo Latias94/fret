@@ -48,8 +48,8 @@ small, fearless refactors.
 - [x] Add a WS message for exit request (`app.exit.request` or `diag.exit.request`).
 - [x] Wire runtime to honor the exit request (native + wasm).
 - [ ] Update tooling:
-  - [ ] in `--launch` mode, exit after run by default (new behavior)
-  - [ ] add `--keep-open` to preserve existing workflows
+  - [x] in `--launch` mode, exit after run by default (new behavior)
+  - [x] add `--keep-open` to preserve existing workflows
   - [x] keep `--touch-exit-after-run` as an alias or deprecate it in favor of transport-neutral naming
 
 ## Phase 4: Retention and evidence (bounded)

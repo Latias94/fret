@@ -30,8 +30,8 @@ Exit criteria:
 Exit criteria:
 
 - [x] A transport-neutral exit request exists (filesystem touch + WS message).
-- [ ] In `--launch` mode, runs exit deterministically by default.
-- [ ] `--keep-open` preserves long-running/manual workflows.
+- [x] In `--launch` mode, runs exit deterministically by default.
+- [x] `--keep-open` preserves long-running/manual workflows.
 
 ## M4: Evidence improvements (bounded)
 
