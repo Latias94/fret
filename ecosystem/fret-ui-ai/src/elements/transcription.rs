@@ -75,22 +75,22 @@ fn muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn primary(theme: &Theme) -> Color {
     theme
         .color_by_key("primary")
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn text_sm(theme: &Theme) -> TextStyle {
     TextStyle {
         font: FontId::default(),
-        size: theme.metric_required("component.text.sm_px"),
+        size: theme.metric_token("component.text.sm_px"),
         weight: FontWeight::NORMAL,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("component.text.sm_line_height")),
+        line_height: Some(theme.metric_token("component.text.sm_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -323,7 +323,7 @@ impl TranscriptionSegment {
             alpha_mul(muted_fg(&theme), 0.6)
         };
 
-        let fg_on_hover = theme.color_required("foreground");
+        let fg_on_hover = theme.color_token("foreground");
 
         let test_id = self.test_id;
         let index = self.index;

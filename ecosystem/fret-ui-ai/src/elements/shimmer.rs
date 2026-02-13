@@ -14,14 +14,14 @@ fn resolve_background(theme: &Theme) -> fret_core::Color {
     theme
         .color_by_key("background")
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or_else(|| theme.color_required("background"))
+        .unwrap_or_else(|| theme.color_token("background"))
 }
 
 fn resolve_muted_foreground(theme: &Theme) -> fret_core::Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn clamp_duration_secs(duration_secs: f32) -> f32 {

@@ -300,7 +300,7 @@ impl ModalBottomSheet {
                             x2: 1.0,
                             y2: 1.0,
                         });
-                let scrim_base = theme.color_required("md.sys.color.scrim");
+                let scrim_base = theme.color_token("md.sys.color.scrim");
                 (default_duration_ms, bezier, scrim_base)
             };
 

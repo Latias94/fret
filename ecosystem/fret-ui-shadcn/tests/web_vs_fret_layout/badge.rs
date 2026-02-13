@@ -148,7 +148,7 @@ fn fret_badge_destructive_label_color_is_white_like_shadcn() {
 
         let expected = theme
             .color_by_key("white")
-            .unwrap_or_else(|| theme.color_required("destructive-foreground"));
+            .unwrap_or_else(|| theme.color_token("destructive-foreground"));
         let actual = first_text_color(&badge).expect("expected Text node under badge");
         assert_eq!(actual, expected);
 

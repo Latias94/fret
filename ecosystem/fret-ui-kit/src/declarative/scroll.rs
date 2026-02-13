@@ -27,10 +27,10 @@ where
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let scrollbar_w = theme.metric_token("metric.scrollbar.width");
 
-        let thumb = theme.color_required("scrollbar.thumb.background");
-        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+        let thumb = theme.color_token("scrollbar.thumb.background");
+        let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
         (layout, scrollbar_w, thumb, thumb_hover)
     };
@@ -100,10 +100,10 @@ where
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let scrollbar_w = theme.metric_token("metric.scrollbar.width");
 
-        let thumb = theme.color_required("scrollbar.thumb.background");
-        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+        let thumb = theme.color_token("scrollbar.thumb.background");
+        let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
         (layout, scrollbar_w, thumb, thumb_hover)
     };
@@ -173,10 +173,10 @@ where
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let scrollbar_w = theme.metric_token("metric.scrollbar.width");
 
-        let thumb = theme.color_required("scrollbar.thumb.background");
-        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+        let thumb = theme.color_token("scrollbar.thumb.background");
+        let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
         let corner_bg = theme
             .color_by_key("scrollbar.corner.background")
@@ -352,10 +352,10 @@ pub fn overflow_scroll_x_content<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let scrollbar_w = theme.metric_token("metric.scrollbar.width");
 
-        let thumb = theme.color_required("scrollbar.thumb.background");
-        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+        let thumb = theme.color_token("scrollbar.thumb.background");
+        let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
         (layout, scrollbar_w, thumb, thumb_hover)
     };

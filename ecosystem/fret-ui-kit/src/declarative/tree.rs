@@ -22,21 +22,21 @@ fn resolve_list_colors(theme: &Theme) -> (Color, Color, Color, Color) {
     let list_bg = theme
         .color_by_key("list.background")
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or_else(|| theme.color_required("card"));
+        .unwrap_or_else(|| theme.color_token("card"));
     let border = theme
         .color_by_key("border")
         .or_else(|| theme.color_by_key("list.border"))
-        .unwrap_or_else(|| theme.color_required("border"));
+        .unwrap_or_else(|| theme.color_token("border"));
     let row_hover = theme
         .color_by_key("list.hover.background")
         .or_else(|| theme.color_by_key("list.row.hover"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
     let row_active = theme
         .color_by_key("list.active.background")
         .or_else(|| theme.color_by_key("list.row.active"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
     (list_bg, border, row_hover, row_active)
 }
 
@@ -181,7 +181,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
 
     let theme = Theme::global(&*cx.app);
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);
-    let radius = theme.metric_required("metric.radius.md");
+    let radius = theme.metric_token("metric.radius.md");
 
     let row_h = resolve_row_height(theme, size);
     let row_px = resolve_row_padding_x(theme);
@@ -379,7 +379,7 @@ where
 
     let theme = Theme::global(&*cx.app);
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);
-    let radius = theme.metric_required("metric.radius.md");
+    let radius = theme.metric_token("metric.radius.md");
 
     let row_h = resolve_row_height(theme, size);
     let row_px = resolve_row_padding_x(theme);

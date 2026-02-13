@@ -33,14 +33,14 @@ fn alpha(color: Color, a: f32) -> Color {
 }
 
 fn border_color(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
@@ -49,7 +49,7 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         size,
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -518,11 +518,11 @@ impl SchemaDisplayMethod {
         let text_px = theme
             .metric_by_key("component.badge.text_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.badge.line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         let mut props = ContainerProps::default();
         props.padding = Edges::symmetric(
@@ -571,7 +571,7 @@ impl SchemaDisplayPath {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let base_color = theme.color_required("foreground");
+        let base_color = theme.color_token("foreground");
         let highlight = theme.color_by_key("primary").unwrap_or_else(|| Color {
             r: 0.145,
             g: 0.388,
@@ -586,7 +586,7 @@ impl SchemaDisplayPath {
         props.layout.size.height = Length::Auto;
         props.style = Some(monospace_style(
             &theme,
-            theme.metric_required("metric.font.mono_size"),
+            theme.metric_token("metric.font.mono_size"),
             FontWeight::NORMAL,
         ));
         props.color = Some(base_color);
@@ -1030,7 +1030,7 @@ impl SchemaDisplayParameter {
                     cx,
                     &theme_for_line,
                     name.clone(),
-                    theme_for_line.metric_required("metric.font.mono_size"),
+                    theme_for_line.metric_token("metric.font.mono_size"),
                 ));
                 out.push(
                     Badge::new(type_name.clone())
@@ -1265,10 +1265,10 @@ impl SchemaDisplayExample {
                 text,
                 style: Some(monospace_style(
                     &theme,
-                    theme.metric_required("metric.font.mono_size"),
+                    theme.metric_token("metric.font.mono_size"),
                     FontWeight::NORMAL,
                 )),
-                color: Some(theme.color_required("foreground")),
+                color: Some(theme.color_token("foreground")),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
             })]
@@ -1338,7 +1338,7 @@ fn monospace_text<H: UiHost>(
         },
         text,
         style: Some(monospace_style(theme, size, FontWeight::NORMAL)),
-        color: Some(theme.color_required("foreground")),
+        color: Some(theme.color_token("foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     })
@@ -1384,11 +1384,11 @@ fn schema_section_trigger<H: UiHost + 'static>(
     let hover_bg = theme
         .color_by_key("muted")
         .map(|c| alpha(c, 0.5))
-        .unwrap_or_else(|| alpha(theme.color_required("accent"), 0.2));
+        .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.2));
     let pressed_bg = theme
         .color_by_key("accent")
         .map(|c| alpha(c, 0.35))
-        .unwrap_or_else(|| alpha(theme.color_required("secondary"), 0.35));
+        .unwrap_or_else(|| alpha(theme.color_token("secondary"), 0.35));
 
     let label: Arc<str> = Arc::from(format!("Toggle {title}"));
     let title_arc: Arc<str> = Arc::from(title);
@@ -1500,11 +1500,11 @@ fn schema_property_trigger_row<H: UiHost + 'static>(
     let hover_bg = theme
         .color_by_key("muted")
         .map(|c| alpha(c, 0.5))
-        .unwrap_or_else(|| alpha(theme.color_required("accent"), 0.2));
+        .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.2));
     let pressed_bg = theme
         .color_by_key("accent")
         .map(|c| alpha(c, 0.35))
-        .unwrap_or_else(|| alpha(theme.color_required("secondary"), 0.35));
+        .unwrap_or_else(|| alpha(theme.color_token("secondary"), 0.35));
 
     let label: Arc<str> = Arc::from(format!("Toggle {name}"));
 
@@ -1540,7 +1540,7 @@ fn schema_property_trigger_row<H: UiHost + 'static>(
             cx,
             &theme_for_row,
             name.clone(),
-            theme_for_row.metric_required("metric.font.mono_size"),
+            theme_for_row.metric_token("metric.font.mono_size"),
         );
         let ty_badge = Badge::new(type_name.clone())
             .variant(BadgeVariant::Outline)
@@ -1594,7 +1594,7 @@ fn schema_property_leaf<H: UiHost>(
         cx,
         theme,
         prop.name.clone(),
-        theme.metric_required("metric.font.mono_size"),
+        theme.metric_token("metric.font.mono_size"),
     );
     let ty_badge = Badge::new(prop.type_name.clone())
         .variant(BadgeVariant::Outline)

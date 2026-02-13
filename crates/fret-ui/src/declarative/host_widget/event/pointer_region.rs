@@ -333,14 +333,14 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             };
 
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_HOOK").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_pointer_region_move_hook {
                 eprintln!(
                     "pointer_region_move_hook: element={:?} node={:?} phase={:?} pos={:?} buttons={:?}",
                     this.element, cx.node, cx.input_ctx.dispatch_phase, position, buttons
                 );
             }
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_BACKTRACE").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_pointer_region_move_backtrace {
                 eprintln!(
                     "pointer_region_move_hook backtrace:\n{}",
                     std::backtrace::Backtrace::force_capture()

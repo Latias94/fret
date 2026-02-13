@@ -55,10 +55,10 @@ pub(in crate::ui) fn preview_material3_gallery(
             let (hover_icon, hover_container) = cx.with_theme(|theme| {
                 (
                     fret_ui_shadcn::ColorRef::Color(
-                        theme.color_required("md.sys.color.on-tertiary-container"),
+                        theme.color_token("md.sys.color.on-tertiary-container"),
                     ),
                     fret_ui_shadcn::ColorRef::Color(
-                        theme.color_required("md.sys.color.tertiary-container"),
+                        theme.color_token("md.sys.color.tertiary-container"),
                     ),
                 )
             });
@@ -123,12 +123,12 @@ pub(in crate::ui) fn preview_material3_gallery(
             let (hover_container, hover_icon, hover_outline) = cx.with_theme(|theme| {
                 (
                     fret_ui_shadcn::ColorRef::Color(
-                        theme.color_required("md.sys.color.tertiary-container"),
+                        theme.color_token("md.sys.color.tertiary-container"),
                     ),
                     fret_ui_shadcn::ColorRef::Color(
-                        theme.color_required("md.sys.color.on-tertiary-container"),
+                        theme.color_token("md.sys.color.on-tertiary-container"),
                     ),
-                    fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary")),
+                    fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary")),
                 )
             });
             let hover_style = material3::CheckboxStyle::default()
@@ -162,10 +162,10 @@ pub(in crate::ui) fn preview_material3_gallery(
                         let (hover_track, hover_handle) = cx.with_theme(|theme| {
                             (
                                 fret_ui_shadcn::ColorRef::Color(
-                                    theme.color_required("md.sys.color.tertiary-container"),
+                                    theme.color_token("md.sys.color.tertiary-container"),
                                 ),
                                 fret_ui_shadcn::ColorRef::Color(
-                                    theme.color_required("md.sys.color.on-tertiary-container"),
+                                    theme.color_token("md.sys.color.on-tertiary-container"),
                                 ),
                             )
                         });
@@ -194,7 +194,7 @@ pub(in crate::ui) fn preview_material3_gallery(
 
                         let hover_color = cx.with_theme(|theme| {
                             fret_ui_shadcn::ColorRef::Color(
-                                theme.color_required("md.sys.color.tertiary"),
+                                theme.color_token("md.sys.color.tertiary"),
                             )
                         });
                         let hover_style = material3::RadioStyle::default()
@@ -248,7 +248,7 @@ pub(in crate::ui) fn preview_material3_gallery(
         stack::VStackProps::default().gap(Space::N1).items_start(),
         |cx| {
             let hover = cx.with_theme(|theme| {
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"))
+                fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
             });
             let hover_style = material3::TextFieldStyle::default()
                 .outline_color(
@@ -292,7 +292,7 @@ pub(in crate::ui) fn preview_material3_gallery(
             ];
 
             let hover_color = cx.with_theme(|theme| {
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"))
+                fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
             });
             let hover_style = material3::TabsStyle::default()
                 .label_color(fret_ui_kit::WidgetStateProperty::new(None).when(

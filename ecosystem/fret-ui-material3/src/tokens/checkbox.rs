@@ -157,7 +157,7 @@ pub(crate) fn state_layer_color(
     theme
         .color_by_key(state_layer_color_key(checked, interaction))
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -211,12 +211,12 @@ pub(crate) fn chrome(
         let mut container = theme
             .color_by_key("md.comp.checkbox.selected.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.primary"));
 
         let mut icon_color = theme
             .color_by_key("md.comp.checkbox.selected.icon.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-primary"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"));
 
         let outline_width = if enabled {
             theme
@@ -285,7 +285,7 @@ pub(crate) fn chrome(
         let icon_color = theme
             .color_by_key("md.comp.checkbox.selected.icon.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-primary"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"));
 
         CheckboxChrome {
             container_bg: None,

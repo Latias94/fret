@@ -47,27 +47,27 @@ fn alpha(color: Color, a: f32) -> Color {
 fn resolve_muted(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
-        .unwrap_or_else(|| theme.color_required("muted.background"))
+        .unwrap_or_else(|| theme.color_token("muted.background"))
 }
 
 fn resolve_border(theme: &Theme) -> Color {
     theme
         .color_by_key("border")
-        .unwrap_or_else(|| theme.color_required("border"))
+        .unwrap_or_else(|| theme.color_token("border"))
 }
 
 fn resolve_background(theme: &Theme) -> Color {
     theme
         .color_by_key("background")
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or_else(|| theme.color_required("card"))
+        .unwrap_or_else(|| theme.color_token("card"))
 }
 
 fn resolve_muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn sorted_arc_slice_from_set(set: &HashSet<Arc<str>>) -> Arc<[Arc<str>]> {
@@ -617,13 +617,13 @@ impl FileTreeName {
             text: self.name,
             style: Some(TextStyle {
                 font: FontId::monospace(),
-                size: theme.metric_required("metric.font.mono_size"),
+                size: theme.metric_token("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                 letter_spacing_em: None,
             }),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
         })

@@ -1215,9 +1215,9 @@ fn render_heading_inline<H: UiHost>(
     info: HeadingInfo,
     events: &[pulldown_cmark::Event<'static>],
 ) -> AnyElement {
-    let font_size = theme.metric_required("metric.font.size");
-    let line_height = theme.metric_required("metric.font.line_height");
-    let fg = theme.color_required("foreground");
+    let font_size = theme.metric_token("metric.font.size");
+    let line_height = theme.metric_token("metric.font.line_height");
+    let fg = theme.color_token("foreground");
     let size = match info.level {
         1 => Px(font_size.0 * 1.6),
         2 => Px(font_size.0 * 1.4),
@@ -1244,9 +1244,9 @@ fn render_paragraph_inline<H: UiHost>(
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
 ) -> AnyElement {
-    let font_size = theme.metric_required("metric.font.size");
-    let line_height = theme.metric_required("metric.font.line_height");
-    let fg = theme.color_required("foreground");
+    let font_size = theme.metric_token("metric.font.size");
+    let line_height = theme.metric_token("metric.font.line_height");
+    let fg = theme.color_token("foreground");
     let base = InlineBaseStyle {
         font: FontId::default(),
         size: font_size,
@@ -1422,7 +1422,7 @@ fn render_math_block_builtin<H: UiHost>(
     container.padding = Edges::all(markdown_theme.math_block_padding);
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
-    container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
+    container.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.md"));
 
     cx.container(container, |cx| {
         vec![cx.scroll(scroll_props, |cx| {
@@ -1431,10 +1431,10 @@ fn render_math_block_builtin<H: UiHost>(
                 text: latex,
                 style: Some(TextStyle {
                     font: FontId::monospace(),
-                    size: theme.metric_required("metric.font.mono_size"),
+                    size: theme.metric_token("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
-                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                    line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                     letter_spacing_em: None,
                 }),
                 color: Some(markdown_theme.math_block_fg),
@@ -1849,8 +1849,8 @@ fn render_inline_token<H: UiHost>(
     let (font, size, line_height) = if style.code {
         (
             FontId::monospace(),
-            theme.metric_required("metric.font.mono_size"),
-            Some(theme.metric_required("metric.font.mono_line_height")),
+            theme.metric_token("metric.font.mono_size"),
+            Some(theme.metric_token("metric.font.mono_line_height")),
         )
     } else {
         (base.font.clone(), base.size, base.line_height)
@@ -1884,7 +1884,7 @@ fn render_inline_token<H: UiHost>(
         };
         props.background = Some(markdown_theme.inline_code_bg);
         props.border = Edges::all(Px(0.0));
-        props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
+        props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
 
         return cx.container(props, |cx| {
             vec![cx.text_props(TextProps {
@@ -2102,10 +2102,10 @@ fn render_image_placeholder<H: UiHost>(
                 text: display_text.clone(),
                 style: Some(TextStyle {
                     font: FontId::default(),
-                    size: theme.metric_required("metric.font.size"),
+                    size: theme.metric_token("metric.font.size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
-                    line_height: Some(theme.metric_required("metric.font.line_height")),
+                    line_height: Some(theme.metric_token("metric.font.line_height")),
                     letter_spacing_em: None,
                 }),
                 color: Some(markdown_theme.link),
@@ -2121,10 +2121,10 @@ fn render_image_placeholder<H: UiHost>(
         text: label,
         style: Some(TextStyle {
             font: FontId::default(),
-            size: theme.metric_required("metric.font.size"),
+            size: theme.metric_token("metric.font.size"),
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
-            line_height: Some(theme.metric_required("metric.font.line_height")),
+            line_height: Some(theme.metric_token("metric.font.line_height")),
             letter_spacing_em: None,
         }),
         color: Some(markdown_theme.muted),
@@ -2172,7 +2172,7 @@ fn render_inline_math_builtin<H: UiHost>(
     };
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
-    props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
+    props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
 
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {
@@ -2180,10 +2180,10 @@ fn render_inline_math_builtin<H: UiHost>(
             text: info.latex,
             style: Some(TextStyle {
                 font: FontId::monospace(),
-                size: theme.metric_required("metric.font.mono_size"),
+                size: theme.metric_token("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
-                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(markdown_theme.inline_math_fg),

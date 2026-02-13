@@ -346,7 +346,7 @@ fn input_with_style_and_submit<H: UiHost>(
     }
 
     if aria_invalid {
-        let border_color = theme.color_required("destructive");
+        let border_color = theme.color_token("destructive");
         chrome.border_color = border_color;
         chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
@@ -381,7 +381,7 @@ fn input_with_style_and_submit<H: UiHost>(
 
     let font_line_height = theme
         .metric_by_key("font.line_height")
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
     let text_style = TextStyle {
         font: FontId::default(),
         size: resolved.text_px,

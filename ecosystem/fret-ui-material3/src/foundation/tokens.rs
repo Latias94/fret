@@ -18,41 +18,41 @@ impl<'a> MaterialTokens<'a> {
     }
 
     pub fn sys_primary(&self) -> Color {
-        self.theme.color_required("md.sys.color.primary")
+        self.theme.color_token("md.sys.color.primary")
     }
 
     pub fn sys_on_surface(&self) -> Color {
-        self.theme.color_required("md.sys.color.on-surface")
+        self.theme.color_token("md.sys.color.on-surface")
     }
 
     pub fn sys_on_surface_variant(&self) -> Color {
-        self.theme.color_required("md.sys.color.on-surface-variant")
+        self.theme.color_token("md.sys.color.on-surface-variant")
     }
 
     pub fn sys_surface_container(&self) -> Color {
-        self.theme.color_required("md.sys.color.surface-container")
+        self.theme.color_token("md.sys.color.surface-container")
     }
 
     pub fn sys_outline(&self) -> Color {
-        self.theme.color_required("md.sys.color.outline")
+        self.theme.color_token("md.sys.color.outline")
     }
 
     pub fn sys_outline_variant(&self) -> Color {
-        self.theme.color_required("md.sys.color.outline-variant")
+        self.theme.color_token("md.sys.color.outline-variant")
     }
 
     pub fn sys_surface(&self) -> Color {
-        self.theme.color_required("md.sys.color.surface")
+        self.theme.color_token("md.sys.color.surface")
     }
 
     pub fn sys_background(&self) -> Color {
-        self.theme.color_required("md.sys.color.background")
+        self.theme.color_token("md.sys.color.background")
     }
 
     pub fn color_comp_or_sys(&self, comp: &str, sys: &str) -> Color {
         self.theme
             .color_by_key(comp)
             .or_else(|| self.theme.color_by_key(sys))
-            .unwrap_or_else(|| self.theme.color_required(sys))
+            .unwrap_or_else(|| self.theme.color_token(sys))
     }
 }

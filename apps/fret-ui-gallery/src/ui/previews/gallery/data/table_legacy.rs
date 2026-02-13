@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_runtime::{CommandId, Model};
@@ -20,6 +21,11 @@ struct DemoProcessRow {
 struct DemoProcessTableAssets {
     data: Arc<[DemoProcessRow]>,
     columns: Arc<[fret_ui_headless::table::ColumnDef<DemoProcessRow>]>,
+}
+
+#[derive(Default)]
+struct DemoProcessTableFacetsState {
+    status_facets: Option<Model<HashMap<Arc<str>, usize>>>,
 }
 
 const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.select_all_page";
@@ -223,6 +229,25 @@ pub(in crate::ui) fn preview_data_table_legacy(
         .test_id("ui-gallery-data-table-add-task")
         .into_element(cx);
 
+    let status_facets = cx.with_state(DemoProcessTableFacetsState::default, |st| {
+        st.status_facets.clone()
+    });
+    let status_facets = match status_facets {
+        Some(m) => m,
+        None => {
+            let mut facets: HashMap<Arc<str>, usize> = HashMap::new();
+            for row in assets.data.iter() {
+                *facets.entry(row.status.clone()).or_insert(0) += 1;
+            }
+            let m = cx.app.models_mut().insert(facets);
+            let m_for_state = m.clone();
+            cx.with_state(DemoProcessTableFacetsState::default, move |st| {
+                st.status_facets = Some(m_for_state);
+            });
+            m
+        }
+    };
+
     let toolbar = shadcn::DataTableToolbar::new(
         state.clone(),
         assets.columns.clone(),
@@ -233,15 +258,19 @@ pub(in crate::ui) fn preview_data_table_legacy(
     .column_filter("name")
     .column_filter_placeholder("Filter processes...")
     .column_filter_a11y_label("Name filter")
-    .faceted_filter(
+    .faceted_filter_options(
         "status",
         "Status",
-        Arc::<[Arc<str>]>::from(vec![
-            Arc::<str>::from("Running"),
-            Arc::<str>::from("Idle"),
-            Arc::<str>::from("Disabled"),
+        Arc::<[shadcn::DataTableFacetedFilterOption]>::from(vec![
+            shadcn::DataTableFacetedFilterOption::new("Running", "Running")
+                .icon(fret_icons::IconId::new_static("lucide.timer")),
+            shadcn::DataTableFacetedFilterOption::new("Idle", "Idle")
+                .icon(fret_icons::IconId::new_static("lucide.circle")),
+            shadcn::DataTableFacetedFilterOption::new("Disabled", "Disabled")
+                .icon(fret_icons::IconId::new_static("lucide.circle-off")),
         ]),
     )
+    .faceted_filter_counts(status_facets)
     .columns_button_label("View")
     .show_pinning_menu(false)
     .show_selected_text(false)

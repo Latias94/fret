@@ -22,9 +22,9 @@ fn build_shadcn_popover_demo_page(
         },
         |cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let sm_px = theme.metric_required("font.size");
-            let sm_line_height = theme.metric_required("font.line_height");
-            let muted_fg = theme.color_required("muted.foreground");
+            let sm_px = theme.metric_token("font.size");
+            let sm_line_height = theme.metric_token("font.line_height");
+            let muted_fg = theme.color_token("muted.foreground");
 
             // popover-demo uses `h4.leading-none.font-medium` (line height = 16px).
             let title = ui::text(cx, "Dimensions")

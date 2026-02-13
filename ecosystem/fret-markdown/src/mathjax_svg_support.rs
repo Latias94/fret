@@ -66,7 +66,7 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
     container.padding = Edges::all(markdown_theme.math_block_padding);
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
-    container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
+    container.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.md"));
 
     cx.container(container, |cx| {
         vec![cx.scroll(scroll_props, |cx| match entry {
@@ -83,10 +83,10 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
                 text: latex.clone(),
                 style: Some(TextStyle {
                     font: FontId::monospace(),
-                    size: theme.metric_required("metric.font.mono_size"),
+                    size: theme.metric_token("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
-                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                    line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                     letter_spacing_em: None,
                 }),
                 color: Some(markdown_theme.math_block_fg),
@@ -98,10 +98,10 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
                 text: Arc::<str>::from(format!("{latex} (mathjax error: {err})")),
                 style: Some(TextStyle {
                     font: FontId::monospace(),
-                    size: theme.metric_required("metric.font.mono_size"),
+                    size: theme.metric_token("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
-                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                    line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                     letter_spacing_em: None,
                 }),
                 color: Some(markdown_theme.math_block_fg),
@@ -155,7 +155,7 @@ fn render_inline_math_svg<H: UiHost>(
     };
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
-    props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
+    props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
 
     cx.container(props, |cx| {
         let mut icon = SvgIconProps::new(SvgSource::Bytes(svg_bytes));
@@ -182,7 +182,7 @@ fn render_inline_math_source<H: UiHost>(
     };
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
-    props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
+    props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
 
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {
@@ -190,10 +190,10 @@ fn render_inline_math_source<H: UiHost>(
             text: Arc::<str>::from(info.latex.trim().to_string()),
             style: Some(TextStyle {
                 font: FontId::monospace(),
-                size: theme.metric_required("metric.font.mono_size"),
+                size: theme.metric_token("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
-                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(markdown_theme.inline_math_fg),

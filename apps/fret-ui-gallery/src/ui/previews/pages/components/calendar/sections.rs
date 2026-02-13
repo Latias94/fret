@@ -41,7 +41,7 @@ pub(super) fn basic(
                             layout: Default::default(),
                             text: Arc::from(format!("selected={}", selected_str)),
                             style: None,
-                            color: Some(theme.color_required("muted-foreground")),
+                            color: Some(theme.color_token("muted-foreground")),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                         })]
@@ -91,7 +91,7 @@ pub(super) fn range(
                                 layout: Default::default(),
                                 text: Arc::from(format!("from={}", from)),
                                 style: None,
-                                color: Some(theme.color_required("muted-foreground")),
+                                color: Some(theme.color_token("muted-foreground")),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                             }),
@@ -99,7 +99,7 @@ pub(super) fn range(
                                 layout: Default::default(),
                                 text: Arc::from(format!("to={}", to)),
                                 style: None,
-                                color: Some(theme.color_required("muted-foreground")),
+                                color: Some(theme.color_token("muted-foreground")),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                             }),
@@ -219,7 +219,7 @@ pub(super) fn date_and_time_picker(
     let time_from = models.time_from.clone();
     let time_to = models.time_to.clone();
 
-    let clock_fg = ColorRef::Color(theme.color_required("muted-foreground"));
+    let clock_fg = ColorRef::Color(theme.color_token("muted-foreground"));
     let clock_icon = |cx: &mut ElementContext<'_, App>| {
         shadcn::icon::icon_with(
             cx,
@@ -287,7 +287,7 @@ pub(super) fn booked_dates(
                     layout: Default::default(),
                     text: Arc::from("Disabled: weekends"),
                     style: None,
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 }),

@@ -1,30 +1,23 @@
----
-title: UI Performance (Windows RTX 4090) - Smoothness Closure v1 (Milestones)
-status: draft
-date: 2026-02-12
-scope: performance, regression-gates, windows
----
+# UI Perf (Windows RTX4090) — Smoothness v1 (Milestones)
 
-# UI Performance (Windows RTX 4090) - Smoothness Closure (v1) — Milestones
+## M0 — Baseline + Protocol Locked
 
-Related:
+- Measurement protocol documented and repeatable.
+- Perf suites run from release binaries with stable env knobs.
 
-- Plan: `docs/workstreams/ui-perf-windows-rtx4090-smoothness-v1.md`
-- TODO: `docs/workstreams/ui-perf-windows-rtx4090-smoothness-v1-todo.md`
+## M1 — Resize Probes Majority-Pass
 
----
+- `ui-resize-probes --attempts 3` passes a strict majority (>= 2/3).
+- Worst bundles are attributable and do not depend on one-off startup events.
+  - Evidence: 2026-02-13 PASS (out-dir: `target/fret-diag-perf/ui-resize-probes.hoverstrip.3x.20260213-151459`)
 
-## Milestone table
+## M2 — Steady Suite Pass
 
-| Milestone | Status | Goal | Acceptance criteria (gates) | Evidence anchors |
-| --- | --- | --- | --- | --- |
-| M0 | Planned | Clean, repeatable Windows perf protocol | Baseline runs are commit-addressable and reproducible | `target/fret-diag-perf/...` dirs + log entry |
-| M1 | Planned | Reduce resize tail latency (stress + drag-jitter) | `ui-resize-probes` attempts=3 majority PASS; worst bundles explainable | `diag stats` worst bundles for resize scripts |
-| M2 | Planned | Reduce steady-suite tail spikes | `ui-gallery-steady` baseline PASS; no new regressions in code-editor probes | `check.perf_thresholds.json` + worst bundles |
-| M3 | Planned | CPU vs GPU attribution closure | Tail spikes classified (CPU vs renderer churn) with evidence | `FRET_DIAG_RENDERER_PERF=1` bundles + optional RenderDoc capture |
+- `ui-gallery-steady` passes against the Windows baseline (repeat >= 3).
+- Worst bundles, if any, are explainable and actionable.
+  - Evidence: 2026-02-13 PASS (out-dir: `target/fret-diag-perf/ui-gallery-steady.hoverstrip.3x.20260213-152340`)
 
-Notes:
+## M3 — Editor Route Guardrail
 
-- Keep milestones small and reversible: one hitch class per landable step.
-- Do not tighten baselines until the underlying hitch class is removed (avoid chasing noise).
-
+- `ui-code-editor-resize-probes` remains PASS (no regression) after landing improvements for “general UI”.
+  - Evidence: 2026-02-13 PASS (out-dir: `target/fret-diag-perf/ui-code-editor-resize-probes.hoverstrip.3x.20260213-151711`)

@@ -58,10 +58,10 @@ impl ConversationEmptyState {
 
         let title_style = TextStyle {
             font: Default::default(),
-            size: theme.metric_required("font.size"),
+            size: theme.metric_token("font.size"),
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
-            line_height: Some(theme.metric_required("font.line_height")),
+            line_height: Some(theme.metric_token("font.line_height")),
             letter_spacing_em: None,
         };
 
@@ -69,7 +69,7 @@ impl ConversationEmptyState {
             layout: LayoutStyle::default(),
             text: self.title,
             style: Some(title_style),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         });
@@ -114,7 +114,7 @@ impl ConversationEmptyState {
                 LayoutRefinement::default()
                     .w_full()
                     .h_full()
-                    .min_h(theme.metric_required("metric.size.lg")),
+                    .min_h(theme.metric_token("metric.size.lg")),
             )
             .refine_layout(self.layout)
             .into_element(cx);

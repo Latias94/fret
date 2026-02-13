@@ -824,7 +824,7 @@ fn render_calendar_chrome_from_config(
     use fret_ui_headless::calendar::CalendarMonth;
 
     let theme = Theme::global(&*cx.app).clone();
-    let border = theme.color_required("border");
+    let border = theme.color_token("border");
 
     let month_model: Model<CalendarMonth> = cx
         .app
@@ -880,7 +880,7 @@ fn render_calendar_hover_chrome_from_config(
     use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 
     let theme = Theme::global(&*cx.app).clone();
-    let border = theme.color_required("border");
+    let border = theme.color_token("border");
 
     let chrome = fret_ui_kit::ChromeRefinement::default()
         .rounded(fret_ui_kit::Radius::Lg)

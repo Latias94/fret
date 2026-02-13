@@ -62,7 +62,7 @@ impl Skeleton {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let mut bg = theme.color_required("accent");
+        let mut bg = theme.color_token("accent");
 
         let mut alpha_mul = if self.secondary { 0.5 } else { 1.0 };
         if self.animate_pulse {

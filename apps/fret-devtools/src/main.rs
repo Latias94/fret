@@ -523,7 +523,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
         &theme,
         fret_ui_kit::ChromeRefinement::default()
             .bg(fret_ui_kit::ColorRef::Color(
-                theme.color_required("background"),
+                theme.color_token("background"),
             ))
             .p(fret_ui_kit::Space::N2),
         fret_ui_kit::LayoutRefinement::default().w_full().h_full(),
@@ -653,13 +653,13 @@ fn header_bar(
         },
     );
 
-    let bg = theme.color_required("muted");
+    let bg = theme.color_token("muted");
     let chrome = fret_ui_kit::ChromeRefinement::default()
         .bg(fret_ui_kit::ColorRef::Color(bg))
         .px(fret_ui_kit::Space::N3)
         .py(fret_ui_kit::Space::N2)
         .border_1()
-        .border_color(fret_ui_kit::ColorRef::Color(theme.color_required("border")));
+        .border_color(fret_ui_kit::ColorRef::Color(theme.color_token("border")));
 
     cx.container(
         fret_ui_kit::declarative::style::container_props(

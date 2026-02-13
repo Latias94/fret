@@ -3535,7 +3535,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
         )
     }
 
-    let radius = fret_ui::Theme::global(&*cx.app).metric_required("metric.radius.md");
+    let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
 
     let left_button = Button::new("Snooze")
         .variant(ButtonVariant::Outline)
@@ -4525,7 +4525,7 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
                             cx,
                             |cx| {
                                 let theme = fret_ui::Theme::global(&*cx.app).clone();
-                                let muted = theme.color_required("muted-foreground");
+                                let muted = theme.color_token("muted-foreground");
 
                                 let mut props = fret_ui::element::PressableProps::default();
                                 props.a11y.role = Some(SemanticsRole::Button);
@@ -4547,8 +4547,8 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
                                                 layout: Default::default(),
                                                 text: Arc::from("Components"),
                                                 style: Some(shadcn_text_style(
-                                                    theme.metric_required("font.size"),
-                                                    theme.metric_required("font.line_height"),
+                                                    theme.metric_token("font.size"),
+                                                    theme.metric_token("font.line_height"),
                                                     FontWeight::NORMAL,
                                                 )),
                                                 color: Some(muted),

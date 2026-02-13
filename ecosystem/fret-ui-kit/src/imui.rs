@@ -2570,7 +2570,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let element = self.with_cx_mut(|cx| {
             let mut props = fret_ui::element::ContainerProps::default();
             let theme = fret_ui::Theme::global(&*cx.app);
-            props.background = Some(theme.color_required("border"));
+            props.background = Some(theme.color_token("border"));
             props.layout.size.width = fret_ui::element::Length::Fill;
             props.layout.size.height = fret_ui::element::Length::Px(fret_core::Px(1.0));
             cx.container(props, |_| Vec::new())
@@ -3094,8 +3094,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let (popover, border) = {
                 let theme = fret_ui::Theme::global(&*cx.app);
                 (
-                    theme.color_required("popover"),
-                    theme.color_required("border"),
+                    theme.color_token("popover"),
+                    theme.color_token("border"),
                 )
             };
 
@@ -3223,8 +3223,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let (popover, border) = {
                 let theme = fret_ui::Theme::global(&*cx.app);
                 (
-                    theme.color_required("popover"),
-                    theme.color_required("border"),
+                    theme.color_token("popover"),
+                    theme.color_token("border"),
                 )
             };
 
@@ -5532,9 +5532,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let (popover, border, muted) = {
                     let theme = fret_ui::Theme::global(&*cx.app);
                     (
-                        theme.color_required("popover"),
-                        theme.color_required("border"),
-                        theme.color_required("muted"),
+                        theme.color_token("popover"),
+                        theme.color_token("border"),
+                        theme.color_token("muted"),
                     )
                 };
 

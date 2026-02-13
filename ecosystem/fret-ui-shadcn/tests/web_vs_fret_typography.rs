@@ -224,7 +224,7 @@ fn web_vs_fret_typography_h2_geometry_light() {
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let theme = Theme::global(&*cx.app).clone();
-        let border_color = theme.color_required("border");
+        let border_color = theme.color_token("border");
 
         let heading = ui::text(cx, text.clone())
             .text_size_px(size)
@@ -598,7 +598,7 @@ fn web_vs_fret_typography_blockquote_geometry_light() {
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let theme = Theme::global(&*cx.app).clone();
-        let border_color = theme.color_required("border");
+        let border_color = theme.color_token("border");
 
         let quote = ui::text(cx, text.clone())
             .text_size_px(size)
@@ -717,7 +717,7 @@ fn web_vs_fret_typography_inline_code_padding_and_style_light() {
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let theme = Theme::global(&*cx.app).clone();
-        let bg = theme.color_required("muted");
+        let bg = theme.color_token("muted");
 
         let code_text_el = ui::text(cx, text.clone())
             .text_size_px(size)

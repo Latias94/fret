@@ -64,7 +64,7 @@ pub(crate) fn state_layer_color(theme: &Theme, interaction: SliderInteraction) -
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn value_indicator_bottom_space(theme: &Theme) -> Px {
@@ -77,14 +77,14 @@ pub(crate) fn value_indicator_container_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.slider.value-indicator.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.inverse-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.inverse-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-surface"))
 }
 
 pub(crate) fn value_indicator_label_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.slider.value-indicator.label.label-text.color")
         .or_else(|| theme.color_by_key("md.sys.color.inverse-on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.inverse-on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-on-surface"))
 }
 
 pub(crate) fn value_indicator_label_style(theme: &Theme) -> TextStyle {
@@ -118,7 +118,7 @@ pub(crate) fn tick_mark_color(theme: &Theme, enabled: bool, active: bool) -> Col
         return theme
             .color_by_key("md.comp.slider.with-tick-marks.disabled.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
     }
 
     let key = if active {
@@ -128,7 +128,7 @@ pub(crate) fn tick_mark_color(theme: &Theme, enabled: bool, active: bool) -> Col
     };
     theme
         .color_by_key(key)
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }
 
 pub(crate) fn tick_mark_opacity(theme: &Theme, enabled: bool, active: bool) -> f32 {
@@ -167,7 +167,7 @@ pub(crate) fn active_track_color(
         let base = theme
             .color_by_key("md.comp.slider.disabled.active.track.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.slider.disabled.active.track.opacity")
             .unwrap_or(0.38);
@@ -183,7 +183,7 @@ pub(crate) fn active_track_color(
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn inactive_track_color(
@@ -195,7 +195,7 @@ pub(crate) fn inactive_track_color(
         let base = theme
             .color_by_key("md.comp.slider.disabled.inactive.track.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.slider.disabled.inactive.track.opacity")
             .unwrap_or(0.12);
@@ -213,7 +213,7 @@ pub(crate) fn inactive_track_color(
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.secondary-container"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"))
 }
 
 pub(crate) fn handle_color(theme: &Theme, enabled: bool, interaction: SliderInteraction) -> Color {
@@ -221,7 +221,7 @@ pub(crate) fn handle_color(theme: &Theme, enabled: bool, interaction: SliderInte
         let base = theme
             .color_by_key("md.comp.slider.disabled.handle.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.slider.disabled.handle.opacity")
             .unwrap_or(0.38);
@@ -238,7 +238,7 @@ pub(crate) fn handle_color(theme: &Theme, enabled: bool, interaction: SliderInte
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn track_shape(theme: &Theme) -> Corners {

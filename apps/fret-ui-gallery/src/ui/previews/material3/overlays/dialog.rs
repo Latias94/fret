@@ -86,13 +86,13 @@ pub(in crate::ui) fn preview_material3_dialog(
         .into();
     let override_style = material3::DialogStyle::default()
         .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
-            theme.color_required("md.sys.color.secondary-container"),
+            theme.color_token("md.sys.color.secondary-container"),
         ))))
         .headline_color(WidgetStateProperty::new(Some(ColorRef::Color(
-            theme.color_required("md.sys.color.on-secondary-container"),
+            theme.color_token("md.sys.color.on-secondary-container"),
         ))))
         .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
-            theme.color_required("md.sys.color.on-secondary-container"),
+            theme.color_token("md.sys.color.on-secondary-container"),
         ))));
 
     let open_dialog_override: OnActivate = {

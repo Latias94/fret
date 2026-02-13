@@ -107,15 +107,15 @@ where
     let list_bg = theme
         .color_by_key("list.background")
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or_else(|| theme.color_required("card"));
+        .unwrap_or_else(|| theme.color_token("card"));
     let row_hover = theme
         .color_by_key("list.hover.background")
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
     let row_active = theme
         .color_by_key("list.active.background")
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
 
     let state_snapshot = cx.watch_model(&state).paint().cloned_or_default();
     let (active, over) = state_snapshot

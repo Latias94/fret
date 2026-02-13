@@ -60,7 +60,7 @@ fn muted_color(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn container_props(
@@ -176,7 +176,7 @@ pub fn inline_code<H: UiHost>(
     let (props, base_style) = {
         let theme = Theme::global(&*cx.app);
         let chrome = ChromeRefinement::default()
-            .bg(ColorRef::Color(theme.color_required("muted")))
+            .bg(ColorRef::Color(theme.color_token("muted")))
             .rounded(Radius::Sm)
             .px(Space::N2)
             .py(Space::N1);
@@ -203,7 +203,7 @@ pub fn blockquote<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let mut layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
         layout.size.min_width = Some(Px(0.0));
-        let border_color = theme.color_required("border");
+        let border_color = theme.color_token("border");
         let muted = muted_color(theme);
         let base_style = base_text_style(theme);
         (layout, border_color, muted, base_style)

@@ -56,26 +56,26 @@ fn switch_padding(theme: &Theme) -> Px {
 fn switch_bg_on(theme: &Theme) -> Color {
     theme
         .color_by_key("primary")
-        .unwrap_or_else(|| theme.color_required("primary"))
+        .unwrap_or_else(|| theme.color_token("primary"))
 }
 
 fn switch_bg_off(theme: &Theme) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or_else(|| theme.color_required("input"))
+        .unwrap_or_else(|| theme.color_token("input"))
 }
 
 fn switch_thumb_bg(theme: &Theme) -> Color {
     theme
         .color_by_key("background")
-        .unwrap_or_else(|| theme.color_required("background"))
+        .unwrap_or_else(|| theme.color_token("background"))
 }
 
 fn switch_ring_color(theme: &Theme) -> Color {
     theme
         .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"))
+        .unwrap_or_else(|| theme.color_token("ring"))
 }
 
 #[derive(Debug, Clone, Default)]

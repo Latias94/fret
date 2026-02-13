@@ -26,11 +26,11 @@ use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 
 fn shadcn_scrollbar_thumb(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn shadcn_scrollbar_thumb_hover(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn shadcn_scrollbar_corner_bg(theme: &Theme) -> Color {
@@ -344,7 +344,7 @@ impl ScrollAreaRoot {
 
                 let thumb = shadcn_scrollbar_thumb(&theme);
                 let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);
-                let scrollbar_width = theme.metric_required("metric.scrollbar.width");
+                let scrollbar_width = theme.metric_token("metric.scrollbar.width");
 
                 if wants_y {
                     if let Some(spec) = scrollbars

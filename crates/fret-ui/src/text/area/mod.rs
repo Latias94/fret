@@ -8,7 +8,7 @@ use fret_core::{
 use fret_runtime::Effect;
 
 use crate::widget::{CommandCx, EventCx};
-use crate::{Invalidation, Theme, UiHost};
+use crate::{Invalidation, Theme, ThemeColorKey, ThemeMetricKey, UiHost};
 
 trait TextAreaUiCx {
     fn invalidate_self(&mut self, kind: Invalidation);
@@ -282,34 +282,34 @@ impl TextArea {
     }
 
     fn sync_style_from_theme(&mut self, theme: &Theme) {
-        self.scrollbar_width = theme.metric_required("metric.scrollbar.width");
+        self.scrollbar_width = theme.metric_token("metric.scrollbar.width");
 
         let rev = theme.revision();
 
         if !self.style_override && self.last_theme_revision != Some(rev) {
             self.last_theme_revision = Some(rev);
-            self.style.padding_x = theme.metric_required("metric.padding.md");
-            self.style.padding_y = theme.metric_required("metric.padding.md");
-            self.style.background = theme.color_required("card");
-            self.style.border_color = theme.color_required("border");
+            self.style.padding_x = theme.metric_token("metric.padding.md");
+            self.style.padding_y = theme.metric_token("metric.padding.md");
+            self.style.background = theme.color(ThemeColorKey::Card);
+            self.style.border_color = theme.color(ThemeColorKey::Border);
             // Focus ring styling is intentionally component-owned (recipes) rather than
             // runtime-owned to keep `fret-ui` mechanism-only (ADR 0066). Component libraries can
             // set `TextAreaStyle.focus_ring` explicitly when desired.
             self.style.focus_ring = None;
-            self.style.corner_radii = Corners::all(theme.metric_required("metric.radius.md"));
-            self.style.text_color = theme.color_required("foreground");
-            self.style.selection_color = theme.color_required("selection.background");
-            self.style.caret_color = theme.color_required("foreground");
+            self.style.corner_radii = Corners::all(theme.metric_token("metric.radius.md"));
+            self.style.text_color = theme.color(ThemeColorKey::Foreground);
+            self.style.selection_color = theme.color_token("selection.background");
+            self.style.caret_color = theme.color(ThemeColorKey::Foreground);
             self.style.preedit_bg_color = Color {
                 a: 0.22,
-                ..theme.color_required("selection.background")
+                ..theme.color_token("selection.background")
             };
-            self.style.preedit_underline_color = theme.color_required("primary");
+            self.style.preedit_underline_color = theme.color(ThemeColorKey::Primary);
         }
 
         if !self.text_style_override && self.last_text_style_theme_revision != Some(rev) {
             self.last_text_style_theme_revision = Some(rev);
-            let next_size = theme.metric_required("font.size");
+            let next_size = theme.metric(ThemeMetricKey::FontSize);
             if self.text_style.size != next_size {
                 self.text_style.size = next_size;
                 self.text_dirty = true;

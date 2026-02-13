@@ -173,7 +173,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
     });
 
     let invalid = cx.keyed("ui_gallery.radio_group.invalid", |cx| {
-        let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
+        let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
 
         let group = shadcn::RadioGroup::uncontrolled(Some("email"))
             .a11y_label("Notification Preferences")

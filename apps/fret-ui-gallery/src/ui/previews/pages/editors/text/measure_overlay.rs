@@ -73,7 +73,7 @@ pub(in crate::ui) fn preview_text_measure_overlay(
             ChromeRefinement::default()
                 .border_1()
                 .rounded(Radius::Md)
-                .bg(ColorRef::Color(theme.color_required("background"))),
+                .bg(ColorRef::Color(theme.color_token("background"))),
             LayoutRefinement::default()
                 .w_full()
                 .h_px(MetricRef::Px(Px(440.0))),
@@ -122,10 +122,10 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                     a: 1.0,
                 };
 
-                let fg = p.theme().color_required("foreground");
-                let muted = p.theme().color_required("muted-foreground");
-                let bg = p.theme().color_required("background");
-                let border = p.theme().color_required("border");
+                let fg = p.theme().color_token("foreground");
+                let muted = p.theme().color_token("muted-foreground");
+                let bg = p.theme().color_token("background");
+                let border = p.theme().color_token("border");
 
                 let scale = p.scale_factor();
                 let mut y = outer.origin.y;

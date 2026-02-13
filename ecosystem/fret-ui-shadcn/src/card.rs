@@ -62,8 +62,8 @@ fn with_card_size_provider<H: UiHost, R>(
 }
 
 fn card_chrome(theme: &Theme, size: CardSize) -> ChromeRefinement {
-    let bg = theme.color_required("card");
-    let border = theme.color_required("border");
+    let bg = theme.color_token("card");
+    let border = theme.color_token("border");
 
     // shadcn/ui v4: Card uses `rounded-xl`, which is computed from the base `--radius`.
     //
@@ -74,7 +74,7 @@ fn card_chrome(theme: &Theme, size: CardSize) -> ChromeRefinement {
     //
     // We model the base radius as `metric.radius.lg`, and derive `rounded-xl` from it to keep
     // behavior stable when the theme radius changes.
-    let base_radius = theme.metric_required("metric.radius.lg");
+    let base_radius = theme.metric_token("metric.radius.lg");
     let rounded_xl = Px(base_radius.0 + 4.0);
 
     let py = match size {
@@ -439,15 +439,15 @@ impl CardTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
-            let fg = theme.color_required("card-foreground");
+            let fg = theme.color_token("card-foreground");
             let px = theme
                 .metric_by_key("component.card.title_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.card.title_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -477,15 +477,15 @@ impl CardDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
-            let fg = theme.color_required("muted-foreground");
+            let fg = theme.color_token("muted-foreground");
             let px = theme
                 .metric_by_key("component.card.description_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.card.description_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 

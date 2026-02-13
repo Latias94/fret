@@ -72,7 +72,7 @@ impl Spinner {
             .color
             .map(|c| c.resolve(&theme))
             .or_else(|| theme.color_by_key("foreground"))
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let svg: SvgSource = icon_runtime::resolve_svg_source_from_globals(
             cx.app,

@@ -217,7 +217,7 @@ pub(crate) fn trailing_icon_color(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
@@ -247,7 +247,7 @@ pub(crate) fn hover_state_layer(
             let color = theme
                 .color_by_key(color_key)
                 .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+                .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
             let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
             Some((color, opacity))
         }
@@ -289,7 +289,7 @@ fn outlined_text_input_style(
 
     let default_bg = theme
         .color_by_key("md.sys.color.surface")
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"));
     style.background = default_bg;
 
     let outline_color = outlined_outline_color(theme, hovered, disabled, error, focused);
@@ -376,13 +376,13 @@ fn filled_text_input_style(
         .color_by_key("md.comp.filled-text-field.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
         .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"));
 
     if disabled {
         let overlay = theme
             .color_by_key("md.comp.filled-text-field.disabled.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.filled-text-field.disabled.container.opacity")
             .unwrap_or(0.04);
@@ -447,7 +447,7 @@ fn outlined_caret_color(theme: &Theme, disabled: bool, error: bool, focused: boo
             .color_by_key("md.comp.outlined-text-field.caret.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
     }
-    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     if disabled {
         alpha_mul(base, 0.38)
@@ -466,7 +466,7 @@ fn filled_caret_color(theme: &Theme, disabled: bool, error: bool, focused: bool)
             .color_by_key("md.comp.filled-text-field.caret.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
     }
-    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     if disabled {
         alpha_mul(base, 0.38)
@@ -499,7 +499,7 @@ fn outlined_input_text_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     if disabled {
         let opacity = theme
@@ -535,7 +535,7 @@ fn filled_input_text_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     if disabled {
         let opacity = theme
@@ -573,7 +573,7 @@ fn outlined_outline_color(
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"))
 }
 
 fn filled_active_indicator_color(

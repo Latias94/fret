@@ -311,7 +311,7 @@ impl WinitAppDriver for VirtualListStressDriver {
                 cx.observe_model(&state.items_revision, Invalidation::Layout);
 
                 let theme = cx.theme_snapshot();
-                let padding = theme.metric_required("metric.padding.md");
+                let padding = theme.metric_token("metric.padding.md");
 
                 let mut root_layout = LayoutStyle::default();
                 root_layout.size.width = Length::Fill;
@@ -336,7 +336,7 @@ impl WinitAppDriver for VirtualListStressDriver {
                 vec![cx.container(
                     ContainerProps {
                         layout: root_layout,
-                        background: Some(theme.color_required("background")),
+                        background: Some(theme.color_token("background")),
                         ..Default::default()
                     },
                     |cx| {
@@ -356,9 +356,9 @@ impl WinitAppDriver for VirtualListStressDriver {
                                     cx.container(
                                         ContainerProps {
                                             layout: list_slot,
-                                            background: Some(theme.color_required("card")),
+                                            background: Some(theme.color_token("card")),
                                             border: fret_core::Edges::all(Px(1.0)),
-                                            border_color: Some(theme.color_required("border")),
+                                            border_color: Some(theme.color_token("border")),
                                             corner_radii: fret_core::Corners::all(Px(8.0)),
                                             ..Default::default()
                                         },
@@ -398,9 +398,9 @@ impl WinitAppDriver for VirtualListStressDriver {
                                                     });
 
                                                     let bg = if id % 2 == 0 {
-                                                        theme.color_required("background")
+                                                        theme.color_token("background")
                                                     } else {
-                                                        theme.color_required("card")
+                                                        theme.color_token("card")
                                                     };
 
                                                     cx.container(
@@ -408,7 +408,7 @@ impl WinitAppDriver for VirtualListStressDriver {
                                                             layout: row_layout,
                                                             background: Some(bg),
                                                             padding: fret_core::Edges::symmetric(
-                                                                theme.metric_required(
+                                                                theme.metric_token(
                                                                     "metric.padding.md",
                                                                 ),
                                                                 Px(0.0),

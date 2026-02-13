@@ -354,8 +354,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsState) 
                 ContainerProps {
                     layout: panel_layout,
                     border: fret_core::Edges::all(Px(1.0)),
-                    border_paint: Some(Paint::Solid(theme.color_required("border"))),
-                    background: Some(theme.color_required("muted")),
+                    border_paint: Some(Paint::Solid(theme.color_token("border"))),
+                    background: Some(theme.color_token("muted")),
                     corner_radii: fret_core::Corners::all(Px(10.0)),
                     ..Default::default()
                 },
@@ -381,7 +381,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsState) 
         cx.container(
             ContainerProps {
                 layout: fill,
-                background: Some(theme.color_required("background")),
+                background: Some(theme.color_token("background")),
                 ..Default::default()
             },
             |cx| {

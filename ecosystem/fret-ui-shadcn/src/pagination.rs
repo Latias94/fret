@@ -40,19 +40,19 @@ fn button_h(theme: &Theme) -> Px {
 }
 
 fn border_color(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn accent(theme: &Theme) -> Color {
-    theme.color_required("accent")
+    theme.color_token("accent")
 }
 
 fn accent_fg(theme: &Theme) -> Color {
-    theme.color_required("accent-foreground")
+    theme.color_token("accent-foreground")
 }
 
 fn base_fg(theme: &Theme) -> Color {
-    theme.color_required("foreground")
+    theme.color_token("foreground")
 }
 
 fn disabled_fg(theme: &Theme) -> Color {
@@ -205,7 +205,7 @@ impl PaginationLink {
         let focus_ring = decl_style::focus_ring(&theme, r);
 
         let base_bg = if self.is_active {
-            theme.color_required("background")
+            theme.color_token("background")
         } else {
             Color::TRANSPARENT
         };

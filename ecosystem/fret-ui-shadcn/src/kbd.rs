@@ -56,7 +56,7 @@ fn kbd_with_patch<H: UiHost>(
     let text = text.into();
     let theme = Theme::global(&*cx.app).clone();
 
-    let bg = theme.color_required("muted");
+    let bg = theme.color_token("muted");
 
     let chrome = ChromeRefinement::default()
         .px(Space::N1)
@@ -73,16 +73,16 @@ fn kbd_with_patch<H: UiHost>(
 
     let props = decl_style::container_props(&theme, chrome, layout_override);
 
-    let fg = theme.color_required("muted-foreground");
+    let fg = theme.color_token("muted-foreground");
 
     let px = theme
         .metric_by_key("component.kbd.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.kbd.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     cx.container(props, |cx| {
         vec![cx.flex(

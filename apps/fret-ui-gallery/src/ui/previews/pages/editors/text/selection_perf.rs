@@ -65,7 +65,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
             ChromeRefinement::default()
                 .border_1()
                 .rounded(Radius::Md)
-                .bg(ColorRef::Color(theme.color_required("background"))),
+                .bg(ColorRef::Color(theme.color_token("background"))),
             LayoutRefinement::default()
                 .w_full()
                 .h_px(MetricRef::Px(Px(420.0))),
@@ -109,9 +109,9 @@ pub(in crate::ui) fn preview_text_selection_perf(
                     }
 
                     let scale_factor = p.scale_factor();
-                    let selection_bg = p.theme().color_required("selection.background");
-                    let fg = p.theme().color_required("foreground");
-                    let muted = p.theme().color_required("muted-foreground");
+                    let selection_bg = p.theme().color_token("selection.background");
+                    let fg = p.theme().color_token("foreground");
+                    let muted = p.theme().color_token("muted-foreground");
 
                     let key = PreparedKey {
                         max_width_bits: max_width.0.to_bits(),

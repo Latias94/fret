@@ -573,10 +573,10 @@ impl SheetContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme.color_required("background");
-        let border = theme.color_required("border");
+        let bg = theme.color_token("background");
+        let border = theme.color_token("border");
 
-        let radius = theme.metric_required("metric.radius.lg");
+        let radius = theme.metric_token("metric.radius.lg");
         let shadow = decl_style::shadow_lg(&theme, radius);
 
         let chrome = ChromeRefinement::default()
@@ -754,16 +754,16 @@ impl SheetTitle {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let px = theme
             .metric_by_key("component.sheet.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.sheet.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -793,16 +793,16 @@ impl SheetDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
+            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.sheet.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.sheet.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)

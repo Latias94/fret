@@ -39,7 +39,7 @@ fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
 }
 
 fn is_dark_background(theme: &Theme) -> bool {
-    let bg = theme.color_required("background");
+    let bg = theme.color_token("background");
     let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
     luma < 0.5
 }
@@ -537,10 +537,10 @@ impl DropdownMenuShortcut {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
+        let fg = theme.color_token("muted-foreground");
 
-        let base_size = theme.metric_required("font.size");
-        let base_line_height = theme.metric_required("font.line_height");
+        let base_size = theme.metric_token("font.size");
+        let base_line_height = theme.metric_token("font.line_height");
         let font_size = theme
             .metric_by_key("component.dropdown_menu.shortcut.font_size")
             .unwrap_or_else(|| Px((base_size.0 - 1.0).max(10.0)));
@@ -1545,7 +1545,7 @@ impl DropdownMenu {
                     // values from the popper substrate.
                     let popper_vars =
                         menu::dropdown_menu_popper_vars(outer, anchor, min_width, popper_placement);
-                    let font_size = theme.metric_required("font.size");
+                    let font_size = theme.metric_token("font.size");
                     let pad_x = MetricRef::space(Space::N2).resolve(theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(theme);
                     let estimated_w = estimated_menu_panel_width_for_entries(
@@ -1565,7 +1565,7 @@ impl DropdownMenu {
                         .metric_by_key("component.dropdown_menu.max_height")
                         .map(|h| Px(h.0.min(popper_vars.available_height.0)))
                         .unwrap_or(popper_vars.available_height);
-                    let font_line_height = theme.metric_required("font.line_height");
+                    let font_line_height = theme.metric_token("font.line_height");
                     let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
                     let row_height = Px(font_line_height.0 + pad_y.0 * 2.0);
                     let desired_h = estimated_menu_panel_height_for_entries(&entries, row_height, max_h);
@@ -1591,16 +1591,16 @@ impl DropdownMenu {
                         opening,
                     );
 
-                    let border = theme.color_required("border");
+                    let border = theme.color_token("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     // new-york-v4: item rows use `px-2`.
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                    let bg = theme.color_required("popover.background");
-                    let fg = theme.color_required("popover.foreground");
-                    let accent = theme.color_required("accent");
-                    let accent_fg = theme.color_required("accent-foreground");
+                    let bg = theme.color_token("popover.background");
+                    let fg = theme.color_token("popover.foreground");
+                    let accent = theme.color_token("accent");
+                    let accent_fg = theme.color_token("accent-foreground");
 
                     let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
                     let submenu_chrome =
@@ -1725,14 +1725,14 @@ impl DropdownMenu {
                                                 labels_arc.clone(),
                                                 typeahead_timeout_ticks,
                                                 move |cx| {
-                                                    let font_size = theme.metric_required("font.size");
+                                                    let font_size = theme.metric_token("font.size");
                                                     let font_line_height =
-                                                        theme.metric_required("font.line_height");
+                                                        theme.metric_token("font.line_height");
                                                     let text_disabled =
-                                                        alpha_mul(theme.color_required("foreground"), 0.5);
+                                                        alpha_mul(theme.color_token("foreground"), 0.5);
                                                     let icon_muted_fg =
-                                                        theme.color_required("muted-foreground");
-                                                    let destructive_fg = theme.color_required("destructive");
+                                                        theme.color_token("muted-foreground");
+                                                    let destructive_fg = theme.color_token("destructive");
                                                     let destructive_bg_alpha =
                                                         if is_dark_background(&theme) { 0.20 } else { 0.10 };
                                                     let destructive_bg = theme
@@ -2619,12 +2619,12 @@ impl DropdownMenu {
                                 align_leading_icons && reserve_leading_slot(&submenu_entries);
                             let item_count = focusable_item_count(&submenu_entries);
 
-                                            let font_size = theme.metric_required("font.size");
+                                            let font_size = theme.metric_token("font.size");
                                             let font_line_height =
-                                                theme.metric_required("font.line_height");
+                                                theme.metric_token("font.line_height");
                                             let text_disabled =
-                                                alpha_mul(theme.color_required("foreground"), 0.5);
-                                            let destructive_fg = theme.color_required("destructive");
+                                                alpha_mul(theme.color_token("foreground"), 0.5);
+                                            let destructive_fg = theme.color_token("destructive");
                                             let destructive_bg_alpha =
                                                 if is_dark_background(&theme) { 0.20 } else { 0.10 };
                                             let destructive_bg = theme
@@ -2636,7 +2636,7 @@ impl DropdownMenu {
                                                 .unwrap_or_else(|| {
                                                     alpha_mul(destructive_fg, destructive_bg_alpha)
                                                 });
-                                            let label_fg = theme.color_required("muted-foreground");
+                                            let label_fg = theme.color_token("muted-foreground");
 
                                             let text_style = TextStyle {
                                                 font: FontId::default(),

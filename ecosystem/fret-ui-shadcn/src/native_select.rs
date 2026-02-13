@@ -136,14 +136,14 @@ pub fn native_select<H: UiHost>(
         size: resolved.text_px,
         weight: FontWeight::NORMAL,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("font.line_height")),
+        line_height: Some(theme.metric_token("font.line_height")),
         letter_spacing_em: None,
     };
 
     let mut border_color = resolved.border_color;
     let mut focus_ring = decl_style::focus_ring(&theme, resolved.radius);
     if aria_invalid {
-        border_color = theme.color_required("destructive");
+        border_color = theme.color_token("destructive");
         let ring_key = if theme.name.contains("/dark") {
             "destructive/40"
         } else {
@@ -177,7 +177,7 @@ pub fn native_select<H: UiHost>(
 
     let content = content.into_element(cx);
 
-    let icon_color = alpha_mul(theme.color_required("muted-foreground"), 0.5);
+    let icon_color = alpha_mul(theme.color_token("muted-foreground"), 0.5);
     let icon = decl_icon::icon_with(
         cx,
         fret_icons::ids::ui::CHEVRON_DOWN,

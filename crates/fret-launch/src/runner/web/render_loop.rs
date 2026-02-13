@@ -15,7 +15,10 @@ use winit::event_loop::ActiveEventLoop;
 use winit::platform::web::WindowExtWeb;
 use winit::window::Window;
 
-use super::super::{RenderTargetUpdate, WinitEventContext, WinitRenderContext, WinitWindowContext};
+use super::super::{
+    EngineFrameUpdate, RenderTargetUpdate, WinitEventContext, WinitRenderContext,
+    WinitWindowContext,
+};
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

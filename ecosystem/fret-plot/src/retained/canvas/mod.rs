@@ -4603,34 +4603,34 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
             let background = self.style.background.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.background", "plot.background")
-                    .unwrap_or_else(|| theme.color_required("card"))
+                    .unwrap_or_else(|| theme.color_token("card"))
             });
             let border = self.style.border.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.border", "plot.border")
-                    .unwrap_or_else(|| theme.color_required("border"))
+                    .unwrap_or_else(|| theme.color_token("border"))
             });
 
             let axis_color = self.style.axis_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.axis", "plot.axis")
-                    .unwrap_or_else(|| theme.color_required("border"))
+                    .unwrap_or_else(|| theme.color_token("border"))
             });
             let grid_color = self.style.grid_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.grid", "plot.grid").unwrap_or_else(
                     || Color {
                         a: 0.35,
-                        ..theme.color_required("border")
+                        ..theme.color_token("border")
                     },
                 )
             });
             let label_color = self.style.label_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.label", "plot.label")
-                    .unwrap_or_else(|| theme.color_required("muted-foreground"))
+                    .unwrap_or_else(|| theme.color_token("muted-foreground"))
             });
             let crosshair_color = self.style.crosshair_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.crosshair", "plot.crosshair")
                     .unwrap_or_else(|| Color {
                         a: 0.65,
-                        ..theme.color_required("primary")
+                        ..theme.color_token("primary")
                     })
             });
 
@@ -4656,18 +4656,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     "fret.plot.tooltip.background",
                     "plot.tooltip.background",
                 )
-                .unwrap_or_else(|| theme.color_required("popover"))
+                .unwrap_or_else(|| theme.color_token("popover"))
             });
             let tooltip_border = self.style.tooltip_border.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.tooltip.border", "plot.tooltip.border")
-                    .unwrap_or_else(|| theme.color_required("popover.border"))
+                    .unwrap_or_else(|| theme.color_token("popover.border"))
             });
             let tooltip_text_color = self.style.tooltip_text_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.tooltip.text", "plot.tooltip.text")
-                    .unwrap_or_else(|| theme.color_required("popover-foreground"))
+                    .unwrap_or_else(|| theme.color_token("popover-foreground"))
             });
 
-            let theme_font_size = theme.metric_required("metric.font.size");
+            let theme_font_size = theme.metric_token("metric.font.size");
 
             (
                 theme.revision(),
@@ -5280,7 +5280,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         ),
                         Size::new(Px(panel_w), Px(bar_h)),
                     );
-                    let panel_radius = cx.theme().metric_required("metric.radius.sm");
+                    let panel_radius = cx.theme().metric_token("metric.radius.sm");
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(3),
                         rect: panel_rect,
@@ -5451,13 +5451,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     "fret.plot.annotation.padding",
                     "plot.annotation.padding",
                 )
-                .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+                .unwrap_or_else(|| theme.metric_token("metric.padding.sm"));
                 let annotation_radius = crate::theme_tokens::metric(
                     theme,
                     "fret.plot.annotation.radius",
                     "plot.annotation.radius",
                 )
-                .unwrap_or_else(|| theme.metric_required("metric.radius.sm"));
+                .unwrap_or_else(|| theme.metric_token("metric.radius.sm"));
 
                 let margin = Px(6.0);
                 let marker_len = Px(8.0);

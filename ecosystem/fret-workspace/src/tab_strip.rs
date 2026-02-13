@@ -420,7 +420,7 @@ impl WorkspaceTabStrip {
             let active_bg = theme
                 .color_by_key("workspace.tab.active_bg")
                 .or_else(|| theme.color_by_key("background"));
-            let active_fg = theme.color_required("foreground");
+            let active_fg = theme.color_token("foreground");
             let inactive_fg = theme.color_by_key("muted-foreground").unwrap_or(active_fg);
             let dirty_fg = theme
                 .color_by_key("workspace.tab.dirty_fg")

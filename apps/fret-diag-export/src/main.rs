@@ -36,14 +36,24 @@ fn main() -> anyhow::Result<()> {
 
     let client = connect_tooling_client(&ws_url, &token)?;
 
+    if args.list_sessions {
+        print_sessions(&client, Duration::from_secs(2))?;
+        return Ok(());
+    }
+
+    let script_path = args
+        .script_path
+        .clone()
+        .context("missing --script <path> (try --help)")?;
+
     let session_id = match args.session_id {
         Some(s) => s,
         None => wait_for_web_app_session(&client, Duration::from_secs(60))
             .context("timeout waiting for a web_app session (is the app connected?)")?,
     };
 
-    let script_json = read_json(&args.script_path)
-        .with_context(|| format!("failed reading script: {}", args.script_path.display()))?;
+    let script_json = read_json(&script_path)
+        .with_context(|| format!("failed reading script: {}", script_path.display()))?;
 
     client.send(DiagTransportMessageV1 {
         schema_version: 1,
@@ -51,6 +61,23 @@ fn main() -> anyhow::Result<()> {
         session_id: Some(session_id.clone()),
         request_id: None,
         payload: serde_json::json!({ "script": script_json }),
+    });
+
+    let script_result = wait_for_script_result_final(&client, &session_id, timeout)?;
+    let stage = script_result
+        .get("stage")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
+    if stage != "passed" {
+        return Err(anyhow!("script failed: stage={stage}"));
+    }
+
+    client.send(DiagTransportMessageV1 {
+        schema_version: 1,
+        r#type: "bundle.dump".to_string(),
+        session_id: Some(session_id.clone()),
+        request_id: None,
+        payload: serde_json::json!({ "label": "diag-export" }),
     });
 
     let (dir, bundle) = wait_for_bundle_dumped(&client, &session_id, timeout)?;
@@ -75,9 +102,10 @@ struct Args {
     ws_url: Option<String>,
     token: Option<String>,
     session_id: Option<String>,
-    script_path: PathBuf,
+    script_path: Option<PathBuf>,
     out_dir: Option<PathBuf>,
     timeout_ms: Option<u64>,
+    list_sessions: bool,
 }
 
 impl Args {
@@ -91,6 +119,7 @@ impl Args {
         let mut script_path: Option<PathBuf> = None;
         let mut out_dir: Option<PathBuf> = None;
         let mut timeout_ms: Option<u64> = None;
+        let mut list_sessions = false;
 
         while let Some(arg) = it.next() {
             match arg.as_str() {
@@ -98,6 +127,7 @@ impl Args {
                     print_help();
                     std::process::exit(0);
                 }
+                "--list-sessions" => list_sessions = true,
                 "--ws-url" => ws_url = Some(next_string(&mut it, "--ws-url")?),
                 "--token" => token = Some(next_string(&mut it, "--token")?),
                 "--session-id" => session_id = Some(next_string(&mut it, "--session-id")?),
@@ -123,8 +153,6 @@ impl Args {
             }
         }
 
-        let script_path = script_path.context("missing --script <path> (try --help)")?;
-
         Ok(Self {
             ws_url,
             token,
@@ -132,6 +160,7 @@ impl Args {
             script_path,
             out_dir,
             timeout_ms,
+            list_sessions,
         })
     }
 }
@@ -145,6 +174,7 @@ script that includes a `capture_bundle` step and waiting for `bundle.dumped`.
 
 Usage:
   fret-diag-export --script <script.json> [--ws-url <ws://.../>] [--token <token>] [--session-id <id>] [--out-dir <path>] [--timeout-ms <ms>]
+  fret-diag-export --list-sessions [--ws-url <ws://.../>] [--token <token>]
 
 Defaults:
   --ws-url     env FRET_DEVTOOLS_WS or ws://127.0.0.1:7331/
@@ -218,6 +248,109 @@ fn wait_for_web_app_session(client: &ToolingDiagClient, timeout: Duration) -> Op
     None
 }
 
+fn print_sessions(client: &ToolingDiagClient, timeout: Duration) -> anyhow::Result<()> {
+    let deadline = Instant::now() + timeout;
+    let mut known: Vec<DevtoolsSessionDescriptorV1> = Vec::new();
+
+    while Instant::now() < deadline {
+        while let Some(msg) = client.try_recv() {
+            match msg.r#type.as_str() {
+                "session.list" => {
+                    if let Ok(list) = serde_json::from_value::<DevtoolsSessionListV1>(msg.payload) {
+                        known = list.sessions;
+                    }
+                }
+                "session.added" => {
+                    if let Ok(added) = serde_json::from_value::<DevtoolsSessionAddedV1>(msg.payload)
+                    {
+                        known.retain(|s| s.session_id != added.session.session_id);
+                        known.push(added.session);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if !known.is_empty() {
+            break;
+        }
+
+        std::thread::sleep(Duration::from_millis(20));
+    }
+
+    known.sort_by(|a, b| {
+        a.client_kind
+            .cmp(&b.client_kind)
+            .then(a.session_id.cmp(&b.session_id))
+    });
+    for s in known {
+        println!(
+            "session_id={} client_kind={} client_version={} capabilities={}",
+            s.session_id,
+            s.client_kind,
+            s.client_version,
+            s.capabilities.join(","),
+        );
+    }
+    Ok(())
+}
+
+fn wait_for_script_result_final(
+    client: &ToolingDiagClient,
+    session_id: &str,
+    timeout: Duration,
+) -> anyhow::Result<serde_json::Value> {
+    let deadline = Instant::now() + timeout;
+    let mut last_script_stage: Option<String> = None;
+    let mut last_script_step_index: Option<u64> = None;
+
+    while Instant::now() < deadline {
+        while let Some(msg) = client.try_recv() {
+            if msg.session_id.as_deref() != Some(session_id) {
+                continue;
+            }
+
+            if msg.r#type != "script.result" {
+                continue;
+            }
+
+            if let Some(stage) = msg.payload.get("stage").and_then(|v| v.as_str()) {
+                let step_index = msg.payload.get("step_index").and_then(|v| v.as_u64());
+                let reason_code = msg.payload.get("reason_code").and_then(|v| v.as_str());
+
+                let stage_changed = last_script_stage.as_deref() != Some(stage);
+                let step_changed = step_index != last_script_step_index;
+
+                if stage_changed || step_changed || stage != "running" {
+                    let mut line = format!("script.result stage={stage}");
+                    if let Some(step_index) = step_index {
+                        line.push_str(&format!(" step_index={step_index}"));
+                    }
+                    if let Some(reason_code) = reason_code {
+                        line.push_str(&format!(" reason_code={reason_code}"));
+                    }
+                    eprintln!("{line}");
+                }
+
+                if stage_changed {
+                    last_script_stage = Some(stage.to_string());
+                }
+                if step_changed {
+                    last_script_step_index = step_index;
+                }
+
+                if stage == "passed" || stage == "failed" {
+                    return Ok(msg.payload);
+                }
+            }
+        }
+
+        std::thread::sleep(Duration::from_millis(20));
+    }
+
+    Err(anyhow!("timeout waiting for script.result"))
+}
+
 fn wait_for_bundle_dumped(
     client: &ToolingDiagClient,
     session_id: &str,
@@ -225,6 +358,7 @@ fn wait_for_bundle_dumped(
 ) -> anyhow::Result<(String, serde_json::Value)> {
     let deadline = Instant::now() + timeout;
     let mut last_script_stage: Option<String> = None;
+    let mut last_script_step_index: Option<u64> = None;
 
     while Instant::now() < deadline {
         while let Some(msg) = client.try_recv() {
@@ -235,9 +369,28 @@ fn wait_for_bundle_dumped(
             match msg.r#type.as_str() {
                 "script.result" => {
                     if let Some(stage) = msg.payload.get("stage").and_then(|v| v.as_str()) {
-                        if last_script_stage.as_deref() != Some(stage) {
-                            eprintln!("script.result stage={stage}");
+                        let step_index = msg.payload.get("step_index").and_then(|v| v.as_u64());
+                        let reason_code = msg.payload.get("reason_code").and_then(|v| v.as_str());
+
+                        let stage_changed = last_script_stage.as_deref() != Some(stage);
+                        let step_changed = step_index != last_script_step_index;
+
+                        if stage_changed || step_changed || stage != "running" {
+                            let mut line = format!("script.result stage={stage}");
+                            if let Some(step_index) = step_index {
+                                line.push_str(&format!(" step_index={step_index}"));
+                            }
+                            if let Some(reason_code) = reason_code {
+                                line.push_str(&format!(" reason_code={reason_code}"));
+                            }
+                            eprintln!("{line}");
+                        }
+
+                        if stage_changed {
                             last_script_stage = Some(stage.to_string());
+                        }
+                        if step_changed {
+                            last_script_step_index = step_index;
                         }
                     }
                 }

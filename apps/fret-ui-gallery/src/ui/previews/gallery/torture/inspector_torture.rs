@@ -37,9 +37,9 @@ pub(in crate::ui) fn preview_inspector_torture(
     let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
         let zebra = (index % 2) == 0;
         let background = if zebra {
-            theme.color_required("muted")
+            theme.color_token("muted")
         } else {
-            theme.color_required("background")
+            theme.color_token("background")
         };
 
         let depth = (index % 8) as f32;

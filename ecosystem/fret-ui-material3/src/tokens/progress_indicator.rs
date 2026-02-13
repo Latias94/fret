@@ -15,14 +15,14 @@ pub(crate) fn track_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.progress-indicator.track.color")
         .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.secondary-container"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"))
 }
 
 pub(crate) fn active_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.progress-indicator.active-indicator.color")
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn four_color_palette(theme: &Theme) -> [Color; 4] {
@@ -34,16 +34,16 @@ pub(crate) fn four_color_palette(theme: &Theme) -> [Color; 4] {
     [
         theme
             .color_by_key("md.sys.color.primary")
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary")),
+            .unwrap_or_else(|| theme.color_token("md.sys.color.primary")),
         theme
             .color_by_key("md.sys.color.primary-container")
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary-container")),
+            .unwrap_or_else(|| theme.color_token("md.sys.color.primary-container")),
         theme
             .color_by_key("md.sys.color.tertiary")
-            .unwrap_or_else(|| theme.color_required("md.sys.color.tertiary")),
+            .unwrap_or_else(|| theme.color_token("md.sys.color.tertiary")),
         theme
             .color_by_key("md.sys.color.tertiary-container")
-            .unwrap_or_else(|| theme.color_required("md.sys.color.tertiary-container")),
+            .unwrap_or_else(|| theme.color_token("md.sys.color.tertiary-container")),
     ]
 }
 

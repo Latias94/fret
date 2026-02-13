@@ -1940,10 +1940,10 @@ const DEMO_THEME_PRESETS: [(&str, &str); 3] = [
 ];
 
 fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
-    let x_color = theme.color_required("color.viewport.gizmo.x");
-    let y_color = theme.color_required("color.viewport.gizmo.y");
-    let z_color = theme.color_required("color.viewport.gizmo.z");
-    let hover_color = theme.color_required("color.viewport.gizmo.hover");
+    let x_color = theme.color_token("color.viewport.gizmo.x");
+    let y_color = theme.color_token("color.viewport.gizmo.y");
+    let z_color = theme.color_token("color.viewport.gizmo.z");
+    let hover_color = theme.color_token("color.viewport.gizmo.hover");
 
     {
         let gizmo_cfg = &mut model.gizmo_mut().config;
@@ -1957,8 +1957,8 @@ fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
     model.view_gizmo.config.y_color = y_color;
     model.view_gizmo.config.z_color = z_color;
     model.view_gizmo.config.hover_color = hover_color;
-    model.view_gizmo.config.face_color = theme.color_required("color.viewport.view_gizmo.face");
-    model.view_gizmo.config.edge_color = theme.color_required("color.viewport.view_gizmo.edge");
+    model.view_gizmo.config.face_color = theme.color_token("color.viewport.view_gizmo.face");
+    model.view_gizmo.config.edge_color = theme.color_token("color.viewport.view_gizmo.edge");
 }
 
 #[derive(Default)]

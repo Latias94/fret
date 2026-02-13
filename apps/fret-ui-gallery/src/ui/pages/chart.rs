@@ -3,9 +3,9 @@ use super::super::*;
 pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let (chart_1, chart_2, chart_3) = cx.with_theme(|theme| {
         (
-            theme.color_required("chart-1"),
-            theme.color_required("chart-2"),
-            theme.color_required("chart-3"),
+            theme.color_token("chart-1"),
+            theme.color_token("chart-2"),
+            theme.color_token("chart-3"),
         )
     });
 

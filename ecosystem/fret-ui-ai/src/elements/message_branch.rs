@@ -399,7 +399,7 @@ impl MessageBranchSelector {
         let muted_fg = theme
             .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted_foreground"))
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let prev_target = if current > 0 {
             current - 1

@@ -221,7 +221,7 @@ pub(in crate::ui) fn preview_image_object_fit(
                 ChromeRefinement::default()
                     .rounded(Radius::Md)
                     .border_1()
-                    .border_color(ColorRef::Color(theme.color_required("border"))),
+                    .border_color(ColorRef::Color(theme.color_token("border"))),
             )
             .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
             .into_element(cx)
@@ -235,7 +235,7 @@ pub(in crate::ui) fn preview_image_object_fit(
                 ChromeRefinement::default()
                     .rounded(Radius::Md)
                     .border_1()
-                    .border_color(ColorRef::Color(theme.color_required("border"))),
+                    .border_color(ColorRef::Color(theme.color_token("border"))),
             )
             .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
             .into_element(cx)

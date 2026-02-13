@@ -132,9 +132,9 @@ pub(in crate::ui) fn preview_material3_select(cx: &mut ElementContext<'_, App>) 
 
     let (primary, primary_container, secondary_container) = cx.with_theme(|theme| {
         (
-            theme.color_required("md.sys.color.primary"),
-            theme.color_required("md.sys.color.primary-container"),
-            theme.color_required("md.sys.color.secondary-container"),
+            theme.color_token("md.sys.color.primary"),
+            theme.color_token("md.sys.color.primary-container"),
+            theme.color_token("md.sys.color.secondary-container"),
         )
     });
 

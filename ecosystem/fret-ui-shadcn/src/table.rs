@@ -19,11 +19,11 @@ fn table_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.table.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.table.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     TextStyle {
         font: FontId::default(),
@@ -42,19 +42,19 @@ fn row_min_h(theme: &Theme) -> fret_core::Px {
 }
 
 fn border_color(theme: &Theme) -> fret_core::Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn muted_bg(theme: &Theme) -> fret_core::Color {
-    theme.color_required("muted")
+    theme.color_token("muted")
 }
 
 fn muted_fg(theme: &Theme) -> fret_core::Color {
-    theme.color_required("muted-foreground")
+    theme.color_token("muted-foreground")
 }
 
 fn foreground(theme: &Theme) -> fret_core::Color {
-    theme.color_required("foreground")
+    theme.color_token("foreground")
 }
 
 /// shadcn/ui `Table` root.

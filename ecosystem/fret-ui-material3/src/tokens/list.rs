@@ -218,7 +218,7 @@ pub(crate) fn supporting_text_color(theme: &Theme, enabled: bool, selected: bool
     let mut color = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     color = alpha_mul(color, supporting_text_opacity(theme, enabled, selected));
     color
 }
@@ -238,7 +238,7 @@ pub(crate) fn trailing_supporting_text_color(
     let mut color = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     color = alpha_mul(
         color,
         trailing_supporting_text_opacity(theme, enabled, selected),
@@ -251,13 +251,13 @@ pub(crate) fn selected_container_background(theme: &Theme, enabled: bool) -> Col
         return theme
             .color_by_key("md.comp.list.list-item.selected.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.secondary-container"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"));
     }
 
     let mut bg = theme
         .color_by_key("md.comp.list.list-item.selected.disabled.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
     let opacity = theme
         .number_by_key("md.comp.list.list-item.selected.disabled.container.opacity")
         .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
@@ -331,7 +331,7 @@ pub(crate) fn item_outcomes(
     let mut icon = theme
         .color_by_key(icon_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     let state_layer = theme
         .color_by_key(state_layer_key)
         .unwrap_or(defaults.content_color);
@@ -369,7 +369,7 @@ pub(crate) fn item_outcomes(
         icon = theme
             .color_by_key(disabled_icon_key)
             .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
 
         let label_opacity = theme
             .number_by_key(disabled_label_opacity_key)

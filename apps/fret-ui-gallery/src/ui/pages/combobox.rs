@@ -15,7 +15,7 @@ pub(super) fn preview_combobox(
     query: Model<String>,
 ) -> Vec<AnyElement> {
     let models = models::get_or_init(cx);
-    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
+    let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
 
     let demo = sections::demo(cx, value, open, query);
     let custom_items_top = sections::custom_items_top(cx, &models);

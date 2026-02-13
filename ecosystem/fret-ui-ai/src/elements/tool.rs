@@ -131,7 +131,7 @@ fn token_color_with_alpha(
     let base = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key(fallback_key))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+        .unwrap_or_else(|| theme.color_token("foreground"));
     let alpha = alpha.clamp(0.0, 1.0);
     Color {
         r: base.r,
@@ -194,16 +194,16 @@ impl ToolHeader {
 
         let label = self.title.unwrap_or_else(|| derive_tool_label(&self.name));
         let status = self.status;
-        let muted_foreground = theme.color_required("muted-foreground");
+        let muted_foreground = theme.color_token("muted-foreground");
 
         let text_sm_px = theme
             .metric_by_key("component.text.sm_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let text_sm_line_height = theme
             .metric_by_key("component.text.sm_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
         let label_text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: label.clone(),
@@ -215,7 +215,7 @@ impl ToolHeader {
                 line_height: Some(text_sm_line_height),
                 letter_spacing_em: None,
             }),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         });
@@ -463,11 +463,11 @@ impl ToolOutput {
         let text_xs_px = theme
             .metric_by_key("component.text.xs_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let text_xs_line_height = theme
             .metric_by_key("component.text.xs_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
         let title = ToolSectionTitle::new(if self.error_text.is_some() {
             "Error"
         } else {
@@ -611,11 +611,11 @@ impl ToolSectionTitle {
         let text_xs_px = theme
             .metric_by_key("component.text.xs_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let text_xs_line_height = theme
             .metric_by_key("component.text.xs_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text,

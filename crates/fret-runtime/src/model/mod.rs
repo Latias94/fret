@@ -12,4 +12,4 @@ pub use debug::{ModelChangedDebugInfo, ModelCreatedDebugInfo};
 pub use error::ModelUpdateError;
 pub use handle::{Model, WeakModel};
 pub use host::{ModelCx, ModelHost};
-pub use store::{ModelLease, ModelStore};
+pub use store::ModelStore;

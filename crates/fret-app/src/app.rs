@@ -1,7 +1,10 @@
 use std::{
     any::{Any, TypeId},
+    cell::RefCell,
     collections::{HashMap, HashSet},
     panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
+    ptr::NonNull,
+    sync::OnceLock,
 };
 
 use fret_core::{AppWindowId, NodeId, PointerId};
@@ -24,6 +27,60 @@ struct GlobalLeaseMarker {
     leased_at: &'static std::panic::Location<'static>,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum GlobalAccessError {
+    #[error(
+        "global is currently leased: {type_name} (type_id={type_id:?}); leased at {leased_at}; accessed at {accessed_at}"
+    )]
+    Leased {
+        type_name: &'static str,
+        type_id: TypeId,
+        leased_at: &'static std::panic::Location<'static>,
+        accessed_at: &'static std::panic::Location<'static>,
+    },
+}
+
+#[derive(Debug)]
+struct PendingGlobalSet {
+    type_name: &'static str,
+    changed_at: &'static std::panic::Location<'static>,
+    value: Box<dyn Any>,
+}
+
+thread_local! {
+    static ACTIVE_GLOBAL_LEASES: RefCell<HashMap<TypeId, NonNull<()>>> = RefCell::new(HashMap::new());
+}
+
+struct ActiveGlobalLeaseGuard {
+    type_id: TypeId,
+}
+
+impl ActiveGlobalLeaseGuard {
+    fn new<T>(type_id: TypeId, value: &mut T) -> Self {
+        let ptr = NonNull::from(value).cast::<()>();
+        ACTIVE_GLOBAL_LEASES.with(|leases| {
+            leases.borrow_mut().insert(type_id, ptr);
+        });
+        Self { type_id }
+    }
+}
+
+impl Drop for ActiveGlobalLeaseGuard {
+    fn drop(&mut self) {
+        ACTIVE_GLOBAL_LEASES.with(|leases| {
+            leases.borrow_mut().remove(&self.type_id);
+        });
+    }
+}
+
+fn strict_runtime_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("FRET_STRICT_RUNTIME")
+            .is_some_and(|v| v != std::ffi::OsStr::new("0"))
+    })
+}
+
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
     global_type_names: HashMap<TypeId, &'static str>,
@@ -32,6 +89,7 @@ pub struct App {
     global_revisions: HashMap<TypeId, u64>,
     changed_globals: Vec<TypeId>,
     changed_globals_dedup: HashSet<TypeId>,
+    pending_globals: HashMap<TypeId, PendingGlobalSet>,
     models: ModelStore,
     commands: CommandRegistry,
     redraw_requests: HashSet<AppWindowId>,
@@ -62,6 +120,7 @@ impl App {
             global_revisions: HashMap::new(),
             changed_globals: Vec::new(),
             changed_globals_dedup: HashSet::new(),
+            pending_globals: HashMap::new(),
             models: ModelStore::default(),
             commands: CommandRegistry::default(),
             redraw_requests: HashSet::new(),
@@ -139,14 +198,65 @@ impl App {
     }
 
     #[track_caller]
-    fn assert_global_not_leased<T: Any>(value: &dyn Any) {
+    pub fn try_set_global<T: Any>(&mut self, value: T) -> Result<(), GlobalAccessError> {
+        let changed_at = std::panic::Location::caller();
+        let type_id = TypeId::of::<T>();
+
+        if let Some(existing) = self.globals.get(&type_id) {
+            if let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>() {
+                return Err(GlobalAccessError::Leased {
+                    type_name: marker.type_name,
+                    type_id,
+                    leased_at: marker.leased_at,
+                    accessed_at: changed_at,
+                });
+            }
+        }
+
+        self.set_global_at(value, changed_at);
+        Ok(())
+    }
+
+    #[track_caller]
+    pub fn try_global<T: Any>(&self) -> Result<Option<&T>, GlobalAccessError> {
+        let accessed_at = std::panic::Location::caller();
+        let type_id = TypeId::of::<T>();
+        let Some(value) = self.globals.get(&type_id) else {
+            return Ok(None);
+        };
+
         if let Some(marker) = value.downcast_ref::<GlobalLeaseMarker>() {
+            return Err(GlobalAccessError::Leased {
+                type_name: marker.type_name,
+                type_id,
+                leased_at: marker.leased_at,
+                accessed_at,
+            });
+        }
+
+        Ok(value.downcast_ref::<T>())
+    }
+
+    #[track_caller]
+    fn report_global_access_while_leased<T: Any>(marker: &GlobalLeaseMarker, accessed_at: &'static std::panic::Location<'static>) {
+        if strict_runtime_enabled() {
             panic!(
                 "global is currently leased: {} (type_id={:?}); leased at {}; accessed at {}",
                 marker.type_name,
                 TypeId::of::<T>(),
                 marker.leased_at,
-                std::panic::Location::caller()
+                accessed_at
+            );
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            eprintln!(
+                "global access while leased; returning fallback: {} (type_id={:?}); leased at {}; accessed at {}",
+                marker.type_name,
+                TypeId::of::<T>(),
+                marker.leased_at,
+                accessed_at
             );
         }
     }
@@ -164,7 +274,18 @@ impl App {
     ) {
         let type_id = TypeId::of::<T>();
         if let Some(existing) = self.globals.get(&type_id) {
-            Self::assert_global_not_leased::<T>(existing.as_ref());
+            if let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>() {
+                Self::report_global_access_while_leased::<T>(marker, changed_at);
+                self.pending_globals.insert(
+                    type_id,
+                    PendingGlobalSet {
+                        type_name: std::any::type_name::<T>(),
+                        changed_at,
+                        value: Box::new(value),
+                    },
+                );
+                return;
+            }
         }
         self.globals.insert(type_id, Box::new(value));
         self.global_type_names
@@ -175,8 +296,12 @@ impl App {
 
     #[track_caller]
     pub fn global<T: Any>(&self) -> Option<&T> {
+        let accessed_at = std::panic::Location::caller();
         let value = self.globals.get(&TypeId::of::<T>())?;
-        Self::assert_global_not_leased::<T>(value.as_ref());
+        if let Some(marker) = value.downcast_ref::<GlobalLeaseMarker>() {
+            Self::report_global_access_while_leased::<T>(marker, accessed_at);
+            return None;
+        }
         value.downcast_ref::<T>()
     }
 
@@ -211,6 +336,43 @@ impl App {
         self.global_type_names
             .entry(type_id)
             .or_insert(std::any::type_name::<T>());
+
+        if let Some(existing) = self.globals.get(&type_id) {
+            if let Some(marker) = existing.downcast_ref::<GlobalLeaseMarker>() {
+                if strict_runtime_enabled() {
+                    panic!(
+                        "global already leased: {} (type_id={type_id:?}); leased at {}; accessed at {}",
+                        marker.type_name, marker.leased_at, leased_at
+                    );
+                }
+
+                let Some(ptr) = ACTIVE_GLOBAL_LEASES.with(|leases| leases.borrow().get(&type_id).copied()) else {
+                    #[cfg(debug_assertions)]
+                    {
+                        eprintln!(
+                            "global already leased but active lease pointer is missing; skipping nested lease: {} (type_id={type_id:?}); leased at {}; accessed at {}",
+                            marker.type_name, marker.leased_at, leased_at
+                        );
+                    }
+                    let mut tmp = init();
+                    let out = f(&mut tmp, self);
+                    if mark_changed {
+                        self.mark_global_changed_at(type_id, leased_at);
+                    }
+                    return out;
+                };
+
+                // Re-borrow the active leased value to avoid panicking on re-entrant access.
+                // This is only supported for same-thread nested calls.
+                let value = unsafe { &mut *(ptr.as_ptr() as *mut T) };
+                let out = f(value, self);
+                if mark_changed {
+                    self.mark_global_changed_at(type_id, leased_at);
+                }
+                return out;
+            }
+        }
+
         let marker = GlobalLeaseMarker {
             type_name: std::any::type_name::<T>(),
             leased_at,
@@ -220,16 +382,11 @@ impl App {
         let mut value = match existing {
             None => init(),
             Some(v) => {
-                if let Some(marker) = v.downcast_ref::<GlobalLeaseMarker>() {
-                    panic!(
-                        "global already leased: {} (type_id={type_id:?}); leased at {}; accessed at {}",
-                        marker.type_name, marker.leased_at, leased_at
-                    );
-                }
                 *v.downcast::<T>().expect("global type id must match")
             }
         };
 
+        let _active_guard = ActiveGlobalLeaseGuard::new(type_id, &mut value);
         let result = if cfg!(panic = "unwind") {
             catch_unwind(AssertUnwindSafe(|| f(&mut value, self)))
         } else {
@@ -244,7 +401,11 @@ impl App {
             panic!("global lease marker was replaced unexpectedly: type_id={type_id:?}");
         }
 
-        if mark_changed {
+        if let Some(pending) = self.pending_globals.remove(&type_id) {
+            self.globals.insert(type_id, pending.value);
+            self.global_type_names.entry(type_id).or_insert(pending.type_name);
+            self.mark_global_changed_at(type_id, pending.changed_at);
+        } else if mark_changed {
             self.mark_global_changed_at(type_id, leased_at);
         }
 
@@ -551,19 +712,13 @@ mod global_lease_tests {
     struct Counter(u32);
 
     #[test]
-    fn with_global_mut_does_not_leak_lease_marker_after_panic() {
+    fn global_access_returns_none_while_leased_and_restores_after() {
         let mut app = App::new();
         let _ = app.take_changed_globals();
 
-        let panicked = catch_unwind(AssertUnwindSafe(|| {
-            app.with_global_mut(Counter::default, |_counter, app| {
-                // Global access during a lease should panic (guardrail), but the lease marker
-                // must be removed before unwinding resumes.
-                let _ = app.global::<Counter>();
-            });
-        }))
-        .is_err();
-        assert!(panicked, "expected global re-entrant access to panic");
+        app.with_global_mut(Counter::default, |_counter, app| {
+            assert_eq!(app.global::<Counter>().copied(), None);
+        });
 
         assert_eq!(app.global::<Counter>().copied(), Some(Counter(0)));
     }
@@ -912,35 +1067,31 @@ mod tests {
     }
 
     #[test]
-    fn global_access_panics_while_leased() {
+    fn global_access_returns_none_while_leased() {
         let mut app = App::new();
         app.set_global::<u32>(1);
 
-        let result = catch_unwind(AssertUnwindSafe(|| {
-            app.with_global_mut(
-                || 0u32,
-                |_v, app| {
-                    let _ = app.global::<u32>();
-                },
-            );
-        }));
-        assert!(result.is_err());
+        app.with_global_mut(
+            || 0u32,
+            |_v, app| {
+                assert_eq!(app.global::<u32>().copied(), None);
+            },
+        );
     }
 
     #[test]
-    fn set_global_panics_while_leased() {
+    fn set_global_defers_while_leased_and_applies_after() {
         let mut app = App::new();
         app.set_global::<u32>(1);
 
-        let result = catch_unwind(AssertUnwindSafe(|| {
-            app.with_global_mut(
-                || 0u32,
-                |_v, app| {
-                    app.set_global::<u32>(2);
-                },
-            );
-        }));
-        assert!(result.is_err());
+        app.with_global_mut(
+            || 0u32,
+            |_v, app| {
+                app.set_global::<u32>(2);
+            },
+        );
+
+        assert_eq!(app.global::<u32>().copied(), Some(2));
     }
 
     #[test]
