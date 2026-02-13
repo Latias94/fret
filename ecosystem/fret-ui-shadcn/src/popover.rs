@@ -2091,8 +2091,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames =
-            fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(3 + i as u64));
             let _ = render_popover_frame_with_auto_focus_hooks(
@@ -3981,7 +3983,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for i in 0..settle_frames {
             render_frame(&mut ui, &mut app, &mut services, 4 + i);
         }

@@ -1288,7 +1288,9 @@ mod tests {
         // The hover card uses a render-transform for shadcn-style open motion. Semantics bounds
         // track the transformed geometry, so advance a few frames to reach steady state before
         // asserting placement.
-        let settle_frames: u64 = overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames: u64 = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for step in 0..settle_frames {
             let tick = 3 + step;
             app.set_frame_id(FrameId(tick));
@@ -1627,7 +1629,9 @@ mod tests {
             }),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 1;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(3 + i));
             render_hover_card_focus_frame(

@@ -5145,7 +5145,9 @@ mod tests {
 
         // Once the exit transition settles, the barrier should drop and the underlay should be
         // interactive again.
-        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for _ in 0..settle_frames {
             let _ = render_frame_with_underlay(
                 &mut ui,
@@ -5812,7 +5814,9 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Let the exit transition settle so the barrier no longer intercepts trigger presses.
-        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for _ in 0..settle_frames {
             let _ = render_frame(
                 &mut ui,
