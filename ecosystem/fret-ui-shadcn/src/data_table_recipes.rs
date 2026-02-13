@@ -307,7 +307,16 @@ impl<TData> DataTableToolbar<TData> {
             column_label: Arc::new(column_label),
             show_global_filter: true,
             filter_placeholder: Arc::from("Filter..."),
-            filter_layout: LayoutRefinement::default(),
+            // Match upstream shadcn/ui tasks:
+            // - `h-8` (32px)
+            // - `w-[150px]` (recipe callers can override, e.g. `lg:w-[250px]` equivalents).
+            //
+            // This also avoids `Input`'s default `width: Fill` shrinking unexpectedly when used in
+            // a shrink-wrapped toolbar row.
+            filter_layout: LayoutRefinement::default()
+                .h_px(Px(32.0))
+                .w_px(Px(150.0))
+                .flex_none(),
             column_filter: None,
             column_filter_placeholder: Arc::from("Filter..."),
             column_filter_a11y_label: Arc::from("Column filter"),
@@ -988,7 +997,7 @@ impl<TData> DataTableToolbar<TData> {
                                          let mut children = Vec::new();
                                         children.push(crate::icon::icon(
                                             cx,
-                                            fret_icons::IconId::new_static("lucide.plus-circle"),
+                                            fret_icons::IconId::new_static("lucide.circle-plus"),
                                         ));
                                         children.push(
                                             ui::text(cx, trigger_button_label.clone())
