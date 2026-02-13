@@ -426,6 +426,17 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         safe_area_insets,
                         occlusion_insets,
                     } => {
+                        if safe_area_insets.is_some() || occlusion_insets.is_some() {
+                            let entry =
+                                self.diag_window_insets_overrides.entry(window).or_default();
+                            if let Some(value) = safe_area_insets.clone() {
+                                entry.safe_area_insets = Some(value);
+                            }
+                            if let Some(value) = occlusion_insets.clone() {
+                                entry.occlusion_insets = Some(value);
+                            }
+                        }
+
                         let mut changed = false;
                         self.app.with_global_mut(
                             fret_core::WindowMetricsService::default,

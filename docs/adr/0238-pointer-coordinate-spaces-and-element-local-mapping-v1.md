@@ -1,6 +1,6 @@
 # ADR 0238: Pointer Coordinate Spaces and Element-Local Mapping (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

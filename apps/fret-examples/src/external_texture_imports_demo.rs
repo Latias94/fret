@@ -2,7 +2,10 @@ use anyhow::Context as _;
 use fret_app::App;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
-use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
+use fret_launch::{
+    EngineFrameKeepalive, EngineFrameUpdate, ImportedViewportRenderTarget,
+    NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
+};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
@@ -162,6 +165,29 @@ enum ExternalTextureImportsMode {
     DecodedPngCpuCopy,
 }
 
+struct OwnedWgpuTextureFrame {
+    texture: wgpu::Texture,
+    size: (u32, u32),
+}
+
+impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
+    fn import(
+        self: Box<Self>,
+        _ctx: &WgpuContext,
+        _caps: &fret_render::RendererCapabilities,
+    ) -> Result<NativeExternalImportedFrame, NativeExternalImportError> {
+        let view = self
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        Ok(NativeExternalImportedFrame {
+            view,
+            size: self.size,
+            metadata: fret_render::RenderTargetMetadata::default(),
+            keepalive: EngineFrameKeepalive::new(self),
+        })
+    }
+}
+
 struct DecodedPngSource {
     base: image::RgbaImage,
     cached_size: (u32, u32),
@@ -226,6 +252,7 @@ impl DecodedPngSource {
 struct ExternalTextureImportsState {
     show: fret_runtime::Model<bool>,
     mode: ExternalTextureImportsMode,
+    use_native_adapter: bool,
 
     target: ImportedViewportRenderTarget,
     target_px_size: (u32, u32),
@@ -249,6 +276,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ExternalTextureImportsSta
         checker: None,
         mode: ExternalTextureImportsMode::CheckerGpu,
         decoded: None,
+        use_native_adapter: false,
     }
 }
 
@@ -274,6 +302,13 @@ fn on_event(
             ExternalTextureImportsMode::CheckerGpu => ExternalTextureImportsMode::DecodedPngCpuCopy,
             ExternalTextureImportsMode::DecodedPngCpuCopy => ExternalTextureImportsMode::CheckerGpu,
         };
+        app.request_redraw(window);
+    }
+
+    if let Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyN
+    {
+        st.use_native_adapter = !st.use_native_adapter;
         app.request_redraw(window);
     }
 }
@@ -421,8 +456,32 @@ fn record_engine_frame(
         .expect("texture must exist after allocation");
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-    st.target
-        .push_update(&mut update, view.clone(), st.target_px_size);
+    if st.use_native_adapter {
+        let renderer_caps = app
+            .global::<fret_render::RendererCapabilities>()
+            .expect("renderer capabilities must be set before record_engine_frame");
+        let frame: Box<dyn NativeExternalTextureFrame> = Box::new(OwnedWgpuTextureFrame {
+            texture: texture.clone(),
+            size: st.target_px_size,
+        });
+        if let Err(err) = st.target.push_native_external_import_update(
+            renderer,
+            &mut update,
+            context,
+            &renderer_caps,
+            frame,
+        ) {
+            tracing::warn!(
+                ?err,
+                "native external import adapter path failed; falling back"
+            );
+            st.target
+                .push_update(&mut update, view.clone(), st.target_px_size);
+        }
+    } else {
+        st.target
+            .push_update(&mut update, view.clone(), st.target_px_size);
+    }
 
     match st.mode {
         ExternalTextureImportsMode::CheckerGpu => {

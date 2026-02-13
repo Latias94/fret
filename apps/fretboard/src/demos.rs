@@ -48,6 +48,8 @@ fn web_demos() -> &'static [&'static str] {
         "ui_gallery",
         // Lightweight examples gallery (separate app from `fret-ui-gallery`).
         "components_gallery",
+        // External texture imports (web copy path; ADR 0234).
+        "external_texture_imports_web_demo",
         "chart_demo",
         "plot_demo",
         "bars_demo",

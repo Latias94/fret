@@ -1,6 +1,6 @@
 # ADR 0243: Pointer Motion Snapshots and Move Coalescing (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -78,4 +78,3 @@ Contract:
 
 - This ADR does not define a gesture recognition layer (drag/pan/fling) as a framework contract.
 - This ADR does not guarantee “perfect” velocity; it is a best-effort UX affordance.
-

@@ -15,6 +15,15 @@ impl EngineFrameKeepalive {
     }
 }
 
+impl fmt::Debug for EngineFrameKeepalive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _ = &self.0;
+        f.debug_tuple("EngineFrameKeepalive")
+            .field(&"<opaque>")
+            .finish()
+    }
+}
+
 pub enum RenderTargetUpdate {
     Update {
         id: fret_core::RenderTargetId,

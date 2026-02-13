@@ -1,6 +1,6 @@
 # ADR 0236: Effect Steps — Color Matrix and Alpha Threshold (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -119,4 +119,3 @@ Implementation is considered conformant when:
 - Budgets/degradation: `docs/adr/0118-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Extensibility trust boundary: `docs/adr/0123-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
 - Color/compositing: `docs/adr/0040-color-management-and-compositing-contracts.md`
-

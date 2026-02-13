@@ -1,6 +1,7 @@
 mod common;
 mod font_catalog;
 mod imported_viewport_target;
+mod native_external_import;
 mod streaming_upload;
 mod viewport_overlay_immediate_3d;
 mod viewport_target;
@@ -14,6 +15,7 @@ mod web;
 
 pub use common::*;
 pub use imported_viewport_target::*;
+pub use native_external_import::*;
 pub use viewport_overlay_immediate_3d::*;
 pub use viewport_target::*;
 
