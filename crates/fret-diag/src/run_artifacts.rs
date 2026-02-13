@@ -163,7 +163,7 @@ pub(crate) fn write_run_id_bundle_json_chunks(
 pub(crate) fn materialize_run_id_bundle_json_from_chunks_if_missing(
     out_dir: &Path,
     run_id: u64,
-) -> Option<PathBuf> {
+) -> Result<Option<PathBuf>, String> {
     let run_dir = run_id_artifact_dir(out_dir, run_id);
     materialize_bundle_json_from_manifest_chunks_if_missing(&run_dir)
 }
@@ -203,14 +203,24 @@ fn update_run_id_manifest_with_bundle_json_chunks(
     let _ = write_json_value(&path, &v);
 }
 
-pub(crate) fn materialize_bundle_json_from_manifest_chunks_if_missing(dir: &Path) -> Option<PathBuf> {
+pub(crate) fn materialize_bundle_json_from_manifest_chunks_if_missing(
+    dir: &Path,
+) -> Result<Option<PathBuf>, String> {
     let bundle_json_path = dir.join("bundle.json");
     if bundle_json_path.is_file() {
-        return Some(bundle_json_path);
+        return Ok(Some(bundle_json_path));
     }
 
     let manifest_path = dir.join("manifest.json");
-    let manifest = read_json_value(&manifest_path)?;
+    if !manifest_path.is_file() {
+        return Ok(None);
+    }
+    let Some(manifest) = read_json_value(&manifest_path) else {
+        return Err(format!(
+            "manifest.json was not valid JSON: {}",
+            manifest_path.display()
+        ));
+    };
     let chunks = manifest
         .get("bundle_json")
         .and_then(|v| v.get("chunks"))
@@ -218,18 +228,77 @@ pub(crate) fn materialize_bundle_json_from_manifest_chunks_if_missing(dir: &Path
         .cloned()
         .unwrap_or_default();
     if chunks.is_empty() {
-        return None;
+        return Ok(None);
     }
 
-    let mut out = std::fs::File::create(&bundle_json_path).ok()?;
+    let expected_total_blake3 = manifest
+        .get("bundle_json")
+        .and_then(|v| v.get("blake3"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let tmp_path = dir.join("bundle.json.tmp");
+    let mut out = std::fs::File::create(&tmp_path).map_err(|e| e.to_string())?;
+    let mut total_hasher = blake3::Hasher::new();
     for chunk in chunks {
-        let rel = chunk.get("path")?.as_str()?;
+        let rel = chunk
+            .get("path")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "invalid manifest.json: bundle_json.chunks[*].path missing".to_string())?;
+        let expected_chunk_blake3 = chunk
+            .get("blake3")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let expected_chunk_bytes = chunk.get("bytes").and_then(|v| v.as_u64());
+
         let chunk_path = dir.join(rel);
-        let bytes = std::fs::read(chunk_path).ok()?;
-        out.write_all(&bytes).ok()?;
+        let bytes = std::fs::read(&chunk_path).map_err(|e| {
+            format!("failed to read bundle json chunk ({}): {}", chunk_path.display(), e)
+        })?;
+        if let Some(expected) = expected_chunk_bytes {
+            if expected != bytes.len() as u64 {
+                let _ = std::fs::remove_file(&tmp_path);
+                return Err(format!(
+                    "bundle json chunk size mismatch ({}): expected={} actual={}",
+                    chunk_path.display(),
+                    expected,
+                    bytes.len()
+                ));
+            }
+        }
+        if let Some(expected) = expected_chunk_blake3 {
+            let actual = blake3::hash(&bytes).to_hex().to_string();
+            if actual != expected {
+                let _ = std::fs::remove_file(&tmp_path);
+                return Err(format!(
+                    "bundle json chunk hash mismatch ({}): expected={} actual={}",
+                    chunk_path.display(),
+                    expected,
+                    actual
+                ));
+            }
+        }
+
+        total_hasher.update(&bytes);
+        out.write_all(&bytes).map_err(|e| e.to_string())?;
     }
-    out.flush().ok()?;
-    Some(bundle_json_path)
+    out.flush().ok();
+
+    if let Some(expected) = expected_total_blake3 {
+        let actual = total_hasher.finalize().to_hex().to_string();
+        if actual != expected {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(format!(
+                "bundle json total hash mismatch ({}): expected={} actual={}",
+                manifest_path.display(),
+                expected,
+                actual
+            ));
+        }
+    }
+
+    std::fs::rename(&tmp_path, &bundle_json_path).map_err(|e| e.to_string())?;
+    Ok(Some(bundle_json_path))
 }
 
 #[cfg(test)]
@@ -391,8 +460,9 @@ mod tests {
 
         std::fs::remove_file(&bundle_json_path).expect("remove bundle.json");
 
-        let rebuilt =
-            materialize_run_id_bundle_json_from_chunks_if_missing(&root, run_id).expect("rebuilt");
+        let rebuilt = materialize_run_id_bundle_json_from_chunks_if_missing(&root, run_id)
+            .expect("rebuilt result")
+            .expect("rebuilt path");
         assert!(rebuilt.is_file());
 
         let bytes = std::fs::read(rebuilt).expect("read rebuilt bundle.json");

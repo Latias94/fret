@@ -10015,16 +10015,26 @@ fn pack_bundle_dir_to_zip(
 
     let bundle_json = bundle_dir.join("bundle.json");
     if !bundle_json.is_file() {
-        if materialize_bundle_json_from_manifest_chunks_if_missing(bundle_dir)
-            .as_ref()
-            .is_some_and(|p| p.is_file())
-        {
-            // `bundle.json` has been materialized from v2 chunks for compatibility.
-        } else {
-            return Err(format!(
-                "bundle_dir does not contain bundle.json: {}",
-                bundle_dir.display()
-            ));
+        match materialize_bundle_json_from_manifest_chunks_if_missing(bundle_dir) {
+            Ok(Some(p)) if p.is_file() => {
+                // `bundle.json` has been materialized from v2 chunks for compatibility.
+            }
+            Ok(_) => {
+                return Err(format!(
+                    "bundle_dir does not contain bundle.json: {}",
+                    bundle_dir.display()
+                ));
+            }
+            Err(err) => {
+                record_tooling_artifact_integrity_failure_for_dir(
+                    bundle_dir,
+                    &format!("failed to materialize bundle.json from chunks: {err}"),
+                );
+                return Err(format!(
+                    "bundle_dir does not contain bundle.json: {}",
+                    bundle_dir.display()
+                ));
+            }
         }
     }
 
@@ -10897,6 +10907,56 @@ fn expand_script_inputs(workspace_root: &Path, inputs: &[String]) -> Result<Vec<
     Ok(set.into_iter().collect())
 }
 
+fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
+    let reason_code = "tooling.artifact.integrity.failed";
+    let kind = "tooling_artifact_integrity_failed";
+
+    let direct = dir.join("script.result.json");
+    let from_parent = dir
+        .parent()
+        .map(|p| p.join("script.result.json"))
+        .unwrap_or_else(|| direct.clone());
+    let script_result_path = if direct.is_file() {
+        direct
+    } else if from_parent.is_file() {
+        from_parent
+    } else {
+        return;
+    };
+
+    let bytes = std::fs::read(&script_result_path).ok();
+    let parsed = bytes
+        .as_deref()
+        .and_then(|b| serde_json::from_slice::<UiScriptResultV1>(b).ok());
+    let Some(parsed) = parsed else {
+        return;
+    };
+
+    let mut out_dir = script_result_path
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| dir.to_path_buf());
+    if let Some(parent) = script_result_path.parent() {
+        if parent
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s == parsed.run_id.to_string())
+            .unwrap_or(false)
+        {
+            out_dir = parent.parent().unwrap_or(parent).to_path_buf();
+        }
+    }
+
+    mark_existing_script_result_tooling_failure(
+        &out_dir,
+        &script_result_path,
+        reason_code,
+        err,
+        kind,
+        Some(format!("dir={}", dir.display())),
+    );
+}
+
 fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     if !path.is_dir() {
         return path.to_path_buf();
@@ -10907,9 +10967,16 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         return direct;
     }
 
-    if let Some(v2) = materialize_bundle_json_from_manifest_chunks_if_missing(path) {
-        if v2.is_file() {
+    match materialize_bundle_json_from_manifest_chunks_if_missing(path) {
+        Ok(Some(v2)) if v2.is_file() => {
             return v2;
+        }
+        Ok(_) => {}
+        Err(err) => {
+            record_tooling_artifact_integrity_failure_for_dir(
+                path,
+                &format!("failed to materialize bundle.json from chunks: {err}"),
+            );
         }
     }
 
@@ -10923,9 +10990,16 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         if run_id_bundle.is_file() {
             return run_id_bundle;
         }
-        if let Some(v2) = materialize_run_id_bundle_json_from_chunks_if_missing(path, run_id) {
-            if v2.is_file() {
+        match materialize_run_id_bundle_json_from_chunks_if_missing(path, run_id) {
+            Ok(Some(v2)) if v2.is_file() => {
                 return v2;
+            }
+            Ok(_) => {}
+            Err(err) => {
+                record_tooling_artifact_integrity_failure_for_dir(
+                    &run_id_artifact_dir(path, run_id),
+                    &format!("failed to materialize bundle.json from chunks: {err}"),
+                );
             }
         }
     }
@@ -14620,6 +14694,93 @@ mod tests {
 
         let resolved = resolve_bundle_json_path(&root);
         assert_eq!(resolved, run_id_dir.join("bundle.json"));
+    }
+
+    #[test]
+    fn resolve_bundle_json_path_records_integrity_failure_reason_code_on_chunk_hash_mismatch() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-resolve-bundle-chunks-integrity-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let run_id = 1u64;
+        let run_id_dir = root.join(run_id.to_string());
+        std::fs::create_dir_all(&run_id_dir).expect("create run_id dir");
+
+        let initial = UiScriptResultV1 {
+            schema_version: 1,
+            run_id,
+            updated_unix_ms: 0,
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        std::fs::write(
+            run_id_dir.join("script.result.json"),
+            serde_json::to_vec_pretty(&initial).expect("script.result json"),
+        )
+        .expect("write script.result.json");
+
+        let chunks_dir = run_id_dir.join("chunks").join("bundle_json");
+        std::fs::create_dir_all(&chunks_dir).expect("create chunks dir");
+        let chunk_path = chunks_dir.join("chunk-000000");
+        let chunk_bytes = br#"{ "schema_version": 1, "windows": [] }"#.to_vec();
+        std::fs::write(&chunk_path, &chunk_bytes).expect("write chunk");
+
+        // Intentionally wrong hash values to force an integrity failure.
+        let manifest = serde_json::json!({
+            "schema_version": 2,
+            "generated_unix_ms": 0,
+            "run_id": run_id,
+            "bundle_json": {
+                "mode": "chunks.v1",
+                "total_bytes": chunk_bytes.len() as u64,
+                "chunk_bytes": chunk_bytes.len() as u64,
+                "blake3": "deadbeef",
+                "chunks": [
+                    {
+                        "index": 0,
+                        "path": "chunks/bundle_json/chunk-000000",
+                        "bytes": chunk_bytes.len() as u64,
+                        "blake3": "deadbeef",
+                    }
+                ]
+            }
+        });
+        std::fs::write(
+            run_id_dir.join("manifest.json"),
+            serde_json::to_vec_pretty(&manifest).expect("manifest json"),
+        )
+        .expect("write manifest.json");
+
+        let _ = resolve_bundle_json_path(&run_id_dir);
+
+        let bytes = std::fs::read(run_id_dir.join("script.result.json")).expect("read script.result.json");
+        let parsed: UiScriptResultV1 =
+            serde_json::from_slice(&bytes).expect("parse script.result.json");
+        assert!(matches!(parsed.stage, UiScriptStageV1::Failed));
+        assert_eq!(
+            parsed.reason_code.as_deref(),
+            Some("tooling.artifact.integrity.failed")
+        );
+        assert!(
+            parsed
+                .evidence
+                .as_ref()
+                .and_then(|e| e.event_log.last())
+                .map(|e| e.kind.as_str())
+                == Some("tooling_artifact_integrity_failed")
+        );
     }
 
     #[test]
