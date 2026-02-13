@@ -95,12 +95,12 @@ impl Drop for StrictThemeGuard {
     }
 }
 
-fn warn_missing_theme_token_once(kind: ThemeTokenKind, key: &str) {
+fn warn_missing_theme_token_once(kind: ThemeTokenKind, key: &str) -> bool {
     static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 
     let canonical = canonicalize_token_key(kind, key);
     if canonical.is_empty() {
-        return;
+        return false;
     }
 
     let seen = SEEN.get_or_init(|| Mutex::new(HashSet::new()));
@@ -111,7 +111,7 @@ fn warn_missing_theme_token_once(kind: ThemeTokenKind, key: &str) {
 
     let k = format!("{kind:?}:{canonical}");
     if !seen.insert(k) {
-        return;
+        return false;
     }
 
     tracing::warn!(
@@ -119,6 +119,7 @@ fn warn_missing_theme_token_once(kind: ThemeTokenKind, key: &str) {
         token_key = canonical,
         "missing theme token; using fallback"
     );
+    true
 }
 
 fn fallback_color_by_key(key: &str) -> Color {
@@ -2083,6 +2084,20 @@ mod tests {
         ] {
             assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
         }
+    }
+
+    #[test]
+    fn missing_theme_token_diagnostics_warn_once_per_key() {
+        // Use a unique key to avoid cross-test coupling (the warn-once cache is process-global).
+        let key = format!("color.__missing_theme_token_test__{}", line!());
+        assert!(super::warn_missing_theme_token_once(
+            crate::theme_registry::ThemeTokenKind::Color,
+            &key
+        ));
+        assert!(!super::warn_missing_theme_token_once(
+            crate::theme_registry::ThemeTokenKind::Color,
+            &key
+        ));
     }
 
     #[test]

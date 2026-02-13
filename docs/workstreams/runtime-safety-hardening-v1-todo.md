@@ -82,11 +82,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] RSH-theme-004 Migrate apps/ecosystem call sites off panicking token accessors.
   - Evidence: workspace-wide migration from `*_required` → `*_token` (e.g. `ecosystem/`, `apps/`)
   - Evidence: `ecosystem/fret-ui-kit/src/style/theme_read.rs` (`ThemeTokenRead::{color_token,metric_token}`; call sites compile against the narrow trait)
-- [~] RSH-theme-005 Add regression gates:
+- [x] RSH-theme-005 Add regression gates:
   - missing tokens never panic by default,
   - diagnostics are emitted once with a stable summary.
   - Evidence: `crates/fret-ui/src/theme/mod.rs` (`*_required` uses fallback + warn-once; strict mode panics via `FRET_STRICT_RUNTIME`)
   - Evidence: `crates/fret-ui/src/theme/mod.rs` (tests: `required_accessors_do_not_panic_when_tokens_are_missing_by_default`, `required_accessors_panic_in_strict_runtime_mode`)
+  - Evidence: `crates/fret-ui/src/theme/mod.rs` (test: `missing_theme_token_diagnostics_warn_once_per_key`)
 
 ## M4 — Globals + env flags hardening
 
