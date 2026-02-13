@@ -1394,7 +1394,10 @@ fn mount_element<H: UiHost + 'static>(
 
     let previous_instance = window_frame.instances.get(node).map(|r| &r.instance);
     if !reuse_view_cache {
-        let mask = declarative_instance_change_mask(previous_instance, &instance);
+        let mut mask = declarative_instance_change_mask(previous_instance, &instance);
+        if ui.interactive_resize_active() && ui.hover_edge_changed_this_frame() {
+            mask &= !INVALIDATION_LAYOUT;
+        }
         if mask != 0 {
             ui.debug_record_hover_declarative_invalidation(
                 node,

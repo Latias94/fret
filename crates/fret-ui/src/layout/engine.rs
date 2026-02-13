@@ -1,9 +1,9 @@
 use fret_core::time::Instant;
-use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use fret_core::{FrameId, NodeId, Point, Px, Rect, Size};
+use rustc_hash::FxHashMap;
 use serde_json::json;
 use slotmap::SecondaryMap;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
@@ -33,15 +33,18 @@ pub struct LayoutEngineMeasureHotspot {
 pub struct TaffyLayoutEngine {
     tree: TaffyTree<NodeContext>,
     node_to_layout: SecondaryMap<NodeId, LayoutId>,
-    layout_to_node: HashMap<LayoutId, NodeId>,
+    layout_to_node: FxHashMap<LayoutId, NodeId>,
     styles: SecondaryMap<NodeId, taffy::Style>,
     children: SecondaryMap<NodeId, Vec<NodeId>>,
     parent: SecondaryMap<NodeId, NodeId>,
-    seen: HashSet<NodeId>,
+    seen_generation: u32,
+    seen_stamp: SecondaryMap<NodeId, u32>,
+    child_nodes_scratch: Vec<TaffyNodeId>,
+    mark_seen_stack_scratch: Vec<NodeId>,
     solve_generation: u64,
     node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
     root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
-    measure_cache_scratch: HashMap<LayoutMeasureKey, taffy::geometry::Size<f32>>,
+    measure_cache_scratch: FxHashMap<LayoutMeasureKey, taffy::geometry::Size<f32>>,
     solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
@@ -89,15 +92,18 @@ impl Default for TaffyLayoutEngine {
         Self {
             tree,
             node_to_layout: SecondaryMap::new(),
-            layout_to_node: HashMap::new(),
+            layout_to_node: FxHashMap::default(),
             styles: SecondaryMap::new(),
             children: SecondaryMap::new(),
             parent: SecondaryMap::new(),
-            seen: HashSet::new(),
+            seen_generation: 1,
+            seen_stamp: SecondaryMap::new(),
+            child_nodes_scratch: Vec::new(),
+            mark_seen_stack_scratch: Vec::new(),
             solve_generation: 0,
             node_solved_stamp: SecondaryMap::new(),
             root_solve_stamp: SecondaryMap::new(),
-            measure_cache_scratch: HashMap::new(),
+            measure_cache_scratch: FxHashMap::default(),
             solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
@@ -113,6 +119,16 @@ impl Default for TaffyLayoutEngine {
 }
 
 impl TaffyLayoutEngine {
+    #[inline]
+    fn mark_seen(&mut self, node: NodeId) {
+        self.seen_stamp.insert(node, self.seen_generation);
+    }
+
+    #[inline]
+    fn is_seen(&self, node: NodeId) -> bool {
+        self.seen_stamp.get(node).copied() == Some(self.seen_generation)
+    }
+
     fn invalidate_solved_ancestors(&mut self, mut node: NodeId) {
         while let Some(parent) = self.parent.get(node).copied() {
             self.node_solved_stamp.remove(parent);
@@ -124,7 +140,11 @@ impl TaffyLayoutEngine {
     pub fn begin_frame(&mut self, frame_id: FrameId) {
         if self.frame_id != Some(frame_id) {
             self.frame_id = Some(frame_id);
-            self.seen.clear();
+            self.seen_generation = self.seen_generation.wrapping_add(1);
+            if self.seen_generation == 0 {
+                self.seen_generation = 1;
+                self.seen_stamp.clear();
+            }
             self.solve_generation = 0;
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
@@ -141,7 +161,7 @@ impl TaffyLayoutEngine {
         let stale: Vec<NodeId> = self
             .node_to_layout
             .iter()
-            .filter_map(|(node, _)| (!self.seen.contains(&node)).then_some(node))
+            .filter_map(|(node, _)| (!self.is_seen(node)).then_some(node))
             .collect();
 
         for node in stale {
@@ -150,6 +170,7 @@ impl TaffyLayoutEngine {
             };
             self.layout_to_node.remove(&layout_id);
             self.styles.remove(node);
+            self.seen_stamp.remove(node);
             if let Some(children) = self.children.remove(node) {
                 for child in children {
                     if self.parent.get(child) == Some(&node) {
@@ -170,7 +191,7 @@ impl TaffyLayoutEngine {
 
     pub(crate) fn mark_seen_if_present(&mut self, node: NodeId) {
         if self.node_to_layout.contains_key(node) {
-            self.seen.insert(node);
+            self.mark_seen(node);
         }
     }
 
@@ -230,14 +251,10 @@ impl TaffyLayoutEngine {
         {
             return None;
         }
-        if !self.seen.contains(&parent) || !self.seen.contains(&child) {
+        if !self.is_seen(parent) || !self.is_seen(child) {
             return None;
         }
-        if !self
-            .children
-            .get(parent)
-            .is_some_and(|children| children.contains(&child))
-        {
+        if self.parent.get(child) != Some(&parent) {
             return None;
         }
         self.layout_id_for_node(child)
@@ -250,7 +267,7 @@ impl TaffyLayoutEngine {
         available: LayoutSize<AvailableSpace>,
         scale_factor: f32,
     ) -> bool {
-        if !self.seen.contains(&root) {
+        if !self.is_seen(root) {
             return false;
         }
         let Some(frame_id) = self.frame_id else {
@@ -303,8 +320,49 @@ impl TaffyLayoutEngine {
         Some(root_id)
     }
 
+    pub(crate) fn mark_seen_subtree_from_cached_children(&mut self, root: NodeId) {
+        if self.layout_id_for_node(root).is_none() {
+            return;
+        }
+        self.mark_seen_stack_scratch.clear();
+        self.mark_seen_stack_scratch.push(root);
+        while let Some(node) = self.mark_seen_stack_scratch.pop() {
+            self.mark_seen(node);
+            if let Some(children) = self.children.get(node) {
+                self.mark_seen_stack_scratch
+                    .extend(children.iter().copied());
+            }
+        }
+    }
+
+    pub(crate) fn set_viewport_root_override_size(
+        &mut self,
+        root: NodeId,
+        viewport_size: Size,
+        scale_factor: f32,
+    ) {
+        let Some(mut style) = self.styles.get(root).cloned() else {
+            return;
+        };
+
+        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
+            scale_factor
+        } else {
+            1.0
+        };
+
+        let w = viewport_size.width.0.max(0.0) * sf;
+        let h = viewport_size.height.0.max(0.0) * sf;
+        style.size.width = taffy::style::Dimension::length(w);
+        style.size.height = taffy::style::Dimension::length(h);
+        style.max_size.width = taffy::style::Dimension::length(w);
+        style.max_size.height = taffy::style::Dimension::length(h);
+
+        self.set_style(root, style);
+    }
+
     pub fn request_layout_node(&mut self, node: NodeId) -> LayoutId {
-        self.seen.insert(node);
+        self.mark_seen(node);
         if let Some(id) = self.node_to_layout.get(node).copied() {
             return id;
         }
@@ -361,8 +419,11 @@ impl TaffyLayoutEngine {
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
         let parent = self.request_layout_node(node).0;
 
-        let prev_children = self.children.get(node).map(|v| v.as_slice()).unwrap_or(&[]);
-        if prev_children == children {
+        if self
+            .children
+            .get(node)
+            .is_some_and(|prev| prev.as_slice() == children)
+        {
             return;
         }
         self.node_solved_stamp.remove(node);
@@ -377,14 +438,19 @@ impl TaffyLayoutEngine {
             }
         }
 
-        let mut child_nodes: Vec<TaffyNodeId> = Vec::with_capacity(children.len());
+        self.child_nodes_scratch.clear();
+        self.child_nodes_scratch.reserve(children.len());
         for &child in children {
             let child_id = self.request_layout_node(child).0;
-            child_nodes.push(child_id);
+            self.child_nodes_scratch.push(child_id);
             self.parent.insert(child, node);
         }
 
-        if self.tree.set_children(parent, &child_nodes).is_ok() {
+        if self
+            .tree
+            .set_children(parent, &self.child_nodes_scratch)
+            .is_ok()
+        {
             self.children.insert(node, children.to_vec());
             let _ = self.tree.mark_dirty(parent);
         }
@@ -466,7 +532,8 @@ impl TaffyLayoutEngine {
             cache_hits: u64,
         }
 
-        let mut by_node: HashMap<NodeId, MeasureNodeProfile> = HashMap::new();
+        let mut by_node: Option<SecondaryMap<NodeId, MeasureNodeProfile>> =
+            enable_profile.then(SecondaryMap::new);
         self.tree
             .compute_layout_with_measure(
                 root.0,
@@ -490,8 +557,14 @@ impl TaffyLayoutEngine {
                     if let Some(size) = measure_cache.get(&key) {
                         measure_cache_hits = measure_cache_hits.saturating_add(1);
                         if enable_profile {
-                            let profile = by_node.entry(ctx.node).or_default();
-                            profile.cache_hits = profile.cache_hits.saturating_add(1);
+                            if let Some(by_node) = by_node.as_mut() {
+                                if by_node.get(ctx.node).is_none() {
+                                    by_node.insert(ctx.node, MeasureNodeProfile::default());
+                                }
+                                let profile =
+                                    by_node.get_mut(ctx.node).expect("profile entry inserted");
+                                profile.cache_hits = profile.cache_hits.saturating_add(1);
+                            }
                         }
                         return *size;
                     }
@@ -537,9 +610,15 @@ impl TaffyLayoutEngine {
 
                     if enable_profile {
                         measure_time += elapsed;
-                        let profile = by_node.entry(ctx.node).or_default();
-                        profile.total_time += elapsed;
-                        profile.calls = profile.calls.saturating_add(1);
+                        if let Some(by_node) = by_node.as_mut() {
+                            if by_node.get(ctx.node).is_none() {
+                                by_node.insert(ctx.node, MeasureNodeProfile::default());
+                            }
+                            let profile =
+                                by_node.get_mut(ctx.node).expect("profile entry inserted");
+                            profile.total_time += elapsed;
+                            profile.calls = profile.calls.saturating_add(1);
+                        }
                     }
                     let out = taffy::geometry::Size {
                         width: s.width.0 * sf,
@@ -558,6 +637,7 @@ impl TaffyLayoutEngine {
         if enable_profile {
             const MAX_HOTSPOTS: usize = 8;
             let mut hotspots: Vec<LayoutEngineMeasureHotspot> = by_node
+                .unwrap_or_default()
                 .into_iter()
                 .map(|(node, p)| LayoutEngineMeasureHotspot {
                     node,
@@ -665,7 +745,7 @@ impl TaffyLayoutEngine {
         fn abs_rect_for_node(
             engine: &TaffyLayoutEngine,
             node: NodeId,
-            abs_cache: &mut HashMap<NodeId, Rect>,
+            abs_cache: &mut FxHashMap<NodeId, Rect>,
         ) -> Rect {
             if let Some(rect) = abs_cache.get(&node).copied() {
                 return rect;
@@ -693,8 +773,8 @@ impl TaffyLayoutEngine {
 
         let root_layout_id = self.layout_id_for_node(root);
         let mut stack: Vec<NodeId> = vec![root];
-        let mut visited: HashSet<NodeId> = HashSet::new();
-        let mut abs_cache: HashMap<NodeId, Rect> = HashMap::new();
+        let mut visited: std::collections::HashSet<NodeId> = std::collections::HashSet::new();
+        let mut abs_cache: FxHashMap<NodeId, Rect> = FxHashMap::default();
         let mut nodes: Vec<serde_json::Value> = Vec::new();
 
         while let Some(node) = stack.pop() {

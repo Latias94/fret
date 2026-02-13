@@ -7,6 +7,10 @@ use crate::layout_engine::TaffyLayoutEngine;
 use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
+fn layout_profile_enabled() -> bool {
+    std::env::var_os("FRET_LAYOUT_PROFILE").is_some_and(|v| !v.is_empty() && v != "0")
+}
+
 impl<H: UiHost> UiTree<H> {
     fn virtual_list_scroll_handle_requires_layout(
         app: &mut H,
@@ -118,14 +122,16 @@ impl<H: UiHost> UiTree<H> {
 
             let mut change_kind = change.kind;
 
-            // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
-            // when offset/viewport/content are unchanged, which makes the change appear as
+            // If a virtual list requested a scroll-to-item, the scroll handle revision can bump
+            // even when offset/viewport/content are unchanged, which makes the change appear as
             // "layout-affecting". Consume the deferred request up-front (using cached metrics +
             // viewport) and convert it into a simple offset update, avoiding a layout-driven
             // consumption path in the common case.
-            if consume_deferred_scroll_to_item
-                && change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout
-            {
+            //
+            // Note: the diagnostics pipeline may classify these revisions as either `Layout` or
+            // `HitTestOnly` depending on which stage observed the bump. Prefer consuming the
+            // deferred request whenever we can.
+            if consume_deferred_scroll_to_item {
                 let mut consumed_scroll_to_item = false;
                 for element in &bound {
                     if consumed_scroll_to_item {
@@ -194,10 +200,19 @@ impl<H: UiHost> UiTree<H> {
                             state.metrics.sync_keys(&state.keys, vlist_items_revision);
                             state.items_revision = vlist_items_revision;
 
+                            let viewport_from_state = match vlist_axis {
+                                fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                            };
                             let viewport_size = vlist_scroll_handle.viewport_size();
-                            let viewport = match vlist_axis {
+                            let viewport_from_handle = match vlist_axis {
                                 fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
                                 fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
+                            };
+                            let viewport = if viewport_from_handle.0 > 0.0 {
+                                viewport_from_handle
+                            } else {
+                                viewport_from_state
                             };
                             if viewport.0 <= 0.0 || vlist_len == 0 {
                                 return None;
@@ -1744,9 +1759,10 @@ impl<H: UiHost> UiTree<H> {
         );
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled);
+        engine.set_measure_profiling_enabled(self.debug_enabled && profile_layout);
 
         let phase1_started = profile_layout.then(Instant::now);
+        let reuse_cached_flow = self.interactive_resize_active();
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
             if self
@@ -1756,8 +1772,34 @@ impl<H: UiHost> UiTree<H> {
             {
                 continue;
             }
-
-            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+            let layout_invalidated = self
+                .nodes
+                .get(root)
+                .is_some_and(|node| node.invalidation.layout);
+            if engine.layout_id_for_node(root).is_some()
+                && self
+                    .nodes
+                    .get(root)
+                    .is_some_and(|node| !node.invalidation.layout && node.bounds == bounds)
+            {
+                engine.mark_seen_subtree_from_cached_children(root);
+                continue;
+            }
+            if reuse_cached_flow && engine.layout_id_for_node(root).is_some() && !layout_invalidated
+            {
+                engine.set_viewport_root_override_size(root, bounds.size, sf);
+                engine.mark_seen_subtree_from_cached_children(root);
+            } else {
+                build_viewport_flow_subtree(
+                    &mut engine,
+                    app,
+                    &*self,
+                    window,
+                    sf,
+                    root,
+                    bounds.size,
+                );
+            }
         }
         let phase1_elapsed = phase1_started.map(|s| s.elapsed());
 
@@ -1885,6 +1927,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds: Rect,
                 needs_layout: bool,
                 is_translation_only: bool,
+                layout_invalidated: bool,
             }
 
             let mut batch: Vec<ViewportWorkItem> = Vec::with_capacity(batch_end - batch_start);
@@ -1908,6 +1951,7 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     needs_layout,
                     is_translation_only,
+                    layout_invalidated: invalidated,
                 });
             }
 
@@ -1915,7 +1959,10 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(window) = window
             {
                 let mut engine = self.take_layout_engine();
-                engine.set_measure_profiling_enabled(self.debug_enabled);
+                engine
+                    .set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+
+                let reuse_cached_flow = self.interactive_resize_active();
 
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
@@ -1927,16 +1974,29 @@ impl<H: UiHost> UiTree<H> {
                     {
                         continue;
                     }
-
-                    build_viewport_flow_subtree(
-                        &mut engine,
-                        app,
-                        &*self,
-                        window,
-                        sf,
-                        item.root,
-                        item.bounds.size,
-                    );
+                    if engine.layout_id_for_node(item.root).is_some()
+                        && (!item.needs_layout || item.is_translation_only)
+                    {
+                        engine.mark_seen_subtree_from_cached_children(item.root);
+                        continue;
+                    }
+                    if reuse_cached_flow
+                        && engine.layout_id_for_node(item.root).is_some()
+                        && !item.layout_invalidated
+                    {
+                        engine.set_viewport_root_override_size(item.root, item.bounds.size, sf);
+                        engine.mark_seen_subtree_from_cached_children(item.root);
+                    } else {
+                        build_viewport_flow_subtree(
+                            &mut engine,
+                            app,
+                            &*self,
+                            window,
+                            sf,
+                            item.root,
+                            item.bounds.size,
+                        );
+                    }
                 }
 
                 // Phase 2: compute/apply only for roots that need layout and are not translation-only.
@@ -2120,7 +2180,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled);
+        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
         crate::layout_engine::build_viewport_flow_subtree(
             &mut engine,
             app,
@@ -2281,7 +2341,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled);
+        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
         for &(root, root_bounds) in &batch {
             crate::layout_engine::build_viewport_flow_subtree(
                 &mut engine,

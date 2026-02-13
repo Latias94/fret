@@ -1962,18 +1962,28 @@ fn ui_app_render<S>(
     }
     state.root = Some(root);
 
-    state.ui.request_semantics_snapshot();
-    state.ui.ingest_paint_cache_source(scene);
-    scene.clear();
+    let diag_wants_semantics_snapshot = {
+        #[cfg(feature = "diagnostics")]
+        {
+            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                svc.wants_semantics_snapshot(window)
+            })
+        }
 
-    #[cfg(feature = "diagnostics")]
-    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled()) {
-        // Diagnostics scripts select targets by semantics bounds. We must ensure we have a fresh
-        // semantics snapshot for the current frame before we drive scripted input; otherwise,
-        // scripts may act on a 1-frame-stale snapshot and mis-predict visibility in virtualized
-        // lists (estimate -> measured jumps).
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            false
+        }
+    };
+    if diag_wants_semantics_snapshot {
+        // Diagnostics scripts select targets by semantics bounds. Ensure we have a fresh semantics
+        // snapshot for the current frame before we drive scripted input; otherwise scripts may act
+        // on a 1-frame-stale snapshot and mis-predict visibility in virtualized lists (estimate ->
+        // measured jumps).
         state.ui.request_semantics_snapshot();
     }
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
 
     let layout_started = hitch_config.map(|_| Instant::now());
     {
@@ -2527,6 +2537,10 @@ fn ui_app_accessibility_snapshot<S>(
     _window: AppWindowId,
     state: &mut UiAppWindowState<S>,
 ) -> Option<std::sync::Arc<fret_core::SemanticsSnapshot>> {
+    // Accessibility snapshots are requested by the runner after layout. Requesting semantics here
+    // ensures we start producing snapshots on the next frame when accessibility activates, without
+    // forcing every app to compute semantics on every frame.
+    state.ui.request_semantics_snapshot();
     state.ui.semantics_snapshot_arc()
 }
 

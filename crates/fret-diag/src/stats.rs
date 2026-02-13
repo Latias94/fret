@@ -725,12 +725,19 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
     pub(super) layout_expand_view_cache_invalidations_time_us: u64,
     pub(super) layout_request_build_roots_time_us: u64,
+    pub(super) layout_roots_time_us: u64,
     pub(super) layout_pending_barrier_relayouts_time_us: u64,
+    pub(super) layout_barrier_relayouts_time_us: u64,
     pub(super) layout_repair_view_cache_bounds_time_us: u64,
     pub(super) layout_contained_view_cache_roots_time_us: u64,
     pub(super) layout_collapse_layout_observations_time_us: u64,
+    pub(super) layout_view_cache_time_us: u64,
+    pub(super) layout_semantics_refresh_time_us: u64,
+    pub(super) layout_focus_repair_time_us: u64,
+    pub(super) layout_deferred_cleanup_time_us: u64,
     pub(super) layout_prepaint_after_layout_time_us: u64,
     pub(super) layout_skipped_engine_frame: bool,
+    pub(super) layout_fast_path_taken: bool,
     pub(super) prepaint_time_us: u64,
     pub(super) paint_time_us: u64,
     pub(super) paint_record_visual_bounds_time_us: u64,
@@ -2074,8 +2081,16 @@ impl BundleStatsReport {
                     Value::from(row.layout_request_build_roots_time_us),
                 );
                 obj.insert(
+                    "layout_roots_time_us".to_string(),
+                    Value::from(row.layout_roots_time_us),
+                );
+                obj.insert(
                     "layout_pending_barrier_relayouts_time_us".to_string(),
                     Value::from(row.layout_pending_barrier_relayouts_time_us),
+                );
+                obj.insert(
+                    "layout_barrier_relayouts_time_us".to_string(),
+                    Value::from(row.layout_barrier_relayouts_time_us),
                 );
                 obj.insert(
                     "layout_repair_view_cache_bounds_time_us".to_string(),
@@ -2090,12 +2105,32 @@ impl BundleStatsReport {
                     Value::from(row.layout_collapse_layout_observations_time_us),
                 );
                 obj.insert(
+                    "layout_view_cache_time_us".to_string(),
+                    Value::from(row.layout_view_cache_time_us),
+                );
+                obj.insert(
+                    "layout_semantics_refresh_time_us".to_string(),
+                    Value::from(row.layout_semantics_refresh_time_us),
+                );
+                obj.insert(
+                    "layout_focus_repair_time_us".to_string(),
+                    Value::from(row.layout_focus_repair_time_us),
+                );
+                obj.insert(
+                    "layout_deferred_cleanup_time_us".to_string(),
+                    Value::from(row.layout_deferred_cleanup_time_us),
+                );
+                obj.insert(
                     "layout_prepaint_after_layout_time_us".to_string(),
                     Value::from(row.layout_prepaint_after_layout_time_us),
                 );
                 obj.insert(
                     "layout_skipped_engine_frame".to_string(),
                     Value::from(row.layout_skipped_engine_frame),
+                );
+                obj.insert(
+                    "layout_fast_path_taken".to_string(),
+                    Value::from(row.layout_fast_path_taken),
                 );
                 obj.insert("cache_roots".to_string(), Value::from(row.cache_roots));
                 obj.insert(
@@ -8404,8 +8439,16 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_request_build_roots_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_roots_time_us = stats
+                .and_then(|m| m.get("layout_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_pending_barrier_relayouts_time_us = stats
                 .and_then(|m| m.get("layout_pending_barrier_relayouts_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_barrier_relayouts_time_us = stats
+                .and_then(|m| m.get("layout_barrier_relayouts_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_repair_view_cache_bounds_time_us = stats
@@ -8420,12 +8463,32 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_collapse_layout_observations_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_view_cache_time_us = stats
+                .and_then(|m| m.get("layout_view_cache_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_semantics_refresh_time_us = stats
+                .and_then(|m| m.get("layout_semantics_refresh_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_focus_repair_time_us = stats
+                .and_then(|m| m.get("layout_focus_repair_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_deferred_cleanup_time_us = stats
+                .and_then(|m| m.get("layout_deferred_cleanup_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_prepaint_after_layout_time_us = stats
                 .and_then(|m| m.get("layout_prepaint_after_layout_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_skipped_engine_frame = stats
                 .and_then(|m| m.get("layout_skipped_engine_frame"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let layout_fast_path_taken = stats
+                .and_then(|m| m.get("layout_fast_path_taken"))
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
             let view_cache_contained_relayouts = stats
@@ -8779,12 +8842,19 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_invalidate_scroll_handle_bindings_time_us,
                 layout_expand_view_cache_invalidations_time_us,
                 layout_request_build_roots_time_us,
+                layout_roots_time_us,
                 layout_pending_barrier_relayouts_time_us,
+                layout_barrier_relayouts_time_us,
                 layout_repair_view_cache_bounds_time_us,
                 layout_contained_view_cache_roots_time_us,
                 layout_collapse_layout_observations_time_us,
+                layout_view_cache_time_us,
+                layout_semantics_refresh_time_us,
+                layout_focus_repair_time_us,
+                layout_deferred_cleanup_time_us,
                 layout_prepaint_after_layout_time_us,
                 layout_skipped_engine_frame,
+                layout_fast_path_taken,
                 prepaint_time_us,
                 paint_time_us,
                 paint_record_visual_bounds_time_us,

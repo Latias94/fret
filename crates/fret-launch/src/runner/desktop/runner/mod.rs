@@ -176,6 +176,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     system_font_rescan_result: Arc<Mutex<Option<fret_render::SystemFontRescanResult>>>,
     system_font_rescan_in_flight: bool,
     system_font_rescan_pending: bool,
+    last_window_surface_sizes: HashMap<fret_core::AppWindowId, (u32, u32)>,
+    last_window_surface_size_changed_at: Option<Instant>,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
     #[cfg(feature = "webview-wry")]
@@ -569,6 +571,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.dispatcher.hot_reload_boundary();
         self.system_font_rescan_in_flight = false;
         self.system_font_rescan_pending = false;
+        self.last_window_surface_sizes.clear();
+        self.last_window_surface_size_changed_at = None;
+        self.publish_system_font_rescan_state();
         if let Ok(mut slot) = self.system_font_rescan_result.lock() {
             *slot = None;
         }
