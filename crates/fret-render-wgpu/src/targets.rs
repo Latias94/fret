@@ -63,4 +63,8 @@ impl RenderTargetRegistry {
     pub(crate) fn get(&self, id: RenderTargetId) -> Option<&wgpu::TextureView> {
         self.targets.get(id).map(|t| &t.view)
     }
+
+    pub(crate) fn metadata(&self, id: RenderTargetId) -> Option<RenderTargetMetadata> {
+        self.targets.get(id).map(|t| t.metadata)
+    }
 }
