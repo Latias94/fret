@@ -1,7 +1,9 @@
 use super::super::*;
 
-use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use std::sync::Arc;
+
+use fret_runtime::Model;
+use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -71,10 +73,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             section(cx, title, body)
         };
 
-    let slide = |cx: &mut ElementContext<'_, App>,
-                 idx: usize,
-                 visual: SlideVisual,
-                 demo_inner_clicked: Option<Model<bool>>| {
+    let slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
 
         let mut content_layout = LayoutRefinement::default().w_full();
@@ -88,32 +87,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .font_semibold()
             .into_element(cx);
 
-        let body = if idx == 1
-            && let Some(clicked) = demo_inner_clicked
-        {
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, _cx, _reason| {
-                let _ = host.models_mut().update(&clicked, |v| *v = true);
-            });
-
-            let inner = shadcn::Button::new("Inner button")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .test_id("ui-gallery-carousel-demo-inner-button")
-                .on_activate(on_activate)
-                .into_element(cx);
-
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full()),
-                move |_cx| vec![number, inner],
-            )
-        } else {
-            number
-        };
-
         let content = cx.flex(
             FlexProps {
                 layout: decl_style::layout_style(&theme, content_layout),
@@ -123,7 +96,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 padding: Edges::all(Px(24.0)),
                 ..Default::default()
             },
-            move |_cx| vec![body],
+            move |_cx| vec![number],
         );
 
         let card = shadcn::Card::new([content]).into_element(cx);
@@ -132,19 +105,67 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .into_element(cx)
     };
 
-    let carousel = |cx: &mut ElementContext<'_, App>,
-                    test_id: &'static str,
-                    orientation: shadcn::CarouselOrientation,
-                    basis: Px,
-                    spacing: Space,
-                    max_w: Px,
-                    viewport_h: Option<Px>,
-                    slide_visual: SlideVisual,
-                    demo_inner_clicked: Option<Model<bool>>| {
-        let items = (1..=5)
-            .map(|idx| slide(cx, idx, slide_visual, demo_inner_clicked.clone()))
-            .collect::<Vec<_>>();
+    let demo_slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
+        if idx != 1 {
+            return slide(cx, idx, visual);
+        }
 
+        let theme = Theme::global(&*cx.app).clone();
+        let mut content_layout = LayoutRefinement::default().w_full();
+        if visual.aspect_square {
+            content_layout = content_layout.aspect_ratio(1.0);
+        }
+
+        let number = ui::text(cx, format!("{idx}"))
+            .text_size_px(visual.text_px)
+            .line_height_px(visual.line_height_px)
+            .font_semibold()
+            .into_element(cx);
+
+        let on_inner_activate: fret_ui::action::OnActivate = {
+            let demo_inner_clicked = demo_inner_clicked.clone();
+            Arc::new(move |host, cx, _reason| {
+                let _ = host.models_mut().update(&demo_inner_clicked, |v| *v = true);
+                host.request_redraw(cx.window);
+            })
+        };
+
+        let inner_button = shadcn::Button::new("Inner button")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .test_id("ui-gallery-carousel-demo-inner-button")
+            .on_activate(on_inner_activate)
+            .into_element(cx);
+
+        let children = vec![number, inner_button];
+
+        let content = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(&theme, content_layout),
+                direction: fret_core::Axis::Vertical,
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                gap: Px(12.0),
+                padding: Edges::all(Px(24.0)),
+                ..Default::default()
+            },
+            move |_cx| children,
+        );
+
+        let card = shadcn::Card::new([content]).into_element(cx);
+        ui::container(cx, move |_cx| vec![card])
+            .p_1()
+            .into_element(cx)
+    };
+
+    let build_carousel = |cx: &mut ElementContext<'_, App>,
+                          items: Vec<AnyElement>,
+                          test_id: &'static str,
+                          orientation: shadcn::CarouselOrientation,
+                          basis: Px,
+                          spacing: Space,
+                          max_w: Px,
+                          viewport_h: Option<Px>| {
         let mut base = shadcn::Carousel::new(items)
             .orientation(orientation)
             .item_basis_main_px(basis)
@@ -160,25 +181,52 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         base.into_element(cx).test_id(test_id)
     };
 
-    let demo_inner_clicked_now = cx
-        .watch_model(&demo_inner_clicked)
-        .copied()
-        .unwrap_or(false);
-    let demo_content = carousel(
+    let carousel = |cx: &mut ElementContext<'_, App>,
+                    test_id: &'static str,
+                    orientation: shadcn::CarouselOrientation,
+                    basis: Px,
+                    spacing: Space,
+                    max_w: Px,
+                    viewport_h: Option<Px>,
+                    slide_visual: SlideVisual| {
+        let items = (1..=5)
+            .map(|idx| slide(cx, idx, slide_visual))
+            .collect::<Vec<_>>();
+        build_carousel(
+            cx,
+            items,
+            test_id,
+            orientation,
+            basis,
+            spacing,
+            max_w,
+            viewport_h,
+        )
+    };
+
+    let demo_visual = SlideVisual {
+        text_px: Px(36.0),
+        line_height_px: Px(40.0),
+        aspect_square: true,
+    };
+    let demo_items = (1..=5)
+        .map(|idx| demo_slide(cx, idx, demo_visual))
+        .collect::<Vec<_>>();
+    let demo_content = build_carousel(
         cx,
+        demo_items,
         "ui-gallery-carousel-demo",
         shadcn::CarouselOrientation::Horizontal,
         Px(320.0),
         Space::N4,
         Px(320.0),
         None,
-        SlideVisual {
-            text_px: Px(36.0),
-            line_height_px: Px(40.0),
-            aspect_square: true,
-        },
-        Some(demo_inner_clicked),
     );
+
+    let demo_inner_clicked_now = cx
+        .watch_model(&demo_inner_clicked)
+        .copied()
+        .unwrap_or(false);
 
     let demo_body = stack::vstack(
         cx,
@@ -232,7 +280,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                         line_height_px: Px(36.0),
                         aspect_square: true,
                     },
-                    None,
                 ),
             ]
         },
@@ -264,7 +311,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                         line_height_px: Px(32.0),
                         aspect_square: true,
                     },
-                    None,
                 ),
             ]
         },
@@ -296,7 +342,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                         line_height_px: Px(36.0),
                         aspect_square: false,
                     },
-                    None,
                 ),
             ]
         },
