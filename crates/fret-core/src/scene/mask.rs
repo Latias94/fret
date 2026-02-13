@@ -22,8 +22,7 @@ impl Mask {
 
         fn stops_all_finite(count: u8, stops: &[GradientStop; MAX_STOPS]) -> bool {
             let n = usize::from(count).min(MAX_STOPS);
-            for i in 0..n {
-                let s = stops[i];
+            for s in stops.iter().take(n) {
                 if !s.offset.is_finite() || !color_is_finite(s.color) {
                     return false;
                 }
@@ -40,8 +39,8 @@ impl Mask {
             mut stops: [GradientStop; MAX_STOPS],
         ) -> [GradientStop; MAX_STOPS] {
             let n = usize::from(count).min(MAX_STOPS);
-            for i in 0..n {
-                stops[i].offset = clamp01(stops[i].offset);
+            for stop in stops.iter_mut().take(n) {
+                stop.offset = clamp01(stop.offset);
             }
 
             for i in 1..n {

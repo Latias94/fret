@@ -213,6 +213,7 @@ impl<H: UiHost> UiTree<H> {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_hover_state_from_hit(
         &mut self,
         app: &mut H,
@@ -1286,8 +1287,6 @@ impl<H: UiHost> UiTree<H> {
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
         let (active_layers, barrier_root) = self.active_input_layers();
-        let active_pointer_down_outside_layers =
-            self.active_pointer_down_outside_layer_roots(barrier_root);
         self.enforce_modal_barrier_scope(&active_layers);
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix

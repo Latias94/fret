@@ -31,20 +31,17 @@ fn fallback_easing() -> CubicBezier {
 #[cfg(not(test))]
 fn strict_theme_enabled() -> bool {
     static STRICT: OnceLock<bool> = OnceLock::new();
-    *STRICT.get_or_init(|| {
-        let enabled = match std::env::var_os("FRET_STRICT_RUNTIME") {
-            None => false,
-            Some(v) => {
-                let s = v.to_string_lossy();
-                let s = s.trim();
-                if s.is_empty() {
-                    false
-                } else {
-                    !matches!(s, "0" | "false" | "no" | "off")
-                }
+    *STRICT.get_or_init(|| match std::env::var_os("FRET_STRICT_RUNTIME") {
+        None => false,
+        Some(v) => {
+            let s = v.to_string_lossy();
+            let s = s.trim();
+            if s.is_empty() {
+                false
+            } else {
+                !matches!(s, "0" | "false" | "no" | "off")
             }
-        };
-        enabled
+        }
     })
 }
 
@@ -58,20 +55,17 @@ thread_local! {
 fn strict_theme_enabled() -> bool {
     STRICT_THEME_OVERRIDE
         .with(|cell| cell.get())
-        .unwrap_or_else(|| {
-            let enabled = match std::env::var_os("FRET_STRICT_RUNTIME") {
-                None => false,
-                Some(v) => {
-                    let s = v.to_string_lossy();
-                    let s = s.trim();
-                    if s.is_empty() {
-                        false
-                    } else {
-                        !matches!(s, "0" | "false" | "no" | "off")
-                    }
+        .unwrap_or_else(|| match std::env::var_os("FRET_STRICT_RUNTIME") {
+            None => false,
+            Some(v) => {
+                let s = v.to_string_lossy();
+                let s = s.trim();
+                if s.is_empty() {
+                    false
+                } else {
+                    !matches!(s, "0" | "false" | "no" | "off")
                 }
-            };
-            enabled
+            }
         })
 }
 
@@ -151,9 +145,7 @@ fn fallback_easing_by_key(key: &str) -> CubicBezier {
 }
 
 fn fallback_text_style_by_key(key: &str) -> TextStyle {
-    default_theme()
-        .text_style_by_key(key)
-        .unwrap_or_else(TextStyle::default)
+    default_theme().text_style_by_key(key).unwrap_or_default()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -1117,17 +1109,11 @@ impl Theme {
         apply_baseline_color!("color.menu.background", self.colors.menu_background);
         apply_baseline_color!("color.menu.border", self.colors.menu_border);
         apply_baseline_color!("color.menu.item.hover", self.colors.menu_item_hover);
-        apply_baseline_color!(
-            "color.menu.item.selected",
-            self.colors.menu_item_selected
-        );
+        apply_baseline_color!("color.menu.item.selected", self.colors.menu_item_selected);
         apply_baseline_color!("color.list.background", self.colors.list_background);
         apply_baseline_color!("color.list.border", self.colors.list_border);
         apply_baseline_color!("color.list.row.hover", self.colors.list_row_hover);
-        apply_baseline_color!(
-            "color.list.row.selected",
-            self.colors.list_row_selected
-        );
+        apply_baseline_color!("color.list.row.selected", self.colors.list_row_selected);
         apply_baseline_color!("color.scrollbar.track", self.colors.scrollbar_track);
         apply_baseline_color!("color.scrollbar.thumb", self.colors.scrollbar_thumb);
         apply_baseline_color!(
@@ -1363,7 +1349,10 @@ impl Theme {
             "color.viewport.selection.stroke".to_string(),
             self.colors.viewport_selection_stroke,
         );
-        next_colors.insert("color.viewport.marker".to_string(), self.colors.viewport_marker);
+        next_colors.insert(
+            "color.viewport.marker".to_string(),
+            self.colors.viewport_marker,
+        );
         next_colors.insert(
             "color.viewport.drag_line.pan".to_string(),
             self.colors.viewport_drag_line_pan,
@@ -1372,8 +1361,14 @@ impl Theme {
             "color.viewport.drag_line.orbit".to_string(),
             self.colors.viewport_drag_line_orbit,
         );
-        next_colors.insert("color.viewport.gizmo.x".to_string(), self.colors.viewport_gizmo_x);
-        next_colors.insert("color.viewport.gizmo.y".to_string(), self.colors.viewport_gizmo_y);
+        next_colors.insert(
+            "color.viewport.gizmo.x".to_string(),
+            self.colors.viewport_gizmo_x,
+        );
+        next_colors.insert(
+            "color.viewport.gizmo.y".to_string(),
+            self.colors.viewport_gizmo_y,
+        );
         next_colors.insert(
             "color.viewport.gizmo.handle.background".to_string(),
             self.colors.viewport_gizmo_handle_background,
@@ -1424,7 +1419,10 @@ impl Theme {
             self.metrics.scrollbar_width,
         );
         next_metrics.insert("metric.font.size".to_string(), self.metrics.font_size);
-        next_metrics.insert("metric.font.mono_size".to_string(), self.metrics.mono_font_size);
+        next_metrics.insert(
+            "metric.font.mono_size".to_string(),
+            self.metrics.mono_font_size,
+        );
         next_metrics.insert(
             "metric.font.line_height".to_string(),
             self.metrics.font_line_height,

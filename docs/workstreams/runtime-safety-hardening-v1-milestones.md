@@ -72,3 +72,14 @@ Deliverables:
 Exit criteria:
 
 - Perf-neutrality validated by existing perf baselines (where available).
+
+## M5 — Clippy hygiene (warnings-as-errors, local gates)
+
+Deliverables:
+
+- `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
+- `cargo clippy -p fret-app --all-targets -- -D warnings` is green.
+
+Exit criteria:
+
+- Clippy can be used as a regression gate for the workstream crates without surfacing new warnings.

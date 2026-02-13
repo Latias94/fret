@@ -51,10 +51,8 @@ impl<'a, H: UiHost> UiFrameCx<'a, H> {
                     .is_some_and(|state| state.occlusion_insets_changed_this_frame())
             },
         );
-        if occlusion_changed {
-            if let Some(focus) = self.ui.focus() {
-                self.ui.scroll_node_into_view(self.app, focus);
-            }
+        if occlusion_changed && let Some(focus) = self.ui.focus() {
+            self.ui.scroll_node_into_view(self.app, focus);
         }
     }
 

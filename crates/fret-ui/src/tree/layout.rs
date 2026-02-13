@@ -1520,10 +1520,10 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Some(filter) = taffy_dump.root_filter.as_ref() {
-            if !format!("{root:?}").contains(filter) {
-                return;
-            }
+        if let Some(filter) = taffy_dump.root_filter.as_ref()
+            && !format!("{root:?}").contains(filter)
+        {
+            return;
         }
 
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a

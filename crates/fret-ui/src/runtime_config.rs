@@ -231,8 +231,7 @@ impl UiRuntimeEnvConfig {
                 .ok()
                 .and_then(|v| v.parse::<u8>().ok())
                 .unwrap_or(64)
-                .max(1)
-                .min(255);
+                .clamp(1, 255);
 
         Self {
             interactive_resize_text_width_cache_entries,

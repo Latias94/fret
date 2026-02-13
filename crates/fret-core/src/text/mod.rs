@@ -46,18 +46,13 @@ pub struct TextFontFamilyConfig {
     pub common_fallback: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TextCommonFallbackInjection {
+    #[default]
     PlatformDefault,
     None,
     CommonFallback,
-}
-
-impl Default for TextCommonFallbackInjection {
-    fn default() -> Self {
-        Self::PlatformDefault
-    }
 }
 
 impl TextCommonFallbackInjection {

@@ -502,10 +502,7 @@ struct LayoutNodeProfileConfig {
 
 impl LayoutNodeProfileConfig {
     fn from_env() -> Option<Self> {
-        let Some(cfg) = crate::runtime_config::ui_runtime_config().layout_node_profile else {
-            return None;
-        };
-
+        let cfg = crate::runtime_config::ui_runtime_config().layout_node_profile?;
         Some(Self {
             top_n: cfg.top_n,
             min_elapsed: cfg.min_elapsed,
@@ -621,10 +618,7 @@ struct MeasureNodeProfileConfig {
 
 impl MeasureNodeProfileConfig {
     fn from_env() -> Option<Self> {
-        let Some(cfg) = crate::runtime_config::ui_runtime_config().measure_node_profile else {
-            return None;
-        };
-
+        let cfg = crate::runtime_config::ui_runtime_config().measure_node_profile?;
         Some(Self {
             top_n: cfg.top_n,
             min_elapsed: cfg.min_elapsed,
