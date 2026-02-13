@@ -234,8 +234,7 @@ impl WorkspaceShellDemoDriver {
                                 body_layout.flex.basis = Length::Px(Px(0.0));
                                 body_layout.overflow = Overflow::Clip;
 
-                                let pane_content_bg =
-                                    Some(theme_for_center.color_token("muted"));
+                                let pane_content_bg = Some(theme_for_center.color_token("muted"));
 
                                 let pane_root_test_id: Arc<str> = Arc::from(format!(
                                     "workspace-shell-pane-{}-root",

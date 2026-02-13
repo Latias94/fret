@@ -85,6 +85,10 @@ impl ImageAssetCache {
         self.max_ready_entries = max_ready_entries;
     }
 
+    pub fn key_for_token(&self, token: ImageUploadToken) -> Option<ImageAssetKey> {
+        self.token_to_key.get(&token).copied()
+    }
+
     pub fn stats(&self) -> ImageAssetStats {
         let mut ready_count = 0usize;
         let mut pending_count = 0usize;
@@ -182,8 +186,17 @@ impl ImageAssetCache {
                 height,
             } => {
                 let Some(key) = self.token_to_key.remove(token) else {
+                    tracing::warn!(token = ?token, "image_asset_cache: ImageRegistered missing token mapping");
                     return false;
                 };
+                tracing::debug!(
+                    token = ?token,
+                    key = ?key,
+                    image = ?image,
+                    width = *width,
+                    height = *height,
+                    "image_asset_cache: image registered"
+                );
                 let bytes = rgba8_bytes_len(*width, *height).unwrap_or(0);
                 let frame = host.frame_id().0;
                 let meta = ImageMeta {
@@ -223,6 +236,11 @@ impl ImageAssetCache {
             }
             Event::ImageRegisterFailed { token, message } => {
                 let Some(key) = self.token_to_key.remove(token) else {
+                    tracing::warn!(
+                        token = ?token,
+                        message = %message,
+                        "image_asset_cache: ImageRegisterFailed missing token mapping"
+                    );
                     return false;
                 };
                 let frame = host.frame_id().0;
@@ -364,6 +382,15 @@ impl ImageAssetCache {
             svc.request_rgba8(host, window, width, height, bytes, color_space)
         });
 
+        tracing::debug!(
+            window = ?window,
+            key = ?key,
+            token = ?token,
+            width,
+            height,
+            "image_asset_cache: scheduled upload"
+        );
+
         if let Some(existing) = self.entries.get(&key)
             && let ImageAssetState::Pending { token, .. } = &existing.state
         {
@@ -458,7 +485,7 @@ mod tests {
     use std::any::{Any, TypeId};
     use std::collections::{HashMap, HashSet};
 
-    use fret_core::{ClipboardToken, FrameId, TimerToken};
+    use fret_core::{ClipboardToken, FrameId, ShareSheetToken, TimerToken};
     use fret_runtime::{Effect, GlobalsHost, TickId, TimeHost};
     use slotmap::KeyData;
 
@@ -474,6 +501,7 @@ mod tests {
         frame_id: FrameId,
         next_timer_token: u64,
         next_clipboard_token: u64,
+        next_share_sheet_token: u64,
         next_image_upload_token: u64,
     }
 
@@ -543,6 +571,12 @@ mod tests {
         fn next_clipboard_token(&mut self) -> ClipboardToken {
             let out = ClipboardToken(self.next_clipboard_token);
             self.next_clipboard_token += 1;
+            out
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            let out = ShareSheetToken(self.next_share_sheet_token);
+            self.next_share_sheet_token += 1;
             out
         }
 

@@ -5,6 +5,63 @@ use super::ElementHostWidget;
 use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
 use fret_core::time::Instant;
 
+fn compute_text_vertical_offset(
+    style: Option<&fret_core::TextStyle>,
+    layout_height: Length,
+    bounds_height: Px,
+    metrics_height: Px,
+) -> Px {
+    // Approximate CSS "half-leading": when a text element uses a fixed line box (`leading-*`),
+    // center the font's em box within the line box. This better matches web baseline behavior for
+    // shadcn recipes (e.g. `text-sm leading-snug`).
+    match (style, layout_height) {
+        (Some(style), Length::Px(line_box)) => {
+            let line_height = style.line_height.unwrap_or(line_box);
+            Px(((line_height.0 - style.size.0) * 0.5).max(0.0))
+        }
+        _ => Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_core::{FontId, FontWeight, Px, TextStyle};
+
+    #[test]
+    fn text_vertical_offset_centers_em_box_in_fixed_line_box() {
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(12.0),
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(Px(16.0)),
+            letter_spacing_em: None,
+        };
+
+        let offset =
+            compute_text_vertical_offset(Some(&style), Length::Px(Px(16.0)), Px(16.0), Px(12.0));
+        assert_eq!(offset, Px(2.0));
+    }
+
+    #[test]
+    fn text_vertical_offset_clamps_negative_half_leading_to_zero() {
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(14.0),
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(Px(12.0)),
+            letter_spacing_em: None,
+        };
+
+        let offset =
+            compute_text_vertical_offset(Some(&style), Length::Px(Px(12.0)), Px(12.0), Px(14.0));
+        assert_eq!(offset, Px(0.0));
+    }
+}
+
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
@@ -517,7 +574,7 @@ impl ElementHostWidget {
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = Some(props.text.clone());
-                    self.text_cache.last_style = Some(style);
+                    self.text_cache.last_style = Some(style.clone());
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(max_width);
@@ -531,9 +588,15 @@ impl ElementHostWidget {
                     return;
                 };
 
+                let vertical_offset = compute_text_vertical_offset(
+                    props.style.as_ref(),
+                    props.layout.size.height,
+                    cx.bounds.size.height,
+                    metrics.size.height,
+                );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -700,7 +763,7 @@ impl ElementHostWidget {
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;
                     self.text_cache.last_rich = Some(props.rich.clone());
-                    self.text_cache.last_style = Some(style);
+                    self.text_cache.last_style = Some(style.clone());
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(max_width);
@@ -714,9 +777,15 @@ impl ElementHostWidget {
                     return;
                 };
 
+                let vertical_offset = compute_text_vertical_offset(
+                    Some(&style),
+                    props.layout.size.height,
+                    cx.bounds.size.height,
+                    metrics.size.height,
+                );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -883,7 +952,7 @@ impl ElementHostWidget {
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;
                     self.text_cache.last_rich = Some(props.rich.clone());
-                    self.text_cache.last_style = Some(style);
+                    self.text_cache.last_style = Some(style.clone());
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(max_width);
@@ -1047,9 +1116,15 @@ impl ElementHostWidget {
                     }
                 }
 
+                let vertical_offset = compute_text_vertical_offset(
+                    Some(&style),
+                    props.layout.size.height,
+                    cx.bounds.size.height,
+                    metrics.size.height,
+                );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),

@@ -419,9 +419,12 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let switch = {
+        let control_id = "ui-gallery-field-switch-mfa";
         let content = shadcn::Field::new([
             shadcn::FieldContent::new([
-                shadcn::FieldLabel::new("Multi-factor authentication").into_element(cx),
+                shadcn::FieldLabel::new("Multi-factor authentication")
+                    .for_control(control_id)
+                    .into_element(cx),
                 shadcn::FieldDescription::new(
                     "Enable MFA. If no dedicated device is available, use one-time email codes.",
                 )
@@ -429,6 +432,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ])
             .into_element(cx),
             shadcn::Switch::new(switch_enabled)
+                .control_id(control_id)
                 .a11y_label("Multi-factor authentication")
                 .into_element(cx),
         ])

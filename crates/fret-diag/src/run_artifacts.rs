@@ -345,7 +345,8 @@ mod tests {
 
         let manifest_path = root.join(run_id.to_string()).join("manifest.json");
         let bytes = std::fs::read(&manifest_path).expect("read manifest.json");
-        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse manifest.json");
+        let parsed: serde_json::Value =
+            serde_json::from_slice(&bytes).expect("parse manifest.json");
         assert_eq!(parsed.get("run_id").and_then(|v| v.as_u64()), Some(run_id));
         assert_eq!(
             parsed

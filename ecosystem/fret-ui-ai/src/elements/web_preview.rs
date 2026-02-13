@@ -1251,9 +1251,7 @@ impl WebPreviewConsole {
                             size: theme.metric_token("component.text.xs_px"),
                             weight: FontWeight::NORMAL,
                             slant: Default::default(),
-                            line_height: Some(
-                                theme.metric_token("component.text.xs_line_height"),
-                            ),
+                            line_height: Some(theme.metric_token("component.text.xs_line_height")),
                             letter_spacing_em: None,
                         }),
                         color: Some(theme.color_token("muted-foreground")),
@@ -1269,9 +1267,7 @@ impl WebPreviewConsole {
                             size: theme.metric_token("component.text.xs_px"),
                             weight: FontWeight::NORMAL,
                             slant: Default::default(),
-                            line_height: Some(
-                                theme.metric_token("component.text.xs_line_height"),
-                            ),
+                            line_height: Some(theme.metric_token("component.text.xs_line_height")),
                             letter_spacing_em: None,
                         }),
                         color: Some(fg),

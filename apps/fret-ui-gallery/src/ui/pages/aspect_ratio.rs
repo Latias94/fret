@@ -64,12 +64,8 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             },
         );
 
-        let (muted_bg, border) = cx.with_theme(|theme| {
-            (
-                theme.color_token("muted"),
-                theme.color_token("border"),
-            )
-        });
+        let (muted_bg, border) =
+            cx.with_theme(|theme| (theme.color_token("muted"), theme.color_token("border")));
 
         shadcn::AspectRatio::new(ratio, content)
             .refine_style(

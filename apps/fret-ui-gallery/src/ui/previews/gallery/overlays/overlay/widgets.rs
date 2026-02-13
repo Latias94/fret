@@ -151,28 +151,33 @@ fn context_menu(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
 fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
     let context_menu_edge_open = models.context_menu_edge_open.clone();
 
-    shadcn::ContextMenu::new(context_menu_edge_open).into_element(
-        cx,
-        |cx| {
-            shadcn::Button::new("ContextMenu (edge, right click)")
-                .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-context-trigger-edge")
-                .into_element(cx)
-        },
-        |_cx| {
-            vec![
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Action")
-                        .test_id("ui-gallery-context-edge-item-action")
-                        .on_select(CMD_MENU_CONTEXT_ACTION),
-                ),
-                shadcn::ContextMenuEntry::Separator,
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Disabled").disabled(true),
-                ),
-            ]
-        },
-    )
+    // Keep this trigger near the window edge so the default `side=Right` placement is forced to flip.
+    shadcn::ContextMenu::new(context_menu_edge_open)
+        .min_width(Px(240.0))
+        .window_margin(Px(8.0))
+        .into_element(
+            cx,
+            |cx| {
+                shadcn::Button::new("ContextMenu (edge)")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+                    .test_id("ui-gallery-context-trigger-edge")
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Action (long label to force edge flip)")
+                            .test_id("ui-gallery-context-edge-item-action")
+                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                    shadcn::ContextMenuEntry::Separator,
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Disabled").disabled(true),
+                    ),
+                ]
+            },
+        )
 }
 
 fn underlay(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -265,7 +270,23 @@ fn popover(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyEleme
                     .toggle_model(popover_open.clone())
                     .into_element(cx);
 
-                shadcn::PopoverContent::new(vec![cx.text("Popover content"), open_dialog, close])
+                let header = shadcn::PopoverHeader::new(vec![
+                    shadcn::PopoverTitle::new("Popover").into_element(cx),
+                    shadcn::PopoverDescription::new("Escape / outside click closes.")
+                        .into_element(cx),
+                ])
+                .into_element(cx);
+
+                let actions = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N2)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full()),
+                    move |_cx| vec![open_dialog, close],
+                );
+
+                shadcn::PopoverContent::new(vec![header, actions])
                     .into_element(cx)
                     .test_id("ui-gallery-popover-content")
             },
@@ -286,6 +307,7 @@ fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElemen
         },
         |cx| {
             shadcn::DialogContent::new(vec![
+                shadcn::DialogClose::new(dialog_open.clone()).into_element(cx),
                 shadcn::DialogHeader::new(vec![
                     shadcn::DialogTitle::new("Dialog").into_element(cx),
                     shadcn::DialogDescription::new("Escape / overlay click closes")
