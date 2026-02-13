@@ -149,11 +149,12 @@ pub fn shadcn_sidebar_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> Cubi
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION_SIDEBAR)
         .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
+        // shadcn/ui v4 Sidebar uses `ease-linear` for width/position transitions.
         .unwrap_or(CubicBezier {
-            x1: crate::headless::easing::SHADCN_EASE.x1,
-            y1: crate::headless::easing::SHADCN_EASE.y1,
-            x2: crate::headless::easing::SHADCN_EASE.x2,
-            y2: crate::headless::easing::SHADCN_EASE.y2,
+            x1: 0.0,
+            y1: 0.0,
+            x2: 1.0,
+            y2: 1.0,
         })
 }
 

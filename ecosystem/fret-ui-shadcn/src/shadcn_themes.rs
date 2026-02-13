@@ -68,6 +68,12 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
         x2: 0.36,
         y2: 1.0,
     };
+    let linear = CubicBezier {
+        x1: 0.0,
+        y1: 0.0,
+        x2: 1.0,
+        y2: 1.0,
+    };
     cfg.easings
         .entry("easing.shadcn.motion".to_string())
         .or_insert(shadcn_ease);
@@ -76,7 +82,7 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
         .or_insert(shadcn_ease);
     cfg.easings
         .entry("easing.shadcn.motion.sidebar".to_string())
-        .or_insert(shadcn_ease);
+        .or_insert(linear);
     cfg.easings
         .entry("easing.shadcn.motion.toast".to_string())
         .or_insert(shadcn_ease);
