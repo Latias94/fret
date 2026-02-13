@@ -29,9 +29,9 @@ pub(in crate::ui) fn preview_layout(
             .items_stretch(),
         |cx| {
             vec![
-                boxy(cx, "Left (fill)", theme.color_required("accent")),
-                boxy(cx, "Center (fill)", theme.color_required("muted")),
-                boxy(cx, "Right (fill)", theme.color_required("card")),
+                boxy(cx, "Left (fill)", theme.color_token("accent")),
+                boxy(cx, "Center (fill)", theme.color_token("muted")),
+                boxy(cx, "Right (fill)", theme.color_token("card")),
             ]
         },
     );

@@ -105,13 +105,13 @@ pub(in crate::ui) fn preview_material3_menu(
     let theme = cx.theme().clone();
     let override_style = material3::MenuStyle::default()
         .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
-            theme.color_required("md.sys.color.secondary-container"),
+            theme.color_token("md.sys.color.secondary-container"),
         ))))
         .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
-            theme.color_required("md.sys.color.on-secondary-container"),
+            theme.color_token("md.sys.color.on-secondary-container"),
         ))))
         .item_state_layer_color(WidgetStateProperty::new(Some(ColorRef::Color(
-            theme.color_required("md.sys.color.on-secondary-container"),
+            theme.color_token("md.sys.color.on-secondary-container"),
         ))));
 
     let last_action_for_override_entries = last_action.clone();

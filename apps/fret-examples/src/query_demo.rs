@@ -179,27 +179,27 @@ fn view(
                 cx,
                 "Note: stale controls freshness only; use invalidate/refetch for refresh.",
             )
-            .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
             .into_element(cx),
         );
         if let Some(err) = error_line {
             out.push(
                 ui::raw_text(cx, format!("error={err} kind={:?}", err.kind()))
-                    .text_color(ColorRef::Color(theme.color_required("destructive")))
+                    .text_color(ColorRef::Color(theme.color_token("destructive")))
                     .into_element(cx),
             );
         }
         if let Some(dur) = duration_line {
             out.push(
                 ui::raw_text(cx, dur)
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                     .into_element(cx),
             );
         }
         if let Some(retry) = retry_line {
             out.push(
                 ui::raw_text(cx, retry)
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                     .into_element(cx),
             );
         }
@@ -238,7 +238,7 @@ fn view(
             .items_center()
             .into_element(cx)]
     })
-    .bg(ColorRef::Color(theme.color_required("background")))
+    .bg(ColorRef::Color(theme.color_token("background")))
     .p(Space::N6)
     .w_full()
     .h_full()

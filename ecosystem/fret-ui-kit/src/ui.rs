@@ -438,9 +438,9 @@ where
             let theme = Theme::global(&*cx.app);
             let container = decl_style::container_props(theme, self.chrome, self.layout);
 
-            let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-            let thumb = theme.color_required("scrollbar.thumb.background");
-            let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+            let scrollbar_w = theme.metric_token("metric.scrollbar.width");
+            let thumb = theme.color_token("scrollbar.thumb.background");
+            let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
             let corner_bg = theme
                 .color_by_key("scrollbar.corner.background")
                 .or_else(|| theme.color_by_key("scrollbar.track.background"))
@@ -586,10 +586,10 @@ where
         let (container, scrollbar_w, thumb, thumb_hover, corner_bg) = {
             let theme = Theme::global(&*cx.app);
             let container = decl_style::container_props(theme, self.chrome, self.layout);
-            let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-            let thumb = theme.color_required("scrollbar.thumb.background");
-            let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
-            let corner_bg = theme.color_required("scrollbar.track.background");
+            let scrollbar_w = theme.metric_token("metric.scrollbar.width");
+            let thumb = theme.color_token("scrollbar.thumb.background");
+            let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
+            let corner_bg = theme.color_token("scrollbar.track.background");
             (container, scrollbar_w, thumb, thumb_hover, corner_bg)
         };
 
@@ -917,7 +917,7 @@ impl UiIntoElement for TextBox {
                     (preset == TextPreset::Label).then(|| {
                         theme
                             .color_by_key("foreground")
-                            .unwrap_or_else(|| theme.color_required("foreground"))
+                            .unwrap_or_else(|| theme.color_token("foreground"))
                     })
                 });
 

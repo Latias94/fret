@@ -120,7 +120,7 @@ pub fn textarea<H: UiHost>(
 
     let font_line_height = theme
         .metric_by_key("font.line_height")
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
     let text_style = TextStyle {
         font: FontId::default(),
         size: resolved.text_px,
@@ -143,7 +143,7 @@ pub fn textarea<H: UiHost>(
     chrome.focus_ring = Some(decl_style::focus_ring(theme, resolved.radius));
 
     if aria_invalid {
-        let border_color = theme.color_required("destructive");
+        let border_color = theme.color_token("destructive");
         chrome.border_color = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
             let ring_key = if theme.name.contains("/dark") {

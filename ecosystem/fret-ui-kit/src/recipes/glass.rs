@@ -124,7 +124,7 @@ pub fn resolve_glass_chrome(
         .map(|c| c.resolve(theme))
         .or_else(|| keys.tint.and_then(|k| theme.color_by_key(k)))
         .or_else(|| theme.color_by_key("component.glass.tint"))
-        .unwrap_or_else(|| alpha_set(theme.color_required("card"), 0.6));
+        .unwrap_or_else(|| alpha_set(theme.color_token("card"), 0.6));
 
     let border_default = ColorRef::Token {
         key: "component.glass.border",

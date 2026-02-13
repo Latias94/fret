@@ -761,7 +761,7 @@ impl Popover {
                 let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
                     theme
                         .metric_by_key("component.popover.arrow_padding")
-                        .unwrap_or_else(|| theme.metric_required("metric.radius.md"))
+                        .unwrap_or_else(|| theme.metric_token("metric.radius.md"))
                 });
 
                 let opacity = motion.opacity;
@@ -877,8 +877,8 @@ impl Popover {
                     let reference_hidden = anchor_fallback
                         .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
 
-                    let bg = theme.color_required("popover.background");
-                    let border = theme.color_required("border");
+                    let bg = theme.color_token("popover.background");
+                    let border = theme.color_token("border");
 
                     let anchor = anchor_fallback.unwrap_or_default();
                     let constrained_height = has_height_constraint_px(hint);
@@ -1281,16 +1281,16 @@ impl PopoverTitle {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("popover.foreground");
+        let fg = theme.color_token("popover.foreground");
 
         let px = theme
             .metric_by_key("component.popover.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.popover.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -1319,16 +1319,16 @@ impl PopoverDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
+            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.popover.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.popover.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)

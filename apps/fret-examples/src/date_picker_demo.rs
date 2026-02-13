@@ -203,7 +203,7 @@ impl WinitAppDriver for DatePickerDemoDriver {
                     cx.observe_model(&disabled, Invalidation::Layout);
 
                     let theme = cx.theme_snapshot();
-                    let padding = theme.metric_required("metric.padding.md");
+                    let padding = theme.metric_token("metric.padding.md");
 
                     let open_value = cx.app.models().get_copied(&open).unwrap_or(false);
                     let selected_value = cx
@@ -368,7 +368,7 @@ impl WinitAppDriver for DatePickerDemoDriver {
                     vec![cx.container(
                         ContainerProps {
                             layout: root_layout,
-                            background: Some(theme.color_required("background")),
+                            background: Some(theme.color_token("background")),
                             ..Default::default()
                         },
                         move |cx| {
@@ -394,9 +394,9 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                                     ..Default::default()
                                                 },
                                                 border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_required("border")),
+                                                border_color: Some(theme.color_token("border")),
                                                 corner_radii: Corners::all(
-                                                    theme.metric_required("metric.radius.md"),
+                                                    theme.metric_token("metric.radius.md"),
                                                 ),
                                                 padding: Edges::all(Px(12.0)),
                                                 ..Default::default()
@@ -410,9 +410,9 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                                     ..Default::default()
                                                 },
                                                 border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_required("border")),
+                                                border_color: Some(theme.color_token("border")),
                                                 corner_radii: Corners::all(
-                                                    theme.metric_required("metric.radius.md"),
+                                                    theme.metric_token("metric.radius.md"),
                                                 ),
                                                 padding: Edges::all(Px(12.0)),
                                                 ..Default::default()

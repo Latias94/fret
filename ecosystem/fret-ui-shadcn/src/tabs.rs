@@ -28,8 +28,8 @@ fn luma_linear(c: Color) -> f32 {
 }
 
 fn theme_is_dark(theme: &Theme) -> bool {
-    let fg = theme.color_required("foreground");
-    let bg = theme.color_required("background");
+    let fg = theme.color_token("foreground");
+    let bg = theme.color_token("background");
     luma_linear(fg) > luma_linear(bg)
 }
 
@@ -92,22 +92,22 @@ fn tabs_list_padding(theme: &Theme) -> Px {
 }
 
 fn tabs_list_bg(theme: &Theme) -> Color {
-    theme.color_required("muted")
+    theme.color_token("muted")
 }
 
 fn tabs_list_fg_muted(theme: &Theme) -> Color {
-    theme.color_required("muted-foreground")
+    theme.color_token("muted-foreground")
 }
 
 fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.tabs.trigger.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -125,7 +125,7 @@ fn tabs_trigger_radius(theme: &Theme) -> Px {
 }
 
 fn tabs_trigger_bg_active(theme: &Theme) -> Color {
-    theme.color_required("background")
+    theme.color_token("background")
 }
 
 fn tabs_trigger_border_active(theme: &Theme) -> Color {
@@ -934,12 +934,12 @@ impl Tabs {
                                 let fg_inactive = if theme_is_dark(&theme) {
                                     tabs_list_fg_muted(&theme)
                                 } else {
-                                    theme.color_required("foreground")
+                                    theme.color_token("foreground")
                                 };
                                 let fg_inactive = ColorRef::Color(fg_inactive);
-                                let fg_active = ColorRef::Color(theme.color_required("foreground"));
+                                let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
-                                    ColorRef::Color(alpha_mul(theme.color_required("foreground"), 0.5));
+                                    ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
                                 let radius = tabs_trigger_radius(&theme);
                                 let ring = decl_style::focus_ring(&theme, radius);
                                 let bg_active =

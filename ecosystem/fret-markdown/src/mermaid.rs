@@ -157,13 +157,13 @@ pub(super) fn render_mermaid_header_label<H: UiHost>(
         text: Arc::<str>::from(format!("Mermaid · {}", diagram_type.display_name())),
         style: Some(TextStyle {
             font: FontId::monospace(),
-            size: theme.metric_required("metric.font.mono_size"),
+            size: theme.metric_token("metric.font.mono_size"),
             weight: FontWeight::SEMIBOLD,
             slant: Default::default(),
-            line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+            line_height: Some(theme.metric_token("metric.font.mono_line_height")),
             letter_spacing_em: None,
         }),
-        color: Some(theme.color_required("muted-foreground")),
+        color: Some(theme.color_token("muted-foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     })

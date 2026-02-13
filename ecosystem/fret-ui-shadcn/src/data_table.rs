@@ -23,18 +23,18 @@ use crate::dropdown_menu::{
 };
 
 fn border_color(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn table_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.table.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.table.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     TextStyle {
         font: FontId::default(),
@@ -588,8 +588,8 @@ impl DataTable {
                 weight: FontWeight::MEDIUM,
                 ..table_text_style(&theme)
             };
-            let header_fg = theme.color_required("foreground");
-            let sort_fg = theme.color_required("muted-foreground");
+            let header_fg = theme.color_token("foreground");
+            let sort_fg = theme.color_token("muted-foreground");
 
             let get_row_key = Arc::new(get_row_key);
             let header_label = Arc::new(header_label);

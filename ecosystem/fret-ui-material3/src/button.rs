@@ -546,7 +546,7 @@ fn button_outline(theme: &Theme, variant: ButtonVariant, enabled: bool) -> Optio
             .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
             .or_else(|| theme.color_by_key("md.sys.color.outline"))
     }
-    .unwrap_or_else(|| theme.color_required("md.sys.color.outline"));
+    .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
 
     color.a = 1.0;
     Some(ButtonOutline { width, color })

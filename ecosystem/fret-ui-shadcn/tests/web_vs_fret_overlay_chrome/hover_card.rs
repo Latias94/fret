@@ -16,15 +16,15 @@ fn build_shadcn_hover_card_demo_page(
     };
 
     let theme = Theme::global(&*cx.app).clone();
-    let sm_px = theme.metric_required("font.size");
-    let sm_line_height = theme.metric_required("font.line_height");
+    let sm_px = theme.metric_token("font.size");
+    let sm_line_height = theme.metric_token("font.line_height");
     let xs_px = theme
         .metric_by_key("component.tooltip.text_px")
         .unwrap_or(Px((sm_px.0 - 2.0).max(10.0)));
     let xs_line_height = theme
         .metric_by_key("component.tooltip.line_height")
         .unwrap_or(Px((sm_line_height.0 - 4.0).max(12.0)));
-    let muted_fg = theme.color_required("muted.foreground");
+    let muted_fg = theme.color_token("muted.foreground");
 
     let trigger_el = Button::new("@nextjs")
         .variant(ButtonVariant::Link)

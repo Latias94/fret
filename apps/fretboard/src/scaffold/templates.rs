@@ -388,7 +388,7 @@ fn view(
         .into_element(cx);
 
     let tip_line = ui::raw_text(cx, tip_text)
-        .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
+        .text_color(ColorRef::Color(theme.color_token(tip_color_key)))
         .into_element(cx);
 
 __ADD_BTN_DEF__
@@ -431,10 +431,10 @@ __ADD_BTN_DEF__
         .into_element(cx),
     ])
     .ui()
-    .bg(ColorRef::Color(theme.color_required("background")))
+    .bg(ColorRef::Color(theme.color_token("background")))
     .rounded(Radius::Lg)
     .border_1()
-    .border_color(ColorRef::Color(theme.color_required("border")))
+    .border_color(ColorRef::Color(theme.color_token("border")))
     .w_full()
     .max_w(Px(520.0))
     .into_element(cx);
@@ -447,7 +447,7 @@ __ADD_BTN_DEF__
             .items_center()
             .into_element(cx)]
     })
-    .bg(ColorRef::Color(theme.color_required("muted")))
+    .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .w_full()
     .h_full()
@@ -474,7 +474,7 @@ __REMOVE_BTN_DEF__
         layout: Default::default(),
         text: item.text.clone(),
         style: None,
-        color: Some(theme.color_required(if done {
+        color: Some(theme.color_token(if done {
             "muted-foreground"
         } else {
             "foreground"
@@ -498,7 +498,7 @@ __REMOVE_BTN_DEF__
 
     ui::container(cx, |_cx| [row])
         .border_1()
-        .border_color(ColorRef::Color(theme.color_required("border")))
+        .border_color(ColorRef::Color(theme.color_token("border")))
         .rounded(Radius::Md)
         .p(Space::N3)
         .w_full()

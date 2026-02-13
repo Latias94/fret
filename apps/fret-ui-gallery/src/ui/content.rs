@@ -47,7 +47,7 @@ pub(crate) fn content_view(
                             },
                             text: Arc::from(origin),
                             style: None,
-                            color: Some(theme.color_required("muted-foreground")),
+                            color: Some(theme.color_token("muted-foreground")),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
                         }),
@@ -278,7 +278,7 @@ pub(crate) fn content_view(
                     base_padding,
                 ),
             ),
-            background: Some(ColorRef::Color(theme.color_required("background"))),
+            background: Some(ColorRef::Color(theme.color_token("background"))),
             ..ChromeRefinement::default()
         };
         cx.container(

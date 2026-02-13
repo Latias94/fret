@@ -119,7 +119,7 @@ impl AvatarStack {
             let stack_layout = decl_style::layout_style(&theme, self.layout);
 
             // Common web outcome: `ring-2 ring-background`.
-            let ring = theme.color_required("background");
+            let ring = theme.color_token("background");
             let item_chrome = ChromeRefinement::default()
                 .rounded(Radius::Full)
                 .border_width(Px(2.0))

@@ -6857,11 +6857,11 @@ mod tests {
 
         assert_eq!(
             canvas.series_color(delinea::SeriesId::new(1)),
-            theme.color_required("chart.palette.0")
+            theme.color_token("chart.palette.0")
         );
         assert_eq!(
             canvas.series_color(delinea::SeriesId::new(2)),
-            theme.color_required("chart.palette.1")
+            theme.color_token("chart.palette.1")
         );
     }
 
@@ -6887,11 +6887,11 @@ mod tests {
 
         assert_eq!(
             canvas.series_color(delinea::SeriesId::new(42)),
-            theme.color_required("chart.palette.0")
+            theme.color_token("chart.palette.0")
         );
         assert_eq!(
             canvas.series_color(delinea::SeriesId::new(1)),
-            theme.color_required("chart.palette.1")
+            theme.color_token("chart.palette.1")
         );
     }
 

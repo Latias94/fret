@@ -246,7 +246,7 @@ pub(super) fn word_boundary_debug_view(
                     ChromeRefinement::default()
                         .border_1()
                         .rounded(Radius::Md)
-                        .bg(ColorRef::Color(theme.color_required("background"))),
+                        .bg(ColorRef::Color(theme.color_token("background"))),
                     LayoutRefinement::default()
                         .w_full()
                         .h_px(MetricRef::Px(Px(150.0))),

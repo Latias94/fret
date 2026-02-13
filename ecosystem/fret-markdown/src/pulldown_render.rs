@@ -362,9 +362,9 @@ fn render_table_cell<H: UiHost>(
     props.border_color = Some(markdown_theme.table_border);
     props.background = is_header.then_some(markdown_theme.table_header_bg);
 
-    let font_size = theme.metric_required("metric.font.size");
-    let line_height = theme.metric_required("metric.font.line_height");
-    let fg = theme.color_required("foreground");
+    let font_size = theme.metric_token("metric.font.size");
+    let line_height = theme.metric_token("metric.font.line_height");
+    let fg = theme.color_token("foreground");
     let base = InlineBaseStyle {
         font: FontId::default(),
         size: font_size,
@@ -681,10 +681,10 @@ fn render_task_list_marker<H: UiHost>(
         text: Arc::<str>::from(text.to_string()),
         style: Some(TextStyle {
             font: FontId::default(),
-            size: theme.metric_required("metric.font.size"),
+            size: theme.metric_token("metric.font.size"),
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
-            line_height: Some(theme.metric_required("metric.font.line_height")),
+            line_height: Some(theme.metric_token("metric.font.line_height")),
             letter_spacing_em: None,
         }),
         color: Some(color),

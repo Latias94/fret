@@ -473,9 +473,9 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
                                 cx,
                                 |cx| {
                                     let theme = Theme::global(&*cx.app).clone();
-                                    let text_px = theme.metric_required("font.size");
-                                    let line_height = theme.metric_required("font.line_height");
-                                    let muted = theme.color_required("muted-foreground");
+                                    let text_px = theme.metric_token("font.size");
+                                    let line_height = theme.metric_token("font.line_height");
+                                    let muted = theme.color_token("muted-foreground");
                                     let style = fret_core::TextStyle {
                                         font: fret_core::FontId::default(),
                                         size: text_px,

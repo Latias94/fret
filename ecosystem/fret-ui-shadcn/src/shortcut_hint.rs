@@ -78,16 +78,16 @@ fn shortcut_hint_label<H: UiHost>(
     theme: &Theme,
     label: Arc<str>,
 ) -> AnyElement {
-    let fg = theme.color_required("muted-foreground");
+    let fg = theme.color_token("muted-foreground");
 
     let px = theme
         .metric_by_key("component.kbd.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.kbd.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     let chrome = ChromeRefinement::default().px(Space::N1).py(Space::N0p5);
     let layout = LayoutRefinement::default().h_px(Px(20.0)).min_h(Px(20.0));

@@ -545,7 +545,7 @@ fn combobox_with_patch<H: UiHost>(
             slant: Default::default(),
             line_height: theme
                 .metric_by_key("font.line_height")
-                .or(Some(theme.metric_required("font.line_height"))),
+                .or(Some(theme.metric_token("font.line_height"))),
             letter_spacing_em: None,
         };
 
@@ -583,13 +583,13 @@ fn combobox_with_patch<H: UiHost>(
             .unwrap_or_else(|| {
                 theme
                     .color_by_key("background")
-                    .unwrap_or_else(|| theme.color_required("background"))
+                    .unwrap_or_else(|| theme.color_token("background"))
             });
         let bg_hover = theme
             .color_by_key("accent")
             .or_else(|| theme.color_by_key("accent.background"))
-            .unwrap_or_else(|| theme.color_required("accent"));
-        let bg_pressed = theme.color_required("accent");
+            .unwrap_or_else(|| theme.color_token("accent"));
+        let bg_pressed = theme.color_token("accent");
         let fg_base = chrome_patch
             .text_color
             .as_ref()
@@ -597,7 +597,7 @@ fn combobox_with_patch<H: UiHost>(
             .unwrap_or_else(|| {
                 theme
                     .color_by_key("foreground")
-                    .unwrap_or_else(|| theme.color_required("foreground"))
+                    .unwrap_or_else(|| theme.color_token("foreground"))
             });
         let fg_hover = theme
             .color_by_key("accent-foreground")
@@ -611,7 +611,7 @@ fn combobox_with_patch<H: UiHost>(
                 theme
                     .color_by_key("input")
                     .or_else(|| theme.color_by_key("border"))
-                    .unwrap_or_else(|| theme.color_required("border"))
+                    .unwrap_or_else(|| theme.color_token("border"))
             });
 
         let default_trigger_bg = WidgetStateProperty::new(ColorRef::Color(bg_base))
@@ -875,7 +875,7 @@ fn combobox_with_patch<H: UiHost>(
 
                             let fg = theme
                                 .color_by_key("foreground")
-                                .unwrap_or_else(|| theme.color_required("foreground"));
+                                .unwrap_or_else(|| theme.color_token("foreground"));
                             let fg_disabled = alpha_mul(fg, 0.5);
                             let item_text_style = crate::command::item_text_style(&theme);
 
@@ -1189,7 +1189,7 @@ fn combobox_with_patch<H: UiHost>(
 
                         let fg = theme
                             .color_by_key("foreground")
-                            .unwrap_or_else(|| theme.color_required("foreground"));
+                            .unwrap_or_else(|| theme.color_token("foreground"));
                         let fg_disabled = alpha_mul(fg, 0.5);
                         let item_text_style = crate::command::item_text_style(&theme);
 

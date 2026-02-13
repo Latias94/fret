@@ -36,31 +36,31 @@ fn alpha(color: Color, a: f32) -> Color {
 fn resolve_border(theme: &Theme) -> Color {
     theme
         .color_by_key("border")
-        .unwrap_or_else(|| theme.color_required("border"))
+        .unwrap_or_else(|| theme.color_token("border"))
 }
 
 fn resolve_background(theme: &Theme) -> Color {
-    theme.color_required("background")
+    theme.color_token("background")
 }
 
 fn resolve_muted(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
-        .unwrap_or_else(|| theme.color_required("muted.background"))
+        .unwrap_or_else(|| theme.color_token("muted.background"))
 }
 
 fn resolve_muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn rounded_xl(theme: &Theme) -> Px {
     // shadcn token model:
     // - `rounded-lg` ~= `--radius`
     // - `rounded-xl` ~= `--radius + 4px`
-    let base_radius = theme.metric_required("metric.radius.lg");
+    let base_radius = theme.metric_token("metric.radius.lg");
     Px(base_radius.0 + 4.0)
 }
 
@@ -472,11 +472,11 @@ impl QueueSectionLabel {
             text: label_text,
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(
-                    theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                    theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                 ),
                 letter_spacing_em: None,
             }),
@@ -870,11 +870,11 @@ impl QueueItemContent {
 
         let style = TextStyle {
             font: FontId::default(),
-            size: theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+            size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
             weight: FontWeight::NORMAL,
             slant: Default::default(),
             line_height: Some(
-                theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
             ),
             letter_spacing_em: None,
         };
@@ -969,11 +969,11 @@ impl QueueItemDescription {
 
         let style = TextStyle {
             font: FontId::default(),
-            size: theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
+            size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
             weight: FontWeight::NORMAL,
             slant: Default::default(),
             line_height: Some(
-                theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
+                theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
             ),
             letter_spacing_em: None,
         };
@@ -1364,11 +1364,11 @@ impl QueueItemFile {
             text: self.filename,
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
+                size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(
-                    theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
+                    theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
                 ),
                 letter_spacing_em: None,
             }),

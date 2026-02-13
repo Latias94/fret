@@ -389,8 +389,8 @@ impl RelativeTimeZoneLabel {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let bg = theme.color_required("secondary");
-        let fg = theme.color_required("secondary-foreground");
+        let bg = theme.color_token("secondary");
+        let fg = theme.color_token("secondary-foreground");
 
         let chrome = ChromeRefinement::default()
             .px(Space::N1p5)
@@ -487,9 +487,9 @@ impl RelativeTimeZoneDisplay {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = if self.muted {
-            theme.color_required("muted-foreground")
+            theme.color_token("muted-foreground")
         } else {
-            theme.color_required("foreground")
+            theme.color_token("foreground")
         };
 
         let chrome = ChromeRefinement::default().pl(Space::N8);

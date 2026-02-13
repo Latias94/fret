@@ -290,13 +290,13 @@ impl ChartStyle {
             metric(theme, key).unwrap_or(fallback)
         }
 
-        let foreground = theme.color_required("foreground");
-        let muted_foreground = theme.color_required("muted-foreground");
-        let border = theme.color_required("border");
-        let primary = theme.color_required("primary");
-        let popover = theme.color_required("popover");
+        let foreground = theme.color_token("foreground");
+        let muted_foreground = theme.color_token("muted-foreground");
+        let border = theme.color_token("border");
+        let primary = theme.color_token("primary");
+        let popover = theme.color_token("popover");
 
-        let background = pick_color(theme, "chart.background", theme.color_required("card"));
+        let background = pick_color(theme, "chart.background", theme.color_token("card"));
         let tooltip_background =
             pick_color(theme, "chart.tooltip.background", with_alpha(popover, 0.9));
         let tooltip_border = pick_color(theme, "chart.tooltip.border", with_alpha(border, 0.15));
@@ -330,7 +330,7 @@ impl ChartStyle {
             pick_metric(theme, "metric.chart.selection.stroke.width", Px(1.0));
 
         let padding_all = metric(theme, "metric.chart.padding")
-            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+            .unwrap_or_else(|| theme.metric_token("metric.padding.sm"));
         let padding = Edges::all(padding_all);
 
         let axis_band_x = pick_metric(theme, "metric.chart.axis.band.x", Px(56.0));
@@ -346,7 +346,7 @@ impl ChartStyle {
         let tooltip_corner_radius = pick_metric(
             theme,
             "metric.chart.tooltip.corner_radius",
-            theme.metric_required("metric.radius.sm"),
+            theme.metric_token("metric.radius.sm"),
         );
         let tooltip_marker_size = pick_metric(theme, "metric.chart.tooltip.marker.size", Px(8.0));
         let tooltip_marker_gap = pick_metric(theme, "metric.chart.tooltip.marker.gap", Px(6.0));
@@ -357,7 +357,7 @@ impl ChartStyle {
         let legend_corner_radius = pick_metric(
             theme,
             "metric.chart.legend.corner_radius",
-            theme.metric_required("metric.radius.md"),
+            theme.metric_token("metric.radius.md"),
         );
         let legend_item_gap = pick_metric(theme, "metric.chart.legend.item.gap", Px(4.0));
         let legend_swatch_size = pick_metric(theme, "metric.chart.legend.swatch.size", Px(10.0));
@@ -487,7 +487,7 @@ mod tests {
         let style = ChartStyle::from_theme(theme);
         assert_eq!(
             style.series_palette[0],
-            theme.color_required("chart.palette.0")
+            theme.color_token("chart.palette.0")
         );
     }
 }

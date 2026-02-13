@@ -291,12 +291,12 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
         .metric_by_key(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
         .unwrap_or(Px(16.0));
 
-    let bg = theme.color_required("background");
+    let bg = theme.color_token("background");
     let border = theme
         .color_by_key("border/50")
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or_else(|| theme.color_required("border"));
-    let muted = theme.color_required("muted-foreground");
+        .unwrap_or_else(|| theme.color_token("border"));
+    let muted = theme.color_token("muted-foreground");
 
     let chrome = ChromeRefinement::default()
         .rounded(Radius::Lg)
@@ -338,7 +338,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
         let mut row_children: Vec<AnyElement> = Vec::new();
 
         if !hide_indicator {
-            let indicator_color = theme.color_required("foreground");
+            let indicator_color = theme.color_token("foreground");
             let (w, h) = match indicator {
                 fret_ui_shadcn::ChartTooltipIndicator::Dot => (Px(10.0), Px(10.0)),
                 fret_ui_shadcn::ChartTooltipIndicator::Line

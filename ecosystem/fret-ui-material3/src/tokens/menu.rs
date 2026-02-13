@@ -26,7 +26,7 @@ pub(crate) fn container_background(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.menu.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container"))
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
@@ -39,7 +39,7 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.menu.container.shadow-color")
         .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
@@ -59,7 +59,7 @@ pub(crate) fn divider_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.menu.divider.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-variant"))
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {

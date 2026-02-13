@@ -123,7 +123,7 @@ mod hotpatch {
         .into_element(cx);
 
         let wrap = cx.with_theme(|theme| {
-            let bg = theme.color_required("background");
+            let bg = theme.color_token("background");
             fret_ui_kit::declarative::style::container_props(
                 theme,
                 fret_ui_kit::ChromeRefinement::default()

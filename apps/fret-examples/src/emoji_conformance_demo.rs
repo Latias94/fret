@@ -151,7 +151,7 @@ impl EmojiConformanceDriver {
                         layout: Default::default(),
                         text: msg,
                         style: None,
-                        color: Some(theme.color_required("muted-foreground")),
+                        color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::Word,
                         overflow: fret_core::TextOverflow::Clip,
                     })
@@ -199,7 +199,7 @@ impl EmojiConformanceDriver {
                         layout: Default::default(),
                         text: Arc::from(case.label),
                         style: Some(label_style.clone()),
-                        color: Some(theme.color_required("muted-foreground")),
+                        color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
@@ -208,7 +208,7 @@ impl EmojiConformanceDriver {
                         layout: Default::default(),
                         text: Arc::from(case.text),
                         style: Some(emoji_style.clone()),
-                        color: Some(theme.color_required("foreground")),
+                        color: Some(theme.color_token("foreground")),
                         wrap: TextWrap::Word,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
@@ -221,7 +221,7 @@ impl EmojiConformanceDriver {
                         layout: Default::default(),
                         text: Arc::from("Emoji-only line forced to the selected family:"),
                         style: Some(label_style.clone()),
-                        color: Some(theme.color_required("muted-foreground")),
+                        color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
@@ -232,7 +232,7 @@ impl EmojiConformanceDriver {
                             font: FontId::family(name),
                             ..emoji_style
                         }),
-                        color: Some(theme.color_required("foreground")),
+                        color: Some(theme.color_token("foreground")),
                         wrap: TextWrap::Word,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
@@ -266,7 +266,7 @@ impl EmojiConformanceDriver {
                         .items_center()
                         .into_element(cx)]
                 })
-                .bg(ColorRef::Color(theme.color_required("muted")))
+                .bg(ColorRef::Color(theme.color_token("muted")))
                 .p(Space::N6)
                 .w_full()
                 .h_full()

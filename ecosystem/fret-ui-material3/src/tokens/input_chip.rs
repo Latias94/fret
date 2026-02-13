@@ -48,12 +48,12 @@ pub(crate) fn selected_container_background(theme: &Theme, enabled: bool) -> Col
         theme
             .color_by_key("md.comp.input-chip.selected.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.secondary-container"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"))
     } else {
         let base = theme
             .color_by_key("md.comp.input-chip.disabled.selected.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.input-chip.disabled.selected.container.opacity")
             .unwrap_or(0.12);
@@ -76,7 +76,7 @@ pub(crate) fn unselected_outline(
         let base = theme
             .color_by_key("md.comp.input-chip.disabled.unselected.outline.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.input-chip.disabled.unselected.outline.opacity")
             .unwrap_or(0.12);
@@ -93,7 +93,7 @@ pub(crate) fn unselected_outline(
     let mut color = theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline-variant"));
     color.a = 1.0;
 
     ChipOutline { width, color }
@@ -109,7 +109,7 @@ pub(crate) fn label_color(
         let base = theme
             .color_by_key("md.comp.input-chip.disabled.label-text.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.input-chip.disabled.label-text.opacity")
             .unwrap_or(0.38);
@@ -129,7 +129,7 @@ pub(crate) fn label_color(
     theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }
 
 pub(crate) fn state_layer_color(
@@ -148,7 +148,7 @@ pub(crate) fn state_layer_color(
     theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }
 
 pub(crate) fn state_layer_opacity(
@@ -191,7 +191,7 @@ pub(crate) fn leading_icon_color(
         let base = theme
             .color_by_key("md.comp.input-chip.with-leading-icon.disabled.leading-icon.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.input-chip.with-leading-icon.disabled.leading-icon.opacity")
             .unwrap_or(0.38);
@@ -217,7 +217,7 @@ pub(crate) fn leading_icon_color(
     theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn trailing_icon_color(
@@ -230,7 +230,7 @@ pub(crate) fn trailing_icon_color(
         let base = theme
             .color_by_key("md.comp.input-chip.with-trailing-icon.disabled.trailing-icon.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.input-chip.with-trailing-icon.disabled.trailing-icon.opacity")
             .unwrap_or(0.38);
@@ -256,5 +256,5 @@ pub(crate) fn trailing_icon_color(
     theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }

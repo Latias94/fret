@@ -613,9 +613,9 @@ impl DockSpace {
         layout: &std::collections::HashMap<DockNodeId, Rect>,
         drag_panel: Option<&PanelKey>,
     ) {
-        self.tab_text_style.size = theme.metric_required("font.size");
-        self.tab_close_style.size = theme.metric_required("font.size");
-        self.empty_state_style.size = theme.metric_required("font.size");
+        self.tab_text_style.size = theme.metric_token("font.size");
+        self.tab_close_style.size = theme.metric_token("font.size");
+        self.empty_state_style.size = theme.metric_token("font.size");
 
         let mut visible_set: HashSet<PanelKey> = HashSet::new();
         for &node_id in layout.keys() {
@@ -670,7 +670,7 @@ impl DockSpace {
             services.text().release(glyph.blob);
         }
 
-        let pad_x = theme.metric_required("metric.padding.md");
+        let pad_x = theme.metric_token("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
         // Avoid fully clamping tab title constraints to 0px, which can result in "missing" tab
         // labels when theme metrics are misconfigured (e.g. overly large padding).
@@ -905,7 +905,7 @@ impl DockSpace {
         scale_factor: f32,
         max_width: Px,
     ) {
-        self.empty_state_style.size = theme.metric_required("font.size");
+        self.empty_state_style.size = theme.metric_token("font.size");
         if self.last_empty_state_theme_revision == Some(theme.revision)
             && self.last_empty_state_scale_factor == Some(scale_factor)
         {
@@ -942,7 +942,7 @@ impl DockSpace {
         theme: fret_ui::ThemeSnapshot,
         scale_factor: f32,
     ) {
-        self.float_zone_style.size = theme.metric_required("font.size");
+        self.float_zone_style.size = theme.metric_token("font.size");
         if self.last_float_zone_theme_revision == Some(theme.revision)
             && self.last_float_zone_scale_factor == Some(scale_factor)
         {
@@ -978,7 +978,7 @@ impl DockSpace {
         scale_factor: f32,
         msg: &str,
     ) {
-        self.float_zone_tooltip_style.size = theme.metric_required("font.size");
+        self.float_zone_tooltip_style.size = theme.metric_token("font.size");
 
         let hash_title = |s: &str| -> u64 {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -1033,10 +1033,10 @@ impl DockSpace {
         let rect = float_zone(dock_bounds);
         self.rebuild_float_zone_glyph(services, theme, scale_factor);
 
-        let border = theme.color_required("border");
-        let card = theme.color_required("card");
-        let hover_bg = theme.color_required("accent");
-        let fg = theme.color_required("muted-foreground");
+        let border = theme.color_token("border");
+        let card = theme.color_token("card");
+        let hover_bg = theme.color_token("accent");
+        let fg = theme.color_token("muted-foreground");
 
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(20),
@@ -1086,7 +1086,7 @@ impl DockSpace {
             return;
         };
 
-        let pad = theme.metric_required("metric.padding.sm").0.max(4.0);
+        let pad = theme.metric_token("metric.padding.sm").0.max(4.0);
         let border_px = Px(1.0);
         let gap = Px(8.0);
 
@@ -1107,7 +1107,7 @@ impl DockSpace {
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(22),
             rect: tooltip_rect,
-            background: fret_core::Paint::Solid(theme.color_required("popover")),
+            background: fret_core::Paint::Solid(theme.color_token("popover")),
             border: Edges::all(border_px),
             border_paint: fret_core::Paint::Solid(border),
             corner_radii: fret_core::Corners::all(Px(8.0)),
@@ -1121,7 +1121,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(23),
             origin: text_origin,
             text: tooltip.blob,
-            color: theme.color_required("popover-foreground"),
+            color: theme.color_token("popover-foreground"),
         });
     }
 
@@ -1220,13 +1220,13 @@ impl DockSpace {
         cx.scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect: cx.bounds,
-            background: fret_core::Paint::Solid(theme.color_required("card")),
+            background: fret_core::Paint::Solid(theme.color_token("card")),
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
-        let pad = theme.metric_required("metric.padding.md").0.max(0.0);
+        let pad = theme.metric_token("metric.padding.md").0.max(0.0);
         let max_w = Px((cx.bounds.size.width.0 - pad * 2.0).max(0.0));
         self.rebuild_empty_state(cx.services, theme, cx.scale_factor, max_w);
 
@@ -1244,7 +1244,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(1),
             origin: Point::new(Px(x), Px(y)),
             text: text.blob,
-            color: theme.color_required("muted-foreground"),
+            color: theme.color_token("muted-foreground"),
         });
     }
 }
@@ -1381,7 +1381,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
         let theme = cx.theme().snapshot();
-        let font_size = theme.metric_required("font.size");
+        let font_size = theme.metric_token("font.size");
 
         let mut pending_effects: Vec<Effect> = Vec::new();
         let mut pending_redraws: Vec<fret_core::AppWindowId> = Vec::new();
@@ -4628,7 +4628,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let theme = cx.theme().snapshot();
         let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
-        let font_size = theme.metric_required("font.size");
+        let font_size = theme.metric_token("font.size");
         // Keep the dock host "alive" as a stable internal drag route target.
         //
         // This must be refreshed during paint/layout, not only during event handling, because
@@ -4931,13 +4931,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     .collect();
 
             for (floating, chrome, layout) in &floating_layouts {
-                let border = theme.color_required("border");
-                let surface = theme.color_required("background");
-                let hover_bg = theme.color_required("accent");
-                let fg = theme.color_required("foreground");
-                let fg_muted = theme.color_required("muted-foreground");
-                let radius_md = theme.metric_required("metric.radius.md");
-                let radius_sm = theme.metric_required("metric.radius.sm");
+                let border = theme.color_token("border");
+                let surface = theme.color_token("background");
+                let hover_bg = theme.color_token("accent");
+                let fg = theme.color_token("foreground");
+                let fg_muted = theme.color_token("muted-foreground");
+                let radius_md = theme.metric_token("metric.radius.md");
+                let radius_sm = theme.metric_token("metric.radius.sm");
 
                 let border_color = Color { a: 0.85, ..border };
                 scene.push(SceneOp::Quad {

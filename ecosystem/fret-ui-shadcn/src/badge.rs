@@ -70,26 +70,26 @@ impl Badge {
 }
 
 fn border_color(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn fg_for(theme: &Theme, variant: BadgeVariant) -> Color {
     match variant {
-        BadgeVariant::Default => theme.color_required("primary-foreground"),
-        BadgeVariant::Secondary => theme.color_required("secondary-foreground"),
+        BadgeVariant::Default => theme.color_token("primary-foreground"),
+        BadgeVariant::Secondary => theme.color_token("secondary-foreground"),
         // Upstream shadcn badge uses `text-white` for destructive.
         BadgeVariant::Destructive => theme
             .color_by_key("white")
-            .unwrap_or_else(|| theme.color_required("destructive-foreground")),
-        BadgeVariant::Outline => theme.color_required("foreground"),
+            .unwrap_or_else(|| theme.color_token("destructive-foreground")),
+        BadgeVariant::Outline => theme.color_token("foreground"),
     }
 }
 
 fn bg_for(theme: &Theme, variant: BadgeVariant) -> Option<Color> {
     match variant {
-        BadgeVariant::Default => Some(theme.color_required("primary")),
-        BadgeVariant::Secondary => Some(theme.color_required("secondary")),
-        BadgeVariant::Destructive => Some(theme.color_required("destructive")),
+        BadgeVariant::Default => Some(theme.color_token("primary")),
+        BadgeVariant::Secondary => Some(theme.color_token("secondary")),
+        BadgeVariant::Destructive => Some(theme.color_token("destructive")),
         BadgeVariant::Outline => None,
     }
 }
@@ -212,7 +212,7 @@ fn badge_with_patch<H: UiHost>(
     chrome = chrome.merge(chrome_override);
 
     let fg = fg_for(&theme, variant);
-    let theme_fg = theme.color_required("foreground");
+    let theme_fg = theme.color_token("foreground");
     let theme_muted_fg = theme.color_by_key("muted-foreground").unwrap_or(theme_fg);
 
     let props = decl_style::container_props(
@@ -226,11 +226,11 @@ fn badge_with_patch<H: UiHost>(
     let text_px = theme
         .metric_by_key("component.badge.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.badge.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     cx.container(props, |cx| {
         let label = ui::text(cx, label)

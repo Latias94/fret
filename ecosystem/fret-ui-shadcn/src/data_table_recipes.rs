@@ -904,7 +904,7 @@ impl<TData> DataTableToolbar<TData> {
                     },
                     move |cx| {
                         let theme = Theme::global(&*cx.app).clone();
-                        let transparent = theme.color_required("transparent");
+                        let transparent = theme.color_token("transparent");
 
                         let mut items: Vec<CommandEntry> = faceted_items_for_content
                             .iter()

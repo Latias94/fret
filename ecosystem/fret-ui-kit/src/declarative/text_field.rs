@@ -71,7 +71,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
 
             let font_line_height = theme
                 .metric_by_key("font.line_height")
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
             let root_layout =
                 decl_style::layout_style(theme, LayoutRefinement::default().relative().w_full());

@@ -110,11 +110,11 @@ fn alert_with_patch<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let bg = theme.color_required("card");
-    let border = theme.color_required("border");
-    let destructive = theme.color_required("destructive");
-    let card_fg = theme.color_required("card-foreground");
-    let muted_fg = theme.color_required("muted-foreground");
+    let bg = theme.color_token("card");
+    let border = theme.color_token("border");
+    let destructive = theme.color_token("destructive");
+    let card_fg = theme.color_token("card-foreground");
+    let muted_fg = theme.color_token("muted-foreground");
     let fg = match variant {
         AlertVariant::Default => card_fg,
         AlertVariant::Destructive => destructive,
@@ -210,15 +210,15 @@ impl AlertTitle {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("foreground");
+        let fg = theme.color_token("foreground");
         let px = theme
             .metric_by_key("component.alert.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.alert.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -243,15 +243,15 @@ impl AlertDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
+        let fg = theme.color_token("muted-foreground");
         let px = theme
             .metric_by_key("component.alert.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.alert.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)

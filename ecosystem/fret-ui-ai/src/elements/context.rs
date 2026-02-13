@@ -206,7 +206,7 @@ impl ContextTrigger {
             .variant(ButtonVariant::Ghost)
             .refine_style(
                 ChromeRefinement::default()
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground"))),
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
             )
             .into_element(cx);
 
@@ -284,13 +284,13 @@ impl ContextContent {
             text: Arc::<str>::from(format!("{used} / {total}")),
             style: Some(TextStyle {
                 font: FontId::monospace(),
-                size: theme.metric_required("component.text.xs_px"),
+                size: theme.metric_token("component.text.xs_px"),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("component.text.xs_line_height")),
+                line_height: Some(theme.metric_token("component.text.xs_line_height")),
                 letter_spacing_em: None,
             }),
-            color: Some(theme.color_required("muted-foreground")),
+            color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
         });
@@ -339,13 +339,13 @@ impl ContextContent {
                     text: Arc::<str>::from(format!("model: {model_id}")),
                     style: Some(TextStyle {
                         font: FontId::monospace(),
-                        size: theme.metric_required("component.text.xs_px"),
+                        size: theme.metric_token("component.text.xs_px"),
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
-                        line_height: Some(theme.metric_required("component.text.xs_line_height")),
+                        line_height: Some(theme.metric_token("component.text.xs_line_height")),
                         letter_spacing_em: None,
                     }),
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 })
@@ -366,13 +366,13 @@ impl ContextContent {
                 )),
                 style: Some(TextStyle {
                     font: FontId::monospace(),
-                    size: theme.metric_required("component.text.xs_px"),
+                    size: theme.metric_token("component.text.xs_px"),
                     weight: FontWeight::NORMAL,
                     slant: Default::default(),
-                    line_height: Some(theme.metric_required("component.text.xs_line_height")),
+                    line_height: Some(theme.metric_token("component.text.xs_line_height")),
                     letter_spacing_em: None,
                 }),
-                color: Some(theme.color_required("muted-foreground")),
+                color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
             }));

@@ -109,14 +109,14 @@ fn breadcrumb_with_patch<H: UiHost>(
         let text_px = theme
             .metric_by_key("component.breadcrumb.text_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.breadcrumb.line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let fg = theme.color_required("foreground");
-        let muted = theme.color_required("muted-foreground");
+        let fg = theme.color_token("foreground");
+        let muted = theme.color_token("muted-foreground");
 
         let style = TextStyle {
             font: FontId::default(),
@@ -391,11 +391,11 @@ pub mod primitives {
         let text_px = theme
             .metric_by_key("component.breadcrumb.text_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.breadcrumb.line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         TextStyle {
             font: FontId::default(),
@@ -408,8 +408,8 @@ pub mod primitives {
     }
 
     fn colors(theme: &Theme) -> (Color, Color) {
-        let fg = theme.color_required("foreground");
-        let muted = theme.color_required("muted-foreground");
+        let fg = theme.color_token("foreground");
+        let muted = theme.color_token("muted-foreground");
         (fg, muted)
     }
 

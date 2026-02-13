@@ -52,7 +52,7 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.radio_group.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.radio_group.line_height")
         .unwrap_or(px);
@@ -75,15 +75,15 @@ fn radio_border(theme: &Theme) -> Color {
 }
 
 fn radio_ring(theme: &Theme) -> Color {
-    theme.color_required("ring")
+    theme.color_token("ring")
 }
 
 fn radio_fg(theme: &Theme) -> Color {
-    theme.color_required("foreground")
+    theme.color_token("foreground")
 }
 
 fn radio_indicator(theme: &Theme) -> Color {
-    theme.color_required("primary")
+    theme.color_token("primary")
 }
 
 pub use fret_ui_kit::primitives::radio_group::RadioGroupOrientation;
@@ -407,7 +407,7 @@ impl RadioGroup {
                             ring_style.color = theme
                                 .color_by_key(ring_key)
                                 .or_else(|| theme.color_by_key("destructive/20"))
-                                .unwrap_or_else(|| theme.color_required("destructive"));
+                                .unwrap_or_else(|| theme.color_token("destructive"));
                         }
                         let pressable_layout = decl_style::layout_style(
                             &theme,
@@ -462,7 +462,7 @@ impl RadioGroup {
                                         )
                                         .resolve(&theme);
                                         let border_color = if aria_invalid {
-                                            let destructive = theme.color_required("destructive");
+                                            let destructive = theme.color_token("destructive");
                                             if item_enabled {
                                                 destructive
                                             } else {
@@ -916,7 +916,7 @@ mod tests {
 
         let theme = Theme::global(&app).clone();
         let icon = icon_size(&theme);
-        let destructive = theme.color_required("destructive");
+        let destructive = theme.color_token("destructive");
 
         let mut icon_border_colors: Vec<Color> = Vec::new();
         for op in scene.ops() {

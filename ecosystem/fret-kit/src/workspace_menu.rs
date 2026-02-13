@@ -526,11 +526,11 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let group = cx.root_id();
 
     let theme = Theme::global(&*cx.app).snapshot();
-    let border = theme.color_required("color.panel.border");
-    let bg = theme.color_required("color.panel.background");
+    let border = theme.color_token("color.panel.border");
+    let bg = theme.color_token("color.panel.background");
 
-    let radius = theme.metric_required("metric.radius.sm");
-    let pad = theme.metric_required("metric.padding.sm");
+    let radius = theme.metric_token("metric.radius.sm");
+    let pad = theme.metric_token("metric.padding.sm");
 
     let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
     let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
@@ -743,21 +743,21 @@ fn render_menu_from_runtime<H: UiHost>(
         let theme = cx.theme_snapshot();
         let enabled = menu.enabled;
 
-        let bg_hover = theme.color_required("color.hover.background");
-        let bg_open = alpha_mul(theme.color_required("color.selection.background"), 0.35);
-        let fg = theme.color_required("color.text.primary");
-        let fg_disabled = theme.color_required("color.text.disabled");
+        let bg_hover = theme.color_token("color.hover.background");
+        let bg_open = alpha_mul(theme.color_token("color.selection.background"), 0.35);
+        let fg = theme.color_token("color.text.primary");
+        let fg_disabled = theme.color_token("color.text.disabled");
         let ring = fret_ui::element::RingStyle {
             placement: fret_ui::element::RingPlacement::Outset,
             width: Px(1.0),
             offset: Px(1.0),
-            color: theme.color_required("color.focus.ring"),
+            color: theme.color_token("color.focus.ring"),
             offset_color: None,
-            corner_radii: Corners::all(theme.metric_required("metric.radius.sm")),
+            corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
         };
 
-        let font_size = theme.metric_required("font.size");
-        let font_line_height = theme.metric_required("font.line_height");
+        let font_size = theme.metric_token("font.size");
+        let font_line_height = theme.metric_token("font.line_height");
         let text_style = TextStyle {
             font: FontId::default(),
             size: font_size,
@@ -897,7 +897,7 @@ fn render_menu_from_runtime<H: UiHost>(
                     shadow: None,
                     border: Edges::all(Px(0.0)),
                     border_color: None,
-                    corner_radii: Corners::all(theme.metric_required("metric.radius.sm")),
+                    corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
                     ..Default::default()
                 },
                 |_cx| vec![content],
@@ -923,11 +923,11 @@ fn request_menu_overlay<H: UiHost>(
 ) {
     let window_margin = Px(8.0);
     let side_offset = Px(6.0);
-    let pad = theme.metric_required("metric.padding.sm");
-    let radius = theme.metric_required("metric.radius.sm");
+    let pad = theme.metric_token("metric.padding.sm");
+    let radius = theme.metric_token("metric.radius.sm");
 
-    let item_font_size = theme.metric_required("font.size");
-    let item_line_height = theme.metric_required("font.line_height");
+    let item_font_size = theme.metric_token("font.size");
+    let item_line_height = theme.metric_token("font.line_height");
     let item_text = TextStyle {
         font: FontId::default(),
         size: item_font_size,
@@ -987,8 +987,8 @@ fn request_menu_overlay<H: UiHost>(
             let submenu_for_panel =
                 menu::root::sync_root_open_and_ensure_submenu(cx, true, cx.root_id(), submenu_cfg);
 
-            let bg = theme.color_required("color.menu.background");
-            let border = theme.color_required("color.menu.border");
+            let bg = theme.color_token("color.menu.background");
+            let border = theme.color_token("color.menu.border");
 
             let open_for_panel_items = open_for_overlay.clone();
             let group_active_for_panel_items = group_active_for_overlay.clone();
@@ -1220,10 +1220,10 @@ fn render_menu_entries<H: UiHost>(
     item_text: TextStyle,
     first_item_focus_id: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>>,
 ) -> Vec<AnyElement> {
-    let fg = theme.color_required("color.text.primary");
-    let fg_muted = theme.color_required("color.text.muted");
-    let fg_disabled = theme.color_required("color.text.disabled");
-    let item_hover = theme.color_required("color.menu.item.hover");
+    let fg = theme.color_token("color.text.primary");
+    let fg_muted = theme.color_token("color.text.muted");
+    let fg_disabled = theme.color_token("color.text.disabled");
+    let item_hover = theme.color_token("color.menu.item.hover");
 
     let mut out = Vec::new();
     for entry in entries {
@@ -1240,7 +1240,7 @@ fn render_menu_entries<H: UiHost>(
                 out.push(cx.container(
                     ContainerProps {
                         layout,
-                        background: Some(theme.color_required("color.menu.border")),
+                        background: Some(theme.color_token("color.menu.border")),
                         ..Default::default()
                     },
                     |_cx| Vec::new(),
@@ -1513,7 +1513,7 @@ fn render_menu_item<H: UiHost>(
                 shadow: None,
                 border: Edges::all(Px(0.0)),
                 border_color: None,
-                corner_radii: Corners::all(theme.metric_required("metric.radius.sm")),
+                corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
                 ..Default::default()
             },
             move |cx| {

@@ -9,13 +9,13 @@ use crate::theme_tokens;
 fn font_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("font.size")
-        .unwrap_or_else(|| theme.metric_required("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"))
 }
 
 fn font_line_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("font.line_height")
-        .unwrap_or_else(|| theme.metric_required("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"))
 }
 
 pub(crate) fn text_xs_style(theme: &Theme) -> TextStyle {
@@ -230,11 +230,11 @@ pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
     let px = theme
         .metric_by_key("component.label.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.label.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     (
         TextStyle {

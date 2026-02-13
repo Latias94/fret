@@ -18,14 +18,14 @@ pub(crate) enum DialogActionInteraction {
 pub(crate) fn scrim_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.sys.color.scrim")
-        .unwrap_or_else(|| theme.color_required("md.sys.color.scrim"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.scrim"))
 }
 
 pub(crate) fn container_background(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.dialog.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-high"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-high"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-high"))
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
@@ -45,21 +45,21 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.dialog.container.shadow-color")
         .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn headline_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.dialog.headline.color")
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 pub(crate) fn supporting_text_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.dialog.supporting-text.color")
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }
 
 pub(crate) fn default_open_duration_ms(theme: &Theme) -> u32 {
@@ -122,7 +122,7 @@ pub(crate) fn action_label_color(theme: &Theme, interaction: DialogActionInterac
     theme
         .color_by_key(action_label_color_key(interaction))
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 fn action_state_layer_color_key(interaction: DialogActionInteraction) -> &'static str {
@@ -142,7 +142,7 @@ pub(crate) fn action_state_layer_color(
     theme
         .color_by_key(action_state_layer_color_key(interaction))
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 fn action_state_layer_opacity_key(interaction: DialogActionInteraction) -> Option<&'static str> {

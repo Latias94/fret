@@ -431,7 +431,7 @@ impl TextField {
                     let theme = Theme::global(&*cx.app);
                     theme
                         .color_by_key("md.sys.color.surface")
-                        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"))
+                        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"))
                 };
                 let mut outline_width_for_notch = Px(0.0);
                 vec![cx.flex(

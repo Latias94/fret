@@ -41,7 +41,7 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
     let disabled_text_color = alpha_mul(
         theme
             .color_by_key("muted-foreground")
-            .unwrap_or_else(|| theme.color_required("muted-foreground")),
+            .unwrap_or_else(|| theme.color_token("muted-foreground")),
         0.5,
     );
 
@@ -57,15 +57,15 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
         },
         text_color: theme
             .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground")),
+            .unwrap_or_else(|| theme.color_token("foreground")),
         disabled_text_color,
         row_hover: theme
             .color_by_key("list.hover.background")
             .or_else(|| theme.color_by_key("accent"))
-            .unwrap_or_else(|| theme.color_required("accent")),
+            .unwrap_or_else(|| theme.color_token("accent")),
         row_selected: theme
             .color_by_key("list.active.background")
             .or_else(|| theme.color_by_key("accent"))
-            .unwrap_or_else(|| theme.color_required("accent")),
+            .unwrap_or_else(|| theme.color_token("accent")),
     }
 }

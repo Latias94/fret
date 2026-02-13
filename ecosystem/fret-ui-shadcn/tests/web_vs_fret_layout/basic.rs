@@ -202,7 +202,7 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
             layout: Default::default(),
             text: Arc::from("You agree to our Terms of Service and Privacy Policy."),
             style: None,
-            color: Some(theme.color_required("muted-foreground")),
+            color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         });

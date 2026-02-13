@@ -467,8 +467,8 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                 cx.observe_model(&models.synth_pointer_debug, Invalidation::Layout);
 
                 let theme = Theme::global(&*cx.app);
-                let padding = theme.metric_required("metric.padding.md");
-                let background = theme.color_required("background");
+                let padding = theme.metric_token("metric.padding.md");
+                let background = theme.color_token("background");
 
                 let drag_state = cx
                     .app
@@ -873,7 +873,7 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
     ) {
         let border_color = Color {
             a: 0.80,
-            ..theme.color_required("primary")
+            ..theme.color_token("primary")
         };
         let draw_rect = layout.draw_rect;
         scene.push(SceneOp::Quad {

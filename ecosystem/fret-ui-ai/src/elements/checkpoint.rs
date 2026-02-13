@@ -124,7 +124,7 @@ impl CheckpointIcon {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
+        let fg = theme.color_token("muted-foreground");
         let color = self.color.unwrap_or(ColorRef::Color(fg));
         let icon = decl_icon::icon_with(cx, self.icon, Some(self.size), Some(color));
         let layout = decl_style::layout_style(&theme, self.layout);

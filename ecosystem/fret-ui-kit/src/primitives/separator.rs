@@ -57,7 +57,7 @@ impl Separator {
 
             let border = theme
                 .color_by_key("border")
-                .unwrap_or_else(|| theme.color_required("border"));
+                .unwrap_or_else(|| theme.color_token("border"));
             let thickness = self.thickness.unwrap_or_else(|| {
                 theme
                     .metric_by_key("component.separator.px")

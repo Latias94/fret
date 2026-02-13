@@ -211,11 +211,11 @@ impl ChartTooltipContent {
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
             .unwrap_or(Px(16.0));
 
-        let bg = theme.color_required("background");
+        let bg = theme.color_token("background");
         let border = theme
             .color_by_key("border/50")
             .or_else(|| theme.color_by_key("border"))
-            .unwrap_or_else(|| theme.color_required("border"));
+            .unwrap_or_else(|| theme.color_token("border"));
 
         let test_id_prefix = self.test_id_prefix.clone();
 
@@ -274,7 +274,7 @@ impl ChartTooltipContent {
                             .color
                             .as_ref()
                             .map(|c| c.resolve(&theme))
-                            .unwrap_or_else(|| theme.color_required("foreground"));
+                            .unwrap_or_else(|| theme.color_token("foreground"));
 
                         let (w, h) = match self.indicator {
                             ChartTooltipIndicator::Dot => (dot, dot),
@@ -303,7 +303,7 @@ impl ChartTooltipContent {
                     row.push(
                         ui::text(cx, item.label)
                             .text_xs()
-                            .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                             .line_height_px(text_xs_px)
                             .h_px(MetricRef::Px(text_xs_px))
                             .into_element(cx),
@@ -348,7 +348,7 @@ impl ChartTooltipContent {
                 for item in self.items {
                     let label = ui::text(cx, item.label)
                         .text_xs()
-                        .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
@@ -360,7 +360,7 @@ impl ChartTooltipContent {
                         .into_element(cx);
                     let suffix = ui::text(cx, "kcal")
                         .text_xs()
-                        .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
@@ -397,7 +397,7 @@ impl ChartTooltipContent {
                         .color
                         .as_ref()
                         .map(|c| c.resolve(&theme))
-                        .unwrap_or_else(|| theme.color_required("foreground"));
+                        .unwrap_or_else(|| theme.color_token("foreground"));
                     let indicator = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
@@ -416,7 +416,7 @@ impl ChartTooltipContent {
                     );
                     let label = ui::text(cx, item.label)
                         .text_xs()
-                        .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
@@ -428,7 +428,7 @@ impl ChartTooltipContent {
                         .into_element(cx);
                     let suffix = ui::text(cx, "kcal")
                         .text_xs()
-                        .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
@@ -481,7 +481,7 @@ impl ChartTooltipContent {
                             .into_element(cx);
                         let total_suffix = ui::text(cx, "kcal")
                             .text_xs()
-                            .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                             .line_height_px(text_xs_line_height)
                             .h_px(MetricRef::Px(text_xs_line_height))
                             .into_element(cx);
@@ -507,7 +507,7 @@ impl ChartTooltipContent {
                                     bottom: Px(0.0),
                                     left: Px(0.0),
                                 },
-                                border_color: Some(theme.color_required("border")),
+                                border_color: Some(theme.color_token("border")),
                                 ..Default::default()
                             },
                             move |cx| {
@@ -750,7 +750,7 @@ impl ChartLegendContent {
                     .color
                     .as_ref()
                     .map(|c| c.resolve(&theme))
-                    .unwrap_or_else(|| theme.color_required("foreground"));
+                    .unwrap_or_else(|| theme.color_token("foreground"));
 
                 let indicator = cx.container(
                     ContainerProps {

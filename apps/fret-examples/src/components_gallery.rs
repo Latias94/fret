@@ -315,7 +315,7 @@ impl ComponentsGalleryDriver {
                     };
 
                     let theme = cx.theme_snapshot();
-                    let padding = theme.metric_required("metric.padding.md");
+                    let padding = theme.metric_token("metric.padding.md");
 
                     let mut root_layout = LayoutStyle::default();
                     root_layout.size.width = Length::Fill;
@@ -414,7 +414,7 @@ impl ComponentsGalleryDriver {
                     let mut props = ContainerProps::default();
                     props.layout = root_layout;
                     props.padding = Edges::all(padding);
-                    props.background = Some(theme.color_required("background"));
+                    props.background = Some(theme.color_token("background"));
 
                     return vec![cx.container(props, |_cx| vec![header, table])];
                 }
@@ -455,8 +455,8 @@ impl ComponentsGalleryDriver {
                 tree_slot_layout.flex.grow = 1.0;
                 tree_slot_layout.flex.basis = Length::Px(Px(0.0));
 
-                let padding = theme.metric_required("metric.padding.md");
-                let bg = theme.color_required("background");
+                let padding = theme.metric_token("metric.padding.md");
+                let bg = theme.color_token("background");
 
                  vec![ui::v_flex(cx, |cx| {
                                  vec![
@@ -547,14 +547,14 @@ impl ComponentsGalleryDriver {
                                             wrap: true,
                                         },
                                         |cx| {
-                                            let border = theme.color_required("border");
+                                            let border = theme.color_token("border");
                                             let swatches = [
-                                                ("background", theme.color_required("background")),
-                                                ("foreground", theme.color_required("foreground")),
-                                                ("card", theme.color_required("card")),
-                                                ("muted", theme.color_required("muted")),
-                                                ("primary", theme.color_required("primary")),
-                                                ("ring", theme.color_required("ring")),
+                                                ("background", theme.color_token("background")),
+                                                ("foreground", theme.color_token("foreground")),
+                                                ("card", theme.color_token("card")),
+                                                ("muted", theme.color_token("muted")),
+                                                ("primary", theme.color_token("primary")),
+                                                ("ring", theme.color_token("ring")),
                                                 ("border", border),
                                             ];
 
@@ -609,11 +609,11 @@ impl ComponentsGalleryDriver {
                                                 layout
                                             },
                                             padding: Edges::all(
-                                                theme.metric_required("metric.padding.md"),
+                                                theme.metric_token("metric.padding.md"),
                                             ),
-                                            background: Some(theme.color_required("card")),
+                                            background: Some(theme.color_token("card")),
                                             border: Edges::all(Px(1.0)),
-                                            border_color: Some(theme.color_required("border")),
+                                            border_color: Some(theme.color_token("border")),
                                             corner_radii: Corners::all(Px(8.0)),
                                             ..Default::default()
                                         },
@@ -804,9 +804,9 @@ impl ComponentsGalleryDriver {
                                                                 style.font = FontId::family(name);
                                                             }
                                                             style.size =
-                                                                theme.metric_required("font.size");
+                                                                theme.metric_token("font.size");
                                                             style.line_height = Some(
-                                                                theme.metric_required(
+                                                                theme.metric_token(
                                                                     "font.line_height",
                                                                 ),
                                                             );
@@ -837,9 +837,9 @@ impl ComponentsGalleryDriver {
                                                             let mut style = TextStyle::default();
                                                             style.font = FontId::family(name);
                                                             style.size =
-                                                                theme.metric_required("font.size");
+                                                                theme.metric_token("font.size");
                                                             style.line_height =
-                                                                Some(theme.metric_required(
+                                                                Some(theme.metric_token(
                                                                     "font.line_height",
                                                                 ));
 
@@ -1056,11 +1056,11 @@ impl ComponentsGalleryDriver {
                                                             },
                                                             padding: Edges::all(Px(8.0)),
                                                             background: Some(
-                                                                theme.color_required("card"),
+                                                                theme.color_token("card"),
                                                             ),
                                                             border: Edges::all(Px(1.0)),
                                                             border_color: Some(
-                                                                theme.color_required("border"),
+                                                                theme.color_token("border"),
                                                             ),
                                                             ..Default::default()
                                                         },

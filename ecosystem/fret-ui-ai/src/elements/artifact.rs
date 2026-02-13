@@ -35,7 +35,7 @@ fn token_color_with_alpha(
     let base = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key(fallback_key))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+        .unwrap_or_else(|| theme.color_token("foreground"));
     alpha_mul(base, alpha)
 }
 
@@ -43,7 +43,7 @@ fn resolve_muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn action_button_style() -> ButtonStyle {
@@ -197,7 +197,7 @@ impl ArtifactHeader {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let bg = token_color_with_alpha(&theme, "muted", "muted.background", 0.5);
 
@@ -277,13 +277,13 @@ impl ArtifactTitle {
                 font: FontId::default(),
                 size: theme
                     .metric_by_key("component.artifact.title_text_px")
-                    .unwrap_or_else(|| theme.metric_required("font.size")),
+                    .unwrap_or_else(|| theme.metric_token("font.size")),
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("font.line_height")),
+                line_height: Some(theme.metric_token("font.line_height")),
                 letter_spacing_em: None,
             }),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
         });
@@ -338,10 +338,10 @@ impl ArtifactDescription {
                 font: FontId::default(),
                 size: theme
                     .metric_by_key("component.artifact.description_text_px")
-                    .unwrap_or_else(|| theme.metric_required("font.size")),
+                    .unwrap_or_else(|| theme.metric_token("font.size")),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("font.line_height")),
+                line_height: Some(theme.metric_token("font.line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(muted_fg),

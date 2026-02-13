@@ -94,7 +94,7 @@ impl Size {
     pub fn control_text_px(self, theme: &Theme) -> Px {
         let base = theme
             .metric_by_key("font.size")
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let fallback = match self {
             // Keep the current defaults when `metric.font.size == 13px`,
             // while allowing themes to scale typography globally.
@@ -119,10 +119,10 @@ impl Size {
             theme,
             "control.radius",
             match self {
-                Self::XSmall => theme.metric_required("metric.radius.sm"),
-                Self::Small => theme.metric_required("metric.radius.sm"),
-                Self::Medium => theme.metric_required("metric.radius.md"),
-                Self::Large => theme.metric_required("metric.radius.md"),
+                Self::XSmall => theme.metric_token("metric.radius.sm"),
+                Self::Small => theme.metric_token("metric.radius.sm"),
+                Self::Medium => theme.metric_token("metric.radius.md"),
+                Self::Large => theme.metric_token("metric.radius.md"),
             },
         )
     }

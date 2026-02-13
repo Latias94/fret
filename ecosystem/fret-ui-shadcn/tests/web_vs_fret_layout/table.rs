@@ -8,11 +8,11 @@ fn text_sm_nowrap<H: fret_ui::UiHost>(
     let size = theme
         .metric_by_key("component.text.sm_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.text.sm_line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     ui::text(cx, text)
         .text_size_px(size)

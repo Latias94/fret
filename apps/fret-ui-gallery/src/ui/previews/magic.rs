@@ -4,8 +4,8 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_magic as magic;
 
 pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let muted = cx.with_theme(|theme| theme.color_required("muted"));
-    let border = cx.with_theme(|theme| theme.color_required("border"));
+    let muted = cx.with_theme(|theme| theme.color_token("muted"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
 
     let mut surface_layout = LayoutStyle::default();
     surface_layout.size.width = Length::Px(Px(560.0));
@@ -98,9 +98,9 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec
 pub(in crate::ui) fn preview_magic_border_beam(
     cx: &mut ElementContext<'_, App>,
 ) -> Vec<AnyElement> {
-    let base = cx.with_theme(|theme| theme.color_required("card"));
-    let border = cx.with_theme(|theme| theme.color_required("border"));
-    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+    let base = cx.with_theme(|theme| theme.color_token("card"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
+    let ring = cx.with_theme(|theme| theme.color_token("ring"));
 
     let mut highlight = ring;
     highlight.a = (highlight.a * 0.85).clamp(0.0, 1.0);
@@ -169,8 +169,8 @@ pub(in crate::ui) fn preview_magic_border_beam(
 }
 
 pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let muted = cx.with_theme(|theme| theme.color_required("muted"));
-    let border = cx.with_theme(|theme| theme.color_required("border"));
+    let muted = cx.with_theme(|theme| theme.color_token("muted"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
 
     let mut dock_layout = LayoutStyle::default();
     dock_layout.size.width = Length::Px(Px(620.0));
@@ -229,7 +229,7 @@ pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec
 }
 
 pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+    let ring = cx.with_theme(|theme| theme.color_token("ring"));
 
     let mut panel_layout = LayoutStyle::default();
     panel_layout.size.width = Length::Px(Px(560.0));
@@ -298,8 +298,8 @@ pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Ve
 }
 
 pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let muted = cx.with_theme(|theme| theme.color_required("muted"));
-    let border = cx.with_theme(|theme| theme.color_required("border"));
+    let muted = cx.with_theme(|theme| theme.color_token("muted"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
 
     let mut surface_layout = LayoutStyle::default();
     surface_layout.size.width = Length::Fill;
@@ -365,9 +365,9 @@ pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> 
 }
 
 pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let base = cx.with_theme(|theme| theme.color_required("card"));
-    let border = cx.with_theme(|theme| theme.color_required("border"));
-    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+    let base = cx.with_theme(|theme| theme.color_token("card"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
+    let ring = cx.with_theme(|theme| theme.color_token("ring"));
 
     let mut highlight = ring;
     highlight.a = (highlight.a * 0.35).clamp(0.0, 1.0);
@@ -440,9 +440,9 @@ pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec
 }
 
 pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let base = cx.with_theme(|theme| theme.color_required("card"));
-    let border = cx.with_theme(|theme| theme.color_required("border"));
-    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+    let base = cx.with_theme(|theme| theme.color_token("card"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
+    let ring = cx.with_theme(|theme| theme.color_token("ring"));
 
     let mut panel_layout = LayoutStyle::default();
     panel_layout.size.width = Length::Px(Px(320.0));
@@ -537,9 +537,9 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
 pub(in crate::ui) fn preview_magic_sparkles_text(
     cx: &mut ElementContext<'_, App>,
 ) -> Vec<AnyElement> {
-    let base = cx.with_theme(|theme| theme.color_required("card"));
-    let border = cx.with_theme(|theme| theme.color_required("border"));
-    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+    let base = cx.with_theme(|theme| theme.color_token("card"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
+    let ring = cx.with_theme(|theme| theme.color_token("ring"));
 
     let mut surface_layout = LayoutStyle::default();
     surface_layout.size.width = Length::Px(Px(560.0));

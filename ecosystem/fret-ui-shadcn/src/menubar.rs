@@ -42,7 +42,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 }
 
 fn is_dark_background(theme: &Theme) -> bool {
-    let bg = theme.color_required("background");
+    let bg = theme.color_token("background");
     let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
     luma < 0.5
 }
@@ -302,9 +302,9 @@ impl MenubarShortcut {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
-        let font_size = theme.metric_required("font.size");
-        let font_line_height = theme.metric_required("font.line_height");
+        let fg = theme.color_token("muted-foreground");
+        let font_size = theme.metric_token("font.size");
+        let font_line_height = theme.metric_token("font.line_height");
 
         ui::text(cx, self.text)
             // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
@@ -881,7 +881,7 @@ impl Menubar {
                 .border_color
                 .as_ref()
                 .map(|c| c.resolve(&theme))
-                .unwrap_or_else(|| theme.color_required("border"));
+                .unwrap_or_else(|| theme.color_token("border"));
 
             let pad_x = MetricRef::space(Space::N1).resolve(&theme);
             let pad_y = MetricRef::space(Space::N1).resolve(&theme);
@@ -897,7 +897,7 @@ impl Menubar {
                 .background
                 .as_ref()
                 .map(|c| c.resolve(&theme))
-                .unwrap_or_else(|| theme.color_required("background"));
+                .unwrap_or_else(|| theme.color_token("background"));
             let shadow = decl_style::shadow_xs(&theme, radius);
             let layout = decl_style::layout_style(&theme, self.layout.clone());
 
@@ -1201,13 +1201,13 @@ impl MenubarMenuEntries {
 
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
-            let bg_hover = theme.color_required("accent");
+            let bg_hover = theme.color_token("accent");
             let bg_open = alpha_mul(bg_hover, 0.35);
-            let fg = theme.color_required("foreground");
-            let fg_muted = theme.color_required("muted-foreground");
+            let fg = theme.color_token("foreground");
+            let fg_muted = theme.color_token("muted-foreground");
 
-            let font_size = theme.metric_required("font.size");
-            let font_line_height = theme.metric_required("font.line_height");
+            let font_size = theme.metric_token("font.size");
+            let font_line_height = theme.metric_token("font.line_height");
             let text_style = TextStyle {
                 font: FontId::default(),
                 size: font_size,
@@ -1421,8 +1421,8 @@ impl MenubarMenuEntries {
                         let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                         let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                        let font_size = theme.metric_required("font.size");
-                        let font_line_height = theme.metric_required("font.line_height");
+                        let font_size = theme.metric_token("font.size");
+                        let font_line_height = theme.metric_token("font.line_height");
                         let mut desired = menu_panel_desired_size(
                             &entries,
                             Px(192.0),
@@ -1552,10 +1552,10 @@ impl MenubarMenuEntries {
                             ..Default::default()
                         };
 
-                        let border = theme.color_required("border");
+                        let border = theme.color_token("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
-                        let destructive_fg = theme.color_required("destructive");
+                        let destructive_fg = theme.color_token("destructive");
                         let destructive_bg_alpha = if is_dark_background(&theme) { 0.20 } else { 0.10 };
                         let destructive_bg = theme
                             .color_by_key(if destructive_bg_alpha >= 0.2 {
@@ -2888,7 +2888,7 @@ impl MenubarMenuEntries {
                                                                                 states.set(WidgetState::Open, false);
 
                                                                                 let highlight_bg =
-                                                                                    theme.color_required("accent");
+                                                                                    theme.color_token("accent");
                                                                                 let bg_prop =
                                                                                     WidgetStateProperty::new(Color::TRANSPARENT)
                                                                                         .when(WidgetStates::HOVERED, highlight_bg)
@@ -3041,7 +3041,7 @@ impl MenubarMenuEntries {
                                                                                 states.set(WidgetState::Open, false);
 
                                                                                 let highlight_bg =
-                                                                                    theme.color_required("accent");
+                                                                                    theme.color_token("accent");
                                                                                 let bg_prop =
                                                                                     WidgetStateProperty::new(Color::TRANSPARENT)
                                                                                         .when(WidgetStates::HOVERED, highlight_bg)
@@ -3187,7 +3187,7 @@ impl MenubarMenuEntries {
                                                                                     if variant == MenubarItemVariant::Destructive {
                                                                                         destructive_bg
                                                                                     } else {
-                                                                                        theme.color_required("accent")
+                                                                                        theme.color_token("accent")
                                                                                     };
                                                                                 let base_fg =
                                                                                     if variant == MenubarItemVariant::Destructive {
@@ -4593,7 +4593,7 @@ mod tests {
         render_frame(&mut ui, &mut app, &mut services, window, bounds);
 
         let theme = Theme::global(&app).clone();
-        let expected_bg = theme.color_required("accent");
+        let expected_bg = theme.color_token("accent");
 
         let mut scene = fret_core::Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);

@@ -589,7 +589,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
     let radius = theme.metric_by_key("metric.radius.md").unwrap_or(Px(8.0));
     let radius_sm = theme.metric_by_key("metric.radius.sm").unwrap_or(Px(6.0));
 
-    let fg = theme.color_required("foreground");
+    let fg = theme.color_token("foreground");
     let muted_fg = theme.color_by_key("muted-foreground").unwrap_or(fg);
     let card = theme
         .color_by_key("card")

@@ -1977,7 +1977,7 @@ fn select_list_item<H: UiHost>(
                     let theme = Theme::global(&*cx.app);
                     let state_layer_color = theme
                         .color_by_key("md.sys.color.on-surface")
-                        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+                        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
                     let pressed_opacity = theme
                         .number_by_key("md.sys.state.pressed.state-layer-opacity")
                         .unwrap_or(0.1);
