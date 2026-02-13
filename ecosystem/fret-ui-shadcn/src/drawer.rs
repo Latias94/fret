@@ -584,6 +584,15 @@ impl Drawer {
                 .height;
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
 
+            if let Some(bounds) = cx.last_bounds_for_element(content.id) {
+                let drawer_h = drawer_drag_snap_height(bounds.size.height, side);
+                let _ = cx.app.models_mut().update(&runtime, |st| {
+                    if st.drawer_height != drawer_h {
+                        st.drawer_height = drawer_h;
+                    }
+                });
+            }
+
             if is_open && !was_open {
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = Px(0.0));
                 if has_snap_points {
@@ -613,6 +622,10 @@ impl Drawer {
                 if needs_init {
                     if let Some(bounds) = cx.last_bounds_for_element(content.id) {
                         let drawer_h = drawer_drag_snap_height(bounds.size.height, side);
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&runtime, |st| st.drawer_height = drawer_h);
                         let points = snap_points.as_ref().expect("snap points");
                         let mut idx = default_snap_point_index
                             .unwrap_or_else(|| points.len().saturating_sub(1));
@@ -695,7 +708,7 @@ impl Drawer {
                     .unwrap_or(Px(0.0));
                 let _ = host.models_mut().update(&runtime_for_down, |st| {
                     st.dragging = true;
-                    st.start = Point::new(down.position.x, Px(down.position.y.0 + start_offset.0));
+                    st.start = down.position;
                     st.start_offset = start_offset;
                     st.settling = false;
                     st.last_offset = start_offset;
@@ -726,13 +739,7 @@ impl Drawer {
                     return false;
                 }
 
-                let current_offset = host
-                    .models_mut()
-                    .read(&offset_for_move, |v| *v)
-                    .ok()
-                    .unwrap_or(Px(0.0));
-                let global_y = mv.position.y.0 + current_offset.0;
-                let dy = global_y - start.y.0;
+                let dy = mv.position.y.0 - start.y.0;
                 let next = Px((start_offset.0 + dy).max(0.0).min(window_height.0));
                 let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
                 let velocity = mv.velocity_window.map(|v| v.y.0).unwrap_or_else(|| {
@@ -758,9 +765,10 @@ impl Drawer {
             let snap_points_for_up = snap_points.clone();
             let inertia_bounce_spring = shadcn_drawer_inertia_bounce_spring_description(&*cx.app);
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, up| {
-                let Ok((dragging, stored_velocity)) = host
-                    .models_mut()
-                    .read(&runtime_for_up, |st| (st.dragging, st.velocity))
+                let Ok((dragging, stored_velocity, stored_drawer_h)) =
+                    host.models_mut().read(&runtime_for_up, |st| {
+                        (st.dragging, st.velocity, st.drawer_height)
+                    })
                 else {
                     return false;
                 };
@@ -771,9 +779,12 @@ impl Drawer {
                 let velocity_is_measured = velocity_window.is_some();
                 let velocity = velocity_window.unwrap_or(stored_velocity);
 
-                host.release_pointer_capture();
                 let bounds = host.bounds();
-                let drawer_h = drawer_drag_snap_height(bounds.size.height, side);
+                let drawer_h = if stored_drawer_h.0 > 0.0 {
+                    stored_drawer_h
+                } else {
+                    drawer_drag_snap_height(bounds.size.height, side)
+                };
                 let offset = host
                     .models_mut()
                     .read(&offset_for_up, |v| *v)
@@ -826,8 +837,14 @@ impl Drawer {
                     let close_threshold = min_visible
                         .map(|v| Px((drawer_h.0 - v.0 * 0.5).max(DRAWER_DRAG_DISMISS_MIN_PX)))
                         .unwrap_or_else(|| Px((drawer_h.0 * 0.25).max(DRAWER_DRAG_DISMISS_MIN_PX)));
+                    let close_threshold = Px(close_threshold.0.max(
+                        (drawer_h.0 * DRAWER_DRAG_SNAP_DISMISS_MIN_DRAWER_FRACTION).max(
+                            (window_height.0 * DRAWER_DRAG_SNAP_DISMISS_MIN_VIEWPORT_FRACTION)
+                                .max(DRAWER_DRAG_DISMISS_MIN_PX),
+                        ),
+                    ));
 
-                    if projected_offset.0 >= close_threshold.0 {
+                    if projected_offset.0 > close_threshold.0 {
                         let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
@@ -848,6 +865,7 @@ impl Drawer {
                             st.settle_velocity = velocity;
                             st.dragging = false;
                         });
+                        host.release_pointer_capture();
                         host.request_redraw(_cx.window);
                         return true;
                     }
@@ -869,6 +887,7 @@ impl Drawer {
                 let _ = host.models_mut().update(&runtime_for_up, |st| {
                     st.dragging = false;
                 });
+                host.release_pointer_capture();
                 host.request_redraw(_cx.window);
                 true
             });
@@ -900,6 +919,8 @@ impl Drawer {
 const DRAWER_DRAG_HANDLE_HIT_HEIGHT: f32 = 32.0;
 const DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH: f32 = 80.0;
 const DRAWER_DRAG_DISMISS_MIN_PX: f32 = 30.0;
+const DRAWER_DRAG_SNAP_DISMISS_MIN_DRAWER_FRACTION: f32 = 0.8;
+const DRAWER_DRAG_SNAP_DISMISS_MIN_VIEWPORT_FRACTION: f32 = 0.25;
 const DRAWER_DRAG_FLING_DRAG: f64 = 0.135;
 const DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC: f32 = 450.0;
 const DRAWER_DRAG_FLING_PROJECTION_TIME: std::time::Duration =
@@ -910,6 +931,7 @@ struct DrawerDragRuntime {
     dragging: bool,
     start: Point,
     start_offset: Px,
+    drawer_height: Px,
     last_tick: TickId,
     last_offset: Px,
     velocity: f32,
@@ -926,6 +948,7 @@ impl Default for DrawerDragRuntime {
             dragging: false,
             start: Point::new(Px(0.0), Px(0.0)),
             start_offset: Px(0.0),
+            drawer_height: Px(0.0),
             last_tick: TickId(0),
             last_offset: Px(0.0),
             velocity: 0.0,

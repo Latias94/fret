@@ -51,11 +51,11 @@
     },
 
     {
-      "type": "click_stable",
-      "target": { "kind": "role_and_name", "role": "button", "name": "Close toast" },
-      "stable_frames": 6,
-      "max_move_px": 1.0,
-      "timeout_frames": 240
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "toast-entry-1" },
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "steps": 12
     },
     { "type": "wait_frames", "n": 1 },
 
