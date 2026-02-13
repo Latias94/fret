@@ -216,6 +216,18 @@ impl ScriptV2Builder {
     pub fn capture_bundle(self, label: impl Into<Option<String>>) -> Self {
         self.push(UiActionStepV2::CaptureBundle {
             label: label.into(),
+            max_snapshots: None,
+        })
+    }
+
+    pub fn capture_bundle_with_max_snapshots(
+        self,
+        label: impl Into<Option<String>>,
+        max_snapshots: u32,
+    ) -> Self {
+        self.push(UiActionStepV2::CaptureBundle {
+            label: label.into(),
+            max_snapshots: Some(max_snapshots),
         })
     }
 

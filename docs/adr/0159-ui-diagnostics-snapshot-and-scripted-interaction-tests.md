@@ -255,7 +255,7 @@ Note: the implementation currently supports a v1 MVP step set, and also supports
 - `WaitFrames { n }`
 - `WaitUntil { predicate, timeout_frames }` (predicate evaluates on `UiDiagnosticsSnapshotV1`)
 - `Assert { predicate }`
-- `CaptureBundle { label }` (exports diagnostics bundle on demand)
+- `CaptureBundle { label, max_snapshots? }` (exports diagnostics bundle on demand)
 
 Execution rules:
 

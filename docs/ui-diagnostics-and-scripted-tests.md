@@ -469,7 +469,7 @@ Supported selectors (v1 MVP):
 - `wait_frames`
 - `wait_until` (schema v2 only: optional `window` target)
 - `assert` (schema v2 only: optional `window` target)
-- `capture_bundle`
+- `capture_bundle` (optional `label`, optional `max_snapshots`)
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
@@ -499,6 +499,7 @@ Notes:
 - `capture_bundle` always writes a new `bundle.json` directory.
   - When `FRET_DIAG_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
   - If you want an explicit screenshot step, follow with `capture_screenshot`.
+  - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 - `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
 

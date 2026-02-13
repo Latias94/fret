@@ -282,7 +282,7 @@ pub struct UiDiagnosticsService {
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
-    pending_force_dump_label: Option<String>,
+    pending_force_dump: Option<PendingForceDumpRequest>,
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
     last_pick_run_id: u64,
@@ -305,6 +305,12 @@ pub struct UiDiagnosticsService {
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
+}
+
+#[derive(Debug, Clone)]
+struct PendingForceDumpRequest {
+    label: String,
+    dump_max_snapshots: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -895,6 +901,7 @@ impl UiDiagnosticsService {
 
         let mut output = UiScriptFrameOutput::default();
         let mut force_dump_label: Option<String> = None;
+        let mut force_dump_max_snapshots: Option<usize> = None;
         let mut stop_script = false;
         let mut failure_reason: Option<String> = None;
         let mut handoff_to: Option<AppWindowId> = None;
@@ -1147,9 +1154,13 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
-            UiActionStepV2::CaptureBundle { label } => {
+            UiActionStepV2::CaptureBundle {
+                label,
+                max_snapshots,
+            } => {
                 force_dump_label =
                     Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
+                force_dump_max_snapshots = max_snapshots.map(|n| n as usize);
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
@@ -4463,7 +4474,7 @@ impl UiDiagnosticsService {
                     self.dump_bundle(Some(label));
                 }
             } else if let Some(label) = force_dump_label {
-                self.request_force_dump(label);
+                self.request_force_dump(label, force_dump_max_snapshots);
             }
 
             let reason_code = failure_reason
@@ -4488,7 +4499,7 @@ impl UiDiagnosticsService {
             });
         } else {
             if let Some(label) = force_dump_label {
-                self.request_force_dump(label);
+                self.request_force_dump(label, force_dump_max_snapshots);
             }
 
             if active.next_step >= active.steps.len() {
@@ -5291,8 +5302,8 @@ impl UiDiagnosticsService {
 
         self.poll_ws_inbox();
 
-        if let Some(label) = self.pending_force_dump_label.take() {
-            return self.dump_bundle(Some(&label));
+        if let Some(pending) = self.pending_force_dump.take() {
+            return self.dump_bundle_with_options(Some(&pending.label), pending.dump_max_snapshots);
         }
 
         if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
@@ -5324,8 +5335,11 @@ impl UiDiagnosticsService {
         self.dump_bundle(None)
     }
 
-    fn request_force_dump(&mut self, label: String) {
-        self.pending_force_dump_label = Some(sanitize_label(&label));
+    fn request_force_dump(&mut self, label: String, dump_max_snapshots: Option<usize>) {
+        self.pending_force_dump = Some(PendingForceDumpRequest {
+            label: sanitize_label(&label),
+            dump_max_snapshots,
+        });
     }
 
     #[cfg(feature = "diagnostics-ws")]
@@ -5397,11 +5411,16 @@ impl UiDiagnosticsService {
                 self.pick_armed_run_id = Some(self.next_pick_run_id());
             }
             "bundle.dump" => {
-                let label = serde_json::from_value::<DevtoolsBundleDumpV1>(msg.payload)
-                    .ok()
-                    .and_then(|v| v.label)
-                    .unwrap_or_else(|| "bundle".to_string());
-                self.request_force_dump(label);
+                let (label, dump_max_snapshots) =
+                    if let Ok(req) = serde_json::from_value::<DevtoolsBundleDumpV1>(msg.payload) {
+                        (
+                            req.label.unwrap_or_else(|| "bundle".to_string()),
+                            req.max_snapshots.map(|n| n as usize),
+                        )
+                    } else {
+                        ("bundle".to_string(), None)
+                    };
+                self.request_force_dump(label, dump_max_snapshots);
             }
             "script.push" | "script.run" => {
                 let script_value = msg
@@ -5515,6 +5534,14 @@ impl UiDiagnosticsService {
     }
 
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
+        self.dump_bundle_with_options(label, None)
+    }
+
+    fn dump_bundle_with_options(
+        &mut self,
+        label: Option<&str>,
+        dump_max_snapshots_override: Option<usize>,
+    ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
         if let Some(label) = label {
@@ -5530,10 +5557,23 @@ impl UiDiagnosticsService {
                 || self.pending_script.is_some()
                 || self.pending_script_run_id.is_some()
                 || label.unwrap_or_default().trim().starts_with("script-step-"));
-        let dump_max_snapshots = if is_script_dump {
-            self.cfg.script_dump_max_snapshots
-        } else {
-            self.cfg.max_snapshots
+        let dump_max_snapshots = {
+            let default = if is_script_dump {
+                self.cfg.script_dump_max_snapshots
+            } else {
+                self.cfg.max_snapshots
+            };
+
+            match dump_max_snapshots_override {
+                Some(want) => {
+                    if self.cfg.max_snapshots == 0 {
+                        0
+                    } else {
+                        want.clamp(1, self.cfg.max_snapshots)
+                    }
+                }
+                None => default,
+            }
         };
 
         let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);

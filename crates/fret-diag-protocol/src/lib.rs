@@ -128,6 +128,8 @@ pub enum UiActionStepV1 {
     },
     CaptureBundle {
         label: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_snapshots: Option<u32>,
     },
     CaptureScreenshot {
         label: Option<String>,
@@ -337,6 +339,8 @@ pub enum UiActionStepV2 {
     },
     CaptureBundle {
         label: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_snapshots: Option<u32>,
     },
     CaptureScreenshot {
         label: Option<String>,
@@ -579,7 +583,13 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 window: None,
                 predicate,
             },
-            UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
+            UiActionStepV1::CaptureBundle {
+                label,
+                max_snapshots,
+            } => Self::CaptureBundle {
+                label,
+                max_snapshots,
+            },
             UiActionStepV1::CaptureScreenshot {
                 label,
                 timeout_frames,
@@ -983,6 +993,13 @@ pub struct DevtoolsBundleDumpV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
+    /// Optional per-dump cap on how many snapshots are included in the exported bundle.
+    ///
+    /// When omitted, the runtime uses its configured dump cap (typically
+    /// `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS` for script-driven dumps, and
+    /// `FRET_DIAG_MAX_SNAPSHOTS` for manual dumps).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_snapshots: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

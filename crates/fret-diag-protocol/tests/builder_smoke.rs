@@ -10,12 +10,24 @@ fn builder_v2_roundtrip_smoke() {
         .wait_exists(test_id("todo-item-4-done"), 60)
         .assert_exists(test_id("todo-item-4-done"))
         .wait_exists(role_and_name("button", "Remove"), 60)
-        .capture_bundle(Some("builder-smoke".to_string()))
+        .capture_bundle_with_max_snapshots(Some("builder-smoke".to_string()), 240)
         .build();
 
     assert_eq!(script.schema_version, 2);
 
     let value_1 = serde_json::to_value(&script).expect("script must serialize");
+    let steps = value_1
+        .get("steps")
+        .and_then(|v| v.as_array())
+        .expect("script must serialize steps as an array");
+    let capture = steps
+        .iter()
+        .find(|s| s.get("type").and_then(|v| v.as_str()) == Some("capture_bundle"))
+        .expect("script must include a capture_bundle step");
+    assert_eq!(
+        capture.get("max_snapshots").and_then(|v| v.as_u64()),
+        Some(240)
+    );
     let script_2: UiActionScriptV2 =
         serde_json::from_value(value_1.clone()).expect("script must parse after serialize");
     let value_2 = serde_json::to_value(&script_2).expect("script must serialize again");

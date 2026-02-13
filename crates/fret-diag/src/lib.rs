@@ -293,6 +293,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut devtools_ws_url: Option<String> = None;
     let mut devtools_token: Option<String> = None;
     let mut devtools_session_id: Option<String> = None;
+    let mut touch_exit_after_run: bool = false;
 
     fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
         if env.iter().any(|(k, _v)| k == key) {
@@ -408,6 +409,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --devtools-session-id".to_string());
                 };
                 devtools_session_id = Some(v);
+                i += 1;
+            }
+            "--touch-exit-after-run" => {
+                touch_exit_after_run = true;
                 i += 1;
             }
             "--pick-trigger-path" => {
@@ -1550,6 +1555,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 .to_string(),
         );
     }
+    if sub != "run" && touch_exit_after_run {
+        return Err("--touch-exit-after-run is only supported with `diag run`".to_string());
+    }
 
     let workspace_root = crate::cli::workspace_root()?;
 
@@ -1896,6 +1904,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             .to_string(),
                     );
                 }
+                if touch_exit_after_run {
+                    return Err(
+                        "--touch-exit-after-run is not supported with --devtools-ws-url"
+                            .to_string(),
+                    );
+                }
                 if wants_pack {
                     return Err("--pack is not supported with --devtools-ws-url yet".to_string());
                 }
@@ -2190,6 +2204,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
             }
             let result = result?;
+            if touch_exit_after_run {
+                let _ = touch(&resolved_exit_path);
+            }
             if result.stage.as_deref() == Some("passed") {
                 if check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()

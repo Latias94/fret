@@ -86,6 +86,27 @@ impl DevtoolsOps {
             payload: serde_json::to_value(DevtoolsBundleDumpV1 {
                 schema_version: 1,
                 label: label.map(|s| s.to_string()),
+                max_snapshots: None,
+            })
+            .unwrap_or(serde_json::Value::Null),
+        });
+    }
+
+    pub fn bundle_dump_with_max_snapshots(
+        &self,
+        session_id: Option<&str>,
+        label: Option<&str>,
+        max_snapshots: u32,
+    ) {
+        self.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "bundle.dump".to_string(),
+            session_id: session_id.map(|s| s.to_string()),
+            request_id: None,
+            payload: serde_json::to_value(DevtoolsBundleDumpV1 {
+                schema_version: 1,
+                label: label.map(|s| s.to_string()),
+                max_snapshots: Some(max_snapshots),
             })
             .unwrap_or(serde_json::Value::Null),
         });
