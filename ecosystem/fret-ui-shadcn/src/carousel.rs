@@ -37,6 +37,7 @@ pub struct Carousel {
     track_start_neg_margin: Space,
     item_padding_start: Space,
     item_basis_main_px: Option<Px>,
+    drag_config: headless_carousel::CarouselDragConfig,
     test_id: Option<Arc<str>>,
 }
 
@@ -107,6 +108,7 @@ impl Carousel {
             track_start_neg_margin: Space::N4,
             item_padding_start: Space::N4,
             item_basis_main_px: None,
+            drag_config: headless_carousel::CarouselDragConfig::default(),
             test_id: None,
         }
     }
@@ -138,6 +140,31 @@ impl Carousel {
 
     pub fn orientation(mut self, orientation: CarouselOrientation) -> Self {
         self.orientation = orientation;
+        self
+    }
+
+    pub fn drag_config(mut self, config: headless_carousel::CarouselDragConfig) -> Self {
+        self.drag_config = config;
+        self
+    }
+
+    pub fn drag_threshold_px(mut self, threshold: Px) -> Self {
+        self.drag_config.drag_threshold_px = threshold.0;
+        self
+    }
+
+    pub fn snap_threshold_fraction(mut self, threshold: f32) -> Self {
+        self.drag_config.snap_threshold_fraction = threshold;
+        self
+    }
+
+    pub fn touch_prevent_scroll(mut self, enabled: bool) -> Self {
+        self.drag_config.touch_prevent_scroll = enabled;
+        self
+    }
+
+    pub fn touch_scroll_lock_threshold_px(mut self, threshold: Px) -> Self {
+        self.drag_config.touch_scroll_lock_threshold_px = threshold.0;
         self
     }
 
@@ -209,6 +236,7 @@ impl Carousel {
             let items_len = self.items.len();
             let item_basis = self.item_basis_main_px;
             let item_layout_patch = self.item_layout;
+            let drag_config = self.drag_config;
             let items = self.items;
             let theme_for_items = theme.clone();
             let root_test_id_for_items = root_test_id.clone();
@@ -309,7 +337,7 @@ impl Carousel {
 
                 let _ = host.models_mut().update(&runtime_for_move, |st| {
                     let out = headless_carousel::on_pointer_move(
-                        headless_carousel::CarouselDragConfig::default(),
+                        drag_config,
                         &mut st.drag,
                         track_direction,
                         mv.position,
@@ -374,7 +402,7 @@ impl Carousel {
 
                 let mut drag = runtime.drag;
                 let release = headless_carousel::on_pointer_up(
-                    headless_carousel::CarouselDragConfig::default(),
+                    drag_config,
                     &mut drag,
                     track_direction,
                     up.position,
