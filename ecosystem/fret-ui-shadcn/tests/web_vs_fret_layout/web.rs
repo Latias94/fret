@@ -3,12 +3,15 @@ use super::*;
 #[path = "../support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 pub(crate) use web_golden_shadcn::{
-    WebGolden, WebGoldenTheme, WebNode, WebRect, WebScrollMetrics, WebViewport, class_contains,
-    class_has_all_tokens, class_has_token, find_all, find_first, read_web_golden,
-    read_web_golden_open, read_web_golden_open_fallback, repo_root, web_golden_open_path,
-    web_golden_path, web_golden_path_file, web_golden_path_open_fallback, web_theme,
-    web_theme_named,
+    WebGoldenTheme, WebNode, WebRect, WebViewport, class_has_all_tokens, class_has_token, find_all,
+    find_first, read_web_golden, web_theme,
 };
+
+#[path = "../support/web_tree.rs"]
+mod web_tree;
+
+#[path = "../support/web_query.rs"]
+mod web_query;
 
 pub(crate) fn find_first_in_theme<'a>(
     theme: &'a WebGoldenTheme,
@@ -29,22 +32,11 @@ pub(crate) fn find_all_in_theme<'a>(
 }
 
 pub(crate) fn contains_text(node: &WebNode, needle: &str) -> bool {
-    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
-        return true;
-    }
-    node.children.iter().any(|c| contains_text(c, needle))
+    web_tree::contains_text(node, needle)
 }
 
 pub(crate) fn contains_id(node: &WebNode, needle: &str) -> bool {
-    if node
-        .id
-        .as_deref()
-        .or_else(|| node.attrs.get("id").map(String::as_str))
-        .is_some_and(|id| id == needle)
-    {
-        return true;
-    }
-    node.children.iter().any(|c| contains_id(c, needle))
+    web_tree::contains_id(node, needle)
 }
 
 pub(crate) fn web_find_by_tag_and_text<'a>(
@@ -93,15 +85,11 @@ pub(crate) fn web_find_badge_spans_with_spinner<'a>(root: &'a WebNode) -> Vec<&'
 }
 
 pub(crate) fn web_find_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v == slot)
-    })
+    web_query::find_by_data_slot(root, slot)
 }
 
 pub(crate) fn web_find_all_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Vec<&'a WebNode> {
-    find_all(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v == slot)
-    })
+    web_query::find_all_by_data_slot(root, slot)
 }
 
 pub(crate) fn web_find_scroll_area_scrollbar<'a>(

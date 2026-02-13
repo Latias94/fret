@@ -364,11 +364,14 @@ impl RadioGroup {
             let list = radix_root.list(values_arc.clone(), disabled_arc.clone());
 
             let container_props = decl_style::container_props(&theme, chrome, layout);
+            let list_layout =
+                decl_style::layout_style(&theme, fret_ui_kit::LayoutRefinement::default().w_full());
 
             let list_element = list.into_element(
                 cx,
                 RovingFlexProps {
                     flex: FlexProps {
+                        layout: list_layout,
                         gap: match orientation {
                             RadioGroupOrientation::Vertical => gap_y,
                             RadioGroupOrientation::Horizontal => gap_x,
@@ -1033,6 +1036,97 @@ mod tests {
         }
 
         assert!(found, "missing checked choice-card background/border quad");
+    }
+
+    #[test]
+    fn radio_group_choice_card_items_stretch_to_group_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("pro")));
+        let items = vec![
+            RadioGroupItem::new("plus", "Plus").variant(RadioGroupItemVariant::ChoiceCard),
+            RadioGroupItem::new("pro", "Pro").variant(RadioGroupItemVariant::ChoiceCard),
+            RadioGroupItem::new("enterprise", "Enterprise")
+                .variant(RadioGroupItemVariant::ChoiceCard),
+        ];
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(360.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-choice-card-stretch-width",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .a11y_label("Plans")
+                        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+                        .item(items[0].clone())
+                        .item(items[1].clone())
+                        .item(items[2].clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let group_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioGroup && n.label.as_deref() == Some("Plans"))
+            .map(|n| n.bounds)
+            .expect("radio group semantics node");
+
+        let mut item_bounds: Vec<(String, Rect)> = Vec::new();
+        for label in ["Plus", "Pro", "Enterprise"] {
+            let b = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some(label))
+                .map(|n| n.bounds)
+                .expect("radio button semantics node");
+            item_bounds.push((label.to_string(), b));
+        }
+
+        let eps = 0.5;
+        for (label, b) in &item_bounds {
+            assert!(
+                (b.size.width.0 - group_bounds.size.width.0).abs() <= eps,
+                "expected choice-card item '{label}' width {} close to group width {}",
+                b.size.width.0,
+                group_bounds.size.width.0
+            );
+        }
+
+        let w0 = item_bounds[0].1.size.width.0;
+        for (label, b) in &item_bounds[1..] {
+            assert!(
+                (b.size.width.0 - w0).abs() <= eps,
+                "expected choice-card item '{label}' width {} close to first item width {}",
+                b.size.width.0,
+                w0
+            );
+        }
     }
 
     #[test]

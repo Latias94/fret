@@ -33,7 +33,7 @@ impl RendererCapabilities {
         let streaming_images = StreamingImageCapabilities {
             nv12_gpu_convert: supports_nv12_gpu_convert(&ctx.adapter),
             i420_gpu_convert: false,
-            external_texture_import: false,
+            external_texture_import: supports_external_texture_import(ctx),
         };
 
         Self {
@@ -51,6 +51,17 @@ impl RendererCapabilities {
             sampled_materials_catalog_textures: supports_material_catalog_textures(&ctx.adapter),
         }
     }
+}
+
+fn supports_external_texture_import(ctx: &WgpuContext) -> bool {
+    // WebGPU `ExternalTexture` is not implemented in wgpu's web backend as of wgpu 28
+    // (`wgpu/src/backend/webgpu.rs` uses `unimplemented!("ExternalTexture not implemented for web")`),
+    // so we conservatively report false on wasm32 for now.
+    if cfg!(target_arch = "wasm32") {
+        return false;
+    }
+
+    ctx.device.features().contains(wgpu::Features::EXTERNAL_TEXTURE)
 }
 
 fn supports_nv12_gpu_convert(adapter: &wgpu::Adapter) -> bool {

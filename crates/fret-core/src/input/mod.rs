@@ -1,6 +1,7 @@
 use crate::{
     ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection, ImageId,
-    ImageUpdateToken, ImageUploadToken, PointerId, Rect, TimerToken, WindowLogicalPosition,
+    ImageUpdateToken, ImageUploadToken, IncomingOpenDataEvent, IncomingOpenItem, IncomingOpenToken,
+    PointerId, Rect, ShareSheetOutcome, ShareSheetToken, TimerToken, WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -237,6 +238,15 @@ pub struct ExternalDragFiles {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalDragFile {
     pub name: String,
+    /// File size in bytes when known.
+    ///
+    /// Web runners can provide this from the `File` object. Native runners may provide this from
+    /// filesystem metadata.
+    pub size_bytes: Option<u64>,
+    /// MIME type when known (e.g. `"image/png"`).
+    ///
+    /// Web runners can provide this from the `File` object. Native runners may leave this unset.
+    pub media_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -336,6 +346,11 @@ pub enum Event {
     ClipboardTextUnavailable {
         token: ClipboardToken,
     },
+    /// Share sheet request completed.
+    ShareSheetCompleted {
+        token: ShareSheetToken,
+        outcome: ShareSheetOutcome,
+    },
     /// Linux primary selection text payload delivered to the focused widget.
     ///
     /// This typically originates from middle-click paste when primary selection is enabled.
@@ -353,6 +368,19 @@ pub enum Event {
     FileDialogData(FileDialogDataEvent),
     /// A file dialog request completed without a selection (user canceled).
     FileDialogCanceled,
+    /// Incoming-open request originating from the OS (open-in / share-target).
+    ///
+    /// Apps must treat the token as ephemeral; privileged platform references remain runner-owned.
+    IncomingOpenRequest {
+        token: IncomingOpenToken,
+        items: Vec<IncomingOpenItem>,
+    },
+    /// Incoming-open data payload, typically produced by `Effect::IncomingOpenReadAll`.
+    IncomingOpenData(IncomingOpenDataEvent),
+    /// Incoming-open token became unavailable (denied/revoked/expired).
+    IncomingOpenUnavailable {
+        token: IncomingOpenToken,
+    },
     /// Image resource registration completed and produced an `ImageId`.
     ImageRegistered {
         token: ImageUploadToken,

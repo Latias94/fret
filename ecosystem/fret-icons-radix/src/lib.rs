@@ -57,6 +57,10 @@ mod semantic_ui {
     use super::*;
 
     pub fn register(reg: &mut IconRegistry) {
+        let _ = reg.alias(
+            ids::ui::ALERT_TRIANGLE,
+            IconId::new("radix.exclamation-triangle"),
+        );
         let _ = reg.alias(ids::ui::ARROW_LEFT, IconId::new("radix.arrow-left"));
         let _ = reg.alias(ids::ui::ARROW_RIGHT, IconId::new("radix.arrow-right"));
         let _ = reg.alias(ids::ui::BOOK, IconId::new("radix.bookmark"));
@@ -70,9 +74,11 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
         let _ = reg.alias(ids::ui::SETTINGS, IconId::new("radix.gear"));
         let _ = reg.alias(ids::ui::PLAY, IconId::new("radix.play"));
+        let _ = reg.alias(ids::ui::EYE, IconId::new("radix.eye-open"));
+        let _ = reg.alias(ids::ui::EYE_OFF, IconId::new("radix.eye-closed"));
         let _ = reg.alias(ids::ui::STATUS_FAILED, IconId::new("radix.cross-circled"));
         let _ = reg.alias(ids::ui::STATUS_PENDING, IconId::new("radix.circle"));
-        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("radix.clock"));
+        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("radix.dot-filled"));
         let _ = reg.alias(
             ids::ui::STATUS_SUCCEEDED,
             IconId::new("radix.check-circled"),

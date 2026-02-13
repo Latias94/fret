@@ -6,6 +6,7 @@ use fret_core::{
     TextWrap,
 };
 use fret_runtime::{CommandId, Model};
+use fret_ui::action::OnKeyDown;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
     PressableProps, SemanticsProps, TextAreaProps, TextInputProps, TextProps,
@@ -39,6 +40,7 @@ pub struct InputGroup {
     control: InputGroupControlKind,
     test_id: Option<Arc<str>>,
     control_test_id: Option<Arc<str>>,
+    control_on_key_down: Option<OnKeyDown>,
     leading: Vec<AnyElement>,
     trailing: Vec<AnyElement>,
     block_start: Vec<AnyElement>,
@@ -54,6 +56,7 @@ pub struct InputGroup {
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
     textarea_min_height: Px,
+    textarea_max_height: Option<Px>,
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -68,6 +71,7 @@ impl std::fmt::Debug for InputGroup {
             .field("control", &self.control)
             .field("test_id", &self.test_id.as_deref())
             .field("control_test_id", &self.control_test_id.as_deref())
+            .field("control_on_key_down", &self.control_on_key_down.is_some())
             .field("leading_len", &self.leading.len())
             .field("trailing_len", &self.trailing.len())
             .field("block_start_len", &self.block_start.len())
@@ -83,6 +87,7 @@ impl std::fmt::Debug for InputGroup {
             .field("submit_command", &self.submit_command)
             .field("cancel_command", &self.cancel_command)
             .field("textarea_min_height", &self.textarea_min_height)
+            .field("textarea_max_height", &self.textarea_max_height)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
@@ -97,6 +102,7 @@ impl InputGroup {
             control: InputGroupControlKind::Input,
             test_id: None,
             control_test_id: None,
+            control_on_key_down: None,
             leading: Vec::new(),
             trailing: Vec::new(),
             block_start: Vec::new(),
@@ -112,6 +118,7 @@ impl InputGroup {
             submit_command: None,
             cancel_command: None,
             textarea_min_height: Px(64.0),
+            textarea_max_height: None,
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -136,6 +143,11 @@ impl InputGroup {
 
     pub fn control_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.control_test_id = Some(id.into());
+        self
+    }
+
+    pub fn control_on_key_down(mut self, handler: OnKeyDown) -> Self {
+        self.control_on_key_down = Some(handler);
         self
     }
 
@@ -234,6 +246,11 @@ impl InputGroup {
 
     pub fn textarea_min_height(mut self, min_height: Px) -> Self {
         self.textarea_min_height = min_height;
+        self
+    }
+
+    pub fn textarea_max_height(mut self, max_height: Px) -> Self {
+        self.textarea_max_height = Some(max_height);
         self
     }
 
@@ -386,8 +403,10 @@ impl InputGroup {
         let cancel_command = self.cancel_command;
         let model = self.model;
         let textarea_min_height = self.textarea_min_height;
+        let textarea_max_height = self.textarea_max_height;
         let test_id = self.test_id;
         let control_test_id = self.control_test_id;
+        let control_on_key_down = self.control_on_key_down;
         let border_width_override = self.border_width_override;
         let corner_radii_override = self.corner_radii_override;
 
@@ -501,14 +520,21 @@ impl InputGroup {
                             props.min_height = textarea_min_height;
                             props.layout = {
                                 let theme = Theme::global(&*cx.app);
-                                decl_style::layout_style(
-                                    theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
-                                )
+                                let mut layout = LayoutRefinement::default().w_full().min_w_0();
+                                if let Some(max_h) = textarea_max_height {
+                                    layout = layout.max_h(max_h);
+                                }
+                                decl_style::layout_style(theme, layout)
                             };
                             cx.text_area(props)
                         }
                     };
+
+                    if let Some(handler) = control_on_key_down {
+                        // Run before the control's internal key handling so callers can
+                        // consume keys like Enter/Backspace and prevent default behavior.
+                        cx.key_prepend_on_key_down_for(control_el.id, handler);
+                    }
 
                     let block_start = (!block_start.is_empty()).then(|| {
                         let px_3 = addon_pl;

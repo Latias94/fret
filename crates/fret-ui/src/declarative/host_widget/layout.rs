@@ -49,6 +49,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(p) => p.enabled,
             ElementInstance::TextInputRegion(p) => p.enabled,
             ElementInstance::InternalDragRegion(p) => p.enabled,
+            ElementInstance::ExternalDragRegion(p) => p.enabled,
             ElementInstance::HoverRegion(_) => false,
             ElementInstance::Semantics(_) => false,
             ElementInstance::SemanticFlex(_) => false,
@@ -60,6 +61,8 @@ impl ElementHostWidget {
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
+            ElementInstance::MaskLayer(_) => false,
+            ElementInstance::CompositeGroup(_) => false,
             ElementInstance::ViewCache(_) => false,
             #[cfg(feature = "unstable-retained-bridge")]
             ElementInstance::RetainedSubtree(_) => false,
@@ -75,6 +78,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(_) => true,
             ElementInstance::TextInputRegion(_) => true,
             ElementInstance::InternalDragRegion(_) => true,
+            ElementInstance::ExternalDragRegion(_) => true,
             ElementInstance::Semantics(_) => true,
             ElementInstance::SemanticFlex(_) => true,
             ElementInstance::FocusScope(_) => true,
@@ -84,6 +88,8 @@ impl ElementHostWidget {
             ElementInstance::FocusTraversalGate(_) => true,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::EffectLayer(_) => true,
+            ElementInstance::MaskLayer(_) => true,
+            ElementInstance::CompositeGroup(_) => true,
             ElementInstance::ViewCache(_) => true,
             ElementInstance::VisualTransform(_) => true,
             ElementInstance::RenderTransform(_) => true,
@@ -147,6 +153,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextInputRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::InternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::ExternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -157,6 +164,8 @@ impl ElementHostWidget {
             ElementInstance::ResizablePanelGroup(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::HoverRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::MaskLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::CompositeGroup(p) => matches!(p.layout.overflow, Overflow::Clip),
             #[cfg(feature = "unstable-retained-bridge")]
             ElementInstance::RetainedSubtree(p) => matches!(p.layout.overflow, Overflow::Clip),
             // These primitives are always hit-test clipped by their own bounds (they are not
@@ -402,6 +411,96 @@ impl ElementHostWidget {
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with focus
                 // traversal gating handled via host widget flags.
                 self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::MaskLayer(props) => {
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
+                // Pass-through wrapper (layout like Opacity/VisualTransform), but with paint-time
+                // `SceneOp::PushMask/PopMask` emission.
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
+                }
+                desired
+            }
+            ElementInstance::CompositeGroup(props) => {
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
+                // Pass-through wrapper (layout like Opacity/VisualTransform), but with paint-time
+                // `SceneOp::PushCompositeGroup/PopCompositeGroup` emission.
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
+                }
+                desired
             }
             ElementInstance::EffectLayer(props) => {
                 if cx.children.len() == 1 {
@@ -1083,6 +1182,16 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::InternalDragRegion(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::ExternalDragRegion(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,

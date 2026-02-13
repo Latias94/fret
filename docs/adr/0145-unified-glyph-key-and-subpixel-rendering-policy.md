@@ -10,10 +10,10 @@ ADR 0142 locks the direction for text shaping/layout (Parley + attributed spans)
 - layout/shaping results (stable, cacheable, no atlas UVs), and
 - glyph atlas residency (budgeted, evictable, frame-driven).
 
-The current implementation still carries a “backend-shaped” glyph identity:
+Historically, the implementation carried a “backend-shaped” glyph identity:
 
-- `cosmic_text::CacheKey` for the cosmic path (includes internal flags and its own subpixel binning),
-- a separate `ParleyGlyphKey` for the Parley path (font blob id + index + glyph id + size + bins).
+- a legacy backend-specific cache key (removed as we converged on Parley),
+- a separate Parley-specific key (font blob id + index + glyph id + size + bins).
 
 This has two long-term problems:
 
@@ -149,4 +149,3 @@ Legacy shaping backends, if kept temporarily, must map their output into the uni
 3) Make Parley shaping produce `GlyphKey` for every glyph instance, including deterministic subpixel variant selection.
 4) Implement `GlyphKind::Subpixel` end-to-end (atlas + shader path) and include policy knobs in cache keys.
 5) Delete the “backend gate” and remove the legacy shaping path once coverage matches.
-

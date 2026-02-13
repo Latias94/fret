@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, MouseButton, Point, Px, SemanticsRole};
+use fret_core::{Edges, KeyCode, MouseButton, Point, Px, SemanticsRole};
 use fret_icons::ids;
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
+use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, MainAlign,
-    PointerRegionProps, RenderTransformProps, SemanticsDecoration,
+    PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -212,6 +212,7 @@ impl Carousel {
             let item_layout_patch = self.item_layout;
             let items = self.items;
             let theme_for_items = theme.clone();
+            let root_test_id_for_items = root_test_id.clone();
 
             let index_now = cx.watch_model(&index_model).copied().unwrap_or(0);
             let mut offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
@@ -468,6 +469,73 @@ impl Carousel {
                 },
             );
 
+            let index_for_key = index_model.clone();
+            let offset_for_key = offset_model.clone();
+            let runtime_for_key = runtime_model.clone();
+            let extent_for_key = extent_model.clone();
+            let on_key_down: OnKeyDown = Arc::new(
+                move |host: &mut dyn fret_ui::action::UiFocusActionHost,
+                      cx: ActionCx,
+                      down: KeyDownCx| {
+                    if items_len <= 1 {
+                        return false;
+                    }
+
+                    // shadcn/ui v4 Carousel uses left/right keys even when `orientation="vertical"`
+                    // (it rotates the controls instead of switching the key mapping).
+                    let (prev_key, next_key) = (KeyCode::ArrowLeft, KeyCode::ArrowRight);
+
+                    if down.key != prev_key && down.key != next_key {
+                        return false;
+                    }
+
+                    let index: usize = host
+                        .models_mut()
+                        .read(&index_for_key, |v| *v)
+                        .ok()
+                        .unwrap_or(0);
+                    let extent = host
+                        .models_mut()
+                        .read(&extent_for_key, |v| *v)
+                        .ok()
+                        .unwrap_or(Px(0.0));
+                    if extent.0 <= 0.0 {
+                        return true;
+                    }
+
+                    let target_index = if down.key == prev_key {
+                        if index == 0 {
+                            return true;
+                        }
+                        index.saturating_sub(1)
+                    } else {
+                        if index + 1 >= items_len {
+                            return true;
+                        }
+                        (index + 1).min(items_len.saturating_sub(1))
+                    };
+
+                    let target = Px((target_index as f32) * extent.0);
+                    let cur = host
+                        .models_mut()
+                        .read(&offset_for_key, |v| *v)
+                        .ok()
+                        .unwrap_or(Px(0.0));
+                    let _ = host
+                        .models_mut()
+                        .update(&index_for_key, |v| *v = target_index);
+                    let _ = host.models_mut().update(&runtime_for_key, |st| {
+                        st.dragging = false;
+                        st.settling = true;
+                        st.settle_from = cur;
+                        st.settle_to = target;
+                        st.settle_tick = 0;
+                    });
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
             let track = cx.flex(
                 FlexProps {
                     layout: track_layout,
@@ -488,13 +556,31 @@ impl Carousel {
                             if let Some(basis) = item_basis {
                                 item_layout =
                                     item_layout.basis(LengthRefinement::Px(MetricRef::Px(basis)));
-                            } else if track_direction == fret_core::Axis::Horizontal {
-                                item_layout = item_layout.basis(LengthRefinement::Fill);
+                            } else {
+                                // Match shadcn/ui v4 `basis-full` default for horizontal tracks.
+                                //
+                                // For vertical tracks, the upstream demo uses `md:basis-1/2` and
+                                // relies on `min-height: auto` to clamp items to their content.
+                                // Since we don't have breakpoint-aware layout here, default to an
+                                // auto basis so vertical item geometry remains content-driven in
+                                // common layouts (matching our web goldens).
+                                item_layout = match track_direction {
+                                    fret_core::Axis::Horizontal => {
+                                        item_layout.basis(LengthRefinement::Fill)
+                                    }
+                                    fret_core::Axis::Vertical => {
+                                        item_layout.basis(LengthRefinement::Auto)
+                                    }
+                                };
                             }
 
                             let item_layout =
                                 decl_style::layout_style(&theme_for_items, item_layout);
-                            let test_id = Arc::from(format!("carousel-item-{}", idx + 1));
+                            let test_id = Arc::from(format!(
+                                "{}-item-{}",
+                                root_test_id_for_items.as_ref(),
+                                idx + 1
+                            ));
 
                             let padding = match track_direction {
                                 fret_core::Axis::Horizontal => Edges {
@@ -590,13 +676,35 @@ impl Carousel {
             let prev_disabled = index_now == 0 || items_len <= 1;
             let next_disabled = index_now + 1 >= items_len;
 
+            let prev_test_id = Arc::from(format!("{}-previous", root_test_id.as_ref()));
+            let next_test_id = Arc::from(format!("{}-next", root_test_id.as_ref()));
+
+            let rotate_controls = orientation == CarouselOrientation::Vertical;
+            let arrow_rotation = if rotate_controls { 90.0 } else { 0.0 };
+            let arrow_center = Point::new(Px(8.0), Px(8.0));
+            let arrow_transform =
+                fret_core::Transform2D::rotation_about_degrees(arrow_rotation, arrow_center);
+            let arrow_layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default()
+                    .w_px(Px(16.0))
+                    .h_px(Px(16.0))
+                    .flex_shrink_0(),
+            );
+
             let prev_button = Button::new("Previous slide")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::IconSm)
                 .disabled(prev_disabled)
-                .test_id("carousel-previous")
+                .test_id(prev_test_id)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(cx, ids::ui::ARROW_LEFT)])
+                .children([cx.visual_transform_props(
+                    VisualTransformProps {
+                        layout: arrow_layout,
+                        transform: arrow_transform,
+                    },
+                    move |cx| vec![decl_icon::icon(cx, ids::ui::ARROW_LEFT)],
+                )])
                 .on_activate(on_prev)
                 .into_element(cx);
 
@@ -604,9 +712,15 @@ impl Carousel {
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::IconSm)
                 .disabled(next_disabled)
-                .test_id("carousel-next")
+                .test_id(next_test_id)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(cx, ids::ui::ARROW_RIGHT)])
+                .children([cx.visual_transform_props(
+                    VisualTransformProps {
+                        layout: arrow_layout,
+                        transform: arrow_transform,
+                    },
+                    move |cx| vec![decl_icon::icon(cx, ids::ui::ARROW_RIGHT)],
+                )])
                 .on_activate(on_next)
                 .into_element(cx);
 
@@ -678,6 +792,8 @@ impl Carousel {
                 },
                 move |_cx| vec![viewport, prev_wrapper, next_wrapper],
             );
+
+            cx.key_add_on_key_down_capture_for(root.id, on_key_down);
 
             root.attach_semantics(
                 SemanticsDecoration::default()

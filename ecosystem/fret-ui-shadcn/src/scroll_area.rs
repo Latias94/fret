@@ -687,7 +687,7 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
+        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
@@ -960,6 +960,92 @@ mod tests {
             point_on_vertical_scrollbar(stack_bounds),
             baseline,
             "expected auto scrollbar hit target for overflow",
+        );
+    }
+
+    #[test]
+    fn scroll_area_touch_pan_updates_scroll_handle_offset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let handle = ScrollHandle::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "sa_touch_pan",
+            |cx| {
+                vec![
+                    ScrollArea::new([cx.column(ColumnProps::default(), |cx| {
+                        (0..80).map(|_| cx.text("Row")).collect::<Vec<_>>()
+                    })])
+                    .axis(ScrollAxis::Y)
+                    .type_(ScrollAreaType::Auto)
+                    .scroll_handle(handle.clone())
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        assert!(
+            handle.offset().y.0 <= 0.01,
+            "expected initial offset at top"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(40.0), Px(200.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Touch,
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(40.0), Px(120.0)),
+                buttons: MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+            }),
+        );
+
+        assert!(
+            handle.offset().y.0 > 0.01,
+            "expected touch pan to scroll content (offset={:?})",
+            handle.offset()
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(40.0), Px(120.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: false,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Touch,
+            }),
         );
     }
 

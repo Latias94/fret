@@ -9,6 +9,7 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, Justify, LayoutRefinement, Space};
 
+use crate::elements::attachments::AttachmentData;
 use crate::elements::{
     AiConversationTranscript, ConversationDownload, ConversationEmptyState,
     ConversationScrollButton, PromptInput,
@@ -50,6 +51,7 @@ pub struct AiChat {
     on_send: Option<OnActivate>,
     on_stop: Option<OnActivate>,
     on_download: Option<OnActivate>,
+    on_add_attachments: Option<OnActivate>,
     show_download: bool,
     empty_state: Option<ConversationEmptyState>,
     message_test_id_prefix: Option<Arc<str>>,
@@ -61,6 +63,9 @@ pub struct AiChat {
     prompt_textarea_test_id: Option<Arc<str>>,
     prompt_send_test_id: Option<Arc<str>>,
     prompt_stop_test_id: Option<Arc<str>>,
+    prompt_attachments_model: Option<Model<Vec<AttachmentData>>>,
+    prompt_attachments_test_id: Option<Arc<str>>,
+    prompt_add_attachments_test_id: Option<Arc<str>>,
     root_test_id: Option<Arc<str>>,
     scroll_handle: Option<VirtualListScrollHandle>,
     root_layout: LayoutRefinement,
@@ -82,6 +87,7 @@ impl std::fmt::Debug for AiChat {
             .field("has_on_send", &self.on_send.is_some())
             .field("has_on_stop", &self.on_stop.is_some())
             .field("has_on_download", &self.on_download.is_some())
+            .field("has_on_add_attachments", &self.on_add_attachments.is_some())
             .field("show_download", &self.show_download)
             .field("has_empty_state", &self.empty_state.is_some())
             .field(
@@ -108,6 +114,18 @@ impl std::fmt::Debug for AiChat {
             )
             .field("prompt_send_test_id", &self.prompt_send_test_id.as_deref())
             .field("prompt_stop_test_id", &self.prompt_stop_test_id.as_deref())
+            .field(
+                "has_prompt_attachments_model",
+                &self.prompt_attachments_model.is_some(),
+            )
+            .field(
+                "prompt_attachments_test_id",
+                &self.prompt_attachments_test_id.as_deref(),
+            )
+            .field(
+                "prompt_add_attachments_test_id",
+                &self.prompt_add_attachments_test_id.as_deref(),
+            )
             .field("root_test_id", &self.root_test_id.as_deref())
             .field("has_scroll_handle", &self.scroll_handle.is_some())
             .field("root_layout", &self.root_layout)
@@ -131,6 +149,7 @@ impl AiChat {
             on_send: None,
             on_stop: None,
             on_download: None,
+            on_add_attachments: None,
             show_download: false,
             empty_state: None,
             message_test_id_prefix: None,
@@ -142,6 +161,9 @@ impl AiChat {
             prompt_textarea_test_id: None,
             prompt_send_test_id: None,
             prompt_stop_test_id: None,
+            prompt_attachments_model: None,
+            prompt_attachments_test_id: None,
+            prompt_add_attachments_test_id: None,
             root_test_id: None,
             scroll_handle: None,
             root_layout: LayoutRefinement::default(),
@@ -180,6 +202,11 @@ impl AiChat {
 
     pub fn on_stop(mut self, on_stop: OnActivate) -> Self {
         self.on_stop = Some(on_stop);
+        self
+    }
+
+    pub fn on_add_attachments(mut self, on_add_attachments: OnActivate) -> Self {
+        self.on_add_attachments = Some(on_add_attachments);
         self
     }
 
@@ -241,6 +268,21 @@ impl AiChat {
 
     pub fn prompt_stop_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.prompt_stop_test_id = Some(id.into());
+        self
+    }
+
+    pub fn prompt_attachments_model(mut self, model: Model<Vec<AttachmentData>>) -> Self {
+        self.prompt_attachments_model = Some(model);
+        self
+    }
+
+    pub fn prompt_attachments_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.prompt_attachments_test_id = Some(id.into());
+        self
+    }
+
+    pub fn prompt_add_attachments_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.prompt_add_attachments_test_id = Some(id.into());
         self
     }
 
@@ -399,6 +441,9 @@ impl AiChat {
         if let Some(on_stop) = self.on_stop.clone() {
             prompt = prompt.on_stop(on_stop);
         }
+        if let Some(on_add) = self.on_add_attachments.clone() {
+            prompt = prompt.on_add_attachments(on_add);
+        }
         if let Some(id) = self.prompt_root_test_id.clone() {
             prompt = prompt.test_id_root(id);
         }
@@ -410,6 +455,15 @@ impl AiChat {
         }
         if let Some(id) = self.prompt_stop_test_id.clone() {
             prompt = prompt.test_id_stop(id);
+        }
+        if let Some(model) = self.prompt_attachments_model.clone() {
+            prompt = prompt.attachments(model);
+        }
+        if let Some(id) = self.prompt_attachments_test_id.clone() {
+            prompt = prompt.test_id_attachments(id);
+        }
+        if let Some(id) = self.prompt_add_attachments_test_id.clone() {
+            prompt = prompt.test_id_add_attachments(id);
         }
 
         let prompt = prompt.into_element(cx);

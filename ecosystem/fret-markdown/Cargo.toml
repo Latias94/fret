@@ -10,7 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [features]
-default = ["mermaid"]
+default = []
 
 ui = []
 imui = ["ui", "dep:fret-authoring"]

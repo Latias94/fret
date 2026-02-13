@@ -3,6 +3,7 @@ use super::super::prelude::*;
 use super::ElementHostWidget;
 
 mod dismissible;
+mod external_drag_region;
 mod hooks;
 mod internal_drag_region;
 mod pointer_region;
@@ -55,15 +56,42 @@ impl ElementHostWidget {
             return;
         };
 
-        if let ElementInstance::PointerRegion(props) = instance
+        if let Event::KeyDown {
+            key,
+            modifiers,
+            repeat,
+        } = event
+            && cx.focus.is_some()
             && matches!(
-                event,
-                Event::Pointer(fret_core::PointerEvent::Down { .. })
-                    | Event::Pointer(fret_core::PointerEvent::Up { .. })
-                    | Event::PointerCancel(_)
+                cx.input_ctx.dispatch_phase,
+                fret_runtime::InputDispatchPhase::Capture
             )
+            && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
         {
-            pointer_region::handle_pointer_region(self, cx, window, props, event);
+            return;
+        }
+
+        let should_dispatch = matches!(
+            event,
+            Event::Pointer(fret_core::PointerEvent::Down { .. })
+                | Event::Pointer(fret_core::PointerEvent::Up { .. })
+                | Event::PointerCancel(_)
+        ) || (cx.captured.is_some()
+            && matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })));
+
+        if should_dispatch {
+            match instance {
+                ElementInstance::PointerRegion(props) => {
+                    pointer_region::handle_pointer_region(self, cx, window, props, event);
+                }
+                ElementInstance::Scroll(props) => {
+                    let _ = scroll::handle_scroll(self, cx, window, props, event);
+                }
+                ElementInstance::VirtualList(props) => {
+                    let _ = scroll::handle_virtual_list(self, cx, window, props, event);
+                }
+                _ => {}
+            }
         }
     }
 
@@ -75,13 +103,6 @@ impl ElementHostWidget {
             return;
         };
 
-        let is_text_input = matches!(
-            &instance,
-            ElementInstance::TextInput(_)
-                | ElementInstance::TextArea(_)
-                | ElementInstance::TextInputRegion(_)
-        );
-
         if hooks::handle_timer_event(self, cx, window, event) {
             return;
         }
@@ -91,22 +112,7 @@ impl ElementHostWidget {
             modifiers,
             repeat,
         } = event
-            && cx.focus == Some(cx.node)
-            && !is_text_input
-            && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
-        {
-            return;
-        }
-
-        // Text input widgets may stop propagation for navigation keys (ArrowUp/ArrowDown, etc.).
-        // Give component-owned key hooks a chance to intercept before the widget consumes them.
-        if let Event::KeyDown {
-            key,
-            modifiers,
-            repeat,
-        } = event
-            && cx.focus == Some(cx.node)
-            && is_text_input
+            && cx.focus.is_some()
             && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
         {
             return;
@@ -151,6 +157,9 @@ impl ElementHostWidget {
             }
             ElementInstance::InternalDragRegion(props) => {
                 internal_drag_region::handle_internal_drag_region(self, cx, window, props, event);
+            }
+            ElementInstance::ExternalDragRegion(props) => {
+                external_drag_region::handle_external_drag_region(self, cx, window, props, event);
             }
             ElementInstance::RovingFlex(props) => {
                 roving_flex::handle_roving_flex(self, cx, window, props, event);

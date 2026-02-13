@@ -497,6 +497,7 @@ mod tests {
                 position: Point::new(Px(40.0), Px(40.0)),
                 tick_id,
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
                 pointer_type: PointerType::Touch,

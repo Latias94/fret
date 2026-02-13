@@ -5,6 +5,7 @@ Status: Draft (workstream notes only; ADRs remain the source of truth)
 Tracking file:
 
 - `docs/workstreams/bottom-up-fearless-refactor-v1-todo.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-milestones.md`
 
 ## 0) Why this workstream exists
 

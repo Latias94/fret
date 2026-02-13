@@ -8,12 +8,13 @@ use std::sync::Arc;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn contains_text(node: &WebNode, needle: &str) -> bool {
-    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
-        return true;
-    }
-    node.children.iter().any(|c| contains_text(c, needle))
-}
+#[path = "support/assert.rs"]
+mod test_assert;
+use test_assert::assert_close_px;
+
+#[path = "support/web_tree.rs"]
+mod web_tree;
+use web_tree::contains_text;
 
 #[derive(Default)]
 struct FakeServices;
@@ -124,15 +125,6 @@ fn find_semantics<'a>(
         }
         true
     })
-}
-
-fn assert_close_px(label: &str, a: Px, b: f32, tol: f32) {
-    let delta = (a.0 - b).abs();
-    assert!(
-        delta <= tol,
-        "{label}: expected ~{b:.3}px, got {:.3}px (Δ={delta:.3}px, tol={tol:.3}px)",
-        a.0
-    );
 }
 
 fn assert_rect_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) {

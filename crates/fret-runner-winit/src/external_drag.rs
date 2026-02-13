@@ -11,6 +11,8 @@ pub fn external_drag_files(
                 .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| p.to_string_lossy().to_string()),
+            size_bytes: std::fs::metadata(p).ok().map(|m| m.len()),
+            media_type: None,
         })
         .collect();
     ExternalDragFiles { token, files }

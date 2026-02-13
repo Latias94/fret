@@ -31,7 +31,7 @@ Evidence anchors:
 
 ## 3) Dependency posture
 
-- Backend coupling risks: intentionally couples to `wgpu` and a large graphics/text stack (`cosmic-text`, `parley`, `lyon`, `resvg/usvg`, `glam`, `etagere`).
+- Backend coupling risks: intentionally couples to `wgpu` and a large graphics/text stack (`parley/fontique`, `swash`, `lyon`, `resvg/usvg`, `glam`, `etagere`).
 - Compile-time / link-time cost is likely significant; keep public surface small and keep modules discoverable to support incremental refactors.
 - JSON use (`serde_json`) exists (likely for dumps/fixtures); keep its usage localized to diagnostics/testing paths where possible.
 
@@ -100,4 +100,3 @@ Evidence anchors:
 
 - Do we want `FRET_WGPU_BACKEND` to be a stable, user-facing contract (documented), or should it remain a developer-only knob?
 - Where should font fallback policy live long-term: renderer backend, `fret-fonts`, or a higher-level “platform defaults” crate?
-

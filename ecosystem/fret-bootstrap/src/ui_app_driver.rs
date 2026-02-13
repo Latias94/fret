@@ -1397,6 +1397,10 @@ fn ui_app_handle_global_command<S>(
                 return;
             }
         }
+        fret_app::core_commands::TEXT_RESCAN_SYSTEM_FONTS => {
+            app.push_effect(Effect::TextRescanSystemFonts);
+            return;
+        }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
             return;

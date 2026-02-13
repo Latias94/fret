@@ -1,5 +1,5 @@
 use fret_core::RenderTargetId;
-use fret_render_core::RenderTargetColorSpace;
+use fret_render_core::{RenderTargetColorSpace, RenderTargetMetadata};
 use slotmap::SlotMap;
 
 pub struct RenderTargetDescriptor {
@@ -7,6 +7,7 @@ pub struct RenderTargetDescriptor {
     pub size: (u32, u32),
     pub format: wgpu::TextureFormat,
     pub color_space: RenderTargetColorSpace,
+    pub metadata: RenderTargetMetadata,
 }
 
 struct RenderTargetEntry {
@@ -14,6 +15,7 @@ struct RenderTargetEntry {
     size: (u32, u32),
     format: wgpu::TextureFormat,
     color_space: RenderTargetColorSpace,
+    metadata: RenderTargetMetadata,
 }
 
 #[derive(Default)]
@@ -33,6 +35,7 @@ impl RenderTargetRegistry {
             size: desc.size,
             format: desc.format,
             color_space: desc.color_space,
+            metadata: desc.metadata,
         })
     }
 
@@ -49,6 +52,7 @@ impl RenderTargetRegistry {
         entry.size = desc.size;
         entry.format = desc.format;
         entry.color_space = desc.color_space;
+        entry.metadata = desc.metadata;
         true
     }
 

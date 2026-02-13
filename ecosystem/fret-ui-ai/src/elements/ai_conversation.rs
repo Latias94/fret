@@ -10,6 +10,21 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use crate::elements::MessageParts;
 use crate::model::{AiMessage, MessageId};
 
+#[cfg(debug_assertions)]
+fn debug_assert_unique_message_ids(messages: &[AiMessage]) {
+    use std::collections::HashMap;
+
+    let mut seen: HashMap<MessageId, usize> = HashMap::with_capacity(messages.len());
+    for (index, message) in messages.iter().enumerate() {
+        if let Some(prev) = seen.insert(message.id, index) {
+            panic!(
+                "duplicate AiMessage.id detected (id={:#x}, a={}, b={}); message IDs must be stable and unique within a transcript",
+                message.id, prev, index
+            );
+        }
+    }
+}
+
 /// A virtualized transcript surface that renders an `Arc<[AiMessage]>` via `MessageParts`.
 ///
 /// Key properties:
@@ -165,6 +180,12 @@ impl AiConversationTranscript {
             pending_scroll_frames: u8,
             was_at_bottom: bool,
             initialized: bool,
+            #[cfg(debug_assertions)]
+            checked_ids_once: bool,
+            #[cfg(debug_assertions)]
+            checked_ids_revision: u64,
+            #[cfg(debug_assertions)]
+            checked_ids_len: usize,
         }
 
         let theme = Theme::global(&*cx.app).clone();
@@ -180,6 +201,24 @@ impl AiConversationTranscript {
         } else {
             self.content_revision
         };
+
+        #[cfg(debug_assertions)]
+        {
+            let needs_check = cx.with_state(ConversationState::default, |st| {
+                !st.checked_ids_once
+                    || st.checked_ids_revision != revision
+                    || st.checked_ids_len != self.messages.len()
+            });
+            if needs_check {
+                debug_assert_unique_message_ids(&self.messages);
+                let len = self.messages.len();
+                cx.with_state(ConversationState::default, move |st| {
+                    st.checked_ids_once = true;
+                    st.checked_ids_revision = revision;
+                    st.checked_ids_len = len;
+                });
+            }
+        }
 
         let provided_handle = self.scroll_handle;
         let handle = cx.with_state(ConversationState::default, |st| {

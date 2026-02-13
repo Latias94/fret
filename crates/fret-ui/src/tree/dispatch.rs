@@ -171,6 +171,10 @@ impl<H: UiHost> UiTree<H> {
             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                 self.app.next_clipboard_token()
             }
+
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
+            }
         }
 
         let mut host = PressableHoverHookHost {
@@ -188,29 +192,40 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
+    fn pressable_element_for_hit(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        hit: Option<NodeId>,
+    ) -> Option<crate::elements::GlobalElementId> {
+        declarative::with_window_frame(app, window, |window_frame| {
+            let window_frame = window_frame?;
+            let mut node = hit;
+            while let Some(id) = node {
+                if let Some(record) = window_frame.instances.get(id)
+                    && matches!(record.instance, declarative::ElementInstance::Pressable(_))
+                {
+                    return Some(record.element);
+                }
+                node = self.nodes.get(id).and_then(|n| n.parent);
+            }
+            None
+        })
+    }
+
     fn update_hover_state_from_hit(
         &mut self,
         app: &mut H,
         window: AppWindowId,
+        barrier_root: Option<NodeId>,
+        position: Option<Point>,
         hit_for_hover: Option<NodeId>,
         hit_for_hover_region: Option<NodeId>,
+        hit_for_raw_below_barrier: Option<NodeId>,
         invalidation_visited: &mut HashMap<NodeId, u8>,
         needs_redraw: &mut bool,
     ) {
-        let hovered_pressable: Option<crate::elements::GlobalElementId> =
-            declarative::with_window_frame(app, window, |window_frame| {
-                let window_frame = window_frame?;
-                let mut node = hit_for_hover;
-                while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(id)
-                        && matches!(record.instance, declarative::ElementInstance::Pressable(_))
-                    {
-                        return Some(record.element);
-                    }
-                    node = self.nodes.get(id).and_then(|n| n.parent);
-                }
-                None
-            });
+        let hovered_pressable = self.pressable_element_for_hit(app, window, hit_for_hover);
 
         let (prev_element, prev_node, next_element, next_node) =
             crate::elements::update_hovered_pressable(app, window, hovered_pressable);
@@ -256,6 +271,128 @@ impl<H: UiHost> UiTree<H> {
             && next_node.is_some()
         {
             Self::run_pressable_hover_hook(app, window, element, true);
+        }
+
+        // Raw hover is pressable-targeted hover derived directly from hit testing, regardless of
+        // component-local interactivity policy (e.g. disabled scopes).
+        let hovered_pressable_raw = self.pressable_element_for_hit(app, window, hit_for_hover);
+        let (prev_raw_element, prev_raw_node, next_raw_element, next_raw_node) =
+            crate::elements::update_hovered_pressable_raw(app, window, hovered_pressable_raw);
+        if prev_raw_node.is_some() || next_raw_node.is_some() {
+            *needs_redraw = true;
+            if let Some(node) = prev_raw_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_raw_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
+
+        if let Some(window) = self.window {
+            for (element, node) in [
+                (prev_raw_element, prev_raw_node),
+                (next_raw_element, next_raw_node),
+            ] {
+                let (Some(element), Some(node)) = (element, node) else {
+                    continue;
+                };
+                let Some(bounds) = self.node_bounds(node) else {
+                    continue;
+                };
+                crate::elements::record_bounds_for_element(app, window, element, bounds);
+            }
+        }
+
+        let hovered_pressable_raw_below_barrier = if hit_for_raw_below_barrier.is_some() {
+            self.pressable_element_for_hit(app, window, hit_for_raw_below_barrier)
+        } else if barrier_root.is_some()
+            && let Some(position) = position
+        {
+            let barrier_root = barrier_root.expect("checked above");
+            let mut roots: Vec<NodeId> = Vec::new();
+            let mut hit_barrier = false;
+            for &layer_id in self.layer_order.iter().rev() {
+                let Some(layer) = self.layers.get(layer_id) else {
+                    continue;
+                };
+                if !layer.visible {
+                    continue;
+                }
+
+                if !hit_barrier {
+                    if layer.root == barrier_root {
+                        hit_barrier = true;
+                    }
+                    continue;
+                }
+
+                if layer.hit_testable {
+                    roots.push(layer.root);
+                }
+            }
+
+            if roots.is_empty() {
+                None
+            } else {
+                let saved = self.hit_test_path_cache.take();
+                self.hit_test_path_cache = None;
+                let hit = self.hit_test_layers_cached(&roots, position);
+                self.hit_test_path_cache = saved;
+                self.pressable_element_for_hit(app, window, hit)
+            }
+        } else {
+            None
+        };
+
+        let (prev_below_element, prev_below_node, next_below_element, next_below_node) =
+            crate::elements::update_hovered_pressable_raw_below_barrier(
+                app,
+                window,
+                hovered_pressable_raw_below_barrier,
+            );
+        if prev_below_node.is_some() || next_below_node.is_some() {
+            *needs_redraw = true;
+            if let Some(node) = prev_below_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_below_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
+
+        if let Some(window) = self.window {
+            for (element, node) in [
+                (prev_below_element, prev_below_node),
+                (next_below_element, next_below_node),
+            ] {
+                let (Some(element), Some(node)) = (element, node) else {
+                    continue;
+                };
+                let Some(bounds) = self.node_bounds(node) else {
+                    continue;
+                };
+                crate::elements::record_bounds_for_element(app, window, element, bounds);
+            }
         }
 
         let hovered_hover_region: Option<crate::elements::GlobalElementId> =
@@ -545,6 +682,10 @@ impl<H: UiHost> UiTree<H> {
 
             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                 self.app.next_clipboard_token()
+            }
+
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
             }
         }
 
@@ -1604,6 +1745,7 @@ impl<H: UiHost> UiTree<H> {
             //   the occlusion mode.
             let mut hit_for_hover = hit;
             let mut hit_for_hover_region = hit;
+            let mut hit_for_raw_below_barrier: Option<NodeId> = None;
             if captured.is_none()
                 && let Some((occlusion_layer, occlusion)) =
                     self.topmost_pointer_occlusion_layer(barrier_root)
@@ -1625,6 +1767,7 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 if hit_is_below_occlusion {
+                    hit_for_raw_below_barrier = hit;
                     // Match GPUI-style "occluded hover": underlay hover/pressable detection is
                     // disabled while occlusion is active, even when scroll is still allowed.
                     hit_for_hover = None;
@@ -1676,6 +1819,8 @@ impl<H: UiHost> UiTree<H> {
                     // layer remains mounted for a close transition.
                     pointer_down_outside = PointerDownOutsideOutcome::default();
                 } else {
+                    let active_pointer_down_outside_layers =
+                        self.active_pointer_down_outside_layer_roots(barrier_root);
                     pointer_down_outside = self.dispatch_pointer_down_outside(
                         app,
                         services,
@@ -1706,11 +1851,15 @@ impl<H: UiHost> UiTree<H> {
             };
 
             if hover_capable {
+                let position = event_position(event);
                 self.update_hover_state_from_hit(
                     app,
                     window,
+                    barrier_root,
+                    position,
                     hit_for_hover,
                     hit_for_hover_region,
+                    hit_for_raw_below_barrier,
                     &mut invalidation_visited,
                     &mut needs_redraw,
                 );
@@ -2612,7 +2761,11 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Event::Pointer(PointerEvent::Down { button, .. }) = event
+        if let Event::Pointer(PointerEvent::Down {
+            button,
+            pointer_type,
+            ..
+        }) = event
             && *button == fret_core::MouseButton::Left
             && !focus_requested
             && !prevented_default_actions.contains(fret_runtime::DefaultAction::FocusOnPointerDown)
@@ -2630,6 +2783,17 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.focus = Some(focus);
                 self.mark_invalidation(focus, Invalidation::Paint);
+
+                // Mobile-friendly best-effort: if touch input focused a text-editing widget,
+                // request the virtual keyboard within the same input turn so platforms that
+                // require user activation can comply (ADR 0261).
+                if *pointer_type == fret_core::PointerType::Touch && self.focus_is_text_input(app) {
+                    app.push_effect(Effect::ImeRequestVirtualKeyboard {
+                        window,
+                        visible: true,
+                    });
+                }
+
                 // Pointer-driven focus should not scroll: the user is already interacting at the
                 // pointer location, and scrolling here can move content under the cursor between
                 // pointer-down and pointer-up.
@@ -2702,6 +2866,10 @@ impl<H: UiHost> UiTree<H> {
 
                     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                         self.app.next_clipboard_token()
+                    }
+
+                    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                        self.app.next_share_sheet_token()
                     }
                 }
 
@@ -2981,6 +3149,7 @@ impl<H: UiHost> UiTree<H> {
 
             let mut hit_for_hover = hit;
             let mut hit_for_hover_region = hit;
+            let mut hit_for_raw_below_barrier: Option<NodeId> = None;
             if let Some((occlusion_layer, occlusion)) =
                 self.topmost_pointer_occlusion_layer(barrier_root)
                 && occlusion != PointerOcclusion::None
@@ -2999,6 +3168,7 @@ impl<H: UiHost> UiTree<H> {
                     _ => false,
                 };
                 if hit_is_below_occlusion {
+                    hit_for_raw_below_barrier = hit;
                     hit_for_hover = None;
                     hit_for_hover_region = None;
                 }
@@ -3007,8 +3177,11 @@ impl<H: UiHost> UiTree<H> {
             self.update_hover_state_from_hit(
                 app,
                 window,
+                barrier_root,
+                Some(*position),
                 hit_for_hover,
                 hit_for_hover_region,
+                hit_for_raw_below_barrier,
                 &mut invalidation_visited,
                 &mut needs_redraw,
             );

@@ -96,12 +96,21 @@ The render target registry entry must carry enough metadata for correct composit
 - `format` (including sRGB-ness as relevant to the backend)
 - `color_space` (ADR 0040)
 
-Future (expected) metadata extensions, if required by real imports:
+v1 introduces a minimal, explicit metadata seam carried by `RenderTargetDescriptor.metadata`
+(`RenderTargetMetadata`):
 
 - alpha semantics (`premul` vs `straight`),
-- YUV plane formats and conversion strategy (GPU vs CPU),
 - orientation/transform metadata (for camera/video sources),
 - frame timing hints (for diagnostics, not UI logic).
+
+This metadata is stored in the render target registry. v1 does not require the renderer to apply
+orientation transforms during sampling yet; the metadata exists to prevent backend paths from
+forking implicit conventions and to keep room for capability-gated fast paths.
+
+Future (expected) metadata extensions, if required by real imports:
+
+- YUV plane formats and conversion strategy (GPU vs CPU),
+- additional orientation/transform nuance beyond the v1 subset.
 
 Any such extensions must:
 
@@ -143,4 +152,3 @@ This milestone must be reproducible on desktop and (when available) on wasm/WebG
 - Optional zero-copy imports: `docs/adr/0122-renderer-capabilities-and-optional-zero-copy-imports.md`
 - Color/compositing: `docs/adr/0040-color-management-and-compositing-contracts.md`
 - Foreign UI embedding (isolated surfaces): `docs/adr/0174-foreign-ui-embedding-isolated-surfaces.md`
-

@@ -35,10 +35,8 @@ selection geometry, and high-performance caching.
 - Current text backend also converts `SwashContent::SubpixelMask` into a single-channel alpha mask
   (`max(r,g,b)`), which removes LCD/subpixel information.
 - Hinting is currently disabled in `layout_to_buffer(..., Hinting::Disabled)`.
-- Our current cosmic-text integration calls `CacheKey::new(..., pos=(x,y), ...)` but ignores the
-  returned `(x, y)` snapped coordinates. Cosmic-text bins fractional offsets into 0/0.25/0.5/0.75
-  subpixel buckets and returns adjusted integer positions; failing to apply them can cause the quad
-  placement to disagree with the rasterized subpixel variant (visible as “soft”/blurry text).
+- Legacy note: earlier backends used 4-way subpixel binning but did not always apply the same snap rule
+  at quad placement time, which can make placement disagree with the rasterized variant (visible as “soft” text).
 
 Zed/GPUI provides a proven reference for addressing these issues:
 

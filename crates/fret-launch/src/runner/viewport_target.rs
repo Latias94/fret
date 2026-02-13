@@ -1,5 +1,7 @@
 use fret_core::RenderTargetId;
-use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
+use fret_render::{
+    RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetMetadata, Renderer, WgpuContext,
+};
 
 /// App-owned offscreen render target intended to be embedded into the UI via `SceneOp::ViewportSurface`.
 ///
@@ -129,6 +131,7 @@ impl ViewportRenderTarget {
                 size: desired_size,
                 format: self.format,
                 color_space: self.color_space,
+                metadata: RenderTargetMetadata::default(),
             };
 
             if self.id == RenderTargetId::default() {

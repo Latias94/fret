@@ -22,6 +22,21 @@ Active workstreams:
 - `docs/workstreams/environment-queries-v1-extensions.md`
 - `docs/workstreams/environment-queries-v1-extensions-todo.md`
 - `docs/workstreams/environment-queries-v1-extensions-milestones.md`
+- `docs/workstreams/mobile-bringup-v1.md`
+- `docs/workstreams/mobile-bringup-v1-todo.md`
+- `docs/workstreams/mobile-bringup-v1-milestones.md`
+- `docs/workstreams/mobile-gfx-backend-v1/design.md`
+- `docs/workstreams/mobile-gfx-backend-v1/todo.md`
+- `docs/workstreams/mobile-gfx-backend-v1/milestones.md`
+- `docs/workstreams/mobile-contracts-v1/design.md`
+- `docs/workstreams/mobile-contracts-v1/todo.md`
+- `docs/workstreams/mobile-contracts-v1/milestones.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/design.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/todo.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/milestones.md`
+- `docs/workstreams/gesture-recognizers-v1.md`
+- `docs/workstreams/gesture-recognizers-v1-todo.md`
+- `docs/workstreams/gesture-recognizers-v1-milestones.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
@@ -50,6 +65,8 @@ Active workstreams:
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ai-elements-port-milestones.md`
+- `docs/workstreams/webview-wry-v1.md`
+- `docs/workstreams/webview-wry-v1-todo.md`
 - `docs/workstreams/shadcn-extras.md`
 - `docs/workstreams/shadcn-extras-todo.md`
 - `docs/workstreams/shadcn-extras-milestones.md`
@@ -57,6 +74,8 @@ Active workstreams:
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
+- `docs/workstreams/font-system-v1.md`
+- `docs/workstreams/font-catalog-refresh-policy-v1.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
 - `docs/workstreams/imui-authoring-facade-v2.md`
@@ -137,3 +156,6 @@ Active workstreams:
 - `docs/workstreams/creative-recipes-v1.md`
 - `docs/workstreams/creative-recipes-v1-todo.md`
 - `docs/workstreams/creative-recipes-v1-milestones.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-todo.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-milestones.md`

@@ -784,11 +784,15 @@ pub mod primitives {
         }
     }
 
-    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    #[derive(Debug, Clone, Default, PartialEq)]
     pub enum BreadcrumbSeparatorKind {
         #[default]
         ChevronRight,
         Slash,
+        Icon {
+            icon: IconId,
+            size: Px,
+        },
     }
 
     #[derive(Debug, Clone)]
@@ -847,18 +851,14 @@ pub mod primitives {
                 (muted, props)
             };
 
-            let icon = match self.kind {
-                BreadcrumbSeparatorKind::ChevronRight => ids::ui::CHEVRON_RIGHT,
-                BreadcrumbSeparatorKind::Slash => ids::ui::SLASH,
+            let (icon, size) = match self.kind {
+                BreadcrumbSeparatorKind::ChevronRight => (ids::ui::CHEVRON_RIGHT, Px(14.0)),
+                BreadcrumbSeparatorKind::Slash => (ids::ui::SLASH, Px(14.0)),
+                BreadcrumbSeparatorKind::Icon { icon, size } => (icon, size),
             };
 
-            // Upstream applies `[&>svg]:size-3.5` (14px).
-            let icon_el = decl_icon::icon_with(
-                cx,
-                icon,
-                Some(Px(14.0)),
-                Some(fret_ui_kit::ColorRef::Color(muted)),
-            );
+            // Upstream applies `[&>svg]:size-3.5` (14px) by default.
+            let icon_el = decl_icon::icon_with(cx, icon, Some(size), Some(ColorRef::Color(muted)));
 
             // Ensure the separator is a "leaf-sized" node in layouts that scan by size.
             cx.container(props, move |_cx| vec![icon_el])

@@ -151,6 +151,14 @@ pub struct PointerMoveCx {
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
+    /// Best-effort pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    ///
+    /// Notes:
+    /// - This is derived from the UI runtime's pointer motion snapshots, not from per-element
+    ///   state. It may be `None` when monotonic timestamps are unavailable.
+    /// - Components that need deterministic velocity for tests should treat `None` as "unknown"
+    ///   and fall back to policy defaults.
+    pub velocity_window: Option<Point>,
     pub buttons: fret_core::MouseButtons,
     pub modifiers: Modifiers,
     pub pointer_type: PointerType,
@@ -208,6 +216,8 @@ pub struct PointerUpCx {
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
+    /// Best-effort pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    pub velocity_window: Option<Point>,
     pub button: MouseButton,
     pub modifiers: Modifiers,
     /// Whether this pointer-up completes a "true click" (press + release without exceeding click
@@ -238,6 +248,7 @@ pub trait UiActionHost {
     fn request_redraw(&mut self, window: AppWindowId);
     fn next_timer_token(&mut self) -> TimerToken;
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken;
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken;
 
     /// Publish router navigation availability for the given window.
     ///
@@ -390,6 +401,10 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
         self.app.next_clipboard_token()
     }
 
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.app.next_share_sheet_token()
+    }
+
     fn set_router_command_availability(
         &mut self,
         window: AppWindowId,
@@ -466,6 +481,14 @@ pub type OnInternalDrag =
 #[derive(Default)]
 pub(crate) struct InternalDragActionHooks {
     pub on_internal_drag: Option<OnInternalDrag>,
+}
+
+pub type OnExternalDrag =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &fret_core::ExternalDragEvent) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct ExternalDragActionHooks {
+    pub on_external_drag: Option<OnExternalDrag>,
 }
 
 pub type OnActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason) + 'static>;
@@ -572,6 +595,7 @@ pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx)
 
 #[derive(Default)]
 pub(crate) struct KeyActionHooks {
+    pub on_key_down_capture: Option<OnKeyDown>,
     pub on_key_down: Option<OnKeyDown>,
 }
 

@@ -66,15 +66,15 @@ It complements (but does not replace) ADRs:
 - **Multiline IME contract + conformance harness**
   - Goal: lock and validate multiline selection/composition/caret-rect behavior (scroll/wrap/DPI/preedit updates).
   - ADRs: `docs/adr/0071-text-input-multiline-composition-contract.md`, `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
-  - Code: `crates/fret-ui/src/text_area/mod.rs`, `crates/fret-render-wgpu/src/text.rs`
+  - Code: `crates/fret-ui/src/text_area/mod.rs`, `crates/fret-render-wgpu/src/text/mod.rs`
 
 ## P0 - Fonts / Fallbacks / Missing Glyphs
 
 - **Make the default font semantic (system UI font alias)**
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`, `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
-  - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render-wgpu/src/text.rs`
-  - Current: `crates/fret-render-wgpu/src/text.rs` configures both `cosmic-text` fontdb generics and Parley/fontique generic families (keep backend behavior aligned as we converge the font source of truth).
+  - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render-wgpu/src/text/mod.rs`
+  - Current: `crates/fret-render-wgpu/src/text/mod.rs` uses Parley/fontique as the single source of truth for generic family resolution and fallback stack injection (no legacy fontdb bridge).
   - Current: `TextStyle.font` is a semantic `FontId` (`Ui/Serif/Monospace/Family(name)`) and maps to generic stacks (`sans-serif`/`serif`/`monospace`) for shaping.
   - TODO: expose a curated default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
 
@@ -90,21 +90,21 @@ It complements (but does not replace) ADRs:
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
-  - Code: `crates/fret-render-wgpu/src/text.rs`
-  - Current: `crates/fret-render-wgpu/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
+  - Code: `crates/fret-render-wgpu/src/text/mod.rs`
+  - Current: `crates/fret-render-wgpu/src/text/mod.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
   - Current: runner font/config mutations go through `fret_runtime::apply_font_catalog_update`, which bumps `TextFontStackKey` to prevent stale layout/raster cache reuse.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0152-polychrome-glyphs-and-emoji-pipeline-v1.md`
-  - Code: `crates/fret-render-wgpu/src/text.rs`
+  - Code: `crates/fret-render-wgpu/src/text/mod.rs`
   - Current: optional wasm emoji font bundle (`fret-fonts/emoji` -> `Noto Color Emoji`) and a dedicated conformance demo (`apps/fret-examples/src/emoji_conformance_demo.rs`).
-  - Current: automated conformance (unit) covers VS16/ZWJ/flags/keycaps (`crates/fret-render-wgpu/src/text.rs`).
+  - Current: automated conformance (unit) covers VS16/ZWJ/flags/keycaps (`crates/fret-render-wgpu/src/text/mod.rs`).
 
 - **Center baseline within the line box across font swaps**
   - Symptom: switching the UI font in `fret-demo` to fonts with unusual metrics (e.g. Nerd Fonts like "Agave NF") can make text look slightly "up/right" in controls that visually expect centered labels.
   - Root cause: baseline placement derived from ascent only (no distribution of extra line-height padding), plus glyph bitmap bearings can shift perceived ink position vs logical advance metrics.
-  - Current: baseline offset is centered within the line box when `line_height > ascent+descent` (see `crates/fret-render-wgpu/src/text.rs`).
+  - Current: baseline offset is centered within the line box when `line_height > ascent+descent` (see `crates/fret-render-wgpu/src/text/mod.rs`).
   - Decision: align with the web/shadcn mental model (layout uses the line box + baseline). Do **not** implement default "optical alignment" (ink-bounds-based centering) to compensate for extreme font bearings.
   - Note: some "weird metrics" fonts may still look slightly off-center horizontally. Treat this as expected behavior under the web-aligned model unless we add an explicit per-component opt-in.
   - Option: add an **opt-in** "optical centering" mode for single-line control labels (compute ink bounds per shaped run and apply a small offset at paint time; cache the bounds in the prepared text blob).
@@ -148,7 +148,7 @@ It complements (but does not replace) ADRs:
     - Zed blade shader gamma/contrast helpers: `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
     - Zed subpixel variant constants: `repo-ref/zed/crates/gpui/src/text_system.rs`
   - Code (current Fret implementation):
-    - Atlas sampler is filtering: `crates/fret-render-wgpu/src/text.rs`
+    - Atlas sampler is filtering: `crates/fret-render-wgpu/src/text/mod.rs`
     - Text shaders: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`)
     - Text draw origin uses `origin * scale_factor`: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs`
   - TODO:

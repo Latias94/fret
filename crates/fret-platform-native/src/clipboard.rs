@@ -2,12 +2,20 @@ use fret_platform::clipboard::{Clipboard, ClipboardError, ClipboardErrorKind};
 
 #[cfg(all(
     unix,
-    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+    not(any(
+        target_os = "macos",
+        target_os = "android",
+        target_os = "ios",
+        target_os = "emscripten"
+    ))
 ))]
 use arboard::{GetExtLinux as _, LinuxClipboardKind, SetExtLinux as _};
 
 pub struct NativeClipboard {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        any(target_os = "windows", target_os = "macos", target_os = "linux")
+    ))]
     inner: Option<arboard::Clipboard>,
 }
 
@@ -15,14 +23,20 @@ pub type DesktopClipboard = NativeClipboard;
 
 impl Default for NativeClipboard {
     fn default() -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             Self {
                 inner: arboard::Clipboard::new().ok(),
             }
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             Self {}
         }
@@ -31,7 +45,10 @@ impl Default for NativeClipboard {
 
 impl Clipboard for NativeClipboard {
     fn set_text(&mut self, text: &str) -> Result<(), ClipboardError> {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             let Some(cb) = self.inner.as_mut() else {
                 return Err(ClipboardError {
@@ -43,7 +60,10 @@ impl Clipboard for NativeClipboard {
             })
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             let _ = text;
             Err(ClipboardError {
@@ -53,7 +73,10 @@ impl Clipboard for NativeClipboard {
     }
 
     fn get_text(&mut self) -> Result<Option<String>, ClipboardError> {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             let Some(cb) = self.inner.as_mut() else {
                 return Err(ClipboardError {
@@ -68,7 +91,10 @@ impl Clipboard for NativeClipboard {
             }
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             Err(ClipboardError {
                 kind: ClipboardErrorKind::Unavailable,
@@ -79,11 +105,19 @@ impl Clipboard for NativeClipboard {
 
 impl NativeClipboard {
     pub fn set_primary_text(&mut self, text: &str) -> Result<(), ClipboardError> {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             #[cfg(all(
                 unix,
-                not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+                not(any(
+                    target_os = "macos",
+                    target_os = "android",
+                    target_os = "ios",
+                    target_os = "emscripten"
+                ))
             ))]
             {
                 let Some(cb) = self.inner.as_mut() else {
@@ -101,7 +135,12 @@ impl NativeClipboard {
 
             #[cfg(not(all(
                 unix,
-                not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+                not(any(
+                    target_os = "macos",
+                    target_os = "android",
+                    target_os = "ios",
+                    target_os = "emscripten"
+                ))
             )))]
             {
                 let _ = text;
@@ -111,7 +150,10 @@ impl NativeClipboard {
             }
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             let _ = text;
             Err(ClipboardError {
@@ -121,11 +163,19 @@ impl NativeClipboard {
     }
 
     pub fn get_primary_text(&mut self) -> Result<Option<String>, ClipboardError> {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             #[cfg(all(
                 unix,
-                not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+                not(any(
+                    target_os = "macos",
+                    target_os = "android",
+                    target_os = "ios",
+                    target_os = "emscripten"
+                ))
             ))]
             {
                 let Some(cb) = self.inner.as_mut() else {
@@ -144,7 +194,12 @@ impl NativeClipboard {
 
             #[cfg(not(all(
                 unix,
-                not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+                not(any(
+                    target_os = "macos",
+                    target_os = "android",
+                    target_os = "ios",
+                    target_os = "emscripten"
+                ))
             )))]
             {
                 Err(ClipboardError {
@@ -153,7 +208,10 @@ impl NativeClipboard {
             }
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             Err(ClipboardError {
                 kind: ClipboardErrorKind::Unavailable,

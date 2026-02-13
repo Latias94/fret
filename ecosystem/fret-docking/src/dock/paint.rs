@@ -430,6 +430,8 @@ pub(super) fn paint_drop_overlay(
     bounds: Rect,
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     tab_scroll: &HashMap<DockNodeId, Px>,
     tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
     drag_source_tabs: Option<DockNodeId>,
@@ -621,7 +623,48 @@ pub(super) fn paint_drop_overlay(
                 return;
             }
 
-            let overlay = drop_zone_rect(rect, target.zone);
+            let overlay = match graph.edge_dock_decision(window, target.tabs, target.zone) {
+                Some(EdgeDockDecision::InsertIntoSplit {
+                    split,
+                    anchor_index,
+                    insert_index,
+                }) => {
+                    let preview = layout.get(&split).copied().and_then(|bounds| {
+                        let Some(DockNode::Split {
+                            axis,
+                            children,
+                            fractions,
+                        }) = graph.node(split)
+                        else {
+                            return None;
+                        };
+                        if children.is_empty() || children.len() != fractions.len() {
+                            return None;
+                        }
+
+                        let mut next = fractions.clone();
+                        let old = *next.get(anchor_index)?;
+                        let keep = old * 0.5;
+                        let take = old * 0.5;
+
+                        next[anchor_index] = keep;
+                        next.insert(insert_index.min(next.len()), take);
+
+                        let computed = resizable::compute_layout(
+                            *axis,
+                            bounds,
+                            children.len().saturating_add(1),
+                            &next,
+                            split_handle_gap,
+                            split_handle_hit_thickness,
+                            &[],
+                        );
+                        computed.panel_rects.get(insert_index).copied()
+                    });
+                    preview.unwrap_or_else(|| drop_zone_rect(rect, target.zone))
+                }
+                _ => drop_zone_rect(rect, target.zone),
+            };
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: overlay,

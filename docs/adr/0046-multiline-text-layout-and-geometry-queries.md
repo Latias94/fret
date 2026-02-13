@@ -86,4 +86,4 @@ This separation avoids forcing `fret-core` to own a full text document model whi
   - `crates/fret-core/src/text.rs` (`TextService::caret_rect`, `TextService::hit_test_point`)
 - Single-line implementations exist in the renderer:
   - `crates/fret-render-wgpu/src/renderer/mod.rs`
-  - `crates/fret-render-wgpu/src/text.rs`
+  - `crates/fret-render-wgpu/src/text/mod.rs`

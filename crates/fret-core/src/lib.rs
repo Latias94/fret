@@ -16,6 +16,7 @@ pub mod file_dialog;
 pub mod geometry;
 pub mod ids;
 pub mod image;
+pub mod incoming_open;
 pub mod input;
 pub mod layout_direction;
 pub mod materials;
@@ -24,6 +25,7 @@ pub mod render_text;
 pub mod scene;
 pub mod semantics;
 pub mod services;
+pub mod share;
 pub mod streaming;
 pub mod svg;
 pub mod text;
@@ -44,7 +46,8 @@ pub use dock::layout::{
 };
 pub use dock::op::{DockOp, SplitFractionsUpdate};
 pub use dock::{
-    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
+    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind,
+    DropZone, EdgeDockDecision,
 };
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,
@@ -52,13 +55,14 @@ pub use file_dialog::{
 pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, ImageUpdateToken, ImageUploadToken, MaterialId, NodeId, PathId, PointerId,
-    RenderTargetId, SvgId, TextBlobId, TimerToken, ViewId,
+    ImageId, ImageUpdateToken, ImageUploadToken, IncomingOpenToken, MaterialId, NodeId, PathId,
+    PointerId, RenderTargetId, ShareSheetToken, SvgId, TextBlobId, TimerToken, ViewId,
 };
 pub use image::{
     AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
     ImageEncoding, TransferFunction, YuvMatrix,
 };
+pub use incoming_open::{IncomingOpenDataEvent, IncomingOpenItem, IncomingOpenKind};
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
@@ -73,7 +77,11 @@ pub use materials::{
     MaterialRegistrationError, MaterialService,
 };
 pub use panels::{PanelKey, PanelKind};
-pub use render_text::{RendererGlyphAtlasPerfSnapshot, RendererTextPerfSnapshot};
+pub use render_text::{
+    RendererGlyphAtlasPerfSnapshot, RendererTextFallbackPolicySnapshot, RendererTextFontTraceEntry,
+    RendererTextFontTraceFamilyClass, RendererTextFontTraceFamilyUsage,
+    RendererTextFontTraceSnapshot, RendererTextPerfSnapshot,
+};
 pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,
     EffectMode, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS, MaterialParams,
@@ -85,13 +93,14 @@ pub use semantics::{
     SemanticsSnapshot,
 };
 pub use services::UiServices;
+pub use share::{ShareItem, ShareSheetOutcome};
 pub use streaming::StreamingUploadPerfSnapshot;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
-    StrikethroughStyle, TextConstraints, TextFontFamilyConfig, TextInput, TextInputRef,
-    TextMetrics, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
-    TextStyle, TextWrap, UnderlineStyle,
+    StrikethroughStyle, TextCommonFallbackInjection, TextConstraints, TextFontAxisSetting,
+    TextFontFamilyConfig, TextInput, TextInputRef, TextMetrics, TextOverflow, TextPaintStyle,
+    TextService, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,

@@ -80,6 +80,10 @@ pub(super) fn handle_pressable<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+
         fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
             crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
         }
@@ -227,11 +231,16 @@ pub(super) fn handle_pressable<H: UiHost>(
                 );
 
                 if let Some(h) = hook {
+                    let velocity_window = cx
+                        .app
+                        .global::<crate::pointer_motion::WindowPointerMotionService>()
+                        .and_then(|svc| svc.velocity_window(window, *pointer_id));
                     let mv = action::PointerMoveCx {
                         pointer_id: *pointer_id,
                         position: *position,
                         tick_id: cx.app.tick_id(),
                         pixels_per_point,
+                        velocity_window,
                         buttons: *buttons,
                         modifiers: *modifiers,
                         pointer_type: *pointer_type,
@@ -381,6 +390,10 @@ pub(super) fn handle_pressable<H: UiHost>(
                         position: *position,
                         tick_id: cx.app.tick_id(),
                         pixels_per_point,
+                        velocity_window: cx
+                            .app
+                            .global::<crate::pointer_motion::WindowPointerMotionService>()
+                            .and_then(|svc| svc.velocity_window(window, *pointer_id)),
                         button: *button,
                         modifiers: *modifiers,
                         is_click: *is_click,
@@ -530,6 +543,10 @@ pub(super) fn handle_pressable<H: UiHost>(
 
                             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                                 self.app.next_clipboard_token()
+                            }
+
+                            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                                self.app.next_share_sheet_token()
                             }
 
                             fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
@@ -699,6 +716,10 @@ pub(super) fn handle_pressable<H: UiHost>(
 
                     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                         self.app.next_clipboard_token()
+                    }
+
+                    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                        self.app.next_share_sheet_token()
                     }
 
                     fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {

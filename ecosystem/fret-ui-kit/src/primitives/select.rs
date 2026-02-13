@@ -2858,6 +2858,7 @@ mod tests {
                 position: Point::new(Px(13.0), Px(15.0)),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
                 is_click: true,
@@ -2913,6 +2914,7 @@ mod tests {
                 position: Point::new(Px(40.0), Px(12.0)),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 buttons: fret_core::MouseButtons {
                     left: true,
                     right: false,
@@ -2933,6 +2935,7 @@ mod tests {
                 position: Point::new(Px(40.0), Px(12.0)),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
                 is_click: false,

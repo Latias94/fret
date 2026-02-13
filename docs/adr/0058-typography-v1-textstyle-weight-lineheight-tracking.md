@@ -34,8 +34,7 @@ Renderer implications (ADR 0006 / ADR 0029):
 ## Consequences
 
 - Components can express shadcn-style typography without inventing per-widget style structs.
-- `FontWeight` is `fret-core`-native and does not require pulling `fontdb`/`cosmic-text` types into
-  `fret-core`.
+- `FontWeight` is `fret-core`-native and does not require pulling backend font database types into `fret-core`.
 - Theme schema changes are **not required** for v1. The existing numeric `metrics` map can carry
   optional baseline typography knobs such as `metric.font.line_height` / `metric.font.mono_line_height`.
   Component recipes can set typography directly, and future work can expand theme-level typography

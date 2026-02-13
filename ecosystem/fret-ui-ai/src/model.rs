@@ -6,6 +6,45 @@ use std::sync::Arc;
 /// as a keyed identity.
 pub type MessageId = fret_ui::ItemKey;
 
+/// Derive a deterministic `MessageId` from a stable external identifier.
+///
+/// This uses a small, deterministic 64-bit hash (FNV-1a) so apps can interop with upstream SDKs
+/// that provide string IDs (UUID/nanoid/etc) while keeping the UI keyed identity as a `u64`.
+///
+/// Notes:
+///
+/// - IDs only need to be unique within a single transcript.
+/// - Hash collisions are possible (as with any hash). If you cannot tolerate collisions, keep a
+///   per-conversation `HashMap<ExternalId, MessageId>` and assign monotonic IDs.
+pub fn message_id_from_external_id(external_id: &str) -> MessageId {
+    item_key_from_external_id(external_id)
+}
+
+/// Derive a deterministic `MessageId` from a stable external ID with an extra salt.
+///
+/// The salt can be a conversation/session ID hash to further reduce collision risk across merged
+/// transcripts.
+pub fn message_id_from_salted_external_id(salt: u64, external_id: &str) -> MessageId {
+    item_key_from_salted_external_id(salt, external_id)
+}
+
+/// Derive a deterministic `ItemKey` (`u64`) from a stable external identifier.
+///
+/// This is a small, stable hash intended for bridging string IDs (UUID/nanoid/etc) into Fret’s
+/// keyed identity surfaces (`ItemKey = u64`).
+///
+/// Notes:
+/// - Hash collisions are possible (as with any hash). If you cannot tolerate collisions, keep a
+///   per-surface mapping table and assign monotonic `ItemKey`s.
+pub fn item_key_from_external_id(external_id: &str) -> fret_ui::ItemKey {
+    item_key_from_salted_external_id(0, external_id)
+}
+
+/// Derive a deterministic `ItemKey` (`u64`) from a stable external ID with an extra salt.
+pub fn item_key_from_salted_external_id(salt: u64, external_id: &str) -> fret_ui::ItemKey {
+    fnv1a64_u64_and_bytes(salt, external_id.as_bytes())
+}
+
 /// Message role taxonomy aligned with typical chat UIs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MessageRole {
@@ -218,8 +257,78 @@ impl AiMessage {
         }
     }
 
+    /// Constructs a message keyed from a stable external string identifier.
+    ///
+    /// This is a convenience wrapper around:
+    /// - `message_id_from_external_id(external_id)`
+    /// - `AiMessage::external_id(...)`
+    ///
+    /// Notes:
+    /// - Hash collisions are possible; if you cannot tolerate collisions, keep a per-transcript
+    ///   mapping table and assign monotonic `MessageId`s instead.
+    pub fn from_external_id(
+        external_id: impl Into<ExternalId>,
+        role: MessageRole,
+        parts: impl IntoIterator<Item = MessagePart>,
+    ) -> Self {
+        let external_id: ExternalId = external_id.into();
+        let id = message_id_from_external_id(external_id.as_ref());
+        Self::new(id, role, parts).external_id(external_id)
+    }
+
+    /// Constructs a message keyed from a stable external string identifier plus an extra salt.
+    ///
+    /// This is useful when you want a deterministic mapping, but also want to reduce collision risk
+    /// across merged transcripts by salting with a conversation/session identifier.
+    pub fn from_salted_external_id(
+        salt: u64,
+        external_id: impl Into<ExternalId>,
+        role: MessageRole,
+        parts: impl IntoIterator<Item = MessagePart>,
+    ) -> Self {
+        let external_id: ExternalId = external_id.into();
+        let id = message_id_from_salted_external_id(salt, external_id.as_ref());
+        Self::new(id, role, parts).external_id(external_id)
+    }
+
     pub fn external_id(mut self, external_id: ExternalId) -> Self {
         self.external_id = Some(external_id);
         self
+    }
+}
+
+fn fnv1a64_u64_and_bytes(prefix: u64, bytes: &[u8]) -> u64 {
+    // Keep in sync with `crates/fret-ui/src/elements/hash.rs` (FNV-1a 64).
+    const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x100000001b3;
+
+    let mut hash = OFFSET_BASIS;
+    for b in prefix.to_le_bytes() {
+        hash ^= b as u64;
+        hash = hash.wrapping_mul(PRIME);
+    }
+    for b in bytes {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(PRIME);
+    }
+    hash
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn message_id_from_external_id_is_deterministic() {
+        let a = message_id_from_external_id("msg_0001");
+        let b = message_id_from_external_id("msg_0001");
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn salted_and_unsalted_differ() {
+        let unsalted = message_id_from_external_id("msg_0001");
+        let salted = message_id_from_salted_external_id(42, "msg_0001");
+        assert_ne!(unsalted, salted);
     }
 }

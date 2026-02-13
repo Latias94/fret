@@ -7,7 +7,10 @@ pub type DesktopOpenUrl = NativeOpenUrl;
 
 impl OpenUrl for NativeOpenUrl {
     fn open_url(&mut self, url: &str) -> Result<(), OpenUrlError> {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             webbrowser::open(url).map_err(|_| OpenUrlError {
                 kind: OpenUrlErrorKind::BackendError,
@@ -15,7 +18,10 @@ impl OpenUrl for NativeOpenUrl {
             Ok(())
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             let _ = url;
             Err(OpenUrlError {

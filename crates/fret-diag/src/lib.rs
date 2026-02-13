@@ -111,6 +111,10 @@ use stats::{
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
     check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
     check_bundle_for_windowed_rows_visible_start_changes_repainted,
+    check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
+    check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+    check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
+    check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
     check_report_for_hover_layout_invalidations, clear_script_result_files,
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
@@ -205,6 +209,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool = false;
     let mut check_ui_gallery_markdown_editor_source_word_boundary: bool = false;
     let mut check_ui_gallery_web_ime_bridge_enabled: bool = false;
+    let mut check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps: bool = false;
+    let mut check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change: bool = false;
+    let mut check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change: bool = false;
+    let mut check_ui_gallery_text_mixed_script_bundled_fallback_conformance: bool = false;
     let mut check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool = false;
     let mut check_ui_gallery_markdown_editor_source_a11y_composition: bool = false;
     let mut check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool = false;
@@ -926,6 +934,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-web-ime-bridge-enabled" => {
                 check_ui_gallery_web_ime_bridge_enabled = true;
+                i += 1;
+            }
+            "--check-ui-gallery-text-rescan-system-fonts-font-stack-key-bumps" => {
+                check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps = true;
+                i += 1;
+            }
+            "--check-ui-gallery-text-fallback-policy-key-bumps-on-settings-change" => {
+                check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change = true;
+                i += 1;
+            }
+            "--check-ui-gallery-text-fallback-policy-key-bumps-on-locale-change" => {
+                check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change = true;
+                i += 1;
+            }
+            "--check-ui-gallery-text-mixed-script-bundled-fallback-conformance" => {
+                check_ui_gallery_text_mixed_script_bundled_fallback_conformance = true;
                 i += 1;
             }
             "--check-ui-gallery-markdown-editor-source-line-boundary-triple-click" => {
@@ -2588,6 +2612,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                     || check_ui_gallery_markdown_editor_source_word_boundary
                     || check_ui_gallery_web_ime_bridge_enabled
+                    || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+                    || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+                    || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+                    || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
                     || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                     || check_ui_gallery_markdown_editor_source_a11y_composition
                     || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
@@ -2710,6 +2738,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary,
                         check_ui_gallery_web_ime_bridge_enabled,
+                        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
+                        check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition,
                         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
@@ -2788,6 +2820,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             let script_wants_screenshots = script_requests_screenshots(&src);
             let mut run_launch_env = launch_env.clone();
+            for (key, value) in script_env_defaults(&src) {
+                push_env_if_missing(&mut run_launch_env, &key, &value);
+            }
             let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
             let mut child = maybe_launch_demo(
                 &launch,
@@ -2944,6 +2979,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary,
                         check_ui_gallery_web_ime_bridge_enabled,
+                        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
+                        check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition,
                         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
@@ -3905,6 +3944,10 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                         || check_ui_gallery_markdown_editor_source_word_boundary
                         || check_ui_gallery_web_ime_bridge_enabled
+                        || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+                        || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+                        || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+                        || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
                         || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                         || check_ui_gallery_markdown_editor_source_a11y_composition
                         || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
@@ -4001,6 +4044,10 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                             check_ui_gallery_markdown_editor_source_word_boundary,
                             check_ui_gallery_web_ime_bridge_enabled,
+                            check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
+                            check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                            check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
+                            check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                             check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                             check_ui_gallery_markdown_editor_source_a11y_composition,
                             check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
@@ -5345,6 +5392,37 @@ See: `docs/tracy.md`.\n";
                 warmup_frames = 5;
             }
 
+            let mut suite_script_env_defaults: std::collections::BTreeMap<String, String> =
+                std::collections::BTreeMap::new();
+            let mut suite_env_conflicts: Vec<String> = Vec::new();
+            for src in scripts.iter() {
+                for (key, value) in script_env_defaults(src) {
+                    if let Some(prev) = suite_script_env_defaults.insert(key.clone(), value.clone())
+                    {
+                        if prev != value {
+                            suite_env_conflicts.push(format!(
+                                "{} wants {}={}, but another script requested {}={}",
+                                src.display(),
+                                key,
+                                value,
+                                key,
+                                prev
+                            ));
+                        }
+                    }
+                }
+            }
+            if !suite_env_conflicts.is_empty() {
+                suite_env_conflicts.sort();
+                return Err(format!(
+                    "conflicting script meta.env_defaults in suite:\n- {}",
+                    suite_env_conflicts.join("\n- ")
+                ));
+            }
+            for (key, value) in suite_script_env_defaults {
+                push_env_if_missing(&mut launch_env, &key, &value);
+            }
+
             let suite_launch_env = launch_env.clone();
 
             let reuse_process = launch.is_none() || reuse_launch;
@@ -5660,6 +5738,10 @@ See: `docs/tracy.md`.\n";
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
                     || check_ui_gallery_web_ime_bridge_enabled
+                    || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+                    || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+                    || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+                    || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
                     || check_ui_gallery_code_editor_torture_geom_fallbacks_low
@@ -5714,6 +5796,9 @@ See: `docs/tracy.md`.\n";
                     || retained_vlist_keep_alive_reuse_min_for_script.is_some()
                     || retained_vlist_keep_alive_budget_for_script.is_some()
                     || vlist_window_shifts_non_retained_max_for_script.is_some()
+                    || ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(
+                        &src,
+                    )
                     || ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
                     || ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
@@ -6094,6 +6179,18 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_a11y_composition_drag =
                         ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(&src)
                             && !check_ui_gallery_code_editor_a11y_composition_drag;
+                    let suite_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps =
+                        ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(&src)
+                            && !check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
+                    let suite_ui_gallery_text_fallback_policy_key_bumps_on_settings_change =
+                        ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_gate(&src)
+                            && !check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
+                    let suite_ui_gallery_text_fallback_policy_key_bumps_on_locale_change =
+                        ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(&src)
+                            && !check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
+                    let suite_ui_gallery_text_mixed_script_bundled_fallback_conformance =
+                        ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(&src)
+                            && !check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
                     let retained_vlist_suite = components_gallery_suite
@@ -6176,6 +6273,14 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_markdown_editor_source_word_boundary,
                         check_ui_gallery_web_ime_bridge_enabled
                             || suite_ui_gallery_web_ime_bridge_enabled,
+                        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+                            || suite_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+                            || suite_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+                            || suite_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
+                        check_ui_gallery_text_mixed_script_bundled_fallback_conformance
+                            || suite_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                             || suite_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition
@@ -10061,9 +10166,11 @@ fn wait_for_bundle_json_in_dir(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 55] {
+fn ui_gallery_suite_scripts() -> [&'static str; 57] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
+        "tools/diag-scripts/ui-gallery-text-rescan-system-fonts-font-stack-key-bumps.json",
+        "tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-settings-change.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
         "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
         "tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json",
@@ -10212,10 +10319,14 @@ fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {
     ]
 }
 
-fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 13] {
+fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 17] {
     [
+        "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
+        "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
         "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
+        "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
         "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
+        "tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json",
         "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",
         "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
         "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
@@ -10241,10 +10352,19 @@ fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {
     ]
 }
 
-fn docking_arbitration_suite_scripts() -> [&'static str; 2] {
+fn docking_arbitration_suite_scripts() -> [&'static str; 11] {
     [
         "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
         "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
+        "tools/diag-scripts/docking-arbitration-demo-default-layout-signature.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-preview-insert-into-existing-split.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-repeated-edge-dock-no-deepen.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-escape-cancels-drag.json",
+        "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
+        "tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size.json",
     ]
 }
 
@@ -10489,6 +10609,58 @@ fn ui_gallery_script_requires_web_ime_bridge_enabled_gate(script: &Path) -> bool
     matches!(
         name,
         "ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-text-rescan-system-fonts-font-stack-key-bumps.json"
+    )
+}
+
+fn ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-text-fallback-policy-key-bumps-on-settings-change.json"
+    )
+}
+
+fn ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json"
+    )
+}
+
+fn ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-text-mixed-script-bundled-fallback-conformance.json"
     )
 }
 
@@ -10979,6 +11151,16 @@ fn script_required_capabilities(script: &Path) -> Vec<String> {
     script_required_capabilities_value(&value)
 }
 
+fn script_env_defaults(script: &Path) -> Vec<(String, String)> {
+    let Ok(bytes) = std::fs::read(script) else {
+        return Vec::new();
+    };
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+        return Vec::new();
+    };
+    script_env_defaults_value(&value)
+}
+
 fn script_requests_screenshots_value(value: &serde_json::Value) -> bool {
     value
         .get("steps")
@@ -11028,6 +11210,71 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
     normalized.sort();
     normalized.dedup();
     normalized
+}
+
+fn script_env_defaults_value(value: &serde_json::Value) -> Vec<(String, String)> {
+    use std::collections::BTreeMap;
+
+    fn is_valid_key(key: &str) -> bool {
+        let key = key.trim();
+        if key.is_empty() {
+            return false;
+        }
+        if key.contains('=') {
+            return false;
+        }
+        true
+    }
+
+    fn normalize_value(v: &serde_json::Value) -> Option<String> {
+        match v {
+            serde_json::Value::String(s) => Some(s.to_string()),
+            serde_json::Value::Bool(b) => Some(b.to_string()),
+            serde_json::Value::Number(n) => Some(n.to_string()),
+            _ => None,
+        }
+    }
+
+    let mut out: BTreeMap<String, String> = BTreeMap::new();
+    let Some(meta) = value.get("meta") else {
+        return Vec::new();
+    };
+    let Some(raw) = meta.get("env_defaults") else {
+        return Vec::new();
+    };
+
+    match raw {
+        serde_json::Value::Object(map) => {
+            for (key, v) in map.iter() {
+                if !is_valid_key(key) {
+                    continue;
+                }
+                let Some(value) = normalize_value(v) else {
+                    continue;
+                };
+                out.insert(key.trim().to_string(), value);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items.iter().filter_map(|v| v.as_str()) {
+                let item = item.trim();
+                if item.is_empty() {
+                    continue;
+                }
+                let Some((key, value)) = item.split_once('=') else {
+                    continue;
+                };
+                let key = key.trim();
+                if !is_valid_key(key) {
+                    continue;
+                }
+                out.insert(key.to_string(), value.to_string());
+            }
+        }
+        _ => {}
+    }
+
+    out.into_iter().collect()
 }
 
 fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
@@ -11187,6 +11434,53 @@ mod capability_tests {
         assert!(missing.contains(&"diag.screenshot_png".to_string()));
 
         let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn parses_script_env_defaults_from_meta() {
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "meta": {
+                "env_defaults": {
+                    "FRET_TEXT_SYSTEM_FONTS": 0,
+                    "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
+                    "": "ignored",
+                    "NOT=ALLOWED": "ignored"
+                }
+            },
+            "steps": []
+        });
+        let parsed = script_env_defaults_value(&script);
+        assert_eq!(
+            parsed,
+            vec![
+                ("FRET_TEXT_SYSTEM_FONTS".to_string(), "0".to_string()),
+                (
+                    "FRET_UI_GALLERY_BOOTSTRAP_FONTS".to_string(),
+                    "1".to_string()
+                ),
+            ]
+        );
+
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "meta": {
+                "env_defaults": [
+                    "FRET_A=1",
+                    "FRET_B=two",
+                    "FRET_A=3"
+                ]
+            },
+            "steps": []
+        });
+        let parsed = script_env_defaults_value(&script);
+        assert_eq!(
+            parsed,
+            vec![
+                ("FRET_A".to_string(), "3".to_string()),
+                ("FRET_B".to_string(), "two".to_string()),
+            ]
+        );
     }
 }
 
@@ -11583,6 +11877,10 @@ fn apply_post_run_checks(
     check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool,
     check_ui_gallery_markdown_editor_source_word_boundary: bool,
     check_ui_gallery_web_ime_bridge_enabled: bool,
+    check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps: bool,
+    check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change: bool,
+    check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change: bool,
+    check_ui_gallery_text_mixed_script_bundled_fallback_conformance: bool,
     check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool,
@@ -11796,6 +12094,18 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_web_ime_bridge_enabled {
         check_bundle_for_ui_gallery_web_ime_bridge_enabled(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps {
+        check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(out_dir)?;
+    }
+    if check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change {
+        check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(out_dir)?;
+    }
+    if check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change {
+        check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(out_dir)?;
+    }
+    if check_ui_gallery_text_mixed_script_bundled_fallback_conformance {
+        check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(out_dir)?;
     }
     if check_ui_gallery_markdown_editor_source_line_boundary_triple_click {
         check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click(

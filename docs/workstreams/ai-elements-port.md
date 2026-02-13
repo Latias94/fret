@@ -17,6 +17,11 @@ This is an **outcomes-first** port: we align behavior and composition outcomes, 
 
 Milestone board (one-screen): `docs/workstreams/ai-elements-port-milestones.md`.
 
+Related workstreams:
+
+- WebView backend plan (native, `wry`): `docs/workstreams/webview-wry-v1.md` and
+  `docs/workstreams/webview-wry-v1-todo.md`.
+
 ## Version stamp (upstream reference)
 
 The upstream spec for this workstream is the pinned local checkout under
@@ -25,7 +30,7 @@ The upstream spec for this workstream is the pinned local checkout under
 Note: `repo-ref` is a local developer asset store and is not required to build the workspace.
 
 - Upstream repo: `vercel/ai-elements`
-- Pinned commit: `e7566cacc888d41cedd2a41510d2cf0df36928da` (commit date `2026-02-04`)
+- Pinned commit: `e2045329c8445ebd0523de6aa755a39d6193841f` (commit date `2026-02-06`)
 
 If the pinned upstream changes, update this stamp first so TODOs and behavior discussions remain
 anchored.
@@ -67,14 +72,28 @@ an interactive chat demo:
 - `AiChat`: a default composition shell (transcript + scroll affordance + prompt input + optional
   empty/download parts), intended as a “good starting point” for apps.
 - `MessageResponse`: markdown rendering backed by `ecosystem/fret-markdown` with streaming-friendly
-  updates and code-block actions (expand/collapse).
+  updates and code-block actions (copy + expand/collapse).
 - `PromptInput`: textarea + send/stop + disabled/loading states, with keyboard-first selectors.
+- `Suggestions` + `Suggestion`: horizontally scrollable suggestion pills row (prompt-adjacent utility).
 - `ToolCallBlock` + `SourcesBlock` + `InlineCitation`: initial tooling surfaces (collapsible tool
   calls, sources list, citation highlight selection).
 - `ConversationEmptyState` + `ConversationScrollButton` + `ConversationDownload` + `MessageToolbar`:
   conversation/message parts for app composition.
 - `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
-- `FileTree`: AI Elements-aligned nested file tree surface (small trees; no virtualization yet).
+- `Artifact`: AI Elements-aligned artifact container surface (header + actions + scrollable content).
+- `Shimmer`: AI Elements-aligned animated text shimmer surface (`duration` + `spread`).
+- `Reasoning`: AI Elements-aligned reasoning disclosure surface (streaming-driven auto-open + timed auto-close + markdown content).
+- `Context`: AI Elements-aligned context usage hovercard surface (percent trigger + progress content).
+- `Terminal`: AI Elements-aligned terminal output viewer surface (monospace output + copy/clear + auto-scroll).
+- `AudioPlayer`: AI Elements-aligned audio player chrome surface (UI-only; playback remains app-owned).
+- `Transcription`: AI Elements-aligned transcription segment surface (UI-only; playback timing remains app-owned).
+- `FileTree`: AI Elements-aligned nested file tree surface with per-row actions; flattens via UI Kit tree primitives and virtualizes via `VirtualList` when the host provides a height constraint.
+- `WebPreview`: AI Elements-aligned web preview chrome (navigation + URL input + console disclosure). Feature-gated native embedding exists via `wry` (see `docs/workstreams/webview-wry-v1.md`); chrome-only remains the default when the backend is not enabled.
+- `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
+- `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
+- `StackTrace`: AI Elements-aligned stack trace disclosure surface (copy + parsed frames).
+- `TestResults`: AI Elements-aligned test results surfaces (summary + suite disclosure + errors).
+- `SchemaDisplay`: AI Elements-aligned schema viewer surface (parameters + request/response property trees).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
   - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates:
@@ -86,10 +105,66 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
+  - `AI context (demo)` (`ai_context_demo`): `Context` hovercard demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-context-demo-hover.json`
+  - `AI terminal (demo)` (`ai_terminal_demo`): `Terminal` viewer demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
+  - `AI package info (demo)` (`ai_package_info_demo`): `PackageInfo` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`
+  - `AI open in chat (demo)` (`ai_open_in_chat_demo`): `OpenIn` provider dropdown demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-open-in-chat-demo-open-menu.json`
+  - `AI task (demo)` (`ai_task_demo`): `Task` collapsible demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-task-demo-toggle.json`
+  - `AI audio player (demo)` (`ai_audio_player_demo`): `AudioPlayer` chrome demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`
+  - `AI transcription (demo)` (`ai_transcription_demo`): `Transcription` segment demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`
+  - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
+  - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-shimmer-demo-pixels-changed.json`
+  - `AI suggestions (demo)` (`ai_suggestions_demo`): `Suggestions`/`Suggestion` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`
   - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
+    - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
+  - `AI code block (demo)` (`ai_code_block_demo`): `CodeBlock` + `Snippet` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
+  - `AI commit (demo)` (`ai_commit_demo`): `Commit` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
+  - `AI commit large (demo)` (`ai_commit_large_demo`): long file list + scroll + file-path click seam gate:
+    - `tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`
+  - `AI stack trace (demo)` (`ai_stack_trace_demo`): `StackTrace` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+  - `AI stack trace large (demo)` (`ai_stack_trace_large_demo`): long frame list + scroll + file-path click seam gate:
+    - `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+  - `AI test results (demo)` (`ai_test_results_demo`): `TestResults` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
+  - `AI test results large (demo)` (`ai_test_results_large_demo`): long test list + scroll + activate seam gate:
+    - `tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`
+  - `AI checkpoint (demo)` (`ai_checkpoint_demo`): tooltip trigger + activate seam gate:
+    - `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`
+  - `AI confirmation (demo)` (`ai_confirmation_demo`): approval request/approve gate:
+    - `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
+  - `AI environment variables (demo)` (`ai_environment_variables_demo`): show/hide toggle + copy feedback gate:
+    - `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`
+  - `AI plan (demo)` (`ai_plan_demo`): collapsible open/close (header trigger) gate:
+    - `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`
+  - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 
 This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
+
+## Alignment notes (code artifacts)
+
+These notes document **intentional** differences from the upstream TS surfaces to keep
+effects/policy app-owned and to fit Fret’s action-hook model. If upstream behavior changes, update
+this section as part of the “Version stamp” bump.
+
+- `CommitCopyButton` (`commit.tsx`): upstream suppresses repeated copy while `Copied` is active; Fret matches this and also exposes an `on_copy` hook so apps can own side effects.
+- `StackTraceCopyButton` (`stack-trace.tsx`): upstream allows repeated copy even while `Copied` is active; Fret preserves that semantic and exposes `on_copy`.
+- `CommitFilePath` / `StackTrace` file-paths: upstream is presentation-only; Fret exposes explicit click seams (`OnCommitFilePathClick`, `OnStackTraceFilePathClick`) because “open file” is an app effect.
+- `Test` rows (`test-results.tsx`): upstream renders tests as a non-interactive row by default; Fret keeps the default non-interactive but adds an optional activation seam (`Test::on_activate(OnTestActivate)`) for editor-style “open test output” flows.
 
 ## Workstream goals
 
@@ -129,8 +204,58 @@ P2 (workflow + voice):
    - Add `fretboard diag` scripts for interaction-heavy surfaces.
    - Add unit tests for invariants and state machines (avoid renderer dependencies when possible).
 
+### Running diag gates (recommended)
+
+Prefer launching a prebuilt UI Gallery binary (instead of nesting `cargo run` under `--launch`) so
+script startup is stable on slower machines:
+
+```powershell
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag run tools/diag-scripts/<script>.json `
+  --dir target/fret-diag-<name> --timeout-ms 300000 --poll-ms 200 --pack --include-all `
+  --launch -- target/release/fret-ui-gallery.exe
+```
+
 4. **Dogfood in UI Gallery**
    - Each new component family gets a UI Gallery page that can be used for perf/interaction regression.
+
+## Priority roadmap (next)
+
+This list is intentionally short. The rule is: **close one user-visible gap, then add/repair a gate**.
+
+P0 (Chat usability + correctness):
+
+- **PromptInput attachments parity** (`prompt-input.tsx`) (done; gated):
+  - attachments chips row (`add/remove/clear`) + add-attachments action (plus button emits an app-owned intent) with app-owned effects (file picker / open URL).
+  - keyboard parity: `Enter` submits (IME-safe; `Shift+Enter` inserts newline), `Backspace` on empty input removes the last attachment.
+  - external file drop fallback: dropping files onto the prompt input appends file-name-based attachment chips (metadata-only).
+  - attachments constraints parity: `accept` / `multiple` / `maxFiles` / `maxFileSize` are exposed on the prompt config and enforced for external file drops; errors emit via `on_error`.
+  - provider mode: optional `PromptInputProvider` lifts text + attachments models outside the `PromptInput` surface.
+  - height constraints: align the textarea “grows but clamps” behavior (min/max height outcome).
+  - gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
+- **PromptInput parts-first composition parity** (`prompt-input.tsx`) (next):
+  - ship a parts-based API so apps can compose prompt chrome without forking (header/footer/tools/buttons/menus).
+  - keep `PromptInput` as a backwards-compatible default recipe wrapper.
+  - add a provider-mode composition demo (external “add attachments” action) + diag gate:
+    - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
+- Blocker: **clipboard file/image paste** needs a runtime/platform capability (Fret currently has clipboard text effects only).
+- **Regression gates**:
+  - add a `fretboard diag` script that covers the attachment keyboard behaviors (add → backspace remove → send).
+  - keep stable selectors on the prompt textarea + attachment row.
+
+P1 (AI Elements “extras” surfaces):
+
+- **FileTree audit + extension seams**:
+  - re-check `FileTree / Folder / File / Icon / Name` decomposition against upstream `file-tree.tsx` and local reference apps.
+  - document extension points (custom row actions, selection model, large-tree strategy).
+  - large-tree strategy is implemented and gated (`tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json`); remaining work focuses on visual/interaction parity refinements.
+
+P2 (platform capability parity, if required by upstream behavior):
+
+- **Clipboard file/image paste**:
+  - option A (preferred long-term): add `ClipboardGetFiles`/`ClipboardGetImage` style effects + platform completions (native + web).
+  - option B (short-term fallback): support “drop files onto the prompt input” as the primary ergonomic path.
 
 ## Upstream parity focus (2026-02)
 
@@ -197,6 +322,14 @@ Fret mapping:
 - Stable selectors remain mandatory:
   - root: `${msg_prefix}toolcall-{part_index}`
   - trigger: `${msg_prefix}toolcall-trigger-{part_index}`
+
+Implementation notes (current):
+
+- Status badge labels match upstream (`Awaiting Approval`, `Responded`, `Running`, `Pending`, `Completed`, `Denied`, `Error`).
+- Tool name derivation strips the `tool-` prefix when the app does not provide an explicit title (matches `tool.tsx` derived name behavior).
+- UI Gallery demo + diag gate exist:
+  - Page: `ai_tool_demo`
+  - Script: `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
 
 ### `inline-citation.tsx` (HoverCard + pager)
 
@@ -325,7 +458,7 @@ Fret’s virtualization and windowed surfaces key off `ItemKey`, which is `u64` 
 Requiring a `u64` message ID gives us:
 
 - deterministic keys across builds/platforms (no randomized hash seeds),
-- no hidden collision risk,
+- explicit collision behavior (IDs are app-owned; avoid hashing if you need strict uniqueness),
 - trivial performance characteristics (copyable, compact),
 - straightforward integration with view-cache + retained virtualization.
 
@@ -337,8 +470,33 @@ Recommended derivation strategy:
 - If your upstream gives you an ordered stream, use a **monotonic counter** (best).
 - If you need to key by a string ID, use a **stable hash with a fixed seed** at the app boundary and
   **detect duplicates** during message list construction (fail fast in debug builds).
+  - `fret-ui-ai` provides helpers: `message_id_from_external_id(external_id: &str)` and
+    `message_id_from_salted_external_id(salt: u64, external_id: &str)`.
+  - Convenience constructors also exist:
+    - `AiMessage::from_external_id(external_id, role, parts)`
+    - `AiMessage::from_salted_external_id(salt, external_id, role, parts)`
+  - `AiConversationTranscript` performs a debug-only uniqueness check when `content_revision` (or
+    message list length) changes and will panic on duplicates to surface keying bugs early.
+  - Reminder: hash collisions are possible; if you cannot tolerate collisions, keep a per-transcript
+    mapping table and assign monotonic `MessageId`s.
 - Avoid using `Vec` indices as IDs if you ever insert/remove in the middle of the transcript (it
   breaks keyed identity and can cause per-row state to “jump”).
+
+Example (recommended, collision-free):
+
+```rust
+// Pseudocode: keep a per-transcript mapping table.
+let mut next_id: MessageId = 1;
+let mut map: HashMap<ExternalId, MessageId> = HashMap::new();
+
+fn ensure_id(map: &mut HashMap<ExternalId, MessageId>, next_id: &mut MessageId, ext: ExternalId) -> MessageId {
+    *map.entry(ext).or_insert_with(|| {
+        let id = *next_id;
+        *next_id += 1;
+        id
+    })
+}
+```
 
 ### Message content model
 
@@ -359,8 +517,9 @@ Notes:
 
 - Use `Arc<[T]>` for `parts` to keep `AiMessage` cheap to clone while still allowing apps to own the
   source-of-truth message list.
-- “Attachments” and richer “code block parts” are deferred until we have a stable authoring contract
-  for file pickers / bytes ownership / per-block state.
+- “Attachments parts” and richer “code block parts” are deferred until we have a stable authoring
+  contract for file pickers / bytes ownership / per-block state. The standalone attachments UI
+  surfaces (`Attachments` / `Attachment*`) can still be used in prompt composers and tool panels.
 
 ### Tool call lifecycle
 
@@ -511,6 +670,11 @@ Even with correct container selection, targets can land too close to sticky prom
 prompt panel). Keep `scroll_into_view.padding_insets_px.bottom_px` conservative in scripts so click
 targets land above the sticky region.
 
+Diagnostics gotcha: Fret element identity uses callsite + key hashing. If you render the same
+"logical list" multiple times from the same callsite (e.g. grid/inline/list variants), key by a
+tuple like `(variant, id)` or wrap each variant section in a dedicated `cx.keyed(...)` scope to
+avoid collisions (missing semantics anchors / state jumping).
+
 ## Component inventory (upstream → Fret mapping)
 
 The upstream AI Elements repo groups components into (chatbot / code / workflow / voice / utilities).
@@ -528,53 +692,53 @@ Legend:
 | Upstream (AI Elements) | Fret owner (candidate) | Fret module/path (candidate) | Status | Notes |
 | --- | --- | --- | --- | --- |
 | `conversation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/conversation.rs` | Partial | Transcript exists; parts for empty/download/scroll button exist as separate surfaces (see `conversation_*` files). |
-| `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Role chrome exists; parts-based composition is available via `MessageParts` + `MessageToolbar` (action policies remain app-owned). |
+| `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Role chrome exists; parts-based composition is available via `MessageParts` + `MessageToolbar` (action policies remain app-owned). Message branching surfaces are ported (`ecosystem/fret-ui-ai/src/elements/message_branch.rs`) + UI Gallery demo + diag gate pass (`tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`). |
 | (subset) | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_response.rs` | Partial | Markdown rendering exists; streaming append + finalize supported; richer per-block actions (copy/download) are TODO. |
-| `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Done | MVP: textarea + send/stop + disabled/loading + stable selectors. |
-| `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool_call_block.rs` | Partial | Tool call block exists (collapsible + state chrome); richer payload views are pending. |
+| `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Done | MVP: textarea + send/stop + disabled/loading + attachments row + add-attachments intent + external file drop fallback + provider mode (lift models) + stable selectors. |
+| `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool.rs` (+ `tool_call_block.rs`) | Prototype | Tool disclosure building blocks + tool call wrapper exist; UI Gallery demo + diag gate: `ai_tool_demo`, `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`. |
 | `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources_block.rs` | Partial | Sources list exists; v0 highlight contract supports “select citation → highlight source row”. |
 | `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Partial | Citation chrome exists; v0 select/highlight contract is implemented via a shared model. |
-| `attachments.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/attachments.rs` | Defer | Needs file picker/bytes ownership contract; keep as intent-only. |
+| `attachments.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/attachments.rs` | Prototype | UI surfaces exist (grid/inline/list) + UI Gallery demo + diag gate pass (`tools/diag-scripts/ui-gallery-ai-attachments-demo-remove.json`); hover uses `HoverRegion` to keep remove affordance interactive while pointer is over the nested button. File pick/open effects remain app-owned. |
 | `code-block.tsx` | `fret-ui-ai` + `fret-code-view` | `ecosystem/fret-markdown` + `ecosystem/fret-code-view` | Partial | Code fences render via markdown; copy/expand/download actions need slots. |
-| `snippet.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Defer | Likely a thin wrapper over code view + metadata chrome. |
-| `file-tree.tsx` | `fret-ui-ai` + `fret-ui-kit` | `ecosystem/fret-ui-kit` (tree infra) + `fret-ui-ai` chrome | Defer | We should reuse outliner/tree recipes; virtualization + stable identity required. |
-| `artifact.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/artifact.rs` | Defer | Needs “artifact” data model + viewer surfaces (markdown/code/file tree). |
-| `image.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/image.rs` | Defer | Depends on image decode/asset pipeline policy. |
-| `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Defer | Depends on audio backend + buffering policy. |
-| `shimmer.tsx` | `fret-ui-shadcn` | `ecosystem/fret-ui-shadcn` skeleton/loading recipes | Defer | Prefer reusing existing shadcn skeleton/loading surfaces. |
+| `snippet.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Done | Inline copyable surface + copy feedback + UI Gallery demo + diag gate. |
+| `file-tree.tsx` | `fret-ui-ai` + `fret-ui-kit` | `ecosystem/fret-ui-ai/src/elements/file_tree.rs` | Done | Nested file tree surface (small trees) + per-row actions + UI Gallery demo + diag gates; future: virtualized outline path via UI Kit tree recipes. |
+| `artifact.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/artifact.rs` | Done | Artifact container surface (header + actions + scrollable content) + UI Gallery demo + diag gate. |
+| `image.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/image.rs` | Prototype | Renders an `ImageId` (decode/upload policy remains app-owned). |
+| `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Prototype | UI-only chrome port (controls + time/volume sliders) + UI Gallery demo + diag gate. Playback remains app-owned. |
+| `shimmer.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/shimmer.rs` | Done | Animated text shimmer surface (`duration` + `spread`) + UI Gallery demo + diag gate. |
 | `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Done | Message toolbar part; composes shadcn buttons + menus (policy app-owned). |
-| `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestion.rs` | Defer | Only implement if an app uses suggestions. |
-| `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Defer | Needs explicit policy: show/hide reasoning, storage, redaction. |
-| `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | N/A | Avoid baking “CoT UI” as a default surface without a consumer. |
-| `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Defer | Could be a markdown-like block with disclosure; wait for consumer. |
-| `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Defer | Likely a code block variant with copy + collapse. |
-| `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Defer | Prefer tying to existing terminal viewport/runner if present. |
-| `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Defer | JSON schema tree; may live in a generic “json viewer” crate later. |
+| `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestions.rs` | Done | Suggestions row + pill surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`). |
+| `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Prototype | Auto-open while streaming (unless `default_open=false`), auto-close once (1s after stream end), duration accounting, markdown content. |
+| `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | Prototype | Optional; ported as a “step list disclosure” surface (apps control data). UI Gallery demo + diag gate: `ai_chain_of_thought_demo`, `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
+| `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Done | Collapsible plan container + shimmer for streaming title/description; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`. |
+| `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Done | Stack trace disclosure surface + parsed frames + copy feedback + UI Gallery demo + diag gate. |
+| `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Prototype | Viewer-only v1: output text + copy/clear + auto-scroll. No PTY/TTY integration yet; ANSI formatting is a future enhancement. |
+| `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Done | Schema viewer surface + UI Gallery demo + diag gate. |
 | `jsx-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/jsx_preview.rs` | Defer | Would need a sandboxed renderer/preview system. |
-| `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Defer | Needs webview/viewport integration. |
+| `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Prototype | Chrome port exists (`WebPreview*`) and can be paired with a host-owned embedded backend (feature-gated `wry`). UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Backend narrative/TODO: `docs/workstreams/webview-wry-v1.md`. |
 | `sandbox.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sandbox.rs` | Defer | Depends on execution sandbox and policies. |
-| `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Defer | Only if tied to a concrete workflow. |
-| `checkpoint.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/checkpoint.rs` | Defer | Workflow-specific; not core chat UI. |
-| `queue.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/queue.rs` | Defer | Workflow-specific. |
-| `task.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/task.rs` | Defer | Workflow-specific. |
+| `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Done | Test results surfaces + suite disclosure + UI Gallery demo + diag gate. |
+| `checkpoint.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/checkpoint.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`. |
+| `queue.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/queue.rs` | Prototype | Queue surfaces + UI Gallery demo + diag gate pass (`tools/diag-scripts/ui-gallery-ai-queue-demo-section-scroll-action.json`); hover uses `HoverRegion` (group-hover parity), list cap uses `ScrollArea` root `max_h`. |
+| `task.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/task.rs` | Prototype | Collapsible task surface (trigger + indented content) + UI Gallery demo + diag gate. |
 | `agent.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/agent.rs` | Defer | Likely app-specific persona chrome. |
 | `persona.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/persona.rs` | Defer | Same. |
-| `model-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/model_selector.rs` | Defer | Only if app needs it; depends on overlay/select recipes. |
+| `model-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/model_selector.rs` | Prototype | Optional; demo page + diag gate exist (`ai_model_selector_demo`, `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`). Provider logos are placeholders (no remote fetch). |
 | `mic-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/mic_selector.rs` | Defer | Voice surfaces are optional. |
 | `voice-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/voice_selector.rs` | Defer | Voice surfaces are optional. |
 | `speech-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/speech_input.rs` | Defer | Depends on audio/ASR stack. |
-| `transcription.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Defer | Voice pipeline dependent. |
+| `transcription.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Prototype | Segment surface + seek seam (`on_seek`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
 | `controls.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/controls.rs` | Defer | Only if it maps to app-level transport controls. |
-| `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Defer | Likely a dialog/sheet recipe (shadcn owner), not AI-specific by default. |
-| `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Defer | Needs a “context items” data model + file references. |
-| `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Defer | App-specific affordance. |
+| `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`. |
+| `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Prototype | Context usage hovercard: percent trigger + progress + compact counts. Usage data model remains app-owned. |
+| `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Prototype | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl`. Demo + diag gate exist. |
 | `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/panel.rs` | Defer | Workspace shell/panels belong in docking/viewports workstreams. |
 | `canvas.tsx` | `fret-canvas` + `fret-ui-ai` | `ecosystem/fret-canvas` (core) + `fret-ui-ai` chrome | Defer | Only when chat embeds interactive canvases. |
 | `node.tsx` / `edge.tsx` | `fret-node` + `fret-ui-ai` | `ecosystem/fret-node` (core) + `fret-ui-ai` chrome | Defer | Same. |
-| `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Defer | Workflow-specific. |
+| `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Done | Commit disclosure surface + copy feedback + UI Gallery demo + diag gate. |
 | `connection.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/connection.rs` | Defer | Workflow-specific. |
-| `environment-variables.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Defer | Workflow-specific. |
-| `package-info.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Defer | Workflow-specific. |
+| `environment-variables.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`. |
+| `package-info.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Prototype | Package info card surface (name + change badge + version row + deps list building blocks) + UI Gallery demo + diag gate. |
 
 ## Risks & design constraints (track proactively)
 
@@ -652,7 +816,8 @@ Definition of done:
   - copy actions,
   - long-code scrolling outcomes,
   - stable block IDs for per-block state.
-- File-tree output is usable (virtualized) and stable under view-cache reuse.
+- File-tree output is usable for small trees (AI Elements parity), and there is a clear large-tree
+  strategy (prefer `fret-ui-kit` virtualization/retained helpers to avoid new engines in `fret-ui-ai`).
 
 Later milestones (workflow/voice) are explicitly optional and should not be started without a
 concrete app consumer.

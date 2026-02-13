@@ -42,6 +42,20 @@ impl<'a, H: UiHost> UiFrameCx<'a, H> {
         let _guard = span.enter();
         self.ui
             .layout_all(self.app, self.services, self.bounds, self.scale_factor);
+
+        let occlusion_changed = self.app.with_global_mut_untracked(
+            crate::elements::ElementRuntime::new,
+            |runtime, _app| {
+                runtime
+                    .for_window(self.window)
+                    .is_some_and(|state| state.occlusion_insets_changed_this_frame())
+            },
+        );
+        if occlusion_changed {
+            if let Some(focus) = self.ui.focus() {
+                self.ui.scroll_node_into_view(self.app, focus);
+            }
+        }
     }
 
     pub fn paint_all(&mut self, scene: &mut Scene) {

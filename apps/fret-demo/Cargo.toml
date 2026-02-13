@@ -14,6 +14,7 @@ default-run = "fret-demo"
 [features]
 alloc-profile = ["fret-examples/alloc-profile"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
+devtools-ws = ["fret-examples/devtools-ws"]
 hotpatch = [
     "fret-examples/hotpatch",
     "dep:fret-app",

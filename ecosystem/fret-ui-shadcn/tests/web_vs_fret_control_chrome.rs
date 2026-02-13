@@ -17,12 +17,15 @@ mod css_color;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn contains_text(node: &WebNode, needle: &str) -> bool {
-    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
-        return true;
-    }
-    node.children.iter().any(|c| contains_text(c, needle))
-}
+#[path = "support/css_units.rs"]
+mod css_units;
+
+use css_units::parse_px;
+
+#[path = "support/web_tree.rs"]
+mod web_tree;
+
+use web_tree::contains_text;
 
 fn has_descendant_attr(node: &WebNode, key: &str, value: &str) -> bool {
     if node.attrs.get(key).is_some_and(|v| v == value) {
@@ -31,12 +34,6 @@ fn has_descendant_attr(node: &WebNode, key: &str, value: &str) -> bool {
     node.children
         .iter()
         .any(|c| has_descendant_attr(c, key, value))
-}
-
-fn parse_px(s: &str) -> Option<f32> {
-    let s = s.trim();
-    let v = s.strip_suffix("px").unwrap_or(s);
-    v.parse::<f32>().ok()
 }
 
 fn parse_calendar_day_aria_label(label: &str) -> Option<(Date, bool)> {
@@ -173,6 +170,26 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
     }
 
     best
+}
+
+fn find_first_svg_mask_icon_in_rect(scene: &Scene, search_within: Rect) -> Option<(Rect, Color)> {
+    for op in scene.ops() {
+        let SceneOp::SvgMaskIcon { rect, color, .. } = *op else {
+            continue;
+        };
+
+        let center = Point::new(
+            Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+            Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+        );
+        if !search_within.contains(center) {
+            continue;
+        }
+
+        return Some((rect, color));
+    }
+
+    None
 }
 
 fn assert_color_close(label: &str, actual: Color, expected_css: &str, tol: f32) {
@@ -5802,6 +5819,57 @@ fn web_vs_fret_alert_demo_chrome_matches() {
     }
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("alert radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_alert_demo_icon_geometry_matches() {
+    let web = read_web_golden("alert-demo");
+    let theme = web_theme(&web);
+
+    let web_alert = find_first_in_theme(theme, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "alert")
+    })
+    .expect("web alert node");
+
+    let web_svg = find_first(web_alert, &|n| n.tag == "svg").expect("web alert svg icon");
+    let web_dx = web_svg.rect.x - web_alert.rect.x;
+    let web_dy = web_svg.rect.y - web_alert.rect.y;
+
+    let web_w = web_alert.rect.w;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Alert::new(vec![
+                decl_icon::icon(cx, fret_icons::IconId::new_static("lucide.terminal")),
+                fret_ui_shadcn::AlertTitle::new("Heads up!").into_element(cx),
+                fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
+                    .into_element(cx),
+            ])
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
+            .into_element(cx),
+        ]
+    });
+
+    let alert = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Alert)
+        .expect("fret alert semantics node");
+
+    let (icon_rect, icon_color) =
+        find_first_svg_mask_icon_in_rect(&scene, alert.bounds).expect("painted svg icon for alert");
+
+    let dx = icon_rect.origin.x.0 - alert.bounds.origin.x.0;
+    let dy = icon_rect.origin.y.0 - alert.bounds.origin.y.0;
+
+    assert_close("alert icon dx", dx, web_dx, 1.0);
+    assert_close("alert icon dy", dy, web_dy, 1.0);
+    assert_close("alert icon w", icon_rect.size.width.0, web_svg.rect.w, 1.0);
+    assert_close("alert icon h", icon_rect.size.height.0, web_svg.rect.h, 1.0);
+
+    if let Some(css) = web_svg.computed_style.get("color") {
+        assert_color_close("alert icon color", icon_color, css, 0.05);
     }
 }
 

@@ -197,11 +197,63 @@ impl UiPaddingInsetsV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowTargetV1 {
+    /// Target the window currently driving the script step.
+    Current,
+    /// Target the first window observed by the diagnostics runtime.
+    FirstSeen,
+    /// Target the first observed window that is not the current window.
+    FirstSeenOther,
+    /// Target the most recently observed window.
+    LastSeen,
+    /// Target the most recently observed window that is not the current window.
+    LastSeenOther,
+    /// Target a specific window by its FFI handle/id as reported in bundles and script results.
+    WindowFfi { window: u64 },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiInsetsOverrideV1 {
+    NoChange,
+    Clear,
+    Set { insets_px: UiPaddingInsetsV1 },
+}
+
+impl Default for UiInsetsOverrideV1 {
+    fn default() -> Self {
+        Self::NoChange
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiIncomingOpenInjectItemV1 {
+    /// Diagnostics-only UTF-8 file payload.
+    ///
+    /// This is intended for CI fixtures and does not model binary files or platform handles.
+    FileUtf8 {
+        name: String,
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        media_type: Option<String>,
+    },
+    Text {
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        media_type: Option<String>,
+    },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiActionStepV2 {
     // v1-compatible steps
     Click {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -217,7 +269,22 @@ pub enum UiActionStepV2 {
     MovePointer {
         target: UiSelectorV1,
     },
+    /// Move the pointer to a target and issue a pointer down, keeping the session active across
+    /// subsequent steps (until `pointer_up`).
+    ///
+    /// This is intended for scripted "drag + key" flows (e.g. press Escape while dragging).
+    PointerDown {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
     DragPointer {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -225,6 +292,29 @@ pub enum UiActionStepV2 {
         delta_y: f32,
         #[serde(default = "default_drag_steps")]
         steps: u32,
+    },
+    /// Move the pointer while a `pointer_down` session is active.
+    ///
+    /// This emits `PointerEvent::Move` with pressed buttons and also mirrors internal drag routing
+    /// by emitting `InternalDrag::Over` events (safe unless a cross-window internal-drag session is
+    /// active).
+    PointerMove {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+    },
+    /// Release an active `pointer_down` session.
+    ///
+    /// This emits `PointerEvent::Up` and mirrors internal drag routing by emitting
+    /// `InternalDrag::Drop`.
+    PointerUp {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        button: Option<UiMouseButtonV1>,
     },
     MovePointerSweep {
         target: UiSelectorV1,
@@ -268,6 +358,8 @@ pub enum UiActionStepV2 {
         n: u32,
     },
     WaitUntil {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
         timeout_frames: u32,
     },
@@ -291,6 +383,8 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     Assert {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
     },
     CaptureBundle {
@@ -385,6 +479,8 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     DragTo {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         from: UiSelectorV1,
         to: UiSelectorV1,
         #[serde(default)]
@@ -409,8 +505,81 @@ pub enum UiActionStepV2 {
         drag_steps: u32,
     },
     SetWindowInnerSize {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         width_px: f32,
         height_px: f32,
+    },
+    SetWindowInsets {
+        #[serde(default)]
+        safe_area_insets: UiInsetsOverrideV1,
+        #[serde(default)]
+        occlusion_insets: UiInsetsOverrideV1,
+    },
+    /// Diagnostics-only clipboard override to simulate clipboard read denial/unavailability.
+    ///
+    /// This is intended to gate “paste request fails gracefully” behavior under mobile privacy
+    /// constraints without requiring a real mobile runner.
+    SetClipboardForceUnavailable {
+        enabled: bool,
+    },
+    /// Diagnostics-only incoming-open injection (best-effort).
+    ///
+    /// This simulates “open in…” / share-target flows by injecting an `IncomingOpenRequest` event.
+    InjectIncomingOpen {
+        items: Vec<UiIncomingOpenInjectItemV1>,
+    },
+    /// Set the OS window outer position (screen-space logical pixels).
+    ///
+    /// This is intended for deterministically arranging windows in scripted repros and for
+    /// best-effort placement restoration (ADR 0017).
+    SetWindowOuterPosition {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        x_px: f32,
+        y_px: f32,
+    },
+    /// Set a runner-level cursor screen position override (screen-space physical pixels).
+    ///
+    /// Desktop runners may use this during scripted diagnostics to drive hover routing that is
+    /// normally owned by OS cursor events (e.g. cross-window docking).
+    SetCursorScreenPos {
+        x_px: f32,
+        y_px: f32,
+    },
+    /// Set a runner-level cursor screen position override using window-local client coordinates.
+    ///
+    /// This is intended for cross-window scripted diagnostics where the runner must synthesize a
+    /// global cursor location from window-local input.
+    ///
+    /// Coordinates are in window-client **physical pixels**.
+    SetCursorInWindow {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        x_px: f32,
+        y_px: f32,
+    },
+    RaiseWindow {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+    },
+    /// Drag with pointer down across frames until `predicate` passes, or timeout.
+    ///
+    /// This is intended for runner-owned cross-window routing: scripts can keep a drag session
+    /// active while polling diagnostics predicates that are only updated between frames.
+    DragPointerUntil {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+        predicate: UiPredicateV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
     },
 }
 
@@ -422,6 +591,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 button,
                 click_count,
             } => Self::Click {
+                window: None,
                 target,
                 button,
                 click_count,
@@ -436,6 +606,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 delta_y,
                 steps,
             } => Self::DragPointer {
+                window: None,
                 target,
                 button,
                 delta_x,
@@ -466,10 +637,14 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 predicate,
                 timeout_frames,
             } => Self::WaitUntil {
+                window: None,
                 predicate,
                 timeout_frames,
             },
-            UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
+            UiActionStepV1::Assert { predicate } => Self::Assert {
+                window: None,
+                predicate,
+            },
             UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
             UiActionStepV1::CaptureScreenshot {
                 label,
@@ -538,7 +713,7 @@ fn default_slider_epsilon() -> f32 {
     0.5
 }
 
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiMouseButtonV1 {
     #[default]
@@ -642,6 +817,15 @@ pub enum UiPredicateV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         require_equal: Option<bool>,
     },
+    RenderTextMissingGlyphsIs {
+        missing_glyphs: u64,
+    },
+    /// Ensures that when the renderer reports missing/tofu glyphs for the current frame, a
+    /// renderer-owned font fallback trace has been captured and is non-empty.
+    ///
+    /// This predicate is meant to keep "tofu regressions" debuggable: if missing glyphs happen,
+    /// the diagnostics bundle should contain an audit trail of the selected families.
+    RenderTextFontTraceCapturedWhenMissingGlyphs,
     VisibleInWindow {
         target: UiSelectorV1,
     },
@@ -649,6 +833,9 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         #[serde(default)]
         padding_px: f32,
+        /// Optional per-edge padding (added on top of `padding_px`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        padding_insets_px: Option<UiPaddingInsetsV1>,
         #[serde(default)]
         eps_px: f32,
     },
@@ -693,6 +880,104 @@ pub enum UiPredicateV1 {
         b: UiSelectorV1,
         #[serde(default)]
         eps_px: f32,
+    },
+    /// True when the diagnostics event ring contains an event whose recorded kind equals `kind`.
+    ///
+    /// This is intentionally a coarse predicate: it is meant to gate “a platform completion was
+    /// delivered” without requiring a dedicated predicate per event type.
+    EventKindSeen {
+        event_kind: String,
+    },
+    /// True when the diagnostics runtime has observed at least `n` windows.
+    ///
+    /// This is intended for multi-window scripted repros (tear-off, auxiliary windows).
+    KnownWindowCountGe {
+        n: u32,
+    },
+    /// True when the latest docking diagnostics report an active dock drag whose `current_window`
+    /// matches `window`.
+    DockDragCurrentWindowIs {
+        window: UiWindowTargetV1,
+    },
+    /// True when the latest docking diagnostics report an active dock drag session.
+    DockDragActiveIs {
+        active: bool,
+    },
+    /// True when the current docking drop preview kind matches `kind`.
+    ///
+    /// This predicate reads the window-local `DockDropResolveDiagnostics` snapshot published into
+    /// `WindowInteractionDiagnosticsStore` by policy-heavy ecosystem crates (e.g. docking).
+    ///
+    /// Supported kinds:
+    /// - `wrap_binary`
+    /// - `insert_into_split`
+    DockDropPreviewKindIs {
+        preview_kind: String,
+    },
+    /// True when the current docking drop resolve source matches `source`.
+    ///
+    /// This predicate reads the window-local `DockDropResolveDiagnostics` snapshot published into
+    /// `WindowInteractionDiagnosticsStore` by policy-heavy ecosystem crates (e.g. docking).
+    ///
+    /// Supported sources:
+    /// - `invert_docking`
+    /// - `outside_window`
+    /// - `float_zone`
+    /// - `layout_bounds_miss`
+    /// - `latched_previous_hover`
+    /// - `tab_bar`
+    /// - `floating_title_bar`
+    /// - `outer_hint_rect`
+    /// - `inner_hint_rect`
+    /// - `none`
+    DockDropResolveSourceIs {
+        source: String,
+    },
+    /// True when the current docking drop resolve has (or does not have) a resolved target.
+    ///
+    /// This is useful for policy-gated no-drop zones: scripts can assert that the pointer is over
+    /// a *candidate* region (via `dock_drop_resolve_source_is`) while `resolved` stays `None`.
+    DockDropResolvedIsSome {
+        some: bool,
+    },
+    /// True when the latest dock graph stats snapshot reports a canonical-form layout.
+    DockGraphCanonicalIs {
+        canonical: bool,
+    },
+    /// True when the latest dock graph stats snapshot reports nested same-axis split children.
+    DockGraphHasNestedSameAxisSplitsIs {
+        has_nested: bool,
+    },
+    /// True when the latest dock graph stats snapshot reports `node_count <= max`.
+    ///
+    /// This is intended for scripted regression gates that want to ensure repeated dock operations
+    /// do not accidentally allocate unbounded structure (e.g. legacy "wrap" behavior that deepens
+    /// the split tree).
+    DockGraphNodeCountLe {
+        max: u32,
+    },
+    /// True when the latest dock graph stats snapshot reports `max_split_depth <= max`.
+    DockGraphMaxSplitDepthLe {
+        max: u32,
+    },
+    /// True when the latest dock graph signature snapshot matches `signature`.
+    ///
+    /// This signature is intended to be stable across runs and platforms:
+    /// - it does not include split fractions (pointer-driven and DPI-sensitive),
+    /// - it does not include floating window rects (platform-dependent).
+    DockGraphSignatureIs {
+        signature: String,
+    },
+    /// True when the latest dock graph signature snapshot contains `needle` as a substring.
+    ///
+    /// This is useful for large layouts where asserting the entire signature string would be too
+    /// verbose.
+    DockGraphSignatureContains {
+        needle: String,
+    },
+    /// True when the latest dock graph signature fingerprint matches `fingerprint64`.
+    DockGraphSignatureFingerprint64Is {
+        fingerprint64: u64,
     },
 }
 

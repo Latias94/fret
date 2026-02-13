@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, OpacityProps,
-    PressableProps, SemanticsDecoration, StackProps,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle,
+    OpacityProps, PressableProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -164,9 +164,10 @@ impl Collapsible {
 
             let content = motion.should_render.then(|| content(cx));
 
-            let stack = cx.stack_props(
-                StackProps {
+            let stack = cx.column(
+                ColumnProps {
                     layout: decl_style::layout_style(&theme, layout),
+                    ..Default::default()
                 },
                 move |cx| {
                     let mut children = Vec::new();
@@ -187,13 +188,14 @@ impl Collapsible {
                                 wrapper_refinement,
                             );
 
-                            let children = vec![cx.opacity_props(
+                            let wrapper_child = cx.opacity_props(
                                 OpacityProps {
                                     layout: LayoutStyle::default(),
                                     opacity: motion_for_wrapper.wrapper_opacity,
                                 },
                                 move |_cx| vec![content],
-                            )];
+                            );
+                            let children = vec![wrapper_child];
 
                             let wrapper_kind = if motion_for_wrapper.wants_measurement {
                                 ElementKind::InteractivityGate(InteractivityGateProps {
@@ -357,9 +359,10 @@ impl CollapsibleContent {
         let children = self.children;
 
         cx.container(wrapper, move |cx| {
-            vec![cx.stack_props(
-                StackProps {
+            vec![cx.column(
+                ColumnProps {
                     layout: decl_style::layout_style(&theme, layout),
+                    ..Default::default()
                 },
                 move |_cx| children,
             )]

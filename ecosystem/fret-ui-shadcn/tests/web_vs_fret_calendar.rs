@@ -16,132 +16,20 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn web_find_by_class_token<'a>(root: &'a WebNode, token: &str) -> Option<&'a WebNode> {
-    find_first(root, &|n| class_has_token(n, token))
-}
+#[path = "support/web_find.rs"]
+mod web_find;
+use web_find::{
+    find_by_class_token as web_find_by_class_token,
+    find_by_class_token_in_theme as web_find_by_class_token_in_theme,
+};
 
-fn web_find_by_class_token_in_theme<'a>(
-    theme: &'a WebGoldenTheme,
-    token: &str,
-) -> Option<&'a WebNode> {
-    find_first_in_theme(theme, &|n| class_has_token(n, token))
-}
+#[path = "support/style_aware_services.rs"]
+mod style_aware_services;
+use style_aware_services::StyleAwareServices;
 
-fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
-    let delta = (actual.0 - expected).abs();
-    assert!(
-        delta <= tol,
-        "{label}: expected≈{expected} (±{tol}) got={}",
-        actual.0
-    );
-}
-
-#[derive(Debug, Clone)]
-struct RecordedTextPrepare {
-    text: String,
-    style: fret_core::TextStyle,
-    constraints: fret_core::TextConstraints,
-}
-
-#[derive(Default)]
-struct StyleAwareServices {
-    prepared: Vec<RecordedTextPrepare>,
-}
-
-impl fret_core::TextService for StyleAwareServices {
-    fn prepare(
-        &mut self,
-        input: &fret_core::TextInput,
-        constraints: fret_core::TextConstraints,
-    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        let (text, style) = match input {
-            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style),
-            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base),
-            _ => {
-                debug_assert!(false, "unsupported TextInput variant");
-                return (
-                    fret_core::TextBlobId::default(),
-                    fret_core::TextMetrics {
-                        size: CoreSize::new(Px(0.0), Px(0.0)),
-                        baseline: Px(0.0),
-                    },
-                );
-            }
-        };
-        self.prepared.push(RecordedTextPrepare {
-            text: text.to_string(),
-            style: style.clone(),
-            constraints,
-        });
-
-        let line_height = style
-            .line_height
-            .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
-
-        let char_w = (style.size.0 * 0.55).max(1.0);
-        let est_w = Px(char_w * text.chars().count() as f32);
-
-        let max_w = constraints.max_width.unwrap_or(est_w);
-        let (lines, w) = match constraints.wrap {
-            fret_core::TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
-                let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
-                (lines, Px(est_w.0.min(max_w.0)))
-            }
-            _ => (1, est_w),
-        };
-
-        let h = Px(line_height.0 * lines as f32);
-
-        (
-            fret_core::TextBlobId::default(),
-            fret_core::TextMetrics {
-                size: CoreSize::new(w, h),
-                baseline: Px(h.0 * 0.8),
-            },
-        )
-    }
-
-    fn release(&mut self, _blob: fret_core::TextBlobId) {}
-}
-
-impl fret_core::PathService for StyleAwareServices {
-    fn prepare(
-        &mut self,
-        _commands: &[fret_core::PathCommand],
-        _style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
-    ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        (
-            fret_core::PathId::default(),
-            fret_core::PathMetrics::default(),
-        )
-    }
-
-    fn release(&mut self, _path: fret_core::PathId) {}
-}
-
-impl fret_core::SvgService for StyleAwareServices {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
-    }
-
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        true
-    }
-}
-
-impl fret_core::MaterialService for StyleAwareServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Ok(fret_core::MaterialId::default())
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        true
-    }
-}
+#[path = "support/assert.rs"]
+mod test_assert;
+use test_assert::assert_close_px;
 
 fn run_fret_root_with_ui_and_services(
     bounds: Rect,

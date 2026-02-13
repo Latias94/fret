@@ -1,11 +1,10 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
-#[path = "support/repo_root.rs"]
-mod repo_root;
+#[path = "support/radix_web_paths.rs"]
+mod radix_web_paths;
 
-use repo_root::repo_root;
+use radix_web_paths::radix_web_dir;
 
 #[derive(Debug, Clone, Deserialize)]
 struct TimelineGolden {
@@ -48,14 +47,6 @@ struct DomNode {
     text: Option<String>,
     #[serde(default)]
     children: Vec<DomNode>,
-}
-
-fn radix_web_dir() -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("radix-web")
-        .join("v4")
-        .join("radix-vega")
 }
 
 fn assert_dom_rect(label: &str, rect: DomRect) {

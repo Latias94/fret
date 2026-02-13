@@ -16,8 +16,9 @@ pub use queries::{
 pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};
 #[cfg(feature = "diagnostics")]
 pub use runtime::{
-    EnvironmentQueryDiagnosticsSnapshot, NodeEntryRootOverwrite, OverlayPlacementDiagnosticsRecord,
-    WindowElementDiagnosticsSnapshot,
+    EnvironmentQueryDiagnosticsSnapshot, NodeEntryRootOverwrite,
+    OverlayAnchoredPanelPlacementDiagnosticsRecord, OverlayPlacedRectDiagnosticsRecord,
+    OverlayPlacementDiagnosticsRecord, WindowElementDiagnosticsSnapshot,
 };
 
 pub(crate) use access::{

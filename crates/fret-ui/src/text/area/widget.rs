@@ -810,6 +810,32 @@ impl<H: UiHost> Widget<H> for TextArea {
                         self.apply_multiline_ui_delta(cx, delta);
                         cx.stop_propagation();
                     }
+                    fret_core::KeyCode::Backspace => {
+                        let command = "text.delete_backward";
+                        let outcome = crate::text_edit::commands::apply_basic(
+                            &mut self.edit_state(),
+                            command,
+                            false,
+                            cx.input_ctx.text_boundary_mode,
+                        );
+                        let delta =
+                            crate::text_edit::commands::multiline_ui_delta(command, outcome);
+                        self.apply_multiline_ui_delta(cx, delta);
+                        cx.stop_propagation();
+                    }
+                    fret_core::KeyCode::Delete => {
+                        let command = "text.delete_forward";
+                        let outcome = crate::text_edit::commands::apply_basic(
+                            &mut self.edit_state(),
+                            command,
+                            false,
+                            cx.input_ctx.text_boundary_mode,
+                        );
+                        let delta =
+                            crate::text_edit::commands::multiline_ui_delta(command, outcome);
+                        self.apply_multiline_ui_delta(cx, delta);
+                        cx.stop_propagation();
+                    }
                     _ => {}
                 }
             }

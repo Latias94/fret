@@ -22,7 +22,7 @@ logic or ad-hoc string truncation in components.
 - `TextOverflow::Clip` (default)
 - `TextOverflow::Ellipsis`
 
-2) Implement `TextOverflow::Ellipsis` in the text backend (currently `cosmic_text`) for the
+2) Implement `TextOverflow::Ellipsis` in the text backend (Parley-based renderer text system) for the
 single-line case (`wrap = None` and `max_width = Some(_)`):
 
 - When the shaped line width exceeds `max_width`, replace the tail of the line with an ellipsis
@@ -47,4 +47,3 @@ single-line case (`wrap = None` and `max_width = Some(_)`):
   theme concern.
 - The ellipsis implementation is backend-driven and must be kept consistent across future text
   backends (e.g. wasm).
-

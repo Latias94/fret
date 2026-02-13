@@ -92,6 +92,10 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusActionHostAdapter<'a, H> {
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.app.next_clipboard_token()
     }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.app.next_share_sheet_token()
+    }
 }
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusActionHostAdapter<'a, H> {
@@ -162,6 +166,10 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
 
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.app.next_clipboard_token()
+    }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.app.next_share_sheet_token()
     }
 }
 
@@ -1948,9 +1956,11 @@ pub fn render<H: UiHost + 'static>(
                                                                         left: button_pad_x,
                                                                     },
                                                                     background: bg,
+                                                                    background_paint: None,
                                                                     shadow: None,
                                                                     border: fret_core::Edges::all(Px(0.0)),
                                                                     border_color: None,
+                                                                    border_paint: None,
                                                                     focus_ring: None,
                                                                     focus_border_color: None,
                                                                     focus_within: false,
@@ -2042,9 +2052,11 @@ pub fn render<H: UiHost + 'static>(
                                                                             left: button_pad_x,
                                                                         },
                                                                         background: button_bg,
+                                                                        background_paint: None,
                                                                         shadow: None,
                                                                         border: fret_core::Edges::all(Px(0.0)),
                                                                         border_color: None,
+                                                                        border_paint: None,
                                                                         focus_ring: None,
                                                                         focus_border_color: None,
                                                                         focus_within: false,
@@ -2118,9 +2130,11 @@ pub fn render<H: UiHost + 'static>(
                                                                             left: button_pad_x,
                                                                         },
                                                                         background: bg,
+                                                                        background_paint: None,
                                                                         shadow: None,
                                                                         border: fret_core::Edges::all(Px(0.0)),
                                                                         border_color: None,
+                                                                        border_paint: None,
                                                                         focus_ring: None,
                                                                         focus_border_color: None,
                                                                         focus_within: false,
@@ -2300,9 +2314,11 @@ pub fn render<H: UiHost + 'static>(
                                                                         },
                                                                         padding: fret_core::Edges::all(Px(0.0)),
                                                                         background: None,
+                                                                        background_paint: None,
                                                                         shadow: None,
                                                                         border: fret_core::Edges::all(Px(0.0)),
                                                                         border_color: None,
+                                                                        border_paint: None,
                                                                         focus_ring: None,
                                                                         focus_border_color: None,
                                                                         focus_within: false,
@@ -2443,9 +2459,11 @@ pub fn render<H: UiHost + 'static>(
                                                                     layout: fret_ui::element::LayoutStyle::default(),
                                                                     padding: toast_padding,
                                                                     background: Some(bg),
+                                                                    background_paint: None,
                                                                     shadow,
                                                                     border: fret_core::Edges::all(fret_core::Px(1.0)),
                                                                     border_color: Some(border_color),
+                                                                    border_paint: None,
                                                                     focus_ring: None,
                                                                     focus_border_color: None,
                                                                     focus_within: false,

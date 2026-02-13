@@ -2,14 +2,27 @@ use std::time::Duration;
 
 use crate::{
     ClipboardToken, ExternalDropToken, FileDialogToken, ImageUpdateToken, ImageUploadToken,
-    TimerToken,
+    IncomingOpenToken, ShareSheetToken, TimerToken,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorInfo,
-    ImageId, Rect, RectPx, WindowAnchor,
+    AlphaMode, AppWindowId, CursorIcon, Edges, ExternalDropReadLimits, FileDialogOptions,
+    ImageColorInfo, ImageId, Rect, RectPx, WindowAnchor,
 };
 
 use crate::{CommandId, MenuBar};
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DiagIncomingOpenItem {
+    File {
+        name: String,
+        bytes: Vec<u8>,
+        media_type: Option<String>,
+    },
+    Text {
+        text: String,
+        media_type: Option<String>,
+    },
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
@@ -98,6 +111,12 @@ pub enum Effect {
         target: Option<String>,
         rel: Option<String>,
     },
+    /// Show the platform-native share sheet (best-effort).
+    ShareSheetShow {
+        window: AppWindowId,
+        token: ShareSheetToken,
+        items: Vec<fret_core::ShareItem>,
+    },
     FileDialogOpen {
         window: AppWindowId,
         options: FileDialogOptions,
@@ -114,6 +133,49 @@ pub enum Effect {
     FileDialogRelease {
         token: FileDialogToken,
     },
+    /// Read all data associated with an incoming-open token (best-effort).
+    IncomingOpenReadAll {
+        window: AppWindowId,
+        token: IncomingOpenToken,
+    },
+    IncomingOpenReadAllWithLimits {
+        window: AppWindowId,
+        token: IncomingOpenToken,
+        limits: ExternalDropReadLimits,
+    },
+    IncomingOpenRelease {
+        token: IncomingOpenToken,
+    },
+    /// Diagnostics-only “incoming open” injection (best-effort).
+    ///
+    /// This simulates mobile-style share-target / open-in flows in CI by injecting an
+    /// `Event::IncomingOpenRequest` carrying tokenized items.
+    ///
+    /// Runners SHOULD:
+    ///
+    /// - allocate an `IncomingOpenToken`,
+    /// - enqueue/deliver `Event::IncomingOpenRequest { token, items }`,
+    /// - and retain the injected payload behind the token so subsequent reads can succeed.
+    ///
+    /// Notes:
+    ///
+    /// - This is intended for diagnostics/scripts only; real incoming-open requests originate from
+    ///   the OS.
+    /// - Payload bytes are diagnostic fixtures; they are not intended to model platform handles.
+    DiagIncomingOpenInject {
+        window: AppWindowId,
+        items: Vec<DiagIncomingOpenItem>,
+    },
+    /// Diagnostics-only clipboard override to simulate mobile privacy/user-activation denial paths.
+    ///
+    /// Notes:
+    /// - Runners SHOULD treat this as a best-effort toggle and default to `enabled=false`.
+    /// - When enabled, clipboard reads (`ClipboardGetText`, `PrimarySelectionGetText`) SHOULD
+    ///   complete as unavailable rather than attempting platform access.
+    DiagClipboardForceUnavailable {
+        window: AppWindowId,
+        enabled: bool,
+    },
     /// Add font bytes (TTF/OTF/TTC) to the renderer text system.
     ///
     /// The runner/backend is responsible for applying this to the renderer and triggering any
@@ -121,15 +183,51 @@ pub enum Effect {
     TextAddFonts {
         fonts: Vec<Vec<u8>>,
     },
+    /// Request a best-effort rescan of system-installed fonts (native-only).
+    ///
+    /// Web/WASM runners should ignore this effect, as they cannot access system font databases.
+    ///
+    /// Semantics:
+    /// - This is an explicit, user-initiated refresh hook (ADR 0258).
+    /// - Runners should re-enumerate the font catalog and republish `FontCatalogMetadata` if
+    ///   changes are observed.
+    /// - Runners should also bump renderer text invalidation keys (e.g. `TextFontStackKey`) so
+    ///   cached shaping/rasterization results cannot be reused after a rescan attempt.
+    TextRescanSystemFonts,
     ViewportInput(fret_core::ViewportInputEvent),
     Dock(fret_core::DockOp),
     ImeAllow {
         window: AppWindowId,
         enabled: bool,
     },
+    /// Best-effort request to show/hide the platform virtual keyboard.
+    ///
+    /// Notes:
+    /// - This does not replace `Effect::ImeAllow`, which remains the source of truth for whether
+    ///   the focused widget is a text input.
+    /// - Some platforms (notably Android) may require this request to be issued within a
+    ///   user-activation turn (direct input event handling), otherwise it may be ignored.
+    ImeRequestVirtualKeyboard {
+        window: AppWindowId,
+        visible: bool,
+    },
     ImeSetCursorArea {
         window: AppWindowId,
         rect: Rect,
+    },
+    /// Override window insets in `WindowMetricsService` (safe area / occlusion).
+    ///
+    /// This is primarily used by diagnostics/scripted repros to simulate keyboard occlusion on
+    /// platforms where the real OS insets are not available in CI.
+    ///
+    /// Semantics:
+    /// - `None` means "no change".
+    /// - `Some(None)` clears the insets but still marks them as "known".
+    /// - `Some(Some(v))` sets the insets to `v`.
+    WindowMetricsSetInsets {
+        window: AppWindowId,
+        safe_area_insets: Option<Option<Edges>>,
+        occlusion_insets: Option<Option<Edges>>,
     },
     CursorSetIcon {
         window: AppWindowId,
@@ -223,6 +321,14 @@ pub enum WindowRequest {
     SetInnerSize {
         window: AppWindowId,
         size: fret_core::Size,
+    },
+    /// Request moving the OS window to a screen-space logical position (ADR 0017).
+    ///
+    /// Runners should treat this as best-effort and may clamp/deny the request based on platform
+    /// constraints and user settings.
+    SetOuterPosition {
+        window: AppWindowId,
+        position: fret_core::WindowLogicalPosition,
     },
     Raise {
         window: AppWindowId,

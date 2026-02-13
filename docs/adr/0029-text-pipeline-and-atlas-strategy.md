@@ -121,7 +121,8 @@ Invalidation must be explicit and compatible with the effects flush loop (ADR 00
 ## Open Questions (To Decide Before Implementation)
 
 1) **Backend split**:
-   - do we want a single `cosmic-text` backend everywhere at first, or per-OS backends from day one?
+   - do we want a single Parley-based backend everywhere at first, or per-OS backends from day one (e.g. DirectWrite,
+     CoreText) behind a stable trait?
 2) **Subpixel strategy**:
    - grayscale only vs subpixel positioning variants vs LCD rendering (and wasm constraints).
 3) **Emoji policy**:
@@ -177,7 +178,7 @@ To keep text output deterministic and avoid stale cache bugs:
 Current status:
 
 - The resolved default family names (`SansSerif`/`Serif`/`Monospace`) participate in the text cache key
-  via a `font_stack_key` (see `crates/fret-render-wgpu/src/text.rs`).
+  via a `font_stack_key` (see `crates/fret-render-wgpu/src/text/mod.rs`).
 
 ### Conformance smoke tests (recommended)
 
@@ -190,8 +191,9 @@ Add at least one integration/demo harness that renders and measures:
 
 This ADR defines the contract and lock-in targets; implementation will evolve. Current code status:
 
-- Text shaping/rasterization uses `cosmic-text` via the renderer text system:
-  - `crates/fret-render-wgpu/src/text.rs`
+- Text shaping/rasterization uses Parley (fontique + swash) via the renderer text system:
+  - `crates/fret-render-wgpu/src/text/mod.rs`
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
 - A framework-level fallback policy and platform-generic family defaults are configured at text-system startup, and a
   `font_stack_key` participates in `TextBlobId` caching so fallback/generic-family changes cannot reuse stale blobs.
 - `TextStyle.font` selects among the three generic families (`SansSerif`/`Serif`/`Monospace`) via the semantic `FontId`

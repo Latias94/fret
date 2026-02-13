@@ -79,6 +79,7 @@ pub trait WinitAppDriver {
                 tick_id,
                 frame_id,
             ),
+            keepalive: Vec::new(),
         }
     }
 

@@ -269,12 +269,22 @@ pub(crate) fn content_view(
     let content = content_inner.test_id("ui-gallery-content-scroll");
 
     cx.named("ui_gallery.content_view_root", |cx| {
+        let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
+        let chrome = ChromeRefinement {
+            padding: Some(
+                fret_ui_kit::declarative::window_insets_padding_refinement_or_zero(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    base_padding,
+                ),
+            ),
+            background: Some(ColorRef::Color(theme.color_required("background"))),
+            ..ChromeRefinement::default()
+        };
         cx.container(
             decl_style::container_props(
                 theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
-                    .p(Space::N6),
+                chrome,
                 LayoutRefinement::default().w_full().h_full(),
             ),
             |_cx| [content],
@@ -409,6 +419,7 @@ fn page_preview(
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
+        PAGE_TEXT_MIXED_SCRIPT_FALLBACK => preview_text_mixed_script_fallback(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
@@ -441,6 +452,7 @@ fn page_preview(
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
+        PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -460,6 +472,14 @@ fn page_preview(
         PAGE_TOOLTIP => preview_tooltip(cx),
         PAGE_SLIDER => preview_slider(cx),
         PAGE_ICONS => preview_icons(cx),
+        PAGE_MAGIC_LENS => preview_magic_lens(cx),
+        PAGE_MAGIC_MARQUEE => preview_magic_marquee(cx),
+        PAGE_MAGIC_CARD => preview_magic_card(cx),
+        PAGE_MAGIC_BORDER_BEAM => preview_magic_border_beam(cx),
+        PAGE_MAGIC_DOCK => preview_magic_dock(cx),
+        PAGE_MAGIC_PATTERNS => preview_magic_patterns(cx),
+        PAGE_MAGIC_SPARKLES_TEXT => preview_magic_sparkles_text(cx),
+        PAGE_MAGIC_BLOOM => preview_magic_bloom(cx),
         PAGE_FIELD => preview_field(cx),
         PAGE_OVERLAY => preview_overlay(
             cx,
