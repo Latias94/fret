@@ -6,6 +6,7 @@ Current state (as of 2026-02-13):
 
 - WS artifact materialization + `--pack` parity landed (tooling materializes `bundle.dumped` to a local `bundle.json` directory).
 - Artifact size stats are reported in `script.result.json` for locally materialized bundles (bytes + bounded counts).
+- Bundle path resolution now prefers the stable per-run `<out_dir>/<run_id>/bundle.json` when `script.result.json` is present (less reliance on `latest.txt`).
 - `script.result.json` now includes a bounded per-run event log (step start/end + bundle dump events) with clipped counts reported.
 - Missing required diagnostics capabilities now fail fast with a stable `reason_code` and structured evidence (avoid timeouts).
 - WS exit request landed (`app.exit.request`) and tooling supports `--exit-after-run` (`--touch-exit-after-run` remains as an alias).
