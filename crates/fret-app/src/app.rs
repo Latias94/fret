@@ -1,9 +1,7 @@
 use std::{
     any::{Any, TypeId},
-    cell::RefCell,
     collections::{HashMap, HashSet},
     panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
-    ptr::NonNull,
     sync::OnceLock,
 };
 
@@ -47,37 +45,10 @@ struct PendingGlobalSet {
     value: Box<dyn Any>,
 }
 
-thread_local! {
-    static ACTIVE_GLOBAL_LEASES: RefCell<HashMap<TypeId, NonNull<()>>> = RefCell::new(HashMap::new());
-}
-
-struct ActiveGlobalLeaseGuard {
-    type_id: TypeId,
-}
-
-impl ActiveGlobalLeaseGuard {
-    fn new<T>(type_id: TypeId, value: &mut T) -> Self {
-        let ptr = NonNull::from(value).cast::<()>();
-        ACTIVE_GLOBAL_LEASES.with(|leases| {
-            leases.borrow_mut().insert(type_id, ptr);
-        });
-        Self { type_id }
-    }
-}
-
-impl Drop for ActiveGlobalLeaseGuard {
-    fn drop(&mut self) {
-        ACTIVE_GLOBAL_LEASES.with(|leases| {
-            leases.borrow_mut().remove(&self.type_id);
-        });
-    }
-}
-
 fn strict_runtime_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED.get_or_init(|| {
-        std::env::var_os("FRET_STRICT_RUNTIME")
-            .is_some_and(|v| v != std::ffi::OsStr::new("0"))
+        std::env::var_os("FRET_STRICT_RUNTIME").is_some_and(|v| v != std::ffi::OsStr::new("0"))
     })
 }
 
@@ -238,7 +209,10 @@ impl App {
     }
 
     #[track_caller]
-    fn report_global_access_while_leased<T: Any>(marker: &GlobalLeaseMarker, accessed_at: &'static std::panic::Location<'static>) {
+    fn report_global_access_while_leased<T: Any>(
+        marker: &GlobalLeaseMarker,
+        accessed_at: &'static std::panic::Location<'static>,
+    ) {
         if strict_runtime_enabled() {
             panic!(
                 "global is currently leased: {} (type_id={:?}); leased at {}; accessed at {}",
@@ -346,30 +320,16 @@ impl App {
                     );
                 }
 
-                let Some(ptr) = ACTIVE_GLOBAL_LEASES.with(|leases| leases.borrow().get(&type_id).copied()) else {
-                    #[cfg(debug_assertions)]
-                    {
-                        eprintln!(
-                            "global already leased but active lease pointer is missing; skipping nested lease: {} (type_id={type_id:?}); leased at {}; accessed at {}",
-                            marker.type_name, marker.leased_at, leased_at
-                        );
-                    }
-                    let mut tmp = init();
-                    let out = f(&mut tmp, self);
-                    if mark_changed {
-                        self.mark_global_changed_at(type_id, leased_at);
-                    }
-                    return out;
-                };
-
-                // Re-borrow the active leased value to avoid panicking on re-entrant access.
-                // This is only supported for same-thread nested calls.
-                let value = unsafe { &mut *(ptr.as_ptr() as *mut T) };
-                let out = f(value, self);
-                if mark_changed {
-                    self.mark_global_changed_at(type_id, leased_at);
+                Self::report_global_access_while_leased::<T>(marker, leased_at);
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!(
+                        "skipping nested global lease mutation; running closure against a temporary value: {} (type_id={type_id:?}); leased at {}; accessed at {}",
+                        marker.type_name, marker.leased_at, leased_at
+                    );
                 }
-                return out;
+                let mut tmp = init();
+                return f(&mut tmp, self);
             }
         }
 
@@ -381,12 +341,9 @@ impl App {
 
         let mut value = match existing {
             None => init(),
-            Some(v) => {
-                *v.downcast::<T>().expect("global type id must match")
-            }
+            Some(v) => *v.downcast::<T>().expect("global type id must match"),
         };
 
-        let _active_guard = ActiveGlobalLeaseGuard::new(type_id, &mut value);
         let result = if cfg!(panic = "unwind") {
             catch_unwind(AssertUnwindSafe(|| f(&mut value, self)))
         } else {
@@ -403,7 +360,9 @@ impl App {
 
         if let Some(pending) = self.pending_globals.remove(&type_id) {
             self.globals.insert(type_id, pending.value);
-            self.global_type_names.entry(type_id).or_insert(pending.type_name);
+            self.global_type_names
+                .entry(type_id)
+                .or_insert(pending.type_name);
             self.mark_global_changed_at(type_id, pending.changed_at);
         } else if mark_changed {
             self.mark_global_changed_at(type_id, leased_at);
@@ -738,6 +697,48 @@ mod global_lease_tests {
         assert!(panicked, "expected user closure panic");
 
         assert_eq!(app.global::<Counter>().copied(), Some(Counter(123)));
+    }
+
+    #[test]
+    fn nested_with_global_mut_is_an_error_and_never_requires_unsafe() {
+        let mut app = App::new();
+        let _ = app.take_changed_globals();
+        let counter_id = TypeId::of::<Counter>();
+
+        if strict_runtime_enabled() {
+            let panicked = catch_unwind(AssertUnwindSafe(|| {
+                app.with_global_mut(Counter::default, |_counter, app| {
+                    let _ = app.with_global_mut(Counter::default, |_nested, _app| {});
+                });
+            }))
+            .is_err();
+            assert!(
+                panicked,
+                "expected strict mode to panic on nested global lease"
+            );
+            return;
+        }
+
+        let nested_value = app.with_global_mut(Counter::default, |counter, app| {
+            counter.0 = 1;
+            app.with_global_mut(Counter::default, |nested, _app| {
+                nested.0 = 999;
+                nested.0
+            })
+        });
+        assert_eq!(nested_value, 999);
+
+        assert_eq!(
+            app.global::<Counter>().copied(),
+            Some(Counter(1)),
+            "nested global leases should not modify the leased global in non-strict mode"
+        );
+        assert_eq!(
+            app.global_revision(counter_id),
+            Some(1),
+            "nested global leases should not count as a persisted mutation"
+        );
+        assert_eq!(app.take_changed_globals(), vec![counter_id]);
     }
 }
 
