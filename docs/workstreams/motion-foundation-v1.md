@@ -230,4 +230,5 @@ Already landed (evidence anchors):
 Diag gates:
 
 - Sidebar toggle under fixed frame delta: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
+- Dropdown menu open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-dropdown-open-fixed-frame-delta.json`
 - Drawer snap points drag + settle: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`
