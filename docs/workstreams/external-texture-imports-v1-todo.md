@@ -29,9 +29,13 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/viewport_surface.rs`
     - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
 
-- [ ] EXT-native-120 Native “true external import” adapter seam (optional v1.1):
+- [x] EXT-native-120 Native “true external import” adapter seam (optional v1.1):
       accept a platform-decoder produced GPU frame via a capability-gated interface, without
       leaking handles into `fret-ui`, and with deterministic fallback to the copy paths.
+  - Evidence anchors:
+    - `crates/fret-launch/src/runner/native_external_import.rs`
+    - `crates/fret-launch/src/runner/imported_viewport_target.rs`
+    - `apps/fret-examples/src/external_texture_imports_demo.rs` (KeyN toggles adapter path)
 
 - [x] EXT-perf-130 Add comparative diag/perf baselines for native copy paths:
       - native CPU upload path vs native GPU-offscreen path,

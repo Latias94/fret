@@ -66,8 +66,11 @@ Evidence:
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/viewport_surface.rs`
     - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
-- [ ] EXT-native-120 Native “true external import” adapter seam (platform-decoder produced GPU
+- [x] EXT-native-120 Native “true external import” adapter seam (platform-decoder produced GPU
       frame, capability-gated, deterministic fallback).
+  - Evidence:
+    - `crates/fret-launch/src/runner/native_external_import.rs`
+    - `crates/fret-launch/src/runner/imported_viewport_target.rs`
 - [x] EXT-perf-130 Comparative diag/perf baselines for native copy paths (native CPU upload vs GPU
       offscreen).
   - Evidence (native):
