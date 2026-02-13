@@ -150,6 +150,12 @@ pub struct PointerDownCx {
     /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
     pub click_count: u8,
     pub pointer_type: PointerType,
+    /// `true` when the pointer-down hit-test target is (or is inside) a text input element subtree
+    /// (`TextInput`, `TextArea`, or `TextInputRegion`).
+    ///
+    /// This is a mechanism-provided classification intended for component policy decisions like
+    /// Embla-style "do not arm drag when interacting with focus nodes".
+    pub hit_is_text_input: bool,
 }
 
 /// Pointer move payload for component-owned pointer handlers.

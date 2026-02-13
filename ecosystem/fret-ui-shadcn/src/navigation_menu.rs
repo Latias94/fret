@@ -75,9 +75,7 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
         .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
         .or_else(|| theme.metric_by_key("metric.font.line_height"))
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| {
-            theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        });
+        .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT));
     TextStyle {
         font: FontId::default(),
         size: px,

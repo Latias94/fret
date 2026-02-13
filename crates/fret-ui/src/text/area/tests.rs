@@ -463,6 +463,7 @@ fn event_cx<'a>(
             caps: PlatformCapabilities::default(),
             ..Default::default()
         },
+        pointer_hit_is_text_input: false,
         prevented_default_actions,
         pointer_id: None,
         scale_factor: 1.0,
