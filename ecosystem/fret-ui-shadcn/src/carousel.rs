@@ -311,6 +311,12 @@ impl Carousel {
                         track_direction,
                         mv.position,
                         mv.buttons.left,
+                        match mv.pointer_type {
+                            fret_core::PointerType::Touch => {
+                                headless_carousel::CarouselDragInputKind::Touch
+                            }
+                            _ => headless_carousel::CarouselDragInputKind::Mouse,
+                        },
                         max_offset,
                     );
                     steal_capture = out.steal_capture;
