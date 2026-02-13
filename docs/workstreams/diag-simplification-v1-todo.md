@@ -35,7 +35,8 @@ Evidence pointers:
   - [x] use `run_script_over_transport` for script execution
   - [x] make bundle selection/dump fully transport-agnostic
 - [ ] Add a transport-agnostic "streaming results" hook:
-  - [ ] allow tooling to consume `script.result` updates incrementally (useful for long suites)
+  - [x] allow tooling to consume `script.result` updates incrementally (useful for long suites)
+    - Evidence: `crates/fret-diag/src/lib.rs` (`run_script_over_transport` incremental writes)
 
 ## Phase 2: Artifact materialization parity
 
