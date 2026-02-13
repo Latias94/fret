@@ -40,6 +40,8 @@ Notes:
 
 - Android Emulator can expose Vulkan features but still be unstable for real-world wgpu usage (driver/translation
   layers differ from physical devices).
+- On macOS hosts, Android Emulator Vulkan is often mediated by Metal-based translation layers; treat it as
+  a convenience tool, not a correctness/perf baseline.
 - Host OS matters (macOS → Metal-based virtualization; Windows → typically DX12-based virtualization). Treat this
   as “worth trying”, not as a correctness baseline: always accept/reject workstreams using **bundle evidence**
   captured on at least one real device.
@@ -67,6 +69,11 @@ iOS:
 
 - `tools/mobile/run.sh ios --app ui-gallery --sim`
 - For real devices, use `tools/mobile/run.sh ios --app ui-gallery --device <udid> --team <team-id>`
+
+Tip (iOS Simulator diagnostics location):
+
+- When diagnostics are enabled, the filesystem transport writes under the app sandbox:
+  - `${container}/tmp/fret-diag` where `container=$(xcrun simctl get_app_container <udid> dev.fret.ui-gallery data)`
 
 5) Capture a diagnostics bundle (Android filesystem transport)
 
@@ -102,6 +109,7 @@ Archive the JSON snippet under the relevant workstream milestone document.
 - Android runner wrapper (build/install/start): `tools/mobile/android_game_activity_run.sh`
 - Mobile run entrypoint: `tools/mobile/run.sh`
 - Workstream smoke recipe (example evidence format): `docs/workstreams/mobile-gfx-backend-v1/m3-real-device-smoke-oppo-plg110.md`
+- Android Emulator Vulkan notes: `docs/workstreams/mobile-gfx-backend-v1/android-emulator-vulkan-notes.md`
 
 ## Common pitfalls
 
