@@ -13,6 +13,7 @@ documentation.workspace = true
 fret-canvas = { path = "../fret-canvas" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
+tracing.workspace = true
 
 [dev-dependencies]
 slotmap.workspace = true

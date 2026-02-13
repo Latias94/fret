@@ -1575,6 +1575,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "slotmap",
+ "tracing",
 ]
 
 [[package]]
@@ -2419,6 +2420,7 @@ dependencies = [
  "fret-ui-kit",
  "image",
  "slotmap",
+ "tracing",
 ]
 
 [[package]]

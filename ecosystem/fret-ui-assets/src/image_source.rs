@@ -26,6 +26,8 @@ use fret_runtime::{Model, ModelHost, ModelId};
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache};
 
+static WARNED_MISSING_DISPATCHER: AtomicBool = AtomicBool::new(false);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ImageSourceId(u64);
 
@@ -361,6 +363,13 @@ impl ImageSourceLoader {
             .fetch_add(1, Ordering::Relaxed);
         entry.state = ImageSourceEntryState::Loading { inflight_id };
 
+        tracing::debug!(
+            source = ?request.source,
+            window = ?window,
+            frame = frame,
+            "image_source: start decode"
+        );
+
         let sender = self.runtime.inbox.sender();
         let dispatcher = self.runtime.dispatcher.clone();
         let wake_dispatcher = dispatcher.clone();
@@ -508,6 +517,13 @@ impl ImageSourceRuntime {
 
             match msg.result {
                 Ok(decoded) => {
+                    tracing::debug!(
+                        source = ?msg.request.source,
+                        window = ?msg.window,
+                        width = decoded.width,
+                        height = decoded.height,
+                        "image_source: decode ok"
+                    );
                     let asset_key = ImageAssetKey::from_rgba8(
                         decoded.width,
                         decoded.height,
@@ -524,6 +540,12 @@ impl ImageSourceRuntime {
                     self.register_asset_key_signal_mapping(msg.request, asset_key);
                 }
                 Err(err) => {
+                    tracing::warn!(
+                        source = ?msg.request.source,
+                        window = ?msg.window,
+                        error = %err,
+                        "image_source: decode failed"
+                    );
                     entry.state = ImageSourceEntryState::Failed {
                         message: Arc::<str>::from(err),
                         last_attempt_frame: msg.attempt_frame,
@@ -593,10 +615,7 @@ impl ImageSourceRuntime {
 }
 
 #[cfg(feature = "ui")]
-pub(crate) fn notify_image_asset_key<H: GlobalsHost + ModelHost>(
-    app: &mut H,
-    key: ImageAssetKey,
-) {
+pub(crate) fn notify_image_asset_key<H: GlobalsHost + ModelHost>(app: &mut H, key: ImageAssetKey) {
     let Some(model_ids) = with_image_source_loader(app, |loader, _app| {
         loader
             .runtime
@@ -828,6 +847,14 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
                 }
             }
             Some(ImageSourceEntrySnapshot::Decoded { decoded, asset_key }) => {
+                tracing::debug!(
+                    source = ?request.source,
+                    window = ?window,
+                    width = decoded.width,
+                    height = decoded.height,
+                    asset_key = ?asset_key,
+                    "image_source: feed decoded bytes into ImageAssetCache"
+                );
                 // Feed the decoded bytes into the `ImageAssetCache` state machine.
                 host.with_image_asset_cache(|cache, host| {
                     let _image = cache.use_rgba8_keyed(
@@ -918,6 +945,9 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
             }
         }
     }) else {
+        if !WARNED_MISSING_DISPATCHER.swap(true, Ordering::Relaxed) {
+            tracing::warn!("image_source: missing DispatcherHandle global (decoding disabled)");
+        }
         return ImageSourceState {
             image: None,
             status: ImageLoadingStatus::Error,
@@ -1280,28 +1310,34 @@ mod tests {
             runtime.apply_msg(&mut host, msg);
         }
         let rev1 = host.models().revision(&model).unwrap_or(0);
-        assert!(rev1 > rev0, "expected decode completion to bump signal model");
+        assert!(
+            rev1 > rev0,
+            "expected decode completion to bump signal model"
+        );
 
         let request = ImageSourceRequestKey {
             source: src.id,
             color_space: ImageColorSpace::Srgb,
         };
-        let (decoded_width, decoded_height) = with_image_source_loader(&mut host, |loader, _host| {
-            let entries = loader
-                .runtime
-                .entries
-                .lock()
-                .expect("poisoned ImageSourceRuntime mutex");
-            let entry = entries.get(&request).expect("expected entry after decode");
-            match &entry.state {
-                ImageSourceEntryState::Decoded { decoded, .. } => (decoded.width, decoded.height),
-                ImageSourceEntryState::Failed { message, .. } => {
-                    panic!("decode failed: {message}");
+        let (decoded_width, decoded_height) =
+            with_image_source_loader(&mut host, |loader, _host| {
+                let entries = loader
+                    .runtime
+                    .entries
+                    .lock()
+                    .expect("poisoned ImageSourceRuntime mutex");
+                let entry = entries.get(&request).expect("expected entry after decode");
+                match &entry.state {
+                    ImageSourceEntryState::Decoded { decoded, .. } => {
+                        (decoded.width, decoded.height)
+                    }
+                    ImageSourceEntryState::Failed { message, .. } => {
+                        panic!("decode failed: {message}");
+                    }
+                    other => panic!("expected Decoded state after inbox apply, got {other:?}"),
                 }
-                other => panic!("expected Decoded state after inbox apply, got {other:?}"),
-            }
-        })
-        .expect("dispatcher installed");
+            })
+            .expect("dispatcher installed");
 
         // Now that we're decoded, the next use should schedule a GPU upload.
         let state = use_image_source_state(&mut host, window, &src);

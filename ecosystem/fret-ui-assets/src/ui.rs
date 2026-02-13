@@ -5,11 +5,11 @@
 
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
+use crate::image_asset_cache::ImageAssetKey;
 use crate::image_source::{
-    register_asset_key_for_source, ImageSource, ImageSourceOptions, ImageSourceState,
+    ImageSource, ImageSourceOptions, ImageSourceState, register_asset_key_for_source,
     with_image_source_loader,
 };
-use crate::image_asset_cache::ImageAssetKey;
 
 pub trait ImageSourceElementContextExt {
     fn use_image_source_state(&mut self, source: &ImageSource) -> ImageSourceState;

@@ -30,6 +30,7 @@ fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-query = { path = "../fret-query", optional = true }
 fret-ui-kit = { path = "../fret-ui-kit", optional = true }
 image = { workspace = true, optional = true }
+tracing.workspace = true
 
 [dev-dependencies]
 slotmap.workspace = true

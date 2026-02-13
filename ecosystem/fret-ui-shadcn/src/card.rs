@@ -17,7 +17,10 @@ const CARD_FOOTER_MARKER_PREFIX: &str = "fret-ui-shadcn.card-footer";
 fn matches_marker(test_id: &str, prefix: &str) -> bool {
     test_id == prefix
         || (test_id.starts_with(prefix)
-            && test_id.as_bytes().get(prefix.len()).is_some_and(|b| *b == b':'))
+            && test_id
+                .as_bytes()
+                .get(prefix.len())
+                .is_some_and(|b| *b == b':'))
 }
 
 fn is_card_action_marker(element: &AnyElement) -> bool {
@@ -393,7 +396,10 @@ mod tests {
             let footer = CardFooter::new([cx.text("footer")]).into_element(cx);
             let el = Card::new([cx.text("body"), footer]).into_element(cx);
 
-            let ElementKind::Container(ContainerProps { layout, padding, .. }) = &el.kind else {
+            let ElementKind::Container(ContainerProps {
+                layout, padding, ..
+            }) = &el.kind
+            else {
                 panic!("expected Card root to be a container element");
             };
 

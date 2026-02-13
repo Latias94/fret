@@ -56,12 +56,11 @@ impl UiAssets {
         host.with_image_asset_cache(|cache, host| {
             #[cfg(feature = "ui")]
             let key = match event {
-                Event::ImageRegistered { token, .. }
-                | Event::ImageRegisterFailed { token, .. } => cache.key_for_token(*token),
+                Event::ImageRegistered { token, .. } | Event::ImageRegisterFailed { token, .. } => {
+                    cache.key_for_token(*token)
+                }
                 _ => None,
             };
-            #[cfg(not(feature = "ui"))]
-            let key = None;
 
             let changed = cache.handle_event(host, window, event);
 
