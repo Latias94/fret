@@ -7,7 +7,7 @@ shift || true
 usage() {
   cat <<EOF
 Usage:
-  tools/mobile/run.sh android --app <name> [--device <serial>] [--release] [--no-logcat]
+  tools/mobile/run.sh android --app <name> [--device <serial>] [--backend <vk|gl|...>] [--allow-fallback] [--diag] [--diag-dir <path>] [--release] [--no-logcat]
   tools/mobile/run.sh ios --app <name> [--sim] [--udid <sim-udid>] [--device <udid>] [--team <team-id>] [--release]
   tools/mobile/run.sh doctor [android|ios|all]
 
@@ -36,6 +36,10 @@ app=""
 profile="debug"
 device=""
 no_logcat=""
+backend=""
+allow_fallback=""
+diag=""
+diag_dir=""
 udid=""
 ios_sim=""
 team=""
@@ -45,6 +49,10 @@ while [[ $# -gt 0 ]]; do
     --app) app="$2"; shift 2 ;;
     --release) profile="release"; shift ;;
     --device|-d) device="$2"; shift 2 ;;
+    --backend) backend="$2"; shift 2 ;;
+    --allow-fallback) allow_fallback="--allow-fallback"; shift ;;
+    --diag) diag="--diag"; shift ;;
+    --diag-dir) diag_dir="$2"; shift 2 ;;
     --no-logcat) no_logcat="--no-logcat"; shift ;;
     --udid) udid="$2"; shift 2 ;;
     --sim) ios_sim="1"; shift ;;
@@ -67,18 +75,30 @@ case "${platform}" in
       exit 2
     fi
 
-    args=()
+    cmd=(tools/mobile/android_game_activity_run.sh)
     if [[ "${profile}" == "release" ]]; then
-      args+=(--release)
+      cmd+=(--release)
     fi
     if [[ -n "${device}" ]]; then
-      args+=(--device "${device}")
+      cmd+=(--device "${device}")
+    fi
+    if [[ -n "${backend}" ]]; then
+      cmd+=(--backend "${backend}")
+    fi
+    if [[ -n "${allow_fallback}" ]]; then
+      cmd+=(--allow-fallback)
+    fi
+    if [[ -n "${diag}" ]]; then
+      cmd+=(--diag)
+    fi
+    if [[ -n "${diag_dir}" ]]; then
+      cmd+=(--diag-dir "${diag_dir}")
     fi
     if [[ -n "${no_logcat}" ]]; then
-      args+=(--no-logcat)
+      cmd+=(--no-logcat)
     fi
 
-    exec tools/mobile/android_game_activity_run.sh "${args[@]}"
+    exec "${cmd[@]}"
     ;;
   ios)
     if [[ "${app}" != "ui-gallery" ]]; then
@@ -86,27 +106,27 @@ case "${platform}" in
       exit 2
     fi
     if [[ -n "${ios_sim}" ]]; then
-      args=()
+      cmd=(tools/mobile/ios_sim_run.sh)
       if [[ "${profile}" == "release" ]]; then
-        args+=(--release)
+        cmd+=(--release)
       fi
       if [[ -n "${udid}" ]]; then
-        args+=(--udid "${udid}")
+        cmd+=(--udid "${udid}")
       fi
-      exec tools/mobile/ios_sim_run.sh "${args[@]}"
+      exec "${cmd[@]}"
     fi
 
-    args=()
+    cmd=(tools/mobile/ios_device_run.sh)
     if [[ "${profile}" == "release" ]]; then
-      args+=(--release)
+      cmd+=(--release)
     fi
     if [[ -n "${device}" ]]; then
-      args+=(--device "${device}")
+      cmd+=(--device "${device}")
     fi
     if [[ -n "${team}" ]]; then
-      args+=(--team "${team}")
+      cmd+=(--team "${team}")
     fi
-    exec tools/mobile/ios_device_run.sh "${args[@]}"
+    exec "${cmd[@]}"
     ;;
   *)
     usage >&2

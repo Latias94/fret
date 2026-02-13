@@ -474,6 +474,7 @@ fn gpu_affine_clip_conformance() {
             size: source_size,
             format,
             color_space: RenderTargetColorSpace::Linear,
+            metadata: fret_render_wgpu::RenderTargetMetadata::default(),
         });
 
         let transform = rotation_about(center, std::f32::consts::FRAC_PI_4);

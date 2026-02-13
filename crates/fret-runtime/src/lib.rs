@@ -58,6 +58,7 @@ pub use docking_settings::{
 pub use drag::{
     DRAG_KIND_DOCK_PANEL, DRAG_KIND_DOCK_TABS, DragKindId, DragPhase, DragSession, DragSessionId,
 };
+pub use effect::DiagIncomingOpenItem;
 pub use effect::{
     ActivationPolicy, CreateWindowKind, CreateWindowRequest, Effect, TaskbarVisibility,
     WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel,
@@ -82,7 +83,11 @@ pub use fret_core::{
     AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
     ImageEncoding, TransferFunction, YuvMatrix,
 };
-pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
+pub use fret_core::{
+    ClipboardToken, ExternalDropToken, FileDialogToken, IncomingOpenToken, ShareSheetToken,
+    TimerToken,
+};
+pub use fret_core::{IncomingOpenDataEvent, IncomingOpenItem, ShareItem, ShareSheetOutcome};
 pub use fret_i18n;
 pub use input::{
     DefaultAction, DefaultActionSet, InputContext, InputDispatchPhase, KeyChord, Platform,
@@ -90,8 +95,10 @@ pub use input::{
 };
 pub use interaction_diagnostics::{
     DockDragDiagnostics, DockDropCandidateRectDiagnostics, DockDropCandidateRectKind,
-    DockDropResolveDiagnostics, DockDropResolveSource, DockDropTargetDiagnostics,
-    DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
+    DockDropPreviewDiagnostics, DockDropPreviewKindDiagnostics, DockDropResolveDiagnostics,
+    DockDropResolveSource, DockDropTargetDiagnostics, DockFloatingDragDiagnostics,
+    DockGraphSignatureDiagnostics, DockGraphStatsDiagnostics, DockingInteractionDiagnostics,
+    ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};

@@ -483,7 +483,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.tick_id,
             self.frame_id,
         );
-        for update in engine.target_updates {
+        let EngineFrameUpdate {
+            target_updates,
+            command_buffers,
+            keepalive,
+        } = engine;
+        for update in target_updates {
             match update {
                 RenderTargetUpdate::Update { id, desc } => {
                     let _ = gfx.renderer.update_render_target(id, desc);
@@ -534,10 +539,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 .set_global(gfx.renderer.text_fallback_policy_snapshot(self.frame_id));
         }
 
-        let mut submit: Vec<wgpu::CommandBuffer> = engine.command_buffers;
+        let mut submit: Vec<wgpu::CommandBuffer> = command_buffers;
         submit.push(cmd);
         gfx.ctx.queue.submit(submit);
         frame.present();
+        drop(keepalive);
 
         self.drain_turns(event_loop, window, &mut gfx, &mut state);
 

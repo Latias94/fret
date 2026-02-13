@@ -23,6 +23,31 @@ Keep in Rust instead:
 - Cases requiring closures/async hooks or bespoke host wiring.
 - Tests where compile-time types are the primary safety net (fixtures would weaken intent).
 
+## Inputs to collect (ask the user)
+
+Ask these before extracting fixtures (so you don’t over-fit the schema):
+
+- What is the repeated dimension (inputs, expected outputs, environment knobs)?
+- Does each case share the same runner/harness, or do you need multiple harnesses?
+- What must be stable IDs (case id, scenario id, golden id)?
+- Do you need deterministic geometry (avoid floats) or will tolerances be required?
+- How should failures be reported (case-id-addressable, diff-friendly output)?
+
+Defaults if unclear:
+
+- Start with a single fixture file with `schema_version` + stable `cases[].id`, and a thin harness that prints failing ids.
+
+## Smallest starting point (one command)
+
+- `cargo nextest run -p fret-ui-shadcn`
+
+## Quick start
+
+1. Pick a single “god test” to extract first (keep the old test while mirroring).
+2. Define a fixture schema with `schema_version` and stable `id` per case.
+3. Write a thin harness that loads fixtures without `cwd` assumptions.
+4. Run: `cargo nextest run -p <crate>` and keep failures case-id-addressable.
+
 ## Directory conventions
 
 Prefer one of:
@@ -73,7 +98,9 @@ Minimal pattern:
 3. `let suite: Suite = serde_json::from_str(raw)?;`
 4. `for case in suite.cases { run_case(&case); }`
 
-## Migration steps (safe + incremental)
+## Workflow
+
+### Migration steps (safe + incremental)
 
 1. **Extract**: copy the existing Rust matrix into a fixture file (keep the old test temporarily).
 2. **Mirror**: write a new harness test that runs the fixture cases and matches existing assertions.
@@ -81,7 +108,7 @@ Minimal pattern:
 4. **Delete**: remove the old matrix and keep the fixture as the source of truth.
 5. **Document evidence**: add 1–3 anchors to the relevant workstream TODO item.
 
-## Reviewability checklist
+### Reviewability checklist
 
 - Fixture format has a `schema_version`.
 - Each case has a stable `id`.
@@ -89,9 +116,34 @@ Minimal pattern:
 - The harness avoids runtime filesystem assumptions (no `current_dir()` reliance).
 - Adding a new case does not require touching the harness.
 
-## Gates
+### Gates
 
 - Inner loop: `cargo nextest run -p <crate>`
-- Refactor boundary changes: `pwsh -NoProfile -File tools/check_layering.ps1`
+- Refactor boundary changes: `python3 tools/check_layering.py`
 - If fixtures are large and frequently edited: consider splitting into multiple files by subsystem.
 
+## Definition of done (what to leave behind)
+
+- Minimum deliverables (3-pack): Repro (fixture suite), Gate (nextest), Evidence (case-id failures). See `fret-skills-playbook`.
+- Fixture suite has `schema_version` and stable case `id` keys.
+- Harness is thin (parse → run_case → asserts) and does not depend on `cwd`.
+- Failing output is case-id-addressable (reviewers can locate the exact case quickly).
+- Old “god test” is removed only after the fixture harness is green and reviewed.
+- If the fixture suite is part of a contract/parity surface, it is wired into the relevant workstream gate.
+
+## Evidence anchors
+
+- Fixture examples (when present): `ecosystem/fret-ui-shadcn/tests/` and `goldens/`
+- Diagnostics scripts (for procedural/state-machine cases): `tools/diag-scripts/`
+
+## Common pitfalls
+
+- Using fixtures for procedural state machines (use `fretboard diag` scripts instead).
+- Making fixtures too “clever” (hard to diff; unstable IDs; floats everywhere).
+- Letting the harness grow (keep it parsing + run_case + asserts only).
+
+## Related skills
+
+- `fret-diag-workflow` (scripted interactions + bundles)
+- `fret-shadcn-source-alignment` (parity work often benefits from fixtures)
+- `fret-boundary-checks` (guardrails for refactors that move tests across crates)

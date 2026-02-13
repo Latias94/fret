@@ -159,6 +159,59 @@ let dock = magic::dock(cx, magic::DockProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_PATTERNS: &str = r#"
+## Patterns (fret-ui-magic)
+
+This page demonstrates a small set of “creative parity” pattern backgrounds built on Tier B
+procedural materials (ADR 0235).
+
+- Patterns are expressed as `Paint::Material { id, params }` on `ContainerProps.background_paint`.
+- `MaterialId`s are renderer-controlled and registered via an app-owned `VisualCatalog` (ADR 0245).
+- Determinism is explicit: authors provide `seed` (and optionally `phase`), and no hidden time is used.
+
+Non-goals (v1):
+
+- Pixel-perfect CSS/SVG pattern parity.
+- Arbitrary shader authoring at the component layer.
+"#;
+
+pub(crate) const USAGE_MAGIC_PATTERNS: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let dot = magic::dot_pattern(cx, magic::DotPatternProps::default(), |cx| {
+    vec![cx.text(\"DotGrid\")]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_SPARKLES_TEXT: &str = r#"
+## SparklesText (fret-ui-magic)
+
+This is a Phase 0 “SparklesText-like” wrapper inspired by MagicUI.
+
+The v1 implementation:
+
+- draws a deterministic sparkle field procedural material (Tier B, ADR 0235),
+- animates using the runner-owned frame clock (ADR 0240) when motion is allowed,
+- respects `prefers-reduced-motion` (static sparkle field),
+- uses additive compositing (ADR 0247) to layer sparkles over the child content.
+
+Non-goals (v1):
+
+- Clipping sparkles to glyph alpha (requires a richer alpha mask substrate than v1 gradient masks).
+"#;
+
+pub(crate) const USAGE_MAGIC_SPARKLES_TEXT: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let sparkle = magic::sparkles_text(cx, magic::SparklesTextProps::default(), |cx| {
+    vec![cx.text(\"Sparkles\")]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_BLOOM: &str = r#"
 ## Bloom (fret-ui-kit recipe)
 
@@ -2847,12 +2900,13 @@ let field = shadcn::Field::new(vec![
 pub(crate) const DOC_ALERT: &str = r#"
 ## Alert
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/alert.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx`.
 "#;
 
 pub(crate) const USAGE_ALERT: &str = r#"
 ```rust
 let alert = shadcn::Alert::new(vec![
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.terminal")),
     shadcn::AlertTitle::new("Heads up!").into_element(cx),
     shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
 ])
@@ -2863,7 +2917,7 @@ let alert = shadcn::Alert::new(vec![
 pub(crate) const DOC_ALERT_DIALOG: &str = r#"
 ## Alert Dialog
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`.
 "#;
 
 pub(crate) const USAGE_ALERT_DIALOG: &str = r#"

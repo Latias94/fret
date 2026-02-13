@@ -543,36 +543,9 @@ fn build_flow_subtree_impl<H: UiHost>(
                 Display::Grid,
                 root_override_size,
             );
-            // Use `1fr` tracks so percent/fill sizing resolves against the wrapper's definite box
-            // when available, without forcing auto-sized children to stretch.
-            style.grid_template_columns = vec![GridTemplateComponent::Single(
-                taffy::style_helpers::flex(1.0),
-            )];
-            style.grid_template_rows = vec![GridTemplateComponent::Single(
-                taffy::style_helpers::flex(1.0),
-            )];
-            style.align_items = Some(AlignItems::FlexStart);
-            style.justify_items = Some(AlignItems::FlexStart);
-            style.justify_content = Some(JustifyContent::FlexStart);
-
-            let _ = with_element_record_for_node(app, window, node, |r| {
-                if let ElementInstance::Container(p) = &r.instance {
-                    apply_container_insets(&mut style, p, sf);
-                }
-            });
+            let wrapper_style = layout_style_for_node(app, window, node);
 
             let children = tree.children_ref(node);
-
-            // If this wrapper sizes itself to content (`Auto`) but its *flow child* requests `Fill`,
-            // promote the wrapper to `Fill` as well.
-            //
-            // This avoids Taffy collapsing `%` sizing to zero when the containing block size is
-            // otherwise undetermined, and matches the Fret contract that `Fill` only resolves when
-            // an ancestor provides definite space.
-            //
-            // Practical impact: shadcn-like compositions commonly put `w_full()/h_full()` on inner
-            // stacks, expecting the outer wrapper (CardHeader/CardContent, etc) to fill the card.
-            let wrapper_style = layout_style_for_node(app, window, node);
             let mut has_flow_child_fill_w = false;
             let mut has_flow_child_fill_h = false;
             for &child in children {
@@ -585,6 +558,49 @@ fn build_flow_subtree_impl<H: UiHost>(
                 has_flow_child_fill_h |=
                     matches!(child_style.size.height, crate::element::Length::Fill);
             }
+
+            // Wrapper nodes (container/opacity/semantics/...) should remain shrink-wrapped by
+            // default, but still provide a definite containing block when percent/fill sizing is
+            // requested by flow children.
+            let needs_definite_width = has_flow_child_fill_w
+                || matches!(wrapper_style.size.width, crate::element::Length::Fill)
+                || matches!(wrapper_style.size.width, crate::element::Length::Px(_));
+            style.grid_template_columns =
+                vec![GridTemplateComponent::Single(if needs_definite_width {
+                    taffy::style_helpers::fr(1.0)
+                } else {
+                    taffy::style_helpers::auto()
+                })];
+
+            let needs_definite_height = has_flow_child_fill_h
+                || matches!(wrapper_style.size.height, crate::element::Length::Fill)
+                || matches!(wrapper_style.size.height, crate::element::Length::Px(_));
+            style.grid_template_rows =
+                vec![GridTemplateComponent::Single(if needs_definite_height {
+                    taffy::style_helpers::fr(1.0)
+                } else {
+                    taffy::style_helpers::auto()
+                })];
+
+            style.align_items = Some(AlignItems::FlexStart);
+            style.justify_items = Some(AlignItems::FlexStart);
+            style.justify_content = Some(JustifyContent::FlexStart);
+
+            let _ = with_element_record_for_node(app, window, node, |r| {
+                if let ElementInstance::Container(p) = &r.instance {
+                    apply_container_insets(&mut style, p, sf);
+                }
+            });
+
+            // If this wrapper sizes itself to content (`Auto`) but its *flow child* requests `Fill`,
+            // promote the wrapper to `Fill` as well.
+            //
+            // This avoids Taffy collapsing `%` sizing to zero when the containing block size is
+            // otherwise undetermined, and matches the Fret contract that `Fill` only resolves when
+            // an ancestor provides definite space.
+            //
+            // Practical impact: shadcn-like compositions commonly put `w_full()/h_full()` on inner
+            // stacks, expecting the outer wrapper (CardHeader/CardContent, etc) to fill the card.
             if matches!(wrapper_style.size.width, crate::element::Length::Auto)
                 && has_flow_child_fill_w
             {

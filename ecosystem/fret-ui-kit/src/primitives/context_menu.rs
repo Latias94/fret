@@ -329,6 +329,10 @@ mod tests {
         fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
             self.app.next_clipboard_token()
         }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
     }
 
     impl UiFocusActionHost for PointerHost {
@@ -420,6 +424,8 @@ mod tests {
             PointerDownCx {
                 pointer_id,
                 position: origin,
+                position_local: origin,
+                position_window: Some(origin),
                 tick_id,
                 pixels_per_point: 1.0,
                 button: MouseButton::Left,
@@ -467,6 +473,8 @@ mod tests {
             PointerDownCx {
                 pointer_id,
                 position: origin,
+                position_local: origin,
+                position_window: Some(origin),
                 tick_id,
                 pixels_per_point: 1.0,
                 button: MouseButton::Left,
@@ -495,8 +503,11 @@ mod tests {
             PointerMoveCx {
                 pointer_id,
                 position: Point::new(Px(40.0), Px(40.0)),
+                position_local: Point::new(Px(40.0), Px(40.0)),
+                position_window: Some(Point::new(Px(40.0), Px(40.0))),
                 tick_id,
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
                 pointer_type: PointerType::Touch,
@@ -534,6 +545,8 @@ mod tests {
             PointerDownCx {
                 pointer_id,
                 position: Point::new(Px(50.0), Px(60.0)),
+                position_local: Point::new(Px(50.0), Px(60.0)),
+                position_window: Some(Point::new(Px(50.0), Px(60.0))),
                 tick_id,
                 pixels_per_point: 1.0,
                 button: MouseButton::Left,
@@ -551,6 +564,8 @@ mod tests {
             PointerCancelCx {
                 pointer_id,
                 position: None,
+                position_local: None,
+                position_window: None,
                 tick_id,
                 pixels_per_point: 1.0,
                 buttons: MouseButtons::default(),

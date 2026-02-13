@@ -17,6 +17,7 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRe
 use crate::{Button, ButtonSize, ButtonVariant};
 
 const CAROUSEL_SETTLE_TICKS: u64 = 12;
+const CAROUSEL_DRAG_START_PX: f32 = 10.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CarouselOrientation {
@@ -41,6 +42,7 @@ pub struct Carousel {
 
 #[derive(Debug, Clone, Copy, Default)]
 struct CarouselRuntime {
+    armed: bool,
     dragging: bool,
     start: Point,
     start_offset: Px,
@@ -251,20 +253,20 @@ impl Carousel {
                 if down.button != MouseButton::Left {
                     return false;
                 }
-                host.capture_pointer();
                 let start_offset = host
                     .models_mut()
                     .read(&offset_for_down, |v| *v)
                     .ok()
                     .unwrap_or(Px(0.0));
                 let _ = host.models_mut().update(&runtime_for_down, |st| {
-                    st.dragging = true;
+                    st.armed = true;
+                    st.dragging = false;
                     st.start = down.position;
                     st.start_offset = start_offset;
                     st.settling = false;
                     st.settle_tick = 0;
                 });
-                true
+                false
             });
 
             let runtime_for_move = runtime_model.clone();
@@ -275,7 +277,15 @@ impl Carousel {
                     .read(&runtime_for_move, |st| *st)
                     .ok()
                     .unwrap_or_default();
-                if !runtime.dragging {
+                if !runtime.armed && !runtime.dragging {
+                    return false;
+                }
+
+                if !mv.buttons.left {
+                    let _ = host.models_mut().update(&runtime_for_move, |st| {
+                        st.armed = false;
+                        st.dragging = false;
+                    });
                     return false;
                 }
 
@@ -297,6 +307,18 @@ impl Carousel {
                     fret_core::Axis::Vertical => mv.position.y.0 - runtime.start.y.0,
                 };
 
+                if !runtime.dragging && runtime.armed && delta.abs() < CAROUSEL_DRAG_START_PX {
+                    return false;
+                }
+
+                if !runtime.dragging && runtime.armed {
+                    host.capture_pointer();
+                    let _ = host.models_mut().update(&runtime_for_move, |st| {
+                        st.armed = false;
+                        st.dragging = true;
+                    });
+                }
+
                 let next = Px((runtime.start_offset.0 - delta).clamp(0.0, max_offset.0));
                 let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
                 host.request_redraw(_cx.window);
@@ -313,6 +335,10 @@ impl Carousel {
                     .ok()
                     .unwrap_or_default();
                 if !runtime.dragging {
+                    let _ = host.models_mut().update(&runtime_for_up, |st| {
+                        st.armed = false;
+                        st.dragging = false;
+                    });
                     return false;
                 }
 
@@ -369,10 +395,33 @@ impl Carousel {
 
                 let _ = host.models_mut().update(&index_for_up, |v| *v = next_index);
                 let _ = host.models_mut().update(&runtime_for_up, |st| {
+                    st.armed = false;
                     st.dragging = false;
                     st.settling = true;
                     st.settle_from = offset;
                     st.settle_to = target;
+                    st.settle_tick = 0;
+                });
+                host.request_redraw(cx.window);
+                true
+            });
+
+            let runtime_for_cancel = runtime_model.clone();
+            let on_cancel: fret_ui::action::OnPointerCancel = Arc::new(move |host, cx, _cancel| {
+                let runtime = host
+                    .models_mut()
+                    .read(&runtime_for_cancel, |st| *st)
+                    .ok()
+                    .unwrap_or_default();
+                if !runtime.dragging && !runtime.armed {
+                    return false;
+                }
+
+                host.release_pointer_capture();
+                let _ = host.models_mut().update(&runtime_for_cancel, |st| {
+                    st.armed = false;
+                    st.dragging = false;
+                    st.settling = false;
                     st.settle_tick = 0;
                 });
                 host.request_redraw(cx.window);
@@ -634,11 +683,13 @@ impl Carousel {
                 PointerRegionProps {
                     layout: pointer_layout,
                     enabled: items_len > 1,
+                    capture_phase_pointer_moves: true,
                 },
                 move |cx| {
                     cx.pointer_region_on_pointer_down(on_down);
                     cx.pointer_region_on_pointer_move(on_move);
                     cx.pointer_region_on_pointer_up(on_up);
+                    cx.pointer_region_on_pointer_cancel(on_cancel);
                     vec![track]
                 },
             );
@@ -682,10 +733,8 @@ impl Carousel {
             let rotate_controls = orientation == CarouselOrientation::Vertical;
             let arrow_rotation = if rotate_controls { 90.0 } else { 0.0 };
             let arrow_center = Point::new(Px(8.0), Px(8.0));
-            let arrow_transform = fret_core::Transform2D::rotation_about_degrees(
-                arrow_rotation,
-                arrow_center,
-            );
+            let arrow_transform =
+                fret_core::Transform2D::rotation_about_degrees(arrow_rotation, arrow_center);
             let arrow_layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default()

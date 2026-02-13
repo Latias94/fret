@@ -172,6 +172,7 @@ impl WinitAppDriver for Plot3dDemoDriver {
         EngineFrameUpdate {
             target_updates: Vec::new(),
             command_buffers: vec![encoder.finish()],
+            keepalive: Vec::new(),
         }
     }
 

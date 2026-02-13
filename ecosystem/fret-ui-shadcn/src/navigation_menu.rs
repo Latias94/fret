@@ -975,12 +975,12 @@ impl NavigationMenu {
                 .copied()
                 .unwrap_or(false);
             let open_for_motion = open && selected.is_some();
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 open_for_motion,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::shadcn_ease,
+                overlay_motion::shadcn_motion_duration_100(cx),
+                overlay_motion::shadcn_motion_duration_100(cx),
+                overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let opacity = motion.progress;
             let scale = if viewport_enabled {
@@ -1091,6 +1091,7 @@ impl NavigationMenu {
                             let pointer_props = PointerRegionProps {
                                 layout: LayoutStyle::default(),
                                 enabled: true,
+                                ..Default::default()
                             };
 
                             let trigger_children = item.trigger.clone();

@@ -14,6 +14,7 @@ pub mod form_validation;
 pub mod grid_viewport;
 pub mod hover_intent;
 pub mod menu_nav;
+pub mod motion;
 pub mod presence;
 pub mod roving_focus;
 pub mod safe_hover;

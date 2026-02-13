@@ -161,12 +161,13 @@ Evidence:
 - Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
 - Add UI gallery entries and `fretboard diag` scripts for each seed component.
 
-Status: In progress
+Status: Landed
 
 Done (so far):
 
 - Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`, `Dock`
 - UI gallery pages + diag scripts exist for the above (see Evidence below)
+- Tier B patterns: dot/grid/stripe backgrounds (static + animated variants) (UI gallery page + steady script)
 
 Evidence (planned):
 
@@ -196,21 +197,87 @@ Evidence (partial):
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_DOCK`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_dock`)
 - `tools/diag-scripts/ui-gallery-magic-dock-pointer-follow.json`
+- `ecosystem/fret-ui-magic/src/patterns.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_PATTERNS`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_patterns`)
+- `tools/diag-scripts/ui-gallery-magic-patterns-steady.json`
+- `ecosystem/fret-ui-magic/src/sparkles_text.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_SPARKLES_TEXT`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_sparkles_text`)
+- `tools/diag-scripts/ui-gallery-magic-sparkles-text-steady.json`
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
-- Next creative parity targets:
-  - Patterns (dot/grid/stripe + animated variants)
-  - `SparklesText`
+- None (M8 complete).
 - Verification:
-  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time)
+  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time): Landed
+    - Evidence:
+      - `tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-marquee-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-sparkles-text-fixed-frame-delta.json`
+
+## M8a — MagicUI perf baselines (optional)
+
+Extend perf coverage for the MagicUI parity pages so regressions show up early under `fretboard diag perf`.
+
+- Add perf scripts:
+  - `tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json`
+  - `tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json`
+  - `tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json`
+  - `tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json`
+- Commit windows-local baselines:
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-border-beam.windows-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-dock.windows-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-marquee.windows-local.v1.json`
+- Use the shared seed policy preset:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-magic-recipes.v1.json`
+
+Status: Landed
+
+Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
+
+- None (M8a complete).
+
+Evidence:
+
+- `tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json`
+- `tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json`
+- `tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json`
+- `tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-border-beam.windows-local.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-dock.windows-local.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-marquee.windows-local.v1.json`
 
 ## M9 — External texture imports (v1)
 
 - Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
 - Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
 
-Status: In progress (contract-path demo + diagnostics/perf evidence landed; first real backend path pending)
+Status: In progress (contract-path demo + diagnostics/perf evidence landed; web copy backend landed; native copy policy landed; web zero-copy pending)
+
+Done (v1 follow-ups):
+
+- Runner v1: a concrete per-frame keepalive mechanism for truly ephemeral imported resources.
+  - Evidence: `crates/fret-launch/src/runner/common/engine_frame_update.rs` (`EngineFrameKeepalive`),
+    submission boundaries: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`,
+    `crates/fret-launch/src/runner/web/render_loop.rs`.
+- Metadata v1: minimal descriptor metadata seam for real imports (alpha semantics, orientation/transform,
+  frame timing hints for diagnostics).
+  - Evidence: `crates/fret-render-core/src/lib.rs` (`RenderTargetMetadata`),
+    `crates/fret-render-wgpu/src/targets.rs` (`RenderTargetDescriptor.metadata`).
+- Native v1 (copy policy): a decode/import path with an explicit CPU upload policy and deterministic
+  fallback.
+  - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source).
+
+Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
+
+- Web v1: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback.
+  (Currently blocked on wgpu WebGPU backend implementing `ExternalTexture`:
+  wgpu v28 has `unimplemented!("ExternalTexture not implemented for web")` in `wgpu/src/backend/webgpu.rs`.)
 
 Acceptance criteria (v1):
 
@@ -240,3 +307,6 @@ Evidence:
 - `docs/workstreams/perf-baselines/policies/external-texture-imports-contract-path.v1.json`
 - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md` (cap gating notes)
+- Web backend (v0 copy path):
+  - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
+  - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)

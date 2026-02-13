@@ -93,7 +93,7 @@ pub(crate) fn assert_listbox_highlighted_option_chrome_matches_web(
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         render_frame(
             &mut ui,
@@ -252,7 +252,7 @@ pub(crate) fn assert_listbox_focused_option_chrome_matches_web(
 
     dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         render_frame(
             &mut ui,
@@ -272,7 +272,7 @@ pub(crate) fn assert_listbox_focused_option_chrome_matches_web(
         // move focus into an inner text field), force the open state and drive ArrowDown on the
         // first text field inside the overlay.
         let _ = app.models_mut().update(&open, |v| *v = true);
-        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames = crate::shadcn_motion::ticks_100() + 2;
         for tick in 0..settle_frames {
             render_frame(
                 &mut ui,

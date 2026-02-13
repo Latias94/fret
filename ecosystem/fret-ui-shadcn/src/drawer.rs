@@ -5,13 +5,17 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
-use fret_runtime::Model;
+use fret_runtime::{Model, TickId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, MarginEdge, MarginEdges, PointerRegionProps,
     RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
+use fret_ui_headless::motion::simulation::Simulation1D;
+use fret_ui_headless::motion::spring::SpringDescription;
+use fret_ui_headless::motion::tolerance::Tolerance;
 
 use crate::Sheet;
 use crate::layout as shadcn_layout;
@@ -19,6 +23,9 @@ pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion_value::{
+    MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
+};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
@@ -30,7 +37,9 @@ const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
 const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
 const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
-const DRAWER_SNAP_SETTLE_TICKS: u64 = 18;
+const DRAWER_SNAP_SETTLE_SPRING_DURATION: std::time::Duration =
+    std::time::Duration::from_millis(240);
+const DRAWER_SNAP_SETTLE_SPRING_BOUNCE: f64 = 0.0;
 
 /// shadcn/ui `DrawerPortal` (v4).
 ///
@@ -133,6 +142,7 @@ pub struct DrawerContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    drag_handle_test_id: Option<Arc<str>>,
 }
 
 impl DrawerContent {
@@ -142,6 +152,7 @@ impl DrawerContent {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            drag_handle_test_id: None,
         }
     }
 
@@ -152,6 +163,11 @@ impl DrawerContent {
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn drag_handle_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.drag_handle_test_id = Some(id.into());
         self
     }
 
@@ -235,6 +251,7 @@ impl DrawerContent {
         props.corner_radii = corners;
 
         let children = self.children;
+        let drag_handle_test_id = self.drag_handle_test_id;
 
         let mut rows: Vec<AnyElement> = Vec::new();
         if side == DrawerSide::Bottom {
@@ -262,6 +279,11 @@ impl DrawerContent {
                 },
                 |_cx| Vec::new(),
             );
+            let bar = if let Some(id) = drag_handle_test_id {
+                bar.test_id(id)
+            } else {
+                bar
+            };
             rows.push(shadcn_layout::container_hstack(
                 cx,
                 ContainerProps {
@@ -569,7 +591,6 @@ impl Drawer {
                     let _ = cx.app.models_mut().update(&runtime, |st| {
                         st.needs_snap_init = true;
                         st.settling = false;
-                        st.settle_tick = 0;
                     });
                 }
             }
@@ -579,7 +600,6 @@ impl Drawer {
                 let _ = cx.app.models_mut().update(&runtime, |st| {
                     st.needs_snap_init = false;
                     st.settling = false;
-                    st.settle_tick = 0;
                 });
             }
 
@@ -616,29 +636,44 @@ impl Drawer {
             }
 
             let mut offset = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
-            let settling = cx
-                .app
-                .models()
-                .get_copied(&runtime)
-                .map(|st| st.settling)
-                .unwrap_or(false);
-            if settling {
-                let runtime_snapshot = cx.app.models().get_copied(&runtime);
-                if let Some(st) = runtime_snapshot {
-                    let tick = st.settle_tick.saturating_add(1);
-                    let t = (tick as f32 / DRAWER_SNAP_SETTLE_TICKS as f32).min(1.0);
-                    let eased = crate::overlay_motion::shadcn_ease(t);
-                    let next = Px(st.settle_from.0 + (st.settle_to.0 - st.settle_from.0) * eased);
-                    offset = next;
+            let runtime_snapshot = cx.app.models().get_copied(&runtime);
+            if let Some(st) = runtime_snapshot {
+                let spring = SpringDescription::with_duration_and_bounce(
+                    DRAWER_SNAP_SETTLE_SPRING_DURATION,
+                    DRAWER_SNAP_SETTLE_SPRING_BOUNCE,
+                );
 
+                let update = if st.settling {
+                    MotionValueF32Update::To {
+                        target: st.settle_to.0,
+                        spec: MotionToSpecF32::Spring(SpringSpecF32 {
+                            spring,
+                            tolerance: Tolerance::default(),
+                            snap_to_target: true,
+                        }),
+                        kick: Some(MotionKickF32 {
+                            id: st.settle_seq,
+                            velocity: st.settle_velocity,
+                        }),
+                    }
+                } else {
+                    MotionValueF32Update::Snap(offset.0)
+                };
+
+                let out = drive_motion_value_f32(cx, offset.0, update);
+                let next = Px(out.value.max(0.0).min(window_height.0));
+                if next != offset {
+                    offset = next;
                     let _ = cx.app.models_mut().update(&offset_model, |v| *v = next);
+                }
+
+                if st.settling {
                     let _ = cx.app.models_mut().update(&runtime, |st| {
-                        st.settle_tick = tick;
-                        if t >= 1.0 {
-                            st.settling = false;
+                        st.settling = out.animating;
+                        if !out.animating {
+                            st.settle_velocity = 0.0;
                         }
                     });
-                    cx.request_frame();
                 }
             }
 
@@ -667,7 +702,9 @@ impl Drawer {
                     st.start = Point::new(down.position.x, Px(down.position.y.0 + start_offset.0));
                     st.start_offset = start_offset;
                     st.settling = false;
-                    st.settle_tick = 0;
+                    st.last_offset = start_offset;
+                    st.last_tick = down.tick_id;
+                    st.velocity = 0.0;
                 });
                 host.request_redraw(_cx.window);
                 true
@@ -676,9 +713,15 @@ impl Drawer {
             let runtime_for_move = runtime.clone();
             let offset_for_move = offset_model.clone();
             let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, _cx, mv| {
-                let Ok((dragging, start, start_offset)) =
+                let Ok((dragging, start, start_offset, last_tick, last_offset)) =
                     host.models_mut().read(&runtime_for_move, |st| {
-                        (st.dragging, st.start, st.start_offset)
+                        (
+                            st.dragging,
+                            st.start,
+                            st.start_offset,
+                            st.last_tick,
+                            st.last_offset,
+                        )
                     })
                 else {
                     return false;
@@ -696,6 +739,19 @@ impl Drawer {
                 let dy = global_y - start.y.0;
                 let next = Px((start_offset.0 + dy).max(0.0).min(window_height.0));
                 let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
+                let velocity = mv.velocity_window.map(|v| v.y.0).unwrap_or_else(|| {
+                    let dt_ticks = mv.tick_id.0.saturating_sub(last_tick.0);
+                    if dt_ticks == 0 {
+                        return 0.0;
+                    }
+                    let dt_secs = dt_ticks as f32 / 60.0;
+                    (next.0 - last_offset.0) / dt_secs
+                });
+                let _ = host.models_mut().update(&runtime_for_move, |st| {
+                    st.last_offset = next;
+                    st.last_tick = mv.tick_id;
+                    st.velocity = velocity.clamp(-5000.0, 5000.0);
+                });
                 host.request_redraw(_cx.window);
                 true
             });
@@ -704,15 +760,19 @@ impl Drawer {
             let runtime_for_up = runtime.clone();
             let offset_for_up = offset_model.clone();
             let snap_points_for_up = snap_points.clone();
-            let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, _up| {
-                let dragging = host
+            let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, up| {
+                let Ok((dragging, stored_velocity)) = host
                     .models_mut()
-                    .read(&runtime_for_up, |st| st.dragging)
-                    .ok()
-                    .unwrap_or(false);
+                    .read(&runtime_for_up, |st| (st.dragging, st.velocity))
+                else {
+                    return false;
+                };
                 if !dragging {
                     return false;
                 }
+                let velocity_window = up.velocity_window.map(|v| v.y.0);
+                let velocity_is_measured = velocity_window.is_some();
+                let velocity = velocity_window.unwrap_or(stored_velocity);
 
                 host.release_pointer_capture();
                 let bounds = host.bounds();
@@ -722,6 +782,29 @@ impl Drawer {
                     .read(&offset_for_up, |v| *v)
                     .ok()
                     .unwrap_or(Px(0.0));
+
+                let projected_offset = if velocity_is_measured
+                    && velocity.abs() >= DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC
+                {
+                    let sim = InertiaSimulation::new(
+                        offset.0 as f64,
+                        velocity as f64,
+                        DRAWER_DRAG_FLING_DRAG,
+                        Some(InertiaBounds {
+                            min: 0.0,
+                            max: window_height.0 as f64,
+                        }),
+                        SpringDescription::with_duration_and_bounce(
+                            DRAWER_SNAP_SETTLE_SPRING_DURATION,
+                            0.25,
+                        ),
+                        Tolerance::default(),
+                    );
+                    Px(sim.x(DRAWER_DRAG_FLING_PROJECTION_TIME) as f32)
+                } else {
+                    offset
+                };
+                let projected_offset = Px(projected_offset.0.clamp(0.0, window_height.0));
 
                 let has_snap_points = snap_points_for_up
                     .as_ref()
@@ -750,7 +833,7 @@ impl Drawer {
                         .map(|v| Px((drawer_h.0 - v.0 * 0.5).max(DRAWER_DRAG_DISMISS_MIN_PX)))
                         .unwrap_or_else(|| Px((drawer_h.0 * 0.25).max(DRAWER_DRAG_DISMISS_MIN_PX)));
 
-                    if offset.0 >= close_threshold.0 {
+                    if projected_offset.0 >= close_threshold.0 {
                         let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
@@ -758,17 +841,17 @@ impl Drawer {
                             .iter()
                             .copied()
                             .min_by(|a, b| {
-                                let da = (a.0 - offset.0).abs();
-                                let db = (b.0 - offset.0).abs();
+                                let da = (a.0 - projected_offset.0).abs();
+                                let db = (b.0 - projected_offset.0).abs();
                                 da.total_cmp(&db)
                             })
                             .unwrap_or(Px(0.0));
 
                         let _ = host.models_mut().update(&runtime_for_up, |st| {
                             st.settling = true;
-                            st.settle_from = offset;
                             st.settle_to = nearest;
-                            st.settle_tick = 0;
+                            st.settle_seq = st.settle_seq.saturating_add(1).max(1);
+                            st.settle_velocity = velocity;
                             st.dragging = false;
                         });
                         host.request_redraw(_cx.window);
@@ -776,11 +859,16 @@ impl Drawer {
                     }
                 } else {
                     let threshold = Px((drawer_h.0 * 0.25).max(DRAWER_DRAG_DISMISS_MIN_PX));
-                    let should_close = offset.0 >= threshold.0;
+                    let should_close = projected_offset.0 >= threshold.0;
                     if should_close {
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
-                        let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
+                        let _ = host.models_mut().update(&runtime_for_up, |st| {
+                            st.settling = true;
+                            st.settle_to = Px(0.0);
+                            st.settle_seq = st.settle_seq.saturating_add(1).max(1);
+                            st.settle_velocity = velocity;
+                        });
                     }
                 }
 
@@ -795,6 +883,7 @@ impl Drawer {
                 PointerRegionProps {
                     layout: LayoutStyle::default(),
                     enabled: is_open,
+                    ..Default::default()
                 },
                 move |cx| {
                     cx.pointer_region_on_pointer_down(on_down);
@@ -818,17 +907,42 @@ impl Drawer {
 const DRAWER_DRAG_HANDLE_HIT_HEIGHT: f32 = 32.0;
 const DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH: f32 = 80.0;
 const DRAWER_DRAG_DISMISS_MIN_PX: f32 = 30.0;
+const DRAWER_DRAG_FLING_DRAG: f64 = 0.135;
+const DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC: f32 = 450.0;
+const DRAWER_DRAG_FLING_PROJECTION_TIME: std::time::Duration =
+    std::time::Duration::from_millis(200);
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 struct DrawerDragRuntime {
     dragging: bool,
     start: Point,
     start_offset: Px,
+    last_tick: TickId,
+    last_offset: Px,
+    velocity: f32,
     needs_snap_init: bool,
     settling: bool,
-    settle_from: Px,
     settle_to: Px,
-    settle_tick: u64,
+    settle_seq: u64,
+    settle_velocity: f32,
+}
+
+impl Default for DrawerDragRuntime {
+    fn default() -> Self {
+        Self {
+            dragging: false,
+            start: Point::new(Px(0.0), Px(0.0)),
+            start_offset: Px(0.0),
+            last_tick: TickId(0),
+            last_offset: Px(0.0),
+            velocity: 0.0,
+            needs_snap_init: false,
+            settling: false,
+            settle_to: Px(0.0),
+            settle_seq: 0,
+            settle_velocity: 0.0,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -1529,7 +1643,10 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1651,7 +1768,10 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1840,7 +1960,10 @@ mod tests {
             ui.paint_all(app, services, b, &mut scene, 1.0);
         };
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1911,21 +2034,29 @@ mod tests {
             }),
         );
 
-        for _ in 0..(DRAWER_SNAP_SETTLE_TICKS + 4) {
-            app.set_frame_id(frame);
-            frame = FrameId(frame.0.saturating_add(1));
-            render_frame(&mut ui, &mut app, &mut services);
-        }
-
         let offset_model = offset_model_cell
             .borrow()
             .clone()
             .expect("offset model captured");
-        let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
         let expected = Px(180.0);
+
+        let mut settled = false;
+        for _ in 0..120 {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_frame(&mut ui, &mut app, &mut services);
+
+            let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+            if (offset.0 - expected.0).abs() < 1.0 {
+                settled = true;
+                break;
+            }
+        }
+
+        let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
         assert!(
-            (offset.0 - expected.0).abs() < 1.0,
-            "expected offset near {expected:?}, got {offset:?}"
+            settled,
+            "expected offset to settle near {expected:?}, got {offset:?}"
         );
     }
 
@@ -1946,7 +2077,10 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -2176,7 +2310,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) + 2;
         for _ in 0..settle_frames {
             render_drawer_frame_with_underlay(
                 &mut ui,
@@ -2570,7 +2706,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(2 + i as u64));
             let _ = render_drawer_frame_with_auto_focus_hooks(

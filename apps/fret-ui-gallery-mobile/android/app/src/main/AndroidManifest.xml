@@ -4,7 +4,8 @@
     <application
         android:allowBackup="true"
         android:label="Fret UI Gallery"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.FretUIGallery">
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|uiMode"
@@ -21,4 +22,3 @@
     </application>
 
 </manifest>
-

@@ -1,4 +1,4 @@
-use super::DockViewportOverlayHooks;
+use super::{DockViewportOverlayHooks, DockingPolicy};
 use fret_core::{AppWindowId, NodeId, PanelKey};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -20,6 +20,26 @@ impl DockViewportOverlayHooksService {
 
     pub fn hooks(&self) -> Option<Arc<dyn DockViewportOverlayHooks>> {
         self.hooks.clone()
+    }
+}
+
+/// Stores app/editor-owned docking policy hooks (min sizes, drop masks, locks, etc.).
+#[derive(Default)]
+pub struct DockingPolicyService {
+    policy: Option<Arc<dyn DockingPolicy>>,
+}
+
+impl DockingPolicyService {
+    pub fn set(&mut self, policy: Arc<dyn DockingPolicy>) {
+        self.policy = Some(policy);
+    }
+
+    pub fn clear(&mut self) {
+        self.policy = None;
+    }
+
+    pub fn policy(&self) -> Option<Arc<dyn DockingPolicy>> {
+        self.policy.clone()
     }
 }
 

@@ -139,7 +139,7 @@ fn web_vs_fret_sheet_overlay_chrome_cases_match_web_fixtures() {
                     theme.as_str(),
                     theme.scheme(),
                     SemanticsRole::Dialog,
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_500 + 2,
+                    crate::shadcn_motion::ticks_500() + 2,
                     build_sheet_demo,
                 );
             }

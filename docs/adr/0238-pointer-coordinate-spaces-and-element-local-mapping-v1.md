@@ -1,6 +1,6 @@
 # ADR 0238: Pointer Coordinate Spaces and Element-Local Mapping (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -76,6 +76,12 @@ boilerplate:
 - `EventCx::pointer_position_window(event) -> Option<Point>` (for the rare cases that need it)
 
 These helpers are purely derived; they do not introduce new state.
+
+Additionally, component-owned pointer action hooks SHOULD receive the same derived values without
+requiring access to `EventCx`:
+
+- `Pointer*Cx.position_local` (derived as `position - host.bounds().origin`)
+- `Pointer*Cx.position_window` / `WheelCx.delta_window` (best-effort pre-mapping values)
 
 ### 4) Pointer capture semantics
 

@@ -1,7 +1,8 @@
 use fret_core::RenderTargetId;
-use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer};
+use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetMetadata, Renderer};
 
 use super::EngineFrameUpdate;
+use super::{EngineFrameKeepalive, NativeExternalImportError, NativeExternalTextureFrame};
 
 /// Per-frame imported render target intended to be embedded into the UI via `SceneOp::ViewportSurface`.
 ///
@@ -62,11 +63,26 @@ impl ImportedViewportRenderTarget {
             return self.id;
         }
 
+        self.ensure_registered_with_metadata(renderer, view, size, RenderTargetMetadata::default())
+    }
+
+    pub fn ensure_registered_with_metadata(
+        &mut self,
+        renderer: &mut Renderer,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        metadata: RenderTargetMetadata,
+    ) -> RenderTargetId {
+        if self.is_registered() {
+            return self.id;
+        }
+
         let desc = RenderTargetDescriptor {
             view,
             size,
             format: self.format,
             color_space: self.color_space,
+            metadata,
         };
         self.id = renderer.register_render_target(desc);
         self.id
@@ -85,13 +101,93 @@ impl ImportedViewportRenderTarget {
             self.is_registered(),
             "ImportedViewportRenderTarget::push_update requires a registered RenderTargetId"
         );
+        self.push_update_with_metadata(update, view, size, RenderTargetMetadata::default())
+    }
+
+    pub fn push_update_with_metadata(
+        &self,
+        update: &mut EngineFrameUpdate,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        metadata: RenderTargetMetadata,
+    ) {
+        assert!(
+            self.is_registered(),
+            "ImportedViewportRenderTarget::push_update_with_metadata requires a registered RenderTargetId"
+        );
         let desc = RenderTargetDescriptor {
             view,
             size,
             format: self.format,
             color_space: self.color_space,
+            metadata,
         };
         update.update_render_target(self.id, desc);
+    }
+
+    /// Record an imported view update and a per-frame keepalive token.
+    ///
+    /// Use this when the imported view depends on an ephemeral external handle (e.g. a WebCodecs
+    /// `VideoFrame`) whose lifetime must be extended until submission.
+    pub fn push_update_with_keepalive<T: 'static>(
+        &self,
+        update: &mut EngineFrameUpdate,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        keepalive: T,
+    ) {
+        self.push_update(update, view, size);
+        update.push_keepalive(keepalive);
+    }
+
+    pub fn push_update_with_metadata_and_keepalive(
+        &self,
+        update: &mut EngineFrameUpdate,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        metadata: RenderTargetMetadata,
+        keepalive: EngineFrameKeepalive,
+    ) {
+        self.push_update_with_metadata(update, view, size, metadata);
+        update.keepalive.push(keepalive);
+    }
+
+    /// Attempt to import a platform-produced external frame and record a runner delta update.
+    ///
+    /// This helper implements ADR 0234's staging shape:
+    /// - import (capability-gated) in driver code,
+    /// - update the renderer registry via explicit deltas,
+    /// - carry per-frame keepalive tokens through submission.
+    ///
+    /// Callers MUST provide deterministic fallback to copy paths when `Err` is returned.
+    pub fn push_native_external_import_update(
+        &mut self,
+        renderer: &mut Renderer,
+        update: &mut EngineFrameUpdate,
+        ctx: &fret_render::WgpuContext,
+        caps: &fret_render::RendererCapabilities,
+        frame: Box<dyn NativeExternalTextureFrame>,
+    ) -> Result<(), NativeExternalImportError> {
+        let imported = frame.import(ctx, caps)?;
+
+        if !self.is_registered() {
+            let _ = self.ensure_registered_with_metadata(
+                renderer,
+                imported.view.clone(),
+                imported.size,
+                imported.metadata,
+            );
+        }
+
+        self.push_update_with_metadata_and_keepalive(
+            update,
+            imported.view,
+            imported.size,
+            imported.metadata,
+            imported.keepalive,
+        );
+
+        Ok(())
     }
 
     /// Record an unregister request as a runner delta and clear the local id.

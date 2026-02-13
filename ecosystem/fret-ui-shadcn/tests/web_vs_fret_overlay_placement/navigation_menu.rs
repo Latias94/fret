@@ -110,7 +110,7 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls() {
         .update(&model, |v| *v = Some(Arc::from(open_value)));
 
     // Frame 2+: open and settle motion.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         render_frame(
             &mut ui,
@@ -396,7 +396,7 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls_via_wheel_over_over
         .update(&model, |v| *v = Some(Arc::from(open_value)));
 
     // Frame 2+: open and settle motion.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         render_frame(
             &mut ui,
@@ -610,7 +610,7 @@ fn web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web() {
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("home")));
     let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 1..=(1 + settle_frames) {
         let request_semantics = frame == 1 + settle_frames;
         render_frame(

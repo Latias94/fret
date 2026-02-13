@@ -51,6 +51,8 @@ pub mod emoji_conformance_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod external_texture_imports_demo;
+#[cfg(target_arch = "wasm32")]
+pub mod external_texture_imports_web_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod extras_marquee_perf_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -126,4 +128,5 @@ pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod workspace_shell_demo;

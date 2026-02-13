@@ -137,14 +137,41 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
     };
 
+    fn slugify_section_title(title: &str) -> String {
+        title
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>()
+            .trim_matches('-')
+            .split('-')
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("-")
+    }
+
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        let title_test_id = format!(
+            "ui-gallery-collapsible-section-title-{}",
+            slugify_section_title(title)
+        );
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
+            move |cx| {
+                vec![
+                    shadcn::typography::h4(cx, title).test_id(title_test_id),
+                    body,
+                ]
+            },
         )
     };
 
@@ -239,49 +266,45 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             Some(open_model) => shadcn::Collapsible::new(open_model)
                 .refine_layout(LayoutRefinement::default().w_full())
                 .into_element_with_open_model(
-                cx,
-                |cx, open, _is_open| {
-                    shadcn::Button::new("Toggle")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Icon)
-                        .refine_layout(
-                            LayoutRefinement::default()
-                                .w_px(Px(32.0))
-                                .h_px(Px(32.0)),
-                        )
-                        .children([shadcn::icon::icon(
-                            cx,
-                            fret_icons::IconId::new_static("lucide.chevrons-up-down"),
-                        )])
-                        .toggle_model(open)
-                        .test_id(format!("{test_id_prefix}-trigger"))
-                        .into_element(cx)
-                },
-                |cx| details_content(cx),
-            ),
+                    cx,
+                    |cx, open, _is_open| {
+                        shadcn::Button::new("Toggle")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Icon)
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)),
+                            )
+                            .children([shadcn::icon::icon(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.chevrons-up-down"),
+                            )])
+                            .toggle_model(open)
+                            .test_id(format!("{test_id_prefix}-trigger"))
+                            .into_element(cx)
+                    },
+                    |cx| details_content(cx),
+                ),
             None => shadcn::Collapsible::uncontrolled(false)
                 .refine_layout(LayoutRefinement::default().w_full())
                 .into_element_with_open_model(
-                cx,
-                |cx, open, _is_open| {
-                    shadcn::Button::new("Toggle")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Icon)
-                        .refine_layout(
-                            LayoutRefinement::default()
-                                .w_px(Px(32.0))
-                                .h_px(Px(32.0)),
-                        )
-                        .children([shadcn::icon::icon(
-                            cx,
-                            fret_icons::IconId::new_static("lucide.chevrons-up-down"),
-                        )])
-                        .toggle_model(open)
-                        .test_id(format!("{test_id_prefix}-trigger"))
-                        .into_element(cx)
-                },
-                |cx| details_content(cx),
-            ),
+                    cx,
+                    |cx, open, _is_open| {
+                        shadcn::Button::new("Toggle")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Icon)
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)),
+                            )
+                            .children([shadcn::icon::icon(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.chevrons-up-down"),
+                            )])
+                            .toggle_model(open)
+                            .test_id(format!("{test_id_prefix}-trigger"))
+                            .into_element(cx)
+                    },
+                    |cx| details_content(cx),
+                ),
         };
 
         let wrapper_props = container_props(

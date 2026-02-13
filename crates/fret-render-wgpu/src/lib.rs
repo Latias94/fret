@@ -16,7 +16,10 @@ pub mod viewport_overlay;
 pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};
 pub use error::RenderError;
 pub use fret_core::ImageColorSpace;
-pub use fret_render_core::RenderTargetColorSpace;
+pub use fret_render_core::{
+    RenderTargetAlphaMode, RenderTargetColorSpace, RenderTargetMetadata, RenderTargetOrientation,
+    RenderTargetRotation,
+};
 pub use images::{
     ImageDescriptor, ImageRegistry, UploadedRgba8Image, create_rgba8_image_storage,
     upload_rgba8_image, write_rgba8_texture_region,
@@ -35,6 +38,99 @@ pub use text::FontCatalogEntryMetadata;
 pub use text::SystemFontRescanResult;
 pub use text::SystemFontRescanSeed;
 pub use text::TextFontFamilyConfig;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct WgpuInitAttemptSnapshot {
+    pub backends: String,
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_backend: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_webgpu_compliant: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub downlevel_flags: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct WgpuInitDiagnosticsSnapshot {
+    pub allow_fallback: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requested_backend: Option<String>,
+    pub requested_backend_is_override: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attempts: Vec<WgpuInitAttemptSnapshot>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct WgpuAdapterSelectionSnapshot {
+    pub schema_version: u32,
+    pub allow_fallback: bool,
+    pub required_downlevel_flags: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requested_backend: Option<String>,
+    pub requested_backend_is_override: bool,
+    pub selected_backend: String,
+    pub adapter_name: String,
+    pub driver: String,
+    pub driver_info: String,
+    pub vendor: u32,
+    pub device: u32,
+    pub is_webgpu_compliant: bool,
+    pub downlevel_flags: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub init_attempts: Vec<WgpuInitAttemptSnapshot>,
+}
+
+impl WgpuAdapterSelectionSnapshot {
+    pub fn from_context(context: &WgpuContext) -> Self {
+        let requested_backend = context.init_diagnostics.requested_backend.clone();
+        let info = context.adapter.get_info();
+        let downlevel = context.adapter.get_downlevel_capabilities();
+
+        Self {
+            schema_version: 2,
+            allow_fallback: context.init_diagnostics.allow_fallback,
+            required_downlevel_flags: format!("{:?}", fret_required_downlevel_flags()),
+            requested_backend_is_override: context.init_diagnostics.requested_backend_is_override,
+            requested_backend,
+            selected_backend: format!("{:?}", info.backend),
+            adapter_name: info.name,
+            driver: info.driver,
+            driver_info: info.driver_info,
+            vendor: info.vendor,
+            device: info.device,
+            is_webgpu_compliant: downlevel.is_webgpu_compliant(),
+            downlevel_flags: format!("{:?}", downlevel.flags),
+            init_attempts: context.init_diagnostics.attempts.clone(),
+        }
+    }
+
+    pub fn from_adapter(adapter: &wgpu::Adapter, requested_backend: Option<String>) -> Self {
+        let info = adapter.get_info();
+        let downlevel = adapter.get_downlevel_capabilities();
+
+        Self {
+            schema_version: 2,
+            allow_fallback: false,
+            required_downlevel_flags: format!("{:?}", fret_required_downlevel_flags()),
+            requested_backend_is_override: requested_backend.is_some(),
+            requested_backend,
+            selected_backend: format!("{:?}", info.backend),
+            adapter_name: info.name,
+            driver: info.driver,
+            driver_info: info.driver_info,
+            vendor: info.vendor,
+            device: info.device,
+            is_webgpu_compliant: downlevel.is_webgpu_compliant(),
+            downlevel_flags: format!("{:?}", downlevel.flags),
+            init_attempts: Vec::new(),
+        }
+    }
+}
 
 fn parse_wgpu_backends(raw: &str) -> Option<wgpu::Backends> {
     let mut backends = wgpu::Backends::empty();
@@ -58,17 +154,96 @@ fn parse_wgpu_backends(raw: &str) -> Option<wgpu::Backends> {
     (!backends.is_empty()).then_some(backends)
 }
 
-fn parse_wgpu_backends_from_env() -> Option<wgpu::Backends> {
-    let raw = std::env::var("FRET_WGPU_BACKEND").ok()?;
-    parse_wgpu_backends(&raw)
+fn env_var_trimmed(name: &str) -> Option<String> {
+    let raw = std::env::var(name).ok()?;
+    let trimmed = raw.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_string())
 }
 
-fn create_wgpu_instance() -> wgpu::Instance {
-    let backends = parse_wgpu_backends_from_env().unwrap_or(wgpu::Backends::PRIMARY);
+fn parse_env_bool(name: &str) -> bool {
+    let Some(raw) = env_var_trimmed(name) else {
+        return false;
+    };
+
+    match raw.to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "y" | "on" => true,
+        "0" | "false" | "no" | "n" | "off" => false,
+        _ => true,
+    }
+}
+
+fn allow_fallback_from_env() -> bool {
+    cfg!(debug_assertions) && parse_env_bool("FRET_WGPU_ALLOW_FALLBACK")
+}
+
+fn backend_override_from_env() -> Result<Option<(String, wgpu::Backends)>, RenderError> {
+    let Some(raw) = env_var_trimmed("FRET_WGPU_BACKEND") else {
+        return Ok(None);
+    };
+    let Some(backends) = parse_wgpu_backends(&raw) else {
+        return Err(RenderError::InvalidWgpuBackendOverride { raw });
+    };
+    Ok(Some((raw, backends)))
+}
+
+fn default_wgpu_backends_for_target() -> wgpu::Backends {
+    #[cfg(target_os = "android")]
+    {
+        return wgpu::Backends::VULKAN;
+    }
+    #[cfg(target_os = "ios")]
+    {
+        return wgpu::Backends::METAL;
+    }
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        wgpu::Backends::PRIMARY
+    }
+}
+
+fn create_wgpu_instance_with_backends(backends: wgpu::Backends) -> wgpu::Instance {
     wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends,
         ..Default::default()
     })
+}
+
+fn format_backends(backends: wgpu::Backends) -> String {
+    let mut parts = Vec::new();
+    if backends.contains(wgpu::Backends::VULKAN) {
+        parts.push("vulkan");
+    }
+    if backends.contains(wgpu::Backends::METAL) {
+        parts.push("metal");
+    }
+    if backends.contains(wgpu::Backends::DX12) {
+        parts.push("dx12");
+    }
+    if backends.contains(wgpu::Backends::GL) {
+        parts.push("gl");
+    }
+    if parts.is_empty() {
+        return "none".to_string();
+    }
+    parts.join("|")
+}
+
+fn fret_required_downlevel_flags() -> wgpu::DownlevelFlags {
+    // The renderer uses storage buffers in vertex shaders (e.g. quad instance data).
+    wgpu::DownlevelFlags::VERTEX_STORAGE
+}
+
+fn validate_adapter(adapter: &wgpu::Adapter) -> Result<(), RenderError> {
+    let required = fret_required_downlevel_flags();
+    let actual = adapter.get_downlevel_capabilities().flags;
+    if !actual.contains(required) {
+        return Err(RenderError::AdapterMissingRequiredDownlevelFlags {
+            required_flags: format!("{:?}", required),
+            actual_flags: format!("{:?}", actual),
+        });
+    }
+    Ok(())
 }
 
 pub struct WgpuContext {
@@ -76,15 +251,144 @@ pub struct WgpuContext {
     pub adapter: wgpu::Adapter,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
+    pub init_diagnostics: WgpuInitDiagnosticsSnapshot,
 }
 
 impl WgpuContext {
     pub async fn new() -> Result<Self, RenderError> {
-        let instance = create_wgpu_instance();
+        let allow_fallback = allow_fallback_from_env();
+        let override_env = backend_override_from_env()?;
+        let requested_backend = override_env.as_ref().map(|(raw, _)| raw.clone());
+        let requested_backend_is_override = override_env.is_some();
+
+        let primary_backends = override_env
+            .as_ref()
+            .map(|(_, backends)| *backends)
+            .unwrap_or_else(default_wgpu_backends_for_target);
+
+        #[allow(unused_mut)]
+        let mut candidates = vec![primary_backends];
+        if allow_fallback {
+            #[cfg(target_os = "android")]
+            {
+                if primary_backends != wgpu::Backends::GL {
+                    candidates.push(wgpu::Backends::GL);
+                }
+            }
+        }
+
+        let mut attempts = Vec::new();
+        let mut last_error: Option<RenderError> = None;
+
+        for backends in candidates {
+            let instance = create_wgpu_instance_with_backends(backends);
+
+            match instance
+                .request_adapter(&wgpu::RequestAdapterOptions::default())
+                .await
+            {
+                Ok(adapter) => {
+                    let info = adapter.get_info();
+                    let downlevel = adapter.get_downlevel_capabilities();
+
+                    if let Err(err) = validate_adapter(&adapter) {
+                        attempts.push(WgpuInitAttemptSnapshot {
+                            backends: format_backends(backends),
+                            ok: false,
+                            error: Some(format!("{err:?}")),
+                            selected_backend: Some(format!("{:?}", info.backend)),
+                            adapter_name: Some(info.name),
+                            is_webgpu_compliant: Some(downlevel.is_webgpu_compliant()),
+                            downlevel_flags: Some(format!("{:?}", downlevel.flags)),
+                        });
+                        last_error = Some(err);
+                        continue;
+                    }
+
+                    match adapter
+                        .request_device(&wgpu::DeviceDescriptor {
+                            label: Some("fret wgpu device"),
+                            required_features: wgpu::Features::empty(),
+                            required_limits: wgpu::Limits::default(),
+                            experimental_features: wgpu::ExperimentalFeatures::default(),
+                            memory_hints: wgpu::MemoryHints::default(),
+                            trace: wgpu::Trace::default(),
+                        })
+                        .await
+                    {
+                        Ok((device, queue)) => {
+                            attempts.push(WgpuInitAttemptSnapshot {
+                                backends: format_backends(backends),
+                                ok: true,
+                                error: None,
+                                selected_backend: Some(format!("{:?}", info.backend)),
+                                adapter_name: Some(info.name),
+                                is_webgpu_compliant: Some(downlevel.is_webgpu_compliant()),
+                                downlevel_flags: Some(format!("{:?}", downlevel.flags)),
+                            });
+
+                            return Ok(Self {
+                                instance,
+                                adapter,
+                                device,
+                                queue,
+                                init_diagnostics: WgpuInitDiagnosticsSnapshot {
+                                    allow_fallback,
+                                    requested_backend,
+                                    requested_backend_is_override,
+                                    attempts,
+                                },
+                            });
+                        }
+                        Err(source) => {
+                            let err = RenderError::RequestDeviceFailed { source };
+                            attempts.push(WgpuInitAttemptSnapshot {
+                                backends: format_backends(backends),
+                                ok: false,
+                                error: Some(format!("{err:?}")),
+                                selected_backend: Some(format!("{:?}", info.backend)),
+                                adapter_name: Some(info.name),
+                                is_webgpu_compliant: Some(downlevel.is_webgpu_compliant()),
+                                downlevel_flags: Some(format!("{:?}", downlevel.flags)),
+                            });
+                            last_error = Some(err);
+                            continue;
+                        }
+                    }
+                }
+                Err(source) => {
+                    let err = RenderError::RequestAdapterFailed { source };
+                    attempts.push(WgpuInitAttemptSnapshot {
+                        backends: format_backends(backends),
+                        ok: false,
+                        error: Some(format!("{err:?}")),
+                        selected_backend: None,
+                        adapter_name: None,
+                        is_webgpu_compliant: None,
+                        downlevel_flags: None,
+                    });
+                    last_error = Some(err);
+                    continue;
+                }
+            }
+        }
+
+        let last_error = last_error.expect("wgpu init attempts are non-empty");
+        Err(RenderError::WgpuInitFailed {
+            attempt_count: attempts.len(),
+            last_error: Box::new(last_error),
+            attempts,
+        })
+    }
+
+    pub async fn new_with_backends(backends: wgpu::Backends) -> Result<Self, RenderError> {
+        let instance = create_wgpu_instance_with_backends(backends);
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions::default())
             .await
             .map_err(|source| RenderError::RequestAdapterFailed { source })?;
+
+        validate_adapter(&adapter)?;
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -98,18 +402,43 @@ impl WgpuContext {
             .await
             .map_err(|source| RenderError::RequestDeviceFailed { source })?;
 
+        let info = adapter.get_info();
+        let downlevel = adapter.get_downlevel_capabilities();
         Ok(Self {
             instance,
             adapter,
             device,
             queue,
+            init_diagnostics: WgpuInitDiagnosticsSnapshot {
+                allow_fallback: false,
+                requested_backend: None,
+                requested_backend_is_override: false,
+                attempts: vec![WgpuInitAttemptSnapshot {
+                    backends: format_backends(backends),
+                    ok: true,
+                    error: None,
+                    selected_backend: Some(format!("{:?}", info.backend)),
+                    adapter_name: Some(info.name),
+                    is_webgpu_compliant: Some(downlevel.is_webgpu_compliant()),
+                    downlevel_flags: Some(format!("{:?}", downlevel.flags)),
+                }],
+            },
         })
     }
 
     pub async fn new_with_surface<'window>(
         target: impl Into<wgpu::SurfaceTarget<'window>>,
     ) -> Result<(Self, wgpu::Surface<'window>), RenderError> {
-        let instance = create_wgpu_instance();
+        let allow_fallback = allow_fallback_from_env();
+        let override_env = backend_override_from_env()?;
+        let requested_backend = override_env.as_ref().map(|(raw, _)| raw.clone());
+        let requested_backend_is_override = override_env.is_some();
+
+        let used_backends = override_env
+            .as_ref()
+            .map(|(_, backends)| *backends)
+            .unwrap_or_else(default_wgpu_backends_for_target);
+        let instance = create_wgpu_instance_with_backends(used_backends);
         let surface = instance
             .create_surface(target)
             .map_err(|source| RenderError::CreateSurfaceFailed { source })?;
@@ -122,6 +451,8 @@ impl WgpuContext {
             .await
             .map_err(|source| RenderError::RequestAdapterFailed { source })?;
 
+        validate_adapter(&adapter)?;
+
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("fret wgpu device"),
@@ -134,12 +465,28 @@ impl WgpuContext {
             .await
             .map_err(|source| RenderError::RequestDeviceFailed { source })?;
 
+        let info = adapter.get_info();
+        let downlevel = adapter.get_downlevel_capabilities();
         Ok((
             Self {
                 instance,
                 adapter,
                 device,
                 queue,
+                init_diagnostics: WgpuInitDiagnosticsSnapshot {
+                    allow_fallback,
+                    requested_backend,
+                    requested_backend_is_override,
+                    attempts: vec![WgpuInitAttemptSnapshot {
+                        backends: format_backends(used_backends),
+                        ok: true,
+                        error: None,
+                        selected_backend: Some(format!("{:?}", info.backend)),
+                        adapter_name: Some(info.name),
+                        is_webgpu_compliant: Some(downlevel.is_webgpu_compliant()),
+                        downlevel_flags: Some(format!("{:?}", downlevel.flags)),
+                    }],
+                },
             },
             surface,
         ))

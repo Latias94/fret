@@ -170,6 +170,33 @@ cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --la
 
 Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
 
+Script tooling (no app required):
+
+- Normalize formatting (stable diffs):
+  - `cargo run -p fretboard -- diag script normalize .\\script.json --write`
+  - `cargo run -p fretboard -- diag script normalize .\\script.json --check`
+- PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
+  - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
+  - `cargo run -p fretboard -- diag script validate tools/diag-scripts`
+- Validate schema/parse (writes `check.script_schema.json` under `--dir`, or `--check-out`):
+  - `cargo run -p fretboard -- diag script validate .\\script.json`
+- Lint scripts (capability inference + hygiene; writes `check.script_lint.json`):
+  - `cargo run -p fretboard -- diag script lint .\\script.json`
+
+Repeat-run triage (flake hunting):
+
+- Run the same script N times and write `repeat.summary.json` under `--dir` (includes `highlights` aggregates for quick scanning):
+  - `cargo run -p fretboard -- diag repeat .\\script.json --repeat 7 --launch -- cargo run -p fret-ui-gallery --release`
+
+Script shrinking (automated minimal repro):
+
+- Reduce a *failing* script to a smaller script that still reproduces the same failure signal.
+  - By default, shrink matches `reason_code` when available (otherwise `reason`). Use `--shrink-any-fail` to accept any failure.
+  - Requires either an already-running app, or `--reuse-launch --launch -- <cmd...>`.
+  - Writes a minimized script to `--shrink-out` (default: `target/fret-diag/shrink/script.min.json`) and a summary to `target/fret-diag/shrink/shrink.summary.json`.
+  - Example:
+    - `cargo run -p fretboard -- diag script shrink .\\script.json --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
+
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
    - `cargo run -p fretboard -- diag script .\\script.json`
@@ -406,6 +433,7 @@ Script harness:
 - `FRET_DIAG_SCRIPT_RESULT_PATH=...`: script result JSON path (default `<dir>/script.result.json`).
 - `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
+- `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=...`: cap snapshots included in script-driven bundle dumps (default 30).
 
 Screenshot capture:
 
@@ -448,9 +476,12 @@ Supported selectors (v1 MVP):
 
 ## Supported scripted steps (v1 MVP)
 
-- `click` (optional `button`: `left`/`right`/`middle`; default `left`)
+- `click` (optional `button`: `left`/`right`/`middle`; default `left`; schema v2 only: optional `window` target)
 - `move_pointer`
-- `drag_pointer` (optional `button`, `steps`)
+- `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
+- `pointer_move` (schema v2 only; optional `window` target; moves with the pressed buttons from `pointer_down`)
+- `pointer_up` (schema v2 only; optional `window` target; ends the `pointer_down` session)
+- `drag_pointer` (optional `button`, `steps`; schema v2 only: optional `window` target)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`,
   `f1-f12`, `alt`/`alt_left`/`alt_right`, `a-z`, `0-9`,
@@ -461,12 +492,21 @@ Supported selectors (v1 MVP):
 - `press_shortcut` (schema v2 only; shortcut strings like `primary+p`, `primary+shift+p`, `alt+f`; supports
   modifier aliases `primary`/`cmd_or_ctrl`/`command_or_control` and `meta`/`cmd`/`command`)
 - `type_text`
+- `ime` (schema v2 only; deterministic IME event injection for composition/commit/preedit)
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`
-- `wait_until`
-- `assert`
-- `capture_bundle`
+- `wait_until` (schema v2 only: optional `window` target)
+- `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry)
+- `wait_overlay_placement_trace` (schema v2 only; wait until overlay placement trace contains a matching entry)
+- `assert` (schema v2 only: optional `window` target)
+- `capture_bundle` (optional `label`, optional `max_snapshots`)
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
+- `set_window_inner_size` (schema v2 only; optional `window` target)
+- `set_window_outer_position` (schema v2 only; optional `window` target)
+- `raise_window` (schema v2 only; optional `window` target)
+- `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
+- `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
+- `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
@@ -477,12 +517,25 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
+- `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
+- `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
+- `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
+- `known_window_count_ge` (assert that the diagnostics runtime has observed at least N windows)
+- `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
+- `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
+- `text_composition_is` (assert whether a text surface is currently composing via IME)
+- `ime_cursor_area_is_some` (assert whether a window-level IME cursor area snapshot exists)
+- `ime_cursor_area_within_window` (assert the IME cursor area stays within the current window bounds; coarse “caret teleported” gate)
+- `ime_cursor_area_min_size` (assert the IME cursor area has a meaningful size; catches “zero rect” bugs)
+- `wait_shortcut_routing_trace` (assert keyboard routing outcomes like `reserved_for_ime`)
+- `wait_overlay_placement_trace` (assert overlay placement decisions by geometry trace rather than screenshots)
 
 Notes:
 
 - `capture_bundle` always writes a new `bundle.json` directory.
   - When `FRET_DIAG_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
   - If you want an explicit screenshot step, follow with `capture_screenshot`.
+  - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 - `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
 
@@ -513,10 +566,43 @@ Supported intent steps (v2):
 - `type_text_into` (wait + click + type)
 - `menu_select` (wait + open menu + click item)
 - `menu_select_path` (wait + open nested menus + click final item)
-- `drag_to` (drag between two semantics targets)
+- `drag_to` (drag between two semantics targets; optional `window` target)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
+- `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
+- `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
+- `raise_window` (emit `WindowRequest::Raise`)
+- `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags; screen-space physical pixels)
+- `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags; window-client physical pixels)
+- `drag_pointer_until` (drag until a predicate passes, holding the session active across frames)
+
+Desktop runner note (cursor override wire format):
+
+- The diagnostics runtime writes `${FRET_DIAG_DIR}/cursor_screen_pos.override.txt` and touches
+  `${FRET_DIAG_DIR}/cursor_screen_pos.touch` to notify the desktop runner.
+- Format is a small key/value text payload (not JSON). Example:
+
+```text
+schema_version=1
+kind=window_client_physical
+window=123
+x_px=220.0
+y_px=220.0
+```
+
+For window-targeted steps, the optional `window` field supports:
+
+- `{ "kind": "current" }` (default)
+- `{ "kind": "first_seen" }`
+- `{ "kind": "first_seen_other" }`
+- `{ "kind": "last_seen" }`
+- `{ "kind": "last_seen_other" }`
+- `{ "kind": "window_ffi", "window": 123 }`
 
 Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
+
+Note: window-targeted steps run against the target window's semantics snapshot. When a step targets
+a different window, the diagnostics runtime migrates the active script to that window; subsequent
+steps will execute there unless they specify another `window` target.
 
 Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
@@ -577,8 +663,20 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
- - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
- - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
+- `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
+- `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
+- `{"kind":"text_input_ime_cursor_area_within_window","padding_px":0,"eps_px":0}` (focused text input's IME cursor area must be fully contained within the window, optionally padded inward; intended for keyboard-avoidance / caret-visibility gates; requires `diag.text_input_snapshot`)
+
+Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typically `docking_arbitration_demo`):
+
+- `{"kind":"dock_drop_preview_kind_is","preview_kind":"wrap_binary"}`
+- `{"kind":"dock_drop_preview_kind_is","preview_kind":"insert_into_split"}`
+- `{"kind":"dock_graph_canonical_is","canonical":true}`
+- `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
+- `{"kind":"known_window_count_ge","n":2}`
+- `{"kind":"dock_drag_current_window_is","window":{"kind":"last_seen_other"}}`
+- `{"kind":"dock_graph_node_count_le","max":32}`
+- `{"kind":"dock_graph_max_split_depth_le","max":8}`
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
@@ -664,12 +762,28 @@ When you use `fretboard diag run`, the running app writes a small status file:
 
 `fretboard diag suite` runs multiple scripts sequentially using the same mechanism.
 
+After a suite run, the CLI writes `suite.summary.json` under the diagnostics output dir (default: `.fret/diag/`).
+This file is intended as the “open first” overview (stage/reason-code aggregates, plus small evidence
+highlights) before you start opening individual bundles.
+
 ## Regression suites (starter)
 
 The `tools/diag-scripts/` directory contains curated scripts intended to become a baseline suite.
 For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
+
+For component-focused conformance scripts (built-in suites), run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag suite ui-gallery-text-ime --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+
+To keep “Rust template ↔ JSON script” closure, check that the committed scripts match typed templates:
+
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
 
 The UI gallery suite includes lightweight smoke checks for table/grid surfaces:
 
@@ -684,10 +798,21 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 
 - `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
 - `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+- `tools/diag-scripts/docking-arbitration-demo-float-zone-floats-in-window.json`
 
 You can run them as a built-in suite:
 
 - `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+
+There are also multi-window (tear-off) docking scripts (require `diag.multi_window` capability):
+
+- `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`
+- `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+- `tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json`
+
+Example (run one script against the demo, launching a fresh process):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
 
 ### View-cache regression gating
 

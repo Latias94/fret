@@ -92,6 +92,10 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusActionHostAdapter<'a, H> {
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.app.next_clipboard_token()
     }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.app.next_share_sheet_token()
+    }
 }
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusActionHostAdapter<'a, H> {
@@ -162,6 +166,10 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
 
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.app.next_clipboard_token()
+    }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.app.next_share_sheet_token()
     }
 }
 

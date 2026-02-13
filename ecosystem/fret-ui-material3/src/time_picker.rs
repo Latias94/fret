@@ -1808,6 +1808,7 @@ fn time_picker_clock_dial<H: UiHost>(
                                 l
                             },
                             enabled: true,
+                            ..Default::default()
                         },
                         move |cx| {
                             cx.pointer_region_on_pointer_down(on_down);

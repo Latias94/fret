@@ -199,10 +199,6 @@ impl ElementHostWidget {
                 }
             }
             ElementInstance::MaskLayer(props) => {
-                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
-                    return;
-                }
-
                 let mask = props.mask.sanitize();
                 if let Some(mask) = mask {
                     cx.scene.push(SceneOp::PushMask {
@@ -222,10 +218,6 @@ impl ElementHostWidget {
                 }
             }
             ElementInstance::CompositeGroup(props) => {
-                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
-                    return;
-                }
-
                 let desc =
                     fret_core::scene::CompositeGroupDesc::new(cx.bounds, props.mode, props.quality);
                 cx.scene.push(SceneOp::PushCompositeGroup { desc });
@@ -239,10 +231,6 @@ impl ElementHostWidget {
                 cx.scene.push(SceneOp::PopCompositeGroup);
             }
             ElementInstance::EffectLayer(props) => {
-                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
-                    return;
-                }
-
                 if !props.chain.is_empty() {
                     cx.scene.push(SceneOp::PushEffect {
                         bounds: cx.bounds,

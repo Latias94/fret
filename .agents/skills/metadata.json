@@ -1,64 +1,75 @@
 {
   "name": "fret-skills",
-  "version": "0.3.8",
+  "version": "0.7.2",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-09",
+  "last_updated": "2026-02-13",
+  "intents": {
+    "maintain_framework": {
+      "primary": "fret-framework-maintainer-guide",
+      "also_consider": ["fret-diag-workflow", "fret-boundary-checks", "fret-shadcn-source-alignment"]
+    },
+    "debug_on_real_device": {
+      "primary": "fret-mobile-real-device-debug",
+      "also_consider": ["fret-diag-workflow", "fret-framework-maintainer-guide"]
+    },
+    "get_oriented": {
+      "primary": "fret-repo-orientation",
+      "also_consider": ["fret-skills-playbook", "fret-external-app-mode"]
+    },
+    "build_a_good_app_ui": {
+      "primary": "fret-app-ui-builder",
+      "also_consider": [
+        "fret-ui-review",
+        "fret-diag-workflow"
+      ]
+    },
+    "review_or_audit_ui": {
+      "primary": "fret-ui-review",
+      "also_consider": ["fret-app-ui-builder", "fret-diag-workflow"]
+    },
+    "debug_correctness_regression": {
+      "primary": "fret-diag-workflow",
+      "also_consider": ["fret-app-ui-builder", "fret-ui-review"]
+    },
+    "measure_or_gate_performance": {
+      "primary": "fret-diag-workflow",
+      "also_consider": ["fret-ui-review"]
+    },
+    "attribute_perf_hitches": {
+      "primary": "fret-diag-workflow",
+      "also_consider": ["fret-ui-review"]
+    },
+    "align_with_upstream_shadcn_radix": {
+      "primary": "fret-shadcn-source-alignment",
+      "also_consider": ["fret-diag-workflow", "fret-ui-review"]
+    },
+    "refactor_safely": {
+      "primary": "fret-boundary-checks",
+      "also_consider": ["fret-crate-audits", "fret-fixture-driven-harnesses"]
+    },
+    "ship_release": {
+      "primary": "fret-release-check-and-publish",
+      "also_consider": ["fret-boundary-checks"]
+    }
+  },
   "skills": {
-    "foundation": [
-      "fret-component-authoring",
-      "fret-action-hooks"
+    "start_here": [
+      "fret-repo-orientation",
+      "fret-skills-playbook",
+      "fret-external-app-mode"
     ],
-    "app_architecture": [
-      "fret-app-architecture-and-effects"
-    ],
-    "design_system": [
-      "fret-design-system-styles"
-    ],
-    "ux": [
-      "fret-ui-ux-guidelines"
-    ],
-    "commands_keymap": [
-      "fret-commands-and-keymap"
-    ],
-    "text_input": [
-      "fret-text-input-and-ime"
-    ],
-    "virtualization": [
-      "fret-scroll-and-virtualization"
-    ],
-    "layout_style": [
-      "fret-layout-and-style"
-    ],
-    "overlays_focus": [
-      "fret-overlays-and-focus"
-    ],
-    "animation": [
-      "fret-animation-and-scheduling"
-    ],
-    "docking": [
-      "fret-docking-and-viewports"
-    ],
-    "debugging": [
-      "fret-diag-workflow"
-    ],
-    "release": [
-      "fret-release-check-and-publish"
-    ],
-    "performance": [
-      "fret-perf-workflow",
-      "fret-perf-attribution"
-    ],
-    "parity": [
-      "fret-shadcn-source-alignment"
-    ],
-    "recipes": [
-      "fret-shadcn-app-recipes"
-    ],
+    "framework": ["fret-framework-maintainer-guide", "fret-mobile-real-device-debug"],
+    "ui": ["fret-app-ui-builder", "fret-ui-review"],
+    "diagnostics": ["fret-diag-workflow"],
+    "parity": ["fret-shadcn-source-alignment"],
     "quality": [
       "fret-crate-audits",
       "fret-boundary-checks",
-      "fret-fixture-driven-harnesses"
-    ]
+      "fret-fixture-driven-harnesses",
+      "fret-ui-review"
+    ],
+    "release": ["fret-release-check-and-publish"],
+    "meta": ["fret-skill-evolution"]
   },
   "triggers": {
     "fret": [
@@ -289,8 +300,38 @@
       "防抖",
       "定时器"
     ]
+    ,
+    "onboarding": [
+      "what is fret",
+      "where is",
+      "entry point",
+      "repo structure",
+      "architecture",
+      "where to change",
+      "which crate",
+      "layering"
+    ]
   },
   "notes": {
-    "pinned_snapshots": "`repo-ref/` is optional and is not necessarily present on GitHub checkouts of this repo."
+    "local_snapshots": "Local upstream snapshots are optional and are not part of the published skills bundle."
+  },
+  "profiles": {
+    "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow"],
+    "framework-dev": [
+      "fret-repo-orientation",
+      "fret-skills-playbook",
+      "fret-framework-maintainer-guide",
+      "fret-mobile-real-device-debug",
+      "fret-external-app-mode",
+      "fret-app-ui-builder",
+      "fret-ui-review",
+      "fret-diag-workflow",
+      "fret-shadcn-source-alignment",
+      "fret-crate-audits",
+      "fret-boundary-checks",
+      "fret-fixture-driven-harnesses",
+      "fret-release-check-and-publish",
+      "fret-skill-evolution"
+    ]
   }
 }

@@ -982,15 +982,16 @@ impl Tooltip {
             });
 
             let opening = update.open;
-            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                cx,
-                opening,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                0.95,
-                1.0,
-                overlay_motion::shadcn_ease,
-            );
+            let motion =
+                radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                    cx,
+                    opening,
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    0.95,
+                    1.0,
+                    overlay_motion::shadcn_motion_ease_bezier(cx),
+                );
             let (open_change, open_change_complete) =
                 cx.with_state(TooltipOpenChangeCallbackState::default, |state| {
                     tooltip_open_change_events(state, opening, motion.present, motion.animating)
@@ -1981,7 +1982,10 @@ mod tests {
 
         // Close delay elapsed on frame 6, then Presence keeps the layer mounted while fading out.
         // Assert that it becomes hidden by the end of the fade-out window.
-        let settle_frame = 6 + crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+        let settle_frame =
+            6 + fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+                crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+            ) + 1;
         for frame in 7..=settle_frame {
             app.set_frame_id(FrameId(frame));
             render_frame(
@@ -4498,7 +4502,9 @@ mod tests {
 
         // Frame 3: close begins immediately (close_delay=0), but Presence keeps the layer mounted
         // while fading out. Assert that it becomes hidden by the end of the fade-out.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 1;
         for frame in 3..=(2 + settle_frames) {
             app.set_frame_id(FrameId(frame));
             render_frame(
@@ -4686,7 +4692,9 @@ mod tests {
         );
 
         // Tooltip uses render-transform motion on open; advance a few frames to reach steady state.
-        let settle_frames: u64 = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames: u64 = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for step in 0..settle_frames {
             let tick = 3 + step;
             app.set_frame_id(FrameId(tick));

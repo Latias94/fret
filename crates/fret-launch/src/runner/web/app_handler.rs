@@ -147,6 +147,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             &mut self.pending_events,
         );
 
+        self.pending_events
+            .extend(self.pending_async_events.borrow_mut().drain(..));
+
         self.web_services.tick();
         self.pending_events.extend(self.web_services.take_events());
 

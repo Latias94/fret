@@ -1095,6 +1095,7 @@ fn text_field_label<H: UiHost>(
         PointerRegionProps {
             layout,
             enabled: !disabled,
+            ..Default::default()
         },
         move |cx| {
             let input_for_focus = input_id;

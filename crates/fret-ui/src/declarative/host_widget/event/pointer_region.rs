@@ -2,6 +2,13 @@ use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 use fret_runtime::DragHost;
 
+fn position_local(bounds: Rect, mapped: Point) -> Point {
+    Point::new(
+        fret_core::Px(mapped.x.0 - bounds.origin.x.0),
+        fret_core::Px(mapped.y.0 - bounds.origin.y.0),
+    )
+}
+
 pub(super) fn handle_pointer_region<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
@@ -18,15 +25,18 @@ pub(super) fn handle_pointer_region<H: UiHost>(
     //
     // Bubble-phase handling is skipped to avoid double-dispatch (capture + bubble) once
     // `event_capture_impl` opts a given event into capture-phase dispatch for PointerRegion.
-    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble
-        && matches!(
-            event,
+    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble {
+        match event {
             Event::Pointer(fret_core::PointerEvent::Down { .. })
-                | Event::Pointer(fret_core::PointerEvent::Up { .. })
-                | Event::PointerCancel(_)
-        )
-    {
-        return;
+            | Event::Pointer(fret_core::PointerEvent::Up { .. })
+            | Event::PointerCancel(_) => return,
+            Event::Pointer(fret_core::PointerEvent::Move { .. })
+                if props.capture_phase_pointer_moves || cx.captured.is_some() =>
+            {
+                return;
+            }
+            _ => {}
+        }
     }
 
     let pixels_per_point = cx
@@ -88,6 +98,10 @@ pub(super) fn handle_pointer_region<H: UiHost>(
 
         fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
             self.app.next_clipboard_token()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
         }
 
         fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
@@ -222,6 +236,8 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             let down = action::PointerDownCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: position_local(cx.bounds, *position),
+                position_window: cx.event_window_position,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 button: *button,
@@ -299,11 +315,18 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 return;
             };
 
+            let velocity_window = cx
+                .app
+                .global::<crate::pointer_motion::WindowPointerMotionService>()
+                .and_then(|svc| svc.velocity_window(window, *pointer_id));
             let mv = action::PointerMoveCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: position_local(cx.bounds, *position),
+                position_window: cx.event_window_position,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
+                velocity_window,
                 buttons: *buttons,
                 modifiers: *modifiers,
                 pointer_type: *pointer_type,
@@ -375,9 +398,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             let wheel = action::WheelCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: position_local(cx.bounds, *position),
+                position_window: cx.event_window_position,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 delta: *delta,
+                delta_window: cx.event_window_wheel_delta,
                 modifiers: *modifiers,
                 pointer_type: *pointer_type,
             };
@@ -433,6 +459,8 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             let pinch = action::PinchGestureCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: position_local(cx.bounds, *position),
+                position_window: cx.event_window_position,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 delta: *delta,
@@ -491,8 +519,14 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             let up = action::PointerUpCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: position_local(cx.bounds, *position),
+                position_window: cx.event_window_position,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
+                velocity_window: cx
+                    .app
+                    .global::<crate::pointer_motion::WindowPointerMotionService>()
+                    .and_then(|svc| svc.velocity_window(window, *pointer_id)),
                 button: *button,
                 modifiers: *modifiers,
                 is_click: *is_click,
@@ -549,6 +583,8 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 let cancel = action::PointerCancelCx {
                     pointer_id: e.pointer_id,
                     position: e.position,
+                    position_local: e.position.map(|p| position_local(cx.bounds, p)),
+                    position_window: cx.event_window_position,
                     tick_id: cx.app.tick_id(),
                     pixels_per_point,
                     buttons: e.buttons,

@@ -22,7 +22,9 @@
 //! or for authoring new presence-like drivers.
 
 use fret_core::{Px, Size};
+use fret_ui::theme::CubicBezier;
 use fret_ui::{ElementContext, UiHost};
+use std::time::Duration;
 
 pub use crate::headless::transition::{TransitionOutput, TransitionTimeline};
 
@@ -110,6 +112,29 @@ pub fn drive_transition_with_durations_and_easing_with_mount_behavior<H: UiHost>
         open_ticks,
         close_ticks,
         ease,
+        animate_on_mount,
+    )
+}
+
+/// Drive a transition with separate durations/cubic-bezier and explicit mount behavior.
+///
+/// When `animate_on_mount` is `false`, the first render snaps to the target state and only
+/// subsequent open/close changes animate.
+#[track_caller]
+pub fn drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    bezier: CubicBezier,
+    animate_on_mount: bool,
+) -> TransitionOutput {
+    crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+        cx,
+        open,
+        open_duration,
+        close_duration,
+        bezier,
         animate_on_mount,
     )
 }
