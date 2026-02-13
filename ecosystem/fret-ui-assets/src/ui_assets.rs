@@ -1,5 +1,5 @@
 use fret_core::{AppWindowId, Event};
-use fret_runtime::{EffectSink, GlobalsHost, TimeHost};
+use fret_runtime::{GlobalsHost, UiHost};
 
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetStats};
 use crate::svg_asset_cache::{SvgAssetCacheHostExt, SvgAssetStats};
@@ -48,12 +48,28 @@ impl UiAssets {
     /// Notes:
     /// - SVG assets are registered directly through `UiServices::svg()` (no event driving needed).
     /// - This call is cheap for unrelated events.
-    pub fn handle_event<H: GlobalsHost + TimeHost + EffectSink>(
+    pub fn handle_event<H: UiHost>(
         host: &mut H,
         window: AppWindowId,
         event: &Event,
     ) -> bool {
-        host.with_image_asset_cache(|cache, host| cache.handle_event(host, window, event))
+        host.with_image_asset_cache(|cache, host| {
+            let changed = cache.handle_event(host, window, event);
+
+            #[cfg(feature = "ui")]
+            {
+                let key = match event {
+                    Event::ImageRegistered { token, .. }
+                    | Event::ImageRegisterFailed { token, .. } => cache.key_for_token(*token),
+                    _ => None,
+                };
+                if let Some(key) = key {
+                    crate::image_source::notify_image_asset_key(host, key);
+                }
+            }
+
+            changed
+        })
     }
 
     pub fn image_stats<H: GlobalsHost>(host: &mut H) -> ImageAssetStats {

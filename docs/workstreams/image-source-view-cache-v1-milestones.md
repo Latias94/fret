@@ -31,7 +31,7 @@ Exit criteria:
 
 - GPU completion events (`ImageRegistered` / `ImageRegisterFailed`) trigger invalidation under
   `ViewCache` without requiring continuous frames.
-- v1 baseline accepts observing the `ImageAssetCache` global; future work may narrow invalidation.
+- Invalidation is per-request (signal models), not a global `ImageAssetCache` observe.
 
 ## M3 — UI Gallery parity + regression gate
 

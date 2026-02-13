@@ -44,8 +44,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-assets/src/image_source.rs` (inbox drainer)
 
 - [ ] IMGVC-core-120 Ensure GPU-ready events trigger invalidation under ViewCache.
-  - v1 baseline: observe `ImageAssetCache` global from UI sugar.
-  - follow-up (optional): narrow invalidation to per-request model updates.
+  - v1: `UiAssets::handle_event(...)` notifies ImageSource by `ImageAssetKey` and bumps per-request models.
 
 ## Phase 2 — UI API (no query required)
 

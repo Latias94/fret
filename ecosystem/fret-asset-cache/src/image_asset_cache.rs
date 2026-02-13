@@ -85,6 +85,10 @@ impl ImageAssetCache {
         self.max_ready_entries = max_ready_entries;
     }
 
+    pub fn key_for_token(&self, token: ImageUploadToken) -> Option<ImageAssetKey> {
+        self.token_to_key.get(&token).copied()
+    }
+
     pub fn stats(&self) -> ImageAssetStats {
         let mut ready_count = 0usize;
         let mut pending_count = 0usize;

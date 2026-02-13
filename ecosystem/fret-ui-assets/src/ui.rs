@@ -5,10 +5,11 @@
 
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-use crate::image_asset_cache::ImageAssetCache;
 use crate::image_source::{
-    ImageSource, ImageSourceOptions, ImageSourceState, with_image_source_loader,
+    register_asset_key_for_source, ImageSource, ImageSourceOptions, ImageSourceState,
+    with_image_source_loader,
 };
+use crate::image_asset_cache::ImageAssetKey;
 
 pub trait ImageSourceElementContextExt {
     fn use_image_source_state(&mut self, source: &ImageSource) -> ImageSourceState;
@@ -33,7 +34,7 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
         // ViewCache correctness:
         //
         // - observe a per-request model that is updated when async decode completes (inbox drainer),
-        // - observe the ImageAssetCache global so GPU-ready events (ImageRegistered/Failed) rerender.
+        // - bump the same model on GPU-ready events (via `UiAssets::handle_event` integration).
         //
         // Without these observations, a view-cached subtree may never re-render even though the
         // app requests redraws.
@@ -42,7 +43,12 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
         }) {
             self.observe_model(&model, Invalidation::Paint);
         }
-        self.observe_global::<ImageAssetCache>(Invalidation::Paint);
+
+        // Fast path: RGBA8 sources skip async decode, so we register the key→signal mapping here.
+        if let Some((width, height, rgba, color_space)) = source.rgba8_meta() {
+            let key = ImageAssetKey::from_rgba8(width, height, color_space, rgba.as_ref());
+            register_asset_key_for_source(self.app, source, options, key);
+        }
 
         crate::use_image_source_state_with_options(self.app, self.window, source, options)
     }

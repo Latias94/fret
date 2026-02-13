@@ -97,11 +97,11 @@ This makes the dependency explicit and compatible with:
 The UI-visible output is `ImageId`, which becomes `Some` only after GPU registration completes.
 That readiness is driven by the event pipeline (`UiAssets::handle_event` → `ImageAssetCache::handle_event`).
 
-To avoid implicit polling, v1 relies on two observed dependencies:
+To avoid implicit polling, v1 relies on per-request signals:
 
 - **decode completion**: bumps `Model<ImageSourceUiSignal>` (per-request), and
-- **GPU readiness**: UI observes the `ImageAssetCache` global, so `ImageRegistered` / `Failed`
-  naturally invalidates view-cached subtrees (the cache is mutated through tracked globals).
+- **GPU readiness**: `UiAssets::handle_event(...)` maps `ImageRegistered` / `Failed` tokens back to an
+  `ImageAssetKey` and bumps the corresponding per-request signal models.
 
 ### 3) UI sugar behind `fret-ui-assets/ui`
 
@@ -109,7 +109,6 @@ Add `ui` feature in `fret-ui-assets` (depends on `fret-ui`) that provides:
 
 - `ImageSourceElementContextExt::use_image_source_state(...) -> ImageSourceState`
   - ensures the per-request signal model is observed (`Invalidation::Paint`)
-  - observes `ImageAssetCache` global (`Invalidation::Paint`)
   - delegates to the existing `use_image_source_state_with_options` hook for the state machine
 
 This is the “no query required” baseline. It should fully solve ViewCache correctness.

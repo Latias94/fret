@@ -65,6 +65,21 @@ impl ImageSource {
         self.id
     }
 
+    #[cfg(feature = "ui")]
+    pub(crate) fn rgba8_meta(&self) -> Option<(u32, u32, Arc<[u8]>, ImageColorSpace)> {
+        match &self.kind {
+            ImageSourceKind::Rgba8 {
+                width,
+                height,
+                rgba,
+                color_space,
+            } => Some((*width, *height, rgba.clone(), *color_space)),
+            ImageSourceKind::Bytes { .. } => None,
+            #[cfg(not(target_arch = "wasm32"))]
+            ImageSourceKind::Path { .. } => None,
+        }
+    }
+
     pub fn from_bytes(bytes: impl Into<Arc<[u8]>>) -> Self {
         let bytes: Arc<[u8]> = bytes.into();
         let id = ImageSourceId(stable_hash(&(b"bytes.v1", bytes.as_ref())));
@@ -155,6 +170,21 @@ impl Default for ImageSourceOptions {
         Self {
             color_space: ImageColorSpace::Srgb,
         }
+    }
+}
+
+#[cfg(feature = "ui")]
+fn request_key_for_source(
+    source: &ImageSource,
+    options: ImageSourceOptions,
+) -> ImageSourceRequestKey {
+    let color_space = source
+        .rgba8_meta()
+        .map(|(_, _, _, cs)| cs)
+        .unwrap_or(options.color_space);
+    ImageSourceRequestKey {
+        source: source.id,
+        color_space,
     }
 }
 
@@ -383,13 +413,24 @@ impl ImageSourceLoader {
                     self.signal_handles.remove(&key);
                     signal_models.remove(&key);
                 }
+
+                let live: std::collections::HashSet<ModelId> =
+                    signal_models.values().copied().collect();
+                drop(signal_models);
+
+                let mut map = self
+                    .runtime
+                    .asset_key_to_signal_models
+                    .lock()
+                    .expect("poisoned ImageSourceRuntime mutex");
+                map.retain(|_key, ids| {
+                    ids.retain(|id| live.contains(id));
+                    !ids.is_empty()
+                });
             }
         }
 
-        let request = ImageSourceRequestKey {
-            source: source.id,
-            color_space: options.color_space,
-        };
+        let request = request_key_for_source(source, options);
 
         let entry = self.signal_handles.entry(request).or_insert_with(|| {
             let model = app.models_mut().insert(ImageSourceUiSignal::default());
@@ -416,6 +457,8 @@ struct ImageSourceRuntime {
     entries: Mutex<HashMap<ImageSourceRequestKey, ImageSourceEntry>>,
     #[cfg(feature = "ui")]
     signal_models: Mutex<HashMap<ImageSourceRequestKey, ModelId>>,
+    #[cfg(feature = "ui")]
+    asset_key_to_signal_models: Mutex<HashMap<ImageAssetKey, Vec<ModelId>>>,
     retry_cooldown_frames: u64,
 }
 
@@ -432,6 +475,8 @@ impl ImageSourceRuntime {
             entries: Mutex::new(HashMap::new()),
             #[cfg(feature = "ui")]
             signal_models: Mutex::new(HashMap::new()),
+            #[cfg(feature = "ui")]
+            asset_key_to_signal_models: Mutex::new(HashMap::new()),
             retry_cooldown_frames: 60,
         }
     }
@@ -474,6 +519,9 @@ impl ImageSourceRuntime {
                         decoded,
                         asset_key,
                     };
+
+                    #[cfg(feature = "ui")]
+                    self.register_asset_key_signal_mapping(msg.request, asset_key);
                 }
                 Err(err) => {
                     entry.state = ImageSourceEntryState::Failed {
@@ -516,6 +564,102 @@ impl ImageSourceRuntime {
 
         host.request_redraw(msg.window);
     }
+
+    #[cfg(feature = "ui")]
+    pub(crate) fn register_asset_key_signal_mapping(
+        &self,
+        request: ImageSourceRequestKey,
+        asset_key: ImageAssetKey,
+    ) {
+        let Some(model_id) = self
+            .signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex")
+            .get(&request)
+            .copied()
+        else {
+            return;
+        };
+
+        let mut map = self
+            .asset_key_to_signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex");
+        let list = map.entry(asset_key).or_default();
+        if !list.contains(&model_id) {
+            list.push(model_id);
+        }
+    }
+}
+
+#[cfg(feature = "ui")]
+pub(crate) fn notify_image_asset_key<H: UiHost>(app: &mut H, key: ImageAssetKey) {
+    let Some(model_ids) = with_image_source_loader(app, |loader, _app| {
+        loader
+            .runtime
+            .asset_key_to_signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex")
+            .get(&key)
+            .cloned()
+            .unwrap_or_default()
+    }) else {
+        return;
+    };
+
+    if model_ids.is_empty() {
+        return;
+    }
+
+    let original_len = model_ids.len();
+    let mut alive = Vec::with_capacity(model_ids.len());
+    for model_id in model_ids {
+        if app
+            .models_mut()
+            .update_any(model_id, |state_any| {
+                let state = state_any
+                    .downcast_mut::<ImageSourceUiSignal>()
+                    .expect("ImageSourceUiSignal model type mismatch");
+                state.epoch = state.epoch.wrapping_add(1);
+            })
+            .is_err()
+        {
+            continue;
+        }
+        alive.push(model_id);
+    }
+
+    if alive.len() == original_len {
+        return;
+    }
+
+    let _ = with_image_source_loader(app, |loader, _app| {
+        let mut map = loader
+            .runtime
+            .asset_key_to_signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex");
+        if alive.is_empty() {
+            map.remove(&key);
+        } else {
+            map.insert(key, alive);
+        }
+    });
+}
+
+#[cfg(feature = "ui")]
+pub(crate) fn register_asset_key_for_source<H: UiHost>(
+    app: &mut H,
+    source: &ImageSource,
+    options: ImageSourceOptions,
+    asset_key: ImageAssetKey,
+) {
+    let _ = with_image_source_loader(app, |loader, _app| {
+        let request = request_key_for_source(source, options);
+        loader
+            .runtime
+            .register_asset_key_signal_mapping(request, asset_key);
+    });
 }
 
 fn image_source_inbox_drainer(runtime: Arc<ImageSourceRuntime>) -> InboxDrainer<ImageSourceMsg> {
