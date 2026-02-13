@@ -161,7 +161,7 @@ Evidence:
 - Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
 - Add UI gallery entries and `fretboard diag` scripts for each seed component.
 
-Status: In progress
+Status: Landed
 
 Done (so far):
 
@@ -217,6 +217,40 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
       - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
       - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
       - `tools/diag-scripts/ui-gallery-magic-sparkles-text-fixed-frame-delta.json`
+
+## M8a — MagicUI perf baselines (optional)
+
+Extend perf coverage for the MagicUI parity pages so regressions show up early under `fretboard diag perf`.
+
+- Add perf scripts:
+  - `tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json`
+  - `tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json`
+  - `tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json`
+  - `tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json`
+- Commit windows-local baselines:
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-border-beam.windows-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-dock.windows-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-marquee.windows-local.v1.json`
+- Use the shared seed policy preset:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-magic-recipes.v1.json`
+
+Status: Landed
+
+Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
+
+- None (M8a complete).
+
+Evidence:
+
+- `tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json`
+- `tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json`
+- `tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json`
+- `tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-border-beam.windows-local.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-dock.windows-local.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-magic-marquee.windows-local.v1.json`
 
 ## M9 — External texture imports (v1)
 
