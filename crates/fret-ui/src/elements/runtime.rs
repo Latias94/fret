@@ -1302,11 +1302,16 @@ impl WindowElementState {
         }
     }
 
-    pub(crate) fn element_nodes(&self) -> Vec<(GlobalElementId, NodeId)> {
-        self.nodes
-            .iter()
-            .map(|(&element, entry)| (element, entry.node))
-            .collect()
+    pub(crate) fn element_nodes_copy_into(&self, out: &mut Vec<(GlobalElementId, NodeId)>) {
+        out.clear();
+        if out.capacity() < self.nodes.len() {
+            out.reserve(self.nodes.len() - out.capacity());
+        }
+        out.extend(
+            self.nodes
+                .iter()
+                .map(|(&element, entry)| (element, entry.node)),
+        );
     }
 
     pub(crate) fn last_bounds(&self, element: GlobalElementId) -> Option<Rect> {
