@@ -9,14 +9,14 @@ Use `carousel-embla-parity-v1-milestones.md` for timeline/phase planning.
 
 - [x] Ensure capture-phase move opt-in is stable and documented in the runtime contract matrix.
 - [x] Ensure capture switching always dispatches `PointerCancel` to the previous capture target (pressed state must clear).
-- [ ] Verify no double-dispatch hazards (capture + bubble move) for opted-in pointer regions.
+- [x] Verify no double-dispatch hazards (capture + bubble move) for opted-in pointer regions.
 
 ### Carousel behavior (ecosystem/fret-ui-shadcn)
 
-- [ ] Verify drag arming/threshold matches Embla’s `dragThreshold` default (10px) across mouse + touch.
+- [x] Verify drag arming/threshold matches Embla’s `dragThreshold` default (10px) across mouse + touch.
 - [x] Ensure drag can start on an interactive descendant and suppress descendant activation when drag wins.
-- [ ] Decide whether focusable descendants should be excluded from arming (Embla ignores INPUT/SELECT/TEXTAREA by default).
-- [ ] Decide whether cross-axis heuristics are needed for touch (Embla uses scroll-vs-cross diff to decide preventing scroll).
+- [x] Decide whether focusable descendants should be excluded from arming (Embla ignores INPUT/SELECT/TEXTAREA by default).
+- [x] Decide whether cross-axis heuristics are needed for touch (Embla uses scroll-vs-cross diff to decide preventing scroll).
 
 ### Docs parity / UI gallery (apps/fret-ui-gallery)
 
