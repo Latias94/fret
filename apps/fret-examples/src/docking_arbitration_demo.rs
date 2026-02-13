@@ -23,6 +23,8 @@ use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::stack::{VStackProps, vstack};
+use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn as shadcn;
 use slotmap::KeyData;
 use std::collections::{HashMap, HashSet};
@@ -548,103 +550,240 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     ..Default::default()
                 },
                 |cx| {
-                    let mut rows = Vec::new();
-                    rows.push(cx.text("Docking arbitration demo (ADR 0072)"));
-                    rows.push(cx.text(
-                        "Open a popover, then drag a dock tab; start viewport drag inside the blue border; open a modal to block underlay.",
-                    ));
-                    rows.push(cx.text(drag_state));
-                    rows.push(cx.text(captured.clone()));
-                    rows.push(cx.text(format!("last_viewport_input={last}")));
-                    rows.push(cx.text(
-                        "Synth pointer: F1 toggle; I/J/K/L move; Space down/up; B right down/up; U/O wheel up/down (consumes these keys while enabled).",
-                    ));
-                    rows.push(cx.text(synth_debug.to_string()));
-                    rows.push(cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            role: fret_core::SemanticsRole::Text,
-                            test_id: Some(Arc::<str>::from(if popover_is_open {
-                                "dock-arb-popover-open"
-                            } else {
-                                "dock-arb-popover-closed"
-                            })),
-                            label: Some(Arc::<str>::from(if popover_is_open {
-                                "popover:open"
-                            } else {
-                                "popover:closed"
-                            })),
-                            ..Default::default()
-                        },
-                        |cx| vec![cx.text(if popover_is_open { "Popover: open" } else { "Popover: closed" })],
-                    ));
-                    rows.push(cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            role: fret_core::SemanticsRole::Text,
-                            test_id: Some(Arc::<str>::from(if dialog_is_open {
-                                "dock-arb-dialog-open"
-                            } else {
-                                "dock-arb-dialog-closed"
-                            })),
-                            label: Some(Arc::<str>::from(if dialog_is_open {
-                                "dialog:open"
-                            } else {
-                                "dialog:closed"
-                            })),
-                            ..Default::default()
-                        },
-                        |cx| vec![cx.text(if dialog_is_open { "Dialog: open" } else { "Dialog: closed" })],
-                    ));
-                    rows.push(cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            role: fret_core::SemanticsRole::Text,
-                            test_id: Some(Arc::<str>::from(if drop_mask_left_disallowed {
-                                "dock-arb-drop-mask-left-disallowed"
-                            } else {
-                                "dock-arb-drop-mask-left-allowed"
-                            })),
-                            label: Some(Arc::<str>::from(if drop_mask_left_disallowed {
-                                "drop_mask_left:disallowed"
-                            } else {
-                                "drop_mask_left:allowed"
-                            })),
-                            ..Default::default()
-                        },
-                        |cx| {
-                            vec![cx.text(if drop_mask_left_disallowed {
-                                "Drop mask: left edge docking disallowed"
-                            } else {
-                                "Drop mask: left edge docking allowed"
-                            })]
-                        },
-                    ));
-                    rows.push(
-                        shadcn::Button::new("Toggle drop mask (left edge)")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .test_id("dock-arb-toggle-drop-mask-left-edge")
-                            .on_activate(Arc::new(move |host, _action_cx, _reason| {
-                                let mut next = false;
-                                let _ = host.models_mut().update(&drop_mask_disallow_left_edge, |v| {
-                                    *v = !*v;
-                                    next = *v;
-                                });
-                                disallow_left_flag.store(next, Ordering::Relaxed);
-                            }))
+                    let header_card = shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![
+                            shadcn::CardTitle::new("Docking arbitration demo").into_element(cx),
+                            shadcn::CardDescription::new("ADR 0072").into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::CardContent::new(vec![vstack(
+                            cx,
+                            VStackProps::default()
+                                .gap(Space::N1)
+                                .layout(LayoutRefinement::default().w_full()),
+                            |cx| {
+                                vec![
+                                    shadcn::CardDescription::new(
+                                        "Open a popover, then drag a dock tab.",
+                                    )
+                                    .into_element(cx),
+                                    shadcn::CardDescription::new(
+                                        "Start viewport drag inside the blue border.",
+                                    )
+                                    .into_element(cx),
+                                    shadcn::CardDescription::new(
+                                        "Open a modal dialog to validate underlay blocking.",
+                                    )
+                                    .into_element(cx),
+                                ]
+                            },
+                        )])
+                        .into_element(cx),
+                    ])
+                    .size(shadcn::CardSize::Sm)
+                    .into_element(cx);
+
+                    let state_card = shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("State").into_element(cx)])
                             .into_element(cx),
-                    );
-                    rows.push(popover);
-                    rows.push(dialog);
-                    rows.push(
-                        shadcn::Button::new("Underlay (modal barrier target)")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .test_id("dock-arb-underlay-probe")
-                            .into_element(cx),
-                    );
-                    rows.push(shadcn::Toaster::new().into_element(cx));
-                    rows.push(cx.text("Layers (paint order):"));
-                    for line in layer_lines.iter().cloned() {
-                        rows.push(cx.text(line));
-                    }
-                    rows
+                        shadcn::CardContent::new(vec![vstack(
+                            cx,
+                            VStackProps::default()
+                                .gap(Space::N2)
+                                .layout(LayoutRefinement::default().w_full()),
+                            |cx| {
+                                vec![
+                                    shadcn::CardDescription::new(drag_state).into_element(cx),
+                                    shadcn::CardDescription::new(captured.clone()).into_element(cx),
+                                    shadcn::CardDescription::new(format!(
+                                        "last_viewport_input={last}"
+                                    ))
+                                    .into_element(cx),
+                                    shadcn::Separator::new().into_element(cx),
+                                    shadcn::CardDescription::new(
+                                        "Synth pointer: F1 toggle; I/J/K/L move; Space down/up; B right down/up; U/O wheel up/down.",
+                                    )
+                                    .into_element(cx),
+                                    shadcn::CardDescription::new(synth_debug.to_string())
+                                        .into_element(cx),
+                                    shadcn::Separator::new().into_element(cx),
+                                    cx.semantics(
+                                        fret_ui::element::SemanticsProps {
+                                            role: fret_core::SemanticsRole::Text,
+                                            test_id: Some(Arc::<str>::from(if popover_is_open {
+                                                "dock-arb-popover-open"
+                                            } else {
+                                                "dock-arb-popover-closed"
+                                            })),
+                                            label: Some(Arc::<str>::from(if popover_is_open {
+                                                "popover:open"
+                                            } else {
+                                                "popover:closed"
+                                            })),
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![cx.text(if popover_is_open {
+                                                "Popover: open"
+                                            } else {
+                                                "Popover: closed"
+                                            })]
+                                        },
+                                    ),
+                                    cx.semantics(
+                                        fret_ui::element::SemanticsProps {
+                                            role: fret_core::SemanticsRole::Text,
+                                            test_id: Some(Arc::<str>::from(if dialog_is_open {
+                                                "dock-arb-dialog-open"
+                                            } else {
+                                                "dock-arb-dialog-closed"
+                                            })),
+                                            label: Some(Arc::<str>::from(if dialog_is_open {
+                                                "dialog:open"
+                                            } else {
+                                                "dialog:closed"
+                                            })),
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![cx.text(if dialog_is_open {
+                                                "Dialog: open"
+                                            } else {
+                                                "Dialog: closed"
+                                            })]
+                                        },
+                                    ),
+                                    cx.semantics(
+                                        fret_ui::element::SemanticsProps {
+                                            role: fret_core::SemanticsRole::Text,
+                                            test_id: Some(Arc::<str>::from(if drop_mask_left_disallowed {
+                                                "dock-arb-drop-mask-left-disallowed"
+                                            } else {
+                                                "dock-arb-drop-mask-left-allowed"
+                                            })),
+                                            label: Some(Arc::<str>::from(if drop_mask_left_disallowed {
+                                                "drop_mask_left:disallowed"
+                                            } else {
+                                                "drop_mask_left:allowed"
+                                            })),
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![cx.text(if drop_mask_left_disallowed {
+                                                "Drop mask: left edge docking disallowed"
+                                            } else {
+                                                "Drop mask: left edge docking allowed"
+                                            })]
+                                        },
+                                    ),
+                                ]
+                            },
+                        )])
+                        .into_element(cx),
+                    ])
+                    .size(shadcn::CardSize::Sm)
+                    .into_element(cx);
+
+                    let actions_card = shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![
+                            shadcn::CardTitle::new("Actions").into_element(cx),
+                            shadcn::CardDescription::new("Overlay probes + policy toggles")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::CardContent::new(vec![vstack(
+                            cx,
+                            VStackProps::default()
+                                .gap(Space::N2)
+                                .layout(LayoutRefinement::default().w_full()),
+                            |cx| {
+                                vec![
+                                    shadcn::Button::new("Toggle drop mask (left edge)")
+                                        .variant(shadcn::ButtonVariant::Outline)
+                                        .test_id("dock-arb-toggle-drop-mask-left-edge")
+                                        .on_activate(Arc::new(move |host, _action_cx, _reason| {
+                                            let mut next = false;
+                                            let _ = host.models_mut().update(
+                                                &drop_mask_disallow_left_edge,
+                                                |v| {
+                                                    *v = !*v;
+                                                    next = *v;
+                                                },
+                                            );
+                                            disallow_left_flag.store(next, Ordering::Relaxed);
+                                        }))
+                                        .into_element(cx),
+                                    popover,
+                                    dialog,
+                                    shadcn::Button::new("Underlay (modal barrier target)")
+                                        .variant(shadcn::ButtonVariant::Secondary)
+                                        .test_id("dock-arb-underlay-probe")
+                                        .into_element(cx),
+                                    shadcn::Toaster::new().into_element(cx),
+                                ]
+                            },
+                        )])
+                        .into_element(cx),
+                    ])
+                    .size(shadcn::CardSize::Sm)
+                    .into_element(cx);
+
+                    let debug_layers_card = shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![
+                            shadcn::CardTitle::new("Debug").into_element(cx),
+                            shadcn::CardDescription::new("Paint order layers").into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::CardContent::new(vec![shadcn::Collapsible::uncontrolled(false)
+                            .into_element(
+                                cx,
+                                |cx, is_open| {
+                                    shadcn::Button::new(if is_open {
+                                        "Hide debug layers"
+                                    } else {
+                                        "Show debug layers"
+                                    })
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .into_element(cx)
+                                },
+                                |cx| {
+                                    let content = vstack(
+                                        cx,
+                                        VStackProps::default()
+                                            .gap(Space::N1)
+                                            .layout(LayoutRefinement::default().w_full()),
+                                        |cx| {
+                                            layer_lines
+                                                .iter()
+                                                .cloned()
+                                                .map(|v| cx.text(v))
+                                                .collect::<Vec<_>>()
+                                        },
+                                    );
+
+                                    shadcn::ScrollArea::new(vec![content])
+                                        .refine_layout(
+                                            LayoutRefinement::default()
+                                                .w_full()
+                                                .h_px(Px(240.0))
+                                                .min_w_0()
+                                                .min_h_0(),
+                                        )
+                                        .into_element(cx)
+                                },
+                            )])
+                        .into_element(cx),
+                    ])
+                    .size(shadcn::CardSize::Sm)
+                    .into_element(cx);
+
+                    vec![vstack(
+                        cx,
+                        VStackProps::default()
+                            .gap(Space::N3)
+                            .layout(LayoutRefinement::default().size_full().min_w_0().min_h_0()),
+                        |_cx| vec![header_card, state_card, actions_card, debug_layers_card],
+                    )]
                 },
             )]
                 },
