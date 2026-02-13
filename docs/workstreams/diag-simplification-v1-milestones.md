@@ -39,7 +39,7 @@ Exit criteria:
 
 - [x] `script.result.json` includes a bounded per-run event log that helps explain failures without relying
   solely on "last N frames".
-- [ ] Reason codes remain stable; failures avoid silent timeouts when missing capabilities.
+- [x] Reason codes remain stable; failures avoid silent timeouts when missing capabilities.
 
 ## M5: Artifact format v2 (manifest + chunks)
 
