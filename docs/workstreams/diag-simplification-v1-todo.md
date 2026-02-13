@@ -33,7 +33,7 @@ Evidence pointers:
   - [x] unify "read script result" behavior
 - [ ] Route `diag repro` through the shared orchestration path:
   - [x] use `run_script_over_transport` for script execution
-  - [ ] make bundle selection/dump fully transport-agnostic
+  - [x] make bundle selection/dump fully transport-agnostic
 - [ ] Add a transport-agnostic "streaming results" hook:
   - [ ] allow tooling to consume `script.result` updates incrementally (useful for long suites)
 
