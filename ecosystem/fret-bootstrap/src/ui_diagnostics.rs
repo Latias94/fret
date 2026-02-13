@@ -15036,9 +15036,16 @@ fn eval_predicate(
             };
             drag.dragging && drag.current_window == target_window
         }
-        UiPredicateV1::DockDragActiveIs { active } => docking
-            .and_then(|d| d.dock_drag)
-            .is_some_and(|drag| drag.dragging == *active),
+        UiPredicateV1::DockDragActiveIs { active } => match docking.and_then(|d| d.dock_drag) {
+            Some(drag) => drag.dragging == *active,
+            None => !*active,
+        },
+        UiPredicateV1::DockFloatingDragActiveIs { active } => {
+            match docking.and_then(|d| d.floating_drag) {
+                Some(drag) => drag.activated == *active,
+                None => !*active,
+            }
+        }
         UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
             let Some(preview) = docking
                 .and_then(|d| d.dock_drop_resolve.as_ref())

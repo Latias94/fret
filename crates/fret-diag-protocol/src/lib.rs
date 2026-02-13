@@ -960,6 +960,12 @@ pub enum UiPredicateV1 {
     DockDragActiveIs {
         active: bool,
     },
+    /// True when the latest docking diagnostics report an active in-window floating drag session.
+    ///
+    /// This is intended to gate "floating window" hand-feel regressions without relying on pixels.
+    DockFloatingDragActiveIs {
+        active: bool,
+    },
     /// True when the current docking drop preview kind matches `kind`.
     ///
     /// This predicate reads the window-local `DockDropResolveDiagnostics` snapshot published into
