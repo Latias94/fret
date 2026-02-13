@@ -12,8 +12,8 @@ use fret_runtime::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, Elements, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length,
-    MainAlign, PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle,
-    StackProps, VisualTransformProps,
+    MainAlign, PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps,
+    SemanticsDecoration, SizeStyle, StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
@@ -75,9 +75,7 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
         .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
         .or_else(|| theme.metric_by_key("metric.font.line_height"))
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| {
-            theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        });
+        .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -597,6 +595,7 @@ pub struct NavigationMenu {
     disabled: bool,
     viewport: bool,
     indicator: bool,
+    viewport_test_id: Option<Arc<str>>,
     /// Optional override for which query region drives responsive variants (ADR 0231).
     ///
     /// When unset, the component uses its own internal region wrapper. When set, the caller must
@@ -639,6 +638,7 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            viewport_test_id: None,
             query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -657,6 +657,7 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            viewport_test_id: None,
             query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -714,6 +715,15 @@ impl NavigationMenu {
 
     pub fn indicator_component(mut self, indicator: NavigationMenuIndicator) -> Self {
         self.indicator = indicator.is_enabled();
+        self
+    }
+
+    /// Attaches a stable `test_id` to the viewport panel surface when it is mounted.
+    ///
+    /// This is intended for deterministic diagnostics (`fretboard diag`) and should not be relied
+    /// on by production UX.
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
         self
     }
 
@@ -796,6 +806,7 @@ impl NavigationMenu {
         let menu_disabled = self.disabled;
         let viewport_enabled = self.viewport;
         let indicator_enabled = self.indicator;
+        let viewport_test_id = self.viewport_test_id;
         let query_region_override = self.query_region;
         let chrome = self.chrome;
         let layout = self.layout;
@@ -1793,7 +1804,7 @@ impl NavigationMenu {
                         // We keep an autosizing wrapper for desktop-style transitions, but use a
                         // fixed-size wrapper on mobile when the panel is `w-full` (fill-based),
                         // otherwise `Length::Fill` has no definite width to resolve against.
-                        let panel = if viewport_enabled && !md_breakpoint {
+                        let mut panel = if viewport_enabled && !md_breakpoint {
                             popper_content::popper_wrapper_at(
                                 cx,
                                 layout.placed,
@@ -1813,6 +1824,12 @@ impl NavigationMenu {
                                 cx,
                                 root_id,
                                 panel.id,
+                            );
+                        }
+
+                        if let Some(test_id) = viewport_test_id.as_ref() {
+                            panel = panel.attach_semantics(
+                                SemanticsDecoration::default().test_id(test_id.clone()),
                             );
                         }
 
