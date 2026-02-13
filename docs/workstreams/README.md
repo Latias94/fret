@@ -40,6 +40,9 @@ Active workstreams:
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1.md`
+- `docs/workstreams/external-texture-imports-v1.md`
+- `docs/workstreams/external-texture-imports-v1-todo.md`
+- `docs/workstreams/external-texture-imports-v1-milestones.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/milestones.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
