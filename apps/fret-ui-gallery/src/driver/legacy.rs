@@ -2155,6 +2155,7 @@ pub fn run() -> anyhow::Result<()> {
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
@@ -2185,6 +2186,7 @@ pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .into_inner()
