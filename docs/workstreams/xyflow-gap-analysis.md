@@ -1,7 +1,7 @@
 ---
 title: XYFlow (React Flow) gap analysis (Fret canvas + node graph)
 status: active
-date: 2026-02-12
+date: 2026-02-13
 scope: ecosystem/fret-canvas, ecosystem/fret-node, ecosystem/fret-ui-ai (workflow wrappers)
 ---
 
@@ -128,6 +128,10 @@ Notes:
   - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
 - A minimal node dragging spike exists (still app-owned):
   - `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+- A minimal connect-drag spike exists (still app-owned):
+  - Handles + preview: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-node-a-source-handle`, `ui-ai-cwl-node-b-target-handle`)
+  - Deterministic commit helper: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-commit-connection`)
+  - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-connection-committed`)
 
 Recommendation:
 

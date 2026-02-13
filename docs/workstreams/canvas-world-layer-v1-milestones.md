@@ -1,7 +1,7 @@
 ---
 title: Declarative Canvas World Layer v1 — Milestones
 status: active
-date: 2026-02-12
+date: 2026-02-13
 scope: ecosystem/fret-canvas/ui, ecosystem/fret-ui-kit, UI Gallery + diag gates
 ---
 
@@ -59,5 +59,7 @@ Status: In progress (partial)
 - Background-only marquee start filtering exists (node subtrees do not trigger selection-on-drag).
 - Node dragging recipe exists (app-owned position edits; canvas-space deltas).
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-node-a-drag-handle`)
-- Connection dragging recipe exists (handles + preview + validity checks).
+- Connection wiring exists (handles + preview); commit is currently gated via a deterministic helper button.
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-node-a-source-handle`, `ui-ai-cwl-node-b-target-handle`, `ui-ai-cwl-commit-connection`)
+  - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-connection-committed`)
 - Input arbitration recipe exists (background-hit only marquee start).

@@ -140,6 +140,13 @@ Current state:
     (`ui-ai-cwl-node-a-drag-handle`)
   - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
     (assert `ui-ai-cwl-node-dragged`)
+- Connection wiring exists as a UI Gallery spike (handles + preview); commit is currently gated via a deterministic helper button:
+  - Handles: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+    (`ui-ai-cwl-node-a-source-handle`, `ui-ai-cwl-node-b-target-handle`)
+  - Commit helper: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+    (`ui-ai-cwl-commit-connection`)
+  - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
+    (assert `ui-ai-cwl-connection-committed`)
 
 Input arbitration note:
 
