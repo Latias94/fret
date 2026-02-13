@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpV1, DevtoolsScreenshotRequestV1, DiagTransportMessageV1, UiInspectConfigV1,
-    UiSemanticsNodeGetV1,
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsScreenshotRequestV1,
+    DiagTransportMessageV1, UiInspectConfigV1, UiSemanticsNodeGetV1,
 };
 
 use crate::transport::ToolingDiagClient;
@@ -171,5 +171,25 @@ impl DevtoolsOps {
             .unwrap_or(serde_json::Value::Null),
         });
         request_id
+    }
+
+    pub fn app_exit_request(
+        &self,
+        session_id: Option<&str>,
+        reason: Option<&str>,
+        delay_ms: Option<u64>,
+    ) {
+        self.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "app.exit.request".to_string(),
+            session_id: session_id.map(|s| s.to_string()),
+            request_id: None,
+            payload: serde_json::to_value(DevtoolsAppExitRequestV1 {
+                schema_version: 1,
+                reason: reason.map(|s| s.to_string()),
+                delay_ms,
+            })
+            .unwrap_or(serde_json::Value::Null),
+        });
     }
 }

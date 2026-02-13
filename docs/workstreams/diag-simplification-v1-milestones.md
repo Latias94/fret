@@ -1,3 +1,5 @@
+Status: Active (workstream tracker)
+
 # Diag simplification v1 - Milestones
 
 ## M0: Baseline documented
@@ -19,17 +21,17 @@ Exit criteria:
 
 Exit criteria:
 
-- In WS mode, a `capture_bundle` produces a **local** bundle directory containing `bundle.json`.
-- `diag pack`, `diag triage`, `diag lint` work from that local directory in both modes.
-- Artifact size is bounded and reported (bytes + clipped counts where applicable).
+- [x] In WS mode, tooling can materialize a **local** bundle directory containing `bundle.json` from `bundle.dumped`.
+- [x] `diag pack`, `diag triage`, `diag lint` work from that local directory in both modes.
+- [ ] Artifact size is bounded and reported (bytes + clipped counts where applicable).
 
 ## M3: Exit parity
 
 Exit criteria:
 
-- A transport-neutral exit request exists (filesystem touch + WS message).
-- In `--launch` mode, runs exit deterministically by default.
-- `--keep-open` preserves long-running/manual workflows.
+- [x] A transport-neutral exit request exists (filesystem touch + WS message).
+- [ ] In `--launch` mode, runs exit deterministically by default.
+- [ ] `--keep-open` preserves long-running/manual workflows.
 
 ## M4: Evidence improvements (bounded)
 

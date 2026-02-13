@@ -316,7 +316,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut devtools_ws_url: Option<String> = None;
     let mut devtools_token: Option<String> = None;
     let mut devtools_session_id: Option<String> = None;
-    let mut touch_exit_after_run: bool = false;
+    let mut exit_after_run: bool = false;
     let mut suite_script_inputs: Vec<String> = Vec::new();
 
     fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
@@ -499,8 +499,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 devtools_session_id = Some(v);
                 i += 1;
             }
-            "--touch-exit-after-run" => {
-                touch_exit_after_run = true;
+            "--exit-after-run" | "--touch-exit-after-run" => {
+                exit_after_run = true;
                 i += 1;
             }
             "--script-dir" => {
@@ -1682,8 +1682,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 .to_string(),
         );
     }
-    if sub != "run" && touch_exit_after_run {
-        return Err("--touch-exit-after-run is only supported with `diag run`".to_string());
+    if sub != "run" && exit_after_run {
+        return Err("--exit-after-run is only supported with `diag run`".to_string());
     }
     if sub != "suite" && !suite_script_inputs.is_empty() {
         return Err("--glob/--script-dir are only supported with `diag suite`".to_string());
@@ -2589,12 +2589,6 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             .to_string(),
                     );
                 }
-                if touch_exit_after_run {
-                    return Err(
-                        "--touch-exit-after-run is not supported with --devtools-ws-url"
-                            .to_string(),
-                    );
-                }
 
                 let ws_url = devtools_ws_url.clone().ok_or_else(|| {
                     "missing --devtools-ws-url (required when using DevTools WS transport)"
@@ -2703,6 +2697,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     devtools_session_id.as_deref(),
                     script_json,
                     wants_post_run_checks || wants_pack,
+                    exit_after_run,
                     timeout_ms,
                     poll_ms,
                 )?;
@@ -2952,7 +2947,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
             }
             let result = result?;
-            if touch_exit_after_run {
+            if exit_after_run {
                 let _ = touch(&resolved_exit_path);
             }
             if result.stage.as_deref() == Some("passed") {
@@ -11946,6 +11941,7 @@ fn run_script_over_devtools_ws(
     session_id: Option<&str>,
     script_json: serde_json::Value,
     dump_bundle: bool,
+    exit_after_run: bool,
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<(UiScriptResultV1, Option<PathBuf>), String> {
@@ -12018,22 +12014,27 @@ fn run_script_over_devtools_ws(
         }
     })?;
 
-    if !dump_bundle {
-        return Ok((result, None));
+    let bundle_path = if dump_bundle {
+        devtools.bundle_dump(None, Some("diag-run"));
+        let dumped = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
+            if msg.r#type != "bundle.dumped"
+                || msg.session_id.as_deref() != Some(&selected_session_id)
+            {
+                return None;
+            }
+            serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
+        })?;
+
+        Some(materialize_devtools_bundle_dumped(out_dir, &dumped)?)
+    } else {
+        None
+    };
+
+    if exit_after_run {
+        devtools.app_exit_request(None, Some("diag.run"), None);
     }
 
-    devtools.bundle_dump(None, Some("diag-run"));
-    let dumped = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
-        if msg.r#type != "bundle.dumped" || msg.session_id.as_deref() != Some(&selected_session_id)
-        {
-            return None;
-        }
-        serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
-    })?;
-
-    let bundle_path = materialize_devtools_bundle_dumped(out_dir, &dumped)?;
-
-    Ok((result, Some(bundle_path)))
+    Ok((result, bundle_path))
 }
 
 fn run_script_suite_collect_bundles(

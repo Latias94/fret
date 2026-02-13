@@ -35,22 +35,22 @@ small, fearless refactors.
   - `<out_dir>/<run_id>/bundle.json`
   - `<out_dir>/<run_id>/script.result.json`
   - optional screenshots directories/files
-- [ ] Implement WS bundle materialization:
-  - [ ] on `bundle.dumped(bundle=...)`, write `bundle.json` locally
-  - [ ] write `latest` pointer (same as filesystem mode)
-  - [ ] plumb through pack/triage/lint paths
-- [ ] Make `--pack` work in WS mode by operating on the materialized local artifact.
+- [x] Implement WS bundle materialization:
+  - [x] on `bundle.dumped(bundle=...)`, write `bundle.json` locally
+  - [x] write `latest` pointer (same as filesystem mode)
+  - [x] plumb through pack/triage/lint paths (operate on local artifacts)
+- [x] Make `--pack` work in WS mode by operating on the materialized local artifact.
 - [ ] Add artifact size reporting:
   - [ ] include bytes on disk and clipped counts in `script.result` evidence (bounded)
 
 ## Phase 3: Exit request parity
 
-- [ ] Add a WS message for exit request (`app.exit.request` or `diag.exit.request`).
-- [ ] Wire runtime to honor the exit request (native + wasm).
+- [x] Add a WS message for exit request (`app.exit.request` or `diag.exit.request`).
+- [x] Wire runtime to honor the exit request (native + wasm).
 - [ ] Update tooling:
   - [ ] in `--launch` mode, exit after run by default (new behavior)
   - [ ] add `--keep-open` to preserve existing workflows
-  - [ ] keep `--touch-exit-after-run` as an alias or deprecate it in favor of transport-neutral naming
+  - [x] keep `--touch-exit-after-run` as an alias or deprecate it in favor of transport-neutral naming
 
 ## Phase 4: Retention and evidence (bounded)
 

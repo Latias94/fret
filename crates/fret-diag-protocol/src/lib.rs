@@ -1129,6 +1129,20 @@ pub struct DevtoolsBundleDumpV1 {
     pub max_snapshots: Option<u32>,
 }
 
+/// Request that the app exits as soon as possible.
+///
+/// This is intended for transport-neutral "exit after run" behavior in CI / scripted automation
+/// flows where relying on large timeouts is undesirable.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsAppExitRequestV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// Optional delay before triggering exit, expressed in wall-clock milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_ms: Option<u64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DevtoolsBundleDumpedV1 {
     pub schema_version: u32,
@@ -1750,4 +1764,20 @@ pub enum UiScriptStageV1 {
 
 fn serde_default_true() -> bool {
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn devtools_app_exit_request_serializes_minimally() {
+        let value = serde_json::to_value(DevtoolsAppExitRequestV1 {
+            schema_version: 1,
+            reason: None,
+            delay_ms: None,
+        })
+        .unwrap();
+        assert_eq!(value, serde_json::json!({ "schema_version": 1 }));
+    }
 }

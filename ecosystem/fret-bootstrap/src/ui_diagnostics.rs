@@ -4,7 +4,9 @@ use fret_core::{
     PointerEvent, PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
 };
 #[cfg(feature = "diagnostics-ws")]
-use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
+use fret_diag_protocol::{
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1,
+};
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
     UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1,
@@ -392,6 +394,7 @@ pub struct UiDiagnosticsService {
     last_inspect_trigger_mtime: Option<std::time::SystemTime>,
     exit_armed: bool,
     exit_last_mtime: Option<std::time::SystemTime>,
+    ws_exit_deadline_unix_ms: Option<u64>,
     ready_written: bool,
     ready_write_warned: bool,
     capabilities_written: bool,
@@ -547,6 +550,13 @@ impl UiDiagnosticsService {
     pub fn poll_exit_trigger(&mut self) -> bool {
         if !self.is_enabled() {
             return false;
+        }
+
+        if let Some(deadline) = self.ws_exit_deadline_unix_ms
+            && unix_ms_now() >= deadline
+        {
+            self.ws_exit_deadline_unix_ms = None;
+            return true;
         }
 
         let current_mtime = std::fs::metadata(&self.cfg.exit_path)
@@ -6047,6 +6057,13 @@ impl UiDiagnosticsService {
                         ("bundle".to_string(), None)
                     };
                 self.request_force_dump(label, dump_max_snapshots);
+            }
+            "app.exit.request" => {
+                let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
+                    .ok()
+                    .and_then(|req| req.delay_ms)
+                    .unwrap_or(0);
+                self.ws_exit_deadline_unix_ms = Some(unix_ms_now().saturating_add(delay_ms));
             }
             "script.push" | "script.run" => {
                 let script_value = msg

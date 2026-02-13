@@ -1,5 +1,13 @@
 # Diag simplification v1 (fearless refactor)
 
+Status: Active (workstream tracker)
+
+Current state (as of 2026-02-13):
+
+- WS artifact materialization + `--pack` parity landed (tooling materializes `bundle.dumped` to a local `bundle.json` directory).
+- WS exit request landed (`app.exit.request`) and tooling supports `--exit-after-run` (`--touch-exit-after-run` remains as an alias).
+- Default deterministic exit in `--launch` mode + `--keep-open` migration is still pending.
+
 ## Context
 
 Fret diagnostics ("diag") currently serves multiple audiences:
