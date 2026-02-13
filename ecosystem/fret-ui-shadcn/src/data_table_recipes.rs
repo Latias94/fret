@@ -997,18 +997,34 @@ impl<TData> DataTableToolbar<TData> {
                                                     .into_element(cx),
                                             );
 
-                                            if trigger_selected_count > 2 {
+                                            let show_labels = fret_ui_kit::declarative::viewport_width_at_least(
+                                                cx,
+                                                fret_ui::Invalidation::Layout,
+                                                fret_ui_kit::declarative::viewport_tailwind::LG,
+                                                fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+                                            );
+
+                                            let badge_style = ChromeRefinement::default()
+                                                .rounded(Radius::Sm)
+                                                .px(Space::N1)
+                                                .py(Space::N0p5);
+
+                                            if !show_labels {
+                                                children.push(
+                                                    crate::badge::Badge::new(Arc::<str>::from(
+                                                        trigger_selected_count.to_string(),
+                                                    ))
+                                                    .variant(crate::badge::BadgeVariant::Secondary)
+                                                    .refine_style(badge_style.clone())
+                                                    .into_element(cx),
+                                                );
+                                            } else if trigger_selected_count > 2 {
                                                 children.push(
                                                     crate::badge::Badge::new(Arc::<str>::from(
                                                         format!("{trigger_selected_count} selected"),
                                                     ))
                                                     .variant(crate::badge::BadgeVariant::Secondary)
-                                                    .refine_style(
-                                                        ChromeRefinement::default()
-                                                            .rounded(Radius::Sm)
-                                                            .px(Space::N1)
-                                                            .py(Space::N0p5),
-                                                    )
+                                                    .refine_style(badge_style.clone())
                                                     .into_element(cx),
                                                 );
                                             } else {
@@ -1018,12 +1034,7 @@ impl<TData> DataTableToolbar<TData> {
                                                             .variant(
                                                                 crate::badge::BadgeVariant::Secondary,
                                                             )
-                                                            .refine_style(
-                                                                ChromeRefinement::default()
-                                                                    .rounded(Radius::Sm)
-                                                                    .px(Space::N1)
-                                                                    .py(Space::N0p5),
-                                                            )
+                                                            .refine_style(badge_style.clone())
                                                             .into_element(cx),
                                                     );
                                                 }
@@ -1111,10 +1122,26 @@ impl<TData> DataTableToolbar<TData> {
                                         .copied()
                                         .map(|n| {
                                             let fg_muted = theme.color_required("muted-foreground");
-                                            ui::raw_text(cx, Arc::<str>::from(n.to_string()))
+                                            let count = ui::text(cx, Arc::<str>::from(n.to_string()))
+                                                .text_xs()
                                                 .text_color(ColorRef::Color(fg_muted))
                                                 .nowrap()
-                                                .into_element(cx)
+                                                .into_element(cx);
+
+                                            hstack(
+                                                cx,
+                                                HStackProps::default()
+                                                    .layout(
+                                                        LayoutRefinement::default()
+                                                            .w_px(Px(16.0))
+                                                            .h_px(Px(16.0))
+                                                            .min_w_0()
+                                                            .min_h_0(),
+                                                    )
+                                                    .items_center()
+                                                    .justify_center(),
+                                                move |_cx| vec![count],
+                                            )
                                         });
 
                                     let left = hstack(
