@@ -61,8 +61,11 @@ Evidence:
 
 ## M4 — Follow-ups (v1.x; not required for closure)
 
-- [ ] EXT-meta-110 Consume `RenderTargetMetadata` for sampling transforms where applicable
+- [x] EXT-meta-110 Consume `RenderTargetMetadata` for sampling transforms where applicable
       (alpha/orientation).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/viewport_surface.rs`
+    - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
 - [ ] EXT-native-120 Native “true external import” adapter seam (platform-decoder produced GPU
       frame, capability-gated, deterministic fallback).
 - [ ] EXT-perf-130 Comparative diag/perf baselines for copy paths (native CPU upload vs GPU
