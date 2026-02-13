@@ -16,11 +16,16 @@ use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps,
-    SvgIconProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsDecoration,
+    SemanticsProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_headless::motion::spring::SpringDescription;
+use fret_ui_headless::motion::tolerance::Tolerance;
+use fret_ui_kit::declarative::motion_value::{
+    MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
+};
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
@@ -33,7 +38,6 @@ use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::surface::material_surface_style;
-use crate::motion::SpringAnimator;
 use crate::tokens::navigation_bar as nav_tokens;
 use crate::{Badge, BadgePlacement, BadgeValue};
 
@@ -184,6 +188,9 @@ impl NavigationBar {
                 disabled,
                 ..Default::default()
             };
+            let indicator_test_id = test_id
+                .as_ref()
+                .map(|id| Arc::<str>::from(format!("{id}-active-indicator")));
 
             let (container_height, container_bg, shadow, corner_radii) = {
                 let theme = Theme::global(&*cx.app);
@@ -234,7 +241,6 @@ impl NavigationBar {
                         ..Default::default()
                     },
                     move |cx| {
-                        let now_frame = cx.frame_id.0;
                         let container_id = cx.root_id();
                         let item_count = items.len();
 
@@ -248,10 +254,10 @@ impl NavigationBar {
 
                         let indicator = navigation_bar_active_indicator(
                             cx,
-                            now_frame,
                             container_id,
                             item_count,
                             selected_idx,
+                            indicator_test_id.clone(),
                         );
 
                         vec![
@@ -618,19 +624,11 @@ fn navigation_bar_item<H: UiHost>(
 
 fn navigation_bar_active_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    now_frame: u64,
     container_id: GlobalElementId,
     item_count: usize,
     selected_idx: Option<usize>,
+    indicator_test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    #[derive(Debug, Default, Clone)]
-    struct NavIndicatorRuntime {
-        x: SpringAnimator,
-        y: SpringAnimator,
-        width: SpringAnimator,
-        height: SpringAnimator,
-    }
-
     cx.named("navigation_bar_active_indicator", move |cx| {
         let id = cx.root_id();
         let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
@@ -686,41 +684,53 @@ fn navigation_bar_active_indicator<H: UiHost>(
             (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
         };
 
-        let (x, y, w, h, want_frames) = cx.with_state_for(id, NavIndicatorRuntime::default, |rt| {
-            if !rt.x.is_initialized() {
-                rt.x.reset(now_frame, target_x);
-            }
-            if !rt.y.is_initialized() {
-                rt.y.reset(now_frame, target_y);
-            }
-            if !rt.width.is_initialized() {
-                rt.width.reset(now_frame, target_w);
-            }
-            if !rt.height.is_initialized() {
-                rt.height.reset(now_frame, target_h);
-            }
-
-            rt.x.set_target(now_frame, target_x, spring);
-            rt.y.set_target(now_frame, target_y, spring);
-            rt.width.set_target(now_frame, target_w, spring);
-            rt.height.set_target(now_frame, target_h, spring);
-
-            rt.x.advance(now_frame);
-            rt.y.advance(now_frame);
-            rt.width.advance(now_frame);
-            rt.height.advance(now_frame);
-
-            (
-                Px(rt.x.value()),
-                Px(rt.y.value()),
-                Px(rt.width.value()),
-                Px(rt.height.value()),
-                rt.x.is_active()
-                    || rt.y.is_active()
-                    || rt.width.is_active()
-                    || rt.height.is_active(),
-            )
+        let spring = SpringDescription::with_damping_ratio(
+            1.0,
+            spring.stiffness as f64,
+            spring.damping as f64,
+        );
+        let spec = MotionToSpecF32::Spring(SpringSpecF32 {
+            spring,
+            tolerance: Tolerance::default(),
+            snap_to_target: true,
         });
+
+        let x = drive_motion_value_f32(
+            cx,
+            target_x,
+            MotionValueF32Update::To {
+                target: target_x,
+                spec,
+                kick: None,
+            },
+        );
+        let y = drive_motion_value_f32(
+            cx,
+            target_y,
+            MotionValueF32Update::To {
+                target: target_y,
+                spec,
+                kick: None,
+            },
+        );
+        let w = drive_motion_value_f32(
+            cx,
+            target_w,
+            MotionValueF32Update::To {
+                target: target_w,
+                spec,
+                kick: None,
+            },
+        );
+        let h = drive_motion_value_f32(
+            cx,
+            target_h,
+            MotionValueF32Update::To {
+                target: target_h,
+                spec,
+                kick: None,
+            },
+        );
 
         let mut props = fret_ui::element::CanvasProps::default();
         props.layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -729,15 +739,15 @@ fn navigation_bar_active_indicator<H: UiHost>(
         props.layout.inset.bottom = Some(Px(0.0));
         props.layout.inset.left = Some(Px(0.0));
 
-        cx.canvas(props, move |p| {
-            if w.0 > 0.0 && h.0 > 0.0 && color.a > 0.0 {
+        let mut indicator = cx.canvas(props, move |p| {
+            if w.value > 0.0 && h.value > 0.0 && color.a > 0.0 {
                 let bounds = p.bounds();
-                let x_px = x.0.clamp(0.0, bounds.size.width.0);
-                let y_px = y.0.clamp(0.0, bounds.size.height.0);
+                let x_px = x.value.clamp(0.0, bounds.size.width.0);
+                let y_px = y.value.clamp(0.0, bounds.size.height.0);
                 let max_w = (bounds.size.width.0 - x_px).max(0.0);
                 let max_h = (bounds.size.height.0 - y_px).max(0.0);
-                let w_px = w.0.clamp(0.0, max_w);
-                let h_px = h.0.clamp(0.0, max_h);
+                let w_px = w.value.clamp(0.0, max_w);
+                let h_px = h.value.clamp(0.0, max_h);
 
                 let rect = fret_core::Rect::new(
                     fret_core::Point::new(
@@ -756,11 +766,14 @@ fn navigation_bar_active_indicator<H: UiHost>(
                     corner_radii,
                 );
             }
+        });
 
-            if want_frames {
-                p.request_animation_frame();
-            }
-        })
+        if let Some(test_id) = indicator_test_id.as_ref() {
+            indicator =
+                indicator.attach_semantics(SemanticsDecoration::default().test_id(test_id.clone()));
+        }
+
+        indicator
     })
 }
 

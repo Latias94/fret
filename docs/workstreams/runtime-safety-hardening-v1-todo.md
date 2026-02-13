@@ -82,11 +82,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] RSH-theme-004 Migrate apps/ecosystem call sites off panicking token accessors.
   - Evidence: workspace-wide migration from `*_required` → `*_token` (e.g. `ecosystem/`, `apps/`)
   - Evidence: `ecosystem/fret-ui-kit/src/style/theme_read.rs` (`ThemeTokenRead::{color_token,metric_token}`; call sites compile against the narrow trait)
-- [~] RSH-theme-005 Add regression gates:
+- [x] RSH-theme-005 Add regression gates:
   - missing tokens never panic by default,
   - diagnostics are emitted once with a stable summary.
   - Evidence: `crates/fret-ui/src/theme/mod.rs` (`*_required` uses fallback + warn-once; strict mode panics via `FRET_STRICT_RUNTIME`)
   - Evidence: `crates/fret-ui/src/theme/mod.rs` (tests: `required_accessors_do_not_panic_when_tokens_are_missing_by_default`, `required_accessors_panic_in_strict_runtime_mode`)
+  - Evidence: `crates/fret-ui/src/theme/mod.rs` (test: `missing_theme_token_diagnostics_warn_once_per_key`)
 
 ## M4 — Globals + env flags hardening
 
@@ -94,6 +95,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-app/src/app.rs` (`GlobalAccessError`, `try_global`, `try_set_global`)
   - Evidence: `crates/fret-app/src/app.rs` (non-strict fallback: `global()` returns `None` when leased; `set_global()` defers via `pending_globals`)
   - Evidence: `crates/fret-app/src/app.rs` (tests: `global_access_returns_none_while_leased`, `set_global_defers_while_leased_and_applies_after`)
+- [x] RSH-global-002 Remove re-entrant `with_global_mut` `unsafe` fallback (nested leases are an error).
+  - Evidence: `crates/fret-app/src/app.rs` (`with_global_mut_impl`: nested leases run against a temporary value in non-strict mode; strict mode panics)
+  - Evidence: `crates/fret-app/src/app.rs` (test: `nested_with_global_mut_is_an_error_and_never_requires_unsafe`)
 - [x] RSH-env-001 Centralize `FRET_*` debug flags into a cached config struct and remove hot-path env reads.
   - Evidence: `crates/fret-ui/src/runtime_config.rs` (`UiRuntimeEnvConfig`, `ui_runtime_config`)
   - Evidence: `crates/fret-ui/src/tree/layout.rs` (layout profiling/taffy dump/fallback-solve gates read cached config)

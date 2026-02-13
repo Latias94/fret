@@ -144,5 +144,15 @@ Per-recipe tracking (pilot follow-ups):
 
 ## P2 — Layout-affecting motion (optional follow-up)
 
-- [ ] MF-MOTION-layout-001 Choose and document the layout transition strategy (FLIP-like vs explicit choreography).
-- [ ] MF-MOTION-layout-002 Add one pilot (sidebar content reflow or tabs indicator) with a deterministic diag gate.
+- [x] MF-MOTION-layout-001 Choose and document the layout transition strategy (FLIP-like vs explicit choreography).
+  - Decision (v1):
+    - Explicit choreography + stable structure; avoid a generic FLIP layer.
+  - Evidence:
+    - `docs/workstreams/motion-foundation-v1.md` (section "Layout-affecting motion (v1)")
+
+- [x] MF-MOTION-layout-002 Add one pilot (sidebar content reflow or tabs indicator) with a deterministic diag gate.
+  - Pilot:
+    - Material3 Tabs active indicator (measurement-driven + refresh-rate stable motion)
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/tabs.rs` (`primary_tab_list_indicator`)
+    - `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json`
