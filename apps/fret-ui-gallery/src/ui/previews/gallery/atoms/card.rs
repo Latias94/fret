@@ -1,6 +1,10 @@
 use super::super::super::super::*;
+use fret_ui_kit::declarative::style as decl_style;
 
-pub(in crate::ui) fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_card(
+    cx: &mut ElementContext<'_, App>,
+    event_cover_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
     #[derive(Default)]
     struct CardModels {
         email: Option<Model<String>>,
@@ -170,20 +174,51 @@ pub(in crate::ui) fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
 
     let image = {
-        let cover_bg = cx.with_theme(|theme| theme.color_required("muted"));
+        let cover_stack = {
+            let theme = Theme::global(&*cx.app);
+            let props = decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default().relative().size_full(),
+            );
 
-        let cover = shadcn::AspectRatio::new(
-            16.0 / 9.0,
-            cx.container(
-                fret_ui::element::ContainerProps {
-                    background: Some(cover_bg),
-                    ..Default::default()
-                },
-                |cx| vec![cx.text("Event cover")],
-            ),
-        )
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element(cx);
+            cx.container(props, move |cx| {
+                let image = shadcn::MediaImage::model(event_cover_image.clone())
+                    .loading(true)
+                    .refine_layout(LayoutRefinement::default().size_full())
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-image-event-cover-image");
+
+                let overlay_props = {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default().bg(ColorRef::Color(CoreColor {
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 0.35,
+                        })),
+                        LayoutRefinement::default()
+                            .absolute()
+                            .inset(Space::N0)
+                            .size_full(),
+                    )
+                };
+
+                let overlay = cx
+                    .container(overlay_props, |_cx| Vec::new())
+                    .test_id("ui-gallery-card-image-event-cover-overlay");
+
+                vec![image, overlay]
+            })
+            .test_id("ui-gallery-card-image-event-cover-stack")
+        };
+
+        let cover = shadcn::AspectRatio::new(16.0 / 9.0, cover_stack)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-card-image-event-cover");
 
         let card = shadcn::Card::new(vec![
             cover,
@@ -209,8 +244,9 @@ pub(in crate::ui) fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .into_element(cx),
         ])
         .refine_style(ChromeRefinement::default().pt(Space::N0))
-        .refine_layout(max_w_sm.clone())
-        .into_element(cx);
+        .refine_layout(max_w_sm.clone().relative())
+        .into_element(cx)
+        .test_id("ui-gallery-card-image");
 
         centered(cx, card)
     };

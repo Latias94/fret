@@ -456,7 +456,7 @@ fn page_preview(
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
-        PAGE_CARD => preview_card(cx),
+        PAGE_CARD => preview_card(cx, image_fit_demo_wide_image),
         PAGE_BADGE => preview_badge(cx),
         PAGE_AVATAR => preview_avatar(cx, avatar_demo_image),
         PAGE_IMAGE_OBJECT_FIT => preview_image_object_fit(
