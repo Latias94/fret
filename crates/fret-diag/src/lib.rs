@@ -10431,6 +10431,18 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         return direct;
     }
 
+    // Prefer the stable per-run artifact directory if `script.result.json` is present.
+    //
+    // This makes `--out-dir` invocations more robust (less dependent on `latest.txt` updates and
+    // directory scans), and aligns with the transport-parity goal of a deterministic local
+    // materialization layout.
+    if let Some(run_id) = crate::util::read_script_result_run_id(&path.join("script.result.json")) {
+        let run_id_bundle = run_id_artifact_dir(path, run_id).join("bundle.json");
+        if run_id_bundle.is_file() {
+            return run_id_bundle;
+        }
+    }
+
     if let Some(dir) = read_latest_pointer(path).or_else(|| find_latest_export_dir(path)) {
         let nested = dir.join("bundle.json");
         if nested.is_file() {
@@ -13960,6 +13972,33 @@ mod tests {
     use std::path::Path;
     use std::time::{Duration, Instant};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn resolve_bundle_json_path_prefers_run_id_dir_from_script_result() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-resolve-bundle-run-id-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let run_id_dir = root.join("777");
+        std::fs::create_dir_all(&run_id_dir).expect("create run_id dir");
+        std::fs::write(
+            run_id_dir.join("bundle.json"),
+            br#"{"schema_version":1,"windows":[]}"#,
+        )
+        .expect("write bundle.json");
+
+        std::fs::write(root.join("script.result.json"), br#"{"run_id":777}"#)
+            .expect("write script.result.json");
+
+        let resolved = resolve_bundle_json_path(&root);
+        assert_eq!(resolved, run_id_dir.join("bundle.json"));
+    }
 
     #[test]
     fn materialize_devtools_bundle_dumped_embedded_writes_bundle_json_and_latest() {
