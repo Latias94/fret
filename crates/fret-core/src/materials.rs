@@ -32,19 +32,14 @@ pub enum MaterialCatalogTextureKind {
 /// Fixed and versioned material binding shapes.
 ///
 /// v1 materials are params-only; v2 introduces a renderer-owned catalog texture bind.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MaterialBindingShape {
     /// v1: fixed-size `MaterialParams` only.
+    #[default]
     ParamsOnly,
     /// v2: `MaterialParams` + one renderer-owned catalog texture + one sampler (ADR 0242).
     ParamsPlusCatalogTexture { texture: MaterialCatalogTextureKind },
-}
-
-impl Default for MaterialBindingShape {
-    fn default() -> Self {
-        Self::ParamsOnly
-    }
 }
 
 /// Backend-agnostic descriptor used to register a material pipeline.

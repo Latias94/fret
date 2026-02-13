@@ -8,8 +8,8 @@ pub(in crate::ui) fn preview_material3_button(cx: &mut ElementContext<'_, App>) 
                label: &'static str| {
         let (hover_container, hover_label) = cx.with_theme(|theme| {
             (
-                theme.color_required("md.sys.color.tertiary-container"),
-                theme.color_required("md.sys.color.on-tertiary-container"),
+                theme.color_token("md.sys.color.tertiary-container"),
+                theme.color_token("md.sys.color.on-tertiary-container"),
             )
         });
 

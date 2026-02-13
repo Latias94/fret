@@ -1,6 +1,6 @@
 # ADR 0242: Sampled Materials and Fixed Binding Shapes (v2)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

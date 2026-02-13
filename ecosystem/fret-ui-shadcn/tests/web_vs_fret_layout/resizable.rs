@@ -99,7 +99,7 @@ fn assert_resizable_demo_geometry_matches_web(web_name: &str) {
         let model_inner: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.25, 0.75]);
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         fn mk_center(
             cx: &mut fret_ui::ElementContext<'_, App>,
@@ -245,7 +245,7 @@ fn assert_resizable_demo_with_handle_geometry_matches_web(web_name: &str) {
         let model_inner: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.25, 0.75]);
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         fn panel(
             cx: &mut fret_ui::ElementContext<'_, App>,
@@ -360,7 +360,7 @@ fn assert_resizable_handle_geometry_matches_web(web_name: &str) {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.25, 0.75]);
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let fill_layout = decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 
@@ -497,7 +497,7 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.25, 0.75]);
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let fill_layout = decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 

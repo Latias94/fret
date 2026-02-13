@@ -120,9 +120,9 @@ impl Progress {
             let radius = Px(radius.0.min(height.0 * 0.5));
 
             // shadcn v4 Progress uses `bg-primary/20` for the track.
-            let mut track_bg = theme.color_required("primary");
+            let mut track_bg = theme.color_token("primary");
             track_bg.a *= 0.2;
-            let fill = theme.color_required("primary");
+            let fill = theme.color_token("primary");
 
             let v = self.value(cx);
             let t = v

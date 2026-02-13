@@ -274,7 +274,7 @@ pub(in crate::ui) fn preview_view_cache(
                         "Tip: keep 'Cache shell' off while iterating so the status bar updates every frame.",
                     ),
                     style: None,
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
                 }),

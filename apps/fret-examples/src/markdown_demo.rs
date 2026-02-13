@@ -402,7 +402,7 @@ $$
                                     SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes.clone()));
                                 props.layout = size;
                                 props.fit = SvgFit::Contain;
-                                props.color = theme.color_required("foreground");
+                                props.color = theme.color_token("foreground");
                                 return cx.svg_icon_props(props);
                             }
                             RemoteImageData::Raster {
@@ -458,7 +458,7 @@ $$
                     let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(demo_svg));
                     props.layout = size;
                     props.fit = SvgFit::Contain;
-                    props.color = theme.color_required("foreground");
+                    props.color = theme.color_token("foreground");
                     cx.svg_icon_props(props)
                 }
                 _ => render_image_placeholder(
@@ -480,7 +480,7 @@ $$
         let root = declarative::RenderRootContext::new(ui, app, services, window, bounds)
             .render_root("markdown-demo", |cx| {
                 let theme = cx.theme_snapshot();
-                let padding_md = theme.metric_required("metric.padding.md");
+                let padding_md = theme.metric_token("metric.padding.md");
 
                 let content = ui::v_flex(cx, |cx| {
                     cx.observe_model(&wrap_code, Invalidation::Layout);
@@ -558,7 +558,7 @@ $$
 
                 vec![
                     ui::container(cx, |_cx| [content])
-                        .bg(ColorRef::Color(theme.color_required("background")))
+                        .bg(ColorRef::Color(theme.color_token("background")))
                         .w_full()
                         .h_full()
                         .into_element(cx),
@@ -609,7 +609,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
                 layout: Default::default(),
                 text: text.clone(),
                 style: None,
-                color: Some(theme.color_required("muted-foreground")),
+                color: Some(theme.color_token("muted-foreground")),
                 wrap: fret_core::TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
             })]
@@ -620,7 +620,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
         layout: Default::default(),
         text,
         style: None,
-        color: Some(theme.color_required("muted-foreground")),
+        color: Some(theme.color_token("muted-foreground")),
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
     })
@@ -772,8 +772,8 @@ impl WinitAppDriver for MarkdownDemoDriver {
 fn apply_markdown_demo_theme_tokens(app: &mut App) {
     Theme::with_global_mut(app, |theme| {
         // Demo-only: inject explicit markdown math tokens so theme tuning is discoverable.
-        let font_size = theme.metric_required("metric.font.size").0;
-        let line_height = theme.metric_required("metric.font.line_height").0;
+        let font_size = theme.metric_token("metric.font.size").0;
+        let line_height = theme.metric_token("metric.font.line_height").0;
         let block_height = (line_height * 3.25).max(font_size * 4.0);
 
         let mut cfg = ThemeConfig {
@@ -789,7 +789,7 @@ fn apply_markdown_demo_theme_tokens(app: &mut App) {
             .insert("fret.markdown.math.inline.height".to_string(), line_height);
         cfg.metrics.insert(
             "fret.markdown.math.block.padding".to_string(),
-            theme.metric_required("metric.padding.md").0,
+            theme.metric_token("metric.padding.md").0,
         );
         cfg.metrics
             .insert("fret.markdown.math.block.height".to_string(), block_height);

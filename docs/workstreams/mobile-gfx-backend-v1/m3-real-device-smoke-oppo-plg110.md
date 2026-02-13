@@ -7,8 +7,9 @@ scope: Android real-device evidence (wgpu backend selection + diagnostics bundle
 
 # M3 real-device smoke (OPPO PLG110)
 
-This document records a minimal, repeatable **real-device** smoke recipe for the Android Vulkan-first
-path, plus the evidence anchors needed to accept ADR 0268.
+This document records a minimal, repeatable **real-device** smoke recipe for the Android mobile
+graphics path (preferred backend: Vulkan by default), plus the evidence anchors needed to accept
+ADR 0268.
 
 Workstream:
 
@@ -100,7 +101,7 @@ jq '.windows[0].snapshots[-1].wgpu_adapter | {
 
 Paste the extracted JSON here once captured on-device.
 
-Expected properties for M3 acceptance:
+Expected properties for M3 acceptance (default policy, no explicit override):
 
 - `selected_backend == "Vulkan"`
 - `requested_backend_is_override == false` (unless explicitly overridden)

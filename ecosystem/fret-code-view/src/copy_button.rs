@@ -112,13 +112,13 @@ pub(crate) fn render_copy_button<H: UiHost>(
             })
         });
 
-        let bg_pressed = theme.color_required("accent");
-        let bg_hover = theme.color_required("color.menu.item.hover");
-        let bg_idle = theme.color_required("secondary");
-        let radius_sm = theme.metric_required("metric.radius.sm");
-        let font_size = theme.metric_required("metric.font.size");
-        let line_height = theme.metric_required("metric.font.line_height");
-        let fg = theme.color_required("foreground");
+        let bg_pressed = theme.color_token("accent");
+        let bg_hover = theme.color_token("color.menu.item.hover");
+        let bg_idle = theme.color_token("secondary");
+        let radius_sm = theme.metric_token("metric.radius.sm");
+        let font_size = theme.metric_token("metric.font.size");
+        let line_height = theme.metric_token("metric.font.line_height");
+        let fg = theme.color_token("foreground");
 
         let bg = if st.pressed {
             bg_pressed

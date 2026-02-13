@@ -5,12 +5,126 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
-    sync::OnceLock,
+    sync::{Mutex, OnceLock},
 };
 
 use crate::UiHost;
 use crate::theme_registry::{ThemeTokenKind, canonicalize_token_key};
 use crate::{ThemeColorKey, ThemeMetricKey};
+
+const FALLBACK_COLOR: Color = Color {
+    r: 1.0,
+    g: 0.0,
+    b: 1.0,
+    a: 1.0,
+};
+
+fn fallback_easing() -> CubicBezier {
+    CubicBezier {
+        x1: 0.0,
+        y1: 0.0,
+        x2: 1.0,
+        y2: 1.0,
+    }
+}
+
+#[cfg(not(test))]
+fn strict_theme_enabled() -> bool {
+    static STRICT: OnceLock<bool> = OnceLock::new();
+    *STRICT.get_or_init(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
+}
+
+#[cfg(test)]
+thread_local! {
+    static STRICT_THEME_OVERRIDE: std::cell::Cell<Option<bool>> =
+        const { std::cell::Cell::new(None) };
+}
+
+#[cfg(test)]
+fn strict_theme_enabled() -> bool {
+    STRICT_THEME_OVERRIDE
+        .with(|cell| cell.get())
+        .unwrap_or_else(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
+}
+
+#[cfg(test)]
+struct StrictThemeGuard(Option<bool>);
+
+#[cfg(test)]
+fn strict_theme_for_tests(value: bool) -> StrictThemeGuard {
+    let prev = STRICT_THEME_OVERRIDE.with(|cell| {
+        let prev = cell.get();
+        cell.set(Some(value));
+        prev
+    });
+    StrictThemeGuard(prev)
+}
+
+#[cfg(test)]
+impl Drop for StrictThemeGuard {
+    fn drop(&mut self) {
+        STRICT_THEME_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+fn warn_missing_theme_token_once(kind: ThemeTokenKind, key: &str) -> bool {
+    static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+    let canonical = canonicalize_token_key(kind, key);
+    if canonical.is_empty() {
+        return false;
+    }
+
+    let seen = SEEN.get_or_init(|| Mutex::new(HashSet::new()));
+    let mut seen = match seen.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+
+    let k = format!("{kind:?}:{canonical}");
+    if !seen.insert(k) {
+        return false;
+    }
+
+    tracing::warn!(
+        token_kind = ?kind,
+        token_key = canonical,
+        "missing theme token; using fallback"
+    );
+    true
+}
+
+fn fallback_color_by_key(key: &str) -> Color {
+    default_theme().color_by_key(key).unwrap_or(FALLBACK_COLOR)
+}
+
+fn fallback_metric_by_key(key: &str) -> Px {
+    default_theme().metric_by_key(key).unwrap_or(Px(0.0))
+}
+
+fn fallback_corners_by_key(key: &str) -> Corners {
+    default_theme()
+        .corners_by_key(key)
+        .unwrap_or_else(|| Corners::all(Px(0.0)))
+}
+
+fn fallback_number_by_key(key: &str) -> f32 {
+    default_theme().number_by_key(key).unwrap_or(0.0)
+}
+
+fn fallback_duration_ms_by_key(key: &str) -> u32 {
+    default_theme().duration_ms_by_key(key).unwrap_or(0)
+}
+
+fn fallback_easing_by_key(key: &str) -> CubicBezier {
+    default_theme()
+        .easing_by_key(key)
+        .unwrap_or_else(fallback_easing)
+}
+
+fn fallback_text_style_by_key(key: &str) -> TextStyle {
+    default_theme().text_style_by_key(key).unwrap_or_default()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CubicBezier {
@@ -456,8 +570,20 @@ impl ThemeSnapshot {
     }
 
     pub fn color_required(&self, key: &str) -> Color {
-        self.color_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme color token {key}"))
+        if let Some(v) = self.color_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme color token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Color, key);
+        fallback_color_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn color_token(&self, key: &str) -> Color {
+        self.color_required(key)
     }
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
@@ -491,8 +617,20 @@ impl ThemeSnapshot {
     }
 
     pub fn metric_required(&self, key: &str) -> Px {
-        self.metric_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme metric token {key}"))
+        if let Some(v) = self.metric_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme metric token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Metric, key);
+        fallback_metric_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn metric_token(&self, key: &str) -> Px {
+        self.metric_required(key)
     }
 }
 
@@ -526,13 +664,29 @@ impl Theme {
     }
 
     pub fn color(&self, key: ThemeColorKey) -> Color {
-        self.color_by_key(key.canonical_name())
-            .unwrap_or_else(|| panic!("missing core theme color key {}", key.canonical_name()))
+        let name = key.canonical_name();
+        if let Some(v) = self.color_by_key(name) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing core theme color key {}", name);
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Color, name);
+        fallback_color_by_key(name)
     }
 
     pub fn metric(&self, key: ThemeMetricKey) -> Px {
-        self.metric_by_key(key.canonical_name())
-            .unwrap_or_else(|| panic!("missing core theme metric key {}", key.canonical_name()))
+        let name = key.canonical_name();
+        if let Some(v) = self.metric_by_key(name) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing core theme metric key {}", name);
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Metric, name);
+        fallback_metric_by_key(name)
     }
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
@@ -544,8 +698,20 @@ impl Theme {
     }
 
     pub fn color_required(&self, key: &str) -> Color {
-        self.color_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme color token {key}"))
+        if let Some(v) = self.color_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme color token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Color, key);
+        fallback_color_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn color_token(&self, key: &str) -> Color {
+        self.color_required(key)
     }
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
@@ -557,8 +723,20 @@ impl Theme {
     }
 
     pub fn metric_required(&self, key: &str) -> Px {
-        self.metric_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme metric token {key}"))
+        if let Some(v) = self.metric_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme metric token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Metric, key);
+        fallback_metric_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn metric_token(&self, key: &str) -> Px {
+        self.metric_required(key)
     }
 
     pub fn corners_by_key(&self, key: &str) -> Option<Corners> {
@@ -570,8 +748,20 @@ impl Theme {
     }
 
     pub fn corners_required(&self, key: &str) -> Corners {
-        self.corners_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme corners token {key}"))
+        if let Some(v) = self.corners_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme corners token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Corners, key);
+        fallback_corners_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn corners_token(&self, key: &str) -> Corners {
+        self.corners_required(key)
     }
 
     pub fn number_by_key(&self, key: &str) -> Option<f32> {
@@ -580,8 +770,20 @@ impl Theme {
     }
 
     pub fn number_required(&self, key: &str) -> f32 {
-        self.number_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme number token {key}"))
+        if let Some(v) = self.number_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme number token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Number, key);
+        fallback_number_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn number_token(&self, key: &str) -> f32 {
+        self.number_required(key)
     }
 
     pub fn duration_ms_by_key(&self, key: &str) -> Option<u32> {
@@ -590,8 +792,20 @@ impl Theme {
     }
 
     pub fn duration_ms_required(&self, key: &str) -> u32 {
-        self.duration_ms_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme duration_ms token {key}"))
+        if let Some(v) = self.duration_ms_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme duration_ms token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::DurationMs, key);
+        fallback_duration_ms_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn duration_ms_token(&self, key: &str) -> u32 {
+        self.duration_ms_required(key)
     }
 
     pub fn easing_by_key(&self, key: &str) -> Option<CubicBezier> {
@@ -600,8 +814,20 @@ impl Theme {
     }
 
     pub fn easing_required(&self, key: &str) -> CubicBezier {
-        self.easing_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme easing token {key}"))
+        if let Some(v) = self.easing_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme easing token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::Easing, key);
+        fallback_easing_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn easing_token(&self, key: &str) -> CubicBezier {
+        self.easing_required(key)
     }
 
     pub fn text_style_by_key(&self, key: &str) -> Option<TextStyle> {
@@ -610,8 +836,20 @@ impl Theme {
     }
 
     pub fn text_style_required(&self, key: &str) -> TextStyle {
-        self.text_style_by_key(key)
-            .unwrap_or_else(|| panic!("missing theme text_style token {key}"))
+        if let Some(v) = self.text_style_by_key(key) {
+            return v;
+        }
+
+        if strict_theme_enabled() {
+            panic!("missing theme text_style token {key}");
+        }
+        warn_missing_theme_token_once(ThemeTokenKind::TextStyle, key);
+        fallback_text_style_by_key(key)
+    }
+
+    /// Non-panicking theme token access with diagnostics + fallback behavior.
+    pub fn text_style_token(&self, key: &str) -> TextStyle {
+        self.text_style_required(key)
     }
 
     pub fn color_key_configured(&self, key: &str) -> bool {
@@ -671,8 +909,6 @@ impl Theme {
 
         let mut changed = false;
 
-        let mut next_colors = default_color_tokens(self.colors);
-        let mut next_metrics = default_metric_tokens(self.metrics);
         let mut next_numbers = HashMap::new();
         let mut next_durations_ms = HashMap::new();
         let mut next_easings = HashMap::new();
@@ -683,7 +919,6 @@ impl Theme {
             ($key:literal, $set:expr) => {
                 if let Some(v) = cfg.colors.get($key) {
                     if let Some(c) = parse_color_to_linear(v) {
-                        next_colors.insert($key.to_string(), c);
                         $set(c);
                     }
                 }
@@ -694,7 +929,6 @@ impl Theme {
             ($key:literal, $field:expr) => {
                 if let Some(v) = cfg.metrics.get($key).copied() {
                     let px = Px(v);
-                    next_metrics.insert($key.to_string(), px);
                     if $field != px {
                         $field = px;
                         changed = true;
@@ -707,7 +941,6 @@ impl Theme {
             ($key:literal, $set:expr) => {
                 if let Some(v) = cfg.metrics.get($key).copied() {
                     let px = Px(v);
-                    next_metrics.insert($key.to_string(), px);
                     $set(px);
                 }
             };
@@ -824,6 +1057,79 @@ impl Theme {
             }
         });
 
+        macro_rules! apply_baseline_color {
+            ($key:literal, $field:expr) => {
+                if let Some(v) = cfg.colors.get($key) {
+                    if let Some(c) = parse_color_to_linear(v) {
+                        if $field != c {
+                            $field = c;
+                            changed = true;
+                        }
+                    }
+                }
+            };
+        }
+
+        // Apply baseline dotted keys (ADR 0050) after semantic keys so explicit baseline tokens win.
+        apply_baseline_color!("color.surface.background", self.colors.surface_background);
+        apply_baseline_color!("color.panel.background", self.colors.panel_background);
+        apply_baseline_color!("color.panel.border", self.colors.panel_border);
+        apply_baseline_color!("color.text.primary", self.colors.text_primary);
+        apply_baseline_color!("color.text.muted", self.colors.text_muted);
+        apply_baseline_color!("color.text.disabled", self.colors.text_disabled);
+        apply_baseline_color!("color.accent", self.colors.accent);
+        apply_baseline_color!(
+            "color.selection.background",
+            self.colors.selection_background
+        );
+        apply_baseline_color!("color.hover.background", self.colors.hover_background);
+        apply_baseline_color!("color.focus.ring", self.colors.focus_ring);
+        apply_baseline_color!("color.menu.background", self.colors.menu_background);
+        apply_baseline_color!("color.menu.border", self.colors.menu_border);
+        apply_baseline_color!("color.menu.item.hover", self.colors.menu_item_hover);
+        apply_baseline_color!("color.menu.item.selected", self.colors.menu_item_selected);
+        apply_baseline_color!("color.list.background", self.colors.list_background);
+        apply_baseline_color!("color.list.border", self.colors.list_border);
+        apply_baseline_color!("color.list.row.hover", self.colors.list_row_hover);
+        apply_baseline_color!("color.list.row.selected", self.colors.list_row_selected);
+        apply_baseline_color!("color.scrollbar.track", self.colors.scrollbar_track);
+        apply_baseline_color!("color.scrollbar.thumb", self.colors.scrollbar_thumb);
+        apply_baseline_color!(
+            "color.scrollbar.thumb.hover",
+            self.colors.scrollbar_thumb_hover
+        );
+        apply_baseline_color!(
+            "color.viewport.selection.fill",
+            self.colors.viewport_selection_fill
+        );
+        apply_baseline_color!(
+            "color.viewport.selection.stroke",
+            self.colors.viewport_selection_stroke
+        );
+        apply_baseline_color!("color.viewport.marker", self.colors.viewport_marker);
+        apply_baseline_color!(
+            "color.viewport.drag_line.pan",
+            self.colors.viewport_drag_line_pan
+        );
+        apply_baseline_color!(
+            "color.viewport.drag_line.orbit",
+            self.colors.viewport_drag_line_orbit
+        );
+        apply_baseline_color!("color.viewport.gizmo.x", self.colors.viewport_gizmo_x);
+        apply_baseline_color!("color.viewport.gizmo.y", self.colors.viewport_gizmo_y);
+        apply_baseline_color!(
+            "color.viewport.gizmo.handle.background",
+            self.colors.viewport_gizmo_handle_background
+        );
+        apply_baseline_color!(
+            "color.viewport.gizmo.handle.border",
+            self.colors.viewport_gizmo_handle_border
+        );
+        apply_baseline_color!(
+            "color.viewport.rotate_gizmo",
+            self.colors.viewport_rotate_gizmo
+        );
+
         apply_semantic_metric!("radius", |px| {
             if self.metrics.radius_lg != px {
                 self.metrics.radius_lg = px;
@@ -865,34 +1171,6 @@ impl Theme {
             }
         });
 
-        // Ensure the semantic keys remain present and mirror the resolved typed baseline.
-        next_colors.insert("background".to_string(), self.colors.surface_background);
-        next_colors.insert("foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("border".to_string(), self.colors.panel_border);
-        next_colors.insert("input".to_string(), self.colors.panel_border);
-        next_colors.insert("ring".to_string(), self.colors.focus_ring);
-        next_colors.insert(
-            "ring-offset-background".to_string(),
-            self.colors.surface_background,
-        );
-        next_colors.insert("card".to_string(), self.colors.panel_background);
-        next_colors.insert("card-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("popover".to_string(), self.colors.menu_background);
-        next_colors.insert("popover-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("muted".to_string(), self.colors.panel_background);
-        next_colors.insert("muted-foreground".to_string(), self.colors.text_muted);
-        next_colors.insert("accent".to_string(), self.colors.hover_background);
-        next_colors.insert("accent-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("primary".to_string(), self.colors.accent);
-        next_colors.insert("primary-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("secondary".to_string(), self.colors.panel_background);
-        next_colors.insert("secondary-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("destructive".to_string(), self.colors.viewport_gizmo_x);
-        next_colors.insert(
-            "destructive-foreground".to_string(),
-            self.colors.text_primary,
-        );
-
         apply_metric!("metric.radius.sm", self.metrics.radius_sm);
         apply_metric!("metric.radius.md", self.metrics.radius_md);
         apply_metric!("metric.radius.lg", self.metrics.radius_lg);
@@ -913,8 +1191,6 @@ impl Theme {
             && let Some(v) = cfg.metrics.get("font.size").copied()
         {
             let px = Px(v);
-            next_metrics.insert("metric.font.size".to_string(), px);
-            next_metrics.insert("font.size".to_string(), px);
             if self.metrics.font_size != px {
                 self.metrics.font_size = px;
                 changed = true;
@@ -924,8 +1200,6 @@ impl Theme {
             && let Some(v) = cfg.metrics.get("mono_font.size").copied()
         {
             let px = Px(v);
-            next_metrics.insert("metric.font.mono_size".to_string(), px);
-            next_metrics.insert("mono_font.size".to_string(), px);
             if self.metrics.mono_font_size != px {
                 self.metrics.mono_font_size = px;
                 changed = true;
@@ -935,8 +1209,6 @@ impl Theme {
             && let Some(v) = cfg.metrics.get("font.line_height").copied()
         {
             let px = Px(v);
-            next_metrics.insert("metric.font.line_height".to_string(), px);
-            next_metrics.insert("font.line_height".to_string(), px);
             if self.metrics.font_line_height != px {
                 self.metrics.font_line_height = px;
                 changed = true;
@@ -946,29 +1218,14 @@ impl Theme {
             && let Some(v) = cfg.metrics.get("mono_font.line_height").copied()
         {
             let px = Px(v);
-            next_metrics.insert("metric.font.mono_line_height".to_string(), px);
-            next_metrics.insert("mono_font.line_height".to_string(), px);
             if self.metrics.mono_font_line_height != px {
                 self.metrics.mono_font_line_height = px;
                 changed = true;
             }
         }
 
-        // Ensure the semantic metric keys remain present and mirror the resolved typed baseline.
-        next_metrics.insert("radius".to_string(), self.metrics.radius_lg);
-        next_metrics.insert("radius.sm".to_string(), self.metrics.radius_sm);
-        next_metrics.insert("radius.md".to_string(), self.metrics.radius_md);
-        next_metrics.insert("radius.lg".to_string(), self.metrics.radius_lg);
-        next_metrics.insert("font.size".to_string(), self.metrics.font_size);
-        next_metrics.insert("mono_font.size".to_string(), self.metrics.mono_font_size);
-        next_metrics.insert(
-            "font.line_height".to_string(),
-            self.metrics.font_line_height,
-        );
-        next_metrics.insert(
-            "mono_font.line_height".to_string(),
-            self.metrics.mono_font_line_height,
-        );
+        let mut next_colors = default_color_tokens(self.colors);
+        let mut next_metrics = default_metric_tokens(self.metrics);
 
         for (k, v) in &cfg.colors {
             if let Some(c) = parse_color_to_linear(v) {
@@ -999,6 +1256,174 @@ impl Theme {
         for (k, v) in &cfg.corners {
             next_corners.insert(k.clone(), *v);
         }
+
+        // Ensure baseline + semantic keys mirror the resolved typed baseline, even if the config
+        // provided overlapping aliases.
+        next_colors.insert(
+            "color.surface.background".to_string(),
+            self.colors.surface_background,
+        );
+        next_colors.insert(
+            "color.panel.background".to_string(),
+            self.colors.panel_background,
+        );
+        next_colors.insert("color.panel.border".to_string(), self.colors.panel_border);
+        next_colors.insert("color.text.primary".to_string(), self.colors.text_primary);
+        next_colors.insert("color.text.muted".to_string(), self.colors.text_muted);
+        next_colors.insert("color.text.disabled".to_string(), self.colors.text_disabled);
+        next_colors.insert("color.accent".to_string(), self.colors.accent);
+        next_colors.insert(
+            "color.selection.background".to_string(),
+            self.colors.selection_background,
+        );
+        next_colors.insert(
+            "color.hover.background".to_string(),
+            self.colors.hover_background,
+        );
+        next_colors.insert("color.focus.ring".to_string(), self.colors.focus_ring);
+        next_colors.insert(
+            "color.menu.background".to_string(),
+            self.colors.menu_background,
+        );
+        next_colors.insert("color.menu.border".to_string(), self.colors.menu_border);
+        next_colors.insert(
+            "color.menu.item.hover".to_string(),
+            self.colors.menu_item_hover,
+        );
+        next_colors.insert(
+            "color.menu.item.selected".to_string(),
+            self.colors.menu_item_selected,
+        );
+        next_colors.insert(
+            "color.list.background".to_string(),
+            self.colors.list_background,
+        );
+        next_colors.insert("color.list.border".to_string(), self.colors.list_border);
+        next_colors.insert(
+            "color.list.row.hover".to_string(),
+            self.colors.list_row_hover,
+        );
+        next_colors.insert(
+            "color.list.row.selected".to_string(),
+            self.colors.list_row_selected,
+        );
+        next_colors.insert(
+            "color.scrollbar.track".to_string(),
+            self.colors.scrollbar_track,
+        );
+        next_colors.insert(
+            "color.scrollbar.thumb".to_string(),
+            self.colors.scrollbar_thumb,
+        );
+        next_colors.insert(
+            "color.scrollbar.thumb.hover".to_string(),
+            self.colors.scrollbar_thumb_hover,
+        );
+        next_colors.insert(
+            "color.viewport.selection.fill".to_string(),
+            self.colors.viewport_selection_fill,
+        );
+        next_colors.insert(
+            "color.viewport.selection.stroke".to_string(),
+            self.colors.viewport_selection_stroke,
+        );
+        next_colors.insert(
+            "color.viewport.marker".to_string(),
+            self.colors.viewport_marker,
+        );
+        next_colors.insert(
+            "color.viewport.drag_line.pan".to_string(),
+            self.colors.viewport_drag_line_pan,
+        );
+        next_colors.insert(
+            "color.viewport.drag_line.orbit".to_string(),
+            self.colors.viewport_drag_line_orbit,
+        );
+        next_colors.insert(
+            "color.viewport.gizmo.x".to_string(),
+            self.colors.viewport_gizmo_x,
+        );
+        next_colors.insert(
+            "color.viewport.gizmo.y".to_string(),
+            self.colors.viewport_gizmo_y,
+        );
+        next_colors.insert(
+            "color.viewport.gizmo.handle.background".to_string(),
+            self.colors.viewport_gizmo_handle_background,
+        );
+        next_colors.insert(
+            "color.viewport.gizmo.handle.border".to_string(),
+            self.colors.viewport_gizmo_handle_border,
+        );
+        next_colors.insert(
+            "color.viewport.rotate_gizmo".to_string(),
+            self.colors.viewport_rotate_gizmo,
+        );
+
+        next_colors.insert("background".to_string(), self.colors.surface_background);
+        next_colors.insert("foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("border".to_string(), self.colors.panel_border);
+        next_colors.insert("input".to_string(), self.colors.panel_border);
+        next_colors.insert("ring".to_string(), self.colors.focus_ring);
+        next_colors.insert(
+            "ring-offset-background".to_string(),
+            self.colors.surface_background,
+        );
+        next_colors.insert("card".to_string(), self.colors.panel_background);
+        next_colors.insert("card-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("popover".to_string(), self.colors.menu_background);
+        next_colors.insert("popover-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("muted".to_string(), self.colors.panel_background);
+        next_colors.insert("muted-foreground".to_string(), self.colors.text_muted);
+        next_colors.insert("accent".to_string(), self.colors.hover_background);
+        next_colors.insert("accent-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("primary".to_string(), self.colors.accent);
+        next_colors.insert("primary-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("secondary".to_string(), self.colors.panel_background);
+        next_colors.insert("secondary-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("destructive".to_string(), self.colors.viewport_gizmo_x);
+        next_colors.insert(
+            "destructive-foreground".to_string(),
+            self.colors.text_primary,
+        );
+
+        next_metrics.insert("metric.radius.sm".to_string(), self.metrics.radius_sm);
+        next_metrics.insert("metric.radius.md".to_string(), self.metrics.radius_md);
+        next_metrics.insert("metric.radius.lg".to_string(), self.metrics.radius_lg);
+        next_metrics.insert("metric.padding.sm".to_string(), self.metrics.padding_sm);
+        next_metrics.insert("metric.padding.md".to_string(), self.metrics.padding_md);
+        next_metrics.insert(
+            "metric.scrollbar.width".to_string(),
+            self.metrics.scrollbar_width,
+        );
+        next_metrics.insert("metric.font.size".to_string(), self.metrics.font_size);
+        next_metrics.insert(
+            "metric.font.mono_size".to_string(),
+            self.metrics.mono_font_size,
+        );
+        next_metrics.insert(
+            "metric.font.line_height".to_string(),
+            self.metrics.font_line_height,
+        );
+        next_metrics.insert(
+            "metric.font.mono_line_height".to_string(),
+            self.metrics.mono_font_line_height,
+        );
+
+        next_metrics.insert("radius".to_string(), self.metrics.radius_lg);
+        next_metrics.insert("radius.sm".to_string(), self.metrics.radius_sm);
+        next_metrics.insert("radius.md".to_string(), self.metrics.radius_md);
+        next_metrics.insert("radius.lg".to_string(), self.metrics.radius_lg);
+        next_metrics.insert("font.size".to_string(), self.metrics.font_size);
+        next_metrics.insert("mono_font.size".to_string(), self.metrics.mono_font_size);
+        next_metrics.insert(
+            "font.line_height".to_string(),
+            self.metrics.font_line_height,
+        );
+        next_metrics.insert(
+            "mono_font.line_height".to_string(),
+            self.metrics.mono_font_line_height,
+        );
 
         let next_configured_colors: HashSet<String> = cfg.colors.keys().cloned().collect();
         if self.configured_colors != next_configured_colors {
@@ -1638,6 +2063,20 @@ mod tests {
     }
 
     #[test]
+    fn missing_theme_token_diagnostics_warn_once_per_key() {
+        // Use a unique key to avoid cross-test coupling (the warn-once cache is process-global).
+        let key = format!("color.__missing_theme_token_test__{}", line!());
+        assert!(super::warn_missing_theme_token_once(
+            crate::theme_registry::ThemeTokenKind::Color,
+            &key
+        ));
+        assert!(!super::warn_missing_theme_token_once(
+            crate::theme_registry::ThemeTokenKind::Color,
+            &key
+        ));
+    }
+
+    #[test]
     fn shadcn_legacy_size_metrics_exist_on_default_theme() {
         let host = crate::test_host::TestHost::default();
         let theme = Theme::global(&host);
@@ -1711,6 +2150,53 @@ mod tests {
         assert_eq!(theme.colors.focus_ring, ring);
         assert_eq!(theme.colors.accent, primary);
         assert_eq!(theme.colors.text_muted, muted_fg);
+
+        // Baseline dotted keys should mirror the resolved typed baseline even when the config only
+        // provided semantic aliases.
+        assert_eq!(theme.color_by_key("color.surface.background"), Some(bg));
+        assert_eq!(theme.color_by_key("color.text.primary"), Some(fg));
+        assert_eq!(theme.color_by_key("color.panel.border"), Some(border));
+        assert_eq!(theme.color_by_key("color.focus.ring"), Some(ring));
+        assert_eq!(theme.color_by_key("color.accent"), Some(primary));
+        assert_eq!(theme.color_by_key("color.text.muted"), Some(muted_fg));
+    }
+
+    #[test]
+    fn baseline_dotted_keys_update_typed_theme_colors() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+
+        let mut colors = HashMap::new();
+        colors.insert(
+            "color.surface.background".to_string(),
+            "#010203".to_string(),
+        );
+        colors.insert("color.text.primary".to_string(), "#AABBCC".to_string());
+        colors.insert("color.panel.border".to_string(), "#112233".to_string());
+        let cfg = ThemeConfig {
+            name: "Baseline Dotted".to_string(),
+            colors,
+            ..Default::default()
+        };
+        theme.apply_config(&cfg);
+
+        let bg = theme
+            .color_by_key("color.surface.background")
+            .expect("color.surface.background");
+        let fg = theme
+            .color_by_key("color.text.primary")
+            .expect("color.text.primary");
+        let border = theme
+            .color_by_key("color.panel.border")
+            .expect("color.panel.border");
+
+        assert_eq!(theme.colors.surface_background, bg);
+        assert_eq!(theme.colors.text_primary, fg);
+        assert_eq!(theme.colors.panel_border, border);
+
+        // Semantic aliases should mirror the typed baseline after normalization.
+        assert_eq!(theme.color_by_key("background"), Some(bg));
+        assert_eq!(theme.color_by_key("foreground"), Some(fg));
+        assert_eq!(theme.color_by_key("border"), Some(border));
     }
 
     #[test]
@@ -1822,6 +2308,37 @@ mod tests {
             })
         );
         assert!(cfg.text_styles.contains_key("md.sys.typescale.body-medium"));
+    }
+
+    #[test]
+    fn required_accessors_do_not_panic_when_tokens_are_missing_by_default() {
+        let _guard = super::strict_theme_for_tests(false);
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+
+        let _ = theme.color_required("missing.color.token");
+        let _ = theme.metric_required("missing.metric.token");
+        let _ = theme.corners_required("missing.corners.token");
+        let _ = theme.number_required("missing.number.token");
+        let _ = theme.duration_ms_required("missing.duration.token");
+        let _ = theme.easing_required("missing.easing.token");
+        let _ = theme.text_style_required("missing.text_style.token");
+
+        let snap = theme.snapshot();
+        let _ = snap.color_required("missing.color.token");
+        let _ = snap.metric_required("missing.metric.token");
+    }
+
+    #[test]
+    fn required_accessors_panic_in_strict_runtime_mode() {
+        let _guard = super::strict_theme_for_tests(true);
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+
+        let result = std::panic::catch_unwind(|| {
+            let _ = theme.color_required("missing.color.token");
+        });
+        assert!(result.is_err());
     }
 
     #[test]

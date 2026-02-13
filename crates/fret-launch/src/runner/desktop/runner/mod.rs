@@ -69,6 +69,18 @@ struct IncomingOpenPathPayload {
     paths: Vec<std::path::PathBuf>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct DiagWindowInsetsOverride {
+    /// `None` means "no override".
+    ///
+    /// `Some(None)` means "known-but-none" (cleared).
+    ///
+    /// `Some(Some(v))` means "override to v".
+    safe_area_insets: Option<Option<fret_core::Edges>>,
+    /// See `safe_area_insets`.
+    occlusion_insets: Option<Option<fret_core::Edges>>,
+}
+
 mod app_handler;
 mod diag_bundle_screenshots;
 mod diag_cursor_override;
@@ -164,6 +176,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     system_font_rescan_result: Arc<Mutex<Option<fret_render::SystemFontRescanResult>>>,
     system_font_rescan_in_flight: bool,
     system_font_rescan_pending: bool,
+    last_window_surface_sizes: HashMap<fret_core::AppWindowId, (u32, u32)>,
+    last_window_surface_size_changed_at: Option<Instant>,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
     #[cfg(feature = "webview-wry")]
@@ -207,6 +221,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     incoming_open_path_payloads: HashMap<fret_core::IncomingOpenToken, IncomingOpenPathPayload>,
     #[cfg(target_os = "ios")]
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
+    diag_window_insets_overrides: HashMap<fret_core::AppWindowId, DiagWindowInsetsOverride>,
     diag_cursor_screen_pos_override: Option<diag_cursor_override::DiagCursorScreenPosOverride>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
@@ -556,6 +571,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.dispatcher.hot_reload_boundary();
         self.system_font_rescan_in_flight = false;
         self.system_font_rescan_pending = false;
+        self.last_window_surface_sizes.clear();
+        self.last_window_surface_size_changed_at = None;
+        self.publish_system_font_rescan_state();
         if let Ok(mut slot) = self.system_font_rescan_result.lock() {
             *slot = None;
         }

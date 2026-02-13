@@ -766,9 +766,9 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
                     move |cx| {
                         vec![
                             fret_ui_shadcn::ItemContent::new([ui::text(cx, "$100.00")
-                                .text_size_px(Theme::global(&*cx.app).metric_required("font.size"))
+                                .text_size_px(Theme::global(&*cx.app).metric_token("font.size"))
                                 .line_height_px(
-                                    Theme::global(&*cx.app).metric_required("font.line_height"),
+                                    Theme::global(&*cx.app).metric_token("font.line_height"),
                                 )
                                 .into_element(cx)])
                             .justify(MainAlign::End)
@@ -1068,7 +1068,7 @@ fn fret_spinner_in_badge_inherits_variant_foreground_when_uncolored() {
                         fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
                     ])
                     .into_element(cx),
-                theme.color_required("primary-foreground"),
+                theme.color_token("primary-foreground"),
             ),
             (
                 fret_ui_shadcn::Badge::new("Updating")
@@ -1077,7 +1077,7 @@ fn fret_spinner_in_badge_inherits_variant_foreground_when_uncolored() {
                         fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
                     ])
                     .into_element(cx),
-                theme.color_required("secondary-foreground"),
+                theme.color_token("secondary-foreground"),
             ),
             (
                 fret_ui_shadcn::Badge::new("Processing")
@@ -1086,7 +1086,7 @@ fn fret_spinner_in_badge_inherits_variant_foreground_when_uncolored() {
                         fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
                     ])
                     .into_element(cx),
-                theme.color_required("foreground"),
+                theme.color_token("foreground"),
             ),
         ];
 

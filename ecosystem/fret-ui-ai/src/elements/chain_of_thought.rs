@@ -258,8 +258,8 @@ impl ChainOfThoughtHeader {
         };
 
         let theme = Theme::global(&*cx.app).clone();
-        let muted_fg = theme.color_required("muted-foreground");
-        let fg_hover = theme.color_required("foreground");
+        let muted_fg = theme.color_token("muted-foreground");
+        let fg_hover = theme.color_token("foreground");
 
         let open = controller.open;
         let is_open = controller.is_open;
@@ -525,9 +525,9 @@ impl ChainOfThoughtStep {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let base_fg = theme.color_required("muted-foreground");
+        let base_fg = theme.color_token("muted-foreground");
         let fg = match self.status {
-            ChainOfThoughtStepStatus::Active => theme.color_required("foreground"),
+            ChainOfThoughtStepStatus::Active => theme.color_token("foreground"),
             ChainOfThoughtStepStatus::Complete => base_fg,
             ChainOfThoughtStepStatus::Pending => alpha(base_fg, 0.5),
         };
@@ -552,7 +552,7 @@ impl ChainOfThoughtStep {
                     },
                     ..Default::default()
                 },
-                background: Some(theme.color_required("border")),
+                background: Some(theme.color_token("border")),
                 ..Default::default()
             },
             |_cx| Vec::new(),
@@ -779,8 +779,8 @@ impl ChainOfThoughtImage {
         let theme = Theme::global(&*cx.app).clone();
         let muted = theme
             .color_by_key("muted")
-            .unwrap_or_else(|| theme.color_required("muted.background"));
-        let caption_fg = theme.color_required("muted-foreground");
+            .unwrap_or_else(|| theme.color_token("muted.background"));
+        let caption_fg = theme.color_token("muted-foreground");
 
         let max_h = Px(352.0); // 22rem
 

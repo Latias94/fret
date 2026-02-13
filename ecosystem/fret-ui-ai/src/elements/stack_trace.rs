@@ -40,7 +40,7 @@ fn muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
@@ -49,7 +49,7 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         size,
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -356,13 +356,13 @@ impl StackTraceCopyButton {
             pressable.a11y.label = Some(label);
             pressable.a11y.test_id = test_id.clone();
 
-            let fg = theme.color_required("muted-foreground");
+            let fg = theme.color_token("muted-foreground");
             let bg_hover = theme
                 .color_by_key("muted")
-                .unwrap_or_else(|| theme.color_required("accent"));
+                .unwrap_or_else(|| theme.color_token("accent"));
             let bg_pressed = theme
                 .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_required("secondary"));
+                .unwrap_or_else(|| theme.color_token("secondary"));
 
             let bg = if st.pressed {
                 alpha(bg_pressed, 0.9)
@@ -373,7 +373,7 @@ impl StackTraceCopyButton {
             };
 
             let size = Px(28.0);
-            let radius = theme.metric_required("metric.radius.sm");
+            let radius = theme.metric_token("metric.radius.sm");
 
             let icon_id = if copied {
                 ids::ui::CHECK
@@ -532,11 +532,11 @@ impl StackTraceFrames {
             .unwrap_or(Px(11.0));
         let style = monospace_style(&theme, text_px, FontWeight::NORMAL);
         let fg_muted = muted_fg(&theme);
-        let fg_normal = alpha(theme.color_required("foreground"), 0.90);
+        let fg_normal = alpha(theme.color_token("foreground"), 0.90);
         let fg_internal = alpha(fg_muted, 0.50);
         let fg_primary = theme
             .color_by_key("primary")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let rows: Vec<AnyElement> = if frames.is_empty() {
             vec![cx.text_props(TextProps {
@@ -906,20 +906,20 @@ impl StackTrace {
 
         let error_fg = theme
             .color_by_key("destructive")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
         let text_px = theme
             .metric_by_key("fret.ai.stack_trace.header.text_px")
             .or_else(|| theme.metric_by_key("component.code_block.text_px"))
             .unwrap_or(Px(12.0));
         let style_normal = monospace_style(&theme, text_px, FontWeight::NORMAL);
         let style_bold = monospace_style(&theme, text_px, FontWeight::SEMIBOLD);
-        let header_fg = theme.color_required("foreground");
+        let header_fg = theme.color_token("foreground");
         let chevron_fg = muted_fg(&theme);
-        let content_border = theme.color_required("border");
+        let content_border = theme.color_token("border");
         let content_bg = theme
             .color_by_key("muted")
             .map(|c| alpha(c, 0.30))
-            .unwrap_or_else(|| alpha(theme.color_required("accent"), 0.18));
+            .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.18));
 
         let error_type = parsed
             .error_type

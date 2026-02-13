@@ -614,6 +614,15 @@ impl<H: UiHost> UiTree<H> {
             if let crate::widget::ScrollIntoViewResult::Handled { did_scroll } = result {
                 if did_scroll {
                     self.mark_invalidation(id, Invalidation::HitTest);
+                    if self.focus == Some(target)
+                        && self
+                            .nodes
+                            .get(target)
+                            .and_then(|n| n.widget.as_ref())
+                            .is_some_and(|w| w.is_text_input())
+                    {
+                        self.mark_invalidation(target, Invalidation::Paint);
+                    }
                     self.request_redraw_coalesced(app);
                 }
                 return did_scroll;

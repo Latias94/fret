@@ -52,6 +52,7 @@ Active workstreams:
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
 - `docs/workstreams/diag-simplification-v1.md`
+- `docs/workstreams/diag-simplification-v1-m0-baseline.md`
 - `docs/workstreams/diag-simplification-v1-todo.md`
 - `docs/workstreams/diag-simplification-v1-milestones.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`
@@ -68,6 +69,9 @@ Active workstreams:
 - `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
+- `docs/workstreams/motion-foundation-v1.md`
+- `docs/workstreams/motion-foundation-v1-todo.md`
+- `docs/workstreams/motion-foundation-v1-milestones.md`
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ai-elements-port-milestones.md`
@@ -165,3 +169,6 @@ Active workstreams:
 - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
 - `docs/workstreams/bottom-up-fearless-refactor-v1-todo.md`
 - `docs/workstreams/bottom-up-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/runtime-safety-hardening-v1.md`
+- `docs/workstreams/runtime-safety-hardening-v1-todo.md`
+- `docs/workstreams/runtime-safety-hardening-v1-milestones.md`

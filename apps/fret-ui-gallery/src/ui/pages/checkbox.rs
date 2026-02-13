@@ -160,7 +160,7 @@ pub(super) fn preview_checkbox(
         }
     };
 
-    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
+    let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
 
     let demo_checked = cx
         .get_model_copied(&model, Invalidation::Layout)

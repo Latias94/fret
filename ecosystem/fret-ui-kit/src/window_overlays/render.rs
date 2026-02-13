@@ -1395,11 +1395,12 @@ pub fn render<H: UiHost + 'static>(
                             ToastTimerOutcome::BeganClose {
                                 window,
                                 remove_token,
+                                after,
                             } => {
                                 host.push_effect(fret_runtime::Effect::SetTimer {
                                     window: Some(window),
                                     token: remove_token,
-                                    after: super::toast::TOAST_CLOSE_DURATION,
+                                    after,
                                     repeat: None,
                                 });
                                 host.request_redraw(window);
@@ -1459,7 +1460,7 @@ pub fn render<H: UiHost + 'static>(
                     let gap = gap_override.unwrap_or_else(|| Px(14.0));
                     let radius = toast_style
                         .container_radius
-                        .unwrap_or_else(|| theme.metric_required("metric.radius.md"));
+                        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
                     (desktop_offset, mobile_offset, gap, radius)
                 };
 
@@ -1806,12 +1807,12 @@ pub fn render<H: UiHost + 'static>(
                                                         let bg_default = theme
                                                             .color_by_key("popover")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required("popover")
+                                                                theme.color_token("popover")
                                                             });
                                                         let fg_default = theme
                                                             .color_by_key("popover-foreground")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required(
+                                                                theme.color_token(
                                                                     "popover-foreground",
                                                                 )
                                                             });
@@ -1877,19 +1878,19 @@ pub fn render<H: UiHost + 'static>(
                                                         let border_color = theme
                                                             .color_by_key("border")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required("border")
+                                                                theme.color_token("border")
                                                             });
                                                         let fg_muted = theme
                                                             .color_by_key("muted-foreground")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required(
+                                                                theme.color_token(
                                                                     "muted-foreground",
                                                                 )
                                                             });
                                                         let button_bg = theme
                                                             .color_by_key("muted")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required("muted")
+                                                                theme.color_token("muted")
                                                             });
 
                                                         (bg, fg, border_color, fg_muted, button_bg)
@@ -2372,12 +2373,32 @@ pub fn render<H: UiHost + 'static>(
                                                         Px(drag_offset.y.0 + settle_offset.y.0),
                                                     );
 
-                                                    let presence = crate::OverlayController::fade_presence_with_durations(
-                                                        cx,
-                                                        open,
-                                                        toast_open_ticks,
-                                                        toast_close_ticks,
-                                                    );
+                                                    let bezier =
+                                                        toast_style.easing.unwrap_or_else(|| {
+                                                            crate::declarative::toast_motion::shadcn_toast_ease_bezier(cx)
+                                                        });
+                                                    let open_duration = crate::declarative::toast_motion::shadcn_toast_enter_duration_opt(cx);
+                                                    let close_duration = crate::declarative::toast_motion::shadcn_toast_exit_duration_opt(cx);
+                                                    let presence = match (open_duration, close_duration) {
+                                                        (Some(open_duration), Some(close_duration)) => {
+                                                            crate::declarative::presence::fade_presence_with_durations_and_cubic_bezier_duration(
+                                                                cx,
+                                                                open,
+                                                                open_duration,
+                                                                close_duration,
+                                                                bezier,
+                                                            )
+                                                        }
+                                                        _ => {
+                                                            crate::declarative::presence::fade_presence_with_durations_and_cubic_bezier(
+                                                                cx,
+                                                                open,
+                                                                toast_open_ticks,
+                                                                toast_close_ticks,
+                                                                bezier,
+                                                            )
+                                                        }
+                                                    };
                                                     let mut opacity = presence.opacity;
                                                     if !toast_visible {
                                                         opacity = 0.0;

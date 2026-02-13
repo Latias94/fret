@@ -582,22 +582,22 @@ impl NodeGraphStyle {
             c
         }
 
-        let background = theme.color_required("background");
-        let border = theme.color_required("border");
-        let ring = theme.color_required("ring");
-        let card = theme.color_required("card");
-        let popover = theme.color_required("popover");
-        let popover_border = theme.color_required("popover.border");
-        let popover_foreground = theme.color_required("popover-foreground");
-        let accent = theme.color_required("accent");
-        let muted_foreground = theme.color_required("muted-foreground");
+        let background = theme.color_token("background");
+        let border = theme.color_token("border");
+        let ring = theme.color_token("ring");
+        let card = theme.color_token("card");
+        let popover = theme.color_token("popover");
+        let popover_border = theme.color_token("popover.border");
+        let popover_foreground = theme.color_token("popover-foreground");
+        let accent = theme.color_token("accent");
+        let muted_foreground = theme.color_token("muted-foreground");
 
-        let padding_sm = theme.metric_required("metric.padding.sm").0;
-        let padding_md = theme.metric_required("metric.padding.md").0;
-        let radius_sm = theme.metric_required("metric.radius.sm").0;
-        let font_size = theme.metric_required("metric.font.size").0;
+        let padding_sm = theme.metric_token("metric.padding.sm").0;
+        let padding_md = theme.metric_token("metric.padding.md").0;
+        let radius_sm = theme.metric_token("metric.radius.sm").0;
+        let font_size = theme.metric_token("metric.font.size").0;
 
-        let pin_color_data = theme.color_required("primary");
+        let pin_color_data = theme.color_token("primary");
         let pin_color_exec = theme.colors.viewport_rotate_gizmo;
 
         Self {
@@ -637,7 +637,7 @@ impl NodeGraphStyle {
             wire_interaction_width: 14.0,
             wire_color_data: pin_color_data,
             wire_color_exec: pin_color_exec,
-            wire_color_preview: alpha(theme.color_required("foreground"), 0.85),
+            wire_color_preview: alpha(theme.color_token("foreground"), 0.85),
 
             wire_width_selected_mul: 1.6,
             wire_width_hover_mul: 1.25,

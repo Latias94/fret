@@ -162,7 +162,7 @@ impl MessageContent {
         let base_chrome = if self.from == MessageRole::User {
             let bg = theme
                 .color_by_key("fret.ai.message.user.bg")
-                .unwrap_or_else(|| theme.color_required("secondary"));
+                .unwrap_or_else(|| theme.color_token("secondary"));
             ChromeRefinement::default()
                 .bg(ColorRef::Color(bg))
                 .px(Space::N4)

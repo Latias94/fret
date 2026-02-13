@@ -9,8 +9,16 @@ pub trait ThemeTokenRead {
     fn color_by_key(&self, key: &str) -> Option<Color>;
     fn color_required(&self, key: &str) -> Color;
 
+    fn color_token(&self, key: &str) -> Color {
+        self.color_required(key)
+    }
+
     fn metric_by_key(&self, key: &str) -> Option<Px>;
     fn metric_required(&self, key: &str) -> Px;
+
+    fn metric_token(&self, key: &str) -> Px {
+        self.metric_required(key)
+    }
 }
 
 impl ThemeTokenRead for Theme {
@@ -19,7 +27,7 @@ impl ThemeTokenRead for Theme {
     }
 
     fn color_required(&self, key: &str) -> Color {
-        self.color_required(key)
+        self.color_token(key)
     }
 
     fn metric_by_key(&self, key: &str) -> Option<Px> {
@@ -27,7 +35,7 @@ impl ThemeTokenRead for Theme {
     }
 
     fn metric_required(&self, key: &str) -> Px {
-        self.metric_required(key)
+        self.metric_token(key)
     }
 }
 
@@ -37,7 +45,7 @@ impl ThemeTokenRead for ThemeSnapshot {
     }
 
     fn color_required(&self, key: &str) -> Color {
-        self.color_required(key)
+        self.color_token(key)
     }
 
     fn metric_by_key(&self, key: &str) -> Option<Px> {
@@ -45,7 +53,7 @@ impl ThemeTokenRead for ThemeSnapshot {
     }
 
     fn metric_required(&self, key: &str) -> Px {
-        self.metric_required(key)
+        self.metric_token(key)
     }
 }
 

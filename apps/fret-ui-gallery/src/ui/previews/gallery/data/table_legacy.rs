@@ -1,5 +1,13 @@
 use super::super::super::super::*;
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use fret_runtime::{CommandId, Model};
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
+
 #[derive(Debug, Clone)]
 struct DemoProcessRow {
     id: u64,
@@ -13,6 +21,64 @@ struct DemoProcessRow {
 struct DemoProcessTableAssets {
     data: Arc<[DemoProcessRow]>,
     columns: Arc<[fret_ui_headless::table::ColumnDef<DemoProcessRow>]>,
+}
+
+#[derive(Default)]
+struct DemoProcessTableFacetsState {
+    status_facets: Option<Model<HashMap<Arc<str>, usize>>>,
+}
+
+const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.select_all_page";
+const CMD_TOGGLE_ROW_SELECTED_PREFIX: &str = "ui_gallery.data_table.toggle_row_selected/";
+
+fn parse_toggle_row_selected(command: &str) -> Option<u64> {
+    let rest = command.strip_prefix(CMD_TOGGLE_ROW_SELECTED_PREFIX)?;
+    rest.parse().ok()
+}
+
+fn wire_selection_commands<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    state: Model<TableState>,
+    data: Arc<[DemoProcessRow]>,
+    columns: Arc<[ColumnDef<DemoProcessRow>]>,
+) {
+    cx.command_on_command_for(
+        cx.root_id(),
+        Arc::new(move |host, acx, command| {
+            let cmd = command.as_str();
+
+            if cmd != CMD_SELECT_ALL_PAGE && !cmd.starts_with(CMD_TOGGLE_ROW_SELECTED_PREFIX) {
+                return false;
+            }
+
+            let current = host
+                .models_mut()
+                .read(&state, |st| st.clone())
+                .ok()
+                .unwrap_or_default();
+
+            let table = Table::builder(data.as_ref())
+                .columns(columns.as_ref().to_vec())
+                .get_row_key(|row, _index, _parent| RowKey(row.id))
+                .state(current)
+                .build();
+
+            let next = if cmd == CMD_SELECT_ALL_PAGE {
+                table.toggled_all_page_rows_selected(None)
+            } else if let Some(row_id) = parse_toggle_row_selected(cmd) {
+                table.toggled_row_selected(RowKey(row_id), None, true)
+            } else {
+                return false;
+            };
+
+            let _ = host.models_mut().update(&state, |st| {
+                st.row_selection = next;
+            });
+
+            host.request_redraw(acx.window);
+            true
+        }),
+    );
 }
 
 pub(in crate::ui) fn preview_data_table_legacy(
@@ -61,10 +127,40 @@ pub(in crate::ui) fn preview_data_table_legacy(
 
             let columns: Arc<[fret_ui_headless::table::ColumnDef<DemoProcessRow>]> =
                 Arc::from(vec![
+                    fret_ui_headless::table::ColumnDef::new("select")
+                        .enable_sorting(false)
+                        .enable_multi_sort(false)
+                        .enable_column_filter(false)
+                        .enable_global_filter(false)
+                        .enable_hiding(false)
+                        .enable_ordering(false)
+                        .enable_pinning(false)
+                        .enable_resizing(false)
+                        .size(44.0)
+                        .min_size(44.0)
+                        .max_size(44.0),
                     fret_ui_headless::table::ColumnDef::new("name")
+                        .filter_by(|row: &DemoProcessRow, q| row.name.as_ref().contains(q))
                         .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.name.cmp(&b.name))
                         .size(220.0),
                     fret_ui_headless::table::ColumnDef::new("status")
+                        .filter_by_with_meta(
+                            |row: &DemoProcessRow, value: &serde_json::Value, _| match value {
+                                serde_json::Value::String(s) => row.status.as_ref() == s,
+                                serde_json::Value::Array(items) => items
+                                    .iter()
+                                    .filter_map(|it| it.as_str())
+                                    .any(|s| row.status.as_ref() == s),
+                                _ => false,
+                            },
+                        )
+                        .facet_key_by(|row: &DemoProcessRow| match row.status.as_ref() {
+                            "Running" => 1,
+                            "Idle" => 2,
+                            "Disabled" => 3,
+                            _ => 0,
+                        })
+                        .facet_str_by(|row: &DemoProcessRow| row.status.as_ref())
                         .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.status.cmp(&b.status))
                         .size(140.0),
                     fret_ui_headless::table::ColumnDef::new("cpu%")
@@ -73,6 +169,18 @@ pub(in crate::ui) fn preview_data_table_legacy(
                     fret_ui_headless::table::ColumnDef::new("mem_mb")
                         .sort_by(|a: &DemoProcessRow, b: &DemoProcessRow| a.mem_mb.cmp(&b.mem_mb))
                         .size(110.0),
+                    fret_ui_headless::table::ColumnDef::new("actions")
+                        .enable_sorting(false)
+                        .enable_multi_sort(false)
+                        .enable_column_filter(false)
+                        .enable_global_filter(false)
+                        .enable_hiding(false)
+                        .enable_ordering(false)
+                        .enable_pinning(false)
+                        .enable_resizing(false)
+                        .size(60.0)
+                        .min_size(60.0)
+                        .max_size(60.0),
                 ]);
 
             DemoProcessTableAssets { data, columns }
@@ -80,45 +188,103 @@ pub(in crate::ui) fn preview_data_table_legacy(
         |st| st.clone(),
     );
 
-    let selected_count = cx
-        .app
-        .models()
-        .read(&state, |st| st.row_selection.len())
-        .ok()
-        .unwrap_or(0);
-    let sorting = cx
-        .app
-        .models()
-        .read(&state, |st| {
-            st.sorting.first().map(|s| (s.column.clone(), s.desc))
-        })
-        .ok()
-        .flatten();
-
-    let sorting_text: Arc<str> = sorting
-        .map(|(col, desc)| {
-            Arc::<str>::from(format!(
-                "Sorting: {} {}",
-                col,
-                if desc { "desc" } else { "asc" }
-            ))
-        })
-        .unwrap_or_else(|| Arc::<str>::from("Sorting: <none>"));
+    let output = cx.with_state(
+        || None::<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
+        |st| st.clone(),
+    );
+    let output = match output {
+        Some(m) => m,
+        None => {
+            let m = cx
+                .app
+                .models_mut()
+                .insert(fret_ui_kit::declarative::table::TableViewOutput::default());
+            let m_for_state = m.clone();
+            cx.with_state(
+                || None::<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
+                move |st| {
+                    if st.is_none() {
+                        *st = Some(m_for_state);
+                    }
+                },
+            );
+            m
+        }
+    };
 
     let normalize_col_id =
         |id: &str| -> Arc<str> { Arc::<str>::from(id.replace('%', "pct").replace('_', "-")) };
+
+    let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
+
+    wire_selection_commands(
+        cx,
+        state.clone(),
+        assets.data.clone(),
+        assets.columns.clone(),
+    );
+
+    let add_task = shadcn::Button::new("Add Task")
+        .size(shadcn::ButtonSize::Sm)
+        .test_id("ui-gallery-data-table-add-task")
+        .into_element(cx);
+
+    let status_facets = cx.with_state(DemoProcessTableFacetsState::default, |st| {
+        st.status_facets.clone()
+    });
+    let status_facets = match status_facets {
+        Some(m) => m,
+        None => {
+            let mut facets: HashMap<Arc<str>, usize> = HashMap::new();
+            for row in assets.data.iter() {
+                *facets.entry(row.status.clone()).or_insert(0) += 1;
+            }
+            let m = cx.app.models_mut().insert(facets);
+            let m_for_state = m.clone();
+            cx.with_state(DemoProcessTableFacetsState::default, move |st| {
+                st.status_facets = Some(m_for_state);
+            });
+            m
+        }
+    };
 
     let toolbar = shadcn::DataTableToolbar::new(
         state.clone(),
         assets.columns.clone(),
         |col: &fret_ui_headless::table::ColumnDef<DemoProcessRow>| col.id.clone(),
     )
+    .show_global_filter(false)
+    .filter_layout(LayoutRefinement::default().h_px(Px(32.0)).w_px(Px(250.0)))
+    .column_filter("name")
+    .column_filter_placeholder("Filter processes...")
+    .column_filter_a11y_label("Name filter")
+    .faceted_filter_options(
+        "status",
+        "Status",
+        Arc::<[shadcn::DataTableFacetedFilterOption]>::from(vec![
+            shadcn::DataTableFacetedFilterOption::new("Running", "Running")
+                .icon(fret_icons::IconId::new_static("lucide.timer")),
+            shadcn::DataTableFacetedFilterOption::new("Idle", "Idle")
+                .icon(fret_icons::IconId::new_static("lucide.circle")),
+            shadcn::DataTableFacetedFilterOption::new("Disabled", "Disabled")
+                .icon(fret_icons::IconId::new_static("lucide.circle-off")),
+        ]),
+    )
+    .faceted_filter_counts(status_facets)
+    .columns_button_label("View")
+    .show_pinning_menu(false)
+    .show_selected_text(false)
+    .trailing([add_task])
     .into_element(cx);
 
+    let state_for_header_checkbox = state.clone();
+    let assets_for_header_checkbox = assets.clone();
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
+        .column_actions_menu(true)
+        .output_model(output.clone())
         .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
-        .into_element(
+        .into_element_with_header_cell(
             cx,
             assets.data.clone(),
             1,
@@ -126,13 +292,175 @@ pub(in crate::ui) fn preview_data_table_legacy(
             assets.columns.clone(),
             |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
             |col| col.id.clone(),
+            move |cx, col, _sort_state| {
+                if col.id.as_ref() != "select" {
+                    return None;
+                }
+
+                let state_value = cx
+                    .app
+                    .models()
+                    .read(&state_for_header_checkbox, |st| st.clone())
+                    .ok()
+                    .unwrap_or_default();
+                let table = Table::builder(assets_for_header_checkbox.data.as_ref())
+                    .columns(assets_for_header_checkbox.columns.as_ref().to_vec())
+                    .get_row_key(|row, _index, _parent| RowKey(row.id))
+                    .state(state_value)
+                    .build();
+
+                let checked = if table.is_all_page_rows_selected() {
+                    Some(true)
+                } else if table.is_some_page_rows_selected() {
+                    None
+                } else {
+                    Some(false)
+                };
+
+                let model = cx.with_state(|| None::<Model<Option<bool>>>, |st| st.clone());
+                let model = match model {
+                    Some(m) => m,
+                    None => {
+                        let m = cx.app.models_mut().insert(checked);
+                        let m_for_state = m.clone();
+                        cx.with_state(
+                            || None::<Model<Option<bool>>>,
+                            move |st| {
+                                if st.is_none() {
+                                    *st = Some(m_for_state);
+                                }
+                            },
+                        );
+                        m
+                    }
+                };
+                let _ = cx.app.models_mut().update(&model, |v| *v = checked);
+
+                Some(vec![
+                    shadcn::Checkbox::new_optional(model)
+                        .a11y_label("Select all")
+                        .test_id("ui-gallery-data-table-select-all")
+                        .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
+                        .into_element(cx),
+                ])
+            },
             move |cx, col, row| {
                 let col_id = normalize_col_id(col.id.as_ref());
                 let cell = match col.id.as_ref() {
+                    "select" => {
+                        let checked = state_value.row_selection.contains(&RowKey(row.id));
+                        cx.keyed(("ui-gallery-data-table-select-row", row.id), |cx| {
+                            let model = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
+                            let model = match model {
+                                Some(m) => m,
+                                None => {
+                                    let m = cx.app.models_mut().insert(checked);
+                                    let m_for_state = m.clone();
+                                    cx.with_state(
+                                        || None::<Model<bool>>,
+                                        move |st| {
+                                            if st.is_none() {
+                                                *st = Some(m_for_state);
+                                            }
+                                        },
+                                    );
+                                    m
+                                }
+                            };
+                            let _ = cx.app.models_mut().update(&model, |v| *v = checked);
+
+                            shadcn::Checkbox::new(model)
+                                .a11y_label("Select row")
+                                .test_id(Arc::<str>::from(format!(
+                                    "ui-gallery-data-table-select-row-{}",
+                                    row.id
+                                )))
+                                .on_click(CommandId::new(format!(
+                                    "{CMD_TOGGLE_ROW_SELECTED_PREFIX}{}",
+                                    row.id
+                                )))
+                                .into_element(cx)
+                        })
+                    }
                     "name" => cx.text(row.name.as_ref()),
                     "status" => cx.text(row.status.as_ref()),
                     "cpu%" => cx.text(format!("{}%", row.cpu)),
                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                    "actions" => cx.keyed(("ui-gallery-data-table-row-actions", row.id), |cx| {
+                        let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
+                        let open = match open {
+                            Some(m) => m,
+                            None => {
+                                let m = cx.app.models_mut().insert(false);
+                                let m_for_state = m.clone();
+                                cx.with_state(
+                                    || None::<Model<bool>>,
+                                    move |st| {
+                                        if st.is_none() {
+                                            *st = Some(m_for_state);
+                                        }
+                                    },
+                                );
+                                m
+                            }
+                        };
+
+                        let trigger = shadcn::Button::new("Open menu")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::IconSm)
+                            .test_id(Arc::<str>::from(format!(
+                                "ui-gallery-data-table-row-actions-open-{}",
+                                row.id
+                            )))
+                            .children([shadcn::icon::icon(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.more-horizontal"),
+                            )])
+                            .into_element(cx);
+
+                        shadcn::DropdownMenu::new(open)
+                            .align(shadcn::DropdownMenuAlign::End)
+                            .side(shadcn::DropdownMenuSide::Bottom)
+                            .into_element(
+                                cx,
+                                move |_cx| trigger.clone(),
+                                move |_cx| {
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Edit")
+                                                .test_id(Arc::<str>::from(format!(
+                                                    "ui-gallery-data-table-row-actions-item-edit-{}",
+                                                    row.id
+                                                )))
+                                                .on_select(CommandId::new(
+                                                    "ui_gallery.data_table.row_actions.edit",
+                                                )),
+                                        ),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Make a copy")
+                                                .test_id(Arc::<str>::from(format!(
+                                                    "ui-gallery-data-table-row-actions-item-copy-{}",
+                                                    row.id
+                                                )))
+                                                .on_select(CommandId::new(
+                                                    "ui_gallery.data_table.row_actions.copy",
+                                                )),
+                                        ),
+                                        shadcn::DropdownMenuEntry::Separator,
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Delete")
+                                                .test_id(Arc::<str>::from(format!(
+                                                    "ui-gallery-data-table-row-actions-item-delete-{}",
+                                                    row.id
+                                                )))
+                                                .on_select(CommandId::new(
+                                                    "ui_gallery.data_table.row_actions.delete",
+                                                )),
+                                        ),
+                                    ]
+                                },
+                            )
+                    }),
                     _ => cx.text("?"),
                 };
 
@@ -146,10 +474,8 @@ pub(in crate::ui) fn preview_data_table_legacy(
     let table = table.test_id("ui-gallery-data-table-root");
 
     vec![
-        cx.text("Click header to sort; click row to toggle selection."),
-        cx.text(format!("Selected rows: {selected_count}")),
-        cx.text(sorting_text.as_ref()),
         toolbar,
         table,
+        shadcn::DataTablePagination::new(state, output).into_element(cx),
     ]
 }

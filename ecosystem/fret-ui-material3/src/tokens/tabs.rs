@@ -24,7 +24,7 @@ pub(crate) fn container_background(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.primary-navigation-tab.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container"))
 }
 
 pub(crate) fn active_indicator_height(theme: &Theme) -> Px {
@@ -37,7 +37,7 @@ pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn active_indicator_shape(theme: &Theme) -> Corners {
@@ -63,9 +63,9 @@ pub(crate) fn label_color(theme: &Theme, active: bool, interaction: TabInteracti
         })
         .unwrap_or_else(|| {
             if active {
-                theme.color_required("md.sys.color.primary")
+                theme.color_token("md.sys.color.primary")
             } else {
-                theme.color_required("md.sys.color.on-surface-variant")
+                theme.color_token("md.sys.color.on-surface-variant")
             }
         })
 }
@@ -74,7 +74,7 @@ pub(crate) fn state_layer_color(theme: &Theme, active: bool, interaction: TabInt
     theme
         .color_by_key(state_layer_color_key(active, interaction))
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 pub(crate) fn state_layer_opacity(theme: &Theme, active: bool, interaction: TabInteraction) -> f32 {

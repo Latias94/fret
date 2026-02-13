@@ -293,8 +293,8 @@ impl ReasoningTrigger {
         };
 
         let theme = Theme::global(&*cx.app).clone();
-        let muted_fg = theme.color_required("muted-foreground");
-        let fg_hover = theme.color_required("foreground");
+        let muted_fg = theme.color_token("muted-foreground");
+        let fg_hover = theme.color_token("foreground");
 
         let is_open = ctx_state.is_open;
         let is_streaming = ctx_state.is_streaming;

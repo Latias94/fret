@@ -1,13 +1,8 @@
 use super::*;
 use std::any::TypeId;
-use std::sync::OnceLock;
 
 fn paint_cache_relax_view_cache_gating() -> bool {
-    static RELAX: OnceLock<bool> = OnceLock::new();
-    *RELAX.get_or_init(|| {
-        std::env::var_os("FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING")
-            .is_some_and(|v| !v.is_empty())
-    })
+    crate::runtime_config::ui_runtime_config().paint_cache_relax_view_cache_gating
 }
 
 #[cfg(test)]
@@ -22,10 +17,7 @@ fn paint_cache_allow_hit_test_only() -> bool {
         return value;
     }
 
-    static ALLOW: OnceLock<bool> = OnceLock::new();
-    *ALLOW.get_or_init(|| {
-        std::env::var_os("FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY").is_some_and(|v| !v.is_empty())
-    })
+    crate::runtime_config::ui_runtime_config().paint_cache_allow_hit_test_only
 }
 
 #[cfg(test)]

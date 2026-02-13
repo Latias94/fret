@@ -40,6 +40,8 @@ Notes:
 
 - Android Emulator can expose Vulkan features but still be unstable for real-world wgpu usage (driver/translation
   layers differ from physical devices).
+- On macOS hosts, Android Emulator Vulkan is often mediated by Metal-based translation layers; treat it as
+  a convenience tool, not a correctness/perf baseline.
 - Host OS matters (macOS → Metal-based virtualization; Windows → typically DX12-based virtualization). Treat this
   as “worth trying”, not as a correctness baseline: always accept/reject workstreams using **bundle evidence**
   captured on at least one real device.
@@ -67,6 +69,26 @@ iOS:
 
 - `tools/mobile/run.sh ios --app ui-gallery --sim`
 - For real devices, use `tools/mobile/run.sh ios --app ui-gallery --device <udid> --team <team-id>`
+
+Tip (iOS Simulator diagnostics location):
+
+- Prefer setting an explicit diagnostics directory so filesystem transport is reliably writable:
+  - `container=$(xcrun simctl get_app_container <udid> dev.fret.ui-gallery data)`
+  - `diag_dir="${container}/tmp/fret-diag"`
+  - `SIMCTL_CHILD_FRET_DIAG=1 SIMCTL_CHILD_FRET_DIAG_DIR="${diag_dir}" xcrun simctl launch --terminate-running-process <udid> dev.fret.ui-gallery`
+
+Tip (iOS Simulator screenshots for diag scripts):
+
+- Enable screenshot capture in diagnostics:
+  - `SIMCTL_CHILD_FRET_DIAG_SCREENSHOTS=1` (alongside `FRET_DIAG`/`FRET_DIAG_DIR`)
+- Screenshots are written under:
+  - `${diag_dir}/screenshots/<bundle_dir_name>/*.png`
+
+Tip (diag scripts trigger stamp):
+
+- `script.touch` uses edge detection and treats the first observed value as a baseline.
+  - If you reuse a diagnostics directory, bump the stamp twice to ensure the script runs:
+    - `python3 - <<'PY' "${diag_dir}"\nimport sys, time, pathlib\np = pathlib.Path(sys.argv[1]) / \"script.touch\"\np.write_text(f\"{int(time.time()*1000)}\\n\")\ntime.sleep(1.0)\np.write_text(f\"{int(time.time()*1000)}\\n\")\nPY`
 
 5) Capture a diagnostics bundle (Android filesystem transport)
 
@@ -102,6 +124,7 @@ Archive the JSON snippet under the relevant workstream milestone document.
 - Android runner wrapper (build/install/start): `tools/mobile/android_game_activity_run.sh`
 - Mobile run entrypoint: `tools/mobile/run.sh`
 - Workstream smoke recipe (example evidence format): `docs/workstreams/mobile-gfx-backend-v1/m3-real-device-smoke-oppo-plg110.md`
+- Android Emulator Vulkan notes: `docs/workstreams/mobile-gfx-backend-v1/android-emulator-vulkan-notes.md`
 
 ## Common pitfalls
 

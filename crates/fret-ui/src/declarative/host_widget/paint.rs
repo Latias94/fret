@@ -1095,7 +1095,7 @@ impl ElementHostWidget {
                         let mut rects: Vec<fret_core::Rect> = Vec::new();
                         cx.services
                             .selection_rects_clipped(blob, (start, end), clip, &mut rects);
-                        let sel_color = cx.theme().color_required("selection.background");
+                        let sel_color = cx.theme().color_token("selection.background");
                         for r in rects {
                             let rect = fret_core::Rect::new(
                                 fret_core::Point::new(
@@ -1490,7 +1490,7 @@ impl ElementHostWidget {
                 let base = props
                     .color
                     .or_else(|| theme.color_by_key("muted-foreground"))
-                    .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                    .unwrap_or_else(|| theme.color(crate::ThemeColorKey::MutedForeground));
 
                 let n = props.dot_count.clamp(1, 32) as usize;
 

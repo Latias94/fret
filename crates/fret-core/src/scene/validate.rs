@@ -43,6 +43,7 @@ impl std::fmt::Display for SceneValidationError {
 impl std::error::Error for SceneValidationError {}
 
 impl SceneRecording {
+    #[allow(clippy::result_large_err)]
     pub fn validate(&self) -> Result<(), SceneValidationError> {
         fn px_is_finite(px: crate::Px) -> bool {
             px.0.is_finite()
@@ -86,8 +87,8 @@ impl SceneRecording {
                         return false;
                     }
                     let n = usize::from(g.stop_count).min(MAX_STOPS);
-                    for i in 0..n {
-                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                    for s in g.stops.iter().take(n) {
+                        if !s.offset.is_finite() || !color_is_finite(s.color) {
                             return false;
                         }
                     }
@@ -102,8 +103,8 @@ impl SceneRecording {
                         return false;
                     }
                     let n = usize::from(g.stop_count).min(MAX_STOPS);
-                    for i in 0..n {
-                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                    for s in g.stops.iter().take(n) {
+                        if !s.offset.is_finite() || !color_is_finite(s.color) {
                             return false;
                         }
                     }
@@ -124,8 +125,8 @@ impl SceneRecording {
                         return false;
                     }
                     let n = usize::from(g.stop_count).min(MAX_STOPS);
-                    for i in 0..n {
-                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                    for s in g.stops.iter().take(n) {
+                        if !s.offset.is_finite() || !color_is_finite(s.color) {
                             return false;
                         }
                     }
@@ -140,8 +141,8 @@ impl SceneRecording {
                         return false;
                     }
                     let n = usize::from(g.stop_count).min(MAX_STOPS);
-                    for i in 0..n {
-                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                    for s in g.stops.iter().take(n) {
+                        if !s.offset.is_finite() || !color_is_finite(s.color) {
                             return false;
                         }
                     }

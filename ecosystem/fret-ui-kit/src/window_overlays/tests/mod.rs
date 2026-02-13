@@ -429,6 +429,7 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                                     layout
                                 },
                                 enabled: true,
+                                ..Default::default()
                             },
                             |cx| {
                                 let underlay_moved = underlay_moved.clone();
@@ -646,6 +647,7 @@ fn render_base_with_trigger_and_capture_underlay(
                             }
                         },
                         enabled: true,
+                        ..Default::default()
                     },
                     |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {

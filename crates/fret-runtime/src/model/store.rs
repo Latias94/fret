@@ -26,6 +26,45 @@ pub(super) struct ModelStoreInner {
     state: RefCell<ModelStoreState>,
 }
 
+#[cfg(not(test))]
+fn strict_runtime_enabled() -> bool {
+    static STRICT: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *STRICT.get_or_init(crate::strict_runtime::strict_runtime_enabled_from_env)
+}
+
+#[cfg(test)]
+thread_local! {
+    static STRICT_RUNTIME_OVERRIDE: std::cell::Cell<Option<bool>> =
+        const { std::cell::Cell::new(None) };
+}
+
+#[cfg(test)]
+fn strict_runtime_enabled() -> bool {
+    STRICT_RUNTIME_OVERRIDE
+        .with(|cell| cell.get())
+        .unwrap_or_else(crate::strict_runtime::strict_runtime_enabled_from_env)
+}
+
+#[cfg(test)]
+struct StrictRuntimeGuard(Option<bool>);
+
+#[cfg(test)]
+fn strict_runtime_for_tests(value: bool) -> StrictRuntimeGuard {
+    let prev = STRICT_RUNTIME_OVERRIDE.with(|cell| {
+        let prev = cell.get();
+        cell.set(Some(value));
+        prev
+    });
+    StrictRuntimeGuard(prev)
+}
+
+#[cfg(test)]
+impl Drop for StrictRuntimeGuard {
+    fn drop(&mut self) {
+        STRICT_RUNTIME_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
 #[derive(Default)]
 struct ModelStoreState {
     storage: SlotMap<ModelId, ModelEntry>,
@@ -52,7 +91,7 @@ struct ModelEntry {
     last_changed_type: Option<&'static str>,
 }
 
-pub struct ModelLease<T: Any> {
+pub(super) struct ModelLease<T: Any> {
     id: ModelId,
     value: Option<Box<T>>,
     dirty: bool,
@@ -79,7 +118,7 @@ impl<T: Any> ModelLease<T> {
 impl<T: Any> Drop for ModelLease<T> {
     fn drop(&mut self) {
         if self.value.is_some() && !std::thread::panicking() {
-            panic!("ModelLease must be ended with ModelStore::end_lease");
+            debug_assert!(false, "ModelLease must be ended with ModelStore::end_lease");
         }
     }
 }
@@ -106,7 +145,10 @@ impl ModelLeaseAny {
 impl Drop for ModelLeaseAny {
     fn drop(&mut self) {
         if self.value.is_some() && !std::thread::panicking() {
-            panic!("ModelLeaseAny must be ended with ModelStore::end_lease_any");
+            debug_assert!(
+                false,
+                "ModelLeaseAny must be ended with ModelStore::end_lease_any"
+            );
         }
     }
 }
@@ -160,6 +202,7 @@ impl ModelStore {
     }
 
     #[cfg(debug_assertions)]
+    #[allow(dead_code)]
     fn debug_lease_info(&self, id: ModelId) -> Option<(&'static str, &'static Location<'static>)> {
         let state = self.state();
         let entry = state.storage.get(id)?;
@@ -335,74 +378,170 @@ impl ModelStore {
         }
     }
 
-    pub fn get_copied<T: Any + Copy>(&self, model: &Model<T>) -> Option<T> {
+    pub fn try_get_copied<T: Any + Copy>(
+        &self,
+        model: &Model<T>,
+    ) -> Result<Option<T>, ModelUpdateError> {
         match self.read(model, |v| *v) {
-            Ok(v) => Some(v),
-            Err(ModelUpdateError::NotFound) => None,
-            Err(ModelUpdateError::AlreadyLeased) => {
-                #[cfg(debug_assertions)]
-                if let Some((ty, at)) = self.debug_lease_info(model.id()) {
-                    panic!(
-                        "model is currently leased: id={:?} type={} leased_at={}:{}:{}",
-                        model.id(),
-                        ty,
-                        at.file(),
-                        at.line(),
-                        at.column()
-                    );
+            Ok(v) => Ok(Some(v)),
+            Err(ModelUpdateError::NotFound) => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub fn get_copied<T: Any + Copy>(&self, model: &Model<T>) -> Option<T> {
+        match self.try_get_copied(model) {
+            Ok(v) => v,
+            Err(err) => {
+                if strict_runtime_enabled() {
+                    self.panic_model_get_error::<T>(model.id(), "get_copied", err);
                 }
-                panic!("model is currently leased: id={:?}", model.id());
-            }
-            Err(ModelUpdateError::TypeMismatch) => {
                 #[cfg(debug_assertions)]
-                if let Some((stored, at)) = self.debug_created_info(model.id()) {
-                    panic!(
-                        "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={}",
-                        model.id(),
-                        stored,
-                        at.file(),
-                        at.line(),
-                        at.column(),
-                        std::any::type_name::<T>()
-                    );
-                }
-                panic!("model type mismatch: id={:?}", model.id());
+                self.debug_log_model_get_error::<T>(model.id(), "get_copied", err);
+                None
             }
         }
     }
 
-    pub fn get_cloned<T: Any + Clone>(&self, model: &Model<T>) -> Option<T> {
+    pub fn try_get_cloned<T: Any + Clone>(
+        &self,
+        model: &Model<T>,
+    ) -> Result<Option<T>, ModelUpdateError> {
         match self.read(model, |v| v.clone()) {
-            Ok(v) => Some(v),
-            Err(ModelUpdateError::NotFound) => None,
-            Err(ModelUpdateError::AlreadyLeased) => {
-                #[cfg(debug_assertions)]
-                if let Some((ty, at)) = self.debug_lease_info(model.id()) {
-                    panic!(
-                        "model is currently leased: id={:?} type={} leased_at={}:{}:{}",
-                        model.id(),
-                        ty,
-                        at.file(),
-                        at.line(),
-                        at.column()
-                    );
+            Ok(v) => Ok(Some(v)),
+            Err(ModelUpdateError::NotFound) => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub fn get_cloned<T: Any + Clone>(&self, model: &Model<T>) -> Option<T> {
+        match self.try_get_cloned(model) {
+            Ok(v) => v,
+            Err(err) => {
+                if strict_runtime_enabled() {
+                    self.panic_model_get_error::<T>(model.id(), "get_cloned", err);
                 }
-                panic!("model is currently leased: id={:?}", model.id());
-            }
-            Err(ModelUpdateError::TypeMismatch) => {
                 #[cfg(debug_assertions)]
-                if let Some((stored, at)) = self.debug_created_info(model.id()) {
-                    panic!(
-                        "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={}",
-                        model.id(),
-                        stored,
+                self.debug_log_model_get_error::<T>(model.id(), "get_cloned", err);
+                None
+            }
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    #[track_caller]
+    fn debug_log_model_get_error<T: Any>(
+        &self,
+        id: ModelId,
+        op: &'static str,
+        err: ModelUpdateError,
+    ) {
+        let caller = Location::caller();
+        match err {
+            ModelUpdateError::AlreadyLeased => {
+                if let Some((ty, at)) = self.debug_lease_info(id) {
+                    eprintln!(
+                        "model access error: op={op} err=AlreadyLeased id={id:?} type={ty} leased_at={}:{}:{} accessed_at={}:{}:{}",
                         at.file(),
                         at.line(),
                         at.column(),
-                        std::any::type_name::<T>()
+                        caller.file(),
+                        caller.line(),
+                        caller.column()
+                    );
+                } else {
+                    eprintln!(
+                        "model access error: op={op} err=AlreadyLeased id={id:?} accessed_at={}:{}:{} (lease origin unknown)",
+                        caller.file(),
+                        caller.line(),
+                        caller.column()
                     );
                 }
-                panic!("model type mismatch: id={:?}", model.id());
+            }
+            ModelUpdateError::TypeMismatch => {
+                if let Some((stored, at)) = self.debug_created_info(id) {
+                    eprintln!(
+                        "model access error: op={op} err=TypeMismatch id={id:?} stored_type={stored} stored_at={}:{}:{} expected_type={} accessed_at={}:{}:{}",
+                        at.file(),
+                        at.line(),
+                        at.column(),
+                        std::any::type_name::<T>(),
+                        caller.file(),
+                        caller.line(),
+                        caller.column()
+                    );
+                } else {
+                    eprintln!(
+                        "model access error: op={op} err=TypeMismatch id={id:?} expected_type={} accessed_at={}:{}:{}",
+                        std::any::type_name::<T>(),
+                        caller.file(),
+                        caller.line(),
+                        caller.column()
+                    );
+                }
+            }
+            ModelUpdateError::NotFound => {}
+        }
+    }
+
+    #[track_caller]
+    fn panic_model_get_error<T: Any>(
+        &self,
+        id: ModelId,
+        op: &'static str,
+        err: ModelUpdateError,
+    ) -> ! {
+        let caller = Location::caller();
+        match err {
+            ModelUpdateError::AlreadyLeased => {
+                #[cfg(debug_assertions)]
+                if let Some((ty, at)) = self.debug_lease_info(id) {
+                    panic!(
+                        "strict runtime: model access error: op={op} err=AlreadyLeased id={id:?} type={ty} leased_at={}:{}:{} accessed_at={}:{}:{}",
+                        at.file(),
+                        at.line(),
+                        at.column(),
+                        caller.file(),
+                        caller.line(),
+                        caller.column()
+                    );
+                }
+                panic!(
+                    "strict runtime: model access error: op={op} err=AlreadyLeased id={id:?} accessed_at={}:{}:{}",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+            ModelUpdateError::TypeMismatch => {
+                #[cfg(debug_assertions)]
+                if let Some((stored, at)) = self.debug_created_info(id) {
+                    panic!(
+                        "strict runtime: model access error: op={op} err=TypeMismatch id={id:?} stored_type={stored} stored_at={}:{}:{} expected_type={} accessed_at={}:{}:{}",
+                        at.file(),
+                        at.line(),
+                        at.column(),
+                        std::any::type_name::<T>(),
+                        caller.file(),
+                        caller.line(),
+                        caller.column()
+                    );
+                }
+                panic!(
+                    "strict runtime: model access error: op={op} err=TypeMismatch id={id:?} expected_type={} accessed_at={}:{}:{}",
+                    std::any::type_name::<T>(),
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+            ModelUpdateError::NotFound => {
+                panic!(
+                    "strict runtime: model access error: op={op} err=NotFound id={id:?} accessed_at={}:{}:{}",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
             }
         }
     }
@@ -565,7 +704,10 @@ impl ModelStore {
         }
     }
 
-    pub fn lease<T: Any>(&mut self, model: &Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
+    pub(super) fn lease<T: Any>(
+        &mut self,
+        model: &Model<T>,
+    ) -> Result<ModelLease<T>, ModelUpdateError> {
         self.lease_shared(model)
     }
 
@@ -674,11 +816,11 @@ impl ModelStore {
         drop(removed);
     }
 
-    pub fn end_lease<T: Any>(&mut self, lease: &mut ModelLease<T>) {
+    pub(super) fn end_lease<T: Any>(&mut self, lease: &mut ModelLease<T>) {
         self.end_lease_shared(lease, None);
     }
 
-    pub fn end_lease_with_changed_at<T: Any>(
+    pub(super) fn end_lease_with_changed_at<T: Any>(
         &mut self,
         lease: &mut ModelLease<T>,
         changed_at: &'static Location<'static>,
@@ -1098,6 +1240,76 @@ mod tests {
             .update_any(model.id(), |_any| {})
             .expect_err("update_any should fail while leased");
         assert!(matches!(err, ModelUpdateError::AlreadyLeased));
+
+        store.end_lease(&mut lease);
+    }
+
+    #[test]
+    fn get_copied_returns_none_while_leased_and_try_get_copied_returns_error() {
+        let mut store = ModelStore::default();
+        let model = store.insert(123_u32);
+
+        let mut lease = store.lease(&model).expect("lease should succeed");
+
+        assert_eq!(store.get_copied(&model), None);
+        assert!(matches!(
+            store.try_get_copied(&model),
+            Err(ModelUpdateError::AlreadyLeased)
+        ));
+
+        store.end_lease(&mut lease);
+        assert_eq!(store.get_copied(&model), Some(123_u32));
+    }
+
+    #[test]
+    fn get_cloned_returns_none_on_type_mismatch_and_try_get_cloned_returns_error() {
+        let mut store = ModelStore::default();
+        let model_u32 = store.insert(123_u32);
+        let id = model_u32.id();
+
+        // Construct an intentionally invalid handle to exercise the TypeMismatch error path.
+        let model_string = Model::<String>::from_store_id(store.clone(), id);
+
+        assert_eq!(store.get_cloned(&model_string), None);
+        assert!(matches!(
+            store.try_get_cloned(&model_string),
+            Err(ModelUpdateError::TypeMismatch)
+        ));
+
+        // Ensure the original value remains intact after the failed access.
+        assert_eq!(store.get_copied(&model_u32), Some(123_u32));
+    }
+
+    #[test]
+    fn update_unwind_does_not_poison_store_state() {
+        if !cfg!(panic = "unwind") {
+            return;
+        }
+
+        let mut store = ModelStore::default();
+        let model = store.insert(1_u32);
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            let _ = store.update(&model, |_v| panic!("boom"));
+        }));
+        assert!(result.is_err());
+
+        assert_eq!(store.get_copied(&model), Some(1_u32));
+        assert!(matches!(store.try_get_copied(&model), Ok(Some(1_u32))));
+    }
+
+    #[test]
+    fn strict_runtime_panics_on_already_leased_get_copied() {
+        let _guard = strict_runtime_for_tests(true);
+
+        let mut store = ModelStore::default();
+        let model = store.insert(123_u32);
+
+        let mut lease = store.lease(&model).expect("lease should succeed");
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            let _ = store.get_copied(&model);
+        }));
+        assert!(result.is_err());
 
         store.end_lease(&mut lease);
     }

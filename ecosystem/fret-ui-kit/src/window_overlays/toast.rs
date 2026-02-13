@@ -468,6 +468,7 @@ pub struct ToastStore {
     toaster_swipe_directions: HashMap<(AppWindowId, GlobalElementId), ToastSwipeDirections>,
     default_duration_by_window: HashMap<AppWindowId, Duration>,
     default_duration_by_toaster_id: HashMap<(AppWindowId, Arc<str>), Duration>,
+    close_duration_by_window: HashMap<AppWindowId, Duration>,
     toaster_state: HashMap<(AppWindowId, GlobalElementId), ToasterState>,
 }
 
@@ -479,6 +480,22 @@ pub(crate) struct ToasterState {
 }
 
 impl ToastStore {
+    pub fn set_window_close_duration(&mut self, window: AppWindowId, duration: Duration) -> bool {
+        let prev = self.close_duration_by_window.get(&window).copied();
+        if prev == Some(duration) {
+            return false;
+        }
+        self.close_duration_by_window.insert(window, duration);
+        true
+    }
+
+    fn close_duration_for_window(&self, window: AppWindowId) -> Duration {
+        self.close_duration_by_window
+            .get(&window)
+            .copied()
+            .unwrap_or(TOAST_CLOSE_DURATION)
+    }
+
     pub fn set_window_default_duration(
         &mut self,
         window: AppWindowId,
@@ -956,9 +973,10 @@ impl ToastStore {
             },
         );
 
+        let remove_after = self.close_duration_for_window(window);
         Some(ToastClosePlan {
             cancel_auto,
-            schedule_remove: Some(remove_token),
+            schedule_remove: Some((remove_token, remove_after)),
         })
     }
 
@@ -1278,10 +1296,11 @@ impl ToastStore {
             let Some(plan) = plan else {
                 return ToastTimerOutcome::Noop;
             };
-            if plan.schedule_remove.is_some() {
+            if let Some((_token, after)) = plan.schedule_remove {
                 ToastTimerOutcome::BeganClose {
                     window,
                     remove_token,
+                    after,
                 }
             } else {
                 ToastTimerOutcome::Noop
@@ -1369,7 +1388,7 @@ fn auto_close_next_after(remaining: Duration) -> Duration {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ToastClosePlan {
     pub(super) cancel_auto: Option<TimerToken>,
-    pub(super) schedule_remove: Option<TimerToken>,
+    pub(super) schedule_remove: Option<(TimerToken, Duration)>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1395,6 +1414,7 @@ pub(super) enum ToastTimerOutcome {
     BeganClose {
         window: AppWindowId,
         remove_token: TimerToken,
+        after: Duration,
     },
     Removed {
         window: AppWindowId,
@@ -1460,11 +1480,11 @@ pub fn toast_action(
             host.push_effect(Effect::CancelTimer { token });
         }
 
-        if plan.schedule_remove.is_some() {
+        if let Some((token, after)) = plan.schedule_remove {
             host.push_effect(Effect::SetTimer {
                 window: Some(window),
-                token: remove_token,
-                after: TOAST_CLOSE_DURATION,
+                token,
+                after,
                 repeat: None,
             });
         }
@@ -1493,11 +1513,11 @@ pub fn dismiss_toast_action(
         host.push_effect(Effect::CancelTimer { token });
     }
 
-    if plan.schedule_remove.is_some() {
+    if let Some((token, after)) = plan.schedule_remove {
         host.push_effect(Effect::SetTimer {
             window: Some(window),
-            token: remove_token,
-            after: TOAST_CLOSE_DURATION,
+            token,
+            after,
             repeat: None,
         });
     }

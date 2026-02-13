@@ -407,7 +407,7 @@ pub fn slider<H: UiHost>(
             .color_by_key("primary")
             .or_else(|| theme.color_by_key("accent"))
             .unwrap_or(snapshot.colors.accent);
-        let ring_color = theme.color_required("ring");
+        let ring_color = theme.color_token("ring");
 
         let default_track_background = WidgetStateProperty::new(ColorRef::Color(track_bg));
         let default_track_border_color =
@@ -813,6 +813,7 @@ pub fn slider<H: UiHost>(
             let pointer = PointerRegionProps {
                 layout: semantics_layout,
                 enabled: !disabled,
+                ..Default::default()
             };
 
             let pointer_el = cx.pointer_region(pointer, |cx| {

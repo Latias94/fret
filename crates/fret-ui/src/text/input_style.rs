@@ -88,24 +88,24 @@ impl TextInputStyle {
         Self {
             padding: Edges {
                 top: Px(6.0),
-                right: theme.metric_required("metric.padding.sm"),
+                right: theme.metric_token("metric.padding.sm"),
                 bottom: Px(6.0),
-                left: theme.metric_required("metric.padding.sm"),
+                left: theme.metric_token("metric.padding.sm"),
             },
-            background: theme.color_required("card"),
+            background: theme.color_token("card"),
             border: Edges::all(Px(1.0)),
-            border_color: theme.color_required("border"),
-            border_color_focused: theme.color_required("ring"),
+            border_color: theme.color_token("border"),
+            border_color_focused: theme.color_token("ring"),
             focus_ring: None,
-            corner_radii: Corners::all(theme.metric_required("metric.radius.sm")),
-            text_color: theme.color_required("foreground"),
-            placeholder_color: theme.color_required("muted-foreground"),
+            corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
+            text_color: theme.color_token("foreground"),
+            placeholder_color: theme.color_token("muted-foreground"),
             selection_color: Color {
                 a: 1.0,
-                ..theme.color_required("selection.background")
+                ..theme.color_token("selection.background")
             },
-            caret_color: theme.color_required("foreground"),
-            preedit_color: theme.color_required("primary"),
+            caret_color: theme.color_token("foreground"),
+            preedit_color: theme.color_token("primary"),
         }
     }
 }

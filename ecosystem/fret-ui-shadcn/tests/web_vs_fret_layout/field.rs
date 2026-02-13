@@ -1910,7 +1910,7 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
     let mut services = StyleAwareServices::default();
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let selected: Model<Option<Arc<str>>> =
             cx.app.models_mut().insert(Some(Arc::from("kubernetes")));

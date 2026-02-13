@@ -33,9 +33,7 @@ impl WindowPointerMotionService {
             && let Some(prev_at) = prev.updated_at
             && let Some(now_at) = now_monotonic
         {
-            let dt = now_at
-                .checked_sub(prev_at)
-                .unwrap_or_else(|| Duration::default());
+            let dt = now_at.checked_sub(prev_at).unwrap_or_default();
             let dt = dt.as_secs_f32();
             if dt > 0.0 {
                 let dx = position_window.x.0 - prev.position_window.x.0;

@@ -51,15 +51,15 @@ fn checkbox_border(theme: &Theme) -> Color {
 }
 
 fn checkbox_bg_checked(theme: &Theme) -> Color {
-    theme.color_required("primary")
+    theme.color_token("primary")
 }
 
 fn checkbox_fg_checked(theme: &Theme) -> Color {
-    theme.color_required("primary-foreground")
+    theme.color_token("primary-foreground")
 }
 
 fn checkbox_ring_color(theme: &Theme) -> Color {
-    theme.color_required("ring")
+    theme.color_token("ring")
 }
 
 #[derive(Debug, Clone, Default)]

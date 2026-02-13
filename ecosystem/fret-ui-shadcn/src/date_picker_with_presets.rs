@@ -228,8 +228,8 @@ impl DatePickerWithPresets {
                             .initial_focus_out(initial_focus_out.clone())
                             .into_element(cx);
 
-                        let border = theme.color_required("border");
-                        let base_radius = theme.metric_required("metric.radius.lg");
+                        let border = theme.color_token("border");
+                        let base_radius = theme.metric_token("metric.radius.lg");
                         let rounded_md = Px((base_radius.0 - 2.0).max(0.0));
                         let calendar_container = {
                             let props = decl_style::container_props(

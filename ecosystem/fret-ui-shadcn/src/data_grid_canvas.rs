@@ -27,27 +27,27 @@ use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
 fn border_color(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn background_color(theme: &Theme) -> Color {
-    theme.color_required("background")
+    theme.color_token("background")
 }
 
 fn foreground_color(theme: &Theme) -> Color {
-    theme.color_required("foreground")
+    theme.color_token("foreground")
 }
 
 fn font_size(theme: &Theme) -> Px {
     theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
-        .unwrap_or_else(|| theme.metric_required("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"))
 }
 
 fn font_line_height(theme: &Theme) -> Px {
     theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        .unwrap_or_else(|| theme.metric_required("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"))
 }
 
 fn text_style(theme: &Theme) -> TextStyle {
@@ -227,9 +227,9 @@ impl DataGridCanvas {
         cx.container(root_props, move |cx| {
             let theme = Theme::global(&*cx.app).clone();
 
-            let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-            let thumb = theme.color_required("scrollbar.thumb.background");
-            let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+            let scrollbar_w = theme.metric_token("metric.scrollbar.width");
+            let thumb = theme.color_token("scrollbar.thumb.background");
+            let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
             let (scroll_handle, paint_data, total_w, total_h, output) =
                 cx.with_state(DataGridCanvasState::default, |state| {

@@ -32,6 +32,7 @@ Evidence:
 - [x] EXT-m1-100 Web copy path exists (GPU copy, no CPU readback):
       `ExternalImageSource` → `Queue::copy_external_image_to_texture` → imported render target.
   - Evidence:
+    - `tools/diag-scripts/external-texture-imports-web-copy.json`
     - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
     - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
 
@@ -66,10 +67,19 @@ Evidence:
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/viewport_surface.rs`
     - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
-- [ ] EXT-native-120 Native “true external import” adapter seam (platform-decoder produced GPU
+- [x] EXT-native-120 Native “true external import” adapter seam (platform-decoder produced GPU
       frame, capability-gated, deterministic fallback).
-- [~] EXT-perf-130 Comparative diag/perf baselines for copy paths (native CPU upload vs GPU
-      offscreen; web GPU copy when stable).
+  - Evidence:
+    - `crates/fret-launch/src/runner/native_external_import.rs`
+    - `crates/fret-launch/src/runner/imported_viewport_target.rs`
+- [x] EXT-perf-130 Comparative diag/perf baselines for native copy paths (native CPU upload vs GPU
+      offscreen).
   - Evidence (native):
     - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-decoded-png-cpu-copy.windows-local.v1.json`
+- [ ] EXT-web-perf-131 Web GPU copy path perf baseline (when stable).
+  - Evidence:
+    - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+    - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)
+    - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
+    - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`

@@ -175,11 +175,12 @@ pub(in crate::ui) fn preview_card(
     };
 
     let image = {
+        let cover_bg = cx.with_theme(|theme| theme.color_token("muted"));
         let cover_stack = {
             let theme = Theme::global(&*cx.app);
             let props = decl_style::container_props(
                 theme,
-                ChromeRefinement::default(),
+                ChromeRefinement::default().bg(ColorRef::Color(cover_bg)),
                 LayoutRefinement::default().relative().size_full(),
             );
 

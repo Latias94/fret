@@ -84,7 +84,7 @@ pub(in crate::ui) fn preview_switch(
             }
         };
 
-    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
+    let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(

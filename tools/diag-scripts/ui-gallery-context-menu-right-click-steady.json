@@ -47,6 +47,35 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
     { "type": "wait_frames", "n": 5 },
 
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "font_catalog_populated" },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "system_font_rescan_idle" },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "text_font_stack_key_stable", "stable_frames": 120 },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" } },
+    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+      },
+      "timeout_frames": 180
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+
     { "type": "reset_diagnostics" },
 
     { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" } },
@@ -65,4 +94,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-

@@ -132,26 +132,26 @@ pub fn resolve_input_chrome(
         .map(|c| c.resolve(theme))
         .or_else(|| keys.bg.and_then(|k| theme.color_by_key(k)))
         .or_else(|| theme.color_by_key("component.input.bg"))
-        .unwrap_or_else(|| theme.color_required("background"));
+        .unwrap_or_else(|| theme.color_token("background"));
     let border_color = style
         .border_color
         .as_ref()
         .map(|c| c.resolve(theme))
         .or_else(|| keys.border.and_then(|k| theme.color_by_key(k)))
         .or_else(|| theme.color_by_key("component.input.border"))
-        .unwrap_or_else(|| theme.color_required("input"));
+        .unwrap_or_else(|| theme.color_token("input"));
     let border_color_focused = keys
         .border_focus
         .and_then(|k| theme.color_by_key(k))
         .or_else(|| theme.color_by_key("component.input.border_focus"))
-        .unwrap_or_else(|| theme.color_required("ring"));
+        .unwrap_or_else(|| theme.color_token("ring"));
     let text_color = style
         .text_color
         .as_ref()
         .map(|c| c.resolve(theme))
         .or_else(|| keys.fg.and_then(|k| theme.color_by_key(k)))
         .or_else(|| theme.color_by_key("component.input.fg"))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+        .unwrap_or_else(|| theme.color_token("foreground"));
     let text_px = keys
         .text_px
         .and_then(|k| theme.metric_by_key(k))
@@ -161,7 +161,7 @@ pub fn resolve_input_chrome(
         .selection
         .and_then(|k| theme.color_by_key(k))
         .or_else(|| theme.color_by_key("component.input.selection"))
-        .unwrap_or_else(|| theme.color_required("selection.background"));
+        .unwrap_or_else(|| theme.color_token("selection.background"));
 
     let padding_top = style
         .padding
@@ -218,27 +218,27 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
     let ring_color = theme
         .color_by_key("ring/50")
         .or_else(|| theme.color_by_key("ring"))
-        .unwrap_or_else(|| theme.color_required("ring"));
+        .unwrap_or_else(|| theme.color_token("ring"));
     let ring_offset_color = theme
         .color_by_key("ring-offset-background")
-        .unwrap_or_else(|| theme.color_required("ring-offset-background"));
+        .unwrap_or_else(|| theme.color_token("ring-offset-background"));
 
     let background = theme
         .color_by_key("component.input.bg")
-        .unwrap_or_else(|| theme.color_required("background"));
+        .unwrap_or_else(|| theme.color_token("background"));
     let border_color = theme
         .color_by_key("component.input.border")
-        .unwrap_or_else(|| theme.color_required("input"));
+        .unwrap_or_else(|| theme.color_token("input"));
     // shadcn/new-york-v4 uses `focus-visible:border-ring`.
     let border_color_focused = theme
         .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"));
+        .unwrap_or_else(|| theme.color_token("ring"));
     let radius = theme
         .metric_by_key("component.input.radius")
-        .unwrap_or_else(|| theme.metric_required("metric.radius.sm"));
+        .unwrap_or_else(|| theme.metric_token("metric.radius.sm"));
     let selection = theme
         .color_by_key("component.input.selection")
-        .unwrap_or_else(|| theme.color_required("selection.background"));
+        .unwrap_or_else(|| theme.color_token("selection.background"));
 
     fret_ui::TextInputStyle {
         padding: Edges::all(Px(0.0)),
@@ -255,14 +255,14 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
             corner_radii: Corners::all(radius),
         }),
         corner_radii: Corners::all(radius),
-        text_color: theme.color_required("foreground"),
-        placeholder_color: theme.color_required("muted-foreground"),
+        text_color: theme.color_token("foreground"),
+        placeholder_color: theme.color_token("muted-foreground"),
         selection_color: Color {
             a: 1.0,
             ..selection
         },
-        caret_color: theme.color_required("foreground"),
-        preedit_color: theme.color_required("primary"),
+        caret_color: theme.color_token("foreground"),
+        preedit_color: theme.color_token("primary"),
     }
 }
 

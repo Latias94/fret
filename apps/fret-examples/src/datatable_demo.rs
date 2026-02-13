@@ -199,7 +199,7 @@ impl WinitAppDriver for DataTableDemoDriver {
                     cx.observe_model(&table_output, Invalidation::Layout);
 
                     let theme = cx.theme_snapshot();
-                    let padding = theme.metric_required("metric.padding.md");
+                    let padding = theme.metric_token("metric.padding.md");
 
                     let (selected, sorting) = cx
                         .app
@@ -317,7 +317,7 @@ impl WinitAppDriver for DataTableDemoDriver {
                     vec![cx.container(
                         ContainerProps {
                             layout: root_layout,
-                            background: Some(theme.color_required("background")),
+                            background: Some(theme.color_token("background")),
                             ..Default::default()
                         },
                         move |cx| {
@@ -338,11 +338,11 @@ impl WinitAppDriver for DataTableDemoDriver {
                                         cx.container(
                                             ContainerProps {
                                                 layout: table_slot,
-                                                background: Some(theme.color_required("card")),
+                                                background: Some(theme.color_token("card")),
                                                 border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_required("border")),
+                                                border_color: Some(theme.color_token("border")),
                                                 corner_radii: Corners::all(
-                                                    theme.metric_required("metric.radius.md"),
+                                                    theme.metric_token("metric.radius.md"),
                                                 ),
                                                 ..Default::default()
                                             },

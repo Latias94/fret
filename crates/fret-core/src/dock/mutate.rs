@@ -761,11 +761,11 @@ impl DockGraph {
             }
         }
 
-        if let Some(root) = self.window_root(window) {
-            if let Some(parent) = self.find_parent_in_subtree(root, old) {
-                self.replace_child_in_node(parent, old, new);
-                return;
-            }
+        if let Some(root) = self.window_root(window)
+            && let Some(parent) = self.find_parent_in_subtree(root, old)
+        {
+            self.replace_child_in_node(parent, old, new);
+            return;
         }
 
         // Window roots are optional (e.g. a window may only contain floating dock containers).

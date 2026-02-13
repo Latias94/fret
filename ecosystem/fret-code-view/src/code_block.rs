@@ -430,8 +430,8 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
     mut header: CodeBlockHeaderSlots,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
-    let bg = theme.color_required("card");
-    let border = theme.color_required("border");
+    let bg = theme.color_token("card");
+    let border = theme.color_token("border");
 
     let chrome = {
         let mut chrome = ChromeRefinement::default().rounded(Radius::Md);
@@ -561,7 +561,7 @@ fn render_code_block_header<H: UiHost>(
     match background {
         CodeBlockHeaderBackground::None => {}
         CodeBlockHeaderBackground::Secondary => {
-            props.background = Some(theme.color_required("secondary"));
+            props.background = Some(theme.color_token("secondary"));
         }
     }
     if divider {
@@ -571,7 +571,7 @@ fn render_code_block_header<H: UiHost>(
             bottom: Px(1.0),
             left: Px(0.0),
         };
-        props.border_color = Some(theme.color_required("border"));
+        props.border_color = Some(theme.color_token("border"));
     }
 
     cx.container(props, |cx| {
@@ -592,15 +592,13 @@ fn render_code_block_header<H: UiHost>(
                         text: Arc::<str>::from(lang.to_string()),
                         style: Some(TextStyle {
                             font: FontId::monospace(),
-                            size: theme.metric_required("metric.font.mono_size"),
+                            size: theme.metric_token("metric.font.mono_size"),
                             weight: FontWeight::SEMIBOLD,
                             slant: Default::default(),
-                            line_height: Some(
-                                theme.metric_required("metric.font.mono_line_height"),
-                            ),
+                            line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                             letter_spacing_em: None,
                         }),
-                        color: Some(theme.color_required("muted-foreground")),
+                        color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                     }));
@@ -658,7 +656,7 @@ fn render_code_block_body<H: UiHost + 'static>(
             wrap
         };
 
-        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let scrollbar_w = theme.metric_token("metric.scrollbar.width");
         let reserved_right_for_x_scrollbar = if scrollbar_y_enabled {
             scrollbar_w
         } else {
@@ -710,8 +708,8 @@ fn render_code_block_body<H: UiHost + 'static>(
                 };
 
                 if let Some(max_height) = max_height {
-                    let thumb = theme.color_required("scrollbar.thumb.background");
-                    let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+                    let thumb = theme.color_token("scrollbar.thumb.background");
+                    let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
                     let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
 
                     let outer_layout = {
@@ -936,11 +934,11 @@ impl CodeBlockLineRowTheme {
             .collect::<HashMap<_, _>>();
 
         Self {
-            mono_size: theme.metric_required("metric.font.mono_size"),
-            mono_line_height: theme.metric_required("metric.font.mono_line_height"),
-            fg: theme.color_required("foreground"),
-            muted_fg: theme.color_required("muted-foreground"),
-            border: theme.color_required("border"),
+            mono_size: theme.metric_token("metric.font.mono_size"),
+            mono_line_height: theme.metric_token("metric.font.mono_line_height"),
+            fg: theme.color_token("foreground"),
+            muted_fg: theme.color_token("muted-foreground"),
+            border: theme.color_token("border"),
             syntax_colors,
         }
     }
@@ -1061,7 +1059,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
         return cx.text("windowed_lines requires max_height");
     };
 
-    let row_h = theme.metric_required("metric.font.mono_line_height");
+    let row_h = theme.metric_token("metric.font.mono_line_height");
     let theme_revision = theme.revision();
     let prepared_revision = prepared.revision;
 
@@ -1137,9 +1135,9 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
         |_cx| vec![list],
     );
 
-    let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-    let thumb = theme.color_required("scrollbar.thumb.background");
-    let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+    let scrollbar_w = theme.metric_token("metric.scrollbar.width");
+    let thumb = theme.color_token("scrollbar.thumb.background");
+    let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
     let scroll_x_id = scroll_x_el.id;
 
@@ -1269,10 +1267,10 @@ fn render_code_block_with_line_numbers<H: UiHost>(
 ) -> AnyElement {
     let number_style = TextStyle {
         font: FontId::monospace(),
-        size: theme.metric_required("metric.font.mono_size"),
+        size: theme.metric_token("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     };
 
@@ -1284,7 +1282,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         },
         text: line_numbers,
         style: Some(number_style),
-        color: Some(theme.color_required("muted-foreground")),
+        color: Some(theme.color_token("muted-foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     });
@@ -1306,7 +1304,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
                 bottom: Px(0.0),
                 left: Px(0.0),
             },
-            border_color: Some(theme.color_required("border")),
+            border_color: Some(theme.color_token("border")),
             corner_radii: fret_core::Corners::all(Px(0.0)),
             ..Default::default()
         },
@@ -1335,13 +1333,13 @@ fn render_code_block_text<H: UiHost>(
 ) -> AnyElement {
     let text_style = TextStyle {
         font: FontId::monospace(),
-        size: theme.metric_required("metric.font.mono_size"),
+        size: theme.metric_token("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     };
-    let fg = theme.color_required("foreground");
+    let fg = theme.color_token("foreground");
 
     let text_wrap = text_wrap_for_code_block_wrap(wrap);
     let overflow = TextOverflow::Clip;
@@ -1350,7 +1348,7 @@ fn render_code_block_text<H: UiHost>(
     scroll_layout.size.width = Length::Fill;
     scroll_layout.size.height = match text_wrap {
         TextWrap::None => {
-            let line_height = theme.metric_required("metric.font.mono_line_height");
+            let line_height = theme.metric_token("metric.font.mono_line_height");
             let lines = line_count.max(1) as f32;
             Length::Px(Px(line_height.0 * lines))
         }
@@ -1388,9 +1386,9 @@ fn render_code_block_text<H: UiHost>(
         },
     );
 
-    let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-    let thumb = theme.color_required("scrollbar.thumb.background");
-    let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+    let scrollbar_w = theme.metric_token("metric.scrollbar.width");
+    let thumb = theme.color_token("scrollbar.thumb.background");
+    let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
     let scroll_id = scroll.id;
     cx.stack_props(

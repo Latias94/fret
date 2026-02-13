@@ -164,7 +164,7 @@ pub use data_table_controls::{
     DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptionItem,
     DataTableViewOptions,
 };
-pub use data_table_recipes::{DataTablePagination, DataTableToolbar};
+pub use data_table_recipes::{DataTableFacetedFilterOption, DataTablePagination, DataTableToolbar};
 pub use date_picker::DatePicker;
 pub use date_picker_with_presets::DatePickerWithPresets;
 pub use date_range_picker::DateRangePicker;

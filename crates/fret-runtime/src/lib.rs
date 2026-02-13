@@ -26,6 +26,7 @@ pub mod platform_completion;
 pub mod platform_text_input;
 pub mod runner_surface_lifecycle_diagnostics;
 pub mod shortcut_routing_diagnostics;
+pub mod strict_runtime;
 pub mod text_interaction_settings;
 pub mod time;
 pub mod ui_host;
@@ -72,7 +73,8 @@ pub use font_bootstrap::{
     apply_font_catalog_update_with_metadata,
 };
 pub use font_catalog::{
-    FontCatalog, FontCatalogEntry, FontCatalogMetadata, FontVariableAxisInfo, TextFontStackKey,
+    FontCatalog, FontCatalogEntry, FontCatalogMetadata, FontVariableAxisInfo,
+    SystemFontRescanState, TextFontStackKey,
 };
 pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;

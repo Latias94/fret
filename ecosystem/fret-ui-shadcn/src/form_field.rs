@@ -117,13 +117,12 @@ impl FormField {
         let mut control = self.control;
         if self.decorate_control {
             let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let destructive = theme.color_required("destructive");
+            let destructive = theme.color_token("destructive");
             let ring_color = Color {
                 a: 0.35,
                 ..destructive
             };
-            let mut ring =
-                decl_style::focus_ring(&theme, theme.metric_required("metric.radius.md"));
+            let mut ring = decl_style::focus_ring(&theme, theme.metric_token("metric.radius.md"));
             ring.color = ring_color;
 
             form_decorate_control_elements(

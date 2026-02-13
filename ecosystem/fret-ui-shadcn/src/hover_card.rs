@@ -145,8 +145,8 @@ fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
 }
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
-    let bg = theme.color_required("popover");
-    let border = theme.color_required("border");
+    let bg = theme.color_token("popover");
+    let border = theme.color_token("border");
 
     ChromeRefinement::default()
         .rounded(Radius::Md)
@@ -398,8 +398,8 @@ impl HoverCard {
                 .metric_by_key("component.hover_card.arrow_padding")
                 .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme))
         });
-        let arrow_bg = theme.color_required("popover");
-        let arrow_border = theme.color_required("border");
+        let arrow_bg = theme.color_token("popover");
+        let arrow_border = theme.color_token("border");
 
         let uncontrolled_default_open = self.open.is_none() && self.default_open;
         let open_root = radix_hover_card::HoverCardRoot::new()
@@ -797,6 +797,7 @@ impl HoverCard {
                             PointerRegionProps {
                                 layout: panel_layout,
                                 enabled: true,
+                                ..Default::default()
                             },
                             move |cx| {
                                 let pointer_down_model_for_down =

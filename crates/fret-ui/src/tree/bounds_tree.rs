@@ -3,28 +3,13 @@ use super::*;
 use std::cmp::Ordering;
 
 const MAX_CHILDREN: usize = 12;
-const DEFAULT_MIN_RECORDS: usize = 256;
 
 fn hit_test_bounds_tree_disabled() -> bool {
-    use std::sync::OnceLock;
-
-    static DISABLED: OnceLock<bool> = OnceLock::new();
-    *DISABLED.get_or_init(|| {
-        std::env::var_os("FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE").is_some_and(|v| !v.is_empty())
-    })
+    crate::runtime_config::ui_runtime_config().hit_test_bounds_tree_disabled
 }
 
 fn hit_test_bounds_tree_min_records() -> usize {
-    use std::sync::OnceLock;
-
-    static MIN_RECORDS: OnceLock<usize> = OnceLock::new();
-    *MIN_RECORDS.get_or_init(|| {
-        std::env::var("FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(DEFAULT_MIN_RECORDS)
-            .max(1)
-    })
+    crate::runtime_config::ui_runtime_config().hit_test_bounds_tree_min_records
 }
 
 #[derive(Debug, Default)]

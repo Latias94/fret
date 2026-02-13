@@ -163,6 +163,7 @@ where
                 PointerRegionProps {
                     layout: fill_layout,
                     enabled: true,
+                    ..Default::default()
                 },
                 move |cx| {
                     cx.pointer_region_on_pointer_move(on_move);

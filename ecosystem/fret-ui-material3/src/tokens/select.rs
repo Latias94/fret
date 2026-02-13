@@ -71,7 +71,7 @@ pub(crate) fn container_background(theme: &Theme, variant: SelectVariant, disabl
     let mut color = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-highest"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"));
 
     if disabled {
         let opacity_key = match variant {
@@ -116,7 +116,7 @@ pub(crate) fn hover_state_layer(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
     let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
     (color, opacity)
 }
@@ -181,7 +181,7 @@ pub(crate) fn outline(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
@@ -248,7 +248,7 @@ pub(crate) fn active_indicator(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
@@ -357,7 +357,7 @@ pub(crate) fn input_text_color(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
@@ -472,7 +472,7 @@ pub(crate) fn leading_icon_color(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
@@ -587,7 +587,7 @@ pub(crate) fn trailing_icon_color(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
@@ -602,7 +602,7 @@ pub(crate) fn placeholder_color(
 ) -> Color {
     let base = theme
         .color_by_key("md.sys.color.on-surface-variant")
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
 
     if !disabled {
         return base;
@@ -710,7 +710,7 @@ pub(crate) fn label_color(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
 
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
@@ -820,7 +820,7 @@ pub(crate) fn supporting_text_color(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
 
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
@@ -836,7 +836,7 @@ pub(crate) fn menu_container_background(theme: &Theme, variant: SelectVariant) -
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container"))
 }
 
 pub(crate) fn menu_container_elevation(theme: &Theme, variant: SelectVariant) -> Px {
@@ -855,7 +855,7 @@ pub(crate) fn menu_container_shadow_color(theme: &Theme, variant: SelectVariant)
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn menu_container_shape(theme: &Theme, variant: SelectVariant) -> Corners {
@@ -895,7 +895,7 @@ pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: SelectVari
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 pub(crate) fn menu_list_item_leading_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
@@ -922,7 +922,7 @@ pub(crate) fn menu_list_item_leading_icon_color(theme: &Theme, variant: SelectVa
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }
 
 pub(crate) fn menu_list_item_trailing_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
@@ -949,7 +949,7 @@ pub(crate) fn menu_list_item_trailing_icon_color(theme: &Theme, variant: SelectV
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }
 
 pub(crate) fn menu_list_item_selected_container_color(
@@ -965,5 +965,5 @@ pub(crate) fn menu_list_item_selected_container_color(
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-highest"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"))
 }

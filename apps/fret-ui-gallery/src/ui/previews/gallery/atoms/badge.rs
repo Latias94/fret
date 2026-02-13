@@ -52,8 +52,8 @@ pub(in crate::ui) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     };
 
     let with_icon = {
-        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
-        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+        let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
+        let outline_fg = ColorRef::Color(theme.color_token("foreground"));
 
         let children = vec![
             shadcn::Badge::new("Verified")
@@ -70,8 +70,8 @@ pub(in crate::ui) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     };
 
     let with_spinner = {
-        let destructive_fg = ColorRef::Color(theme.color_required("destructive-foreground"));
-        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+        let destructive_fg = ColorRef::Color(theme.color_token("destructive-foreground"));
+        let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
 
         let children = vec![
             shadcn::Badge::new("Deleting")
@@ -92,7 +92,7 @@ pub(in crate::ui) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     };
 
     let link = {
-        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+        let outline_fg = ColorRef::Color(theme.color_token("foreground"));
 
         let children = vec![
             shadcn::Badge::new("Open Link")
@@ -180,7 +180,7 @@ pub(in crate::ui) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     };
 
     let rtl = {
-        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+        let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
 
         let body = fret_ui_kit::primitives::direction::with_direction_provider(
             cx,

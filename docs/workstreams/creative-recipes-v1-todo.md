@@ -72,10 +72,18 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
     - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/ui-gallery-magic-sparkles-text.windows-local.v1.json`
   - [ ] Extend coverage (optional):
-    - Lens (`tools/diag-scripts/ui-gallery-magic-lens-*-perf-steady.json`)
-    - BorderBeam (`tools/diag-scripts/ui-gallery-magic-border-beam-*-perf-steady.json`)
-    - Dock (`tools/diag-scripts/ui-gallery-magic-dock-*-perf-steady.json`)
-    - Marquee (`tools/diag-scripts/ui-gallery-magic-marquee-*-perf-steady.json`)
+    - [x] Lens:
+      - `tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json`
+    - [x] BorderBeam:
+      - `tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-border-beam.windows-local.v1.json`
+    - [x] Dock:
+      - `tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-dock.windows-local.v1.json`
+    - [x] Marquee:
+      - `tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-marquee.windows-local.v1.json`
 
 ## P1 — Effect steps extension
 

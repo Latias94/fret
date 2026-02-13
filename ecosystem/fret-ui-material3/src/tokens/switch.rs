@@ -96,7 +96,7 @@ pub(crate) fn state_layer_color(
         .unwrap_or_else(|| {
             theme
                 .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
         })
 }
 
@@ -117,11 +117,11 @@ pub(crate) fn chrome(
         if selected {
             theme
                 .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
         } else {
             theme
                 .color_by_key("md.sys.color.surface-container-highest")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-highest"))
+                .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"))
         }
     });
 
@@ -129,11 +129,11 @@ pub(crate) fn chrome(
         if selected {
             theme
                 .color_by_key("md.sys.color.on-primary")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.on-primary"))
+                .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"))
         } else {
             theme
                 .color_by_key("md.sys.color.outline")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.outline"))
+                .unwrap_or_else(|| theme.color_token("md.sys.color.outline"))
         }
     });
 
@@ -144,7 +144,7 @@ pub(crate) fn chrome(
             theme
                 .color_by_key(track_outline_color_key(interaction))
                 .or_else(|| theme.color_by_key("md.sys.color.outline"))
-                .unwrap_or_else(|| theme.color_required("md.sys.color.outline")),
+                .unwrap_or_else(|| theme.color_token("md.sys.color.outline")),
         )
     };
 
@@ -162,7 +162,7 @@ fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
         theme.color_by_key("md.comp.switch.disabled.unselected.track.color")
     }
     .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     let track_opacity = theme
         .number_by_key("md.comp.switch.disabled.track.opacity")
@@ -178,7 +178,7 @@ fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
             .color_by_key("md.comp.switch.disabled.unselected.handle.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
     }
-    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     let handle_opacity = if selected {
         theme.number_by_key("md.comp.switch.disabled.selected.handle.opacity")

@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use fret_diag_protocol::DiagTransportMessageV1;
+use fret_diag_protocol::{
+    DevtoolsBundleDumpedV1, DiagTransportMessageV1, FilesystemCapabilitiesV1,
+};
 
 use crate::util::{now_unix_ms, read_json_value, touch, write_json_value};
 
@@ -65,6 +67,7 @@ struct State {
     cfg: FsDiagTransportConfig,
     emitted_sessions: bool,
     default_session_id: Option<String>,
+    last_emitted_capabilities: Vec<String>,
 
     last_pick_result_stamp: Option<u64>,
     last_script_result_stamp: Option<u64>,
@@ -81,6 +84,7 @@ impl FsDiagTransport {
                 cfg,
                 emitted_sessions: false,
                 default_session_id: Some("fs".to_string()),
+                last_emitted_capabilities: Vec::new(),
                 last_pick_result_stamp: None,
                 last_script_result_stamp: None,
                 last_screenshots_result_stamp: None,
@@ -176,20 +180,58 @@ impl DiagTransport for FsDiagTransport {
 
 impl State {
     fn poll(&mut self, inbox: &DiagInbox) {
-        if !self.emitted_sessions {
-            let session_id = self
-                .default_session_id
-                .as_deref()
-                .unwrap_or("fs")
-                .to_string();
-            inbox.push(fs_single_session_list(&session_id));
-            self.emitted_sessions = true;
-        }
+        self.poll_session_list(inbox);
 
         self.poll_pick_result(inbox);
         self.poll_script_result(inbox);
         self.poll_screenshots_result(inbox);
         self.poll_latest_pointer(inbox);
+    }
+
+    fn poll_session_list(&mut self, inbox: &DiagInbox) {
+        let session_id = self
+            .default_session_id
+            .as_deref()
+            .unwrap_or("fs")
+            .to_string();
+
+        let mut caps: Vec<String> = vec![
+            // Backwards-compatible (legacy, un-namespaced) control plane capabilities.
+            "inspect".to_string(),
+            "pick".to_string(),
+            "scripts".to_string(),
+            "bundles".to_string(),
+            "sessions".to_string(),
+            // Namespaced control plane capabilities (recommended).
+            "devtools.inspect".to_string(),
+            "devtools.pick".to_string(),
+            "devtools.scripts".to_string(),
+            "devtools.bundles".to_string(),
+            "devtools.sessions".to_string(),
+        ];
+
+        let path = self.cfg.out_dir.join("capabilities.json");
+        if let Some(v) = read_json_value(&path) {
+            if let Ok(parsed) = serde_json::from_value::<FilesystemCapabilitiesV1>(v) {
+                for c in parsed.capabilities {
+                    let c = normalize_capability_string(&c);
+                    if !c.is_empty() {
+                        caps.push(c);
+                    }
+                }
+            }
+        }
+
+        caps.sort();
+        caps.dedup();
+
+        if self.emitted_sessions && self.last_emitted_capabilities == caps {
+            return;
+        }
+        self.last_emitted_capabilities = caps.clone();
+
+        inbox.push(fs_single_session_list(&session_id, caps));
+        self.emitted_sessions = true;
     }
 
     fn poll_pick_result(&mut self, inbox: &DiagInbox) {
@@ -266,13 +308,39 @@ impl State {
             r#type: "bundle.dumped".to_string(),
             session_id: self.default_session_id.clone(),
             request_id: None,
-            payload: serde_json::json!({
-                "exported_unix_ms": now_unix_ms(),
-                "out_dir": self.cfg.out_dir.to_string_lossy(),
-                "dir": latest,
-            }),
+            payload: serde_json::to_value(DevtoolsBundleDumpedV1 {
+                schema_version: 1,
+                exported_unix_ms: now_unix_ms(),
+                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                dir: latest,
+                bundle: None,
+                bundle_json_chunk: None,
+                bundle_json_chunk_index: None,
+                bundle_json_chunk_count: None,
+            })
+            .unwrap_or_else(|_| serde_json::json!({})),
         });
     }
+}
+
+fn normalize_capability_string(raw: &str) -> String {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return String::new();
+    }
+    if raw.contains('.') {
+        return raw.to_string();
+    }
+
+    let mapped = match raw {
+        "script_v2" => "diag.script_v2",
+        "screenshot_png" => "diag.screenshot_png",
+        "multi_window" => "diag.multi_window",
+        "pointer_kind_touch" => "diag.pointer_kind_touch",
+        "gesture_pinch" => "diag.gesture_pinch",
+        _ => raw,
+    };
+    mapped.to_string()
 }
 
 fn stamp_is_newer(slot: &mut Option<u64>, stamp: Option<u64>) -> bool {
@@ -303,6 +371,7 @@ fn read_touch_stamp(path: &Path) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_diag_protocol::DevtoolsSessionListV1;
 
     #[test]
     fn fs_transport_emits_session_list_and_pick_result() {
@@ -314,11 +383,34 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create temp dir");
 
+        let caps = FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec![
+                "script_v2".to_string(),
+                "foo.bar".to_string(),
+                "diag.screenshot_png".to_string(),
+            ],
+        };
+        write_json_value(
+            &dir.join("capabilities.json"),
+            &serde_json::to_value(caps).unwrap(),
+        )
+        .expect("write capabilities.json");
+
         let cfg = FsDiagTransportConfig::from_out_dir(&dir);
         let client = crate::transport::ToolingDiagClient::connect_fs(cfg).expect("connect_fs");
 
         let msg = client.try_recv().expect("session.list");
         assert_eq!(msg.r#type, "session.list");
+        let list: DevtoolsSessionListV1 =
+            serde_json::from_value(msg.payload).expect("parse session.list payload");
+        assert_eq!(list.sessions.len(), 1);
+        assert_eq!(list.sessions[0].session_id, "fs");
+        let caps = &list.sessions[0].capabilities;
+        assert!(caps.iter().any(|c| c == "devtools.sessions"));
+        assert!(caps.iter().any(|c| c == "diag.script_v2"));
+        assert!(caps.iter().any(|c| c == "diag.screenshot_png"));
+        assert!(caps.iter().any(|c| c == "foo.bar"));
 
         let pick_payload = serde_json::json!({
             "schema_version": 1,

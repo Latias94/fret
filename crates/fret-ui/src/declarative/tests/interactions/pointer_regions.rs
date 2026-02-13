@@ -216,6 +216,81 @@ fn declarative_pointer_region_pointer_down_runs_when_descendant_pressable_stops_
 }
 
 #[test]
+fn pointer_down_payload_marks_hit_is_text_input_for_text_input_region_descendants() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let seen = app.models_mut().insert(false);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-down-hit-is-text-input",
+        |cx| {
+            let seen = seen.clone();
+            let on_down = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      down: crate::action::PointerDownCx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&seen, |v: &mut bool| *v = down.hit_is_text_input);
+                    host.request_redraw(cx.window);
+                    false
+                },
+            );
+
+            let mut region_props = crate::element::PointerRegionProps::default();
+            region_props.layout.size.width = Length::Fill;
+            region_props.layout.size.height = Length::Fill;
+
+            let mut text_props = crate::element::TextInputRegionProps::default();
+            text_props.layout.size.width = Length::Fill;
+            text_props.layout.size.height = Length::Fill;
+
+            vec![cx.pointer_region(region_props, move |cx| {
+                cx.pointer_region_on_pointer_down(on_down);
+                vec![cx.text_input_region(text_props, |_cx| Vec::<AnyElement>::new())]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region = ui.children(root)[0];
+    let region_bounds = ui.debug_node_bounds(region).expect("pointer region bounds");
+    let inside = Point::new(
+        Px(region_bounds.origin.x.0 + 5.0),
+        Px(region_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&seen), Some(true));
+}
+
+#[test]
 fn declarative_pointer_region_can_handle_pointer_cancel() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -636,6 +711,7 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
                                 ..Default::default()
                             },
                             enabled: true,
+                            ..Default::default()
                         },
                         |cx| {
                             cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, down| {
@@ -677,4 +753,80 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
     );
 
     assert_eq!(ui.focus(), Some(semantics_node));
+}
+
+#[test]
+fn declarative_pointer_region_capture_phase_pointer_moves_do_not_double_dispatch() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let moves = app.models_mut().insert(0u32);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-capture-phase-moves-no-double-dispatch",
+        |cx| {
+            let on_move = Arc::new({
+                let moves = moves.clone();
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      _mv: crate::action::PointerMoveCx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&moves, |v: &mut u32| *v = v.saturating_add(1));
+                    host.request_redraw(cx.window);
+                    false
+                }
+            });
+
+            vec![cx.pointer_region(
+                crate::element::PointerRegionProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Fill;
+                        layout.size.height = crate::element::Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    capture_phase_pointer_moves: true,
+                },
+                move |cx| {
+                    cx.pointer_region_on_pointer_move(on_move);
+                    Vec::new()
+                },
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&moves), Some(1));
 }

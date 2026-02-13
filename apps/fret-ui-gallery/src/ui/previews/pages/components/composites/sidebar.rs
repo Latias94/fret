@@ -272,6 +272,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                 .into_element(cx),
             shadcn::SidebarFooter::new([shadcn::typography::small(cx, "shadcn")]).into_element(cx),
         ])
+        .collapsible(shadcn::SidebarCollapsible::Icon)
         .collapsed(is_collapsed)
         .refine_layout(LayoutRefinement::default().h_full())
         .into_element(cx);
@@ -416,6 +417,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
         let sidebar = shadcn::Sidebar::new([shadcn::SidebarContent::new([projects])
             .collapsed(is_collapsed)
             .into_element(cx)])
+        .collapsible(shadcn::SidebarCollapsible::Icon)
         .collapsed(is_collapsed)
         .refine_layout(LayoutRefinement::default().h_full())
         .into_element(cx);

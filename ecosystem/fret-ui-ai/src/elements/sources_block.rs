@@ -129,7 +129,7 @@ impl SourcesBlock {
 
         let highlight_bg = theme
             .color_by_key("accent")
-            .unwrap_or_else(|| theme.color_required("muted"));
+            .unwrap_or_else(|| theme.color_token("muted"));
         let highlight_padding = decl_style::space(&theme, Space::N2);
         let highlight_radius = decl_style::radius(&theme, Radius::Md);
         let highlight_layout =

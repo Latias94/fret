@@ -294,7 +294,7 @@ impl OpenInTrigger {
             cx,
             fret_icons::ids::ui::CHEVRON_DOWN,
             Some(Px(16.0)),
-            Some(ColorRef::Color(theme.color_required("foreground"))),
+            Some(ColorRef::Color(theme.color_token("foreground"))),
         );
 
         let row = stack::hstack(
@@ -332,7 +332,7 @@ fn open_in_item_entry<H: UiHost + 'static>(
         provider.icon(),
         Some(Px(16.0)),
         Some(ColorRef::Color(
-            Theme::global(&*cx.app).color_required("muted-foreground"),
+            Theme::global(&*cx.app).color_token("muted-foreground"),
         )),
     );
     let external = decl_icon::icon_with(
@@ -340,7 +340,7 @@ fn open_in_item_entry<H: UiHost + 'static>(
         fret_icons::IconId::new_static("lucide.external-link"),
         Some(Px(16.0)),
         Some(ColorRef::Color(
-            Theme::global(&*cx.app).color_required("muted-foreground"),
+            Theme::global(&*cx.app).color_token("muted-foreground"),
         )),
     );
 

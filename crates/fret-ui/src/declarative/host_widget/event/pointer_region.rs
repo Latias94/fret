@@ -25,15 +25,18 @@ pub(super) fn handle_pointer_region<H: UiHost>(
     //
     // Bubble-phase handling is skipped to avoid double-dispatch (capture + bubble) once
     // `event_capture_impl` opts a given event into capture-phase dispatch for PointerRegion.
-    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble
-        && matches!(
-            event,
+    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble {
+        match event {
             Event::Pointer(fret_core::PointerEvent::Down { .. })
-                | Event::Pointer(fret_core::PointerEvent::Up { .. })
-                | Event::PointerCancel(_)
-        )
-    {
-        return;
+            | Event::Pointer(fret_core::PointerEvent::Up { .. })
+            | Event::PointerCancel(_) => return,
+            Event::Pointer(fret_core::PointerEvent::Move { .. })
+                if props.capture_phase_pointer_moves || cx.captured.is_some() =>
+            {
+                return;
+            }
+            _ => {}
+        }
     }
 
     let pixels_per_point = cx
@@ -241,6 +244,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 modifiers: *modifiers,
                 click_count: *click_count,
                 pointer_type: *pointer_type,
+                hit_is_text_input: cx.pointer_hit_is_text_input,
             };
 
             let Some(h) = hook else {
@@ -330,14 +334,14 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             };
 
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_HOOK").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_pointer_region_move_hook {
                 eprintln!(
                     "pointer_region_move_hook: element={:?} node={:?} phase={:?} pos={:?} buttons={:?}",
                     this.element, cx.node, cx.input_ctx.dispatch_phase, position, buttons
                 );
             }
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_BACKTRACE").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_pointer_region_move_backtrace {
                 eprintln!(
                     "pointer_region_move_hook backtrace:\n{}",
                     std::backtrace::Backtrace::force_capture()

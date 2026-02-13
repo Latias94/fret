@@ -174,8 +174,8 @@ impl Banner {
                 return hidden_element(cx);
             }
 
-            let bg = theme.color_required("primary");
-            let fg = theme.color_required("primary-foreground");
+            let bg = theme.color_token("primary");
+            let fg = theme.color_token("primary-foreground");
 
             let mut chrome = ChromeRefinement::default()
                 .px(Space::N4)
@@ -241,7 +241,7 @@ impl BannerIcon {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let base = theme.color_required("background");
+        let base = theme.color_token("background");
         let border = alpha_mul(base, 0.20);
         let bg = alpha_mul(base, 0.10);
 
@@ -345,8 +345,8 @@ impl BannerAction {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("primary-foreground");
-        let mut hover_bg = theme.color_required("background");
+        let fg = theme.color_token("primary-foreground");
+        let mut hover_bg = theme.color_token("background");
         hover_bg = alpha_mul(hover_bg, 0.10);
 
         let style = ButtonStyle::default()
@@ -415,8 +415,8 @@ impl BannerClose {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("primary-foreground");
-        let mut hover_bg = theme.color_required("background");
+        let fg = theme.color_token("primary-foreground");
+        let mut hover_bg = theme.color_token("background");
         hover_bg = alpha_mul(hover_bg, 0.10);
 
         let scope = banner_scope_inherited(cx);

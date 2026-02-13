@@ -101,7 +101,7 @@ pub fn paint_viewport_crosshair(
 
     let color = Color {
         a: 0.65,
-        ..theme.color_required("foreground")
+        ..theme.color_token("foreground")
     };
 
     for rect in [h, v] {
@@ -184,11 +184,11 @@ fn paint_viewport_translate_gizmo(
     };
     let x_color = Color {
         a: x_axis_alpha,
-        ..theme.color_required("color.viewport.gizmo.x")
+        ..theme.color_token("color.viewport.gizmo.x")
     };
     let y_color = Color {
         a: y_axis_alpha,
-        ..theme.color_required("color.viewport.gizmo.y")
+        ..theme.color_token("color.viewport.gizmo.y")
     };
 
     scene.push(SceneOp::Quad {
@@ -219,12 +219,12 @@ fn paint_viewport_translate_gizmo(
         ),
         background: Paint::Solid(Color {
             a: 0.85,
-            ..theme.color_required("color.viewport.gizmo.handle.background")
+            ..theme.color_token("color.viewport.gizmo.handle.background")
         }),
         border: Edges::all(handle_border),
         border_paint: Paint::Solid(Color {
             a: 0.90,
-            ..theme.color_required("color.viewport.gizmo.handle.border")
+            ..theme.color_token("color.viewport.gizmo.handle.border")
         }),
         corner_radii: Corners::all(Px(2.0)),
     });
@@ -245,7 +245,7 @@ fn paint_viewport_rotate_gizmo(
     let a = if gizmo.highlight { 0.95 } else { 0.75 };
     let color = Color {
         a,
-        ..theme.color_required("color.viewport.rotate_gizmo")
+        ..theme.color_token("color.viewport.rotate_gizmo")
     };
 
     scene.push(SceneOp::Quad {
@@ -411,11 +411,11 @@ fn paint_viewport_marquee(
 
     let fill = Color {
         a: 0.14,
-        ..theme.color_required("primary")
+        ..theme.color_token("primary")
     };
     let stroke = Color {
         a: 0.85,
-        ..theme.color_required("primary")
+        ..theme.color_token("primary")
     };
     let t = Px(1.5);
 

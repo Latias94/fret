@@ -95,7 +95,28 @@ impl BoundResizablePanelGroup {
         bounds: Rect,
         children_len: usize,
     ) -> (Vec<Rect>, Vec<Rect>, Vec<f32>, Vec<f32>, f32) {
-        let raw = app.models().get_cloned(&self.model).unwrap_or_default();
+        let raw = match app.models().try_get_cloned(&self.model) {
+            Ok(Some(v)) => v,
+            Ok(None) => {
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    model_id = ?self.model.id(),
+                    children_len,
+                    "resizable_panel_group: fractions model not found"
+                );
+                Vec::new()
+            }
+            Err(err) => {
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    ?err,
+                    model_id = ?self.model.id(),
+                    children_len,
+                    "resizable_panel_group: failed to read fractions model"
+                );
+                Vec::new()
+            }
+        };
         let layout = compute_resizable_panel_group_layout(
             self.axis,
             bounds,

@@ -33,6 +33,7 @@ impl Default for WindowFrame {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub(crate) enum ElementInstance {
     Container(ContainerProps),
@@ -671,7 +672,8 @@ pub(crate) fn layout_style_for_node<H: UiHost>(
     window: AppWindowId,
     node: NodeId,
 ) -> LayoutStyle {
-    element_record_for_node(app, window, node)
-        .map(|r| layout_style_for_instance(&r.instance))
-        .unwrap_or_default()
+    with_element_record_for_node(app, window, node, |r| {
+        layout_style_for_instance(&r.instance)
+    })
+    .unwrap_or_default()
 }

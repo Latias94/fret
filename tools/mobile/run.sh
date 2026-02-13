@@ -75,30 +75,30 @@ case "${platform}" in
       exit 2
     fi
 
-    args=()
+    cmd=(tools/mobile/android_game_activity_run.sh)
     if [[ "${profile}" == "release" ]]; then
-      args+=(--release)
+      cmd+=(--release)
     fi
     if [[ -n "${device}" ]]; then
-      args+=(--device "${device}")
+      cmd+=(--device "${device}")
     fi
     if [[ -n "${backend}" ]]; then
-      args+=(--backend "${backend}")
+      cmd+=(--backend "${backend}")
     fi
     if [[ -n "${allow_fallback}" ]]; then
-      args+=(--allow-fallback)
+      cmd+=(--allow-fallback)
     fi
     if [[ -n "${diag}" ]]; then
-      args+=(--diag)
+      cmd+=(--diag)
     fi
     if [[ -n "${diag_dir}" ]]; then
-      args+=(--diag-dir "${diag_dir}")
+      cmd+=(--diag-dir "${diag_dir}")
     fi
     if [[ -n "${no_logcat}" ]]; then
-      args+=(--no-logcat)
+      cmd+=(--no-logcat)
     fi
 
-    exec tools/mobile/android_game_activity_run.sh "${args[@]}"
+    exec "${cmd[@]}"
     ;;
   ios)
     if [[ "${app}" != "ui-gallery" ]]; then
@@ -106,27 +106,27 @@ case "${platform}" in
       exit 2
     fi
     if [[ -n "${ios_sim}" ]]; then
-      args=()
+      cmd=(tools/mobile/ios_sim_run.sh)
       if [[ "${profile}" == "release" ]]; then
-        args+=(--release)
+        cmd+=(--release)
       fi
       if [[ -n "${udid}" ]]; then
-        args+=(--udid "${udid}")
+        cmd+=(--udid "${udid}")
       fi
-      exec tools/mobile/ios_sim_run.sh "${args[@]}"
+      exec "${cmd[@]}"
     fi
 
-    args=()
+    cmd=(tools/mobile/ios_device_run.sh)
     if [[ "${profile}" == "release" ]]; then
-      args+=(--release)
+      cmd+=(--release)
     fi
     if [[ -n "${device}" ]]; then
-      args+=(--device "${device}")
+      cmd+=(--device "${device}")
     fi
     if [[ -n "${team}" ]]; then
-      args+=(--team "${team}")
+      cmd+=(--team "${team}")
     fi
-    exec tools/mobile/ios_device_run.sh "${args[@]}"
+    exec "${cmd[@]}"
     ;;
   *)
     usage >&2

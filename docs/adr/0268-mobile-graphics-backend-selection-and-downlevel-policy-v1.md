@@ -41,15 +41,25 @@ This ADR defines the v1 policy for mobile graphics backend selection and downlev
 
 ## Decision
 
-### D1 — Default policy: mobile is Vulkan/Metal-first
+### D1 — Default policy: prefer platform-native backends (capability-first)
 
 For mobile “first-class” targets:
 
-- iOS: Metal (via `wgpu`).
-- Android: Vulkan (via `wgpu`).
+- iOS: prefer Metal (via `wgpu`).
+- Android: prefer Vulkan (via `wgpu`).
 
-Rationale: editor-grade UI needs predictable performance characteristics; Vulkan/Metal are the
-primary long-term backends for modern mobile GPUs.
+Rationale:
+
+- iOS is effectively “Metal-native” for modern rendering, and `wgpu`’s Metal backend is the
+  expected first-class path.
+- On Android, Vulkan is typically the most capable and predictable backend on real hardware, and
+  is the best match for editor-grade UI workloads.
+
+Important: the long-lived contract is not “always Vulkan” vs “always Metal”, but rather:
+
+- the backend selection policy is deterministic and overrideable,
+- the policy is observable in logs/diagnostics,
+- and the selected adapter satisfies Fret’s required renderer capability gate (D6).
 
 ### D2 — Emulators are best-effort, not an acceptance gate (v1)
 

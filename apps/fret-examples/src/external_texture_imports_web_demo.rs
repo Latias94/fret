@@ -11,6 +11,7 @@
 
 use anyhow::Context as _;
 use fret_app::{App, Effect};
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
 use fret_launch::{
@@ -281,8 +282,8 @@ impl ExternalTextureImportsWebDriver {
                 ContainerProps {
                     layout: panel_layout,
                     border: fret_core::Edges::all(Px(1.0)),
-                    border_paint: Some(Paint::Solid(theme.color_required("border"))),
-                    background: Some(theme.color_required("muted")),
+                    border_paint: Some(Paint::Solid(theme.color_token("border"))),
+                    background: Some(theme.color_token("muted")),
                     corner_radii: fret_core::Corners::all(Px(10.0)),
                     ..Default::default()
                 },
@@ -308,7 +309,7 @@ impl ExternalTextureImportsWebDriver {
             cx.container(
                 ContainerProps {
                     layout: fill,
-                    background: Some(theme.color_required("background")),
+                    background: Some(theme.color_token("background")),
                     ..Default::default()
                 },
                 |cx| {
@@ -329,6 +330,36 @@ impl ExternalTextureImportsWebDriver {
 
 impl WinitAppDriver for ExternalTextureImportsWebDriver {
     type WindowState = ExternalTextureImportsWebWindowState;
+
+    fn handle_model_changes(
+        &mut self,
+        context: fret_launch::WinitWindowContext<'_, Self::WindowState>,
+        changed: &[fret_app::ModelId],
+    ) {
+        let fret_launch::WinitWindowContext {
+            app, state, window, ..
+        } = context;
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_model_changes(window, changed);
+        });
+        state.ui.propagate_model_changes(app, changed);
+    }
+
+    fn handle_global_changes(
+        &mut self,
+        context: fret_launch::WinitWindowContext<'_, Self::WindowState>,
+        changed: &[std::any::TypeId],
+    ) {
+        let fret_launch::WinitWindowContext {
+            app, state, window, ..
+        } = context;
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_global_changes(app, window, changed);
+        });
+        state.ui.propagate_global_changes(app, changed);
+    }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
@@ -393,8 +424,29 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
         let WinitEventContext {
-            app, window, state, ..
+            app,
+            services,
+            window,
+            state,
+            ..
         } = context;
+
+        let diag_enabled =
+            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
+        state.ui.set_debug_enabled(diag_enabled);
+
+        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            if !svc.is_enabled() {
+                return false;
+            }
+            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                return true;
+            }
+            svc.maybe_intercept_event_for_picking(app, window, event)
+        });
+        if consumed {
+            return;
+        }
 
         if let Event::KeyDown { key, .. } = event
             && *key == KeyCode::KeyV
@@ -402,6 +454,8 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
             let _ = app.models_mut().update(&state.show, |v| *v = !*v);
             app.request_redraw(window);
         }
+
+        state.ui.dispatch_event(app, services, event);
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -411,8 +465,14 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
             window,
             state,
             bounds,
+            scale_factor,
+            scene,
             ..
         } = context;
+
+        let diag_enabled =
+            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
+        state.ui.set_debug_enabled(diag_enabled);
 
         let show = state.show.clone();
         let target = state.target.id();
@@ -426,6 +486,66 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
 
         state.ui.set_root(root);
         state.root = Some(root);
+
+        state.ui.request_semantics_snapshot();
+        state.ui.ingest_paint_cache_source(scene);
+
+        scene.clear();
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.drive_script_for_window(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                Some(&state.ui),
+                semantics_snapshot,
+                element_runtime,
+            )
+        });
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+        if injected_any {
+            state.ui.request_semantics_snapshot();
+            let mut frame =
+                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
+        }
+
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.paint_all(scene);
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &state.ui,
+                element_runtime,
+                scene,
+            );
+            let _ = svc.maybe_dump_if_triggered();
+            if svc.is_enabled() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
+        });
     }
 }
 

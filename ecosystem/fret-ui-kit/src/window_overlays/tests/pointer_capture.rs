@@ -823,6 +823,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
                         }
                     },
                     enabled: true,
+                    ..Default::default()
                 },
                 |cx| {
                     cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {

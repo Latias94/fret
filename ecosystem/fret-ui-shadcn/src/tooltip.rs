@@ -63,13 +63,13 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> 
 }
 
 fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
-    theme.color_required("background")
+    theme.color_token("background")
 }
 
 fn tooltip_text_style(theme: &Theme) -> TextStyle {
     // new-york-v4 uses `text-xs` for tooltips (base is `text-sm`).
-    let base_px = theme.metric_required("font.size");
-    let base_line_height = theme.metric_required("font.line_height");
+    let base_px = theme.metric_token("font.size");
+    let base_line_height = theme.metric_token("font.line_height");
 
     let px = theme
         .metric_by_key("component.tooltip.text_px")
@@ -90,7 +90,7 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
     // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
-    let bg = theme.color_required("foreground");
+    let bg = theme.color_token("foreground");
 
     ChromeRefinement::default()
         .rounded(Radius::Md)
@@ -632,7 +632,7 @@ impl Tooltip {
                 .metric_by_key("component.tooltip.arrow_padding")
                 .unwrap_or_else(|| MetricRef::radius(Radius::Sm).resolve(&theme))
         });
-        let arrow_bg = theme.color_required("foreground");
+        let arrow_bg = theme.color_token("foreground");
         let hide_when_detached = self.hide_when_detached;
 
         let align = self.align;
@@ -1279,7 +1279,7 @@ impl TooltipContent {
             .line_height_px(
                 text_style
                     .line_height
-                    .unwrap_or_else(|| theme.metric_required("font.line_height")),
+                    .unwrap_or_else(|| theme.metric_token("font.line_height")),
             )
             .font_weight(text_style.weight)
             .wrap(TextWrap::Word)

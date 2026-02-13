@@ -2367,6 +2367,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-text-nav",
+ "rustc-hash 2.1.1",
  "serde",
  "serde_json",
  "slotmap",
@@ -2535,7 +2536,6 @@ version = "0.1.0"
 dependencies = [
  "fret-app",
  "fret-core",
- "fret-render",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
@@ -2552,6 +2552,7 @@ dependencies = [
  "fret-icons",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "material-colors",
  "serde",

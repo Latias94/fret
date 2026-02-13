@@ -6,7 +6,6 @@ const SCROLL_CONSUMED_EPS: f32 = 0.001;
 const TOUCH_PAN_SCROLL_THRESHOLD_PX: f32 = 6.0;
 static DEBUG_VLIST_WHEEL_PRINTED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
-const DEBUG_VLIST_WHEEL_ENV: &str = "FRET_DEBUG_SCROLL_WHEEL_VLIST";
 
 #[derive(Debug, Default, Clone, Copy)]
 struct TouchPanScrollTracking {
@@ -160,9 +159,7 @@ fn apply_virtual_list_scroll_delta<H: UiHost>(
                 }
             };
             let next = state.metrics.clamp_offset(Px(offset.0 - delta.0), viewport);
-            if std::env::var(DEBUG_VLIST_WHEEL_ENV)
-                .ok()
-                .is_some_and(|v| v == "1")
+            if crate::runtime_config::ui_runtime_config().debug_scroll_wheel_vlist
                 && !DEBUG_VLIST_WHEEL_PRINTED.swap(true, std::sync::atomic::Ordering::Relaxed)
             {
                 let max = props.scroll_handle.max_offset();
@@ -426,10 +423,7 @@ pub(super) fn handle_scroll<H: UiHost>(
             let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
             handle.set_offset(desired);
             let next = handle.offset();
-            if std::env::var("FRET_DEBUG_SCROLL_WHEEL")
-                .ok()
-                .is_some_and(|v| v == "1")
-            {
+            if crate::runtime_config::ui_runtime_config().debug_scroll_wheel {
                 let max = handle.max_offset();
                 eprintln!(
                     "scroll wheel element={:?} handle_key={} axis={:?} delta=({:.3},{:.3}) prev=({:.3},{:.3}) next=({:.3},{:.3}) max=({:.3},{:.3})",

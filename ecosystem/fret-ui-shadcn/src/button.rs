@@ -282,7 +282,7 @@ pub(crate) fn variant_colors(
 
 pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     let px = size.component_size().control_text_px(theme);
-    let line_height = theme.metric_required("font.line_height");
+    let line_height = theme.metric_token("font.line_height");
 
     TextStyle {
         font: FontId::default(),
@@ -484,7 +484,7 @@ impl Button {
             // shadcn/ui v4 buttons use `rounded-md` across sizes (including `sm` and `icon`), so
             // we intentionally pin the default radius to `metric.radius.md` rather than scaling
             // with `ComponentSize`.
-            let radius = theme.metric_required("metric.radius.md");
+            let radius = theme.metric_token("metric.radius.md");
             let border_w = if self.variant == ButtonVariant::Outline {
                 Px(1.0)
             } else {
@@ -562,7 +562,7 @@ impl Button {
             let text_weight = text_style.weight;
             let text_line_height = text_style
                 .line_height
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             let is_icon = is_icon_button;
             let has_svg_icon_like_children =
                 !is_icon_button && self.children.iter().any(contains_svg_icon_like);
@@ -957,7 +957,7 @@ mod tests {
         let mut services = FakeServices;
 
         let theme = Theme::global(&app).clone();
-        let ring = theme.color_required("ring");
+        let ring = theme.color_token("ring");
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let rendered_out: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));

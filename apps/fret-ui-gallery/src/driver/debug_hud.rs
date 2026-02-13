@@ -41,7 +41,7 @@ pub(super) fn maybe_push_debug_hud(
             let mut container_props = decl_style::container_props(
                 &theme,
                 ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
+                    .bg(ColorRef::Color(theme.color_token("background")))
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N3),
@@ -64,7 +64,7 @@ pub(super) fn maybe_push_debug_hud(
                                 layout: Default::default(),
                                 text: line.clone(),
                                 style: None,
-                                color: Some(theme.color_required("foreground")),
+                                color: Some(theme.color_token("foreground")),
                                 wrap: TextWrap::Word,
                                 overflow: TextOverflow::Clip,
                             })

@@ -4,7 +4,7 @@ pub(in crate::ui) fn preview_tabs(
     cx: &mut ElementContext<'_, App>,
     _value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
-    let primary = cx.with_theme(|theme| theme.color_required("primary"));
+    let primary = cx.with_theme(|theme| theme.color_token("primary"));
     let line_style = shadcn::tabs::TabsStyle::default()
         .trigger_background(fret_ui_kit::WidgetStateProperty::new(Some(
             ColorRef::Color(CoreColor::TRANSPARENT),

@@ -51,7 +51,7 @@ pub(in crate::ui) fn preview_intro(
         let props = decl_style::container_props(
             theme,
             ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required("muted")))
+                .bg(ColorRef::Color(theme.color_token("muted")))
                 .rounded(Radius::Md)
                 .p(Space::N4),
             LayoutRefinement::default().w_full().min_w_0(),

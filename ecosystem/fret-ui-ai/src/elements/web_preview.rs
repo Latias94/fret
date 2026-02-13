@@ -140,8 +140,8 @@ fn base_chrome(theme: &Theme) -> ChromeRefinement {
     ChromeRefinement::default()
         .rounded(Radius::Lg)
         .border_1()
-        .bg(ColorRef::Color(theme.color_required("card")))
-        .border_color(ColorRef::Color(theme.color_required("border")))
+        .bg(ColorRef::Color(theme.color_token("card")))
+        .border_color(ColorRef::Color(theme.color_token("border")))
 }
 
 /// Root provider aligned with AI Elements `WebPreview`.
@@ -682,7 +682,7 @@ impl WebPreviewNavigationButton {
             .refine_style(
                 ChromeRefinement::default()
                     .p(Space::N0)
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground"))),
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
             );
 
         #[cfg(feature = "webview")]
@@ -903,13 +903,13 @@ impl WebPreviewBody {
                 text,
                 style: Some(TextStyle {
                     font: FontId::default(),
-                    size: theme.metric_required("component.text.sm_px"),
+                    size: theme.metric_token("component.text.sm_px"),
                     weight: FontWeight::NORMAL,
                     slant: Default::default(),
-                    line_height: Some(theme.metric_required("component.text.sm_line_height")),
+                    line_height: Some(theme.metric_token("component.text.sm_line_height")),
                     letter_spacing_em: None,
                 }),
-                color: Some(theme.color_required("muted-foreground")),
+                color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
             })
@@ -1098,7 +1098,7 @@ impl WebPreviewConsole {
                 fret_icons::ids::ui::CHEVRON_DOWN
             },
             Some(Px(16.0)),
-            Some(ColorRef::Color(theme.color_required("muted-foreground"))),
+            Some(ColorRef::Color(theme.color_token("muted-foreground"))),
         );
 
         let label = cx.text("Console");
@@ -1233,14 +1233,14 @@ impl WebPreviewConsole {
             } else {
                 for log in logs.iter() {
                     let fg = match log.level {
-                        WebPreviewConsoleLogLevel::Error => theme.color_required("destructive"),
+                        WebPreviewConsoleLogLevel::Error => theme.color_token("destructive"),
                         WebPreviewConsoleLogLevel::Warn => fret_core::Color {
                             r: 0.792,
                             g: 0.541,
                             b: 0.016,
                             a: 1.0,
                         },
-                        WebPreviewConsoleLogLevel::Log => theme.color_required("foreground"),
+                        WebPreviewConsoleLogLevel::Log => theme.color_token("foreground"),
                     };
 
                     let ts = cx.text_props(TextProps {
@@ -1248,15 +1248,13 @@ impl WebPreviewConsole {
                         text: log.timestamp.clone(),
                         style: Some(TextStyle {
                             font: FontId::monospace(),
-                            size: theme.metric_required("component.text.xs_px"),
+                            size: theme.metric_token("component.text.xs_px"),
                             weight: FontWeight::NORMAL,
                             slant: Default::default(),
-                            line_height: Some(
-                                theme.metric_required("component.text.xs_line_height"),
-                            ),
+                            line_height: Some(theme.metric_token("component.text.xs_line_height")),
                             letter_spacing_em: None,
                         }),
-                        color: Some(theme.color_required("muted-foreground")),
+                        color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                     });
@@ -1266,12 +1264,10 @@ impl WebPreviewConsole {
                         text: log.message.clone(),
                         style: Some(TextStyle {
                             font: FontId::monospace(),
-                            size: theme.metric_required("component.text.xs_px"),
+                            size: theme.metric_token("component.text.xs_px"),
                             weight: FontWeight::NORMAL,
                             slant: Default::default(),
-                            line_height: Some(
-                                theme.metric_required("component.text.xs_line_height"),
-                            ),
+                            line_height: Some(theme.metric_token("component.text.xs_line_height")),
                             letter_spacing_em: None,
                         }),
                         color: Some(fg),
@@ -1338,7 +1334,7 @@ impl WebPreviewConsole {
             .refine_layout(self.layout)
             .refine_style(
                 ChromeRefinement::default()
-                    .border_color(ColorRef::Color(theme.color_required("border")))
+                    .border_color(ColorRef::Color(theme.color_token("border")))
                     .bg(ColorRef::Token {
                         key: "muted",
                         fallback: fret_ui_kit::ColorFallback::ThemeSurfaceBackground,

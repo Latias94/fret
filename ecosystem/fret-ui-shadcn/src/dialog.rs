@@ -231,9 +231,9 @@ impl Dialog {
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 is_open,
-                overlay_motion::shadcn_motion_duration_200(cx),
-                overlay_motion::shadcn_motion_duration_200(cx),
-                overlay_motion::shadcn_motion_ease_bezier(cx),
+                overlay_motion::shadcn_overlay_open_duration(cx),
+                overlay_motion::shadcn_overlay_close_duration(cx),
+                overlay_motion::shadcn_overlay_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
                 .with_state(DialogOpenChangeCallbackState::default, |state| {
@@ -539,7 +539,7 @@ impl DialogClose {
             let fg = theme
                 .color_by_key("muted.foreground")
                 .or_else(|| theme.color_by_key("muted-foreground"))
-                .unwrap_or_else(|| theme.color_required("muted.foreground"));
+                .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
             let a11y_label: Arc<str> = Arc::from("Close");
             let open = self.open.clone();
@@ -576,10 +576,10 @@ impl DialogClose {
 
                 let ring_color = theme
                     .color_by_key("ring")
-                    .unwrap_or_else(|| theme.color_required("ring"));
+                    .unwrap_or_else(|| theme.color_token("ring"));
                 let ring_offset_bg = theme
                     .color_by_key("ring-offset-background")
-                    .unwrap_or_else(|| theme.color_required("ring-offset-background"));
+                    .unwrap_or_else(|| theme.color_token("ring-offset-background"));
 
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
@@ -697,16 +697,16 @@ impl DialogTitle {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let px = theme
             .metric_by_key("component.dialog.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.dialog.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         let title = ui::text(cx, self.text)
             .text_size_px(px)
@@ -738,16 +738,16 @@ impl DialogDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
+            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.dialog.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.dialog.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         let description = ui::text(cx, self.text)
             .text_size_px(px)

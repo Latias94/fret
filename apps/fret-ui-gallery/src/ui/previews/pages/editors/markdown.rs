@@ -459,7 +459,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
             ChromeRefinement::default()
                 .border_1()
                 .rounded(Radius::Md)
-                .bg(ColorRef::Color(theme.color_required("background"))),
+                .bg(ColorRef::Color(theme.color_token("background"))),
             LayoutRefinement::default()
                 .w_full()
                 .h_px(MetricRef::Px(Px(520.0))),
@@ -473,7 +473,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
             ChromeRefinement::default()
                 .border_1()
                 .rounded(Radius::Md)
-                .bg(ColorRef::Color(theme.color_required("background"))),
+                .bg(ColorRef::Color(theme.color_token("background"))),
             LayoutRefinement::default()
                 .w_full()
                 .h_px(MetricRef::Px(Px(520.0))),

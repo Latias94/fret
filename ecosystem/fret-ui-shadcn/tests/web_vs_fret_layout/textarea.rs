@@ -279,8 +279,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                         .a11y_label("Textarea")
                         .into_element(cx);
                     let helper = ui::text(cx, "Your message will be copied to the support team.")
-                        .text_size_px(theme.metric_required("font.size"))
-                        .line_height_px(theme.metric_required("font.line_height"))
+                        .text_size_px(theme.metric_token("font.size"))
+                        .line_height_px(theme.metric_token("font.line_height"))
                         .font_normal()
                         .into_element(cx);
                     let helper = cx.semantics(

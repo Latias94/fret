@@ -868,6 +868,28 @@ pub enum UiPredicateV1 {
     /// This predicate is meant to keep "tofu regressions" debuggable: if missing glyphs happen,
     /// the diagnostics bundle should contain an audit trail of the selected families.
     RenderTextFontTraceCapturedWhenMissingGlyphs,
+    /// True when the runner-owned `TextFontStackKey` has not changed for `stable_frames`
+    /// consecutive frames.
+    ///
+    /// This is primarily used to keep perf suites from including one-time system font catalog
+    /// rescans (which bump `TextFontStackKey` and can trigger large relayouts) inside a measured
+    /// window.
+    TextFontStackKeyStable {
+        stable_frames: u32,
+    },
+    /// True when the runner-owned `FontCatalog` has been populated with at least one family.
+    ///
+    /// On desktop, the runner may seed an empty catalog at startup and populate it asynchronously
+    /// via the system font rescan pipeline. This predicate lets scripts wait for that one-time
+    /// async work to complete before entering a measured window.
+    FontCatalogPopulated,
+    /// True when the runner-owned system font rescan pipeline is idle (no work in flight and no
+    /// pending restart).
+    ///
+    /// Desktop runners may perform a one-time async system font rescan at startup. Applying the
+    /// result can bump `TextFontStackKey` and trigger large relayouts; this predicate lets perf
+    /// suites wait for that one-time work to complete before entering a measured window.
+    SystemFontRescanIdle,
     VisibleInWindow {
         target: UiSelectorV1,
     },
@@ -1129,6 +1151,20 @@ pub struct DevtoolsBundleDumpV1 {
     pub max_snapshots: Option<u32>,
 }
 
+/// Request that the app exits as soon as possible.
+///
+/// This is intended for transport-neutral "exit after run" behavior in CI / scripted automation
+/// flows where relying on large timeouts is undesirable.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsAppExitRequestV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// Optional delay before triggering exit, expressed in wall-clock milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_ms: Option<u64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DevtoolsBundleDumpedV1 {
     pub schema_version: u32,
@@ -1137,6 +1173,17 @@ pub struct DevtoolsBundleDumpedV1 {
     pub dir: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundle: Option<serde_json::Value>,
+    /// Optional chunked representation of the embedded bundle JSON.
+    ///
+    /// When present, the runtime may send multiple `bundle.dumped` messages (same `exported_unix_ms`
+    /// + `dir`) each carrying one chunk. Tooling should reassemble chunks in order to reconstruct
+    /// the full JSON payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_chunk: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_chunk_index: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_chunk_count: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1166,6 +1213,23 @@ pub struct DevtoolsScreenshotResultV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiArtifactStatsV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_bytes: Option<u64>,
+    #[serde(default)]
+    pub window_count: u64,
+    #[serde(default)]
+    pub event_count: u64,
+    #[serde(default)]
+    pub snapshot_count: u64,
+    #[serde(default)]
+    pub max_snapshots: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dump_max_snapshots: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiScriptResultV1 {
     pub schema_version: u32,
     pub run_id: u64,
@@ -1179,10 +1243,18 @@ pub struct UiScriptResultV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub evidence: Option<UiScriptEvidenceV1>,
     pub last_bundle_dir: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_bundle_artifact: Option<UiArtifactStatsV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiScriptEvidenceV1 {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event_log: Vec<UiScriptEventLogEntryV1>,
+    #[serde(default, skip_serializing_if = "is_zero_u64")]
+    pub event_log_dropped: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capabilities_check: Option<UiCapabilitiesCheckV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1201,6 +1273,30 @@ pub struct UiScriptEvidenceV1 {
     pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCapabilitiesCheckV1 {
+    pub schema_version: u32,
+    pub source: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub available: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub missing: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScriptEventLogEntryV1 {
+    pub unix_ms: u64,
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step_index: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_dir: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1750,4 +1846,24 @@ pub enum UiScriptStageV1 {
 
 fn serde_default_true() -> bool {
     true
+}
+
+fn is_zero_u64(v: &u64) -> bool {
+    *v == 0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn devtools_app_exit_request_serializes_minimally() {
+        let value = serde_json::to_value(DevtoolsAppExitRequestV1 {
+            schema_version: 1,
+            reason: None,
+            delay_ms: None,
+        })
+        .unwrap();
+        assert_eq!(value, serde_json::json!({ "schema_version": 1 }));
+    }
 }

@@ -171,7 +171,7 @@ impl WorkspaceShellDemoDriver {
                     cx.observe_model(&file_tree_state, Invalidation::Layout);
 
                     let theme = cx.theme_snapshot();
-                    let bg = Some(theme.color_required("background"));
+                    let bg = Some(theme.color_token("background"));
 
                     let theme_for_left = theme;
                     let left = cx.keyed("workspace_shell.left", move |cx| {
@@ -188,9 +188,9 @@ impl WorkspaceShellDemoDriver {
                         cx.container(
                             ContainerProps {
                                 layout: fixed_width_fill_height(Px(280.0)),
-                                background: Some(theme_for_left.color_required("card")),
+                                background: Some(theme_for_left.color_token("card")),
                                 border: Edges::all(Px(1.0)),
-                                border_color: Some(theme_for_left.color_required("border")),
+                                border_color: Some(theme_for_left.color_token("border")),
                                 ..Default::default()
                             },
                             move |cx| {
@@ -234,8 +234,7 @@ impl WorkspaceShellDemoDriver {
                                 body_layout.flex.basis = Length::Px(Px(0.0));
                                 body_layout.overflow = Overflow::Clip;
 
-                                let pane_content_bg =
-                                    Some(theme_for_center.color_required("muted"));
+                                let pane_content_bg = Some(theme_for_center.color_token("muted"));
 
                                 let pane_root_test_id: Arc<str> = Arc::from(format!(
                                     "workspace-shell-pane-{}-root",

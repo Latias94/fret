@@ -56,7 +56,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let dispatcher = DesktopDispatcher::new(caps.exec);
         app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
 
-        Self {
+        let mut runner = Self {
             config,
             app,
             driver,
@@ -75,6 +75,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             system_font_rescan_result: Arc::new(Mutex::new(None)),
             system_font_rescan_in_flight: false,
             system_font_rescan_pending: false,
+            last_window_surface_sizes: HashMap::new(),
+            last_window_surface_size_changed_at: None,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
             #[cfg(feature = "webview-wry")]
@@ -106,6 +108,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             incoming_open_path_payloads: HashMap::new(),
             #[cfg(target_os = "ios")]
             ios_keyboard: None,
+            diag_window_insets_overrides: HashMap::new(),
             diag_cursor_screen_pos_override:
                 super::diag_cursor_override::DiagCursorScreenPosOverride::from_env(),
             cursor_screen_pos: None,
@@ -125,7 +128,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             #[cfg(feature = "diag-screenshots")]
             diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
-        }
+        };
+        runner.publish_system_font_rescan_state();
+        runner
     }
 }
 

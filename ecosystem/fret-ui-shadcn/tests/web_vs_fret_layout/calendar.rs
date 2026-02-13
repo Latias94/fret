@@ -1492,7 +1492,7 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
         use fret_ui_headless::calendar::CalendarMonth;
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let month_model: Model<CalendarMonth> =
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
@@ -1657,7 +1657,7 @@ fn web_vs_fret_layout_calendar_14_selected_day_background_matches_web() {
         use fret_ui_headless::calendar::CalendarMonth;
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let month_model: Model<CalendarMonth> =
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
@@ -1832,7 +1832,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_background_matches_web(
         use fret_ui_headless::calendar::CalendarMonth;
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let month_model: Model<CalendarMonth> =
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
@@ -2033,7 +2033,7 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
         use fret_ui_headless::calendar::CalendarMonth;
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let month_model: Model<CalendarMonth> =
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
@@ -2281,7 +2281,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
         use fret_ui_headless::calendar::CalendarMonth;
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let month_model: Model<CalendarMonth> =
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
@@ -2512,7 +2512,7 @@ fn web_vs_fret_layout_calendar_14_selected_day_text_rect_matches_web() {
         use fret_ui_headless::calendar::CalendarMonth;
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let month_model: Model<CalendarMonth> =
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
@@ -2732,7 +2732,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_text_rect_matches_web()
         use fret_ui_headless::calendar::CalendarMonth;
 
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let month_model: Model<CalendarMonth> =
             cx.app.models_mut().insert(CalendarMonth::new(year, month));

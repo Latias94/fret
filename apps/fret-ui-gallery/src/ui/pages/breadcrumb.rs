@@ -168,8 +168,8 @@ pub(super) fn preview_breadcrumb(
                                     move |cx| {
                                         let (fg, muted) = cx.with_theme(|theme| {
                                             (
-                                                theme.color_required("foreground"),
-                                                theme.color_required("muted-foreground"),
+                                                theme.color_token("foreground"),
+                                                theme.color_token("muted-foreground"),
                                             )
                                         });
                                         let mut props = fret_ui::element::PressableProps::default();
@@ -297,8 +297,8 @@ pub(super) fn preview_breadcrumb(
                                         move |cx| {
                                             let (fg, muted) = cx.with_theme(|theme| {
                                                 (
-                                                    theme.color_required("foreground"),
-                                                    theme.color_required("muted-foreground"),
+                                                    theme.color_token("foreground"),
+                                                    theme.color_token("muted-foreground"),
                                                 )
                                             });
                                             let mut props = fret_ui::element::PressableProps::default();

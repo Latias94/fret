@@ -46,23 +46,12 @@ pub(super) fn preview_data_table(
             section(cx, title, body)
         };
 
-    let gap_card = |cx: &mut ElementContext<'_, App>,
-                    title: &'static str,
-                    details: &'static str,
-                    test_id: &'static str| {
-        let alert_content = shadcn::Alert::new([
-            shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
-            shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
-            shadcn::AlertDescription::new(details).into_element(cx),
-        ])
-        .variant(shadcn::AlertVariant::Default)
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)))
-        .into_element(cx)
-        .test_id(test_id);
-        section_card(cx, title, alert_content)
-    };
+    let preview_hint = shadcn::typography::muted(
+        cx,
+        "shadcn Data Table is a guide recipe (TanStack + Table primitives). This page renders a guide-aligned demo backed by Fret's headless engine.",
+    );
 
-    let live_table = {
+    let demo = {
         let legacy_content = super::super::preview_data_table_legacy(cx, state);
         let live_stack = stack::vstack(
             cx,
@@ -74,64 +63,10 @@ pub(super) fn preview_data_table(
         );
         section_card(
             cx,
-            "Basic Table",
-            live_stack.test_id("ui-gallery-data-table-basic"),
+            "Guide Demo",
+            live_stack.test_id("ui-gallery-data-table-guide-demo"),
         )
     };
-
-    let row_actions = gap_card(
-        cx,
-        "Row Actions",
-        "Current gallery shows sortable/selectable process rows. Dedicated row-action menus are tracked as follow-up for strict docs parity.",
-        "ui-gallery-data-table-row-actions-gap",
-    );
-    let pagination = gap_card(
-        cx,
-        "Pagination",
-        "Guide expects pageable datasets and page-size controls. Current demo focuses on dense viewport rendering and row selection semantics.",
-        "ui-gallery-data-table-pagination-gap",
-    );
-    let sorting = gap_card(
-        cx,
-        "Sorting",
-        "Sorting is active in the live table section. Next iteration will expose explicit sortable header affordances matching docs screenshots.",
-        "ui-gallery-data-table-sorting-gap",
-    );
-    let filtering = gap_card(
-        cx,
-        "Filtering",
-        "Column/global filtering controls are not yet surfaced on this page. Keep this section explicit to avoid hidden parity drift.",
-        "ui-gallery-data-table-filtering-gap",
-    );
-    let visibility = gap_card(
-        cx,
-        "Visibility",
-        "Column visibility toggles (dropdown checkboxes) are documented upstream and planned for the next pass in this page module.",
-        "ui-gallery-data-table-visibility-gap",
-    );
-    let row_selection = gap_card(
-        cx,
-        "Row Selection",
-        "Row selection is active in the current demo state model; docs-style header checkbox UX will be aligned in follow-up.",
-        "ui-gallery-data-table-row-selection-gap",
-    );
-    let reusable = gap_card(
-        cx,
-        "Reusable Components",
-        "Upstream recommends extracting reusable column-header, pagination, and view-options components. We keep this reminder as architecture guidance.",
-        "ui-gallery-data-table-reusable-gap",
-    );
-    let rtl = gap_card(
-        cx,
-        "RTL",
-        "RTL coverage for data-table interactions is tracked; add an explicit RTL matrix once column visibility/filtering controls land.",
-        "ui-gallery-data-table-rtl-gap",
-    );
-
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Data Table guide order: Basic Table, Row Actions, Pagination, Sorting, Filtering, Visibility, Row Selection, Reusable Components, RTL.",
-    );
 
     let component_stack = stack::vstack(
         cx,
@@ -139,20 +74,7 @@ pub(super) fn preview_data_table(
             .gap(Space::N6)
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                live_table,
-                row_actions,
-                pagination,
-                sorting,
-                filtering,
-                visibility,
-                row_selection,
-                reusable,
-                rtl,
-            ]
-        },
+        |_cx| vec![preview_hint, demo],
     );
     let component_panel = shell(cx, component_stack).test_id("ui-gallery-data-table-component");
 
@@ -214,11 +136,11 @@ section_card("Visibility", Alert::new([...]))
                 shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
-                    "Data Table in shadcn is a guide recipe, not a single fixed widget; keep page structure aligned to guide milestones.",
+                    "Data Table in shadcn is a guide recipe, not a single fixed widget; treat this page as a living parity surface.",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "Preserve visible gap markers for missing milestones (pagination/filtering/visibility) instead of silently omitting them.",
+                    "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
                 ),
                 shadcn::typography::muted(
                     cx,

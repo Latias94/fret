@@ -14,7 +14,7 @@ fn muted_foreground(theme: &Theme) -> fret_core::Color {
     theme
         .color_by_key("muted.foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or_else(|| theme.color_required("muted.foreground"))
+        .unwrap_or_else(|| theme.color_token("muted.foreground"))
 }
 
 fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
@@ -438,7 +438,7 @@ impl FieldLegend {
             let theme = Theme::global(&*cx.app);
             let fg = theme
                 .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_required("foreground"));
+                .unwrap_or_else(|| theme.color_token("foreground"));
 
             let (size, line_height) = match self.variant {
                 FieldLegendVariant::Legend => {
@@ -452,8 +452,8 @@ impl FieldLegend {
                     (size, line_height)
                 }
                 FieldLegendVariant::Label => {
-                    let size = theme.metric_required("font.size");
-                    let line_height = theme.metric_required("font.line_height");
+                    let size = theme.metric_token("font.size");
+                    let line_height = theme.metric_token("font.line_height");
                     (size, line_height)
                 }
             };
@@ -631,15 +631,15 @@ impl FieldTitle {
             let theme = Theme::global(&*cx.app);
             let fg = theme
                 .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_required("foreground"));
+                .unwrap_or_else(|| theme.color_token("foreground"));
             let px = theme
                 .metric_by_key("component.field.title_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.title_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -692,17 +692,17 @@ impl FieldLabel {
             // See: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx`.
             let fg = theme
                 .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_required("foreground"));
+                .unwrap_or_else(|| theme.color_token("foreground"));
             let px = theme
                 .metric_by_key("component.field.label_px")
                 .or_else(|| theme.metric_by_key("component.label.text_px"))
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.label_line_height")
                 .or_else(|| theme.metric_by_key("component.label.line_height"))
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -825,11 +825,11 @@ impl FieldDescription {
             let px = theme
                 .metric_by_key("component.field.description_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.description_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -859,15 +859,15 @@ impl FieldError {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
-            let fg = theme.color_required("destructive");
+            let fg = theme.color_token("destructive");
             let px = theme
                 .metric_by_key("component.field.error_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.error_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -914,8 +914,8 @@ impl FieldSeparator {
             let h = theme
                 .metric_by_key("component.field.separator_h")
                 .unwrap_or_else(|| MetricRef::space(Space::N5).resolve(theme));
-            let border = theme.color_required("border");
-            let bg = theme.color_required("background");
+            let border = theme.color_token("border");
+            let bg = theme.color_token("background");
 
             // Upstream uses `-my-2` (negative 8px) to visually tighten the separator in a group.
             let outer_layout = decl_style::layout_style(

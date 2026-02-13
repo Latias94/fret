@@ -56,7 +56,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
             };
             props.layout.size.width = fret_ui::element::Length::Px(Px(160.0));
             props.layout.size.height = fret_ui::element::Length::Px(Px(120.0));
-            props.background = Some(fret_ui::Theme::global(&*cx.app).color_required("muted"));
+            props.background = Some(fret_ui::Theme::global(&*cx.app).color_token("muted"));
             let zone = cx.container(props, |cx| {
                 vec![
                     cx.text("Drop zone").attach_semantics(

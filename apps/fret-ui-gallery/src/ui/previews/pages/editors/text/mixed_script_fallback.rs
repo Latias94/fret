@@ -60,7 +60,7 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
                     size: Px(28.0),
                     ..Default::default()
                 }),
-                color: Some(theme.color_required("foreground")),
+                color: Some(theme.color_token("foreground")),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
             })
@@ -82,7 +82,7 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
-                    .bg(ColorRef::Color(theme.color_required("background")))
+                    .bg(ColorRef::Color(theme.color_token("background")))
                     .p(Space::N4),
                 LayoutRefinement::default().w_full(),
             ),
