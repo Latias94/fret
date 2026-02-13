@@ -156,6 +156,11 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
             let mv = action::PointerMoveCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: Point::new(
+                    Px(position.x.0 - cx.bounds.origin.x.0),
+                    Px(position.y.0 - cx.bounds.origin.y.0),
+                ),
+                position_window: None,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 velocity_window,
@@ -334,6 +339,11 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             let mv = action::PointerMoveCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: Point::new(
+                    Px(position.x.0 - cx.bounds.origin.x.0),
+                    Px(position.y.0 - cx.bounds.origin.y.0),
+                ),
+                position_window: None,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
                 velocity_window,

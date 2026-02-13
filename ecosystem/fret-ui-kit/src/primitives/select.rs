@@ -2795,6 +2795,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2831,6 +2833,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2852,6 +2856,8 @@ mod tests {
             PointerUpCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(13.0), Px(15.0)),
+                position_local: Point::new(Px(13.0), Px(15.0)),
+                position_window: Some(Point::new(Px(13.0), Px(15.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 velocity_window: None,
@@ -2889,6 +2895,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2908,6 +2916,8 @@ mod tests {
             PointerMoveCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                position_local: Point::new(Px(40.0), Px(12.0)),
+                position_window: Some(Point::new(Px(40.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 velocity_window: None,
@@ -2929,6 +2939,8 @@ mod tests {
             PointerUpCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                position_local: Point::new(Px(40.0), Px(12.0)),
+                position_window: Some(Point::new(Px(40.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 velocity_window: None,
