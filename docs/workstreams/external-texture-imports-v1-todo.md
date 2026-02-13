@@ -33,14 +33,17 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
       accept a platform-decoder produced GPU frame via a capability-gated interface, without
       leaking handles into `fret-ui`, and with deterministic fallback to the copy paths.
 
-- [~] EXT-perf-130 Add comparative diag/perf baselines for copy paths:
+- [x] EXT-perf-130 Add comparative diag/perf baselines for native copy paths:
       - native CPU upload path vs native GPU-offscreen path,
-      - web GPU copy path (when stable),
       and document the expected deltas (uploads/intermediates) in the baseline notes.
   - Evidence anchors (native):
     - `tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
     - `tools/diag-scripts/external-texture-imports-decoded-png-cpu-copy-perf-steady.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-decoded-png-cpu-copy.windows-local.v1.json`
-  - Remaining:
-    - web GPU copy path baseline (when stable).
+
+- [ ] EXT-web-perf-131 Web GPU copy path perf baseline (when stable):
+      add a steady-state perf script + baseline for the wasm copy path demo.
+  - Evidence anchors:
+    - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
+    - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)

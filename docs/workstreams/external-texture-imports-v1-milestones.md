@@ -68,8 +68,9 @@ Evidence:
     - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
 - [ ] EXT-native-120 Native “true external import” adapter seam (platform-decoder produced GPU
       frame, capability-gated, deterministic fallback).
-- [~] EXT-perf-130 Comparative diag/perf baselines for copy paths (native CPU upload vs GPU
-      offscreen; web GPU copy when stable).
+- [x] EXT-perf-130 Comparative diag/perf baselines for native copy paths (native CPU upload vs GPU
+      offscreen).
   - Evidence (native):
     - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-decoded-png-cpu-copy.windows-local.v1.json`
+- [ ] EXT-web-perf-131 Web GPU copy path perf baseline (when stable).
