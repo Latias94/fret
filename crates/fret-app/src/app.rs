@@ -47,9 +47,7 @@ struct PendingGlobalSet {
 
 fn strict_runtime_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| {
-        std::env::var_os("FRET_STRICT_RUNTIME").is_some_and(|v| v != std::ffi::OsStr::new("0"))
-    })
+    *ENABLED.get_or_init(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
 }
 
 pub struct App {

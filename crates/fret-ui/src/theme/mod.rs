@@ -31,18 +31,7 @@ fn fallback_easing() -> CubicBezier {
 #[cfg(not(test))]
 fn strict_theme_enabled() -> bool {
     static STRICT: OnceLock<bool> = OnceLock::new();
-    *STRICT.get_or_init(|| match std::env::var_os("FRET_STRICT_RUNTIME") {
-        None => false,
-        Some(v) => {
-            let s = v.to_string_lossy();
-            let s = s.trim();
-            if s.is_empty() {
-                false
-            } else {
-                !matches!(s, "0" | "false" | "no" | "off")
-            }
-        }
-    })
+    *STRICT.get_or_init(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
 }
 
 #[cfg(test)]
@@ -55,18 +44,7 @@ thread_local! {
 fn strict_theme_enabled() -> bool {
     STRICT_THEME_OVERRIDE
         .with(|cell| cell.get())
-        .unwrap_or_else(|| match std::env::var_os("FRET_STRICT_RUNTIME") {
-            None => false,
-            Some(v) => {
-                let s = v.to_string_lossy();
-                let s = s.trim();
-                if s.is_empty() {
-                    false
-                } else {
-                    !matches!(s, "0" | "false" | "no" | "off")
-                }
-            }
-        })
+        .unwrap_or_else(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
 }
 
 #[cfg(test)]

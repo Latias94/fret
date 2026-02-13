@@ -26,6 +26,7 @@ pub mod platform_completion;
 pub mod platform_text_input;
 pub mod runner_surface_lifecycle_diagnostics;
 pub mod shortcut_routing_diagnostics;
+pub mod strict_runtime;
 pub mod text_interaction_settings;
 pub mod time;
 pub mod ui_host;

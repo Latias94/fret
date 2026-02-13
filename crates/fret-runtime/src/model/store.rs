@@ -26,33 +26,10 @@ pub(super) struct ModelStoreInner {
     state: RefCell<ModelStoreState>,
 }
 
-#[derive(Debug, Clone, Copy)]
-struct RuntimeStrictness {
-    enabled: bool,
-}
-
-impl RuntimeStrictness {
-    fn from_env() -> Self {
-        let enabled = match std::env::var_os("FRET_STRICT_RUNTIME") {
-            None => false,
-            Some(v) => {
-                let s = v.to_string_lossy();
-                let s = s.trim();
-                if s.is_empty() {
-                    false
-                } else {
-                    !matches!(s, "0" | "false" | "no" | "off")
-                }
-            }
-        };
-        Self { enabled }
-    }
-}
-
 #[cfg(not(test))]
 fn strict_runtime_enabled() -> bool {
-    static STRICT: std::sync::OnceLock<RuntimeStrictness> = std::sync::OnceLock::new();
-    STRICT.get_or_init(RuntimeStrictness::from_env).enabled
+    static STRICT: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *STRICT.get_or_init(crate::strict_runtime::strict_runtime_enabled_from_env)
 }
 
 #[cfg(test)]
@@ -65,7 +42,7 @@ thread_local! {
 fn strict_runtime_enabled() -> bool {
     STRICT_RUNTIME_OVERRIDE
         .with(|cell| cell.get())
-        .unwrap_or_else(|| RuntimeStrictness::from_env().enabled)
+        .unwrap_or_else(crate::strict_runtime::strict_runtime_enabled_from_env)
 }
 
 #[cfg(test)]
