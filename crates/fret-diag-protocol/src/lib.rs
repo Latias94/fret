@@ -750,6 +750,21 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when the runtime-published IME cursor area for the focused text input is fully within
+    /// the window bounds (minus the specified padding).
+    ///
+    /// This is intended as a stable regression gate for keyboard-avoidance policies: after
+    /// occlusion insets change, the focused caret/cursor area should remain inside the visible
+    /// rect derived from safe-area + occlusion.
+    TextInputImeCursorAreaWithinWindow {
+        #[serde(default)]
+        padding_px: f32,
+        /// Optional per-edge padding (added on top of `padding_px`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        padding_insets_px: Option<UiPaddingInsetsV1>,
+        #[serde(default)]
+        eps_px: f32,
+    },
     BoundsMinSize {
         target: UiSelectorV1,
         #[serde(default)]
