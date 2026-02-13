@@ -151,6 +151,7 @@ Use existing theme token surfaces:
 
 - `Theme::duration_ms_by_key(...)`
 - `Theme::easing_by_key(...)`
+- `Theme::number_by_key(...)`
 
 Add a first-class convention for motion keys (ecosystem policy):
 
@@ -158,6 +159,34 @@ Add a first-class convention for motion keys (ecosystem policy):
 - `shadcn.motion.duration.*` / `shadcn.motion.easing.*` (shadcn-aligned aliases)
 
 Component ecosystems should request motion by **semantic key**, not hard-coded numbers.
+
+Spring tokens (v1):
+
+- Represent a spring using two theme tokens: `duration_ms` + `number` (bounce).
+- Prefer authoring-friendly "duration + bounce" (Flutter-style) and derive physical params in
+  headless math (`SpringDescription::with_duration_and_bounce`).
+- Bounce semantics (mirrors Flutter):
+  - `bounce = 0.0` is critically damped (no overshoot),
+  - `bounce in (0, 1)` is underdamped (overshoot),
+  - negative values are overdamped,
+  - values must be `> -1.0` to keep damping derivation finite.
+
+Current shadcn drawer spring keys (ecosystem policy; overrideable via theme JSON):
+
+- `duration.shadcn.motion.spring.drawer.settle` (ms)
+- `number.shadcn.motion.spring.drawer.settle.bounce`
+- `duration.shadcn.motion.spring.drawer.inertia_bounce` (ms)
+- `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`
+
+Spring cookbook (starter presets; tune with diag gates):
+
+| Preset | duration_ms | bounce | Notes |
+| --- | --- | --- | --- |
+| `snappy` | 180 | 0.0 | fast, no overshoot |
+| `standard` | 240 | 0.0 | baseline critical-damped |
+| `emphasized` | 320 | 0.15 | mild overshoot for "hero" motions |
+| `bouncy` | 300 | 0.35 | noticeable overshoot; use sparingly |
+| `overdamped` | 260 | -0.20 | heavier feel; no overshoot |
 
 ### 6) Reduced motion policy (ecosystem-level)
 
@@ -226,7 +255,7 @@ land deterministic gates before polishing implementation details.
 | Pilot | Recipe | Spec sources | Fret target | Motion channels & primitives | Tokens & gates | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | P1 | Sidebar collapse/expand | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/sidebar.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` (`sidebar_collapse_motion`) | width / rail reveal (+ optional opacity)<br>tween timeline<br>optional: layout-aware choreography (future) | tokens (current): `duration.shadcn.motion.200`, `easing.shadcn.motion`<br>gate: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json` | Landed (baseline) |
-| P1 | Drawer / Sheet settle | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`, `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/drawer.rs`<br>`ecosystem/fret-ui-shadcn/src/sheet.rs` | translate + scrim opacity<br>drag velocity projection -> inertia -> spring settle<br>retarget mid-flight (no restart stutter) | tokens (current): shadcn overlay motion tokens (duration/easing)<br>gates: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`, `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json` | Landed (baseline) |
+| P1 | Drawer / Sheet settle | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`, `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/drawer.rs`<br>`ecosystem/fret-ui-shadcn/src/sheet.rs` | translate + scrim opacity<br>drag velocity projection -> inertia -> spring settle<br>retarget mid-flight (no restart stutter) | tokens (current): `duration.shadcn.motion.spring.drawer.settle`, `number.shadcn.motion.spring.drawer.settle.bounce`<br>`duration.shadcn.motion.spring.drawer.inertia_bounce`, `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`<br>gates: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`, `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json` | Landed (baseline) |
 | P1 | Dialog / Modal presence | Animata modal: `repo-ref/animata/animata/overlay/modal.tsx`<br>shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`, `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs`<br>`ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | opacity + scale (and optional blur)<br>barrier fade + focus/dismiss choreography<br>optional: spring-based settle for native-like feel | tokens (current): shadcn overlay motion tokens (duration/easing)<br>gates: `tools/diag-scripts/ui-gallery-overlay-dialog-open-motion-snapshots.json`, `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json` | Landed (baseline) |
 | P2 | Tabs indicator | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/tabs.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | indicator translate + width<br>tween or spring (theme-controlled)<br>layout measurement coherence | tokens (planned): semantic tabs motion keys<br>gate (perf-only today): `tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json` | Planned |
 | P2 | Toast stack (Sonner) | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/toast.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/toast.rs`<br>`ecosystem/fret-ui-shadcn/src/sonner.rs` | enter/exit presence + stack shift<br>stagger + interrupt/re-target behavior<br>swipe dismiss inertia (future) | gates: `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`, `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json` | Landed (baseline) |

@@ -99,14 +99,21 @@ Per-recipe tracking (pilot follow-ups):
 
 ## P1 — Spring feel calibration (native-like)
 
-- [ ] MF-MOTION-spring-001 Decide the public theme-facing spring token shape (ecosystem-level).
+- [x] MF-MOTION-spring-001 Decide the public theme-facing spring token shape (ecosystem-level).
   - Options to document:
     - stiffness/damping/mass (physics params)
     - duration/bounce (authoring-friendly, derived to physics)
+  - Decision (v1):
+    - `duration_ms` + `number` bounce tokens (Flutter-style), derived to `SpringDescription`.
+  - Evidence:
+    - `docs/workstreams/motion-foundation-v1.md` (section "Spring tokens (v1)")
+    - `ecosystem/fret-ui-kit/src/declarative/motion_springs.rs`
 
-- [ ] MF-MOTION-spring-002 Add a small “spring cookbook” section with recommended presets.
+- [x] MF-MOTION-spring-002 Add a small “spring cookbook” section with recommended presets.
   - Presets to include (examples):
     - standard, emphasized, overshoot, critically-damped, “snappy”
+  - Evidence:
+    - `docs/workstreams/motion-foundation-v1.md` (section "Spring cookbook (starter presets; tune with diag gates)")
 
 - [ ] MF-MOTION-spring-003 Add at least one diag script that exercises re-targeting mid-flight (no restart stutter).
 

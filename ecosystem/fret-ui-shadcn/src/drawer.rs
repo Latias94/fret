@@ -14,7 +14,6 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
-use fret_ui_headless::motion::spring::SpringDescription;
 use fret_ui_headless::motion::tolerance::Tolerance;
 
 use crate::Sheet;
@@ -23,6 +22,9 @@ pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion_springs::{
+    shadcn_drawer_inertia_bounce_spring_description, shadcn_drawer_settle_spring_description,
+};
 use fret_ui_kit::declarative::motion_value::{
     MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
@@ -37,9 +39,6 @@ const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
 const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
 const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
-const DRAWER_SNAP_SETTLE_SPRING_DURATION: std::time::Duration =
-    std::time::Duration::from_millis(240);
-const DRAWER_SNAP_SETTLE_SPRING_BOUNCE: f64 = 0.0;
 
 /// shadcn/ui `DrawerPortal` (v4).
 ///
@@ -638,10 +637,7 @@ impl Drawer {
             let mut offset = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.app.models().get_copied(&runtime);
             if let Some(st) = runtime_snapshot {
-                let spring = SpringDescription::with_duration_and_bounce(
-                    DRAWER_SNAP_SETTLE_SPRING_DURATION,
-                    DRAWER_SNAP_SETTLE_SPRING_BOUNCE,
-                );
+                let spring = shadcn_drawer_settle_spring_description(&*cx.app);
 
                 let update = if st.settling {
                     MotionValueF32Update::To {
@@ -760,6 +756,7 @@ impl Drawer {
             let runtime_for_up = runtime.clone();
             let offset_for_up = offset_model.clone();
             let snap_points_for_up = snap_points.clone();
+            let inertia_bounce_spring = shadcn_drawer_inertia_bounce_spring_description(&*cx.app);
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, up| {
                 let Ok((dragging, stored_velocity)) = host
                     .models_mut()
@@ -794,10 +791,7 @@ impl Drawer {
                             min: 0.0,
                             max: window_height.0 as f64,
                         }),
-                        SpringDescription::with_duration_and_bounce(
-                            DRAWER_SNAP_SETTLE_SPRING_DURATION,
-                            0.25,
-                        ),
+                        inertia_bounce_spring,
                         Tolerance::default(),
                     );
                     Px(sim.x(DRAWER_DRAG_FLING_PROJECTION_TIME) as f32)
