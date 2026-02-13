@@ -202,6 +202,8 @@ Use invariants-first, evidence-first gates; avoid snapshotting every internal st
 
 - Select playbook: `references/select-conformance.md`
   - Run: `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
+- Combobox playbook: `references/combobox-conformance.md`
+  - Run: `cargo run -p fretboard -- diag suite ui-gallery-combobox --launch -- cargo run -p fret-ui-gallery --release`
 - Layout sweep playbook (page-level): `references/layout-sweep.md`
 - Web runner transport notes: `references/web-runner.md`
 
