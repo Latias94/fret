@@ -186,7 +186,8 @@ Token taxonomy (v1; conventions we can keep stable):
 Implementation note:
 
 - The semantic keys above are a *convention* we can migrate toward without requiring Theme-level
-  aliasing. Today, most shadcn surfaces still read the numeric shadcn tokens directly; the goal is
+  aliasing. Pilot surfaces (Dialog / AlertDialog / Sidebar) already read semantic keys with numeric
+  fallbacks; most other shadcn surfaces still read the numeric scale tokens directly. The goal is
   to gradually switch recipe code to semantic keys while keeping numeric scale keys as fallbacks.
 
 Pragmatic mapping table (shadcn numeric durations ↔ M3 duration tokens):
