@@ -60,7 +60,7 @@ Definition of done:
 - [x] Implement capability discovery:
   - [x] filesystem-trigger transport (`capabilities.json`),
   - [x] devtools WS transport (session-advertised capabilities).
-- [ ] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
+- [x] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
   - [x] `diag run` (filesystem transport),
   - [x] `diag run` (devtools WS transport),
   - [x] `diag suite` (filesystem transport),
@@ -115,7 +115,7 @@ Definition of done:
 
 ### M6: Text & IME gates (self-drawn UI pain point)
 
-- [ ] Define the minimum text/IME evidence surface (selection/caret/composition summary).
+- [x] Define the minimum text/IME evidence surface (selection/caret/composition summary).
 - [x] Add a deterministic IME injection surface for scripted tests (`UiActionStepV2::Ime`, `diag.inject_ime`).
 - [ ] Add a small set of stable gates (word boundary, line boundary, composition not stolen by shortcuts).
 

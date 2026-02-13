@@ -113,9 +113,24 @@ When you need a placement/collision matrix (many cases):
 - Use `wait_bounds_stable` for placement/size “settle” phases (flip/shift, transform-only updates, estimate -> measured).
 - Use `diag lint --all-test-ids` when you want out-of-window hints for all targeted nodes, not only focused ones.
 
+## Page-level layout sweeps (UI Gallery)
+
+When the goal is “does the app still lay out correctly?”, a component-by-component suite can miss page integration bugs.
+Add a page sweep suite that:
+
+- navigates by stable page-root `test_id`,
+- runs at a small set of window sizes (`set_window_inner_size`) to trigger overflow/flex edge cases,
+- asserts coarse invariants (bounds within window, focus not lost, key controls exist),
+- captures one bundle per page/size (optional screenshots only when they add signal),
+- runs `diag lint` on every captured bundle (fail on error-level findings).
+
+This complements component conformance suites: sweeps catch integration/layout regressions, while component suites
+explain policy/routing/focus failures with targeted evidence.
+
 ## References
 
 - `docs/ui-diagnostics-and-scripted-tests.md`
+- `docs/workstreams/ui-gallery-layout-correctness.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - `tools/diag-scripts/ui-gallery-select-*.json`
 - `tools/diag-scripts/ui-gallery-combobox-*.json`

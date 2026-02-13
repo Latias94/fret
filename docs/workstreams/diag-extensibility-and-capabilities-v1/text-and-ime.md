@@ -76,6 +76,7 @@ In-repo examples:
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
 - Composition not stolen by shortcuts:
   - `tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json`
+  - `tools/diag-scripts/ui-gallery-combobox-ime-tab-suppressed.json`
 
 Run the suite (native):
 

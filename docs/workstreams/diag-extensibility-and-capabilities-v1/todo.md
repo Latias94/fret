@@ -131,17 +131,19 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
     - [x] ensure Select scroll viewport exposes `active_descendant_element` semantics.
   - [x] Ensure keyboard roving keeps the active item visible:
     - [x] scroll active option into view for jump keys (e.g. Home/End).
-  - [ ] ensure stable `test_id` for trigger/content/items (value-stable, not index-stable),
-  - [ ] cover: open/close, selection commit, disabled option, roving/typeahead, outside-press/Escape dismiss,
+  - [x] ensure stable `test_id` for trigger/content/items (value-stable, not index-stable).
+  - [x] cover: open/close, selection commit, disabled option, roving/typeahead, outside-press/Escape dismiss,
     focus restore, wheel scroll stability, collision/placement sanity.
   - [ ] Optional: decide whether “click trigger toggles close” is required under item-aligned positioning.
 - [ ] Turn the shadcn `Combobox` suite into a reference-quality example:
   - [x] Ensure stable `test_id` anchors for input + listbox via `test_id_prefix`.
   - [x] Align listbox a11y selection semantics with combobox expectations (active descendant + checked selection).
   - [x] Add a starter `ui-gallery-combobox` suite (open/select/focus restore; keyboard/typeahead commit; dismiss; roving skips disabled).
-  - [ ] Cover: placement sanity + collision/flip/shift evidence.
+  - [x] Cover: placement sanity + collision/flip/shift evidence.
   - [ ] Cover: long-list scroll + (future) virtualization invariants.
-  - [ ] Cover: text + IME behavior while open (composition lifecycle; shortcut routing; caret geometry).
+  - [ ] Cover: text + IME behavior while open:
+    - [x] composition lifecycle + shortcut routing (IME injection + `wait_shortcut_routing_trace`).
+    - [ ] caret/candidate geometry (cursor-area evidence + in-window bounds gates).
 - [ ] Make suites run `diag lint` automatically (and fail on error-level findings):
   - [x] `fretboard diag suite` runs bundle lint by default (use `--no-lint` to disable).
 
