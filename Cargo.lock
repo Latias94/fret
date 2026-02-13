@@ -2548,6 +2548,7 @@ dependencies = [
  "fret-icons",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "material-colors",
  "serde",
