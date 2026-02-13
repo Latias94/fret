@@ -31,6 +31,13 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
   - Evidence anchors:
     - Mechanism: `crates/fret-ui/src/tree/dispatch.rs`
     - Regression test: `crates/fret-ui/src/tree/tests/pointer_move_layers.rs`
+- **Capture-phase pointer move opt-in (mechanism):**
+  - `PointerRegionProps.capture_phase_pointer_moves` routes `PointerEvent::Move` via the Capture phase
+    (root → target) so parent wrappers can observe moves even when a descendant has captured and/or
+    stopped bubbling (gesture arena style arbitration).
+  - Evidence anchors:
+    - Contract surface: `crates/fret-ui/src/element.rs` (`PointerRegionProps`)
+    - PointerRegion dispatch: `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs`
 - **Runner snapshot seam (data-only):**
   - `fret-runtime::WindowInputContextService` publishes a window-scoped `InputContext` snapshot for
     runner/platform integration surfaces (OS menubars, etc.).
