@@ -59,8 +59,11 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingDemoHarnessRoot {
 
         let _ = cx.layout_in(self.dock_space, bounds);
 
-        let x_l = bounds.origin.x.0 + bounds.size.width.0 * 0.25;
-        let x_r = bounds.origin.x.0 + bounds.size.width.0 * 0.75;
+        // Keep the scripted drag anchors inside the *tab* rect even when tabs use natural widths.
+        let mid_x = bounds.origin.x.0 + bounds.size.width.0 * 0.5;
+        let pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
+        let x_l = bounds.origin.x.0 + pad_x;
+        let x_r = mid_x + pad_x;
         let y = bounds.origin.y.0 + (DOCKING_DEMO_TAB_BAR_H.0 * 0.5);
 
         let half = DOCKING_DEMO_DRAG_ANCHOR_SIZE.0 * 0.5;

@@ -104,7 +104,9 @@ struct DockingArbitrationHarnessRoot {
     dock_space: fret_core::NodeId,
     left_anchor: fret_core::NodeId,
     right_anchor: fret_core::NodeId,
+    float_zone_anchor: fret_core::NodeId,
     viewport_split_handle_anchor: fret_core::NodeId,
+    floating_title_bar_anchor: fret_core::NodeId,
 }
 
 impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
@@ -120,8 +122,12 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
 
-        let x_l = bounds.origin.x.0 + bounds.size.width.0 * 0.25;
-        let x_r = bounds.origin.x.0 + bounds.size.width.0 * 0.75;
+        // Keep the scripted drag anchors inside the *tab* rect even when tabs use natural widths
+        // (as opposed to stretching to fill the full tab bar).
+        let mid_x = bounds.origin.x.0 + bounds.size.width.0 * 0.5;
+        let pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
+        let x_l = bounds.origin.x.0 + pad_x;
+        let x_r = mid_x + pad_x;
         let y = bounds.origin.y.0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
 
         let half = DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE.0 * 0.5;
@@ -137,6 +143,60 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
 
         let _ = cx.layout_in(self.left_anchor, rect(x_l));
         let _ = cx.layout_in(self.right_anchor, rect(x_r));
+
+        let float_zone_anchor_rect = {
+            // Mirror `fret_docking::dock::layout::float_zone(...)` logic for stable, pixel-free
+            // scripted diagnostics.
+            //
+            // Note: This is intentionally duplicated here (demo-only harness) to avoid relying on
+            // crate-private helpers.
+            let pad = 2.0_f32;
+            let size = (DOCKING_ARBITRATION_TAB_BAR_H.0 - pad * 2.0).max(0.0);
+            let x =
+                (bounds.origin.x.0 + bounds.size.width.0 - pad - size).max(bounds.origin.x.0 + pad);
+            let y = bounds.origin.y.0 + pad;
+            let cx = x + size * 0.5;
+            let cy = y + size * 0.5;
+            Rect::new(
+                Point::new(Px(cx - half), Px(cy - half)),
+                Size::new(
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                ),
+            )
+        };
+        let _ = cx.layout_in(self.float_zone_anchor, float_zone_anchor_rect);
+
+        let floating_anchor_rect = (|| {
+            let dock = cx.app.global::<DockManager>()?;
+            let floating = dock.graph.floating_windows(self.window).last()?;
+            let outer = floating.rect;
+            let x = outer.origin.x.0 + outer.size.width.0 * 0.5;
+            // Heuristic: stay inside the floating title bar even if tokens vary.
+            let y = outer.origin.y.0 + 12.0;
+            Some(Rect::new(
+                Point::new(Px(x - half), Px(y - half)),
+                Size::new(
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                ),
+            ))
+        })()
+        // When no in-window floating exists yet, keep the anchor offscreen so scripts won't
+        // accidentally hit it before creating a floating container.
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(
+                    Px(bounds.origin.x.0 - 2000.0),
+                    Px(bounds.origin.y.0 - 2000.0),
+                ),
+                Size::new(
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                ),
+            )
+        });
+        let _ = cx.layout_in(self.floating_title_bar_anchor, floating_anchor_rect);
 
         let handle_bounds = (|| {
             fn first_handle_for_axis(
@@ -1476,6 +1536,18 @@ impl DockingArbitrationDriver {
                     .create_node_retained(DockingArbitrationDragAnchor::new(
                         "dock-arb-split-handle-viewport",
                     ));
+            let floating_title_bar_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-floating-title-bar-anchor",
+                    ));
+            let float_zone_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-float-zone-anchor",
+                    ));
             let root = state
                 .ui
                 .create_node_retained(DockingArbitrationHarnessRoot {
@@ -1483,7 +1555,9 @@ impl DockingArbitrationDriver {
                     dock_space: *dock_space,
                     left_anchor,
                     right_anchor,
+                    float_zone_anchor,
                     viewport_split_handle_anchor,
+                    floating_title_bar_anchor,
                 });
             state.ui.set_root(root);
             // Ensure the retained harness nodes participate in hit-testing and event routing.
@@ -1495,7 +1569,9 @@ impl DockingArbitrationDriver {
                     *dock_space,
                     left_anchor,
                     right_anchor,
+                    float_zone_anchor,
                     viewport_split_handle_anchor,
+                    floating_title_bar_anchor,
                 ],
             );
             root
