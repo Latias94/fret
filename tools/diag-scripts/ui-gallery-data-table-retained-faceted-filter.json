@@ -44,20 +44,26 @@
 
     {
       "type": "click",
-      "target": { "kind": "role_and_name", "role": "button", "name": "Status" }
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-trigger" }
     },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "role_and_name", "role": "menu_item_checkbox", "name": "Running" }
+        "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-input" }
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item_checkbox", "name": "Running" } },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-item-running" }
+    },
     { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item_checkbox", "name": "Idle" } },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-item-idle" }
+    },
     { "type": "wait_frames", "n": 2 },
 
     {
@@ -75,4 +81,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-data-table-retained-faceted-filter" }
   ]
 }
-
