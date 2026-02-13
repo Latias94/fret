@@ -161,7 +161,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut inspect_path: Option<PathBuf> = None;
     let mut inspect_trigger_path: Option<PathBuf> = None;
     let mut inspect_consume_clicks: Option<bool> = None;
-    let mut timeout_ms: u64 = 30_000;
+    let mut timeout_ms: u64 = 240_000;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
@@ -3908,6 +3908,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
             }
 
+            fn read_tooling_reason_code(path: &Path) -> Option<String> {
+                read_json_value(path).and_then(|v| {
+                    v.get("reason_code")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+            }
+
             let mut pack_defaults = (
                 pack_include_root_artifacts,
                 pack_include_triage,
@@ -3952,6 +3960,15 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
 
             let summary_path = resolved_out_dir.join("repro.summary.json");
+
+            let mut required_caps: Vec<String> = Vec::new();
+            for src in scripts.iter() {
+                required_caps.extend(script_required_capabilities(src));
+            }
+            required_caps.sort();
+            required_caps.dedup();
+
+            let mut overall_reason_code: Option<String> = None;
 
             let mut repro_launch = launch.clone();
             let mut repro_launch_env = launch_env.clone();
@@ -4010,7 +4027,7 @@ See: `docs/tracy.md`.\n";
                 renderdoc_autocapture_after_frames = Some(after);
             }
 
-            let mut child = maybe_launch_demo(
+            let mut child = match maybe_launch_demo(
                 &repro_launch,
                 &repro_launch_env,
                 &workspace_root,
@@ -4022,22 +4039,72 @@ See: `docs/tracy.md`.\n";
                     || scripts.iter().any(|p| script_requests_screenshots(p)),
                 timeout_ms,
                 poll_ms,
-            )?;
+            ) {
+                Ok(v) => v,
+                Err(err) => {
+                    write_tooling_failure_script_result(
+                        &resolved_script_result_path,
+                        "tooling.launch.failed",
+                        &err,
+                        "tooling_error",
+                        Some("maybe_launch_demo".to_string()),
+                    );
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": now_unix_ms(),
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "suite": suite_name,
+                        "scripts": scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                        "capabilities": serde_json::json!({
+                            "required": required_caps,
+                            "available": [],
+                            "check_file": None::<String>,
+                        }),
+                        "error_reason_code": "tooling.launch.failed",
+                        "error": err,
+                    });
+                    let _ = write_json_value(&summary_path, &payload);
+                    return Err("repro setup failed (see repro.summary.json)".to_string());
+                }
+            };
 
-            let mut required_caps: Vec<String> = Vec::new();
-            for src in scripts.iter() {
-                required_caps.extend(script_required_capabilities(src));
-            }
-            required_caps.sort();
-            required_caps.dedup();
-
-            let connected = connect_filesystem_tooling(
+            let connected = match connect_filesystem_tooling(
                 &fs_transport_cfg,
                 &resolved_ready_path,
                 false,
                 timeout_ms,
                 poll_ms,
-            )?;
+            ) {
+                Ok(v) => v,
+                Err(err) => {
+                    write_tooling_failure_script_result(
+                        &resolved_script_result_path,
+                        "tooling.connect.failed",
+                        &err,
+                        "tooling_error",
+                        Some("connect_filesystem_tooling".to_string()),
+                    );
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": now_unix_ms(),
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "suite": suite_name,
+                        "scripts": scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                        "capabilities": serde_json::json!({
+                            "required": required_caps,
+                            "available": [],
+                            "check_file": None::<String>,
+                        }),
+                        "error_reason_code": "tooling.connect.failed",
+                        "error": err,
+                    });
+                    let _ = write_json_value(&summary_path, &payload);
+                    if repro_launch.is_some() {
+                        let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    }
+                    return Err("repro setup failed (see repro.summary.json)".to_string());
+                }
+            };
             let available_caps = connected.available_caps.clone();
             let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
 
@@ -4059,6 +4126,8 @@ See: `docs/tracy.md`.\n";
                     &available_caps,
                     "filesystem",
                 ) {
+                    overall_reason_code = read_tooling_reason_code(&resolved_script_result_path)
+                        .or_else(|| Some("capability.missing".to_string()));
                     overall_error = Some(err);
                 }
             }
@@ -4067,9 +4136,39 @@ See: `docs/tracy.md`.\n";
                 if overall_error.is_some() {
                     break;
                 }
+                let script_json_bytes = match std::fs::read(&src) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        let err = e.to_string();
+                        overall_reason_code = Some("tooling.script.read_failed".to_string());
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.script.read_failed",
+                            &err,
+                            "tooling_error",
+                            Some(src.display().to_string()),
+                        );
+                        overall_error = Some(err);
+                        break;
+                    }
+                };
                 let script_json: serde_json::Value =
-                    serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-                        .map_err(|e| e.to_string())?;
+                    match serde_json::from_slice(&script_json_bytes) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            let err = e.to_string();
+                            overall_reason_code = Some("tooling.script.parse_failed".to_string());
+                            write_tooling_failure_script_result(
+                                &resolved_script_result_path,
+                                "tooling.script.parse_failed",
+                                &err,
+                                "tooling_error",
+                                Some(src.display().to_string()),
+                            );
+                            overall_error = Some(err);
+                            break;
+                        }
+                    };
 
                 let (raw_result, _bundle_path) = match run_script_over_transport(
                     &resolved_out_dir,
@@ -4085,6 +4184,9 @@ See: `docs/tracy.md`.\n";
                 ) {
                     Ok(v) => v,
                     Err(err) => {
+                        overall_reason_code =
+                            read_tooling_reason_code(&resolved_script_result_path)
+                                .or_else(|| Some("tooling.run.failed".to_string()));
                         overall_error = Some(err);
                         break;
                     }
@@ -4166,6 +4268,20 @@ See: `docs/tracy.md`.\n";
                             bundle_path = Some(p);
                         }
                         Err(err) => {
+                            let code = if err.contains("timed out waiting") {
+                                "timeout.tooling.bundle_dump"
+                            } else {
+                                "tooling.bundle_dump.failed"
+                            };
+                            overall_reason_code = Some(code.to_string());
+                            mark_existing_script_result_tooling_failure(
+                                &resolved_out_dir,
+                                &resolved_script_result_path,
+                                code,
+                                &err,
+                                "tooling_bundle_dump_failed",
+                                Some(src.display().to_string()),
+                            );
                             overall_error = Some(err);
                             break;
                         }
@@ -4285,6 +4401,8 @@ See: `docs/tracy.md`.\n";
 
                     if wants_post_run_checks_for_script {
                         let Some(bundle_path) = bundle_path.as_ref() else {
+                            overall_reason_code =
+                                Some("tooling.bundle_missing_for_post_run_checks".to_string());
                             overall_error = Some(
                                 "script passed but no bundle.json was found (required for post-run checks)"
                                     .to_string(),
@@ -4387,11 +4505,17 @@ See: `docs/tracy.md`.\n";
                             check_retained_vlist_keep_alive_budget,
                             warmup_frames,
                         ) {
+                            overall_reason_code =
+                                Some("tooling.post_run_checks.failed".to_string());
                             overall_error = Some(err);
                             break;
                         }
                     }
                 } else {
+                    overall_reason_code = result
+                        .reason_code
+                        .clone()
+                        .or_else(|| Some("script.failed".to_string()));
                     overall_error = Some(format!(
                         "script failed: {} (run_id={}, step={:?}, reason={:?})",
                         src.display(),
@@ -4658,6 +4782,7 @@ See: `docs/tracy.md`.\n";
                     "reason": r.reason,
                     "last_bundle_dir": r.last_bundle_dir,
                 })),
+                "error_reason_code": overall_reason_code,
                 "error": overall_error,
             });
 
@@ -4723,6 +4848,7 @@ See: `docs/tracy.md`.\n";
                         warmup_frames,
                     ) {
                         overall_error = Some(format!("failed to pack repro zip: {err}"));
+                        overall_reason_code = Some("tooling.pack.failed".to_string());
                     } else {
                         packed_zip = Some(zip_out.clone());
                     }
@@ -4731,6 +4857,7 @@ See: `docs/tracy.md`.\n";
                         "no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
                             .to_string(),
                     );
+                    overall_reason_code = Some("tooling.bundle_missing".to_string());
                 }
 
                 if overall_error.is_some() {
@@ -4747,6 +4874,12 @@ See: `docs/tracy.md`.\n";
                                         overall_error.clone().unwrap_or_default(),
                                     ),
                                 );
+                                if let Some(code) = overall_reason_code.as_ref() {
+                                    obj.insert(
+                                        "error_reason_code".to_string(),
+                                        serde_json::Value::String(code.clone()),
+                                    );
+                                }
                                 serde_json::Value::Object(obj)
                             })
                             .unwrap_or(summary_json.clone()),
@@ -4763,6 +4896,7 @@ See: `docs/tracy.md`.\n";
                     r.failures,
                     r.evidence_path.display()
                 ));
+                overall_reason_code = Some("tooling.resource_footprint.failed".to_string());
             }
             if let Some(r) = redraw_hitches_gate.as_ref()
                 && r.failures > 0
@@ -4773,6 +4907,7 @@ See: `docs/tracy.md`.\n";
                     r.failures,
                     r.evidence_path.display()
                 ));
+                overall_reason_code = Some("tooling.redraw_hitches.failed".to_string());
             }
 
             let final_summary_json = summary_json
@@ -4781,6 +4916,12 @@ See: `docs/tracy.md`.\n";
                 .map(|mut obj| {
                     if let Some(err) = overall_error.as_ref() {
                         obj.insert("error".to_string(), serde_json::Value::String(err.clone()));
+                    }
+                    if let Some(code) = overall_reason_code.as_ref() {
+                        obj.insert(
+                            "error_reason_code".to_string(),
+                            serde_json::Value::String(code.clone()),
+                        );
                     }
                     serde_json::Value::Object(obj)
                 })
@@ -7339,6 +7480,32 @@ See: `docs/tracy.md`.\n";
             let launched_by_fretboard = reuse_launch && launch.is_some();
             let mut perf_launch_env = launch_env.clone();
             let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+            if let Some(name) = suite_name.as_deref() {
+                // Make the common UI gallery perf suites reproducible without requiring callers
+                // to remember a pile of `--env` flags. Callers can still override them explicitly
+                // via `--env KEY=...`.
+                if matches!(
+                    name,
+                    "ui-gallery"
+                        | "ui-gallery-steady"
+                        | "ui-resize-probes"
+                        | "ui-code-editor-resize-probes"
+                ) {
+                    let _ = ensure_env_var(&mut perf_launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    let _ = ensure_env_var(
+                        &mut perf_launch_env,
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+                        "1",
+                    );
+                }
+                if matches!(name, "ui-gallery" | "ui-gallery-steady") {
+                    let _ = ensure_env_var(
+                        &mut perf_launch_env,
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
+                        "1",
+                    );
+                }
+            }
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
@@ -12105,6 +12272,34 @@ fn push_tooling_event_log_entry(result: &mut UiScriptResultV1, kind: &str, note:
         note,
         bundle_dir: result.last_bundle_dir.clone(),
     });
+}
+
+fn mark_existing_script_result_tooling_failure(
+    out_dir: &Path,
+    script_result_path: &Path,
+    reason_code: &str,
+    reason: &str,
+    kind: &str,
+    note: Option<String>,
+) {
+    if let Ok(bytes) = std::fs::read(script_result_path) {
+        if let Ok(mut parsed) = serde_json::from_slice::<UiScriptResultV1>(&bytes) {
+            push_tooling_event_log_entry(&mut parsed, kind, note.clone());
+            if matches!(parsed.stage, UiScriptStageV1::Passed) {
+                parsed.stage = UiScriptStageV1::Failed;
+                parsed.reason_code = Some(reason_code.to_string());
+                parsed.reason = Some(reason.to_string());
+            }
+            let _ = write_json_value(
+                script_result_path,
+                &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
+            );
+            write_run_id_script_result(out_dir, parsed.run_id, &parsed);
+            return;
+        }
+    }
+
+    write_tooling_failure_script_result(script_result_path, reason_code, reason, kind, note);
 }
 
 fn gate_required_capabilities_with_script_result(
