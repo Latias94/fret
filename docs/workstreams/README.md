@@ -51,6 +51,9 @@ Active workstreams:
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
+- `docs/workstreams/diag-simplification-v1.md`
+- `docs/workstreams/diag-simplification-v1-todo.md`
+- `docs/workstreams/diag-simplification-v1-milestones.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`
