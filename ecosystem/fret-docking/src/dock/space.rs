@@ -226,6 +226,7 @@ fn dock_graph_signature_for_window(
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     semantics_test_id: Option<&'static str>,
+    diag_env_enabled: bool,
     last_bounds: Rect,
     prepaint_wants_animation_frames: bool,
     dock_drop_resolve_diagnostics: Option<fret_runtime::DockDropResolveDiagnostics>,
@@ -314,9 +315,14 @@ struct FloatingChrome {
 
 impl DockSpace {
     pub fn new(window: fret_core::AppWindowId) -> Self {
+        // Match `UiDiagnosticsConfig::default()` enable heuristic without pulling a dependency on
+        // `fret-bootstrap` (layering: docking is ecosystem, diagnostics is bootstrap).
+        let diag_env_enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
         Self {
             window,
             semantics_test_id: None,
+            diag_env_enabled,
             last_bounds: Rect::default(),
             prepaint_wants_animation_frames: false,
             dock_drop_resolve_diagnostics: None,
@@ -666,7 +672,9 @@ impl DockSpace {
 
         let pad_x = theme.metric_required("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
-        let inner_max_w = Px((DOCK_TAB_MAX_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
+        // Avoid fully clamping tab title constraints to 0px, which can result in "missing" tab
+        // labels when theme metrics are misconfigured (e.g. overly large padding).
+        let inner_max_w = Px((DOCK_TAB_MAX_W.0 - pad_x.0 * 2.0 - reserve.0).max(1.0));
         let constraints = TextConstraints {
             max_width: Some(inner_max_w),
             wrap: TextWrap::None,
@@ -712,10 +720,25 @@ impl DockSpace {
                 .map(|p| p.title.as_str())
                 .unwrap_or(panel.kind.0.as_str());
             let title_hash = hash_title(title);
-            let (blob, metrics) =
+            let (mut blob, mut metrics) =
                 services
                     .text()
                     .prepare_str(title, &self.tab_text_style, constraints);
+            if metrics.size.width.0 <= 0.0 && !title.is_empty() {
+                // Fallback: if the constrained layout returns an empty run for a non-empty title,
+                // re-prepare without a width cap so the tab can at least render a clipped prefix.
+                services.text().release(blob);
+                (blob, metrics) = services.text().prepare_str(
+                    title,
+                    &self.tab_text_style,
+                    TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor,
+                    },
+                );
+            }
             self.tab_titles.insert(
                 panel,
                 PreparedTabTitle {
@@ -1258,10 +1281,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         //
         // Important: publish in `prepaint` (not only `paint`) so scripts can rely on the snapshot
         // even when paint is replay-cached.
-        if cx
-            .app
-            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-            .is_some()
+        if self.diag_env_enabled
+            || cx
+                .app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .is_some()
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
@@ -1278,6 +1302,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cross_window_hover: drag.cross_window_hover,
                 })
             });
+            let floating_drag =
+                self.floating_drag
+                    .as_ref()
+                    .map(|d| fret_runtime::DockFloatingDragDiagnostics {
+                        pointer_id: d.pointer_id,
+                        floating: d.floating,
+                        activated: d.activated,
+                    });
             let viewport_capture = self
                 .viewport_capture
                 .iter()
@@ -1306,6 +1338,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         frame_id,
                         fret_runtime::DockingInteractionDiagnostics {
                             dock_drag,
+                            floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
@@ -4415,10 +4448,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // store (avoids allocating globals in production apps).
         //
         // Publish in `layout` so scripts can gate against the snapshot before `paint_all()`.
-        if cx
-            .app
-            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-            .is_some()
+        if self.diag_env_enabled
+            || cx
+                .app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .is_some()
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
@@ -4435,6 +4469,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cross_window_hover: drag.cross_window_hover,
                 })
             });
+            let floating_drag =
+                self.floating_drag
+                    .as_ref()
+                    .map(|d| fret_runtime::DockFloatingDragDiagnostics {
+                        pointer_id: d.pointer_id,
+                        floating: d.floating,
+                        activated: d.activated,
+                    });
             let viewport_capture = self
                 .viewport_capture
                 .iter()
@@ -4463,6 +4505,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         frame_id,
                         fret_runtime::DockingInteractionDiagnostics {
                             dock_drag,
+                            floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
@@ -4606,10 +4649,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         // Best-effort diagnostics hook: only record if a diagnostics collector has registered the
         // store (avoids allocating globals in production apps).
-        if cx
-            .app
-            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-            .is_some()
+        if self.diag_env_enabled
+            || cx
+                .app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .is_some()
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
@@ -4626,6 +4670,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cross_window_hover: drag.cross_window_hover,
                 })
             });
+            let floating_drag =
+                self.floating_drag
+                    .as_ref()
+                    .map(|d| fret_runtime::DockFloatingDragDiagnostics {
+                        pointer_id: d.pointer_id,
+                        floating: d.floating,
+                        activated: d.activated,
+                    });
             let viewport_capture = self
                 .viewport_capture
                 .iter()
@@ -4654,6 +4706,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         frame_id,
                         fret_runtime::DockingInteractionDiagnostics {
                             dock_drag,
+                            floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,

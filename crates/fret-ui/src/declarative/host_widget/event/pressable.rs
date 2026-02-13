@@ -2,6 +2,13 @@ use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 use fret_runtime::DragHost;
 
+fn position_local(bounds: Rect, mapped: Point) -> Point {
+    Point::new(
+        fret_core::Px(mapped.x.0 - bounds.origin.x.0),
+        fret_core::Px(mapped.y.0 - bounds.origin.y.0),
+    )
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct PressablePressTracking {
     pointer_id: Option<fret_core::PointerId>,
@@ -238,6 +245,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                     let mv = action::PointerMoveCx {
                         pointer_id: *pointer_id,
                         position: *position,
+                        position_local: position_local(cx.bounds, *position),
+                        position_window: cx.event_window_position,
                         tick_id: cx.app.tick_id(),
                         pixels_per_point,
                         velocity_window,
@@ -295,6 +304,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                     let down = action::PointerDownCx {
                         pointer_id: *pointer_id,
                         position: *position,
+                        position_local: position_local(cx.bounds, *position),
+                        position_window: cx.event_window_position,
                         tick_id: cx.app.tick_id(),
                         pixels_per_point,
                         button: *button,
@@ -388,6 +399,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                     let up = action::PointerUpCx {
                         pointer_id: *pointer_id,
                         position: *position,
+                        position_local: position_local(cx.bounds, *position),
+                        position_window: cx.event_window_position,
                         tick_id: cx.app.tick_id(),
                         pixels_per_point,
                         velocity_window: cx

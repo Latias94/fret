@@ -30,28 +30,22 @@
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-float-zone-anchor" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "dock_graph_signature_is", "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])" },
       "timeout_frames": 240
     },
 
-    { "type": "pointer_down", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
-    { "type": "pointer_move", "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
-    { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
-
     {
-      "type": "pointer_move",
-      "delta_x": 386.0,
-      "delta_y": 0.0,
-      "steps": 36
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "to": { "kind": "test_id", "id": "dock-arb-float-zone-anchor" },
+      "steps": 48,
+      "timeout_frames": 240
     },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "float_zone" },
-      "timeout_frames": 120
-    },
-
-    { "type": "pointer_up" },
-    { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
     {
       "type": "wait_until",

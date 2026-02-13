@@ -194,7 +194,7 @@ Suggested steps:
 - Motion tokens can be sourced from theme config (M3 keys and/or shadcn aliases).
 - At least 2 diag scripts gate motion behavior under fixed `delta` (native runner).
 
-## Implementation status (as of 2026-02-12)
+## Implementation status (as of 2026-02-13)
 
 Already landed (evidence anchors):
 
@@ -203,6 +203,8 @@ Already landed (evidence anchors):
   - `ecosystem/fret-ui-kit/src/declarative/transition.rs` (`ticks_60hz_for_duration`, `drive_transition_*_duration`)
   - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`transition_with_durations*_duration`)
 - Shadcn motion durations (wall-time constants): `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs` (`SHADCN_MOTION_DURATION_*`)
+- Shadcn motion tokens sourced from theme (durations + cubic-bezier easing):
+  - `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs` (`shadcn_motion_duration_*`, `shadcn_motion_ease_bezier`)
 - Headless motion primitives: `ecosystem/fret-ui-headless/src/motion/`
   - `spring.rs`, `friction.rs`, `tween.rs`, `inertia.rs`
 - UI-kit drivers: `ecosystem/fret-ui-kit/src/declarative/motion.rs`
@@ -217,8 +219,16 @@ Already landed (evidence anchors):
   - `ecosystem/fret-ui-shadcn/src/drawer.rs`
 - Sheet uses duration-based overlay transitions (no shadcn tick constants in component code):
   - `ecosystem/fret-ui-shadcn/src/sheet.rs`
+- Presence supports duration + cubic-bezier (theme-friendly) drivers:
+  - `ecosystem/fret-ui-kit/src/declarative/presence.rs`
+  - `ecosystem/fret-ui-kit/src/primitives/presence.rs`
+- Shadcn overlays that use Presence now read durations/easing from theme tokens (refresh-rate stable):
+  - `ecosystem/fret-ui-shadcn/src/{context_menu,dropdown_menu,hover_card,menubar,popover,select,tooltip}.rs`
+- Hover intent (tooltip/hover-card delays) scales 60Hz ticks to frame ticks for refresh-rate stability:
+  - `ecosystem/fret-ui-kit/src/declarative/hover_intent.rs`
 
 Diag gates:
 
 - Sidebar toggle under fixed frame delta: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
+- Dropdown menu open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-dropdown-open-fixed-frame-delta.json`
 - Drawer snap points drag + settle: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`

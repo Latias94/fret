@@ -6,8 +6,9 @@
 //! - Prefer stable selectors (`test_id`, semantics role/name) over pixel coordinates.
 
 use crate::{
-    UiActionScriptV2, UiActionStepV2, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
-    UiMouseButtonV1, UiPredicateV1, UiSelectorV1,
+    UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
+    UiMouseButtonV1, UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiSelectorV1,
+    UiShortcutRoutingTraceQueryV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -35,6 +36,34 @@ pub fn focus_is(target: UiSelectorV1) -> UiPredicateV1 {
 
 pub fn active_item_is(container: UiSelectorV1, item: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::ActiveItemIs { container, item }
+}
+
+pub fn selected_is(target: UiSelectorV1, selected: bool) -> UiPredicateV1 {
+    UiPredicateV1::SelectedIs { target, selected }
+}
+
+pub fn text_composition_is(target: UiSelectorV1, composing: bool) -> UiPredicateV1 {
+    UiPredicateV1::TextCompositionIs { target, composing }
+}
+
+pub fn ime_cursor_area_is_some(is_some: bool) -> UiPredicateV1 {
+    UiPredicateV1::ImeCursorAreaIsSome { is_some }
+}
+
+pub fn ime_cursor_area_within_window(padding_px: f32, eps_px: f32) -> UiPredicateV1 {
+    UiPredicateV1::ImeCursorAreaWithinWindow {
+        padding_px,
+        padding_insets_px: None,
+        eps_px,
+    }
+}
+
+pub fn ime_cursor_area_min_size(min_w_px: f32, min_h_px: f32, eps_px: f32) -> UiPredicateV1 {
+    UiPredicateV1::ImeCursorAreaMinSize {
+        min_w_px,
+        min_h_px,
+        eps_px,
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -147,6 +176,15 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn wait_bounds_stable(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::WaitBoundsStable {
+            target,
+            stable_frames: 2,
+            max_move_px: 1.0,
+            timeout_frames: 180,
+        })
+    }
+
     pub fn press_key(self, key: impl Into<String>) -> Self {
         self.push(UiActionStepV2::PressKey {
             key: key.into(),
@@ -166,6 +204,42 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::TypeText { text: text.into() })
     }
 
+    pub fn ime_enabled(self) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Enabled,
+        })
+    }
+
+    pub fn ime_disabled(self) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Disabled,
+        })
+    }
+
+    pub fn ime_preedit(self, text: impl Into<String>, cursor_bytes: Option<(u32, u32)>) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Preedit {
+                text: text.into(),
+                cursor_bytes,
+            },
+        })
+    }
+
+    pub fn ime_commit(self, text: impl Into<String>) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Commit { text: text.into() },
+        })
+    }
+
+    pub fn ime_delete_surrounding(self, before_bytes: u32, after_bytes: u32) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::DeleteSurrounding {
+                before_bytes,
+                after_bytes,
+            },
+        })
+    }
+
     pub fn type_text_into(self, target: UiSelectorV1, text: impl Into<String>) -> Self {
         self.push(UiActionStepV2::TypeTextInto {
             target,
@@ -182,6 +256,28 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::WaitUntil {
             window: None,
             predicate,
+            timeout_frames,
+        })
+    }
+
+    pub fn wait_shortcut_routing_trace(
+        self,
+        query: UiShortcutRoutingTraceQueryV1,
+        timeout_frames: u32,
+    ) -> Self {
+        self.push(UiActionStepV2::WaitShortcutRoutingTrace {
+            query,
+            timeout_frames,
+        })
+    }
+
+    pub fn wait_overlay_placement_trace(
+        self,
+        query: UiOverlayPlacementTraceQueryV1,
+        timeout_frames: u32,
+    ) -> Self {
+        self.push(UiActionStepV2::WaitOverlayPlacementTrace {
+            query,
             timeout_frames,
         })
     }
@@ -216,6 +312,18 @@ impl ScriptV2Builder {
     pub fn capture_bundle(self, label: impl Into<Option<String>>) -> Self {
         self.push(UiActionStepV2::CaptureBundle {
             label: label.into(),
+            max_snapshots: None,
+        })
+    }
+
+    pub fn capture_bundle_with_max_snapshots(
+        self,
+        label: impl Into<Option<String>>,
+        max_snapshots: u32,
+    ) -> Self {
+        self.push(UiActionStepV2::CaptureBundle {
+            label: label.into(),
+            max_snapshots: Some(max_snapshots),
         })
     }
 

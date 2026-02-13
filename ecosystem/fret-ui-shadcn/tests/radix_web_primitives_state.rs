@@ -21,6 +21,12 @@ mod radix_web_paths;
 
 use radix_web_paths::radix_web_path;
 
+fn shadcn_ticks_100() -> u64 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_DURATION_100,
+    )
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct TimelineGolden {
@@ -1535,7 +1541,7 @@ fn radix_web_menubar_submenu_outside_click_close_matches_fret() {
     click_outside(&mut ui, &mut app, &mut services, bounds);
     deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -1993,7 +1999,7 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+    let settle_frames = shadcn_ticks_100() + 1;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -4712,7 +4718,7 @@ fn radix_web_menubar_submenu_arrowleft_escape_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6332,7 +6338,7 @@ fn radix_web_dropdown_menu_submenu_arrowleft_escape_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6658,7 +6664,7 @@ fn radix_web_context_menu_submenu_arrowleft_escape_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6816,7 +6822,7 @@ fn radix_web_dropdown_menu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7031,7 +7037,7 @@ fn radix_web_dropdown_menu_submenu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7200,7 +7206,7 @@ fn radix_web_context_menu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7399,7 +7405,7 @@ fn radix_web_context_menu_submenu_outside_click_close_matches_fret() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

@@ -8,6 +8,9 @@ struct ComboboxModelsState {
     basic_value: Option<Model<Option<Arc<str>>>>,
     basic_open: Option<Model<bool>>,
     basic_query: Option<Model<String>>,
+    long_list_value: Option<Model<Option<Arc<str>>>>,
+    long_list_open: Option<Model<bool>>,
+    long_list_query: Option<Model<String>>,
     groups_value: Option<Model<Option<Arc<str>>>>,
     groups_open: Option<Model<bool>>,
     groups_query: Option<Model<String>>,
@@ -33,6 +36,9 @@ pub(super) struct ComboboxModels {
     pub(super) basic_value: Model<Option<Arc<str>>>,
     pub(super) basic_open: Model<bool>,
     pub(super) basic_query: Model<String>,
+    pub(super) long_list_value: Model<Option<Arc<str>>>,
+    pub(super) long_list_open: Model<bool>,
+    pub(super) long_list_query: Model<String>,
     pub(super) groups_value: Model<Option<Arc<str>>>,
     pub(super) groups_open: Model<bool>,
     pub(super) groups_query: Model<String>,
@@ -59,6 +65,9 @@ impl ComboboxModels {
             basic_value: state.basic_value?,
             basic_open: state.basic_open?,
             basic_query: state.basic_query?,
+            long_list_value: state.long_list_value?,
+            long_list_open: state.long_list_open?,
+            long_list_query: state.long_list_query?,
             groups_value: state.groups_value?,
             groups_open: state.groups_open?,
             groups_query: state.groups_query?,
@@ -92,6 +101,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let basic_open = cx.app.models_mut().insert(false);
     let basic_query = cx.app.models_mut().insert(String::new());
 
+    let long_list_value = cx.app.models_mut().insert(None);
+    let long_list_open = cx.app.models_mut().insert(false);
+    let long_list_query = cx.app.models_mut().insert(String::new());
+
     let groups_value = cx.app.models_mut().insert(None);
     let groups_open = cx.app.models_mut().insert(false);
     let groups_query = cx.app.models_mut().insert(String::new());
@@ -121,6 +134,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         st.basic_open = Some(basic_open.clone());
         st.basic_query = Some(basic_query.clone());
 
+        st.long_list_value = Some(long_list_value.clone());
+        st.long_list_open = Some(long_list_open.clone());
+        st.long_list_query = Some(long_list_query.clone());
+
         st.groups_value = Some(groups_value.clone());
         st.groups_open = Some(groups_open.clone());
         st.groups_query = Some(groups_query.clone());
@@ -149,6 +166,9 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         basic_value,
         basic_open,
         basic_query,
+        long_list_value,
+        long_list_open,
+        long_list_query,
         groups_value,
         groups_open,
         groups_query,

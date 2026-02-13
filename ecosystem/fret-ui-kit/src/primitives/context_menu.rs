@@ -424,6 +424,8 @@ mod tests {
             PointerDownCx {
                 pointer_id,
                 position: origin,
+                position_local: origin,
+                position_window: Some(origin),
                 tick_id,
                 pixels_per_point: 1.0,
                 button: MouseButton::Left,
@@ -471,6 +473,8 @@ mod tests {
             PointerDownCx {
                 pointer_id,
                 position: origin,
+                position_local: origin,
+                position_window: Some(origin),
                 tick_id,
                 pixels_per_point: 1.0,
                 button: MouseButton::Left,
@@ -499,6 +503,8 @@ mod tests {
             PointerMoveCx {
                 pointer_id,
                 position: Point::new(Px(40.0), Px(40.0)),
+                position_local: Point::new(Px(40.0), Px(40.0)),
+                position_window: Some(Point::new(Px(40.0), Px(40.0))),
                 tick_id,
                 pixels_per_point: 1.0,
                 velocity_window: None,
@@ -539,6 +545,8 @@ mod tests {
             PointerDownCx {
                 pointer_id,
                 position: Point::new(Px(50.0), Px(60.0)),
+                position_local: Point::new(Px(50.0), Px(60.0)),
+                position_window: Some(Point::new(Px(50.0), Px(60.0))),
                 tick_id,
                 pixels_per_point: 1.0,
                 button: MouseButton::Left,
@@ -556,6 +564,8 @@ mod tests {
             PointerCancelCx {
                 pointer_id,
                 position: None,
+                position_local: None,
+                position_window: None,
                 tick_id,
                 pixels_per_point: 1.0,
                 buttons: MouseButtons::default(),

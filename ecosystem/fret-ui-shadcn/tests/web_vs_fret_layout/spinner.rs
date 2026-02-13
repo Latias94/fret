@@ -1022,3 +1022,131 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
         0.02,
     );
 }
+
+fn first_svg_icon_color(el: &AnyElement) -> Option<fret_core::Color> {
+    match &el.kind {
+        fret_ui::element::ElementKind::SvgIcon(props) => Some(props.color),
+        _ => el.children.iter().find_map(first_svg_icon_color),
+    }
+}
+
+fn first_visual_transform_props(el: &AnyElement) -> Option<fret_ui::element::VisualTransformProps> {
+    match &el.kind {
+        fret_ui::element::ElementKind::VisualTransform(props) => Some(*props),
+        _ => el.children.iter().find_map(first_visual_transform_props),
+    }
+}
+
+fn assert_transform_close(label: &str, actual: Transform2D, expected: Transform2D, tol: f32) {
+    let da = (actual.a - expected.a).abs();
+    let db = (actual.b - expected.b).abs();
+    let dc = (actual.c - expected.c).abs();
+    let dd = (actual.d - expected.d).abs();
+    let dtx = (actual.tx - expected.tx).abs();
+    let dty = (actual.ty - expected.ty).abs();
+    assert!(
+        da <= tol && db <= tol && dc <= tol && dd <= tol && dtx <= tol && dty <= tol,
+        "{label}: expected≈{expected:?} (±{tol}) got={actual:?} deltas=({da:.6},{db:.6},{dc:.6},{dd:.6},{dtx:.6},{dty:.6})",
+    );
+}
+
+#[test]
+fn fret_spinner_in_badge_inherits_variant_foreground_when_uncolored() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(200.0)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let _snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let cases = [
+            (
+                fret_ui_shadcn::Badge::new("Syncing")
+                    .children(vec![
+                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
+                    ])
+                    .into_element(cx),
+                theme.color_required("primary-foreground"),
+            ),
+            (
+                fret_ui_shadcn::Badge::new("Updating")
+                    .variant(fret_ui_shadcn::BadgeVariant::Secondary)
+                    .children(vec![
+                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
+                    ])
+                    .into_element(cx),
+                theme.color_required("secondary-foreground"),
+            ),
+            (
+                fret_ui_shadcn::Badge::new("Processing")
+                    .variant(fret_ui_shadcn::BadgeVariant::Outline)
+                    .children(vec![
+                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
+                    ])
+                    .into_element(cx),
+                theme.color_required("foreground"),
+            ),
+        ];
+
+        for (i, (badge, expected_fg)) in cases.into_iter().enumerate() {
+            let actual = first_svg_icon_color(&badge).expect("expected SvgIcon under badge");
+            assert_eq!(
+                actual, expected_fg,
+                "badge spinner should inherit fg (case {i})"
+            );
+        }
+
+        Vec::new()
+    });
+}
+
+#[test]
+fn fret_badge_forces_child_spinner_icon_size_to_12px() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(200.0)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let _snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let badge = fret_ui_shadcn::Badge::new("Syncing")
+            .children(vec![
+                fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
+            ])
+            .into_element(cx);
+
+        let props = first_visual_transform_props(&badge).expect("expected spinner VisualTransform");
+        assert_eq!(props.layout.size.width, Length::Px(Px(12.0)));
+        assert_eq!(props.layout.size.height, Length::Px(Px(12.0)));
+
+        Vec::new()
+    });
+}
+
+#[test]
+fn fret_badge_spinner_rotation_uses_visual_transform_center_after_badge_resize_patch() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(200.0)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let _snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        cx.app.set_frame_id(fret_runtime::FrameId(1));
+
+        let badge = fret_ui_shadcn::Badge::new("Syncing")
+            .children(vec![
+                fret_ui_shadcn::Spinner::new().speed(1.0).into_element(cx),
+            ])
+            .into_element(cx);
+
+        let props = first_visual_transform_props(&badge).expect("expected spinner VisualTransform");
+        let expected_center = Point::new(Px(6.0), Px(6.0));
+        let expected = Transform2D::rotation_about_radians(1.0_f32, expected_center);
+        assert_transform_close("badge spinner transform", props.transform, expected, 1e-5);
+
+        Vec::new()
+    });
+}

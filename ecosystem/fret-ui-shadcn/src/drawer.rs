@@ -1642,7 +1642,10 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1764,7 +1767,10 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1953,7 +1959,10 @@ mod tests {
             ui.paint_all(app, services, b, &mut scene, 1.0);
         };
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -2067,7 +2076,10 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -2297,7 +2309,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) + 2;
         for _ in 0..settle_frames {
             render_drawer_frame_with_underlay(
                 &mut ui,
@@ -2691,7 +2705,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(2 + i as u64));
             let _ = render_drawer_frame_with_auto_focus_hooks(

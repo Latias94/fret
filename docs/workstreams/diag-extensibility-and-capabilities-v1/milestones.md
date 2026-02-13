@@ -7,7 +7,7 @@ scope: diagnostics, automation, protocol, ecosystem, portability
 
 # Diagnostics Extensibility + Capabilities v1 (Milestones)
 
-This file tracks milestones for `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This file tracks milestones for `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Conventions:
 
@@ -45,9 +45,9 @@ Definition of done:
 
 - [x] Add a small, typed Rust script builder that produces Script v2.
 - [x] Add a minimal script generator tool that emits JSON from Rust templates.
-- [ ] Add `diag script normalize` (stable diffs).
-- [ ] Add `diag script validate` (clear failures + evidence file).
-- [ ] Add `diag script lint` (capability inference + basic hygiene).
+- [x] Add `diag script normalize` (stable diffs).
+- [x] Add `diag script validate` (clear failures + evidence file).
+- [x] Add `diag script lint` (capability inference + basic hygiene).
 
 Definition of done:
 
@@ -57,10 +57,10 @@ Definition of done:
 
 - [x] Decide namespaces and initial stable vocabulary (`devtools.*` vs `diag.*`).
 - [x] Define `meta.required_capabilities` and “unknown meta ignored” rule.
-- [ ] Implement capability discovery:
+- [x] Implement capability discovery:
   - [x] filesystem-trigger transport (`capabilities.json`),
   - [x] devtools WS transport (session-advertised capabilities).
-- [ ] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
+- [x] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
   - [x] `diag run` (filesystem transport),
   - [x] `diag run` (devtools WS transport),
   - [x] `diag suite` (filesystem transport),
@@ -79,8 +79,10 @@ Definition of done:
 - [ ] M4b: Hit-test + input routing explainability (why did the click/drag not land?):
   - [x] emit `evidence.hit_test_trace` for injected pointer actions (click/drag/wheel),
   - [x] emit `evidence.overlay_placement_trace` (flip/shift/collision inputs + final rect; geometry-first overlay debugging),
-  - [ ] add capture/barrier/occlusion *explainability* (hit path, occluder hints, capture owner),
-  - [ ] add “chosen point” vs “hit-test path” mismatch evidence.
+  - [x] include input arbitration snapshot in hit-test trace (occlusion/capture/barrier roots),
+  - [x] include best-effort `blocking_reason` attribution in hit-test trace,
+  - [x] add deeper capture/barrier/occlusion *explainability* (hit node path, capture/occlusion owners, capture owner element path, routing explain string),
+  - [x] add “chosen point” vs “hit-test path” mismatch evidence (via `evidence.click_stable_trace`).
 - [ ] M4c: Focus + text/IME explainability:
   - [x] emit `evidence.focus_trace` (focused element/node + expected target for focus waits),
     - [x] include `text_input_snapshot` (selection/composition/cursor area; from `WindowTextInputSnapshot`),
@@ -90,7 +92,7 @@ Definition of done:
   - [x] emit `evidence.ime_event_trace` (native + web IME event kinds + length/cursor summaries; no raw text),
   - [ ] focus change trace with reasons (why focus moved / why it did not) beyond barrier inference.
 - [ ] M4d: Bundle lint closure:
-  - [ ] add `diag lint` and emit `check.lint.json`.
+  - [x] add `diag lint` and emit `check.lint.json`.
 
 Definition of done:
 
@@ -98,15 +100,23 @@ Definition of done:
 
 ### M5: Ecosystem-friendly script discovery and suites
 
-- [ ] Allow `fretboard diag suite` to accept:
-  - [ ] `--script-dir <path>`,
-  - [ ] `--glob <pattern>`,
+- [x] Allow `fretboard diag suite` to accept:
+  - [x] `--script-dir <path>`,
+  - [x] `--glob <pattern>`,
   - [ ] multiple directories (workspace + `.fret/diag/scripts` + external).
+- [x] Add starter built-in component conformance suites:
+  - [x] `ui-gallery-select`
+  - [x] `ui-gallery-combobox`
 - [ ] Add a recommended “smoke” suite definition that is stable across platforms.
+- [ ] Make suites evidence-first by default:
+  - [x] run `diag lint` for every captured bundle (fail on error-level findings; use `--no-lint` to disable),
+  - [x] emit `check.lint.json` next to `bundle.json` (and include it in `diag pack` outputs).
+  - [x] emit `suite.summary.json` for suite runs (per-script rows + aggregates + small evidence highlights).
 
 ### M6: Text & IME gates (self-drawn UI pain point)
 
-- [ ] Define the minimum text/IME evidence surface (selection/caret/composition summary).
+- [x] Define the minimum text/IME evidence surface (selection/caret/composition summary).
+- [x] Add a deterministic IME injection surface for scripted tests (`UiActionStepV2::Ime`, `diag.inject_ime`).
 - [ ] Add a small set of stable gates (word boundary, line boundary, composition not stolen by shortcuts).
 
 Definition of done:
@@ -115,9 +125,9 @@ Definition of done:
 
 ### M7: Determinism + shrink (flake triage)
 
-- [ ] Add environment fingerprint to bundles.
-- [ ] Add repeat-run triage summary (`repeat.summary.json`).
-- [ ] Add `diag script shrink` (delta debugging) as an opt-in workflow.
+- [x] Add environment fingerprint to bundles.
+- [x] Add repeat-run triage summary (`repeat.summary.json`).
+- [x] Add `diag script shrink` (delta debugging) as an opt-in workflow.
 
 Definition of done:
 

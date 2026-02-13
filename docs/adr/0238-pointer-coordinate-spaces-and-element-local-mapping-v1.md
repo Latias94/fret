@@ -77,6 +77,12 @@ boilerplate:
 
 These helpers are purely derived; they do not introduce new state.
 
+Additionally, component-owned pointer action hooks SHOULD receive the same derived values without
+requiring access to `EventCx`:
+
+- `Pointer*Cx.position_local` (derived as `position - host.bounds().origin`)
+- `Pointer*Cx.position_window` / `WheelCx.delta_window` (best-effort pre-mapping values)
+
 ### 4) Pointer capture semantics
 
 When a pointer is captured by a widget:

@@ -109,6 +109,51 @@ Evidence anchors:
 - Fret tear-off integration: `ecosystem/fret-docking/src/runtime.rs`
 - Dockview serialization: `repo-ref/dockview/packages/dockview-core/src/dockview/dockviewComponent.ts`
 
+#### Behavioral differences (practical UX notes)
+
+This section is intentionally outcome-oriented: it captures where “floating” feels different across
+systems even when the high-level feature exists.
+
+- **Stable container identity**
+  - Fret: the floating container node is stable (`DockNode::Floating`), and docking inside it
+    replaces its `child` while keeping the container id stable.
+  - Dockview: the layout tree is separate from the `panels` map (`SerializedDockview.panels`), so
+    panel identity stays stable even if the tree is rewritten.
+  - ImGui: dock nodes are persistent objects; undocking/docking mutates the dock node tree.
+
+- **Position + coordinate space**
+  - Fret: in-window floating rects are stored in logical pixels relative to the host window’s inner
+    content origin (`DockLayoutWindow.floatings[]`), and can be recovered via a recenter/clamp
+    affordance (`ecosystem/fret-docking/src/runtime.rs`).
+  - Dockview: floating groups use anchored boxes (`SerializedFloatingGroup.position`), and popouts
+    store a screen-positioned window box (`SerializedPopoutGroup.position`).
+  - ImGui: with multi-viewport enabled, floating windows can become platform windows (viewports)
+    where hovered-viewport selection is a backend responsibility.
+
+- **Z-order / “raise on interaction”**
+  - Fret: in-window floating z-order is represented by list order (`DockGraph::window_floatings`);
+    raising is a pure graph mutation (`DockGraph::raise_floating`).
+  - Dockview/ImGui: z-order is managed by their host (DOM stacking / platform window order) and is
+    tightly coupled to active/hovered group selection.
+
+- **Tear-off semantics + degradation**
+  - Fret: tear-off is an explicit op (`DockOp::RequestFloatPanelToNewWindow`) translated by the
+    runtime into `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`, and is subject to
+    capabilities/degradation (ADR 0083).
+  - Dockview: popouts are browser windows (same-origin URL) and are fundamentally a different
+    surface than OS-level multi-window.
+  - ImGui: viewports disabled → in-host floating; viewports enabled → platform windows, requiring
+    robust cross-window hover/drop routing for editor-grade hand-feel.
+
+#### Follow-ups to align with dockview / ImGui hand-feel
+
+These are not required for N-ary splits, but they tend to be tackled in the same iterations because
+preview geometry, drag routing, and size clamping intersect with floating.
+
+- Add “editor constraints” surfaces (min-size, clamping) for split shares and floating rects.
+- Strengthen cross-window drag routing tests (scripted diag) so float → dock across windows can be
+  gated without pixel diffs.
+
 ## Current implementation map (evidence anchors)
 
 Core graph and ops:

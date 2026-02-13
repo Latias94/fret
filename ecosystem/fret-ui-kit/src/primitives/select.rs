@@ -1137,6 +1137,14 @@ impl SelectTriggerPointerState {
 
         match down.pointer_type {
             PointerType::Mouse | PointerType::Unknown => {
+                let was_open = host.models_mut().get_copied(open).unwrap_or(false);
+                if was_open {
+                    let _ = host.models_mut().update(open, |v| *v = false);
+                    host.request_focus(action_cx.target);
+                    host.request_redraw(action_cx.window);
+                    return true;
+                }
+
                 let _ = host.models_mut().update(open, |v| *v = true);
                 host.request_redraw(action_cx.window);
                 host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
@@ -2795,6 +2803,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2831,6 +2841,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2852,6 +2864,8 @@ mod tests {
             PointerUpCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(13.0), Px(15.0)),
+                position_local: Point::new(Px(13.0), Px(15.0)),
+                position_window: Some(Point::new(Px(13.0), Px(15.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 velocity_window: None,
@@ -2889,6 +2903,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2908,6 +2924,8 @@ mod tests {
             PointerMoveCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                position_local: Point::new(Px(40.0), Px(12.0)),
+                position_window: Some(Point::new(Px(40.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 velocity_window: None,
@@ -2929,6 +2947,8 @@ mod tests {
             PointerUpCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                position_local: Point::new(Px(40.0), Px(12.0)),
+                position_window: Some(Point::new(Px(40.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 velocity_window: None,

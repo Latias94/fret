@@ -1,6 +1,6 @@
 # ADR 0239: Mask Layers and Alpha Masks (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -132,4 +132,3 @@ MUST preserve ordering semantics.
 - Full parity with CSS masks is not a goal for v1.
 - Path masking is deferred; v1 focuses on gradients because they cover a large portion of common
   UI recipes with a compact, portable surface.
-

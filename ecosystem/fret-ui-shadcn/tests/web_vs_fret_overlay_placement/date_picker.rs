@@ -101,7 +101,7 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
 
     // Open popover and settle.
     let _ = app.models_mut().update(&popover_open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

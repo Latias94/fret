@@ -87,7 +87,7 @@ fn web_vs_fret_select_overlay_chrome_cases_match_web_fixtures() {
                     theme.as_str(),
                     theme.scheme(),
                     SemanticsRole::ListBox,
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                    crate::shadcn_motion::ticks_100() + 2,
                     build_shadcn_select_scrollable_demo,
                 );
             }
@@ -99,7 +99,7 @@ fn web_vs_fret_select_overlay_chrome_cases_match_web_fixtures() {
                     theme.as_str(),
                     theme.scheme(),
                     SemanticsRole::ListBox,
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                    crate::shadcn_motion::ticks_100() + 2,
                     build_shadcn_select_scrollable_demo,
                 );
             }

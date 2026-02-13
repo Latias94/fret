@@ -7,7 +7,7 @@ scope: diagnostics, automation, protocol, ecosystem, portability
 
 # Diagnostics Extensibility + Capabilities v1 (TODO)
 
-This file tracks tasks for `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This file tracks tasks for `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Guiding idea: keep `diag` useful for day-to-day debugging *and* safe to depend on as an ecosystem contract surface.
 
@@ -31,9 +31,9 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
 - [x] Script metadata surface:
   - [x] define `meta` object shape (name/tags/required_capabilities/target_hints),
   - [x] rule: tooling ignores unknown `meta` keys.
-- [ ] Filesystem discovery:
+- [x] Filesystem discovery:
   - [x] runner writes deterministic `capabilities.json` under `FRET_DIAG_DIR`.
-- [ ] DevTools WS discovery:
+- [x] DevTools WS discovery:
   - [x] runner/session descriptors advertise `diag.*` capabilities.
 - [ ] Tooling gating:
   - [x] fail fast when required capabilities are missing,
@@ -49,7 +49,12 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
 - [x] Add hit-test / routing evidence to `script.result.json` (`evidence.hit_test_trace`).
 - [ ] Expand the reason-code taxonomy as new evidence surfaces land (avoid premature over-taxonomy).
 - [ ] Add bounded trace evidence (ring buffer) dumped on failure:
-  - [ ] hit-test + routing evidence (capture/barriers/occlusion) with deeper explainability (hit path, occluder hints),
+  - [x] hit-test + routing evidence (capture/barriers/occlusion) with deeper explainability:
+    - hit node path (`hit_node_path`) for “hit the right region but got blocked” cases,
+    - best-effort attribution (`blocking_reason` / `blocking_root` / `blocking_layer_id`),
+    - best-effort explanation string (`routing_explain`),
+    - best-effort capture + occlusion owners (semantics node + bounds),
+    - best-effort capture owner element-path (`pointer_capture_element_path`),
   - [x] overlay placement evidence in `script.result.json` (`evidence.overlay_placement_trace`),
   - [x] focus + IME evidence snapshots in `script.result.json` (`evidence.focus_trace`, `evidence.web_ime_trace`),
   - [x] IME event summaries in `script.result.json` (`evidence.ime_event_trace`),
@@ -57,10 +62,10 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
   - [x] text input snapshot evidence in `script.result.json` (via `evidence.focus_trace[].text_input_snapshot`),
   - [ ] focus change evidence with reasons beyond barrier inference,
   - [ ] predicate evaluation deltas (what changed, what did not).
-- [ ] Add `diag lint` mode for captured bundles:
-  - [ ] semantics lint (duplicate `test_id`, missing labels, inconsistent flags),
-  - [ ] layout lint (bounds outside window, overlap invariants, basic stability checks),
-  - [ ] emit `check.lint.json`.
+- [x] Add `diag lint` mode for captured bundles:
+  - [x] semantics lint (duplicate `test_id`, missing labels, dangling `active_descendant`),
+  - [x] layout lint (focused/active bounds outside window, empty bounds for focused/test-id nodes),
+  - [x] emit `check.lint.json` (exit 1 when error findings exist).
 
 ## Tooling tasks (authoring ergonomics)
 
@@ -71,37 +76,77 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 
-- [ ] Add `diag script normalize` (pretty-print, stable diffs).
-- [ ] Add `diag script validate` (schema/parse, clear error paths, `check.script_schema.json`).
-- [ ] Add `diag script lint` (capability inference, discouraged patterns, `check.script_lint.json`).
+- [x] Add `diag script normalize` (pretty-print, stable diffs).
+- [x] Add `diag script validate` (schema/parse, clear error paths, `check.script_schema.json`).
+- [x] Add `diag script lint` (capability inference, discouraged patterns, `check.script_lint.json`).
 - [ ] Add CI-friendly “generate + check” workflow:
+  - [x] add a `fret-diag-scriptgen check-suite ui-gallery-select` closure for the Select suite,
+  - [x] add a `fret-diag-scriptgen check-suite ui-gallery-combobox` closure for the Combobox suite,
   - [ ] ensure generated scripts match checked-in scripts (when applicable),
   - [ ] prefer `.fret/diag/scripts` for local generation (avoid accidental churn in `tools/diag-scripts/`).
-- [ ] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
-  - [ ] emit `repro.min.json` + summary.
+- [x] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
+  - [x] emit `target/fret-diag/shrink/script.min.json` + `target/fret-diag/shrink/shrink.summary.json` (or `--shrink-out`).
+- [x] Add a suite-level summary artifact for `diag suite`:
+  - [x] emit `suite.summary.json` (per-script rows + aggregates + small evidence highlights).
 
 ## Text & IME (self-drawn UI pain point)
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 
-- [ ] Define the minimum redaction-friendly evidence surface for focused text inputs:
+- [x] Define the minimum redaction-friendly evidence surface for focused text inputs:
   - [x] selection range (UTF-16),
   - [x] caret/candidate rect (best-effort `ime_cursor_area`),
   - [x] IME composition state summary (`is_composing` + `marked_utf16`).
+- [x] Add a deterministic IME injection surface for scripted tests:
+  - [x] `UiActionStepV2::Ime` (preedit/commit/enable/disable/delete-surrounding),
+  - [x] `UiPredicateV1::TextCompositionIs` (best-effort composition range signal),
+  - [x] add `diag.inject_ime` capability.
 - [ ] Add at least one stable script gate for:
-  - [ ] word boundary (double click),
-  - [ ] line boundary (triple click),
-  - [ ] “composition not stolen by shortcuts” (requires trace + reason codes).
+  - [x] word boundary (double click),
+  - [x] line boundary (triple click),
+  - [x] “composition not stolen by shortcuts” (assert `wait_shortcut_routing_trace` finds `outcome=reserved_for_ime`).
 
 ## Determinism (flake triage)
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 
-- [ ] Define and capture an environment fingerprint in bundles (versions, DPI, font fallback summary, flags).
-- [ ] Add a repeat-run triage workflow:
-  - [ ] run a script N times,
-  - [ ] classify diffs (semantics/layout/routing/perf),
-  - [ ] emit `repeat.summary.json`.
+- [x] Define and capture an environment fingerprint in bundles (runner kind, target triple, flags, scale factors, capabilities).
+- [x] Add a repeat-run triage workflow:
+  - [x] run a script N times,
+  - [x] classify diffs (semantics/layout/perf; routing classification TBD),
+  - [x] emit `repeat.summary.json`.
+  - [x] include actionable highlights (lint counts + stage/reason-code aggregates + worst perf).
+
+## Component conformance (self-drawn UI pain points)
+
+Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
+
+- [x] Add a component conformance playbook document (invariants-first, evidence-first).
+- [ ] Turn the shadcn `Select` suite into a reference-quality example:
+  - [x] Keep the suite redaction-friendly (`FRET_DIAG_REDACT_TEXT=1`):
+    - [x] add `selected_is` predicate and migrate selection assertions off label text.
+  - [x] Stabilize injected clicks for composed widgets:
+    - [x] allow `click_stable` to accept “hit path contains intended” (intended child intercepts input).
+  - [x] Make listbox-style predicates portable across scroll/viewport implementations:
+    - [x] ensure Select scroll viewport exposes `active_descendant_element` semantics.
+  - [x] Ensure keyboard roving keeps the active item visible:
+    - [x] scroll active option into view for jump keys (e.g. Home/End).
+  - [x] ensure stable `test_id` for trigger/content/items (value-stable, not index-stable).
+  - [x] cover: open/close, selection commit, disabled option, roving/typeahead, outside-press/Escape dismiss,
+    focus restore, wheel scroll stability, collision/placement sanity.
+  - [ ] Optional: decide whether “click trigger toggles close” is required under item-aligned positioning.
+- [ ] Turn the shadcn `Combobox` suite into a reference-quality example:
+  - [x] Ensure stable `test_id` anchors for input + listbox via `test_id_prefix`.
+  - [x] Align listbox a11y selection semantics with combobox expectations (active descendant + checked selection).
+  - [x] Add a starter `ui-gallery-combobox` suite (open/select/focus restore; keyboard/typeahead commit; dismiss; roving skips disabled).
+  - [x] Cover: placement sanity + collision/flip/shift evidence.
+  - [x] Cover: long-list scroll invariants (scroll into view + commit + selected state).
+  - [ ] Cover: (future) virtualization invariants (same script should stay valid under virtualization).
+  - [ ] Cover: text + IME behavior while open:
+    - [x] composition lifecycle + shortcut routing (IME injection + `wait_shortcut_routing_trace`).
+    - [x] caret/candidate geometry (cursor-area evidence + in-window bounds gates).
+- [ ] Make suites run `diag lint` automatically (and fail on error-level findings):
+  - [x] `fretboard diag suite` runs bundle lint by default (use `--no-lint` to disable).
 
 ## Scenario coverage (future-proofing)
 
@@ -118,7 +163,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 - [ ] Add a small smoke suite for CI that:
   - [ ] avoids pixel assertions by default,
   - [ ] uses only `test_id`/role selectors,
-  - [ ] runs with predictable timeouts.
+  - [ ] runs with predictable timeouts (document a recommended `--timeout-ms` baseline).
 - [ ] Add checks that protect contract evolution:
   - [ ] script schema validation for the smoke suite,
   - [ ] normalization check (avoid “random diff churn”).

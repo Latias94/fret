@@ -123,11 +123,7 @@ where
 
     let pointer_local_for_move = pointer_local.clone();
     let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, _acx, mv| {
-        let bounds = host.bounds();
-        let local = Point::new(
-            Px(mv.position.x.0 - bounds.origin.x.0),
-            Px(mv.position.y.0 - bounds.origin.y.0),
-        );
+        let local = mv.position_local;
 
         let _ = host.update_model(&pointer_local_for_move, |p| {
             *p = Some(local);

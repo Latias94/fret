@@ -1479,7 +1479,7 @@ pub(crate) fn assert_hover_overlay_chrome_matches(
     ui.set_focus(Some(trigger_node));
     hover_open_at(&mut ui, &mut app, &mut services, trigger_center);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         let build_frame = build.clone();

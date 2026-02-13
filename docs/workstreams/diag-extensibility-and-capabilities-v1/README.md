@@ -40,6 +40,8 @@ Sub-documents (this workstream intentionally decomposes into small, checkable st
   - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - Determinism and “repeat-run triage” for flaky regressions:
   - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
+- Component conformance playbooks (how to build stable, explainable end-to-end gates):
+  - `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
 
 ## Why this workstream
 
@@ -140,7 +142,7 @@ See:
 
 This workstream ships three “stable outcomes”:
 
-1. A clear ADR-backed contract (`docs/adr/0204-...`) that defines extension points and versioning rules.
+1. A clear ADR-backed contract (`docs/adr/0189-...`) that defines extension points and versioning rules.
 2. A small set of ergonomic authoring tools (typed builders + generators) that still emit JSON.
 3. CI-friendly gates for contract health (schema validation, capability checks, and minimal smoke suites).
 

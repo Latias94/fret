@@ -154,14 +154,14 @@ to `fret-ui` (ADR 0234).
         `RenderTargetUpdate::Update` (GPU copy, no CPU readback).
     - Evidence: `apps/fret-examples/src/external_texture_imports_web_demo.rs`,
       `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
-  - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
-        (capability-gated) with deterministic fallback.
+    - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
+          (capability-gated) with deterministic fallback.
         Note: currently blocked on wgpu's WebGPU backend implementing `ExternalTexture`
         (wgpu v28: `wgpu/src/backend/webgpu.rs` contains `unimplemented!("ExternalTexture not implemented for web")`).
-  - [x] native (v1 copy path): software decode → CPU upload (`Queue::write_texture`) →
-        `RenderTargetUpdate::Update` with deterministic fallback.
-    - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source)
-- [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
+    - [x] native (v1 copy path): software decode → CPU upload (`Queue::write_texture`) →
+          `RenderTargetUpdate::Update` with deterministic fallback.
+      - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source)
+  - [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
 - [x] Decide and implement the minimal render target descriptor metadata seam needed by real imports:
       alpha semantics (`premul` vs `straight`), orientation/transform metadata, and frame timing hints
       for diagnostics (ADR 0234 D4).
