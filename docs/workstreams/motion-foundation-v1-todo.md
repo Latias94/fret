@@ -119,10 +119,17 @@ Per-recipe tracking (pilot follow-ups):
 
 ## P1 — Token taxonomy (shadcn ↔ Material 3)
 
-- [ ] MF-MOTION-tokens-001 Document a stable semantic key scheme for duration/easing/spring.
+- [x] MF-MOTION-tokens-001 Document a stable semantic key scheme for duration/easing/spring.
   - Goal: component ecosystems request “semantic motion”, not raw numbers.
+  - Evidence:
+    - `docs/workstreams/motion-foundation-v1.md` (section "Token taxonomy (v1; conventions we can keep stable)")
 
-- [ ] MF-MOTION-tokens-002 Add shadcn aliases (already present) and define the M3 mapping table.
+- [x] MF-MOTION-tokens-002 Add shadcn aliases (already present) and define the M3 mapping table.
+  - Evidence:
+    - `docs/workstreams/motion-foundation-v1.md` (section "Pragmatic mapping table (shadcn numeric durations ↔ M3 duration tokens)")
+    - `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+    - `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`
 
 ## P2 — Layout-affecting motion (optional follow-up)
 

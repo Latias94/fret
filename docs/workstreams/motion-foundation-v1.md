@@ -156,9 +156,54 @@ Use existing theme token surfaces:
 Add a first-class convention for motion keys (ecosystem policy):
 
 - `md.sys.motion.duration.*` / `md.sys.motion.easing.*` / `md.sys.motion.spring.*` (M3-aligned)
-- `shadcn.motion.duration.*` / `shadcn.motion.easing.*` (shadcn-aligned aliases)
+- `duration.shadcn.motion.*` / `easing.shadcn.motion.*` / `number.shadcn.motion.*` (shadcn-aligned)
 
 Component ecosystems should request motion by **semantic key**, not hard-coded numbers.
+
+Token taxonomy (v1; conventions we can keep stable):
+
+- Duration keys:
+  - Prefer *semantic* keys for recipes/components (stable, future-proof):
+    - `duration.shadcn.motion.overlay.open`
+    - `duration.shadcn.motion.overlay.close`
+    - `duration.shadcn.motion.toast.enter`
+    - `duration.shadcn.motion.toast.exit`
+    - `duration.shadcn.motion.sidebar.toggle`
+  - Keep the existing numeric scale as leaf-level defaults and for quick authoring:
+    - `duration.shadcn.motion.{100|200|300|500}`
+- Easing keys:
+  - Use semantic keys where a component needs a specific curve (don’t assume 1 curve fits all):
+    - `easing.shadcn.motion.overlay`
+    - `easing.shadcn.motion.toast`
+  - Keep `easing.shadcn.motion` as a simple global default.
+- Spring keys:
+  - For duration+bounce (shadcn-style):
+    - `duration.shadcn.motion.spring.<surface>.<intent>`
+    - `number.shadcn.motion.spring.<surface>.<intent>.bounce`
+  - For damping+stiffness (M3 scheme):
+    - `md.sys.motion.spring.{default|fast|slow}.{spatial|effects}.{damping|stiffness}`
+
+Implementation note:
+
+- The semantic keys above are a *convention* we can migrate toward without requiring Theme-level
+  aliasing. Today, most shadcn surfaces still read the numeric shadcn tokens directly; the goal is
+  to gradually switch recipe code to semantic keys while keeping numeric scale keys as fallbacks.
+
+Pragmatic mapping table (shadcn numeric durations ↔ M3 duration tokens):
+
+| shadcn key | ms | closest M3 token | Notes |
+| --- | ---: | --- | --- |
+| `duration.shadcn.motion.100` | 100 | `md.sys.motion.duration.short2` | exact match in v30 |
+| `duration.shadcn.motion.200` | 200 | `md.sys.motion.duration.short4` | exact match in v30 |
+| `duration.shadcn.motion.300` | 300 | `md.sys.motion.duration.medium2` | exact match in v30 |
+| `duration.shadcn.motion.500` | 500 | `md.sys.motion.duration.long2` | exact match in v30 |
+
+Easing mapping note:
+
+- `easing.shadcn.motion` (default: `cubic-bezier(0.22,1,0.36,1)`) does not have an exact match in
+  Material Web v30’s sys easings. When bridging across ecosystems, treat easing as a per-recipe
+  choice and pick the closest `md.sys.motion.easing.*` (or define an explicit shadcn curve key for
+  that recipe).
 
 Spring tokens (v1):
 
@@ -202,6 +247,23 @@ Spring cookbook (starter presets; tune with diag gates):
 | `emphasized` | 320 | 0.15 | mild overshoot for "hero" motions |
 | `bouncy` | 300 | 0.35 | noticeable overshoot; use sparingly |
 | `overdamped` | 260 | -0.20 | heavier feel; no overshoot |
+
+Material 3 spring taxonomy (tokens already exist in `ecosystem/fret-ui-material3`):
+
+- M3 expresses springs as **damping ratio + stiffness** (not duration+bounce):
+  - `md.sys.motion.spring.{default|fast|slow}.{spatial|effects}.{damping|stiffness}`
+- In Fret's M3 ecosystem today, these map to `SpringSpec { damping, stiffness }` and are advanced
+  deterministically by `FrameId` (see `ecosystem/fret-ui-material3/src/motion.rs` and
+  `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`).
+
+Bridging guidance (spec-only; no required unification yet):
+
+- Prefer **duration+bounce** for shadcn-style "recipe motion" where authors think in wall-time.
+- Prefer **damping ratio + stiffness** for M3 "motion scheme" where tokens are already published in
+  that form.
+- If/when we unify on a single headless spring kernel, both shapes should remain supported:
+  - duration+bounce -> `SpringDescription::with_duration_and_bounce`
+  - (ratio, stiffness) -> `SpringDescription::with_damping_ratio(mass=1.0, stiffness, ratio)`
 
 ### 6) Reduced motion policy (ecosystem-level)
 

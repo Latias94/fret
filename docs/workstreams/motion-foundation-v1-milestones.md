@@ -110,7 +110,15 @@ Deliverables:
   - spring (stiffness/damping or duration+bounce).
 - shadcn tokens remain as aliases (ecosystem-level), not mechanism-layer contracts.
 
-Status: Planned
+Status: Landed (taxonomy doc + mapping table)
+
+Evidence:
+
+- `docs/workstreams/motion-foundation-v1.md` (section "Token taxonomy (v1; conventions we can keep stable)")
+- `docs/workstreams/motion-foundation-v1.md` (section "Pragmatic mapping table (shadcn numeric durations ↔ M3 duration tokens)")
+- `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`
+- `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+- `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`
 
 ## M6 — Layout-affecting motion (optional v1 follow-up)
 
