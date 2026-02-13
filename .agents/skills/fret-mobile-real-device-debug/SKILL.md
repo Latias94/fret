@@ -72,8 +72,23 @@ iOS:
 
 Tip (iOS Simulator diagnostics location):
 
-- When diagnostics are enabled, the filesystem transport writes under the app sandbox:
-  - `${container}/tmp/fret-diag` where `container=$(xcrun simctl get_app_container <udid> dev.fret.ui-gallery data)`
+- Prefer setting an explicit diagnostics directory so filesystem transport is reliably writable:
+  - `container=$(xcrun simctl get_app_container <udid> dev.fret.ui-gallery data)`
+  - `diag_dir="${container}/tmp/fret-diag"`
+  - `SIMCTL_CHILD_FRET_DIAG=1 SIMCTL_CHILD_FRET_DIAG_DIR="${diag_dir}" xcrun simctl launch --terminate-running-process <udid> dev.fret.ui-gallery`
+
+Tip (iOS Simulator screenshots for diag scripts):
+
+- Enable screenshot capture in diagnostics:
+  - `SIMCTL_CHILD_FRET_DIAG_SCREENSHOTS=1` (alongside `FRET_DIAG`/`FRET_DIAG_DIR`)
+- Screenshots are written under:
+  - `${diag_dir}/screenshots/<bundle_dir_name>/*.png`
+
+Tip (diag scripts trigger stamp):
+
+- `script.touch` uses edge detection and treats the first observed value as a baseline.
+  - If you reuse a diagnostics directory, bump the stamp twice to ensure the script runs:
+    - `echo "$(date +%s%3N)" > "${diag_dir}/script.touch"; sleep 1; echo "$(date +%s%3N)" > "${diag_dir}/script.touch"`
 
 5) Capture a diagnostics bundle (Android filesystem transport)
 
