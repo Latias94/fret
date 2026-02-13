@@ -1217,6 +1217,10 @@ pub struct UiScriptResultV1 {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event_log: Vec<UiScriptEventLogEntryV1>,
+    #[serde(default, skip_serializing_if = "is_zero_u64")]
+    pub event_log_dropped: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hit_test_trace: Vec<UiHitTestTraceEntryV1>,
@@ -1234,6 +1238,18 @@ pub struct UiScriptEvidenceV1 {
     pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScriptEventLogEntryV1 {
+    pub unix_ms: u64,
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step_index: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_dir: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1783,6 +1799,10 @@ pub enum UiScriptStageV1 {
 
 fn serde_default_true() -> bool {
     true
+}
+
+fn is_zero_u64(v: &u64) -> bool {
+    *v == 0
 }
 
 #[cfg(test)]

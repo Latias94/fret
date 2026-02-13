@@ -16,10 +16,10 @@ use fret_diag_protocol::{
     UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
     UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
     UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
-    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
-    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
-    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1,
-    UiWebImeTraceEntryV1, UiWindowTargetV1,
+    UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1,
+    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
+    UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1,
+    UiTextInputSnapshotV1, UiWebImeTraceEntryV1, UiWindowTargetV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -434,6 +434,8 @@ pub struct UiDiagnosticsService {
 struct PendingForceDumpRequest {
     label: String,
     dump_max_snapshots: Option<usize>,
+    script_run_id: Option<u64>,
+    script_step_index: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -929,33 +931,45 @@ impl UiDiagnosticsService {
         {
             let run_id = self.pending_script_run_id.take().unwrap_or(0);
             self.pending_script = None;
-            self.active_scripts.insert(
-                window,
-                ActiveScript {
-                    steps: script.steps,
-                    run_id,
-                    next_step: 0,
-                    last_injected_step: None,
-                    wait_frames_remaining: 0,
-                    wait_until: None,
-                    wait_shortcut_routing_trace: None,
-                    wait_overlay_placement_trace: None,
-                    screenshot_wait: None,
-                    v2_step_state: None,
-                    pointer_session: None,
-                    last_reported_step: Some(0),
-                    selector_resolution_trace: Vec::new(),
-                    hit_test_trace: Vec::new(),
-                    click_stable_trace: Vec::new(),
-                    bounds_stable_trace: Vec::new(),
-                    focus_trace: Vec::new(),
-                    shortcut_routing_trace: Vec::new(),
-                    last_shortcut_routing_seq: 0,
-                    overlay_placement_trace: Vec::new(),
-                    web_ime_trace: Vec::new(),
-                    ime_event_trace: Vec::new(),
+            let mut active_script = ActiveScript {
+                steps: script.steps,
+                run_id,
+                next_step: 0,
+                event_log: Vec::new(),
+                event_log_dropped: 0,
+                event_log_active_step: None,
+                last_injected_step: None,
+                wait_frames_remaining: 0,
+                wait_until: None,
+                wait_shortcut_routing_trace: None,
+                wait_overlay_placement_trace: None,
+                screenshot_wait: None,
+                v2_step_state: None,
+                pointer_session: None,
+                last_reported_step: Some(0),
+                selector_resolution_trace: Vec::new(),
+                hit_test_trace: Vec::new(),
+                click_stable_trace: Vec::new(),
+                bounds_stable_trace: Vec::new(),
+                focus_trace: Vec::new(),
+                shortcut_routing_trace: Vec::new(),
+                last_shortcut_routing_seq: 0,
+                overlay_placement_trace: Vec::new(),
+                web_ime_trace: Vec::new(),
+                ime_event_trace: Vec::new(),
+            };
+            push_script_event_log(
+                &mut active_script,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_start".to_string(),
+                    step_index: Some(0),
+                    note: None,
+                    bundle_dir: None,
                 },
             );
+            self.active_scripts.insert(window, active_script);
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id,
@@ -1011,6 +1025,7 @@ impl UiDiagnosticsService {
             };
         }
 
+        let prev_next_step = active.next_step;
         let step_index = active.next_step;
         let step = active.steps.get(step_index).cloned();
         let Some(step) = step else {
@@ -1019,6 +1034,21 @@ impl UiDiagnosticsService {
 
         // Keep evidence scoped to the active step so failures remain focused.
         let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
+        let step_kind = script_step_kind_name(&step).to_string();
+        if active.event_log_active_step != Some(step_index_u32) {
+            push_script_event_log(
+                &mut active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "step_start".to_string(),
+                    step_index: Some(step_index_u32),
+                    note: Some(step_kind.clone()),
+                    bundle_dir: None,
+                },
+            );
+            active.event_log_active_step = Some(step_index_u32);
+        }
         active
             .selector_resolution_trace
             .retain(|e| e.step_index == step_index_u32);
@@ -1998,6 +2028,17 @@ impl UiDiagnosticsService {
                         if self.cfg.script_auto_dump {
                             self.dump_bundle(Some(&label));
                         }
+                        push_script_event_log(
+                            &mut active,
+                            &self.cfg,
+                            UiScriptEventLogEntryV1 {
+                                unix_ms: unix_ms_now(),
+                                kind: "script_failed".to_string(),
+                                step_index: Some(step_index as u32),
+                                note: Some("no_semantics_snapshot".to_string()),
+                                bundle_dir: None,
+                            },
+                        );
                         self.write_script_result(UiScriptResultV1 {
                             schema_version: 1,
                             run_id: active.run_id,
@@ -2007,7 +2048,7 @@ impl UiDiagnosticsService {
                             step_index: Some(step_index as u32),
                             reason_code: Some("semantics.missing".to_string()),
                             reason: Some("no_semantics_snapshot".to_string()),
-                            evidence: None,
+                            evidence: script_evidence_for_active(&active),
                             last_bundle_dir: self
                                 .last_dump_dir
                                 .as_ref()
@@ -2030,6 +2071,17 @@ impl UiDiagnosticsService {
                         if self.cfg.script_auto_dump {
                             self.dump_bundle(Some(&label));
                         }
+                        push_script_event_log(
+                            &mut active,
+                            &self.cfg,
+                            UiScriptEventLogEntryV1 {
+                                unix_ms: unix_ms_now(),
+                                kind: "script_failed".to_string(),
+                                step_index: Some(step_index as u32),
+                                note: Some("click_no_semantics_match".to_string()),
+                                bundle_dir: None,
+                            },
+                        );
                         self.write_script_result(UiScriptResultV1 {
                             schema_version: 1,
                             run_id: active.run_id,
@@ -2682,6 +2734,17 @@ impl UiDiagnosticsService {
                     if self.cfg.script_auto_dump {
                         self.dump_bundle(Some(&label));
                     }
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "script_failed".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some("no_semantics_snapshot".to_string()),
+                            bundle_dir: None,
+                        },
+                    );
                     self.write_script_result(UiScriptResultV1 {
                         schema_version: 1,
                         run_id: active.run_id,
@@ -2691,7 +2754,7 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
-                        evidence: None,
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -2715,6 +2778,17 @@ impl UiDiagnosticsService {
                     if self.cfg.script_auto_dump {
                         self.dump_bundle(Some(&label));
                     }
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "script_failed".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some("move_pointer_no_semantics_match".to_string()),
+                            bundle_dir: None,
+                        },
+                    );
                     self.write_script_result(UiScriptResultV1 {
                         schema_version: 1,
                         run_id: active.run_id,
@@ -3218,6 +3292,17 @@ impl UiDiagnosticsService {
                                 if self.cfg.script_auto_dump {
                                     self.dump_bundle(Some(&label));
                                 }
+                                push_script_event_log(
+                                    &mut active,
+                                    &self.cfg,
+                                    UiScriptEventLogEntryV1 {
+                                        unix_ms: unix_ms_now(),
+                                        kind: "script_failed".to_string(),
+                                        step_index: Some(step_index as u32),
+                                        note: Some("no_semantics_snapshot".to_string()),
+                                        bundle_dir: None,
+                                    },
+                                );
                                 self.write_script_result(UiScriptResultV1 {
                                     schema_version: 1,
                                     run_id: active.run_id,
@@ -3227,7 +3312,7 @@ impl UiDiagnosticsService {
                                     step_index: Some(step_index as u32),
                                     reason_code: Some("semantics.missing".to_string()),
                                     reason: Some("no_semantics_snapshot".to_string()),
-                                    evidence: None,
+                                    evidence: script_evidence_for_active(&active),
                                     last_bundle_dir: self
                                         .last_dump_dir
                                         .as_ref()
@@ -3252,6 +3337,17 @@ impl UiDiagnosticsService {
                                 if self.cfg.script_auto_dump {
                                     self.dump_bundle(Some(&label));
                                 }
+                                push_script_event_log(
+                                    &mut active,
+                                    &self.cfg,
+                                    UiScriptEventLogEntryV1 {
+                                        unix_ms: unix_ms_now(),
+                                        kind: "script_failed".to_string(),
+                                        step_index: Some(step_index as u32),
+                                        note: Some("drag_pointer_no_semantics_match".to_string()),
+                                        bundle_dir: None,
+                                    },
+                                );
                                 self.write_script_result(UiScriptResultV1 {
                                     schema_version: 1,
                                     run_id: active.run_id,
@@ -3519,6 +3615,17 @@ impl UiDiagnosticsService {
                     if self.cfg.script_auto_dump {
                         self.dump_bundle(Some(&label));
                     }
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "script_failed".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some("no_semantics_snapshot".to_string()),
+                            bundle_dir: None,
+                        },
+                    );
                     self.write_script_result(UiScriptResultV1 {
                         schema_version: 1,
                         run_id: active.run_id,
@@ -3528,7 +3635,7 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
-                        evidence: None,
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -3561,6 +3668,17 @@ impl UiDiagnosticsService {
                             if self.cfg.script_auto_dump {
                                 self.dump_bundle(Some(&label));
                             }
+                            push_script_event_log(
+                                &mut active,
+                                &self.cfg,
+                                UiScriptEventLogEntryV1 {
+                                    unix_ms: unix_ms_now(),
+                                    kind: "script_failed".to_string(),
+                                    step_index: Some(step_index as u32),
+                                    note: Some("move_pointer_sweep_no_semantics_match".to_string()),
+                                    bundle_dir: None,
+                                },
+                            );
                             self.write_script_result(UiScriptResultV1 {
                                 schema_version: 1,
                                 run_id: active.run_id,
@@ -3663,6 +3781,17 @@ impl UiDiagnosticsService {
                     if self.cfg.script_auto_dump {
                         self.dump_bundle(Some(&label));
                     }
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "script_failed".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some("no_semantics_snapshot".to_string()),
+                            bundle_dir: None,
+                        },
+                    );
                     self.write_script_result(UiScriptResultV1 {
                         schema_version: 1,
                         run_id: active.run_id,
@@ -3672,7 +3801,7 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
-                        evidence: None,
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -3695,6 +3824,17 @@ impl UiDiagnosticsService {
                     if self.cfg.script_auto_dump {
                         self.dump_bundle(Some(&label));
                     }
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "script_failed".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some("wheel_no_semantics_match".to_string()),
+                            bundle_dir: None,
+                        },
+                    );
                     self.write_script_result(UiScriptResultV1 {
                         schema_version: 1,
                         run_id: active.run_id,
@@ -4780,6 +4920,17 @@ impl UiDiagnosticsService {
                             if self.cfg.script_auto_dump {
                                 self.dump_bundle(Some(&label));
                             }
+                            push_script_event_log(
+                                &mut active,
+                                &self.cfg,
+                                UiScriptEventLogEntryV1 {
+                                    unix_ms: unix_ms_now(),
+                                    kind: "script_failed".to_string(),
+                                    step_index: Some(step_index as u32),
+                                    note: Some("drag_to_timeout".to_string()),
+                                    bundle_dir: None,
+                                },
+                            );
                             self.write_script_result(UiScriptResultV1 {
                                 schema_version: 1,
                                 run_id: active.run_id,
@@ -5041,6 +5192,21 @@ impl UiDiagnosticsService {
             }
         }
 
+        if !stop_script && handoff_to.is_none() && active.next_step > prev_next_step {
+            push_script_event_log(
+                &mut active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "step_end".to_string(),
+                    step_index: Some(step_index_u32),
+                    note: Some(step_kind.clone()),
+                    bundle_dir: None,
+                },
+            );
+            active.event_log_active_step = None;
+        }
+
         if let Some(target_window) = handoff_to {
             if self.active_scripts.contains_key(&target_window) {
                 force_dump_label = Some(format!(
@@ -5061,12 +5227,63 @@ impl UiDiagnosticsService {
         }
 
         if stop_script {
+            push_script_event_log(
+                &mut active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_failed".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: failure_reason.clone(),
+                    bundle_dir: None,
+                },
+            );
             if self.cfg.script_auto_dump {
                 if let Some(label) = force_dump_label.as_deref() {
-                    self.dump_bundle(Some(label));
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "bundle_dump_requested".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some(label.to_string()),
+                            bundle_dir: None,
+                        },
+                    );
+                    let dumped_dir = self.dump_bundle(Some(label));
+                    if let Some(dir) = dumped_dir.as_ref() {
+                        push_script_event_log(
+                            &mut active,
+                            &self.cfg,
+                            UiScriptEventLogEntryV1 {
+                                unix_ms: unix_ms_now(),
+                                kind: "bundle_dumped".to_string(),
+                                step_index: Some(step_index as u32),
+                                note: Some(label.to_string()),
+                                bundle_dir: Some(display_path(&self.cfg.out_dir, dir)),
+                            },
+                        );
+                    }
                 }
             } else if let Some(label) = force_dump_label {
-                self.request_force_dump(label, force_dump_max_snapshots);
+                push_script_event_log(
+                    &mut active,
+                    &self.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "bundle_dump_requested".to_string(),
+                        step_index: Some(step_index as u32),
+                        note: Some(label.clone()),
+                        bundle_dir: None,
+                    },
+                );
+                self.request_force_dump(
+                    label,
+                    force_dump_max_snapshots,
+                    Some(active.run_id),
+                    Some(step_index as u32),
+                );
             }
 
             let reason_code = failure_reason
@@ -5092,10 +5309,37 @@ impl UiDiagnosticsService {
             });
         } else {
             if let Some(label) = force_dump_label {
-                self.request_force_dump(label, force_dump_max_snapshots);
+                push_script_event_log(
+                    &mut active,
+                    &self.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "bundle_dump_requested".to_string(),
+                        step_index: Some(step_index as u32),
+                        note: Some(label.clone()),
+                        bundle_dir: None,
+                    },
+                );
+                self.request_force_dump(
+                    label,
+                    force_dump_max_snapshots,
+                    Some(active.run_id),
+                    Some(step_index as u32),
+                );
             }
 
             if active.next_step >= active.steps.len() {
+                push_script_event_log(
+                    &mut active,
+                    &self.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "script_passed".to_string(),
+                        step_index: Some(active.next_step.saturating_sub(1) as u32),
+                        note: None,
+                        bundle_dir: None,
+                    },
+                );
                 self.write_script_result(UiScriptResultV1 {
                     schema_version: 1,
                     run_id: active.run_id,
@@ -5105,7 +5349,7 @@ impl UiDiagnosticsService {
                     step_index: Some(active.next_step.saturating_sub(1) as u32),
                     reason_code: None,
                     reason: None,
-                    evidence: None,
+                    evidence: script_evidence_for_active(&active),
                     last_bundle_dir: self
                         .last_dump_dir
                         .as_ref()
@@ -5955,7 +6199,29 @@ impl UiDiagnosticsService {
         self.poll_ws_inbox();
 
         if let Some(pending) = self.pending_force_dump.take() {
-            return self.dump_bundle_with_options(Some(&pending.label), pending.dump_max_snapshots);
+            let dumped =
+                self.dump_bundle_with_options(Some(&pending.label), pending.dump_max_snapshots);
+            if let (Some(script_run_id), Some(dir)) = (pending.script_run_id, dumped.as_ref()) {
+                let bundle_dir = display_path(&self.cfg.out_dir, dir);
+                for active in self
+                    .active_scripts
+                    .values_mut()
+                    .filter(|active| active.run_id == script_run_id)
+                {
+                    push_script_event_log(
+                        active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "bundle_dumped".to_string(),
+                            step_index: pending.script_step_index,
+                            note: Some(pending.label.clone()),
+                            bundle_dir: Some(bundle_dir.clone()),
+                        },
+                    );
+                }
+            }
+            return dumped;
         }
 
         if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
@@ -5987,10 +6253,18 @@ impl UiDiagnosticsService {
         self.dump_bundle(None)
     }
 
-    fn request_force_dump(&mut self, label: String, dump_max_snapshots: Option<usize>) {
+    fn request_force_dump(
+        &mut self,
+        label: String,
+        dump_max_snapshots: Option<usize>,
+        script_run_id: Option<u64>,
+        script_step_index: Option<u32>,
+    ) {
         self.pending_force_dump = Some(PendingForceDumpRequest {
             label: sanitize_label(&label),
             dump_max_snapshots,
+            script_run_id,
+            script_step_index,
         });
     }
 
@@ -6072,7 +6346,7 @@ impl UiDiagnosticsService {
                     } else {
                         ("bundle".to_string(), None)
                     };
-                self.request_force_dump(label, dump_max_snapshots);
+                self.request_force_dump(label, dump_max_snapshots, None, None);
             }
             "app.exit.request" => {
                 let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
@@ -8139,6 +8413,9 @@ struct ActiveScript {
     steps: Vec<UiActionStepV2>,
     run_id: u64,
     next_step: usize,
+    event_log: Vec<UiScriptEventLogEntryV1>,
+    event_log_dropped: u64,
+    event_log_active_step: Option<u32>,
     last_injected_step: Option<u32>,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
@@ -13395,8 +13672,49 @@ fn push_click_stable_trace(
     }
 }
 
+fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
+    match step {
+        UiActionStepV2::Click { .. } => "click",
+        UiActionStepV2::ClickStable { .. } => "click_stable",
+        UiActionStepV2::DragPointer { .. } => "drag_pointer",
+        UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
+        UiActionStepV2::DragTo { .. } => "drag_to",
+        UiActionStepV2::Wheel { .. } => "wheel",
+        UiActionStepV2::TypeText { .. } => "type_text",
+        UiActionStepV2::TypeTextInto { .. } => "type_text_into",
+        UiActionStepV2::WaitFrames { .. } => "wait_frames",
+        UiActionStepV2::WaitUntil { .. } => "wait_until",
+        UiActionStepV2::Assert { .. } => "assert",
+        UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
+        UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
+        UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
+        _ => "step",
+    }
+}
+
+fn push_script_event_log(
+    active: &mut ActiveScript,
+    cfg: &UiDiagnosticsConfig,
+    entry: UiScriptEventLogEntryV1,
+) {
+    let max = cfg.max_gating_trace_entries;
+    if max == 0 {
+        active.event_log_dropped = active.event_log_dropped.saturating_add(1);
+        return;
+    }
+
+    active.event_log.push(entry);
+    if active.event_log.len() > max {
+        let extra = active.event_log.len().saturating_sub(max);
+        active.event_log.drain(0..extra);
+        active.event_log_dropped = active.event_log_dropped.saturating_add(extra as u64);
+    }
+}
+
 fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV1> {
-    if active.selector_resolution_trace.is_empty()
+    if active.event_log.is_empty()
+        && active.event_log_dropped == 0
+        && active.selector_resolution_trace.is_empty()
         && active.hit_test_trace.is_empty()
         && active.click_stable_trace.is_empty()
         && active.bounds_stable_trace.is_empty()
@@ -13409,6 +13727,8 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
         return None;
     }
     Some(UiScriptEvidenceV1 {
+        event_log: active.event_log.clone(),
+        event_log_dropped: active.event_log_dropped,
         selector_resolution_trace: active.selector_resolution_trace.clone(),
         hit_test_trace: active.hit_test_trace.clone(),
         click_stable_trace: active.click_stable_trace.clone(),
