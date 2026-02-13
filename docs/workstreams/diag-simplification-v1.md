@@ -9,6 +9,7 @@ Current state (as of 2026-02-13):
 - Bundle path resolution now prefers the stable per-run `<out_dir>/<run_id>/bundle.json` when `script.result.json` is present (less reliance on `latest.txt`).
 - Tooling failures now produce a deterministic `script.result.json` with stable `reason_code` (e.g. `tooling.*`, `timeout.tooling.*`) instead of degrading to "no artifact + timeout".
 - `diag repro` setup/driver failures now write `repro.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
+- `diag repeat` setup/driver failures now write `repeat.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `script.result.json` now includes a bounded per-run event log (step start/end + bundle dump events) with clipped counts reported.
 - Missing required diagnostics capabilities now fail fast with a stable `reason_code` and structured evidence (avoid timeouts).
 - WS exit request landed (`app.exit.request`) and tooling supports `--exit-after-run` (`--touch-exit-after-run` remains as an alias).

@@ -122,8 +122,7 @@ impl FormField {
                 a: 0.35,
                 ..destructive
             };
-            let mut ring =
-                decl_style::focus_ring(&theme, theme.metric_token("metric.radius.md"));
+            let mut ring = decl_style::focus_ring(&theme, theme.metric_token("metric.radius.md"));
             ring.color = ring_color;
 
             form_decorate_control_elements(

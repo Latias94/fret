@@ -86,6 +86,7 @@ Current examples:
 - `capability.missing` (tooling-side gating failure; see `check.capabilities.json` + `script.result.json` evidence)
 - `selector.not_found`, `semantics.missing`, `timeout`, `assert.failed` (runner-side script failures)
 - `tooling.connect.failed`, `tooling.script.read_failed`, `tooling.script.parse_failed` (tooling-side setup failures)
+- `tooling.repeat.failed` (tooling-side repeat harness failure; should still write a local `script.result.json`)
 - `timeout.tooling.script_result`, `timeout.tooling.bundle_dump` (tooling-side timeouts; should still write a local `script.result.json`)
 
 When adding a new `reason_code`, also add/extend bounded structured evidence so the reason is explainable without logs.

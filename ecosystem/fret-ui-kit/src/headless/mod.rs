@@ -2,6 +2,7 @@ pub mod dismissible_layer;
 pub mod focus_scope;
 
 pub use fret_ui_headless::calendar;
+pub use fret_ui_headless::carousel;
 pub use fret_ui_headless::checked_state;
 pub use fret_ui_headless::cmdk_score;
 pub use fret_ui_headless::cmdk_selection;

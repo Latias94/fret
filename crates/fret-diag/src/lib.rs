@@ -1659,6 +1659,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &ms.to_string(),
         );
     }
+    if check_pixels_changed_test_id.is_some() {
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+    }
 
     let resource_footprint_thresholds = ResourceFootprintThresholds {
         max_working_set_bytes,
@@ -3366,6 +3369,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut baseline_run: Option<usize> = None;
             let mut baseline_bundle: Option<PathBuf> = None;
 
+            let mut tooling_error_reason_code: Option<String> = None;
+
             let mut failed_runs: u64 = 0;
             let mut differing_runs: u64 = 0;
             let mut first_failed_run: Option<usize> = None;
@@ -3390,6 +3395,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             fn read_script_result_typed(path: &Path) -> Option<UiScriptResultV1> {
                 let bytes = std::fs::read(path).ok()?;
                 serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
+            }
+
+            fn read_tooling_reason_code(path: &Path) -> Option<String> {
+                read_json_value(path).and_then(|v| {
+                    v.get("reason_code")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+            }
+
+            fn repeat_tooling_reason_code_from_error(err: &str) -> &'static str {
+                if err.contains("timeout waiting for script result") {
+                    "timeout.tooling.script_result"
+                } else {
+                    "tooling.repeat.failed"
+                }
             }
 
             fn push_count(map: &mut std::collections::BTreeMap<String, u64>, key: &str) {
@@ -3808,6 +3829,19 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         })
                     }
                     Err(err) => {
+                        let code = read_tooling_reason_code(&resolved_script_result_path)
+                            .unwrap_or_else(|| {
+                                repeat_tooling_reason_code_from_error(&err).to_string()
+                            });
+                        tooling_error_reason_code =
+                            tooling_error_reason_code.or_else(|| Some(code.clone()));
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            &code,
+                            &err,
+                            "tooling_error",
+                            Some(format!("repeat run index={run_index}")),
+                        );
                         failed_runs += 1;
                         if first_failed_run.is_none() {
                             first_failed_run = Some(run_index);
@@ -3816,6 +3850,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         serde_json::json!({
                             "index": run_index,
                             "stage": "error",
+                            "reason_code": code,
                             "error": err,
                         })
                     }
@@ -3870,6 +3905,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 "repeat": repeat,
                 "baseline_run": baseline_run,
                 "highlights": highlights,
+                "error_reason_code": tooling_error_reason_code,
                 "options": {
                     "warmup_frames": warmup_frames,
                     "compare_eps_px": compare_eps_px,
