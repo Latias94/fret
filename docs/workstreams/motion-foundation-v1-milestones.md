@@ -95,7 +95,9 @@ Exit criteria:
 Evidence:
 
 - `docs/workstreams/motion-foundation-v1.md` (section "Recipe alignment matrix (draft)")
+- `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
 - `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
+- `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`
 - `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`
 - `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json`
 - `crates/fret-diag/src/lib.rs` (builtin suite: `ui-gallery-motion-pilot`)

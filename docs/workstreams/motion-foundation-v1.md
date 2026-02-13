@@ -183,6 +183,15 @@ Token taxonomy (v1; conventions we can keep stable):
   - For damping+stiffness (M3 scheme):
     - `md.sys.motion.spring.{default|fast|slow}.{spatial|effects}.{damping|stiffness}`
 
+Seeded defaults (New York v4 presets):
+
+- The built-in shadcn New York v4 theme presets seed the motion tokens above so recipes can
+  request semantic keys without hard-coding numbers.
+- Toast/Sonner timing is tuned slightly faster than the numeric `200ms` scale to better match the
+  “web-like” feel while staying deterministic under fixed-delta diagnostics:
+  - `duration.shadcn.motion.toast.enter = 160ms`
+  - `duration.shadcn.motion.toast.exit = 120ms`
+
 Implementation note:
 
 - The semantic keys above are a *convention* we can migrate toward without requiring Theme-level
