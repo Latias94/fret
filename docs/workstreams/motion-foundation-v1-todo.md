@@ -123,7 +123,10 @@ Per-recipe tracking (pilot follow-ups):
   - Evidence:
     - `docs/workstreams/motion-foundation-v1.md` (section "Spring cookbook (starter presets; tune with diag gates)")
 
-- [ ] MF-MOTION-spring-003 Add at least one diag script that exercises re-targeting mid-flight (no restart stutter).
+- [x] MF-MOTION-spring-003 Add at least one diag script that exercises re-targeting mid-flight (no restart stutter).
+  - Evidence:
+    - `tools/diag-scripts/ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta.json`
+    - `crates/fret-diag/src/lib.rs` (builtin suite: `ui-gallery-motion-pilot`)
 
 ## P1 — Token taxonomy (shadcn ↔ Material 3)
 
