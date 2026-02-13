@@ -11586,6 +11586,9 @@ fn devtools_select_session_id(
     if list.sessions.len() == 1 {
         return Ok(list.sessions[0].session_id.clone());
     }
+    if list.sessions.is_empty() {
+        return Err("no DevTools sessions available (is the app connected?)".to_string());
+    }
 
     let web_apps = list
         .sessions
