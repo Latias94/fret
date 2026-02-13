@@ -79,7 +79,7 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
 
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         render_frame(
             &mut ui,

@@ -146,7 +146,7 @@ fn fret_menubar_menu_tracks_trigger_when_underlay_scrolls() {
         render,
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -376,7 +376,7 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

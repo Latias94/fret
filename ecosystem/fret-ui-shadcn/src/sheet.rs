@@ -290,12 +290,12 @@ impl Sheet {
             let id = trigger.id;
             let overlay_root_name = radix_dialog::dialog_root_name(id);
 
-            let motion = OverlayController::transition_with_durations_and_easing_duration(
+            let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_DURATION_500,
-                overlay_motion::SHADCN_MOTION_DURATION_300,
-                overlay_motion::ease_in_out,
+                overlay_motion::shadcn_motion_duration_500(cx),
+                overlay_motion::shadcn_motion_duration_300(cx),
+                overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
                 .with_state(SheetOpenChangeCallbackState::default, |state| {

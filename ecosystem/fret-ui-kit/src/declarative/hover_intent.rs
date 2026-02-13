@@ -1,6 +1,7 @@
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::scheduling;
+use crate::declarative::transition;
 use crate::headless::hover_intent::{HoverIntentConfig, HoverIntentState, HoverIntentUpdate};
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -17,6 +18,13 @@ pub fn hover_intent<H: UiHost>(
     hovered: bool,
     cfg: HoverIntentConfig,
 ) -> HoverIntentUpdate {
+    let (open_delay_ticks, close_delay_ticks) = transition::effective_transition_durations_for_cx(
+        &*cx,
+        cfg.open_delay_ticks,
+        cfg.close_delay_ticks,
+    );
+    let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
+
     let frame_tick = cx.app.frame_id().0;
     let update = cx.with_state(HoverIntentDriverState::default, |st| {
         match st.last_frame_tick {

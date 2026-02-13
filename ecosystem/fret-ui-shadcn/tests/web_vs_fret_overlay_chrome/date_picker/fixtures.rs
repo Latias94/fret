@@ -101,8 +101,7 @@ fn web_vs_fret_date_picker_overlay_chrome_cases_match_web_fixtures() {
         eprintln!("overlay-chrome date-picker case={}", case.id);
         match case.recipe {
             DatePickerOverlayChromeRecipe::ListboxPanelSize => {
-                let settle_frames =
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+                let settle_frames = crate::shadcn_motion::ticks_100() + 2;
                 assert_overlay_panel_size_matches_by_portal_slot_theme(
                     &case.web_name,
                     "select-content",

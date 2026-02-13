@@ -71,7 +71,7 @@ fn web_vs_fret_calendar_overlay_chrome_cases_match_web_fixtures() {
                     case.theme.as_str(),
                     case.theme.scheme(),
                     SemanticsRole::Panel,
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                    crate::shadcn_motion::ticks_100() + 2,
                     2.0,
                     build,
                 );

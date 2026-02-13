@@ -30,6 +30,9 @@ use web::*;
 mod support;
 use support::*;
 
+#[path = "support/shadcn_motion.rs"]
+mod shadcn_motion;
+
 #[path = "web_vs_fret_overlay_chrome/alert_dialog.rs"]
 mod alert_dialog;
 #[path = "web_vs_fret_overlay_chrome/button_group.rs"]

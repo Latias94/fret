@@ -113,9 +113,6 @@ fn sidebar_width_mobile(theme: &Theme) -> Px {
 const SIDEBAR_TOGGLE_SHORTCUT_KEY: KeyCode = KeyCode::KeyB;
 const SIDEBAR_TOGGLE_COMMAND_ID: &str = "sidebar.toggle";
 
-const SIDEBAR_COLLAPSE_OPEN_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
-const SIDEBAR_COLLAPSE_CLOSE_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
-
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
 #[derive(Default)]
@@ -172,12 +169,12 @@ fn sidebar_collapse_motion<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     collapsed: bool,
 ) -> transition_prim::TransitionOutput {
-    let motion = transition_prim::drive_transition_with_durations_and_easing_with_mount_behavior(
+    let motion = transition_prim::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
         cx,
         !collapsed,
-        SIDEBAR_COLLAPSE_OPEN_TICKS,
-        SIDEBAR_COLLAPSE_CLOSE_TICKS,
-        overlay_motion::ease_linear,
+        overlay_motion::shadcn_motion_duration_200(cx),
+        overlay_motion::shadcn_motion_duration_200(cx),
+        overlay_motion::shadcn_motion_ease_bezier(cx),
         false,
     );
 
@@ -4297,7 +4294,9 @@ mod tests {
 
         render_frame(&mut ui, &mut app, &mut services, 2);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for step in 0..settle_frames {
             let tick = 3 + step;
             render_frame(&mut ui, &mut app, &mut services, tick);

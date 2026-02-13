@@ -1317,15 +1317,16 @@ impl MenubarMenuEntries {
                     .layout()
                     .copied()
                     .unwrap_or(false);
-                let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                    cx,
-                    is_open,
-                    overlay_motion::SHADCN_MOTION_TICKS_100,
-                    overlay_motion::SHADCN_MOTION_TICKS_100,
-                    0.95,
-                    1.0,
-                    overlay_motion::shadcn_ease,
-                );
+                let motion =
+                    radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                        cx,
+                        is_open,
+                        overlay_motion::shadcn_motion_duration_100(cx),
+                        overlay_motion::shadcn_motion_duration_100(cx),
+                        0.95,
+                        1.0,
+                        overlay_motion::shadcn_motion_ease_bezier(cx),
+                    );
                 let overlay_presence = OverlayPresence {
                     present: motion.present,
                     interactive: is_open,
@@ -2534,16 +2535,15 @@ impl MenubarMenuEntries {
                             .unwrap_or(outer.size.height);
                         let desired = Size::new(desired.width, Px(desired.height.0.min(submenu_max_h.0)));
                         let submenu_is_open = submenu_open_value.is_some();
-                        let submenu_motion =
-                            radix_presence::scale_fade_presence_with_durations_and_easing(
-                                cx,
-                                submenu_is_open,
-                                overlay_motion::SHADCN_MOTION_TICKS_100,
-                                0,
-                                0.95,
-                                1.0,
-                                overlay_motion::shadcn_ease,
-                            );
+                        let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                            cx,
+                            submenu_is_open,
+                            overlay_motion::shadcn_motion_duration_100(cx),
+                            std::time::Duration::ZERO,
+                            0.95,
+                            1.0,
+                            overlay_motion::shadcn_motion_ease_bezier(cx),
+                        );
                         let submenu_opacity = submenu_motion.opacity;
                         let submenu_scale = submenu_motion.scale;
                         let open_submenu = menu::sub::with_open_submenu_synced(
@@ -5303,7 +5303,10 @@ mod tests {
             "ArrowLeft should restore focus to the submenu trigger"
         );
 
-        for _ in 0..overlay_motion::SHADCN_MOTION_TICKS_100 {
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        );
+        for _ in 0..settle_frames {
             render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
         }
 
