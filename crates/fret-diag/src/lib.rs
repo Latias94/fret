@@ -10293,7 +10293,7 @@ fn ui_gallery_text_ime_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json"]
 }
 
-fn ui_gallery_combobox_suite_scripts() -> [&'static str; 6] {
+fn ui_gallery_combobox_suite_scripts() -> [&'static str; 8] {
     [
         "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
         "tools/diag-scripts/ui-gallery-combobox-keyboard-commit-apple.json",
@@ -10301,6 +10301,8 @@ fn ui_gallery_combobox_suite_scripts() -> [&'static str; 6] {
         "tools/diag-scripts/ui-gallery-combobox-escape-dismiss-focus-restore.json",
         "tools/diag-scripts/ui-gallery-combobox-dismiss-outside-press.json",
         "tools/diag-scripts/ui-gallery-combobox-roving-skips-disabled.json",
+        "tools/diag-scripts/ui-gallery-combobox-flip-tight-window.json",
+        "tools/diag-scripts/ui-gallery-combobox-ime-tab-suppressed.json",
     ]
 }
 

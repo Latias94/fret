@@ -148,6 +148,7 @@ fn template_names() -> &'static [&'static str] {
         "ui-gallery-combobox-dismiss-outside-press-v2",
         "ui-gallery-combobox-roving-skips-disabled-v2",
         "ui-gallery-combobox-flip-tight-window-v2",
+        "ui-gallery-combobox-ime-tab-suppressed-v2",
         "ui-gallery-select-commit-and-label-update-bundle-v2",
         "ui-gallery-select-keyboard-commit-apple-v2",
         "ui-gallery-select-typeahead-commit-banana-v2",
@@ -189,6 +190,9 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
         }
         "ui-gallery-combobox-flip-tight-window-v2" => {
             Ok(ui_gallery_combobox_flip_tight_window_v2())
+        }
+        "ui-gallery-combobox-ime-tab-suppressed-v2" => {
+            Ok(ui_gallery_combobox_ime_tab_suppressed_v2())
         }
         "ui-gallery-select-commit-and-label-update-bundle-v2" => {
             Ok(ui_gallery_select_commit_and_label_update_bundle_v2())
@@ -270,9 +274,11 @@ fn ctrl_a_step() -> UiActionStepV2 {
 
 fn wait_bounds_within_window_step(target: UiSelectorV1, timeout_frames: u32) -> UiActionStepV2 {
     UiActionStepV2::WaitUntil {
+        window: None,
         predicate: UiPredicateV1::BoundsWithinWindow {
             target,
             padding_px: 2.0,
+            padding_insets_px: None,
             eps_px: 0.5,
         },
         timeout_frames,
@@ -352,6 +358,7 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_input_page()
         .click(input.clone())
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: input.clone(),
             },
@@ -359,6 +366,7 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
         })
         .ime_preedit("東京", Some((0, 6)))
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::TextCompositionIs {
                 target: input.clone(),
                 composing: true,
@@ -380,6 +388,7 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
         .assert(text_composition_is(input.clone(), true))
         .ime_commit("東京")
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::TextCompositionIs {
                 target: input.clone(),
                 composing: false,
@@ -420,6 +429,7 @@ fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-item-apple"))
         .wait_not_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
@@ -428,6 +438,7 @@ fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-combobox-demo-item-apple"),
                 selected: true,
@@ -464,6 +475,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .wait_bounds_stable(test_id("ui-gallery-combobox-demo-listbox"))
         .press_key("home")
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("ui-gallery-combobox-demo-input"),
                 item: test_id("ui-gallery-combobox-demo-item-apple"),
@@ -473,6 +485,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .press_key("enter")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
@@ -481,6 +494,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-combobox-demo-item-apple"),
                 selected: true,
@@ -518,6 +532,7 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .type_text("ban")
         .wait_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("ui-gallery-combobox-demo-input"),
                 item: test_id("ui-gallery-combobox-demo-item-banana"),
@@ -527,6 +542,7 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .press_key("enter")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
@@ -535,6 +551,7 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-combobox-demo-item-banana"),
                 selected: true,
@@ -572,6 +589,7 @@ fn ui_gallery_combobox_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
         .press_key("escape")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
@@ -606,6 +624,7 @@ fn ui_gallery_combobox_dismiss_outside_press_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-nav-search"))
         .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
@@ -640,6 +659,7 @@ fn ui_gallery_combobox_roving_skips_disabled_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("ui-gallery-combobox-demo-item-disabled"), 240)
         .press_key("end")
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("ui-gallery-combobox-demo-input"),
                 item: test_id("ui-gallery-combobox-demo-item-orange"),
@@ -661,6 +681,7 @@ fn ui_gallery_combobox_flip_tight_window_v2() -> UiActionScriptV2 {
 
     let script = ui_gallery_nav_to_combobox_page()
         .push(UiActionStepV2::SetWindowInnerSize {
+            window: None,
             width_px: 420.0,
             height_px: 240.0,
         })
@@ -695,6 +716,70 @@ fn ui_gallery_combobox_flip_tight_window_v2() -> UiActionScriptV2 {
     with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
+fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
+    let trigger = test_id("ui-gallery-combobox-demo-trigger");
+    let input = test_id("ui-gallery-combobox-demo-input");
+    let listbox = test_id("ui-gallery-combobox-demo-listbox");
+
+    let script = ui_gallery_nav_to_combobox_page()
+        .click(trigger.clone())
+        .wait_exists(input.clone(), 240)
+        .wait_exists(listbox.clone(), 240)
+        .click(input.clone())
+        .push(UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::FocusIs {
+                target: input.clone(),
+            },
+            timeout_frames: 240,
+        })
+        .ime_preedit("東京", Some((0, 6)))
+        .push(UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::TextCompositionIs {
+                target: input.clone(),
+                composing: true,
+            },
+            timeout_frames: 240,
+        })
+        .press_key("tab")
+        .wait_shortcut_routing_trace(
+            UiShortcutRoutingTraceQueryV1 {
+                outcome: Some("reserved_for_ime".to_string()),
+                key: Some("Tab".to_string()),
+                ime_composing: Some(true),
+                focus_is_text_input: Some(true),
+                ..UiShortcutRoutingTraceQueryV1::default()
+            },
+            120,
+        )
+        .assert_focus_is(input.clone())
+        .assert(text_composition_is(input.clone(), true))
+        .assert_exists(listbox.clone())
+        .ime_commit("東京")
+        .push(UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::TextCompositionIs {
+                target: input.clone(),
+                composing: false,
+            },
+            timeout_frames: 240,
+        })
+        .assert_focus_is(input.clone())
+        .assert_exists(listbox.clone())
+        .capture_bundle(Some("ui-gallery-combobox-ime-tab-suppressed".to_string()))
+        .build();
+
+    with_required_caps(
+        script,
+        &[
+            "diag.script_v2",
+            "diag.inject_ime",
+            "diag.shortcut_routing_trace",
+        ],
+    )
+}
+
 fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
     let script = ScriptV2Builder::new()
         .wait_exists(test_id("ui-gallery-nav-search"), 600)
@@ -727,9 +812,11 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
             240,
         )
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::BoundsWithinWindow {
                 target: test_id("select-scroll-viewport"),
                 padding_px: 2.0,
+                padding_insets_px: None,
                 eps_px: 0.5,
             },
             timeout_frames: 240,
@@ -745,6 +832,7 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-banana"),
                 selected: true,
@@ -783,6 +871,7 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-item-banana"))
         .wait_not_exists(test_id("ui-gallery-select-item-banana"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -800,6 +889,7 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
             240,
         )
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-banana"),
                 selected: true,
@@ -834,6 +924,7 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         ))
         .press_key("home")
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("select-scroll-viewport"),
                 item: test_id("ui-gallery-select-item-apple"),
@@ -843,6 +934,7 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .press_key("enter")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -860,6 +952,7 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
             240,
         )
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-apple"),
                 selected: true,
@@ -895,6 +988,7 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .press_key("enter")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -912,6 +1006,7 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
             240,
         )
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-banana"),
                 selected: true,
@@ -948,6 +1043,7 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-item-banana"))
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -971,6 +1067,7 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         .press_key("escape")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -988,6 +1085,7 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
             240,
         )
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-banana"),
                 selected: true,
@@ -1022,6 +1120,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
         ))
         .press_key("home")
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("select-scroll-viewport"),
                 item: test_id("ui-gallery-select-item-apple"),
@@ -1030,6 +1129,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
         })
         .press_key("arrow_down")
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("select-scroll-viewport"),
                 item: test_id("ui-gallery-select-item-banana"),
@@ -1038,6 +1138,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
         })
         .press_key("arrow_down")
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("select-scroll-viewport"),
                 item: test_id("ui-gallery-select-item-item-01"),
@@ -1072,6 +1173,7 @@ fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
         .wait_frames(10)
         .click(test_id("ui-gallery-nav-search"))
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -1104,6 +1206,7 @@ fn ui_gallery_select_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
         .press_key("escape")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -1137,6 +1240,7 @@ fn ui_gallery_select_trigger_toggle_close_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate: UiPredicateV1::FocusIs {
                 target: test_id("ui-gallery-select-trigger"),
             },
@@ -1260,6 +1364,14 @@ fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), Stri
             (
                 "ui-gallery-combobox-roving-skips-disabled-v2",
                 "tools/diag-scripts/ui-gallery-combobox-roving-skips-disabled.json",
+            ),
+            (
+                "ui-gallery-combobox-flip-tight-window-v2",
+                "tools/diag-scripts/ui-gallery-combobox-flip-tight-window.json",
+            ),
+            (
+                "ui-gallery-combobox-ime-tab-suppressed-v2",
+                "tools/diag-scripts/ui-gallery-combobox-ime-tab-suppressed.json",
             ),
         ],
         "ui-gallery-select" => &[

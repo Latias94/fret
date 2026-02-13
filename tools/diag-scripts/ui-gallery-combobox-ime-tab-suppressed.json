@@ -1,0 +1,284 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.inject_ime",
+      "diag.shortcut_routing_trace"
+    ]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "press_key",
+      "key": "escape",
+      "modifiers": {
+        "shift": false,
+        "ctrl": false,
+        "alt": false,
+        "meta": false
+      },
+      "repeat": false
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      },
+      "button": "left"
+    },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": {
+        "shift": false,
+        "ctrl": true,
+        "alt": false,
+        "meta": false
+      },
+      "repeat": false
+    },
+    {
+      "type": "press_key",
+      "key": "backspace",
+      "modifiers": {
+        "shift": false,
+        "ctrl": false,
+        "alt": false,
+        "meta": false
+      },
+      "repeat": false
+    },
+    {
+      "type": "type_text",
+      "text": "combobox"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-combobox"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-combobox"
+      },
+      "button": "left"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-combobox"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-trigger"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-combobox-demo-trigger"
+      },
+      "button": "left"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-listbox"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-combobox-demo-input"
+      },
+      "button": "left"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "ime",
+      "event": {
+        "kind": "preedit",
+        "text": "東京",
+        "cursor_bytes": [
+          0,
+          6
+        ]
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "text_composition_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        },
+        "composing": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "press_key",
+      "key": "tab",
+      "modifiers": {
+        "shift": false,
+        "ctrl": false,
+        "alt": false,
+        "meta": false
+      },
+      "repeat": false
+    },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "reserved_for_ime",
+        "key": "Tab",
+        "ime_composing": true,
+        "focus_is_text_input": true
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_composition_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        },
+        "composing": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-listbox"
+        }
+      }
+    },
+    {
+      "type": "ime",
+      "event": {
+        "kind": "commit",
+        "text": "東京"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "text_composition_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        },
+        "composing": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-listbox"
+        }
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-combobox-ime-tab-suppressed"
+    }
+  ]
+}
