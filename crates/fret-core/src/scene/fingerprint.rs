@@ -335,6 +335,30 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_paint(state, border_paint);
             mix_corners(state, corner_radii)
         }
+        SceneOp::StrokeRRect {
+            order,
+            rect,
+            stroke,
+            stroke_paint,
+            corner_radii,
+            style,
+        } => {
+            let mut state = mix_u64(state, 12);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_rect(state, rect);
+            state = mix_edges(state, stroke);
+            state = mix_paint(state, stroke_paint);
+            state = mix_corners(state, corner_radii);
+            match style.dash {
+                None => mix_u64(state, 0),
+                Some(dash) => {
+                    let mut state = mix_u64(state, 1);
+                    state = mix_f32(state, dash.dash.0);
+                    state = mix_f32(state, dash.gap.0);
+                    mix_f32(state, dash.phase.0)
+                }
+            }
+        }
         SceneOp::Image {
             order,
             rect,

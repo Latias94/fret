@@ -383,6 +383,32 @@ impl SceneRecording {
                         });
                     }
                 }
+                SceneOp::StrokeRRect {
+                    rect,
+                    stroke,
+                    stroke_paint,
+                    corner_radii,
+                    style,
+                    ..
+                } => {
+                    let mut ok = rect_is_finite(rect)
+                        && edges_is_finite(stroke)
+                        && paint_is_finite(stroke_paint)
+                        && corners_is_finite(corner_radii);
+                    if let Some(dash) = style.dash {
+                        ok = ok
+                            && dash.dash.0.is_finite()
+                            && dash.gap.0.is_finite()
+                            && dash.phase.0.is_finite();
+                    }
+                    if !ok {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
                 SceneOp::Image { rect, opacity, .. } => {
                     if !rect_is_finite(rect) || !opacity.is_finite() {
                         return Err(SceneValidationError {

@@ -104,6 +104,7 @@ pub(super) struct QuadInstance {
     pub(super) border_paint: PaintGpu,
     pub(super) corner_radii: [f32; 4],
     pub(super) border: [f32; 4],
+    pub(super) dash_params: [f32; 4],
 }
 
 #[repr(C)]
