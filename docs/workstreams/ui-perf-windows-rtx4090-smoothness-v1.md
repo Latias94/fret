@@ -66,3 +66,21 @@ frames.
    - text measurement churn (wrap-width bucketing, shaping cache behavior),
    - cache invalidation fan-out (global/model observation patterns).
 
+## Evidence (2026-02-13)
+
+Commit-addressable gate results for the `windows-rtx4090` machine profile:
+
+- Changes:
+  - `9816a115` — `perf(diag): stabilize perf windows on Windows`
+  - `99b14370` — `perf(ui): stabilize interactive resize tails`
+- Gates (baseline: `*.windows-rtx4090.v1.json`):
+  - `ui-resize-probes --repeat 3`: PASS
+    - out-dir: `target/fret-diag-perf/ui-resize-probes.hoverstrip.3x.20260213-151459`
+  - `ui-code-editor-resize-probes --repeat 3`: PASS
+    - out-dir: `target/fret-diag-perf/ui-code-editor-resize-probes.hoverstrip.3x.20260213-151711`
+  - `ui-gallery-steady --repeat 3`: PASS
+    - out-dir: `target/fret-diag-perf/ui-gallery-steady.hoverstrip.3x.20260213-152340`
+- Commands used (PowerShell, release):
+  - `target/release/fretboard.exe diag perf ui-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+  - `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
