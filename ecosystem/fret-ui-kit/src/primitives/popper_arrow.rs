@@ -147,6 +147,7 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
                     border: Edges::all(style.border_width),
                     border_color,
                     border_paint: None,
+                    border_dash: None,
                     focus_ring: None,
                     focus_border_color: None,
                     focus_within: false,

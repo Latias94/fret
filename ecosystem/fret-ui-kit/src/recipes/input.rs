@@ -68,6 +68,7 @@ pub fn input_chrome_container_props(
         border: Edges::all(chrome.border_width),
         border_color: Some(border_color),
         border_paint: None,
+        border_dash: None,
         focus_ring: None,
         focus_border_color: None,
         focus_within: false,

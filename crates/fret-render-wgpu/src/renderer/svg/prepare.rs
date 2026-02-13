@@ -119,6 +119,7 @@ impl Renderer {
                     );
                 }
                 SceneOp::Quad { .. }
+                | SceneOp::StrokeRRect { .. }
                 | SceneOp::Image { .. }
                 | SceneOp::ImageRegion { .. }
                 | SceneOp::MaskImage { .. }
