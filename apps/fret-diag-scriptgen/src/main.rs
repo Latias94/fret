@@ -819,6 +819,15 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
         .click_stable(trigger.clone())
         .wait_exists(test_id("ui-gallery-combobox-long-list-input"), 240)
         .wait_exists(listbox.clone(), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-long-list-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-long-list-listbox".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(listbox.clone(), 240))
         .push(UiActionStepV2::ScrollIntoView {
             container: listbox.clone(),
@@ -861,7 +870,7 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
         ))
         .build();
 
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
