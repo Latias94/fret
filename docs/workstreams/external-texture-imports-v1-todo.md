@@ -45,5 +45,7 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
 - [ ] EXT-web-perf-131 Web GPU copy path perf baseline (when stable):
       add a steady-state perf script + baseline for the wasm copy path demo.
   - Evidence anchors:
+    - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+    - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
     - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
     - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
