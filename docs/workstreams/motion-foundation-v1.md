@@ -344,8 +344,33 @@ land deterministic gates before polishing implementation details.
 | P1 | Sidebar collapse/expand | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/sidebar.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` (`sidebar_collapse_motion`) | width / rail reveal (+ optional opacity)<br>tween timeline<br>optional: layout-aware choreography (future) | tokens (current): `duration.shadcn.motion.sidebar.toggle`, `easing.shadcn.motion.sidebar` (default: linear)<br>gate: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json` | Landed (baseline) |
 | P1 | Drawer / Sheet settle | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`, `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/drawer.rs`<br>`ecosystem/fret-ui-shadcn/src/sheet.rs` | translate + scrim opacity<br>drag velocity projection -> inertia -> spring settle<br>retarget mid-flight (no restart stutter) | tokens (current): `duration.shadcn.motion.spring.drawer.settle`, `number.shadcn.motion.spring.drawer.settle.bounce`<br>`duration.shadcn.motion.spring.drawer.inertia_bounce`, `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`<br>gates: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`, `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json` | Landed (baseline) |
 | P1 | Dialog / Modal presence | Animata modal: `repo-ref/animata/animata/overlay/modal.tsx`<br>shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`, `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs`<br>`ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | opacity + scale (and optional blur)<br>barrier fade + focus/dismiss choreography<br>optional: spring-based settle for native-like feel | tokens (current): shadcn overlay motion tokens (duration/easing)<br>gates: `tools/diag-scripts/ui-gallery-overlay-dialog-open-motion-snapshots.json`, `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json` | Landed (baseline) |
-| P2 | Tabs indicator | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/tabs.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | indicator translate + width<br>tween or spring (theme-controlled)<br>layout measurement coherence | tokens (planned): semantic tabs motion keys<br>gate (perf-only today): `tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json` | Planned |
+| P2 | Tabs indicator | Material motion tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss`<br>Material3 impl: `ecosystem/fret-ui-material3/src/tabs.rs` | `ecosystem/fret-ui-material3/src/tabs.rs` (`primary_tab_list_indicator`) | indicator x + width<br>measurement-driven target bounds<br>Duration-based spring (refresh-rate stable) | gate: `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json` (with `--check-pixels-changed ui-gallery-material3-tabs-active-indicator`) | Landed (pilot) |
 | P2 | Toast stack (Sonner) | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/toast.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/toast.rs`<br>`ecosystem/fret-ui-shadcn/src/sonner.rs` | enter/exit presence + stack shift<br>stagger + interrupt/re-target behavior<br>swipe dismiss inertia (future) | tokens: `duration.shadcn.motion.toast.{enter|exit}`, `easing.shadcn.motion.toast`<br>gates: `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`, `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json` | Landed (baseline) |
+
+## Layout-affecting motion (v1)
+
+Not every “layout change” should be handled with a generic FLIP-style system. For a custom renderer,
+the most reliable v1 strategy is **explicit choreography** + **stable structure**, with a small set
+of reusable measurement-driven primitives.
+
+Guidelines:
+
+- Prefer keeping the element subtree **structurally stable** and animating via:
+  - width/height + overflow clipping (CSS-like),
+  - paint transforms (visual transforms) for non-interactive visuals (indicators),
+  - render transforms only when hit-testing must follow visuals.
+- If a layout needs measurement (e.g. a tab indicator tracks the selected slot’s bounds), treat
+  measurement as an explicit input, then animate a small set of scalar channels (`x`, `w`, `alpha`)
+  using `MotionValue` (Duration-based) rather than per-frame “60Hz ticks”.
+- For overlays/panels that slide off-screen but should not steal layout space (off-canvas), separate:
+  - the **layout wrapper** (width collapses to 0, overflow clipped),
+  - the **visual surface** (relative offset within the wrapper).
+
+Definition of done for a layout-motion pilot:
+
+- the target uses Duration-based drivers (refresh-rate stable),
+- retargeting mid-flight does not restart stutter,
+- at least one deterministic diag gate exists under fixed `delta`.
 
 ## Acceptance criteria (v1)
 
@@ -398,6 +423,8 @@ Diag gates:
 - Overlay dialog open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
 - Sonner open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`
 - Sonner interrupt under fixed frame delta: `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`
+- Material3 tabs indicator moves (pixels changed under fixed delta): `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json`
+- Material3 navigation bar active indicator moves (pixels changed under fixed delta): `tools/diag-scripts/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json`
 
 Refresh-rate sanity (local):
 

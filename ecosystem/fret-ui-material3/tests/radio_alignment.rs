@@ -6437,8 +6437,7 @@ fn material3_headless_badge_suite_goldens_v1() {
                     "badge_root",
                     |cx| {
                         let theme = Theme::global(&*cx.app).clone();
-                        let anchor_color =
-                            theme.color_token("md.sys.color.surface-container-low");
+                        let anchor_color = theme.color_token("md.sys.color.surface-container-low");
 
                         let anchor = |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
                                       size: Px| {
@@ -6603,8 +6602,7 @@ fn material3_headless_top_app_bar_suite_goldens_v1() {
                                 let mut bg = ContainerProps::default();
                                 bg.layout.size.width = fret_ui::element::Length::Fill;
                                 bg.layout.size.height = fret_ui::element::Length::Fill;
-                                bg.background =
-                                    Some(theme.color_token("md.sys.color.background"));
+                                bg.background = Some(theme.color_token("md.sys.color.background"));
 
                                 let bar = TopAppBar::new(case_label)
                                     .variant(variant)
