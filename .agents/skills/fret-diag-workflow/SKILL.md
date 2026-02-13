@@ -111,91 +111,17 @@ Ship a result that is reviewable and reusable:
 
 ## Performance gates (diag perf)
 
-Use this section when the issue is “it feels janky” (resize/scroll/pointer-move) and you need **numbers**
-and **worst-bundle evidence** (not only a correctness repro).
+Use this section when the issue is “it feels janky” (resize/scroll/pointer-move) and you need numbers + **worst-bundle evidence**
+for fast attribution.
 
-### “Resize jank” fast path (copy/paste)
+Fast paths (copy/paste):
 
-Run the P0 resize probes (numbers + thresholds):
+- Resize probes: `python3 tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3`
+- VirtualList boundary: `python3 tools/perf/diag_vlist_boundary_gate.py --runs 3`
+- Triage an out-dir: `python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all --app-snapshot`
+- Inspect worst frames: `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
 
-```bash
-python3 tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3
-python3 tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3
-```
-
-Notes:
-
-- For non-default machines/OS, pass `--baseline <baseline.json>` explicitly (defaults may be tuned for a specific host).
-- The bash gate (`tools/perf/diag_resize_probes_gate.sh`) is still available, but the Python gate is cross-platform.
-
-If a gate fails (or you want the worst bundles even on PASS), triage the out-dir:
-
-```bash
-python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all --app-snapshot
-```
-
-Then inspect the worst bundle:
-
-```bash
-cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
-```
-
-### VirtualList boundary gate (window shift invariants)
-
-Run the VirtualList window-boundary crossing gate repeatedly (checks + bundles per run):
-
-```bash
-python3 tools/perf/diag_vlist_boundary_gate.py --runs 3
-```
-
-Notes:
-
-- Default profile is retained (`--retained 1`). For non-retained stress runs: `--retained 0`.
-- Each run writes `summary.json` under the out-dir; failures also keep per-run `stdout.log`/`stderr.log`.
-
-### Steady baseline run (when you want a stable “global sanity”)
-
-Run a suite against a baseline file (under `docs/workstreams/perf-baselines/`):
-
-```bash
-cargo run -p fretboard -- diag perf ui-gallery-steady \
-  --dir target/fret-diag-perf/ui-gallery-steady.<tag> \
-  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json \
-  --perf-baseline <baseline.json> \
-  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 \
-  --launch -- target/release/fret-ui-gallery
-```
-
-### Baseline selection (anti-outlier)
-
-If you need to generate a new baseline, prefer the baseline-select helper:
-
-- `tools/perf/diag_perf_baseline_select.py` (cross-platform)
-  - Bash wrapper: `tools/perf/diag_perf_baseline_select.sh`
-
-## Perf attribution (answer “why did the worst frame hitch?”)
-
-1) Identify the failing script/metric:
-
-- `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
-
-2) Resolve worst bundles quickly:
-
-- `python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all`
-
-3) Attribute the worst frames in a bundle:
-
-- `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
-
-4) If the failing threshold is “max of a specific metric”, locate the exact max frame with `jq`:
-
-```bash
-jq -c '
-  .windows[0].snapshots
-  | map({frame_id, tick_id, ts: .timestamp_unix_ms, solve: .debug.stats.layout_engine_solve_time_us, paint: .debug.stats.paint_time_us})
-  | max_by(.solve)
-' <bundle.json> | jq .
-```
+See: `references/perf-handoff.md`.
 
 ## Tips
 
@@ -212,7 +138,10 @@ jq -c '
 
 ## Minimal script template (schema v2)
 
-Use schema v2 for new scripts. Start with stable `test_id` selectors and one `capture_bundle`.
+Use schema v2 for new scripts. Start with stable `test_id` selectors and one `capture_bundle`:
+
+- `wait_until` (target exists) → `click`/`click_stable` → `capture_bundle`
+- Prefer intent-level stabilization (`click_stable`, `wait_bounds_stable`) over ad-hoc sleeps.
 
 Good in-tree examples to copy from:
 
@@ -220,37 +149,6 @@ Good in-tree examples to copy from:
 - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json` (click_stable on jittery targets)
 - `tools/diag-scripts/ui-gallery-dropdown-submenu-safe-corridor-sweep.json` (move_pointer_sweep hover corridor)
 - `tools/diag-scripts/ui-gallery-material3-select-rich-options-screenshots.json` (ensure_visible + screenshot)
-
-```json
-{
-  "schema_version": 2,
-  "meta": {
-    "name": "my-scenario",
-    "required_capabilities": ["diag.script_v2"]
-  },
-  "steps": [
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "my-trigger" } },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "my-trigger" },
-      "stable_frames": 6,
-      "max_move_px": 0.5,
-      "timeout_frames": 240
-    },
-    {
-      "type": "type_text_into",
-      "target": { "kind": "test_id", "id": "my-input" },
-      "text": "hello",
-      "timeout_frames": 240
-    },
-    { "type": "capture_bundle", "label": "after" }
-  ]
-}
-```
 
 If you add `capture_screenshot`, require screenshot capability and enable screenshots:
 
@@ -298,56 +196,14 @@ Reason-code first triage:
 - “overlay jumped/flipped/clipped” ⇒ inspect `overlay_placement_trace` (outer/collision/anchor + chosen side + shift delta)
 - `timeout` ⇒ prefer adding an intermediate `capture_bundle` and shrinking the script
 
-## Component conformance playbook (example: shadcn `Select`)
+## Component conformance playbooks (reference)
 
-The goal is not to snapshot *every* internal state; it’s to define stable, explainable **invariants** and
-make failures self-diagnosing via evidence.
+Use invariants-first, evidence-first gates; avoid snapshotting every internal state.
 
-Recommended invariants to gate:
-
-- **Open/close lifecycle**:
-  - trigger click opens content overlay,
-  - outside press / Escape dismisses,
-  - close restores focus predictably (when applicable).
-- **Routing correctness** (why did the click/key not work?):
-  - pointer injection lands on intended target (or produces a hit-test trace explaining barriers/capture),
-  - keydown shortcuts do not steal reserved IME/navigation keys while composing.
-- **Selection outcome**:
-  - selecting an item updates the trigger value,
-  - disabled items do not apply selection.
-- **Placement sanity** (geometry, not pixels):
-  - content bounds stay within the window/viewport,
-  - the chosen side/align is explainable under collisions.
-- **Virtualization stability** (if list is large):
-  - scroll-to-item makes the item exist in semantics,
-  - identity is stable (`test_id`/value selectors).
-
-Recommended testing layers:
-
-- Placement/collision matrices ⇒ data-driven fixtures (many cases, thin harness).
-- State machine/policy ⇒ Rust tests against the component/policy layer (deterministic time/frames).
-- End-to-end routing/focus/IME ⇒ `fretboard diag` scripts with evidence assertions.
-
-Practical authoring tips for scripts:
-
-- Put stable `test_id` on trigger/content/items at the shadcn recipe layer.
-- Use `click_stable` for jittery overlays/virtualized targets.
-- Prefer semantics selectors (`test_id`, role+name) over coordinates.
-- Add one `capture_bundle` near the “interesting” step so failures are explainable without rerunning.
-
-Concrete shadcn `Select` scripts (UI Gallery suite):
-
-- Run: `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
-- Scripts:
-  - `tools/diag-scripts/ui-gallery-select-commit-and-label-update-bundle.json` (pointer commit)
-  - `tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json` (ArrowDown + Enter commit)
-  - `tools/diag-scripts/ui-gallery-select-typeahead-commit-banana.json` (typeahead + Enter commit)
-  - `tools/diag-scripts/ui-gallery-select-disabled-item-no-commit.json` (disabled option does not commit)
-  - `tools/diag-scripts/ui-gallery-select-roving-skips-disabled-orange.json` (assert roving skips a disabled option via `active_item_is`)
-  - `tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json` (outside-press dismiss + click-through policy)
-  - `tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json` (Escape dismiss + focus restore)
-  - `tools/diag-scripts/ui-gallery-select-wheel-scroll.json` (wheel scroll stability)
-  - `tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json` (wheel-up from bottom stability)
+- Select playbook: `references/select-conformance.md`
+  - Run: `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
+- Layout sweep playbook (page-level): `references/layout-sweep.md`
+- Web runner transport notes: `references/web-runner.md`
 
 ## Evidence anchors
 
