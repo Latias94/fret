@@ -106,6 +106,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             incoming_open_path_payloads: HashMap::new(),
             #[cfg(target_os = "ios")]
             ios_keyboard: None,
+            diag_window_insets_overrides: HashMap::new(),
             diag_cursor_screen_pos_override:
                 super::diag_cursor_override::DiagCursorScreenPosOverride::from_env(),
             cursor_screen_pos: None,

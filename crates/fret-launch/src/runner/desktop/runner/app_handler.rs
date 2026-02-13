@@ -1869,15 +1869,23 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     left: Px(0.0),
                 };
 
+                let overrides = self.diag_window_insets_overrides.get(&app_window);
+                let safe_area_insets = overrides
+                    .and_then(|ovr| ovr.safe_area_insets.clone())
+                    .unwrap_or(Some(safe_area_insets));
+                let occlusion_insets = overrides
+                    .and_then(|ovr| ovr.occlusion_insets.clone())
+                    .unwrap_or(Some(occlusion_insets));
+
                 let mut insets_changed = false;
                 self.app
                     .with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
-                        if svc.safe_area_insets(app_window) != Some(safe_area_insets) {
-                            svc.set_safe_area_insets(app_window, Some(safe_area_insets));
+                        if svc.safe_area_insets(app_window) != safe_area_insets {
+                            svc.set_safe_area_insets(app_window, safe_area_insets);
                             insets_changed = true;
                         }
-                        if svc.occlusion_insets(app_window) != Some(occlusion_insets) {
-                            svc.set_occlusion_insets(app_window, Some(occlusion_insets));
+                        if svc.occlusion_insets(app_window) != occlusion_insets {
+                            svc.set_occlusion_insets(app_window, occlusion_insets);
                             insets_changed = true;
                         }
                     });
@@ -1931,15 +1939,23 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     left: Px(0.0),
                 };
 
+                let overrides = self.diag_window_insets_overrides.get(&app_window);
+                let safe_area_insets = overrides
+                    .and_then(|ovr| ovr.safe_area_insets.clone())
+                    .unwrap_or(Some(safe_area_insets));
+                let occlusion_insets = overrides
+                    .and_then(|ovr| ovr.occlusion_insets.clone())
+                    .unwrap_or(Some(occlusion_insets));
+
                 let mut insets_changed = false;
                 self.app
                     .with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
-                        if svc.safe_area_insets(app_window) != Some(safe_area_insets) {
-                            svc.set_safe_area_insets(app_window, Some(safe_area_insets));
+                        if svc.safe_area_insets(app_window) != safe_area_insets {
+                            svc.set_safe_area_insets(app_window, safe_area_insets);
                             insets_changed = true;
                         }
-                        if svc.occlusion_insets(app_window) != Some(occlusion_insets) {
-                            svc.set_occlusion_insets(app_window, Some(occlusion_insets));
+                        if svc.occlusion_insets(app_window) != occlusion_insets {
+                            svc.set_occlusion_insets(app_window, occlusion_insets);
                             insets_changed = true;
                         }
                     });

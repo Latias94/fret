@@ -69,6 +69,18 @@ struct IncomingOpenPathPayload {
     paths: Vec<std::path::PathBuf>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct DiagWindowInsetsOverride {
+    /// `None` means "no override".
+    ///
+    /// `Some(None)` means "known-but-none" (cleared).
+    ///
+    /// `Some(Some(v))` means "override to v".
+    safe_area_insets: Option<Option<fret_core::Edges>>,
+    /// See `safe_area_insets`.
+    occlusion_insets: Option<Option<fret_core::Edges>>,
+}
+
 mod app_handler;
 mod diag_bundle_screenshots;
 mod diag_cursor_override;
@@ -207,6 +219,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     incoming_open_path_payloads: HashMap<fret_core::IncomingOpenToken, IncomingOpenPathPayload>,
     #[cfg(target_os = "ios")]
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
+    diag_window_insets_overrides: HashMap<fret_core::AppWindowId, DiagWindowInsetsOverride>,
     diag_cursor_screen_pos_override: Option<diag_cursor_override::DiagCursorScreenPosOverride>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
