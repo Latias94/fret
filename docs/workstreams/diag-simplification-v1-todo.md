@@ -41,7 +41,7 @@ small, fearless refactors.
   - [x] plumb through pack/triage/lint paths (operate on local artifacts)
 - [x] Make `--pack` work in WS mode by operating on the materialized local artifact.
 - [ ] Add artifact size reporting:
-  - [ ] include bytes on disk and clipped counts in `script.result` evidence (bounded)
+  - [x] include bytes on disk and clipped counts in `script.result` evidence (bounded)
 
 ## Phase 3: Exit request parity
 

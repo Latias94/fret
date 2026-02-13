@@ -9,17 +9,17 @@ use fret_diag_protocol::{
 };
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
-    UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1,
-    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiImeEventV1,
-    UiIncomingOpenInjectItemV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
-    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
-    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayPlacementTraceKindV1,
-    UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1,
-    UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1,
-    UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
-    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
-    UiWindowTargetV1,
+    UiArtifactStatsV1, UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1,
+    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
+    UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiInspectConfigV1,
+    UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
+    UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
+    UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
+    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
+    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
+    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1,
+    UiWebImeTraceEntryV1, UiWindowTargetV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -406,6 +406,7 @@ pub struct UiDiagnosticsService {
     active_scripts: HashMap<AppWindowId, ActiveScript>,
     pending_force_dump: Option<PendingForceDumpRequest>,
     last_dump_dir: Option<PathBuf>,
+    last_dump_artifact_stats: Option<UiArtifactStatsV1>,
     last_script_run_id: u64,
     last_pick_run_id: u64,
     last_picked_node_id: HashMap<AppWindowId, u64>,
@@ -969,6 +970,7 @@ impl UiDiagnosticsService {
                     .last_dump_dir
                     .as_ref()
                     .map(|p| display_path(&self.cfg.out_dir, p)),
+                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
             });
         }
 
@@ -995,6 +997,7 @@ impl UiDiagnosticsService {
                     .last_dump_dir
                     .as_ref()
                     .map(|p| display_path(&self.cfg.out_dir, p)),
+                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
             });
             active.last_reported_step = Some(active.next_step);
         }
@@ -2009,6 +2012,7 @@ impl UiDiagnosticsService {
                                 .last_dump_dir
                                 .as_ref()
                                 .map(|p| display_path(&self.cfg.out_dir, p)),
+                            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                         });
                         return output;
                     };
@@ -2040,6 +2044,7 @@ impl UiDiagnosticsService {
                                 .last_dump_dir
                                 .as_ref()
                                 .map(|p| display_path(&self.cfg.out_dir, p)),
+                            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                         });
                         return output;
                     };
@@ -2691,6 +2696,7 @@ impl UiDiagnosticsService {
                             .last_dump_dir
                             .as_ref()
                             .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                     });
                     return output;
                 };
@@ -2723,6 +2729,7 @@ impl UiDiagnosticsService {
                             .last_dump_dir
                             .as_ref()
                             .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                     });
                     return output;
                 };
@@ -3225,6 +3232,7 @@ impl UiDiagnosticsService {
                                         .last_dump_dir
                                         .as_ref()
                                         .map(|p| display_path(&self.cfg.out_dir, p)),
+                                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                                 });
                                 return output;
                             };
@@ -3258,6 +3266,7 @@ impl UiDiagnosticsService {
                                         .last_dump_dir
                                         .as_ref()
                                         .map(|p| display_path(&self.cfg.out_dir, p)),
+                                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                                 });
                                 return output;
                             };
@@ -3524,6 +3533,7 @@ impl UiDiagnosticsService {
                             .last_dump_dir
                             .as_ref()
                             .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                     });
                     return output;
                 };
@@ -3565,6 +3575,7 @@ impl UiDiagnosticsService {
                                     .last_dump_dir
                                     .as_ref()
                                     .map(|p| display_path(&self.cfg.out_dir, p)),
+                                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                             });
                             return output;
                         };
@@ -3666,6 +3677,7 @@ impl UiDiagnosticsService {
                             .last_dump_dir
                             .as_ref()
                             .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                     });
                     return output;
                 };
@@ -3697,6 +3709,7 @@ impl UiDiagnosticsService {
                             .last_dump_dir
                             .as_ref()
                             .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                     });
                     return output;
                 };
@@ -4782,6 +4795,7 @@ impl UiDiagnosticsService {
                                     .last_dump_dir
                                     .as_ref()
                                     .map(|p| display_path(&self.cfg.out_dir, p)),
+                                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                             });
                             return output;
                         } else {
@@ -5074,6 +5088,7 @@ impl UiDiagnosticsService {
                     .last_dump_dir
                     .as_ref()
                     .map(|p| display_path(&self.cfg.out_dir, p)),
+                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
             });
         } else {
             if let Some(label) = force_dump_label {
@@ -5095,6 +5110,7 @@ impl UiDiagnosticsService {
                         .last_dump_dir
                         .as_ref()
                         .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                 });
             } else if active.next_step < active.steps.len() {
                 self.active_scripts.insert(window, active);
@@ -6091,6 +6107,7 @@ impl UiDiagnosticsService {
                         .last_dump_dir
                         .as_ref()
                         .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                 });
             }
             _ => {}
@@ -6173,6 +6190,7 @@ impl UiDiagnosticsService {
                 .last_dump_dir
                 .as_ref()
                 .map(|p| display_path(&self.cfg.out_dir, p)),
+            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
         });
     }
 
@@ -6221,6 +6239,8 @@ impl UiDiagnosticsService {
 
         let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
 
+        let mut bundle_json_bytes: Option<u64> = None;
+
         if !cfg!(target_arch = "wasm32") {
             if std::fs::create_dir_all(&dir).is_err() {
                 return None;
@@ -6228,13 +6248,33 @@ impl UiDiagnosticsService {
             if write_json_compact(dir.join("bundle.json"), &bundle).is_err() {
                 return None;
             }
+            bundle_json_bytes = std::fs::metadata(dir.join("bundle.json"))
+                .ok()
+                .map(|m| m.len());
             let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
             if self.cfg.screenshot_on_dump {
                 let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
             }
+        } else if self.ws_is_configured() {
+            // WASM apps do not have a filesystem, but we still want a bounded estimate so the
+            // artifact can report its size budget.
+            bundle_json_bytes = serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64);
         }
 
         self.last_dump_dir = Some(dir.clone());
+        self.last_dump_artifact_stats = Some(UiArtifactStatsV1 {
+            schema_version: 1,
+            bundle_json_bytes,
+            window_count: bundle.windows.len() as u64,
+            event_count: bundle.windows.iter().map(|w| w.events.len() as u64).sum(),
+            snapshot_count: bundle
+                .windows
+                .iter()
+                .map(|w| w.snapshots.len() as u64)
+                .sum(),
+            max_snapshots: bundle.config.max_snapshots as u64,
+            dump_max_snapshots: bundle.config.dump_max_snapshots.map(|n| n as u64),
+        });
 
         #[cfg(feature = "diagnostics-ws")]
         {

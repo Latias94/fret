@@ -5,6 +5,7 @@ Status: Active (workstream tracker)
 Current state (as of 2026-02-13):
 
 - WS artifact materialization + `--pack` parity landed (tooling materializes `bundle.dumped` to a local `bundle.json` directory).
+- Artifact size stats are reported in `script.result.json` for locally materialized bundles (bytes + bounded counts).
 - WS exit request landed (`app.exit.request`) and tooling supports `--exit-after-run` (`--touch-exit-after-run` remains as an alias).
 - Default deterministic exit in `--launch` mode landed and `--keep-open` preserves long-running/manual workflows.
 

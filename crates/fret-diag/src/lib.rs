@@ -5,7 +5,9 @@ use std::path::{Path, PathBuf};
 use std::process::Child;
 use std::time::{Duration, Instant};
 
-use fret_diag_protocol::{DevtoolsBundleDumpedV1, DevtoolsSessionListV1, UiScriptResultV1};
+use fret_diag_protocol::{
+    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, UiArtifactStatsV1, UiScriptResultV1,
+};
 
 use zip::write::FileOptions;
 
@@ -5664,7 +5666,7 @@ See: `docs/tracy.md`.\n";
                     }
 
                     devtools.script_run_value(None, script_json);
-                    let script_result =
+                    let mut script_result =
                         wait_for_devtools_message(devtools, timeout_ms, poll_ms, |msg| {
                             if msg.r#type != "script.result"
                                 || msg.session_id.as_deref() != Some(selected_session_id)
@@ -5732,6 +5734,17 @@ See: `docs/tracy.md`.\n";
                         .and_then(|p| p.file_name())
                         .and_then(|s| s.to_str())
                         .map(|s| s.to_string());
+
+                    // Update the local `script.result.json` so it always points at a locally
+                    // materialized artifact directory in WS mode.
+                    script_result.last_bundle_dir = last_bundle_dir.clone();
+                    script_result.last_bundle_artifact =
+                        Some(artifact_stats_from_bundle_json_path(&bundle_path));
+                    let _ = write_json_value(
+                        &resolved_script_result_path,
+                        &serde_json::to_value(&script_result)
+                            .unwrap_or_else(|_| serde_json::json!({})),
+                    );
 
                     let stage = match script_result.stage {
                         fret_diag_protocol::UiScriptStageV1::Passed => "passed",
@@ -11922,6 +11935,57 @@ fn materialize_devtools_bundle_dumped(
     Ok(bundle_path)
 }
 
+fn artifact_stats_from_bundle_json_path(bundle_path: &Path) -> UiArtifactStatsV1 {
+    let bundle_json_bytes = std::fs::metadata(bundle_path).ok().map(|m| m.len());
+    let v = read_json_value(bundle_path).unwrap_or_else(|| serde_json::json!({}));
+
+    let windows = v
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let mut event_count: u64 = 0;
+    let mut snapshot_count: u64 = 0;
+    for w in &windows {
+        event_count = event_count.saturating_add(
+            w.get("events")
+                .and_then(|v| v.as_array())
+                .map(|a| a.len() as u64)
+                .unwrap_or(0),
+        );
+        snapshot_count = snapshot_count.saturating_add(
+            w.get("snapshots")
+                .and_then(|v| v.as_array())
+                .map(|a| a.len() as u64)
+                .unwrap_or(0),
+        );
+    }
+
+    let (max_snapshots, dump_max_snapshots) = v
+        .get("config")
+        .and_then(|v| v.as_object())
+        .map(|cfg| {
+            let max = cfg
+                .get("max_snapshots")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dump = cfg.get("dump_max_snapshots").and_then(|v| v.as_u64());
+            (max, dump)
+        })
+        .unwrap_or((0, None));
+
+    UiArtifactStatsV1 {
+        schema_version: 1,
+        bundle_json_bytes,
+        window_count: windows.len() as u64,
+        event_count,
+        snapshot_count,
+        max_snapshots,
+        dump_max_snapshots,
+    }
+}
+
 fn devtools_select_session_id(
     list: &DevtoolsSessionListV1,
     want: Option<&str>,
@@ -12032,7 +12096,7 @@ fn run_script_over_devtools_ws(
     }
 
     devtools.script_run_value(None, script_json);
-    let result = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
+    let mut result = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
         if msg.r#type != "script.result" || msg.session_id.as_deref() != Some(&selected_session_id)
         {
             return None;
@@ -12056,7 +12120,12 @@ fn run_script_over_devtools_ws(
             serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
         })?;
 
-        Some(materialize_devtools_bundle_dumped(out_dir, &dumped)?)
+        let bundle_path = materialize_devtools_bundle_dumped(out_dir, &dumped)?;
+        // Ensure `script.result.json` points at a locally materialized artifact directory in WS
+        // mode, even if the runtime also dumped other bundles during the script run.
+        result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));
+        result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(&bundle_path));
+        Some(bundle_path)
     } else {
         None
     };

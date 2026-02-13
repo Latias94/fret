@@ -23,7 +23,7 @@ Exit criteria:
 
 - [x] In WS mode, tooling can materialize a **local** bundle directory containing `bundle.json` from `bundle.dumped`.
 - [x] `diag pack`, `diag triage`, `diag lint` work from that local directory in both modes.
-- [ ] Artifact size is bounded and reported (bytes + clipped counts where applicable).
+- [x] Artifact size is bounded and reported (bytes + clipped counts where applicable).
 
 ## M3: Exit parity
 

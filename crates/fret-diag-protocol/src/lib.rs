@@ -1180,6 +1180,23 @@ pub struct DevtoolsScreenshotResultV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiArtifactStatsV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle_json_bytes: Option<u64>,
+    #[serde(default)]
+    pub window_count: u64,
+    #[serde(default)]
+    pub event_count: u64,
+    #[serde(default)]
+    pub snapshot_count: u64,
+    #[serde(default)]
+    pub max_snapshots: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dump_max_snapshots: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiScriptResultV1 {
     pub schema_version: u32,
     pub run_id: u64,
@@ -1193,6 +1210,8 @@ pub struct UiScriptResultV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub evidence: Option<UiScriptEvidenceV1>,
     pub last_bundle_dir: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_bundle_artifact: Option<UiArtifactStatsV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
