@@ -140,6 +140,20 @@ fn patch_can_target_submenu_by_path() {
 }
 
 #[test]
+fn patch_apply_errors_when_menu_path_is_missing() {
+    let mut base = base_menu_bar();
+    let patch = MenuBarPatch {
+        ops: vec![MenuBarPatchOp::AppendItem {
+            menu: MenuTarget::Path(vec!["File".into(), "DoesNotExist".into()]),
+            item: MenuItem::Separator,
+        }],
+    };
+
+    let err = patch.apply_to(&mut base).expect_err("patch should fail");
+    assert!(matches!(err, MenuBarError::PatchFailed { .. }));
+}
+
+#[test]
 fn insert_item_before_can_use_index_anchor() {
     let mut base = base_menu_bar();
     let patch = MenuBarPatch {
