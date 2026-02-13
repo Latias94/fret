@@ -3970,7 +3970,15 @@ See: `docs/tracy.md`.\n";
             }
             required_caps.sort();
             required_caps.dedup();
-            let available_caps = read_filesystem_capabilities(&resolved_out_dir);
+
+            let connected = connect_filesystem_tooling(
+                &fs_transport_cfg,
+                &resolved_ready_path,
+                false,
+                timeout_ms,
+                poll_ms,
+            )?;
+            let available_caps = connected.available_caps.clone();
             let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
 
             let mut repro_process_footprint: Option<serde_json::Value> = None;
@@ -3999,40 +4007,57 @@ See: `docs/tracy.md`.\n";
                 if overall_error.is_some() {
                     break;
                 }
-                let mut result = run_script_and_wait(
-                    &src,
-                    &resolved_script_path,
-                    &resolved_script_trigger_path,
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
+                let script_json: serde_json::Value =
+                    serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
+                        .map_err(|e| e.to_string())?;
+
+                let (raw_result, _bundle_path) = match run_script_over_transport(
+                    &resolved_out_dir,
+                    &connected,
+                    script_json,
+                    false,
+                    None,
+                    None,
                     timeout_ms,
                     poll_ms,
-                );
-
-                if let Ok(summary) = &result
-                    && summary.stage.as_deref() == Some("failed")
-                {
-                    if let Some(dir) = wait_for_failure_dump_bundle(
-                        &resolved_out_dir,
-                        summary,
-                        timeout_ms,
-                        poll_ms,
-                    ) {
-                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                            if let Ok(summary) = result.as_mut() {
-                                summary.last_bundle_dir = Some(name.to_string());
-                            }
-                        }
-                    }
-                }
-
-                let result = match result {
-                    Ok(r) => r,
+                    &resolved_script_result_path,
+                    &capabilities_check_path,
+                ) {
+                    Ok(v) => v,
                     Err(err) => {
                         overall_error = Some(err);
                         break;
                     }
                 };
+
+                let stage = match raw_result.stage {
+                    fret_diag_protocol::UiScriptStageV1::Passed => "passed",
+                    fret_diag_protocol::UiScriptStageV1::Failed => "failed",
+                    fret_diag_protocol::UiScriptStageV1::Queued => "queued",
+                    fret_diag_protocol::UiScriptStageV1::Running => "running",
+                };
+
+                let mut result = ScriptResultSummary {
+                    run_id: raw_result.run_id,
+                    stage: Some(stage.to_string()),
+                    step_index: raw_result.step_index.map(|n| n as u64),
+                    reason_code: raw_result.reason_code.clone(),
+                    reason: raw_result.reason.clone(),
+                    last_bundle_dir: raw_result.last_bundle_dir.clone(),
+                };
+
+                if result.stage.as_deref() == Some("failed") {
+                    if let Some(dir) = wait_for_failure_dump_bundle(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    ) {
+                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                            result.last_bundle_dir = Some(name.to_string());
+                        }
+                    }
+                }
                 last_script_result = Some(result.clone());
 
                 let mut bundle_path = wait_for_bundle_json_from_script_result(
@@ -4042,7 +4067,7 @@ See: `docs/tracy.md`.\n";
                     poll_ms,
                 );
                 if bundle_path.is_none() {
-                    let _ = touch(&resolved_trigger_path);
+                    connected.devtools.bundle_dump(None, None);
                     bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
                         &result,
@@ -12189,19 +12214,11 @@ fn connect_filesystem_tooling(
 
     if require_ready {
         let deadline = Instant::now() + Duration::from_millis(timeout_ms);
-        let mut ready = false;
         while Instant::now() < deadline {
             if std::fs::metadata(ready_path).is_ok() {
-                ready = true;
                 break;
             }
             std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
-        }
-        if !ready {
-            return Err(format!(
-                "timeout waiting for readiness signal (ready.touch): {}",
-                ready_path.display()
-            ));
         }
     }
 
