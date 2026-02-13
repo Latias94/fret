@@ -124,7 +124,11 @@ use stats::{
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
 };
-use run_artifacts::{run_id_artifact_dir, write_run_id_bundle_json, write_run_id_script_result};
+use run_artifacts::{
+    materialize_bundle_json_from_manifest_chunks_if_missing,
+    materialize_run_id_bundle_json_from_chunks_if_missing, run_id_artifact_dir,
+    write_run_id_bundle_json, write_run_id_script_result,
+};
 use tooling_failures::{
     mark_existing_script_result_tooling_failure, write_tooling_failure_script_result,
     write_tooling_failure_script_result_if_missing, push_tooling_event_log_entry,
@@ -10011,10 +10015,17 @@ fn pack_bundle_dir_to_zip(
 
     let bundle_json = bundle_dir.join("bundle.json");
     if !bundle_json.is_file() {
-        return Err(format!(
-            "bundle_dir does not contain bundle.json: {}",
-            bundle_dir.display()
-        ));
+        if materialize_bundle_json_from_manifest_chunks_if_missing(bundle_dir)
+            .as_ref()
+            .is_some_and(|p| p.is_file())
+        {
+            // `bundle.json` has been materialized from v2 chunks for compatibility.
+        } else {
+            return Err(format!(
+                "bundle_dir does not contain bundle.json: {}",
+                bundle_dir.display()
+            ));
+        }
     }
 
     if let Some(parent) = out_path.parent() {
@@ -10896,6 +10907,12 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         return direct;
     }
 
+    if let Some(v2) = materialize_bundle_json_from_manifest_chunks_if_missing(path) {
+        if v2.is_file() {
+            return v2;
+        }
+    }
+
     // Prefer the stable per-run artifact directory if `script.result.json` is present.
     //
     // This makes `--out-dir` invocations more robust (less dependent on `latest.txt` updates and
@@ -10905,6 +10922,11 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         let run_id_bundle = run_id_artifact_dir(path, run_id).join("bundle.json");
         if run_id_bundle.is_file() {
             return run_id_bundle;
+        }
+        if let Some(v2) = materialize_run_id_bundle_json_from_chunks_if_missing(path, run_id) {
+            if v2.is_file() {
+                return v2;
+            }
         }
     }
 

@@ -1,8 +1,11 @@
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
 
-use crate::util::{now_unix_ms, write_json_value};
+use crate::util::{now_unix_ms, read_json_value, write_json_value};
+
+const BUNDLE_JSON_CHUNK_BYTES: usize = 256 * 1024;
 
 pub(crate) fn run_id_artifact_dir(out_dir: &Path, run_id: u64) -> PathBuf {
     out_dir.join(run_id.to_string())
@@ -29,7 +32,12 @@ pub(crate) fn write_run_id_bundle_json(out_dir: &Path, run_id: u64, bundle_json_
     }
     // Best-effort alias: keep a stable per-run path even when the underlying bundle export directory
     // is timestamp/label-based (filesystem) or message-derived (WS).
-    let _ = std::fs::copy(bundle_json_path, &dst);
+    if std::fs::copy(bundle_json_path, &dst).is_ok() {
+        let chunks = write_run_id_bundle_json_chunks(out_dir, run_id, &dst);
+        if let Ok(chunks) = chunks {
+            update_run_id_manifest_with_bundle_json_chunks(out_dir, run_id, &chunks);
+        }
+    }
 }
 
 fn stage_as_str(stage: &UiScriptStageV1) -> &'static str {
@@ -46,7 +54,7 @@ pub(crate) fn write_run_id_manifest_json(out_dir: &Path, run_id: u64, result: &U
     let path = dir.join("manifest.json");
 
     let payload = serde_json::json!({
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_unix_ms": now_unix_ms(),
         "run_id": run_id,
         "paths": {
@@ -63,6 +71,165 @@ pub(crate) fn write_run_id_manifest_json(out_dir: &Path, run_id: u64, result: &U
     });
 
     let _ = write_json_value(&path, &payload);
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct BundleJsonChunksV1 {
+    pub total_bytes: u64,
+    pub chunk_bytes: u64,
+    pub blake3: String,
+    pub chunks: Vec<BundleJsonChunkV1>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct BundleJsonChunkV1 {
+    pub index: u32,
+    pub rel_path: String,
+    pub bytes: u64,
+    pub blake3: String,
+}
+
+fn run_id_bundle_json_chunk_dir(out_dir: &Path, run_id: u64) -> PathBuf {
+    run_id_artifact_dir(out_dir, run_id)
+        .join("chunks")
+        .join("bundle_json")
+}
+
+pub(crate) fn write_run_id_bundle_json_chunks(
+    out_dir: &Path,
+    run_id: u64,
+    bundle_json_path: &Path,
+) -> Result<BundleJsonChunksV1, String> {
+    let chunks_dir = run_id_bundle_json_chunk_dir(out_dir, run_id);
+    std::fs::create_dir_all(&chunks_dir).map_err(|e| e.to_string())?;
+
+    if let Ok(entries) = std::fs::read_dir(&chunks_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+
+    let mut file = std::fs::File::open(bundle_json_path).map_err(|e| e.to_string())?;
+    let mut total_hasher = blake3::Hasher::new();
+
+    let mut index: u32 = 0;
+    let mut total_bytes: u64 = 0;
+    let mut chunks: Vec<BundleJsonChunkV1> = Vec::new();
+
+    loop {
+        let mut buf = vec![0u8; BUNDLE_JSON_CHUNK_BYTES];
+        let n = file.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 {
+            break;
+        }
+        buf.truncate(n);
+        total_bytes = total_bytes.saturating_add(n as u64);
+
+        total_hasher.update(&buf);
+        let chunk_hash = blake3::hash(&buf).to_hex().to_string();
+
+        let name = format!("chunk-{index:06}");
+        let chunk_path = chunks_dir.join(&name);
+        let mut out = std::fs::File::create(&chunk_path).map_err(|e| e.to_string())?;
+        out.write_all(&buf).map_err(|e| e.to_string())?;
+        out.flush().ok();
+
+        let rel_path = PathBuf::from("chunks")
+            .join("bundle_json")
+            .join(&name)
+            .to_string_lossy()
+            .replace('\\', "/");
+        chunks.push(BundleJsonChunkV1 {
+            index,
+            rel_path,
+            bytes: n as u64,
+            blake3: chunk_hash,
+        });
+
+        index = index.saturating_add(1);
+    }
+
+    Ok(BundleJsonChunksV1 {
+        total_bytes,
+        chunk_bytes: BUNDLE_JSON_CHUNK_BYTES as u64,
+        blake3: total_hasher.finalize().to_hex().to_string(),
+        chunks,
+    })
+}
+
+pub(crate) fn materialize_run_id_bundle_json_from_chunks_if_missing(
+    out_dir: &Path,
+    run_id: u64,
+) -> Option<PathBuf> {
+    let run_dir = run_id_artifact_dir(out_dir, run_id);
+    materialize_bundle_json_from_manifest_chunks_if_missing(&run_dir)
+}
+
+fn update_run_id_manifest_with_bundle_json_chunks(
+    out_dir: &Path,
+    run_id: u64,
+    chunks: &BundleJsonChunksV1,
+) {
+    let dir = run_id_artifact_dir(out_dir, run_id);
+    let path = dir.join("manifest.json");
+
+    let mut v = read_json_value(&path).unwrap_or_else(|| {
+        serde_json::json!({
+            "schema_version": 2,
+            "generated_unix_ms": now_unix_ms(),
+            "run_id": run_id,
+        })
+    });
+
+    v["schema_version"] = serde_json::json!(2);
+    v["generated_unix_ms"] = serde_json::json!(now_unix_ms());
+    v["run_id"] = serde_json::json!(run_id);
+    v["bundle_json"] = serde_json::json!({
+        "mode": "chunks.v1",
+        "total_bytes": chunks.total_bytes,
+        "blake3": chunks.blake3,
+        "chunk_bytes": chunks.chunk_bytes,
+        "chunks": chunks.chunks.iter().map(|c| serde_json::json!({
+            "index": c.index,
+            "path": c.rel_path,
+            "bytes": c.bytes,
+            "blake3": c.blake3,
+        })).collect::<Vec<_>>(),
+    });
+
+    let _ = write_json_value(&path, &v);
+}
+
+pub(crate) fn materialize_bundle_json_from_manifest_chunks_if_missing(dir: &Path) -> Option<PathBuf> {
+    let bundle_json_path = dir.join("bundle.json");
+    if bundle_json_path.is_file() {
+        return Some(bundle_json_path);
+    }
+
+    let manifest_path = dir.join("manifest.json");
+    let manifest = read_json_value(&manifest_path)?;
+    let chunks = manifest
+        .get("bundle_json")
+        .and_then(|v| v.get("chunks"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    if chunks.is_empty() {
+        return None;
+    }
+
+    let mut out = std::fs::File::create(&bundle_json_path).ok()?;
+    for chunk in chunks {
+        let rel = chunk.get("path")?.as_str()?;
+        let chunk_path = dir.join(rel);
+        let bytes = std::fs::read(chunk_path).ok()?;
+        out.write_all(&bytes).ok()?;
+    }
+    out.flush().ok()?;
+    Some(bundle_json_path)
 }
 
 #[cfg(test)]
@@ -124,6 +291,116 @@ mod tests {
                 .and_then(|v| v.get("script_result_json"))
                 .and_then(|v| v.as_str()),
             Some("script.result.json")
+        );
+    }
+
+    #[test]
+    fn write_run_id_bundle_json_writes_chunks_and_updates_manifest() {
+        let root = make_temp_dir("fret-diag-run-artifacts-chunks");
+        let run_id = 9u64;
+
+        let result = UiScriptResultV1 {
+            schema_version: 1,
+            run_id,
+            updated_unix_ms: now_unix_ms(),
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: Some(UiScriptEvidenceV1::default()),
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        write_run_id_script_result(&root, run_id, &result);
+
+        let export_dir = root.join("export");
+        std::fs::create_dir_all(&export_dir).expect("create export dir");
+        let src = export_dir.join("bundle.json");
+        std::fs::write(&src, br#"{ "schema_version": 1, "windows": [] }"#)
+            .expect("write src bundle.json");
+
+        write_run_id_bundle_json(&root, run_id, &src);
+
+        let chunks_dir = run_id_bundle_json_chunk_dir(&root, run_id);
+        let entries = std::fs::read_dir(&chunks_dir)
+            .expect("read chunks dir")
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_file())
+            .count();
+        assert!(entries > 0, "expected at least one chunk file");
+
+        let manifest_path = root.join(run_id.to_string()).join("manifest.json");
+        let bytes = std::fs::read(&manifest_path).expect("read manifest.json");
+        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse manifest.json");
+        assert!(
+            parsed.get("bundle_json").is_some(),
+            "expected bundle_json section"
+        );
+        assert!(
+            parsed
+                .get("bundle_json")
+                .and_then(|v| v.get("blake3"))
+                .and_then(|v| v.as_str())
+                .is_some(),
+            "expected bundle_json.blake3"
+        );
+        assert_eq!(
+            parsed
+                .get("bundle_json")
+                .and_then(|v| v.get("chunks"))
+                .and_then(|v| v.as_array())
+                .map(|a| a.is_empty())
+                .unwrap_or(true),
+            false
+        );
+
+        let run_dir = root.join(run_id.to_string());
+        let bundle = std::fs::read(run_dir.join("bundle.json")).expect("read run bundle.json");
+        assert!(!bundle.is_empty());
+    }
+
+    #[test]
+    fn materialize_run_id_bundle_json_from_chunks_if_missing_reconstructs_bundle_json() {
+        let root = make_temp_dir("fret-diag-run-artifacts-reconstruct");
+        let run_id = 11u64;
+
+        let result = UiScriptResultV1 {
+            schema_version: 1,
+            run_id,
+            updated_unix_ms: now_unix_ms(),
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: Some(UiScriptEvidenceV1::default()),
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        write_run_id_script_result(&root, run_id, &result);
+
+        let run_dir = root.join(run_id.to_string());
+        let bundle_json_path = run_dir.join("bundle.json");
+        std::fs::write(&bundle_json_path, br#"{ "schema_version": 1, "windows": [] }"#)
+            .expect("write bundle.json");
+
+        let chunks = write_run_id_bundle_json_chunks(&root, run_id, &bundle_json_path)
+            .expect("write chunks");
+        update_run_id_manifest_with_bundle_json_chunks(&root, run_id, &chunks);
+
+        std::fs::remove_file(&bundle_json_path).expect("remove bundle.json");
+
+        let rebuilt =
+            materialize_run_id_bundle_json_from_chunks_if_missing(&root, run_id).expect("rebuilt");
+        assert!(rebuilt.is_file());
+
+        let bytes = std::fs::read(rebuilt).expect("read rebuilt bundle.json");
+        assert!(!bytes.is_empty());
+        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse rebuilt json");
+        assert_eq!(
+            parsed.get("schema_version").and_then(|v| v.as_u64()),
+            Some(1)
         );
     }
 }
