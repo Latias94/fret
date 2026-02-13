@@ -11,6 +11,7 @@ Current state (as of 2026-02-13):
 - Tooling-side "failure artifact" helpers are now isolated into focused modules (`crates/fret-diag/src/tooling_failures.rs`, `crates/fret-diag/src/run_artifacts.rs`) to reduce monolith churn risk.
 - Tooling now writes a minimal per-run `manifest.json` next to `script.result.json`/`bundle.json` (v2 direction; still v1-compatible).
 - Tooling can now maintain a v2-ish chunked bundle payload under `<run_id>/chunks/bundle_json/*` and records chunk list + sizes + hashes in `manifest.json` (and can materialize `bundle.json` on-demand for compatibility).
+- Tooling validates chunked bundle integrity (per-chunk + total hash) and marks `script.result.json` with a stable `reason_code` when corruption is detected (`tooling.artifact.integrity.failed`).
 - DevTools WS bundle dumps can now be delivered as chunked `bundle.dumped` messages to avoid oversized single payloads; tooling reassembles and materializes locally.
 - `diag repro` setup/driver failures now write `repro.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `diag repeat` setup/driver failures now write `repeat.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
