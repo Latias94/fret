@@ -5543,10 +5543,6 @@ See: `docs/tracy.md`.\n";
                     );
                 }
 
-                use crate::transport::{
-                    ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
-                };
-
                 let ws_url = devtools_ws_url.clone().ok_or_else(|| {
                     "missing --devtools-ws-url (required when using DevTools WS transport)"
                         .to_string()
@@ -5556,53 +5552,17 @@ See: `docs/tracy.md`.\n";
                         .to_string()
                 })?;
 
-                let mut cfg =
-                    DevtoolsWsClientConfig::with_defaults(ws_url.to_string(), token.to_string());
-                cfg.client_kind = ClientKindV1::Tooling;
-                cfg.capabilities = vec![
-                    // Backwards-compatible (legacy, un-namespaced) control plane capabilities.
-                    "inspect".to_string(),
-                    "pick".to_string(),
-                    "scripts".to_string(),
-                    "bundles".to_string(),
-                    "sessions".to_string(),
-                    // Namespaced control plane capabilities (recommended).
-                    "devtools.inspect".to_string(),
-                    "devtools.pick".to_string(),
-                    "devtools.scripts".to_string(),
-                    "devtools.bundles".to_string(),
-                    "devtools.sessions".to_string(),
-                ];
+                let connected = connect_devtools_ws_tooling(
+                    ws_url.as_str(),
+                    token.as_str(),
+                    devtools_session_id.as_deref(),
+                    timeout_ms,
+                    poll_ms,
+                )?;
 
-                let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))?;
-                let devtools = DevtoolsOps::new(client);
-
-                let sessions = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
-                    if msg.r#type != "session.list" {
-                        return None;
-                    }
-                    serde_json::from_value::<DevtoolsSessionListV1>(msg.payload).ok()
-                })?;
-
-                let selected_session_id =
-                    devtools_select_session_id(&sessions, devtools_session_id.as_deref())?;
-                devtools.set_default_session_id(Some(selected_session_id.clone()));
-
-                let mut available_caps: Vec<String> = sessions
-                    .sessions
-                    .iter()
-                    .find(|s| s.session_id == selected_session_id)
-                    .map(|s| s.capabilities.clone())
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|c| normalize_capability_string(&c))
-                    .collect();
-                available_caps.sort();
-                available_caps.dedup();
-
-                devtools_ws = Some(devtools);
-                devtools_ws_selected_session_id = Some(selected_session_id);
-                devtools_ws_available_caps = available_caps;
+                devtools_ws_available_caps = connected.available_caps;
+                devtools_ws_selected_session_id = Some(connected.selected_session_id);
+                devtools_ws = Some(connected.devtools);
             }
 
             let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
@@ -12166,19 +12126,19 @@ fn devtools_select_session_id(
     ))
 }
 
-fn run_script_over_devtools_ws(
-    out_dir: &Path,
+struct ConnectedDevtoolsWs {
+    devtools: DevtoolsOps,
+    selected_session_id: String,
+    available_caps: Vec<String>,
+}
+
+fn connect_devtools_ws_tooling(
     ws_url: &str,
     token: &str,
-    session_id: Option<&str>,
-    script_json: serde_json::Value,
-    dump_bundle: bool,
-    exit_after_run: bool,
+    want_session_id: Option<&str>,
     timeout_ms: u64,
     poll_ms: u64,
-    script_result_path: &Path,
-    capabilities_check_path: &Path,
-) -> Result<(UiScriptResultV1, Option<PathBuf>), String> {
+) -> Result<ConnectedDevtoolsWs, String> {
     use crate::transport::{
         ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
     };
@@ -12199,6 +12159,7 @@ fn run_script_over_devtools_ws(
         "devtools.bundles".to_string(),
         "devtools.sessions".to_string(),
     ];
+
     let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))?;
     let devtools = DevtoolsOps::new(client);
 
@@ -12209,28 +12170,52 @@ fn run_script_over_devtools_ws(
         serde_json::from_value::<DevtoolsSessionListV1>(msg.payload).ok()
     })?;
 
-    let selected_session_id = devtools_select_session_id(&sessions, session_id)?;
+    let selected_session_id = devtools_select_session_id(&sessions, want_session_id)?;
     devtools.set_default_session_id(Some(selected_session_id.clone()));
+
+    let mut available_caps: Vec<String> = sessions
+        .sessions
+        .iter()
+        .find(|s| s.session_id == selected_session_id)
+        .map(|s| s.capabilities.clone())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|c| normalize_capability_string(&c))
+        .collect();
+    available_caps.sort();
+    available_caps.dedup();
+
+    Ok(ConnectedDevtoolsWs {
+        devtools,
+        selected_session_id,
+        available_caps,
+    })
+}
+
+fn run_script_over_devtools_ws(
+    out_dir: &Path,
+    ws_url: &str,
+    token: &str,
+    session_id: Option<&str>,
+    script_json: serde_json::Value,
+    dump_bundle: bool,
+    exit_after_run: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    script_result_path: &Path,
+    capabilities_check_path: &Path,
+) -> Result<(UiScriptResultV1, Option<PathBuf>), String> {
+    let connected = connect_devtools_ws_tooling(ws_url, token, session_id, timeout_ms, poll_ms)?;
+    let devtools = connected.devtools;
+    let selected_session_id = connected.selected_session_id;
 
     let required_caps = script_required_capabilities_value(&script_json);
     if !required_caps.is_empty() {
-        let mut available_caps: Vec<String> = sessions
-            .sessions
-            .iter()
-            .find(|s| s.session_id == selected_session_id)
-            .map(|s| s.capabilities.clone())
-            .unwrap_or_default()
-            .into_iter()
-            .filter_map(|c| normalize_capability_string(&c))
-            .collect();
-        available_caps.sort();
-        available_caps.dedup();
-
         gate_required_capabilities_with_script_result(
             capabilities_check_path,
             script_result_path,
             &required_caps,
-            &available_caps,
+            &connected.available_caps,
             "devtools_ws",
         )?;
     }
