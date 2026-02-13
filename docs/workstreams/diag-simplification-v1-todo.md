@@ -71,6 +71,7 @@ Evidence pointers:
   - [ ] stable `reason_code`
   - [ ] bounded structured evidence (not just "timeout")
 - [x] Add a "capabilities missing" failure mode that is explicit and immediate.
+- [x] Ensure tooling-side failures/timeouts write a local `script.result.json` with stable `reason_code` (avoid "no artifact + timeout").
 
 ## Phase 5: Artifact format v2 (manifest + chunks)
 
