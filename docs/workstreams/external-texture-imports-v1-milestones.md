@@ -32,6 +32,7 @@ Evidence:
 - [x] EXT-m1-100 Web copy path exists (GPU copy, no CPU readback):
       `ExternalImageSource` → `Queue::copy_external_image_to_texture` → imported render target.
   - Evidence:
+    - `tools/diag-scripts/external-texture-imports-web-copy.json`
     - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
     - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
 
@@ -79,4 +80,5 @@ Evidence:
 - [ ] EXT-web-perf-131 Web GPU copy path perf baseline (when stable).
   - Evidence:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+    - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)
     - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
