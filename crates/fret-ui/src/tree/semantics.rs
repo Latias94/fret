@@ -1,7 +1,8 @@
 use super::*;
 
 pub(super) fn validate_semantics_if_enabled(snapshot: &SemanticsSnapshot) {
-    if std::env::var_os("FRET_VALIDATE_SEMANTICS").is_none() {
+    let config = crate::runtime_config::ui_runtime_config();
+    if !config.validate_semantics {
         return;
     }
 
@@ -12,7 +13,7 @@ pub(super) fn validate_semantics_if_enabled(snapshot: &SemanticsSnapshot) {
             "semantics validation failed (set FRET_VALIDATE_SEMANTICS_PANIC=1 to panic)"
         );
 
-        if std::env::var_os("FRET_VALIDATE_SEMANTICS_PANIC").is_some() {
+        if config.validate_semantics_panic {
             panic!("semantics validation failed: {err:?}");
         }
     }

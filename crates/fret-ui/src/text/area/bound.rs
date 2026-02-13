@@ -104,8 +104,18 @@ impl BoundTextArea {
         }
         self.last_revision = revision;
 
-        let Some(text) = app.models().get_cloned(&self.model) else {
-            return;
+        let text = match app.models().try_get_cloned(&self.model) {
+            Ok(Some(text)) => text,
+            Ok(None) => return,
+            Err(err) => {
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    ?err,
+                    model_id = ?self.model.id(),
+                    "text_area: failed to read bound model"
+                );
+                return;
+            }
         };
 
         if force || !self.dirty_since_sync {

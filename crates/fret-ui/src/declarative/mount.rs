@@ -6,16 +6,11 @@ use super::host_widget::ElementHostWidget;
 use super::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
 fn keep_alive_view_cache_scratch_disabled() -> bool {
-    static DISABLED: OnceLock<bool> = OnceLock::new();
-    *DISABLED.get_or_init(|| {
-        std::env::var_os("FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE")
-            .is_some_and(|v| !v.is_empty() && v != "0")
-    })
+    crate::runtime_config::ui_runtime_config().keep_alive_view_cache_scratch_disabled
 }
 
 #[cfg(feature = "unstable-retained-bridge")]
@@ -276,13 +271,16 @@ where
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
 
+            let mut root_stack = crate::element::StackProps::default();
+            root_stack.layout.size.width = crate::element::Length::Fill;
+            root_stack.layout.size.height = crate::element::Length::Fill;
             let inserted = window_frame
                 .instances
                 .insert(
                     root_node,
                     ElementRecord {
                         element: root_id,
-                        instance: ElementInstance::Stack(StackProps::default()),
+                        instance: ElementInstance::Stack(root_stack),
                         semantics_decoration: None,
                     },
                 )

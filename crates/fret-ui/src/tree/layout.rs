@@ -507,8 +507,7 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
-        let profile_layout_all = std::env::var_os("FRET_LAYOUT_ALL_PROFILE")
-            .is_some_and(|v| !v.is_empty() && v != "0")
+        let profile_layout_all = crate::runtime_config::ui_runtime_config().layout_all_profile
             && pass_kind == LayoutPassKind::Final;
         let profile_started = profile_layout_all.then(Instant::now);
         let mut t_invalidate_scroll_handle_bindings: Option<Duration> = None;
@@ -1066,14 +1065,14 @@ impl<H: UiHost> UiTree<H> {
         };
         let Some(element) = self.node_element(focused) else {
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_focus_repair {
                 eprintln!("focus_repair: focused={focused:?} has no element");
             }
             return;
         };
         let Some(canonical) = crate::elements::node_for_element(app, window, element) else {
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_focus_repair {
                 eprintln!(
                     "focus_repair: focused={focused:?} element={element:?} has no canonical node",
                 );
@@ -1081,7 +1080,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         #[cfg(debug_assertions)]
-        if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+        if crate::runtime_config::ui_runtime_config().debug_focus_repair {
             eprintln!(
                 "focus_repair: focused={focused:?} element={element:?} canonical={canonical:?} canonical_exists={}",
                 self.node_exists(canonical)
@@ -1488,19 +1487,17 @@ impl<H: UiHost> UiTree<H> {
     ) {
         use std::sync::atomic::{AtomicU32, Ordering};
 
-        if std::env::var_os("FRET_TAFFY_DUMP").is_none() {
+        let config = crate::runtime_config::ui_runtime_config();
+        let Some(taffy_dump) = config.taffy_dump.as_ref() else {
             return;
-        }
+        };
 
         static DUMP_COUNT: AtomicU32 = AtomicU32::new(0);
-        let dump_max: Option<u32> =
-            if std::env::var("FRET_TAFFY_DUMP_ONCE").ok().as_deref() == Some("1") {
-                Some(1)
-            } else {
-                std::env::var("FRET_TAFFY_DUMP_MAX")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-            };
+        let dump_max: Option<u32> = if config.taffy_dump_once {
+            Some(1)
+        } else {
+            taffy_dump.max
+        };
         if let Some(max) = dump_max {
             let prev = DUMP_COUNT.fetch_add(1, Ordering::SeqCst);
             if prev >= max {
@@ -1508,19 +1505,19 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT")
-            && !format!("{root:?}").contains(&filter)
-        {
-            return;
+        if let Some(filter) = taffy_dump.root_filter.as_ref() {
+            if !format!("{root:?}").contains(filter) {
+                return;
+            }
         }
 
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
         // stable element label (e.g. a `SemanticsProps.label`) than by ephemeral `NodeId`s.
-        let dump_root = if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT_LABEL") {
+        let dump_root = if let Some(filter) = taffy_dump.root_label_filter.as_ref() {
             let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
                 .map(|r| format!("{:?}", r.instance))
                 .unwrap_or_default();
-            if root_label.contains(&filter) {
+            if root_label.contains(filter) {
                 root
             } else {
                 let mut stack: Vec<NodeId> = vec![root];
@@ -1536,7 +1533,7 @@ impl<H: UiHost> UiTree<H> {
                         crate::declarative::frame::element_record_for_node(app, window, node)
                             .map(|r| format!("{:?}", r.instance))
                             .unwrap_or_default();
-                    if label.contains(&filter) {
+                    if label.contains(filter) {
                         found = Some(node);
                         break;
                     }
@@ -1556,9 +1553,7 @@ impl<H: UiHost> UiTree<H> {
             root
         };
 
-        let out_dir = std::env::var("FRET_TAFFY_DUMP_DIR")
-            .ok()
-            .unwrap_or_else(|| ".fret/taffy-dumps".to_string());
+        let out_dir = taffy_dump.out_dir.clone();
 
         let frame = app.frame_id().0;
         let root_slug: String = format!("{dump_root:?}")
@@ -1733,8 +1728,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let profile_layout =
-            std::env::var_os("FRET_LAYOUT_PROFILE").is_some_and(|v| !v.is_empty() && v != "0");
+        let profile_layout = crate::runtime_config::ui_runtime_config().layout_profile;
         let total_started = profile_layout.then(Instant::now);
 
         let sf = scale_factor;
@@ -2063,9 +2057,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let forbid_fallback_solves =
-            std::env::var_os("FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES").is_some();
+            crate::runtime_config::ui_runtime_config().layout_forbid_widget_fallback_solves;
         let trace_fallback_solves =
-            std::env::var_os("FRET_LAYOUT_TRACE_WIDGET_FALLBACK_SOLVES").is_some();
+            crate::runtime_config::ui_runtime_config().layout_trace_widget_fallback_solves;
 
         if trace_fallback_solves {
             let label = crate::declarative::frame::element_record_for_node(app, window, node)
