@@ -52,6 +52,7 @@ Active workstreams:
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
 - `docs/workstreams/diag-simplification-v1.md`
+- `docs/workstreams/diag-simplification-v1-m0-baseline.md`
 - `docs/workstreams/diag-simplification-v1-todo.md`
 - `docs/workstreams/diag-simplification-v1-milestones.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`

@@ -28,6 +28,7 @@ Related docs:
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - ADR: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - Existing workstream: `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
+- M0 baseline: `docs/workstreams/diag-simplification-v1-m0-baseline.md`
 
 ## Goals
 

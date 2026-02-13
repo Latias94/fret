@@ -5,17 +5,22 @@ small, fearless refactors.
 
 ## Phase 0: Inventory + gates (prep)
 
-- [ ] Document current transport capability matrix (filesystem vs WS).
-- [ ] Define a stable registry policy for:
-  - [ ] `reason_code` naming and backward-compat rules
-  - [ ] `capabilities` naming (namespaced strings) and ownership
-- [ ] Add/confirm a small nextest gate set for diag tooling:
-  - [ ] `cargo nextest run -p fret-diag-protocol`
-  - [ ] `cargo nextest run -p fret-diag-ws` (if applicable)
-  - [ ] `cargo nextest run -p fret-diag` (tooling unit tests)
-- [ ] Add a minimal "WS export materialization" smoke test (tooling only; no browser required):
+- [x] Document current transport capability matrix (filesystem vs WS).
+- [x] Define a stable registry policy for:
+  - [x] `reason_code` naming and backward-compat rules
+  - [x] `capabilities` naming (namespaced strings) and ownership
+- [x] Add/confirm a small nextest gate set for diag tooling:
+  - [x] `cargo nextest run -p fret-diag-protocol`
+  - [x] `cargo nextest run -p fret-diag-ws --no-tests` (currently no tests; compile gate only)
+  - [x] `cargo nextest run -p fret-diag` (tooling unit tests)
+- [x] Add a minimal "WS export materialization" smoke test (tooling only; no browser required):
   - feed a `bundle.dumped` message containing embedded bundle JSON
   - assert a local `bundle.json` directory is produced
+
+Evidence pointers:
+
+- M0 baseline note: `docs/workstreams/diag-simplification-v1-m0-baseline.md`
+- WS materialization smoke tests: `crates/fret-diag/src/lib.rs` (`materialize_devtools_bundle_dumped_*`)
 
 ## Phase 1: Tooling transport abstraction
 

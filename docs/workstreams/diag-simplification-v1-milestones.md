@@ -6,9 +6,9 @@ Status: Active (workstream tracker)
 
 Exit criteria:
 
-- A written capability/behavior matrix for filesystem vs WS transports.
-- A small set of nextest gates in place for protocol/tooling.
-- A documented policy for `reason_code` and `capabilities` naming/backward-compat.
+- [x] A written capability/behavior matrix for filesystem vs WS transports.
+- [x] A small set of nextest gates in place for protocol/tooling.
+- [x] A documented policy for `reason_code` and `capabilities` naming/backward-compat.
 
 ## M1: Transport abstraction (tooling)
 
