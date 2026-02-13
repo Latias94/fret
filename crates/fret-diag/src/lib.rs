@@ -12549,6 +12549,99 @@ fn wait_for_devtools_message<T>(
     }
 }
 
+fn wait_for_devtools_bundle_dumped(
+    devtools: &DevtoolsOps,
+    selected_session_id: &str,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<DevtoolsBundleDumpedV1, String> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
+
+    let mut chunk_exported_unix_ms: Option<u64> = None;
+    let mut chunk_out_dir: Option<String> = None;
+    let mut chunk_dir: Option<String> = None;
+    let mut chunks: Vec<Option<String>> = Vec::new();
+
+    loop {
+        while let Some(msg) = devtools.try_recv() {
+            if msg.r#type != "bundle.dumped"
+                || msg.session_id.as_deref() != Some(selected_session_id)
+            {
+                continue;
+            }
+            let Ok(dumped) = serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload) else {
+                continue;
+            };
+
+            if dumped.bundle.is_some() {
+                return Ok(dumped);
+            }
+
+            if let (
+                Some(chunk),
+                Some(chunk_index),
+                Some(chunk_count_value),
+            ) = (
+                dumped.bundle_json_chunk.clone(),
+                dumped.bundle_json_chunk_index,
+                dumped.bundle_json_chunk_count,
+            ) {
+                if chunk_exported_unix_ms.is_none() {
+                    chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
+                    chunk_out_dir = Some(dumped.out_dir.clone());
+                    chunk_dir = Some(dumped.dir.clone());
+                    chunks = vec![None; chunk_count_value.max(1) as usize];
+                }
+
+                if chunk_exported_unix_ms != Some(dumped.exported_unix_ms)
+                    || chunk_dir.as_deref() != Some(dumped.dir.as_str())
+                {
+                    // A new dump started (or messages interleaved); reset to the latest seen.
+                    chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
+                    chunk_out_dir = Some(dumped.out_dir.clone());
+                    chunk_dir = Some(dumped.dir.clone());
+                    chunks = vec![None; chunk_count_value.max(1) as usize];
+                }
+
+                if let Some(slot) = chunks.get_mut(chunk_index as usize) {
+                    *slot = Some(chunk);
+                }
+
+                if chunks.iter().all(|c| c.is_some()) {
+                    let mut json = String::new();
+                    for part in chunks.iter().flatten() {
+                        json.push_str(part);
+                    }
+                    let bundle = serde_json::from_str::<serde_json::Value>(&json).map_err(|e| {
+                        format!("bundle.dumped chunked JSON was not valid JSON: {e}")
+                    })?;
+                    return Ok(DevtoolsBundleDumpedV1 {
+                        schema_version: dumped.schema_version,
+                        exported_unix_ms: chunk_exported_unix_ms.unwrap_or(dumped.exported_unix_ms),
+                        out_dir: chunk_out_dir.clone().unwrap_or(dumped.out_dir),
+                        dir: chunk_dir.clone().unwrap_or(dumped.dir),
+                        bundle: Some(bundle),
+                        bundle_json_chunk: None,
+                        bundle_json_chunk_index: None,
+                        bundle_json_chunk_count: None,
+                    });
+                }
+
+                continue;
+            }
+
+            // Non-embedded bundle (native filesystem case): allow materialization to fall back to
+            // reading the runtime's bundle.json.
+            return Ok(dumped);
+        }
+
+        if Instant::now() >= deadline {
+            return Err("timed out waiting for DevTools WS bundle.dumped".to_string());
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
+    }
+}
+
 fn materialize_devtools_bundle_dumped(
     out_dir: &Path,
     dumped: &DevtoolsBundleDumpedV1,
@@ -12597,9 +12690,19 @@ fn materialize_devtools_bundle_dumped(
     }
 
     let dumped_path = export_dir.join("bundle.dumped.json");
+    let dumped_meta = DevtoolsBundleDumpedV1 {
+        schema_version: dumped.schema_version,
+        exported_unix_ms: dumped.exported_unix_ms,
+        out_dir: dumped.out_dir.clone(),
+        dir: dumped.dir.clone(),
+        bundle: None,
+        bundle_json_chunk: None,
+        bundle_json_chunk_index: None,
+        bundle_json_chunk_count: None,
+    };
     write_json_value(
         &dumped_path,
-        &serde_json::to_value(dumped).unwrap_or_else(|_| serde_json::json!({})),
+        &serde_json::to_value(dumped_meta).unwrap_or_else(|_| serde_json::json!({})),
     )?;
     let _ = std::fs::write(out_dir.join("latest.txt"), export_dir_name.as_bytes());
 
@@ -12958,15 +13061,12 @@ fn run_script_over_transport(
         } else {
             connected.devtools.bundle_dump(None, bundle_label);
         }
-        let dumped =
-            match wait_for_devtools_message(&connected.devtools, timeout_ms, poll_ms, |msg| {
-                if msg.r#type != "bundle.dumped"
-                    || msg.session_id.as_deref() != Some(&connected.selected_session_id)
-                {
-                    return None;
-                }
-                serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
-            }) {
+        let dumped = match wait_for_devtools_bundle_dumped(
+            &connected.devtools,
+            &connected.selected_session_id,
+            timeout_ms,
+            poll_ms,
+        ) {
                 Ok(v) => v,
                 Err(err) => {
                     let reason_code = if err.contains("timed out waiting") {
@@ -13044,14 +13144,12 @@ fn dump_bundle_over_transport(
         connected.devtools.bundle_dump(None, bundle_label);
     }
 
-    let dumped = wait_for_devtools_message(&connected.devtools, timeout_ms, poll_ms, |msg| {
-        if msg.r#type != "bundle.dumped"
-            || msg.session_id.as_deref() != Some(&connected.selected_session_id)
-        {
-            return None;
-        }
-        serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
-    })?;
+    let dumped = wait_for_devtools_bundle_dumped(
+        &connected.devtools,
+        &connected.selected_session_id,
+        timeout_ms,
+        poll_ms,
+    )?;
 
     materialize_devtools_bundle_dumped(out_dir, &dumped)
 }
@@ -14523,6 +14621,9 @@ mod tests {
                 "schema_version": 1,
                 "windows": [],
             })),
+            bundle_json_chunk: None,
+            bundle_json_chunk_index: None,
+            bundle_json_chunk_count: None,
         };
 
         let bundle_path =
@@ -14578,6 +14679,9 @@ mod tests {
             out_dir: runtime_root.to_string_lossy().to_string(),
             dir: "456-runtime".to_string(),
             bundle: None,
+            bundle_json_chunk: None,
+            bundle_json_chunk_index: None,
+            bundle_json_chunk_count: None,
         };
 
         let bundle_path =

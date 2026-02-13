@@ -314,6 +314,9 @@ impl State {
                 out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
                 dir: latest,
                 bundle: None,
+                bundle_json_chunk: None,
+                bundle_json_chunk_index: None,
+                bundle_json_chunk_count: None,
             })
             .unwrap_or_else(|_| serde_json::json!({})),
         });
