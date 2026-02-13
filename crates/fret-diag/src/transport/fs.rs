@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use fret_diag_protocol::{DevtoolsBundleDumpedV1, DiagTransportMessageV1};
+use fret_diag_protocol::{
+    DevtoolsBundleDumpedV1, DiagTransportMessageV1, FilesystemCapabilitiesV1,
+};
 
 use crate::util::{now_unix_ms, read_json_value, touch, write_json_value};
 
@@ -65,6 +67,7 @@ struct State {
     cfg: FsDiagTransportConfig,
     emitted_sessions: bool,
     default_session_id: Option<String>,
+    last_emitted_capabilities: Vec<String>,
 
     last_pick_result_stamp: Option<u64>,
     last_script_result_stamp: Option<u64>,
@@ -81,6 +84,7 @@ impl FsDiagTransport {
                 cfg,
                 emitted_sessions: false,
                 default_session_id: Some("fs".to_string()),
+                last_emitted_capabilities: Vec::new(),
                 last_pick_result_stamp: None,
                 last_script_result_stamp: None,
                 last_screenshots_result_stamp: None,
@@ -176,20 +180,58 @@ impl DiagTransport for FsDiagTransport {
 
 impl State {
     fn poll(&mut self, inbox: &DiagInbox) {
-        if !self.emitted_sessions {
-            let session_id = self
-                .default_session_id
-                .as_deref()
-                .unwrap_or("fs")
-                .to_string();
-            inbox.push(fs_single_session_list(&session_id));
-            self.emitted_sessions = true;
-        }
+        self.poll_session_list(inbox);
 
         self.poll_pick_result(inbox);
         self.poll_script_result(inbox);
         self.poll_screenshots_result(inbox);
         self.poll_latest_pointer(inbox);
+    }
+
+    fn poll_session_list(&mut self, inbox: &DiagInbox) {
+        let session_id = self
+            .default_session_id
+            .as_deref()
+            .unwrap_or("fs")
+            .to_string();
+
+        let mut caps: Vec<String> = vec![
+            // Backwards-compatible (legacy, un-namespaced) control plane capabilities.
+            "inspect".to_string(),
+            "pick".to_string(),
+            "scripts".to_string(),
+            "bundles".to_string(),
+            "sessions".to_string(),
+            // Namespaced control plane capabilities (recommended).
+            "devtools.inspect".to_string(),
+            "devtools.pick".to_string(),
+            "devtools.scripts".to_string(),
+            "devtools.bundles".to_string(),
+            "devtools.sessions".to_string(),
+        ];
+
+        let path = self.cfg.out_dir.join("capabilities.json");
+        if let Some(v) = read_json_value(&path) {
+            if let Ok(parsed) = serde_json::from_value::<FilesystemCapabilitiesV1>(v) {
+                for c in parsed.capabilities {
+                    let c = normalize_capability_string(&c);
+                    if !c.is_empty() {
+                        caps.push(c);
+                    }
+                }
+            }
+        }
+
+        caps.sort();
+        caps.dedup();
+
+        if self.emitted_sessions && self.last_emitted_capabilities == caps {
+            return;
+        }
+        self.last_emitted_capabilities = caps.clone();
+
+        inbox.push(fs_single_session_list(&session_id, caps));
+        self.emitted_sessions = true;
     }
 
     fn poll_pick_result(&mut self, inbox: &DiagInbox) {
@@ -276,6 +318,26 @@ impl State {
             .unwrap_or_else(|_| serde_json::json!({})),
         });
     }
+}
+
+fn normalize_capability_string(raw: &str) -> String {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return String::new();
+    }
+    if raw.contains('.') {
+        return raw.to_string();
+    }
+
+    let mapped = match raw {
+        "script_v2" => "diag.script_v2",
+        "screenshot_png" => "diag.screenshot_png",
+        "multi_window" => "diag.multi_window",
+        "pointer_kind_touch" => "diag.pointer_kind_touch",
+        "gesture_pinch" => "diag.gesture_pinch",
+        _ => raw,
+    };
+    mapped.to_string()
 }
 
 fn stamp_is_newer(slot: &mut Option<u64>, stamp: Option<u64>) -> bool {
