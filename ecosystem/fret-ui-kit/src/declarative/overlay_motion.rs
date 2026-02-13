@@ -19,12 +19,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 pub const SHADCN_SLIDE_PX: Px = Px(8.0);
 
-// These ticks assume a ~60fps frame clock.
-pub const SHADCN_MOTION_TICKS_100: u64 = 6;
-pub const SHADCN_MOTION_TICKS_200: u64 = 12;
-pub const SHADCN_MOTION_TICKS_300: u64 = 18;
-pub const SHADCN_MOTION_TICKS_500: u64 = 30;
-
 pub const SHADCN_MOTION_DURATION_100: Duration = Duration::from_millis(100);
 pub const SHADCN_MOTION_DURATION_200: Duration = Duration::from_millis(200);
 pub const SHADCN_MOTION_DURATION_300: Duration = Duration::from_millis(300);

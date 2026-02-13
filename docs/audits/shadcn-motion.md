@@ -73,12 +73,21 @@ Evidence:
 
 ### Timing presets
 
-`overlay_motion.rs` provides frame-count presets assuming ~60fps:
+`overlay_motion.rs` provides wall-clock duration presets (theme overridable):
 
-- `SHADCN_MOTION_TICKS_100` (~100ms)
-- `SHADCN_MOTION_TICKS_200` (~200ms)
-- `SHADCN_MOTION_TICKS_300` (~300ms)
-- `SHADCN_MOTION_TICKS_500` (~500ms)
+- `SHADCN_MOTION_DURATION_100` (100ms)
+- `SHADCN_MOTION_DURATION_200` (200ms)
+- `SHADCN_MOTION_DURATION_300` (300ms)
+- `SHADCN_MOTION_DURATION_500` (500ms)
+
+Duration-based drivers map wall-time to the nearest 60Hz tick budget via
+`ticks_60hz_for_duration(...)`, then apply refresh-rate scaling in the runtime driver so perceived
+timings remain stable on 60/120/144Hz displays.
+
+Theme override keys:
+
+- `duration.shadcn.motion.{100,200,300,500}`
+- `easing.shadcn.motion`
 
 ## Current parity notes
 
