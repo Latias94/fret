@@ -122,7 +122,7 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
     ui.set_focus(Some(trigger0.id));
 
     // Frame 2+: open and settle motion.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -374,7 +374,7 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
         |cx| render(cx, &open),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -634,7 +634,7 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
     ui.set_focus(Some(trigger0.id));
 
     // Frame 2+: open and settle motion.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

@@ -21,6 +21,18 @@ mod radix_web_paths;
 
 use radix_web_paths::radix_web_path;
 
+fn shadcn_ticks_100() -> u64 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_DURATION_100,
+    )
+}
+
+fn shadcn_ticks_200() -> u64 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_DURATION_200,
+    )
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct TimelineGolden {
     version: u32,
@@ -830,7 +842,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
     let _ = app.models_mut().update(&open, |v| *v = true);
 
     // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -1085,7 +1097,7 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
     let _ = app.models_mut().update(&open, |v| *v = true);
 
     // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -1348,7 +1360,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
     assert_eq!(app.models().get_copied(&open), Some(true));
 
     // Frame 2+: open, then settle (motion + item-aligned bookkeeping) before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 4;
+    let settle_frames = shadcn_ticks_100() + 4;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -1595,7 +1607,7 @@ fn radix_web_tooltip_hover_geometry_matches_fret() {
     ui.set_focus(Some(trigger_node));
 
     // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -1765,7 +1777,7 @@ fn radix_web_hover_card_hover_geometry_matches_fret() {
     );
 
     // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -2037,7 +2049,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
     );
 
     // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -2311,7 +2323,7 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
         })
         .expect("update navigation-menu model");
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -2595,7 +2607,7 @@ fn radix_web_menubar_open_geometry_matches_fret() {
     );
 
     // Frame 2+: open, then settle motion before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -2923,7 +2935,7 @@ fn radix_web_menubar_open_geometry_matches_fret() {
     );
 
     // Frame 2+: open, then settle motion before measuring geometry.
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = shadcn_ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -3076,7 +3088,7 @@ fn radix_web_dialog_open_geometry_matches_fret() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -3192,7 +3204,7 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+    let settle_frames = shadcn_ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

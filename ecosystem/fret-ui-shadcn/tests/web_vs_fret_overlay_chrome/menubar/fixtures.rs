@@ -166,7 +166,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                     theme.scheme(),
                     SemanticsRole::MenuItem,
                     "File",
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                    crate::shadcn_motion::ticks_100() + 2,
                     build_shadcn_menubar_demo,
                 );
             }
@@ -197,7 +197,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                             theme.scheme(),
                             SemanticsRole::MenuItem,
                             trigger,
-                            fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                            crate::shadcn_motion::ticks_100() + 2,
                             |cx| build_minimal_file_menu(cx),
                         );
                     }
@@ -209,7 +209,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                             theme.scheme(),
                             SemanticsRole::MenuItem,
                             trigger,
-                            fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                            crate::shadcn_motion::ticks_100() + 2,
                             build_shadcn_menubar_demo,
                         );
                     }
@@ -242,7 +242,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                             theme.scheme(),
                             SemanticsRole::MenuItem,
                             trigger,
-                            fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                            crate::shadcn_motion::ticks_100() + 2,
                             |cx| build_minimal_file_menu(cx),
                         );
                     }
@@ -254,7 +254,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                             theme.scheme(),
                             SemanticsRole::MenuItem,
                             trigger,
-                            fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                            crate::shadcn_motion::ticks_100() + 2,
                             build_shadcn_menubar_demo,
                         );
                     }
@@ -270,8 +270,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                     .as_ref()
                     .expect("submenu_surface_colors requires theme");
                 let bounds = bounds_for_web_theme_or(web_name, theme);
-                let settle_frames =
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+                let settle_frames = crate::shadcn_motion::ticks_100() + 2;
                 assert_menu_subcontent_surface_colors_match_by_portal_slot_theme(
                     web_name,
                     "menubar-sub-content",
@@ -295,8 +294,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                     .as_ref()
                     .expect("submenu_keyboard_shadow_insets requires theme");
                 let bounds = bounds_for_web_theme_or(web_name, theme);
-                let settle_frames =
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+                let settle_frames = crate::shadcn_motion::ticks_100() + 2;
                 assert_menu_subcontent_shadow_insets_match_by_portal_slot_theme_keyboard_submenu(
                     web_name,
                     "menubar-sub-content",
@@ -320,8 +318,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                     .as_ref()
                     .expect("submenu_keyboard_panel_size requires theme");
                 let bounds = bounds_for_web_theme_or(web_name, theme);
-                let settle_frames =
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+                let settle_frames = crate::shadcn_motion::ticks_100() + 2;
                 assert_menu_subcontent_panel_size_matches_by_portal_slot_theme_keyboard_submenu(
                     web_name,
                     "menubar-sub-content",
@@ -345,8 +342,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                     .as_ref()
                     .expect("submenu_keyboard_surface_colors requires theme");
                 let bounds = bounds_for_web_theme_or(web_name, theme);
-                let settle_frames =
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+                let settle_frames = crate::shadcn_motion::ticks_100() + 2;
                 assert_menu_subcontent_surface_colors_match_by_portal_slot_theme_keyboard_submenu(
                     web_name,
                     "menubar-sub-content",
@@ -370,8 +366,7 @@ fn web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures() {
                     .as_ref()
                     .expect("subtrigger_open_chrome_keyboard requires theme");
                 let bounds = bounds_for_web_theme_or(web_name, theme);
-                let settle_frames =
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+                let settle_frames = crate::shadcn_motion::ticks_100() + 2;
                 assert_menu_subtrigger_open_chrome_matches_web_by_portal_slot_theme_keyboard_submenu(
                     web_name,
                     "menubar-sub-trigger",

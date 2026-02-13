@@ -62,7 +62,7 @@ pub(crate) fn assert_navigation_menu_content_chrome_matches(
         bounds_center(trigger.bounds),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         let build_frame = build.clone();
@@ -191,7 +191,7 @@ pub(crate) fn assert_navigation_menu_content_surface_colors_match(
         bounds_center(trigger.bounds),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         let build_frame = build.clone();
@@ -357,7 +357,7 @@ pub(crate) fn assert_navigation_menu_content_shadow_insets_match(
         bounds_center(trigger.bounds),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         let build_frame = build.clone();
@@ -469,7 +469,7 @@ pub(crate) fn assert_navigation_menu_viewport_shadow_insets_match(
         bounds_center(trigger.bounds),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         let build_frame = build.clone();
@@ -586,7 +586,7 @@ pub(crate) fn assert_navigation_menu_viewport_surface_colors_match(
         bounds_center(trigger.bounds),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         let build_frame = build.clone();
@@ -758,7 +758,7 @@ pub(crate) fn assert_navigation_menu_indicator_shadow_insets_match(
         bounds_center(trigger.bounds),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         let build_frame = build.clone();

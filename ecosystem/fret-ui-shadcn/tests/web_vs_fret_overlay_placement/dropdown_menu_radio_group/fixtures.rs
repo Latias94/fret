@@ -74,7 +74,7 @@ fn assert_dropdown_menu_radio_group_menu_content_insets_match(web_name: &str) {
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         let request_semantics = frame == 2 + settle_frames;
         render_frame(
@@ -140,7 +140,7 @@ fn assert_dropdown_menu_radio_group_menu_item_height_matches(web_name: &str) {
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         let request_semantics = frame == 2 + settle_frames;
         render_frame(

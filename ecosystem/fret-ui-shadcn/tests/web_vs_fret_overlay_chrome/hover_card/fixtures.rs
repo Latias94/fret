@@ -81,7 +81,7 @@ fn web_vs_fret_hover_card_overlay_chrome_cases_match_web_fixtures() {
                     "hover-card-content",
                     theme.as_str(),
                     theme.scheme(),
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                    crate::shadcn_motion::ticks_100() + 2,
                     build_shadcn_hover_card_demo_page,
                 );
             }
@@ -92,7 +92,7 @@ fn web_vs_fret_hover_card_overlay_chrome_cases_match_web_fixtures() {
                     "hover-card-content",
                     theme.as_str(),
                     theme.scheme(),
-                    fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+                    crate::shadcn_motion::ticks_100() + 2,
                     build_hover_card,
                 );
             }

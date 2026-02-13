@@ -145,7 +145,7 @@ fn assert_button_group_demo_dropdown_menu_destructive_item_idle_fg_matches_web(
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         render_frame(
             &mut ui,
@@ -251,7 +251,7 @@ fn assert_button_group_demo_dropdown_menu_destructive_focused_item_chrome_matche
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         render_frame(
             &mut ui,
