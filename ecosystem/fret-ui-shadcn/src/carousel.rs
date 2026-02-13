@@ -250,6 +250,9 @@ impl Carousel {
                 if down.button != MouseButton::Left {
                     return false;
                 }
+                if down.hit_is_text_input {
+                    return false;
+                }
                 let start_offset = host
                     .models_mut()
                     .read(&offset_for_down, |v| *v)
