@@ -37,14 +37,41 @@ pub(super) fn preview_breadcrumb(
         )
     };
 
+    fn slugify_section_title(title: &str) -> String {
+        title
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>()
+            .trim_matches('-')
+            .split('-')
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("-")
+    }
+
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        let title_test_id = format!(
+            "ui-gallery-breadcrumb-section-title-{}",
+            slugify_section_title(title)
+        );
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
+            move |cx| {
+                vec![
+                    shadcn::typography::h4(cx, title).test_id(title_test_id),
+                    body,
+                ]
+            },
         )
     };
 
