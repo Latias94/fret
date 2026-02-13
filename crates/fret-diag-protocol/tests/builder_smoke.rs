@@ -1,12 +1,25 @@
-use fret_diag_protocol::UiActionScriptV2;
-use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id};
+use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
+use fret_diag_protocol::{
+    UiActionScriptV2, UiOverlayPlacementTraceQueryV1, UiShortcutRoutingTraceQueryV1,
+};
 
 #[test]
 fn builder_v2_roundtrip_smoke() {
     let script = ScriptV2Builder::new()
         .click(test_id("todo-input"))
         .type_text("hello")
+        .ime_preedit("東", Some((0, 3)))
+        .assert(text_composition_is(test_id("todo-input"), true))
+        .ime_commit("東京")
         .press_key("enter")
+        .wait_shortcut_routing_trace(
+            UiShortcutRoutingTraceQueryV1 {
+                outcome: Some("command_dispatched".to_string()),
+                ..UiShortcutRoutingTraceQueryV1::default()
+            },
+            60,
+        )
+        .wait_overlay_placement_trace(UiOverlayPlacementTraceQueryV1::default(), 60)
         .wait_exists(test_id("todo-item-4-done"), 60)
         .assert_exists(test_id("todo-item-4-done"))
         .wait_exists(role_and_name("button", "Remove"), 60)

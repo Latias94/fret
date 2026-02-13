@@ -1,66 +1,164 @@
 {
+  "meta": {
+    "required_capabilities": [
+      "diag.screenshot_png"
+    ]
+  },
   "schema_version": 1,
   "steps": [
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "combobox" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-combobox" } },
     {
-      "type": "wait_until",
+      "key": "escape",
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "combobox",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-combobox",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
+        "target": {
+          "id": "ui-gallery-page-combobox",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-combobox-trigger" }
+        "target": {
+          "id": "ui-gallery-combobox-trigger",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-combobox-selected-label" }
+        "target": {
+          "id": "ui-gallery-combobox-selected-label",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      "key": "escape",
+      "type": "press_key"
     },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-combobox-commit-before" },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-combobox-trigger" } },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "type_text", "text": "banana" },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "press_key", "key": "enter" },
-    { "type": "wait_frames", "n": 20 },
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      "n": 2,
+      "type": "wait_frames"
     },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-combobox-commit-after" },
-    { "type": "capture_bundle", "label": "ui-gallery-combobox-commit" }
+    {
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-combobox-commit-before",
+      "type": "capture_screenshot"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-combobox-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "text": "banana",
+      "type": "type_text"
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "key": "enter",
+      "type": "press_key"
+    },
+    {
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-combobox-commit-after",
+      "type": "capture_screenshot"
+    },
+    {
+      "label": "ui-gallery-combobox-commit",
+      "type": "capture_bundle"
+    }
   ]
 }

@@ -7,21 +7,31 @@ scope: diagnostics, automation, scripts, tooling
 
 # Diagnostics Extensibility + Capabilities v1 - Script Tooling
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Goal: keep JSON scripts as the portable artifact, while providing tooling that makes scripts maintainable at scale
 (reviewable diffs, CI-friendly checks, and shrink/minimize workflows).
 
-## Commands to add (small, checkable deliverables)
+## Commands (implemented)
 
 ### 1) `diag script normalize`
 
 Parse a script JSON (v1/v2) and re-emit pretty JSON with stable formatting.
 
+Command:
+
+- `fretboard diag script normalize <script.json> [--write|--check]`
+
+Behavior:
+
+- Canonicalizes JSON key order recursively and emits `serde_json::to_string_pretty` output.
+- Normalized output always ends with `\n` (and treats `\r\n` and `\n` as equivalent on input).
+
 Outputs:
 
 - normalized JSON on stdout (optional),
 - or write-in-place with `--write`.
+- `--check` exits with code 1 when the file is not normalized.
 
 Why:
 
@@ -34,12 +44,20 @@ Validate:
 
 - JSON schema version is known,
 - step variants and fields parse,
-- unknown fields are either tolerated (for forward-compat rules) or flagged based on strictness mode.
+- unknown fields follow the protocol crate’s `serde` rules (strictness modes are TBD).
+
+Command:
+
+- `fretboard diag script validate <script.json>... [--check-out <path>] [--json]`
 
 Outputs:
 
-- `check.script_schema.json` evidence file for CI,
+- `check.script_schema.json` evidence file for CI (default: under `--dir`, typically `target/fret-diag/`),
 - clear human error messages (path + reason).
+
+Exit code:
+
+- exits with code 1 if any script fails to parse/validate.
 
 ### 3) `diag script lint`
 
@@ -49,24 +67,46 @@ Script-only lint (no app required):
 - can flag discouraged patterns (raw coordinate injection when semantics selector exists),
 - can flag missing metadata (optional, based on repo policy).
 
+Command:
+
+- `fretboard diag script lint <script.json>... [--check-out <path>] [--json]`
+
 Outputs:
 
 - `check.script_lint.json`.
+
+Exit code:
+
+- exits with code 1 if any script fails to parse/lint (tooling errors).
 
 ### 4) `diag script shrink` (delta debugging)
 
 Given:
 
 - a failing script,
-- a deterministic runner invocation (`diag run --launch ...` or devtools-ws transport),
+- a deterministic runner invocation (filesystem transport; `diag run --launch ...`),
 
 Perform a bounded search to produce a smaller script that still reproduces the failure.
 
+Command:
+
+- `fretboard diag script shrink <script.json> [--shrink-out <path>] [--shrink-any-fail] [--shrink-match-reason-code <code>] [--shrink-match-reason <reason>] [--shrink-min-steps <n>] [--shrink-max-iters <n>] [--reuse-launch] [--launch -- <cmd...>]`
+
+Behavior:
+
+- Runs the script once to record the baseline failure signal.
+- Minimizes by removing contiguous step chunks while the failure signal still matches.
+- Default match rule:
+  - prefer `reason_code` when present,
+  - otherwise match `reason`,
+  - use `--shrink-any-fail` to accept any failure (stage=`failed`) regardless of reason.
+- Requires either an already-running app, or `--reuse-launch --launch -- <cmd...>` (to avoid restarting the app on every attempt).
+
 Outputs:
 
-- `repro.min.json`,
-- a summary of removals (step indices),
-- last failing bundle + trace, if available.
+- `target/fret-diag/shrink/script.min.json` (default) or `--shrink-out <path>`,
+- `target/fret-diag/shrink/shrink.summary.json` (summary: baseline, final, removed step indices, search stats),
+- the app may also auto-dump bundles/traces into `--dir` (depending on script + runtime settings).
 
 Constraints:
 
@@ -79,5 +119,46 @@ If typed templates are used (scriptgen):
 
 - `scriptgen write <name> --out <tmp>` then `diag script normalize --check` against the committed script.
 
+In-repo suites can also be checked as a closure (“template ↔ JSON”):
+
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
+
 The goal is to treat scripts like compiled assets: authored or generated, but always reviewable and reproducible.
 
+## Bundle lint (post-run sanity checks)
+
+Bundle lint is intentionally separate from script-only lint: it validates the *captured evidence*.
+
+Command:
+
+- `fretboard diag lint <bundle_dir|bundle.json>`
+
+Behavior:
+
+- emits `check.lint.json` (default) next to `bundle.json`,
+- exits with code 1 when error-level findings exist,
+- supports `--warmup-frames <n>` to ignore early transient frames.
+
+Initial checks (expand over time, but keep codes stable):
+
+- `semantics.duplicate_test_id`,
+- `semantics.active_descendant_missing`,
+- focused/active out-of-window geometry sanity,
+- empty/zero-size bounds on focused or `test_id` nodes.
+
+## Suite summary (batch runs)
+
+When running a suite (`fretboard diag suite ...`), the CLI writes a one-file overview:
+
+- `suite.summary.json` (under the diagnostics output dir, e.g. `.fret/diag/`)
+
+This summary is intentionally “AI-friendly” and “human-first”:
+
+- per-script rows (stage/reason + last bundle dir),
+- stage/reason-code aggregates,
+- small evidence highlights (hit-test blocking reasons, overlay chosen sides, IME event kinds, focus mismatch counts).
+
+Goal: when a suite fails (layout sweep, component conformance), you should be able to answer
+“which scripts failed, and why?” without opening every bundle directory.

@@ -290,6 +290,7 @@ fn command_text_input<H: UiHost>(
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    test_id: Option<Arc<str>>,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
     height: Px,
@@ -322,6 +323,7 @@ fn command_text_input<H: UiHost>(
     let mut props = TextInputProps::new(model);
     props.a11y_label = Some(a11y_label);
     props.a11y_role = a11y_role;
+    props.test_id = test_id;
     props.placeholder = placeholder;
     props.active_descendant = active_descendant;
     props.expanded = expanded;
@@ -764,6 +766,7 @@ impl CommandInput {
                     a11y_label,
                     placeholder,
                     Some(SemanticsRole::ComboBox),
+                    None,
                     None,
                     None,
                     input_h,
@@ -1308,6 +1311,17 @@ impl CommandList {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandPaletteA11ySelectedMode {
+    /// Use `aria-selected` to reflect the currently highlighted/active row.
+    Active,
+    /// Use `aria-selected` to reflect the committed selection (`checked`) instead of highlight.
+    ///
+    /// This is a better fit for combobox/listbox conformance where active highlight is exposed via
+    /// `active_descendant` on the input.
+    Checked,
+}
+
 #[derive(Clone)]
 pub struct CommandPalette {
     model: Model<String>,
@@ -1319,6 +1333,9 @@ pub struct CommandPalette {
     placeholder: Option<Arc<str>>,
     input_role: Option<SemanticsRole>,
     input_expanded: Option<bool>,
+    input_test_id: Option<Arc<str>>,
+    list_test_id: Option<Arc<str>>,
+    a11y_selected_mode: CommandPaletteA11ySelectedMode,
     input_wrapper_h: MetricRef,
     input_h: MetricRef,
     input_icon_size: MetricRef,
@@ -1557,6 +1574,9 @@ impl CommandPalette {
             placeholder: None,
             input_role: Some(SemanticsRole::ComboBox),
             input_expanded: None,
+            input_test_id: None,
+            list_test_id: None,
+            a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
             input_wrapper_h: Px(36.0).into(),
             input_h: Px(40.0).into(),
             input_icon_size: Px(16.0).into(),
@@ -1652,6 +1672,21 @@ impl CommandPalette {
         self
     }
 
+    pub fn input_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.input_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn list_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.list_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn a11y_selected_mode(mut self, mode: CommandPaletteA11ySelectedMode) -> Self {
+        self.a11y_selected_mode = mode;
+        self
+    }
+
     /// Installs a stable `test_id` on the command input (for automation).
     pub fn test_id_input(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_input = Some(id.into());
@@ -1714,6 +1749,9 @@ impl CommandPalette {
 
             let disabled = self.disabled;
             let wrap = self.wrap;
+            let input_test_id = self.input_test_id.clone();
+            let list_test_id = self.list_test_id.clone();
+            let a11y_selected_mode = self.a11y_selected_mode;
             let test_id_input = self.test_id_input;
             let test_id_item_prefix = self.test_id_item_prefix;
             let query = cx
@@ -1965,7 +2003,7 @@ impl CommandPalette {
                         let active_for_row = active.clone();
                         cx.keyed((base, occ), |cx| {
                             let enabled = disabled_flags.get(idx).copied() == Some(false);
-                            let selected = active_idx.is_some_and(|i| i == idx);
+                            let active_row = active_idx.is_some_and(|i| i == idx);
 
                             let label = item.label.clone();
                             let value = item.value.clone();
@@ -1977,6 +2015,11 @@ impl CommandPalette {
                             let on_select = item.on_select.clone();
                             let children = item.children;
                             let text_style = text_style.clone();
+
+                            let selected_a11y = match a11y_selected_mode {
+                                CommandPaletteA11ySelectedMode::Active => active_row,
+                                CommandPaletteA11ySelectedMode::Checked => checked,
+                            };
 
                             let test_id_for_row = test_id_item_prefix.clone().map(|prefix| {
                                 let seg = sanitize_test_id_segment(value.as_ref());
@@ -1998,7 +2041,7 @@ impl CommandPalette {
                                         role: Some(SemanticsRole::ListBoxOption),
                                         label: Some(label.clone()),
                                         test_id: test_id.clone(),
-                                        selected,
+                                        selected: selected_a11y,
                                         ..Default::default()
                                     }
                                     .with_collection_position(idx, item_count),
@@ -2033,7 +2076,7 @@ impl CommandPalette {
 
                                     let hovered = st.hovered && !st.pressed;
                                     let pressed = st.pressed;
-                                    let bg = if selected {
+                                    let bg = if active_row {
                                         Some(bg_selected)
                                     } else if hovered || pressed {
                                         Some(bg_hover)
@@ -2203,6 +2246,7 @@ impl CommandPalette {
                 a11y_label,
                 self.placeholder.clone(),
                 self.input_role,
+                input_test_id.clone(),
                 active_descendant,
                 self.input_expanded,
                 input_h,
@@ -2446,6 +2490,11 @@ impl CommandPalette {
                 labelled_by_element: list_labelled_by,
                 ..Default::default()
             });
+            let list = if let Some(test_id) = list_test_id.clone() {
+                list.test_id(test_id)
+            } else {
+                list
+            };
 
             Command::new(vec![cx.container(wrapper, move |_cx| vec![input]), list])
                 .refine_style(self.chrome)

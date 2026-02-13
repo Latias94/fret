@@ -39,10 +39,10 @@ Active workstreams:
 - `docs/workstreams/gesture-recognizers-v1-milestones.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
-- `docs/workstreams/diag-extensibility-and-capabilities-v1.md`
 - `docs/workstreams/external-texture-imports-v1.md`
 - `docs/workstreams/external-texture-imports-v1-todo.md`
 - `docs/workstreams/external-texture-imports-v1-milestones.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/milestones.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
@@ -50,6 +50,7 @@ Active workstreams:
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`

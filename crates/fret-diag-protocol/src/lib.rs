@@ -66,6 +66,32 @@ pub struct UiScriptMetaV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiImeEventV1 {
+    Enabled,
+    Disabled,
+    Commit {
+        text: String,
+    },
+    /// IME preedit update.
+    ///
+    /// `cursor_bytes` is a byte-indexed range in the preedit string (begin, end).
+    /// When `None`, the cursor should be hidden.
+    Preedit {
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cursor_bytes: Option<(u32, u32)>,
+    },
+    /// Delete text surrounding the cursor or selection.
+    ///
+    /// Offsets are expressed in UTF-8 bytes.
+    DeleteSurrounding {
+        before_bytes: u32,
+        after_bytes: u32,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -323,6 +349,13 @@ pub enum UiActionStepV2 {
     TypeText {
         text: String,
     },
+    /// Inject an IME event into the focused text surface.
+    ///
+    /// This is intended for deterministic regression scripts that need to exercise text/IME
+    /// composition without depending on platform IME integrations.
+    Ime {
+        event: UiImeEventV1,
+    },
     WaitFrames {
         n: u32,
     },
@@ -330,6 +363,25 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
+        timeout_frames: u32,
+    },
+    /// Wait until the shortcut routing diagnostics trace contains an entry matching `query`.
+    ///
+    /// This is intended for deterministic scripts that need to assert keyboard routing outcomes
+    /// (e.g. reserved-for-IME) without depending on screenshots or ad-hoc logs.
+    WaitShortcutRoutingTrace {
+        query: UiShortcutRoutingTraceQueryV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    /// Wait until the overlay placement trace contains an entry matching `query`.
+    ///
+    /// This is intended for overlay-driven components (Select/Combobox/Menus) where correctness
+    /// depends on collision/flip/shift behavior and we want failures to be explainable without
+    /// relying on screenshots.
+    WaitOverlayPlacementTrace {
+        query: UiOverlayPlacementTraceQueryV1,
+        #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
     Assert {
@@ -368,6 +420,20 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_click_stable_frames")]
         stable_frames: u32,
         #[serde(default = "default_click_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    /// Wait until a target's semantics bounds have remained stable for `stable_frames`.
+    ///
+    /// This is useful for overlays/virtualized surfaces where measured bounds can jump across
+    /// frames (estimate -> measured, placement flip/shift, scroll settle), and you want a
+    /// deterministic “ready” point without relying on wall-clock sleeps.
+    WaitBoundsStable {
+        target: UiSelectorV1,
+        #[serde(default = "default_bounds_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_bounds_stable_max_move_px")]
         max_move_px: f32,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
@@ -625,6 +691,14 @@ fn default_click_stable_max_move_px() -> f32 {
     1.0
 }
 
+fn default_bounds_stable_frames() -> u32 {
+    2
+}
+
+fn default_bounds_stable_max_move_px() -> f32 {
+    1.0
+}
+
 fn default_capture_screenshot_timeout_frames() -> u32 {
     300
 }
@@ -713,6 +787,53 @@ pub enum UiPredicateV1 {
     CheckedIs {
         target: UiSelectorV1,
         checked: bool,
+    },
+    SelectedIs {
+        target: UiSelectorV1,
+        selected: bool,
+    },
+    /// True when the target exists and its semantics reports whether it currently has an IME
+    /// composition range.
+    ///
+    /// Notes:
+    /// - This checks whether `SemanticsNode.text_composition` is `Some(_)`.
+    /// - Some platforms/widgets may omit composition ranges even while composing; treat this
+    ///   predicate as best-effort and gate it behind appropriate suites.
+    TextCompositionIs {
+        target: UiSelectorV1,
+        composing: bool,
+    },
+    /// True when the diagnostics runtime has a window-level IME cursor area snapshot.
+    ///
+    /// Notes:
+    /// - This reads `WindowTextInputSnapshot.ime_cursor_area`.
+    /// - Coordinates are window logical pixels.
+    ImeCursorAreaIsSome {
+        is_some: bool,
+    },
+    /// True when the window-level IME cursor area snapshot is within the current window bounds.
+    ///
+    /// This is a coarse regression gate for IME geometry bugs (caret/candidate window
+    /// teleportation, negative coordinates, far-offscreen rects).
+    ImeCursorAreaWithinWindow {
+        #[serde(default)]
+        padding_px: f32,
+        /// Optional per-edge padding (added on top of `padding_px`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        padding_insets_px: Option<UiPaddingInsetsV1>,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the window-level IME cursor area snapshot has at least the specified size.
+    ///
+    /// This can catch "zero rect" bugs where the IME caret geometry is missing meaningful size.
+    ImeCursorAreaMinSize {
+        #[serde(default)]
+        min_w_px: f32,
+        #[serde(default)]
+        min_h_px: f32,
+        #[serde(default)]
+        eps_px: f32,
     },
     CheckedIsNone {
         target: UiSelectorV1,
@@ -1061,6 +1182,10 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub click_stable_trace: Vec<UiClickStableTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -1123,18 +1248,118 @@ pub struct UiHitTestTraceEntryV1 {
     pub intended_bounds: Option<UiRectV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_node_id: Option<u64>,
+    /// Debug-only path from the root to `hit_node_id` (inclusive).
+    ///
+    /// Treat node ids as in-run references only; they are not stable across runs.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hit_node_path: Vec<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_semantics_node_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_semantics_test_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub includes_intended: Option<bool>,
+    /// Best-effort: whether the hit-test path contains the intended node id.
+    ///
+    /// Useful for diagnosing “clicked the right region but an overlay/capture blocked delivery”.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_path_contains_intended: Option<bool>,
+    /// Best-effort attribution for why the intended target did not receive injected input.
+    ///
+    /// This is a convenience field intended for triage tools and AI. Prefer inspecting the raw
+    /// evidence fields when debugging novel cases.
+    ///
+    /// Stable strings (start small; expand only when evidence becomes more actionable):
+    /// - `modal_barrier` (a modal barrier is active)
+    /// - `focus_barrier` (a focus barrier is active)
+    /// - `pointer_capture` (pointer capture is active)
+    /// - `pointer_occlusion` (pointer occlusion blocks underlay input)
+    /// - `no_hit` (hit-test produced no node)
+    /// - `miss` (hit-test landed on a different node)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocking_reason: Option<String>,
+    /// Best-effort in-run root reference associated with `blocking_reason` (when applicable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocking_root: Option<u64>,
+    /// Best-effort layer id associated with `blocking_reason` (when applicable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocking_layer_id: Option<u64>,
+    /// Best-effort human-readable explanation for `blocking_reason`.
+    ///
+    /// This is intended for fast triage and AI; treat it as a hint rather than a contract.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing_explain: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub barrier_root: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focus_barrier_root: Option<u64>,
+    /// The input arbitration snapshot at the time this trace entry was recorded.
+    ///
+    /// These fields are primarily useful for explaining why injected input did not reach the
+    /// underlay (pointer occlusion/capture/focus barriers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    /// Best-effort pointer occlusion owner (in-run references only).
+    ///
+    /// When `pointer_occlusion_layer_id` is present, these fields attempt to resolve the layer
+    /// root to a semantics node for easier triage.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_active: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_multiple_layers: Option<bool>,
+    /// Best-effort pointer capture owner (in-run references only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_element_path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scope_roots: Vec<UiHitTestScopeRootEvidenceV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiClickStableTraceEntryV1 {
+    pub step_index: u32,
+    pub stable_required: u32,
+    pub stable_count: u32,
+    pub moved_px: f32,
+    pub max_move_px: f32,
+    pub remaining_frames: u32,
+    pub hit_test: UiHitTestTraceEntryV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiBoundsStableTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    pub stable_required: u32,
+    pub stable_count: u32,
+    pub moved_px: f32,
+    pub max_move_px: f32,
+    pub remaining_frames: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds: Option<UiRectV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 }
@@ -1236,6 +1461,29 @@ pub struct UiShortcutRoutingTraceEntryV1 {
     pub pending_sequence_len: Option<u32>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlayPlacementTraceKindV1 {
+    AnchoredPanel,
+    PlacedRect,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiShortcutRoutingTraceQueryV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phase: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outcome: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_composing: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_is_text_input: Option<bool>,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiLayoutDirectionV1 {
@@ -1243,7 +1491,7 @@ pub enum UiLayoutDirectionV1 {
     Rtl,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOverlaySideV1 {
     Top,
@@ -1252,7 +1500,7 @@ pub enum UiOverlaySideV1 {
     Right,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOverlayAlignV1 {
     Start,
@@ -1260,7 +1508,7 @@ pub enum UiOverlayAlignV1 {
     End,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOverlayStickyModeV1 {
     Partial,
@@ -1379,6 +1627,30 @@ pub enum UiOverlayPlacementTraceEntryV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         side: Option<UiOverlaySideV1>,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiOverlayPlacementTraceQueryV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<UiOverlayPlacementTraceKindV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overlay_root_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preferred_side: Option<UiOverlaySideV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chosen_side: Option<UiOverlaySideV1>,
+    /// For `kind=anchored_panel`, whether the solver flipped away from `preferred_side`.
+    /// Equivalent to `chosen_side != preferred_side` when both are available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flipped: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<UiOverlayAlignV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sticky: Option<UiOverlayStickyModeV1>,
 }
 
 /// Debug-only snapshot for the wasm textarea IME bridge (ADR 0180).

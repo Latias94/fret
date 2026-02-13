@@ -7,7 +7,7 @@ scope: diagnostics, text, ime, regression-gates
 
 # Diagnostics Extensibility + Capabilities v1 - Text & IME
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Self-drawn UI frameworks predictably struggle with text editing and IME composition.
 The diagnostics contract must make these failures explainable and gateable without relying only on screenshots.
@@ -59,7 +59,36 @@ Start with “portable, low-flake” gates:
   - after navigation keys, caret rect remains within window bounds.
 - `composition_not_stolen_by_shortcuts`:
   - while composing, press keys that normally trigger global shortcuts,
-  - assert the trace shows `outcome=reserved_for_ime` (or `consumed_by_widget`), not `command_dispatched`.
+  - assert `wait_shortcut_routing_trace` finds `outcome=reserved_for_ime` (or `consumed_by_widget`), not `command_dispatched`.
+
+For deterministic scripts, prefer injecting IME events explicitly (instead of relying on a platform IME):
+
+- Use `UiActionStepV2::Ime` (script v2) to inject `preedit` / `commit` / `enabled` / `disabled` /
+  `delete_surrounding` events.
+- Declare `diag.inject_ime` in `meta.required_capabilities` for scripts that use IME injection.
+- Declare `diag.shortcut_routing_trace` for scripts that assert `wait_shortcut_routing_trace`.
+- Declare `diag.text_input_snapshot` for scripts that gate IME caret geometry (`ime_cursor_area_*` predicates).
+
+Practical “caret stays sane” gates:
+
+- After entering composition (preedit), wait for:
+  - `ime_cursor_area_is_some` (`is_some=true`),
+  - `ime_cursor_area_within_window` (small `eps_px` to tolerate rounding).
+
+In-repo examples:
+
+- Word boundary (double click):
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
+- Line boundary (triple click):
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
+- Composition not stolen by shortcuts:
+  - `tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json`
+  - `tools/diag-scripts/ui-gallery-combobox-ime-tab-suppressed.json`
+
+Run the suite (native):
+
+- `cargo run -p fretboard -- diag suite ui-gallery-code-editor --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag suite ui-gallery-text-ime --launch -- cargo run -p fret-ui-gallery --release`
 
 IME-specific behavior may remain runner-dependent; treat missing IME evidence as capability-gated
 (`diag.text_ime_trace`) rather than as an implicit timeout.

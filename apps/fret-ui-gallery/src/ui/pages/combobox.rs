@@ -21,6 +21,7 @@ pub(super) fn preview_combobox(
     let custom_items_top = sections::custom_items_top(cx, &models);
     let multiple_selection = sections::multiple_selection(cx);
     let basic = sections::basic(cx, &models);
+    let long_list = sections::long_list(cx, &models);
     let multiple = sections::multiple(cx);
     let clear_button = sections::clear_button(cx);
     let groups = sections::groups(cx, &models);
@@ -38,6 +39,7 @@ pub(super) fn preview_combobox(
         custom_items_top,
         multiple_selection,
         basic,
+        long_list,
         multiple,
         clear_button,
         groups,

@@ -170,6 +170,33 @@ cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --la
 
 Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
 
+Script tooling (no app required):
+
+- Normalize formatting (stable diffs):
+  - `cargo run -p fretboard -- diag script normalize .\\script.json --write`
+  - `cargo run -p fretboard -- diag script normalize .\\script.json --check`
+- PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
+  - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
+  - `cargo run -p fretboard -- diag script validate tools/diag-scripts`
+- Validate schema/parse (writes `check.script_schema.json` under `--dir`, or `--check-out`):
+  - `cargo run -p fretboard -- diag script validate .\\script.json`
+- Lint scripts (capability inference + hygiene; writes `check.script_lint.json`):
+  - `cargo run -p fretboard -- diag script lint .\\script.json`
+
+Repeat-run triage (flake hunting):
+
+- Run the same script N times and write `repeat.summary.json` under `--dir` (includes `highlights` aggregates for quick scanning):
+  - `cargo run -p fretboard -- diag repeat .\\script.json --repeat 7 --launch -- cargo run -p fret-ui-gallery --release`
+
+Script shrinking (automated minimal repro):
+
+- Reduce a *failing* script to a smaller script that still reproduces the same failure signal.
+  - By default, shrink matches `reason_code` when available (otherwise `reason`). Use `--shrink-any-fail` to accept any failure.
+  - Requires either an already-running app, or `--reuse-launch --launch -- <cmd...>`.
+  - Writes a minimized script to `--shrink-out` (default: `target/fret-diag/shrink/script.min.json`) and a summary to `target/fret-diag/shrink/shrink.summary.json`.
+  - Example:
+    - `cargo run -p fretboard -- diag script shrink .\\script.json --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
+
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
    - `cargo run -p fretboard -- diag script .\\script.json`
@@ -465,9 +492,12 @@ Supported selectors (v1 MVP):
 - `press_shortcut` (schema v2 only; shortcut strings like `primary+p`, `primary+shift+p`, `alt+f`; supports
   modifier aliases `primary`/`cmd_or_ctrl`/`command_or_control` and `meta`/`cmd`/`command`)
 - `type_text`
+- `ime` (schema v2 only; deterministic IME event injection for composition/commit/preedit)
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`
 - `wait_until` (schema v2 only: optional `window` target)
+- `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry)
+- `wait_overlay_placement_trace` (schema v2 only; wait until overlay placement trace contains a matching entry)
 - `assert` (schema v2 only: optional `window` target)
 - `capture_bundle` (optional `label`, optional `max_snapshots`)
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
@@ -493,6 +523,12 @@ Recent additions:
 - `known_window_count_ge` (assert that the diagnostics runtime has observed at least N windows)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 - `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
+- `text_composition_is` (assert whether a text surface is currently composing via IME)
+- `ime_cursor_area_is_some` (assert whether a window-level IME cursor area snapshot exists)
+- `ime_cursor_area_within_window` (assert the IME cursor area stays within the current window bounds; coarse “caret teleported” gate)
+- `ime_cursor_area_min_size` (assert the IME cursor area has a meaningful size; catches “zero rect” bugs)
+- `wait_shortcut_routing_trace` (assert keyboard routing outcomes like `reserved_for_ime`)
+- `wait_overlay_placement_trace` (assert overlay placement decisions by geometry trace rather than screenshots)
 
 Notes:
 
@@ -726,12 +762,28 @@ When you use `fretboard diag run`, the running app writes a small status file:
 
 `fretboard diag suite` runs multiple scripts sequentially using the same mechanism.
 
+After a suite run, the CLI writes `suite.summary.json` under the diagnostics output dir (default: `.fret/diag/`).
+This file is intended as the “open first” overview (stage/reason-code aggregates, plus small evidence
+highlights) before you start opening individual bundles.
+
 ## Regression suites (starter)
 
 The `tools/diag-scripts/` directory contains curated scripts intended to become a baseline suite.
 For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
+
+For component-focused conformance scripts (built-in suites), run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag suite ui-gallery-text-ime --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+
+To keep “Rust template ↔ JSON script” closure, check that the committed scripts match typed templates:
+
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
 
 The UI gallery suite includes lightweight smoke checks for table/grid surfaces:
 
