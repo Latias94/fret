@@ -5394,13 +5394,14 @@ impl UiDiagnosticsService {
             }
 
             if active.next_step >= active.steps.len() {
+                let passed_step_index = active.next_step.saturating_sub(1) as u32;
                 push_script_event_log(
                     &mut active,
                     &self.cfg,
                     UiScriptEventLogEntryV1 {
                         unix_ms: unix_ms_now(),
                         kind: "script_passed".to_string(),
-                        step_index: Some(active.next_step.saturating_sub(1) as u32),
+                        step_index: Some(passed_step_index),
                         note: None,
                         bundle_dir: None,
                     },
@@ -5411,7 +5412,7 @@ impl UiDiagnosticsService {
                     updated_unix_ms: unix_ms_now(),
                     window: Some(window.data().as_ffi()),
                     stage: UiScriptStageV1::Passed,
-                    step_index: Some(active.next_step.saturating_sub(1) as u32),
+                    step_index: Some(passed_step_index),
                     reason_code: None,
                     reason: None,
                     evidence: script_evidence_for_active(&active),

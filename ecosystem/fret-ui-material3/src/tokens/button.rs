@@ -72,9 +72,7 @@ pub(crate) fn container_background(
                     theme
                         .color_by_key("md.comp.button.tonal.container.color")
                         .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-                        .unwrap_or_else(|| {
-                            theme.color_token("md.sys.color.secondary-container")
-                        }),
+                        .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container")),
                 )
             } else {
                 Some(disabled_container_color(
@@ -91,9 +89,7 @@ pub(crate) fn container_background(
                     theme
                         .color_by_key("md.comp.button.elevated.container.color")
                         .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-                        .unwrap_or_else(|| {
-                            theme.color_token("md.sys.color.surface-container-low")
-                        }),
+                        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low")),
                 )
             } else {
                 Some(disabled_container_color(
