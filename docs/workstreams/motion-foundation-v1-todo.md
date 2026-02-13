@@ -68,18 +68,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `docs/workstreams/motion-foundation-v1.md` (section "Recipe alignment matrix (draft)")
 
-- [~] MF-MOTION-diag-002 Add a “motion pilot” diag suite (fixed `delta`) with 1 script per recipe.
+- [x] MF-MOTION-diag-002 Add a “motion pilot” diag suite (fixed `delta`) with 1 script per recipe.
   - Expected output:
-    - deterministic bundles + screenshots under `--fixed-frame-delta-ms 16`
+    - deterministic bundles under `--fixed-frame-delta-ms 16`
   - Suite:
     - `fretboard diag suite ui-gallery-motion-pilot` (run with `--fixed-frame-delta-ms 16`)
   - Existing gates:
     - `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
-    - `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`
+    - `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json`
     - `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
-    - `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`
-  - Missing gates (recommended next):
-    - toast interrupt/re-target coverage (rapid re-trigger and mid-exit dismissal)
+    - `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`
 
 - [ ] MF-MOTION-diag-003 Add a high-refresh-rate sanity check run (optional): 60Hz vs 120Hz should match wall-time completion.
   - Note: keep this as a best-effort local gate if runner refresh rate is not easily forced.
@@ -89,9 +87,15 @@ Per-recipe tracking (pilot follow-ups):
 - [x] MF-MOTION-pilot-010 Dialog fixed-delta open/close script + evidence anchors.
   - Evidence:
     - `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
-- [ ] MF-MOTION-pilot-020 Toast fixed-delta interrupt coverage.
 - [ ] MF-MOTION-pilot-030 Sidebar: confirm layout-affecting choreography expectations (do we need FLIP?).
-- [ ] MF-MOTION-pilot-040 Drawer/sheet: add a mid-flight retarget scenario (drag, reverse, release).
+- [x] MF-MOTION-pilot-020 Toast fixed-delta interrupt coverage.
+  - Evidence:
+    - `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`
+    - `crates/fret-diag/src/lib.rs` (builtin suite: `ui-gallery-motion-pilot`)
+- [x] MF-MOTION-pilot-040 Drawer/sheet: add a mid-flight retarget scenario (drag, reverse, release).
+  - Evidence:
+    - `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json`
+    - `crates/fret-diag/src/lib.rs` (builtin suite: `ui-gallery-motion-pilot`)
 
 ## P1 — Spring feel calibration (native-like)
 

@@ -3407,7 +3407,7 @@ See: `docs/tracy.md`.\n";
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
-                                    "tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json",
+                                    "tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
                                 ),
                             ),
                             resolve_path(
@@ -3419,7 +3419,7 @@ See: `docs/tracy.md`.\n";
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
-                                    "tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json",
+                                    "tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
                                 ),
                             ),
                         ],
