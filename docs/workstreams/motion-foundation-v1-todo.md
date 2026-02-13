@@ -79,7 +79,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
     - `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`
 
-- [ ] MF-MOTION-diag-003 Add a high-refresh-rate sanity check run (optional): 60Hz vs 120Hz should match wall-time completion.
+- [x] MF-MOTION-diag-003 Add a high-refresh-rate sanity check run (optional): 60Hz vs 120Hz should match wall-time completion.
+  - Evidence (local sanity runs; deterministic fixed delta):
+    - `fretboard diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 16`
+    - `fretboard diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 8` (120Hz-ish)
   - Note: keep this as a best-effort local gate if runner refresh rate is not easily forced.
 
 Per-recipe tracking (pilot follow-ups):

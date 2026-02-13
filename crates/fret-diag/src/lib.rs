@@ -3393,8 +3393,8 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_motion_pilot_suite {
-                    // The motion pilot suite uses at least one role-and-name selector (toast close
-                    // button), so ensure diagnostics redaction is disabled.
+                    // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
+                    // redaction disabled so any role-and-name selectors remain usable in scripts.
                     push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
                     (
                         vec![
