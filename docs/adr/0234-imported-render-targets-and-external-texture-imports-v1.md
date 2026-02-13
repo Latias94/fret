@@ -1,6 +1,6 @@
 # ADR 0234: Imported Render Targets and External Texture Imports (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
