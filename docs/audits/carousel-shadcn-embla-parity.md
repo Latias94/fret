@@ -53,6 +53,31 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
   `aria-roledescription="slide"`. Fret currently stamps group roles for diagnostics and automation;
   richer semantics should be considered if/when we expand the accessibility contract.
 
+## Mechanism prerequisites for Embla-like drag (Fret-specific)
+
+Embla’s drag model is explicitly designed to coexist with interactive slide contents:
+
+- A pointer-down should still reach descendant buttons/pressables.
+- Once movement exceeds `dragThreshold` (default `10`), the carousel “wins” the gesture and prevents
+  click activation (Embla sets `preventClick = true` in `DragHandler.ts`).
+
+For a custom-rendered UI runtime, matching this behavior requires two mechanism capabilities:
+
+1) **Capture switching must cancel the previous capture target.** If a parent steals capture after
+   threshold (gesture arena outcome), the child pressable must receive a cancel signal so it can
+   clear pressed/drag state.
+   - In-tree evidence: `crates/fret-ui/src/tree/dispatch.rs` (capture switch emits `PointerCancel`)
+   - Regression test: `crates/fret-ui/src/tree/tests/pointer_move_layers.rs`
+
+2) **A parent gesture region must be able to observe pointer moves even when a descendant captured
+   the pointer on down.** This is the only way to implement “armed → threshold → steal capture”
+   without weakening global pressable semantics.
+   - Mechanism: opt in to capture-phase pointer move dispatch via
+     `PointerRegionProps.capture_phase_pointer_moves` (built on `Widget::event_capture` / ADR 0218).
+
+Without (2), the carousel can either (a) capture immediately on down (breaking descendant clicks),
+or (b) only allow dragging from non-interactive blank areas (breaking upstream expectations).
+
 ## Layering guidance (where fixes should live)
 
 - `crates/fret-ui`: keep mechanism-only (pointer capture, hit-testing, semantics plumbing).
@@ -64,4 +89,3 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 
 - Layout parity: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
 - Interaction: `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs`
-
