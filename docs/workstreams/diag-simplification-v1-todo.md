@@ -41,7 +41,7 @@ Evidence pointers:
 
 ## Phase 2: Artifact materialization parity
 
-- [ ] Define local artifact layout contract (tooling-side):
+- [x] Define local artifact layout contract (tooling-side):
   - `<out_dir>/<run_id>/bundle.json`
   - `<out_dir>/<run_id>/script.result.json`
   - optional screenshots directories/files

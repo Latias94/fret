@@ -10455,6 +10455,11 @@ fn wait_for_bundle_json_from_script_result(
 ) -> Option<PathBuf> {
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
     while Instant::now() < deadline {
+        let run_id_bundle_path = run_id_artifact_dir(out_dir, result.run_id).join("bundle.json");
+        if run_id_bundle_path.is_file() {
+            return Some(run_id_bundle_path);
+        }
+
         let dir = result
             .last_bundle_dir
             .as_deref()
@@ -12364,6 +12369,7 @@ fn run_script_over_transport(
                 script_result_path,
                 &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
             );
+            write_run_id_script_result(out_dir, parsed.run_id, &parsed);
 
             if matches!(
                 parsed.stage,
@@ -12415,6 +12421,7 @@ fn run_script_over_transport(
         })?;
 
         let bundle_path = materialize_devtools_bundle_dumped(out_dir, &dumped)?;
+        write_run_id_bundle_json(out_dir, result.run_id, &bundle_path);
         result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));
         result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(&bundle_path));
         Some(bundle_path)
@@ -12456,6 +12463,33 @@ fn dump_bundle_over_transport(
     })?;
 
     materialize_devtools_bundle_dumped(out_dir, &dumped)
+}
+
+fn run_id_artifact_dir(out_dir: &Path, run_id: u64) -> PathBuf {
+    out_dir.join(run_id.to_string())
+}
+
+fn write_run_id_script_result(out_dir: &Path, run_id: u64, result: &UiScriptResultV1) {
+    let dir = run_id_artifact_dir(out_dir, run_id);
+    let path = dir.join("script.result.json");
+    let _ = write_json_value(
+        &path,
+        &serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({})),
+    );
+}
+
+fn write_run_id_bundle_json(out_dir: &Path, run_id: u64, bundle_json_path: &Path) {
+    if !bundle_json_path.is_file() {
+        return;
+    }
+    let dir = run_id_artifact_dir(out_dir, run_id);
+    let dst = dir.join("bundle.json");
+    if let Some(parent) = dst.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    // Best-effort alias: keep a stable per-run path even when the underlying bundle export directory
+    // is timestamp/label-based (filesystem) or message-derived (WS).
+    let _ = std::fs::copy(bundle_json_path, &dst);
 }
 
 fn run_script_suite_collect_bundles(
@@ -14115,6 +14149,13 @@ mod tests {
             final_result.stage,
             fret_diag_protocol::UiScriptStageV1::Passed
         ));
+
+        let bytes = std::fs::read(root.join("1").join("script.result.json"))
+            .expect("read run_id script.result.json");
+        let v: serde_json::Value =
+            serde_json::from_slice(&bytes).expect("parse run_id script.result.json");
+        assert_eq!(v.get("run_id").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(v.get("stage").and_then(|v| v.as_str()), Some("passed"));
     }
 
     #[test]
@@ -14300,6 +14341,120 @@ mod tests {
                 .and_then(|s| s.to_str()),
             Some(latest_dir)
         );
+    }
+
+    #[test]
+    fn run_script_over_transport_dump_bundle_writes_run_id_bundle_json() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-run-dump-runid-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["script_v2".to_string()],
+        };
+        crate::util::write_json_value(
+            &root.join("capabilities.json"),
+            &serde_json::to_value(caps).expect("capabilities json"),
+        )
+        .expect("write capabilities.json");
+
+        let cfg = crate::transport::FsDiagTransportConfig::from_out_dir(&root);
+
+        let runtime_cfg = cfg.clone();
+        std::thread::spawn(move || {
+            fn read_stamp(path: &Path) -> Option<u64> {
+                let s = std::fs::read_to_string(path).ok()?;
+                s.lines().last()?.trim().parse::<u64>().ok()
+            }
+
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while Instant::now() < deadline {
+                if read_stamp(&runtime_cfg.script_trigger_path).is_some() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+
+            let passed = fret_diag_protocol::UiScriptResultV1 {
+                schema_version: 1,
+                run_id: 1,
+                updated_unix_ms: crate::util::now_unix_ms(),
+                window: None,
+                stage: fret_diag_protocol::UiScriptStageV1::Passed,
+                step_index: Some(0),
+                reason_code: None,
+                reason: None,
+                evidence: None,
+                last_bundle_dir: None,
+                last_bundle_artifact: None,
+            };
+            let _ = crate::util::write_json_value(
+                &runtime_cfg.script_result_path,
+                &serde_json::to_value(passed).unwrap_or_else(|_| serde_json::json!({})),
+            );
+            let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while Instant::now() < deadline {
+                if read_stamp(&runtime_cfg.trigger_path).is_some() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+
+            let export_dir = runtime_cfg.out_dir.join("777-bundle");
+            let _ = std::fs::create_dir_all(&export_dir);
+            let _ = crate::util::write_json_value(
+                &export_dir.join("bundle.json"),
+                &serde_json::json!({
+                    "schema_version": 1,
+                    "windows": [],
+                }),
+            );
+            let _ = std::fs::write(runtime_cfg.out_dir.join("latest.txt"), b"777-bundle");
+        });
+
+        let connected =
+            connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 5_000, 5)
+                .expect("connect fs tooling");
+
+        let tool_script_result_path = root.join("tool.script.result.json");
+        let capabilities_check_path = root.join("check.capabilities.json");
+        let script_json = serde_json::json!({
+            "schema_version": 2,
+            "steps": [],
+        });
+
+        let (result, bundle_path) = run_script_over_transport(
+            &root,
+            &connected,
+            script_json,
+            true,
+            Some("dump"),
+            None,
+            5_000,
+            5,
+            &tool_script_result_path,
+            &capabilities_check_path,
+        )
+        .expect("run_script_over_transport");
+
+        assert!(matches!(
+            result.stage,
+            fret_diag_protocol::UiScriptStageV1::Passed
+        ));
+        assert!(bundle_path.is_some());
+
+        let run_id_bundle = root.join("1").join("bundle.json");
+        assert!(run_id_bundle.is_file(), "expected run_id bundle.json alias");
     }
 
     #[test]
