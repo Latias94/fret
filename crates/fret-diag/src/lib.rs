@@ -3419,6 +3419,12 @@ See: `docs/tracy.md`.\n";
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
                                 ),
                             ),
