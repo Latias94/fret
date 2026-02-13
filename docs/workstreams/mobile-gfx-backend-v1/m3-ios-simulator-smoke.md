@@ -83,9 +83,14 @@ cp -f tools/diag-scripts/ui-gallery-window-insets-safe-area-and-keyboard-avoidan
 3) Bump the script trigger stamp (note: the first observed value is treated as a baseline, so bump twice):
 
 ```bash
-echo "$(date +%s%3N)" > "${diag_dir}/script.touch"
-sleep 1
-echo "$(date +%s%3N)" > "${diag_dir}/script.touch"
+python3 - <<'PY' "${diag_dir}"
+import sys, time, pathlib
+diag_dir = pathlib.Path(sys.argv[1])
+path = diag_dir / "script.touch"
+path.write_text(f"{int(time.time()*1000)}\n")
+time.sleep(1.0)
+path.write_text(f"{int(time.time()*1000)}\n")
+PY
 ```
 
 4) Inspect the result:
