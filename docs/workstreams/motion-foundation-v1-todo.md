@@ -90,7 +90,12 @@ Per-recipe tracking (pilot follow-ups):
 - [x] MF-MOTION-pilot-010 Dialog fixed-delta open/close script + evidence anchors.
   - Evidence:
     - `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
-- [ ] MF-MOTION-pilot-030 Sidebar: confirm layout-affecting choreography expectations (do we need FLIP?).
+- [x] MF-MOTION-pilot-030 Sidebar: confirm layout-affecting choreography expectations (do we need FLIP?).
+  - Decision:
+    - For Sidebar collapse/expand, keep the label subtree present and rely on width transition +
+      overflow clipping (CSS-like), rather than FLIP.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/sidebar.rs` (menu button label opacity; no branch pop)
 - [x] MF-MOTION-pilot-020 Toast fixed-delta interrupt coverage.
   - Evidence:
     - `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`

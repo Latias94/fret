@@ -3471,39 +3471,36 @@ impl SidebarMenuButton {
                     if let Some(icon) = icon.clone() {
                         out.push(decl_icon::icon(cx, icon));
                     }
-                    if label_opacity > 0.0 {
-                        let text = ui::text(cx, label.clone())
-                            .w_full()
-                            .min_w_0()
-                            .flex_1()
-                            .basis_0()
-                            .text_size_px(label_style.size)
-                            .font_weight(label_style.weight)
-                            .text_color(ColorRef::Color(fg))
-                            .truncate();
+                    // Keep the label subtree present (even when fully collapsed) so the flex
+                    // layout remains stable across the width transition. This matches the DOM
+                    // recipe shape (overflow-hidden + truncate) and avoids a "pop" when the label
+                    // branch appears/disappears at `opacity == 0`.
+                    let text = ui::text(cx, label.clone())
+                        .w_full()
+                        .min_w_0()
+                        .flex_1()
+                        .basis_0()
+                        .text_size_px(label_style.size)
+                        .font_weight(label_style.weight)
+                        .text_color(ColorRef::Color(fg))
+                        .truncate();
 
-                        let mut text = text;
-                        if let Some(line_height) = label_style.line_height {
-                            text = text.line_height_px(line_height);
-                        }
-                        if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                            text = text.letter_spacing_em(letter_spacing_em);
-                        }
-
-                        let text = text.into_element(cx);
-                        out.push(cx.opacity_props(
-                            OpacityProps {
-                                layout: fret_ui::element::LayoutStyle::default(),
-                                opacity: label_opacity,
-                            },
-                            move |_cx| vec![text],
-                        ));
-                    } else {
-                        out.push(cx.spacer(SpacerProps {
-                            min: Px(0.0),
-                            ..Default::default()
-                        }));
+                    let mut text = text;
+                    if let Some(line_height) = label_style.line_height {
+                        text = text.line_height_px(line_height);
                     }
+                    if let Some(letter_spacing_em) = label_style.letter_spacing_em {
+                        text = text.letter_spacing_em(letter_spacing_em);
+                    }
+
+                    let text = text.into_element(cx);
+                    out.push(cx.opacity_props(
+                        OpacityProps {
+                            layout: fret_ui::element::LayoutStyle::default(),
+                            opacity: label_opacity.clamp(0.0, 1.0),
+                        },
+                        move |_cx| vec![text],
+                    ));
                     out
                 })]
             })]
