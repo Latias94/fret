@@ -21,7 +21,7 @@ use fret_runtime::{
     InboxDrainRegistry, TimeHost,
 };
 #[cfg(feature = "ui")]
-use fret_runtime::{Model, ModelId, UiHost};
+use fret_runtime::{Model, ModelHost, ModelId};
 
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache};
@@ -381,7 +381,7 @@ impl ImageSourceLoader {
     }
 
     #[cfg(feature = "ui")]
-    pub(crate) fn use_signal_model<H: UiHost>(
+    pub(crate) fn use_signal_model<H: ModelHost + TimeHost>(
         &mut self,
         app: &mut H,
         source: &ImageSource,
@@ -593,7 +593,10 @@ impl ImageSourceRuntime {
 }
 
 #[cfg(feature = "ui")]
-pub(crate) fn notify_image_asset_key<H: UiHost>(app: &mut H, key: ImageAssetKey) {
+pub(crate) fn notify_image_asset_key<H: GlobalsHost + ModelHost>(
+    app: &mut H,
+    key: ImageAssetKey,
+) {
     let Some(model_ids) = with_image_source_loader(app, |loader, _app| {
         loader
             .runtime
@@ -648,7 +651,7 @@ pub(crate) fn notify_image_asset_key<H: UiHost>(app: &mut H, key: ImageAssetKey)
 }
 
 #[cfg(feature = "ui")]
-pub(crate) fn register_asset_key_for_source<H: UiHost>(
+pub(crate) fn register_asset_key_for_source<H: GlobalsHost>(
     app: &mut H,
     source: &ImageSource,
     options: ImageSourceOptions,
@@ -1045,7 +1048,7 @@ mod tests {
     };
     use fret_runtime::{
         DispatchPriority, Dispatcher, DispatcherHandle, Effect, ExecCapabilities, GlobalsHost,
-        Runnable, TickId, TimeHost,
+        InboxDrainHost, ModelHost, ModelStore, Runnable, TickId, TimeHost,
     };
 
     use super::*;
@@ -1056,6 +1059,16 @@ mod tests {
     }
 
     impl QueuedDispatcher {
+        fn run_background_tasks(&self) {
+            let tasks = {
+                let mut tasks = self.background.lock().expect("poisoned background queue");
+                std::mem::take(&mut *tasks)
+            };
+            for task in tasks {
+                task();
+            }
+        }
+
         fn drop_background_tasks(&self) {
             let mut tasks = self.background.lock().expect("poisoned background queue");
             tasks.clear();
@@ -1082,6 +1095,7 @@ mod tests {
     #[derive(Default)]
     struct TestHost {
         globals: HashMap<TypeId, Box<dyn Any>>,
+        models: ModelStore,
         effects: Vec<Effect>,
         redraws: HashSet<AppWindowId>,
         tick_id: TickId,
@@ -1158,6 +1172,30 @@ mod tests {
         }
     }
 
+    impl ModelHost for TestHost {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl InboxDrainHost for TestHost {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            <Self as EffectSink>::request_redraw(self, window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            <Self as EffectSink>::push_effect(self, effect);
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
     impl TestHost {
         fn set_frame(&mut self, frame: u64) {
             self.frame_id = FrameId(frame);
@@ -1205,6 +1243,91 @@ mod tests {
         let state2 = use_image_source_state(&mut host, window, &src);
         assert_eq!(state2.status, ImageLoadingStatus::Loaded);
         assert_eq!(state2.image, Some(image));
+    }
+
+    #[cfg(all(feature = "ui", feature = "image-decode", not(target_arch = "wasm32")))]
+    #[test]
+    fn image_source_test_jpg_drives_decode_and_gpu_ready_bumps_signal_model() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+        let window = AppWindowId::default();
+
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../assets/textures/test.jpg");
+        let bytes: Arc<[u8]> = std::fs::read(path)
+            .expect("expected assets/textures/test.jpg to exist")
+            .into();
+        let src = ImageSource::from_bytes(bytes);
+
+        let model = with_image_source_loader(&mut host, |loader, host| {
+            loader.use_signal_model(host, &src, ImageSourceOptions::default())
+        })
+        .expect("dispatcher installed");
+        let rev0 = host.models().revision(&model).unwrap_or(0);
+
+        // Schedule decode (background) for the bytes source.
+        let _ = use_image_source_state(&mut host, window, &src);
+        dispatcher.run_background_tasks();
+
+        // Drain + apply decode completion on the main thread.
+        let runtime = with_image_source_loader(&mut host, |loader, _host| loader.runtime.clone())
+            .expect("dispatcher installed");
+        for msg in runtime.inbox.drain() {
+            runtime.apply_msg(&mut host, msg);
+        }
+        let rev1 = host.models().revision(&model).unwrap_or(0);
+        assert!(rev1 > rev0, "expected decode completion to bump signal model");
+
+        let request = ImageSourceRequestKey {
+            source: src.id,
+            color_space: ImageColorSpace::Srgb,
+        };
+        let (decoded_width, decoded_height) = with_image_source_loader(&mut host, |loader, _host| {
+            let entries = loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex");
+            let entry = entries.get(&request).expect("expected entry after decode");
+            match &entry.state {
+                ImageSourceEntryState::Decoded { decoded, .. } => (decoded.width, decoded.height),
+                ImageSourceEntryState::Failed { message, .. } => {
+                    panic!("decode failed: {message}");
+                }
+                other => panic!("expected Decoded state after inbox apply, got {other:?}"),
+            }
+        })
+        .expect("dispatcher installed");
+
+        // Now that we're decoded, the next use should schedule a GPU upload.
+        let state = use_image_source_state(&mut host, window, &src);
+        let (width, height) = state
+            .intrinsic_size_px
+            .unwrap_or((decoded_width, decoded_height));
+        let token = host
+            .effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::ImageRegisterRgba8 { token, .. } => Some(*token),
+                _ => None,
+            })
+            .expect("expected ImageRegisterRgba8 after decode");
+
+        // GPU-ready event should bump the same signal model (per-key).
+        let image = ImageId::default();
+        let event = Event::ImageRegistered {
+            token,
+            image,
+            width,
+            height,
+        };
+        let _ = crate::UiAssets::handle_event(&mut host, window, &event);
+        let rev2 = host.models().revision(&model).unwrap_or(0);
+        assert!(rev2 > rev1, "expected GPU-ready to bump signal model");
     }
 
     #[test]
