@@ -24,9 +24,10 @@ Evidence pointers:
 
 ## Phase 1: Tooling transport abstraction
 
-- [ ] Introduce a transport trait in `crates/fret-diag` (tooling-only):
-  - [ ] FS implementation (existing behavior)
-  - [ ] WS implementation (existing behavior)
+- [x] Introduce a transport trait in `crates/fret-diag` (tooling-only):
+  - [x] FS implementation (existing behavior)
+  - [x] WS implementation (existing behavior)
+  - Evidence: `crates/fret-diag/src/transport/mod.rs` (`trait DiagTransport`, `ToolingDiagClient`), `crates/fret-diag/src/transport/fs.rs`, `crates/fret-diag/src/transport/ws.rs`
 - [ ] Make `diag run` and `diag suite` transport-agnostic:
   - [x] unify "wait ready" behavior
   - [x] unify "send script" behavior

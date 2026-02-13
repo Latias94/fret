@@ -16,6 +16,8 @@ Exit criteria:
 
 - [x] `diag run` and `diag suite` use a single orchestration path with a pluggable transport.
   - Evidence: `crates/fret-diag/src/lib.rs` (`ConnectedToolingTransport`, `run_script_over_transport`)
+- [x] A tooling-side transport trait exists with FS/WS implementations.
+  - Evidence: `crates/fret-diag/src/transport/mod.rs` (`trait DiagTransport`, `ToolingDiagClient`), `crates/fret-diag/src/transport/fs.rs`, `crates/fret-diag/src/transport/ws.rs`
 - [x] No behavior change for existing filesystem workflows (tooling-side contract audited).
   - Evidence: `crates/fret-diag/src/lib.rs` (baseline-race retouch + incremental writes), `crates/fret-diag/src/lib.rs` (tests: `run_script_over_transport_retouches_in_filesystem_mode_to_avoid_baseline_race`, `dump_bundle_over_transport_materializes_filesystem_latest_pointer`)
 
