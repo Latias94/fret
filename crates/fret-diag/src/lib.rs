@@ -12648,6 +12648,7 @@ fn wait_for_devtools_message<T>(
 fn wait_for_devtools_bundle_dumped(
     devtools: &DevtoolsOps,
     selected_session_id: &str,
+    expected_request_id: Option<u64>,
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<DevtoolsBundleDumpedV1, String> {
@@ -12664,6 +12665,11 @@ fn wait_for_devtools_bundle_dumped(
                 || msg.session_id.as_deref() != Some(selected_session_id)
             {
                 continue;
+            }
+            if let Some(expected) = expected_request_id {
+                if msg.request_id != Some(expected) {
+                    continue;
+                }
             }
             let Ok(dumped) = serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload) else {
                 continue;
@@ -13150,16 +13156,32 @@ fn run_script_over_transport(
     };
 
     let bundle_path = if dump_bundle {
-        if let Some(max) = dump_max_snapshots {
-            connected
-                .devtools
-                .bundle_dump_with_max_snapshots(None, bundle_label, max);
+        let expected_request_id = if connected.devtools.client().kind()
+            == crate::transport::DiagTransportKind::WebSocket
+        {
+            if let Some(max) = dump_max_snapshots {
+                Some(
+                    connected
+                        .devtools
+                        .bundle_dump_with_max_snapshots(None, bundle_label, max),
+                )
+            } else {
+                Some(connected.devtools.bundle_dump(None, bundle_label))
+            }
         } else {
-            connected.devtools.bundle_dump(None, bundle_label);
-        }
+            if let Some(max) = dump_max_snapshots {
+                connected
+                    .devtools
+                    .bundle_dump_with_max_snapshots(None, bundle_label, max);
+            } else {
+                connected.devtools.bundle_dump(None, bundle_label);
+            }
+            None
+        };
         let dumped = match wait_for_devtools_bundle_dumped(
             &connected.devtools,
             &connected.selected_session_id,
+            expected_request_id,
             timeout_ms,
             poll_ms,
         ) {
@@ -13232,17 +13254,33 @@ fn dump_bundle_over_transport(
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<PathBuf, String> {
-    if let Some(max) = dump_max_snapshots {
-        connected
-            .devtools
-            .bundle_dump_with_max_snapshots(None, bundle_label, max);
+    let expected_request_id = if connected.devtools.client().kind()
+        == crate::transport::DiagTransportKind::WebSocket
+    {
+        if let Some(max) = dump_max_snapshots {
+            Some(
+                connected
+                    .devtools
+                    .bundle_dump_with_max_snapshots(None, bundle_label, max),
+            )
+        } else {
+            Some(connected.devtools.bundle_dump(None, bundle_label))
+        }
     } else {
-        connected.devtools.bundle_dump(None, bundle_label);
-    }
+        if let Some(max) = dump_max_snapshots {
+            connected
+                .devtools
+                .bundle_dump_with_max_snapshots(None, bundle_label, max);
+        } else {
+            connected.devtools.bundle_dump(None, bundle_label);
+        }
+        None
+    };
 
     let dumped = wait_for_devtools_bundle_dumped(
         &connected.devtools,
         &connected.selected_session_id,
+        expected_request_id,
         timeout_ms,
         poll_ms,
     )?;

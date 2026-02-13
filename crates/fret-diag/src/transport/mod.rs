@@ -78,6 +78,11 @@ impl ToolingDiagClient {
     pub fn set_default_session_id(&self, session_id: Option<String>) {
         self.transport.set_default_session_id(session_id);
     }
+
+    #[cfg(test)]
+    pub(crate) fn new_for_test(transport: Arc<dyn DiagTransport>) -> Self {
+        Self { transport }
+    }
 }
 
 #[derive(Debug, Clone)]

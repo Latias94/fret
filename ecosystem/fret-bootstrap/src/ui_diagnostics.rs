@@ -437,6 +437,7 @@ struct PendingForceDumpRequest {
     dump_max_snapshots: Option<usize>,
     script_run_id: Option<u64>,
     script_step_index: Option<u32>,
+    request_id: Option<u64>,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -5348,6 +5349,7 @@ impl UiDiagnosticsService {
                     force_dump_max_snapshots,
                     Some(active.run_id),
                     Some(step_index as u32),
+                    None,
                 );
             }
 
@@ -5390,6 +5392,7 @@ impl UiDiagnosticsService {
                     force_dump_max_snapshots,
                     Some(active.run_id),
                     Some(step_index as u32),
+                    None,
                 );
             }
 
@@ -6265,8 +6268,11 @@ impl UiDiagnosticsService {
         self.poll_ws_inbox();
 
         if let Some(pending) = self.pending_force_dump.take() {
-            let dumped =
-                self.dump_bundle_with_options(Some(&pending.label), pending.dump_max_snapshots);
+            let dumped = self.dump_bundle_with_options(
+                Some(&pending.label),
+                pending.dump_max_snapshots,
+                pending.request_id,
+            );
             if let (Some(script_run_id), Some(dir)) = (pending.script_run_id, dumped.as_ref()) {
                 let bundle_dir = display_path(&self.cfg.out_dir, dir);
                 for active in self
@@ -6325,12 +6331,14 @@ impl UiDiagnosticsService {
         dump_max_snapshots: Option<usize>,
         script_run_id: Option<u64>,
         script_step_index: Option<u32>,
+        request_id: Option<u64>,
     ) {
         self.pending_force_dump = Some(PendingForceDumpRequest {
             label: sanitize_label(&label),
             dump_max_snapshots,
             script_run_id,
             script_step_index,
+            request_id,
         });
     }
 
@@ -6367,7 +6375,12 @@ impl UiDiagnosticsService {
     fn poll_ws_inbox(&mut self) {}
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+    fn ws_send_with_request_id(
+        &mut self,
+        ty: impl Into<String>,
+        request_id: Option<u64>,
+        payload: serde_json::Value,
+    ) {
         if !self.ws_is_configured() {
             return;
         }
@@ -6379,10 +6392,15 @@ impl UiDiagnosticsService {
                 schema_version: 1,
                 r#type: ty.into(),
                 session_id: None,
-                request_id: None,
+                request_id,
                 payload,
             },
         );
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+        self.ws_send_with_request_id(ty, None, payload);
     }
 
     #[cfg(feature = "diagnostics-ws")]
@@ -6412,7 +6430,13 @@ impl UiDiagnosticsService {
                     } else {
                         ("bundle".to_string(), None)
                     };
-                self.request_force_dump(label, dump_max_snapshots, None, None);
+                self.request_force_dump(
+                    label,
+                    dump_max_snapshots,
+                    None,
+                    None,
+                    msg.request_id,
+                );
             }
             "app.exit.request" => {
                 let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
@@ -6535,13 +6559,14 @@ impl UiDiagnosticsService {
     }
 
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
-        self.dump_bundle_with_options(label, None)
+        self.dump_bundle_with_options(label, None, None)
     }
 
     fn dump_bundle_with_options(
         &mut self,
         label: Option<&str>,
         dump_max_snapshots_override: Option<usize>,
+        request_id: Option<u64>,
     ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -6665,7 +6690,7 @@ impl UiDiagnosticsService {
                                 bundle_json_chunk_count: Some(chunk_count),
                             })
                             .unwrap_or(serde_json::Value::Null);
-                            self.ws_send("bundle.dumped", payload);
+                            self.ws_send_with_request_id("bundle.dumped", request_id, payload);
                         }
                     } else {
                         let bundle_value = serde_json::to_value(&bundle).ok();
@@ -6680,7 +6705,7 @@ impl UiDiagnosticsService {
                             bundle_json_chunk_count: None,
                         })
                         .unwrap_or(serde_json::Value::Null);
-                        self.ws_send("bundle.dumped", payload);
+                        self.ws_send_with_request_id("bundle.dumped", request_id, payload);
                     }
                 } else {
                     let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
@@ -6694,7 +6719,7 @@ impl UiDiagnosticsService {
                         bundle_json_chunk_count: None,
                     })
                     .unwrap_or(serde_json::Value::Null);
-                    self.ws_send("bundle.dumped", payload);
+                    self.ws_send_with_request_id("bundle.dumped", request_id, payload);
                 }
             } else {
                 let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
@@ -6708,7 +6733,7 @@ impl UiDiagnosticsService {
                     bundle_json_chunk_count: None,
                 })
                 .unwrap_or(serde_json::Value::Null);
-                self.ws_send("bundle.dumped", payload);
+                self.ws_send_with_request_id("bundle.dumped", request_id, payload);
             }
         }
 
