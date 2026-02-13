@@ -10,15 +10,16 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_icons::ids;
 use time::{Date, OffsetDateTime, Weekday};
 
-use crate::button::{ButtonSize, ButtonVariant};
 use crate::select::{Select, SelectItem, SelectPosition};
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
@@ -261,10 +262,10 @@ impl Calendar {
             month_bounds: None,
             disable_navigation: false,
             required: false,
-            week_start: Weekday::Monday,
+            week_start: Weekday::Sunday,
             fixed_weeks: false,
             show_outside_days: true,
-            disable_outside_days: true,
+            disable_outside_days: false,
             show_week_number: false,
             cell_size: None,
             today: None,
@@ -704,9 +705,9 @@ impl Calendar {
                                         direction_prim::use_direction_in_scope(cx, None);
                                     let (prev_icon, next_icon) =
                                         if direction == direction_prim::LayoutDirection::Rtl {
-                                            (Arc::from(">"), Arc::from("<"))
+                                            (ids::ui::CHEVRON_RIGHT, ids::ui::CHEVRON_LEFT)
                                         } else {
-                                            (Arc::from("<"), Arc::from(">"))
+                                            (ids::ui::CHEVRON_LEFT, ids::ui::CHEVRON_RIGHT)
                                         };
 
                                     let caption_month_value_for_prev =
@@ -719,11 +720,9 @@ impl Calendar {
                                         caption_year_value_prev.clone();
 
                                     let month_model_prev = month_model_header.clone();
-                                    let prev = calendar_icon_button(
+                                    let prev = calendar_nav_icon_button(
                                         cx,
                                         "Go to the Previous Month",
-                                        ButtonVariant::Ghost,
-                                        ButtonSize::IconSm,
                                         day_size,
                                         prev_icon,
                                         prev_enabled,
@@ -768,11 +767,9 @@ impl Calendar {
                                         },
                                     );
                                     let month_model_next = month_model_header.clone();
-                                    let next = calendar_icon_button(
+                                    let next = calendar_nav_icon_button(
                                         cx,
                                         "Go to the Next Month",
-                                        ButtonVariant::Ghost,
-                                        ButtonSize::IconSm,
                                         day_size,
                                         next_icon,
                                         next_enabled,
@@ -1353,14 +1350,19 @@ fn calendar_multi_month_view<H: UiHost>(
         let prev_enabled = nav_enabled && min_start.map_or(true, |min| month_lt(min, start_month));
         let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
 
+        let direction = direction_prim::use_direction_in_scope(cx, None);
+        let (prev_icon, next_icon) = if direction == direction_prim::LayoutDirection::Rtl {
+            (ids::ui::CHEVRON_RIGHT, ids::ui::CHEVRON_LEFT)
+        } else {
+            (ids::ui::CHEVRON_LEFT, ids::ui::CHEVRON_RIGHT)
+        };
+
         let month_model_prev = month_model.clone();
-        let prev = calendar_icon_button(
+        let prev = calendar_nav_icon_button(
             cx,
             "Go to the Previous Month",
-            ButtonVariant::Ghost,
-            ButtonSize::IconSm,
             day_size,
-            Arc::from("<"),
+            prev_icon,
             prev_enabled,
             move |host| {
                 if disable_navigation {
@@ -1374,13 +1376,11 @@ fn calendar_multi_month_view<H: UiHost>(
             },
         );
         let month_model_next = month_model.clone();
-        let next = calendar_icon_button(
+        let next = calendar_nav_icon_button(
             cx,
             "Go to the Next Month",
-            ButtonVariant::Ghost,
-            ButtonSize::IconSm,
             day_size,
-            Arc::from(">"),
+            next_icon,
             next_enabled,
             move |host| {
                 if disable_navigation {
@@ -1988,79 +1988,29 @@ fn ordinal_suffix(day: u8) -> &'static str {
     }
 }
 
-fn calendar_icon_button<H: UiHost>(
+fn calendar_nav_icon_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
-    variant: crate::button::ButtonVariant,
-    size: ButtonSize,
     button_size_px: Px,
-    text: Arc<str>,
+    icon: fret_icons::IconId,
     enabled: bool,
     on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let icon = decl_icon::icon(cx, icon);
 
-    let (bg, bg_hover, bg_pressed, border, fg) = crate::button::variant_colors(&theme, variant);
-
-    let radius = theme
-        .metric_by_key("component.button.radius")
-        .unwrap_or_else(|| theme.metric_required("metric.radius.md"));
-
-    control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-        cx.pressable_add_on_activate(Arc::new(move |host, _acx, _reason| {
-            on_activate(host);
-        }));
-
-        let mut pressable_layout = LayoutStyle::default();
-        pressable_layout.size.width = Length::Px(button_size_px);
-        pressable_layout.size.height = Length::Px(button_size_px);
-
-        let bg = if st.pressed {
-            bg_pressed
-        } else if st.hovered {
-            bg_hover
-        } else {
-            bg
-        };
-
-        let chrome = ChromeRefinement::default()
-            .rounded(Radius::Md)
-            .bg(ColorRef::Color(bg))
-            .border_1()
-            .border_color(ColorRef::Color(border));
-
-        let pressable = PressableProps {
-            layout: pressable_layout,
-            enabled,
-            focusable: enabled,
-            focus_ring: Some(decl_style::focus_ring(&theme, radius)),
-            a11y: PressableA11y {
-                label: Some(Arc::from(label)),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-
-        let style = crate::button::button_text_style(&theme, size);
-        let children = move |cx: &mut ElementContext<'_, H>| {
-            let mut label = ui::label(cx, text.clone())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .text_color(ColorRef::Color(fg))
-                .nowrap();
-            if let Some(line_height) = style.line_height {
-                label = label.line_height_px(line_height);
-            }
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                label = label.letter_spacing_em(letter_spacing_em);
-            }
-            vec![label.into_element(cx)]
-        };
-
-        (pressable, chrome_props, children)
-    })
+    crate::button::Button::new(label)
+        .variant(crate::button::ButtonVariant::Ghost)
+        .size(crate::button::ButtonSize::IconSm)
+        .children([icon])
+        .disabled(!enabled)
+        // shadcn calendar nav uses `size-(--cell-size)` and `p-0`.
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(button_size_px))
+                .h_px(MetricRef::Px(button_size_px)),
+        )
+        .on_activate(Arc::new(move |host, _acx, _reason| on_activate(host)))
+        .into_element(cx)
 }
 
 fn calendar_hidden_day_cell<H: UiHost>(
@@ -2139,10 +2089,6 @@ fn calendar_day_cell<H: UiHost>(
         (Color::TRANSPARENT, fg)
     };
 
-    let ring_color = theme
-        .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"));
-
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
     let date_label = locale.day_aria_label(date, today, selected);
@@ -2183,29 +2129,29 @@ fn calendar_day_cell<H: UiHost>(
             }
         }));
 
-        let hover_bg = theme.color_required("accent");
+        let accent_bg = theme.color_required("accent");
         let pressed_bg = {
-            let mut c = hover_bg;
+            let mut c = accent_bg;
             c.a *= 0.85;
             c
         };
 
         let bg = if selected {
             bg
+        } else if today {
+            accent_bg
         } else if st.pressed {
             pressed_bg
         } else if st.hovered {
-            hover_bg
+            accent_bg
         } else {
             Color::TRANSPARENT
         };
 
-        let mut chrome = ChromeRefinement::default()
-            .rounded(Radius::Sm)
+        // Align with shadcn-web: day buttons are `rounded-md` and `today` is filled (`bg-accent`).
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Md)
             .bg(ColorRef::Color(bg));
-        if today && !selected {
-            chrome = chrome.border_1().border_color(ColorRef::Color(ring_color));
-        }
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
@@ -2219,7 +2165,7 @@ fn calendar_day_cell<H: UiHost>(
             focusable: !disabled,
             focus_ring: Some(decl_style::focus_ring(
                 theme,
-                theme.metric_required("metric.radius.sm"),
+                theme.metric_required("metric.radius.md"),
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),
@@ -2253,7 +2199,13 @@ fn calendar_day_cell<H: UiHost>(
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
                         .font_medium()
-                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .text_color(ColorRef::Color(if disabled {
+                            muted_fg
+                        } else if today && !selected {
+                            theme.color_required("accent-foreground")
+                        } else {
+                            fg
+                        }))
                         .nowrap();
 
                     let label = if disabled {

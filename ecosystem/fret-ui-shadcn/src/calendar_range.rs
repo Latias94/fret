@@ -94,10 +94,10 @@ impl CalendarRange {
             min_days: 0,
             max_days: 0,
             exclude_disabled: false,
-            week_start: Weekday::Monday,
+            week_start: Weekday::Sunday,
             fixed_weeks: false,
             show_outside_days: true,
-            disable_outside_days: true,
+            disable_outside_days: false,
             show_week_number: false,
             cell_size: None,
             today: None,
@@ -708,6 +708,18 @@ impl CalendarRange {
                                         let is_to = selected.to.is_some_and(|d| d == day.date);
                                         let in_range = selected.contains(day.date);
                                         let selected_flag = in_range || is_from || is_to;
+                                        let col = idx % 7;
+                                        let is_selected_at = |idx: usize| {
+                                            let Some(day) = grid.get(idx) else {
+                                                return false;
+                                            };
+                                            let d = day.date;
+                                            selected.contains(d)
+                                                || selected.from.is_some_and(|it| it == d)
+                                                || selected.to.is_some_and(|it| it == d)
+                                        };
+                                        let left_selected = col > 0 && is_selected_at(idx - 1);
+                                        let right_selected = col < 6 && is_selected_at(idx + 1);
 
                                         calendar_range_day_cell(
                                             cx,
@@ -718,6 +730,8 @@ impl CalendarRange {
                                             is_from,
                                             is_to,
                                             selected_flag,
+                                            left_selected,
+                                            right_selected,
                                             is_today,
                                             is_disabled,
                                             focus_date.is_some_and(|d| d == day.date),
@@ -1313,6 +1327,18 @@ fn calendar_range_month_view<H: UiHost>(
                 let is_to = selected.to.is_some_and(|d| d == day.date);
                 let in_range = selected.contains(day.date);
                 let selected_flag = in_range || is_from || is_to;
+                let col = idx % 7;
+                let is_selected_at = |idx: usize| {
+                    let Some(day) = grid.get(idx) else {
+                        return false;
+                    };
+                    let d = day.date;
+                    selected.contains(d)
+                        || selected.from.is_some_and(|it| it == d)
+                        || selected.to.is_some_and(|it| it == d)
+                };
+                let left_selected = col > 0 && is_selected_at(idx - 1);
+                let right_selected = col < 6 && is_selected_at(idx + 1);
 
                 calendar_range_day_cell(
                     cx,
@@ -1323,6 +1349,8 @@ fn calendar_range_month_view<H: UiHost>(
                     is_from,
                     is_to,
                     selected_flag,
+                    left_selected,
+                    right_selected,
                     is_today,
                     is_disabled,
                     focus_date.is_some_and(|d| d == day.date),
@@ -1558,6 +1586,8 @@ fn calendar_range_day_cell<H: UiHost>(
     is_from: bool,
     is_to: bool,
     selected: bool,
+    left_selected: bool,
+    right_selected: bool,
     today: bool,
     disabled: bool,
     focus_candidate: bool,
@@ -1592,14 +1622,18 @@ fn calendar_range_day_cell<H: UiHost>(
             theme.color_required("primary-foreground"),
         )
     } else if selected {
-        (theme.color_required("accent"), fg)
+        (
+            theme.color_required("accent"),
+            theme.color_required("accent-foreground"),
+        )
+    } else if today {
+        (
+            theme.color_required("accent"),
+            theme.color_required("accent-foreground"),
+        )
     } else {
         (Color::TRANSPARENT, fg)
     };
-
-    let ring_color = theme
-        .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"));
 
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
@@ -1659,28 +1693,36 @@ fn calendar_range_day_cell<H: UiHost>(
             }
         }));
 
-        let hover_bg = theme.color_required("accent");
+        let accent_bg = theme.color_required("accent");
         let pressed_bg = {
-            let mut c = hover_bg;
+            let mut c = accent_bg;
             c.a *= 0.85;
             c
         };
 
         let bg = if is_from || is_to {
             bg
+        } else if selected || today {
+            bg
         } else if st.pressed {
             pressed_bg
         } else if st.hovered {
-            hover_bg
+            accent_bg
         } else {
-            bg
+            Color::TRANSPARENT
         };
 
-        let mut chrome = ChromeRefinement::default()
-            .rounded(Radius::Sm)
-            .bg(ColorRef::Color(bg));
-        if today && !(is_from || is_to) {
-            chrome = chrome.border_1().border_color(ColorRef::Color(ring_color));
+        let mut chrome = ChromeRefinement::default().bg(ColorRef::Color(bg));
+        if selected {
+            // Match shadcn-web: range selection rounds only the visible row edges.
+            if !left_selected {
+                chrome = chrome.rounded_tl(Radius::Md).rounded_bl(Radius::Md);
+            }
+            if !right_selected {
+                chrome = chrome.rounded_tr(Radius::Md).rounded_br(Radius::Md);
+            }
+        } else {
+            chrome = chrome.rounded(Radius::Md);
         }
 
         let mut chrome_props =
@@ -1694,7 +1736,7 @@ fn calendar_range_day_cell<H: UiHost>(
             focusable: !disabled,
             focus_ring: Some(decl_style::focus_ring(
                 theme,
-                theme.metric_required("metric.radius.sm"),
+                theme.metric_required("metric.radius.md"),
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),

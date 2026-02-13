@@ -89,10 +89,10 @@ impl CalendarMultiple {
             required: false,
             min: None,
             max: None,
-            week_start: Weekday::Monday,
+            week_start: Weekday::Sunday,
             fixed_weeks: false,
             show_outside_days: true,
-            disable_outside_days: true,
+            disable_outside_days: false,
             show_week_number: false,
             cell_size: None,
             today: None,
@@ -1061,10 +1061,6 @@ fn calendar_multi_day_cell<H: UiHost>(
         (Color::TRANSPARENT, fg)
     };
 
-    let ring_color = theme
-        .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"));
-
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
     let date_label = locale.day_aria_label(date, today, selected);
@@ -1109,29 +1105,29 @@ fn calendar_multi_day_cell<H: UiHost>(
             }
         }));
 
-        let hover_bg = theme.color_required("accent");
+        let accent_bg = theme.color_required("accent");
         let pressed_bg = {
-            let mut c = hover_bg;
+            let mut c = accent_bg;
             c.a *= 0.85;
             c
         };
 
         let bg = if selected {
             bg
+        } else if today {
+            accent_bg
         } else if st.pressed {
             pressed_bg
         } else if st.hovered {
-            hover_bg
+            accent_bg
         } else {
             Color::TRANSPARENT
         };
 
-        let mut chrome = ChromeRefinement::default()
-            .rounded(Radius::Sm)
+        // Align with shadcn-web: day buttons are `rounded-md` and `today` is filled (`bg-accent`).
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Md)
             .bg(ColorRef::Color(bg));
-        if today && !selected {
-            chrome = chrome.border_1().border_color(ColorRef::Color(ring_color));
-        }
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
@@ -1144,7 +1140,7 @@ fn calendar_multi_day_cell<H: UiHost>(
             focusable: !disabled,
             focus_ring: Some(decl_style::focus_ring(
                 theme,
-                theme.metric_required("metric.radius.sm"),
+                theme.metric_required("metric.radius.md"),
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),
@@ -1177,7 +1173,13 @@ fn calendar_multi_day_cell<H: UiHost>(
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
                         .font_medium()
-                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .text_color(ColorRef::Color(if disabled {
+                            muted_fg
+                        } else if today && !selected {
+                            theme.color_required("accent-foreground")
+                        } else {
+                            fg
+                        }))
                         .nowrap();
 
                     let label = if disabled {
