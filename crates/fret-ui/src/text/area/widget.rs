@@ -1461,10 +1461,10 @@ impl<H: UiHost> Widget<H> for TextArea {
             let (track_bg, thumb_bg, thumb_hover_bg, radius) = {
                 let theme = cx.theme();
                 (
-                    theme.color_required("scrollbar.background"),
-                    theme.color_required("scrollbar.thumb.background"),
-                    theme.color_required("scrollbar.thumb.hover.background"),
-                    theme.metric_required("metric.radius.sm"),
+                    theme.color_token("scrollbar.background"),
+                    theme.color_token("scrollbar.thumb.background"),
+                    theme.color_token("scrollbar.thumb.hover.background"),
+                    theme.metric_token("metric.radius.sm"),
                 )
             };
             cx.scene.push(SceneOp::Quad {

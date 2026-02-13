@@ -7,6 +7,10 @@ use crate::layout_engine::TaffyLayoutEngine;
 use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
+fn layout_profile_enabled() -> bool {
+    std::env::var_os("FRET_LAYOUT_PROFILE").is_some_and(|v| !v.is_empty() && v != "0")
+}
+
 impl<H: UiHost> UiTree<H> {
     fn virtual_list_scroll_handle_requires_layout(
         app: &mut H,
@@ -118,14 +122,16 @@ impl<H: UiHost> UiTree<H> {
 
             let mut change_kind = change.kind;
 
-            // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
-            // when offset/viewport/content are unchanged, which makes the change appear as
+            // If a virtual list requested a scroll-to-item, the scroll handle revision can bump
+            // even when offset/viewport/content are unchanged, which makes the change appear as
             // "layout-affecting". Consume the deferred request up-front (using cached metrics +
             // viewport) and convert it into a simple offset update, avoiding a layout-driven
             // consumption path in the common case.
-            if consume_deferred_scroll_to_item
-                && change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout
-            {
+            //
+            // Note: the diagnostics pipeline may classify these revisions as either `Layout` or
+            // `HitTestOnly` depending on which stage observed the bump. Prefer consuming the
+            // deferred request whenever we can.
+            if consume_deferred_scroll_to_item {
                 let mut consumed_scroll_to_item = false;
                 for element in &bound {
                     if consumed_scroll_to_item {
@@ -194,10 +200,19 @@ impl<H: UiHost> UiTree<H> {
                             state.metrics.sync_keys(&state.keys, vlist_items_revision);
                             state.items_revision = vlist_items_revision;
 
+                            let viewport_from_state = match vlist_axis {
+                                fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                            };
                             let viewport_size = vlist_scroll_handle.viewport_size();
-                            let viewport = match vlist_axis {
+                            let viewport_from_handle = match vlist_axis {
                                 fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
                                 fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
+                            };
+                            let viewport = if viewport_from_handle.0 > 0.0 {
+                                viewport_from_handle
+                            } else {
+                                viewport_from_state
                             };
                             if viewport.0 <= 0.0 || vlist_len == 0 {
                                 return None;
@@ -507,8 +522,7 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
-        let profile_layout_all = std::env::var_os("FRET_LAYOUT_ALL_PROFILE")
-            .is_some_and(|v| !v.is_empty() && v != "0")
+        let profile_layout_all = crate::runtime_config::ui_runtime_config().layout_all_profile
             && pass_kind == LayoutPassKind::Final;
         let profile_started = profile_layout_all.then(Instant::now);
         let mut t_invalidate_scroll_handle_bindings: Option<Duration> = None;
@@ -1066,14 +1080,14 @@ impl<H: UiHost> UiTree<H> {
         };
         let Some(element) = self.node_element(focused) else {
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_focus_repair {
                 eprintln!("focus_repair: focused={focused:?} has no element");
             }
             return;
         };
         let Some(canonical) = crate::elements::node_for_element(app, window, element) else {
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_focus_repair {
                 eprintln!(
                     "focus_repair: focused={focused:?} element={element:?} has no canonical node",
                 );
@@ -1081,7 +1095,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         #[cfg(debug_assertions)]
-        if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+        if crate::runtime_config::ui_runtime_config().debug_focus_repair {
             eprintln!(
                 "focus_repair: focused={focused:?} element={element:?} canonical={canonical:?} canonical_exists={}",
                 self.node_exists(canonical)
@@ -1488,19 +1502,17 @@ impl<H: UiHost> UiTree<H> {
     ) {
         use std::sync::atomic::{AtomicU32, Ordering};
 
-        if std::env::var_os("FRET_TAFFY_DUMP").is_none() {
+        let config = crate::runtime_config::ui_runtime_config();
+        let Some(taffy_dump) = config.taffy_dump.as_ref() else {
             return;
-        }
+        };
 
         static DUMP_COUNT: AtomicU32 = AtomicU32::new(0);
-        let dump_max: Option<u32> =
-            if std::env::var("FRET_TAFFY_DUMP_ONCE").ok().as_deref() == Some("1") {
-                Some(1)
-            } else {
-                std::env::var("FRET_TAFFY_DUMP_MAX")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-            };
+        let dump_max: Option<u32> = if config.taffy_dump_once {
+            Some(1)
+        } else {
+            taffy_dump.max
+        };
         if let Some(max) = dump_max {
             let prev = DUMP_COUNT.fetch_add(1, Ordering::SeqCst);
             if prev >= max {
@@ -1508,19 +1520,19 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT")
-            && !format!("{root:?}").contains(&filter)
-        {
-            return;
+        if let Some(filter) = taffy_dump.root_filter.as_ref() {
+            if !format!("{root:?}").contains(filter) {
+                return;
+            }
         }
 
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
         // stable element label (e.g. a `SemanticsProps.label`) than by ephemeral `NodeId`s.
-        let dump_root = if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT_LABEL") {
+        let dump_root = if let Some(filter) = taffy_dump.root_label_filter.as_ref() {
             let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
                 .map(|r| format!("{:?}", r.instance))
                 .unwrap_or_default();
-            if root_label.contains(&filter) {
+            if root_label.contains(filter) {
                 root
             } else {
                 let mut stack: Vec<NodeId> = vec![root];
@@ -1536,7 +1548,7 @@ impl<H: UiHost> UiTree<H> {
                         crate::declarative::frame::element_record_for_node(app, window, node)
                             .map(|r| format!("{:?}", r.instance))
                             .unwrap_or_default();
-                    if label.contains(&filter) {
+                    if label.contains(filter) {
                         found = Some(node);
                         break;
                     }
@@ -1556,9 +1568,7 @@ impl<H: UiHost> UiTree<H> {
             root
         };
 
-        let out_dir = std::env::var("FRET_TAFFY_DUMP_DIR")
-            .ok()
-            .unwrap_or_else(|| ".fret/taffy-dumps".to_string());
+        let out_dir = taffy_dump.out_dir.clone();
 
         let frame = app.frame_id().0;
         let root_slug: String = format!("{dump_root:?}")
@@ -1733,8 +1743,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let profile_layout =
-            std::env::var_os("FRET_LAYOUT_PROFILE").is_some_and(|v| !v.is_empty() && v != "0");
+        let profile_layout = crate::runtime_config::ui_runtime_config().layout_profile;
         let total_started = profile_layout.then(Instant::now);
 
         let sf = scale_factor;
@@ -1744,9 +1753,10 @@ impl<H: UiHost> UiTree<H> {
         );
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled);
+        engine.set_measure_profiling_enabled(self.debug_enabled && profile_layout);
 
         let phase1_started = profile_layout.then(Instant::now);
+        let reuse_cached_flow = self.interactive_resize_active();
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
             if self
@@ -1756,8 +1766,34 @@ impl<H: UiHost> UiTree<H> {
             {
                 continue;
             }
-
-            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+            let layout_invalidated = self
+                .nodes
+                .get(root)
+                .is_some_and(|node| node.invalidation.layout);
+            if engine.layout_id_for_node(root).is_some()
+                && self
+                    .nodes
+                    .get(root)
+                    .is_some_and(|node| !node.invalidation.layout && node.bounds == bounds)
+            {
+                engine.mark_seen_subtree_from_cached_children(root);
+                continue;
+            }
+            if reuse_cached_flow && engine.layout_id_for_node(root).is_some() && !layout_invalidated
+            {
+                engine.set_viewport_root_override_size(root, bounds.size, sf);
+                engine.mark_seen_subtree_from_cached_children(root);
+            } else {
+                build_viewport_flow_subtree(
+                    &mut engine,
+                    app,
+                    &*self,
+                    window,
+                    sf,
+                    root,
+                    bounds.size,
+                );
+            }
         }
         let phase1_elapsed = phase1_started.map(|s| s.elapsed());
 
@@ -1885,6 +1921,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds: Rect,
                 needs_layout: bool,
                 is_translation_only: bool,
+                layout_invalidated: bool,
             }
 
             let mut batch: Vec<ViewportWorkItem> = Vec::with_capacity(batch_end - batch_start);
@@ -1908,6 +1945,7 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     needs_layout,
                     is_translation_only,
+                    layout_invalidated: invalidated,
                 });
             }
 
@@ -1915,7 +1953,10 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(window) = window
             {
                 let mut engine = self.take_layout_engine();
-                engine.set_measure_profiling_enabled(self.debug_enabled);
+                engine
+                    .set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+
+                let reuse_cached_flow = self.interactive_resize_active();
 
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
@@ -1927,16 +1968,29 @@ impl<H: UiHost> UiTree<H> {
                     {
                         continue;
                     }
-
-                    build_viewport_flow_subtree(
-                        &mut engine,
-                        app,
-                        &*self,
-                        window,
-                        sf,
-                        item.root,
-                        item.bounds.size,
-                    );
+                    if engine.layout_id_for_node(item.root).is_some()
+                        && (!item.needs_layout || item.is_translation_only)
+                    {
+                        engine.mark_seen_subtree_from_cached_children(item.root);
+                        continue;
+                    }
+                    if reuse_cached_flow
+                        && engine.layout_id_for_node(item.root).is_some()
+                        && !item.layout_invalidated
+                    {
+                        engine.set_viewport_root_override_size(item.root, item.bounds.size, sf);
+                        engine.mark_seen_subtree_from_cached_children(item.root);
+                    } else {
+                        build_viewport_flow_subtree(
+                            &mut engine,
+                            app,
+                            &*self,
+                            window,
+                            sf,
+                            item.root,
+                            item.bounds.size,
+                        );
+                    }
                 }
 
                 // Phase 2: compute/apply only for roots that need layout and are not translation-only.
@@ -2063,9 +2117,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let forbid_fallback_solves =
-            std::env::var_os("FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES").is_some();
+            crate::runtime_config::ui_runtime_config().layout_forbid_widget_fallback_solves;
         let trace_fallback_solves =
-            std::env::var_os("FRET_LAYOUT_TRACE_WIDGET_FALLBACK_SOLVES").is_some();
+            crate::runtime_config::ui_runtime_config().layout_trace_widget_fallback_solves;
 
         if trace_fallback_solves {
             let label = crate::declarative::frame::element_record_for_node(app, window, node)
@@ -2120,7 +2174,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled);
+        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
         crate::layout_engine::build_viewport_flow_subtree(
             &mut engine,
             app,
@@ -2281,7 +2335,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled);
+        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
         for &(root, root_bounds) in &batch {
             crate::layout_engine::build_viewport_flow_subtree(
                 &mut engine,

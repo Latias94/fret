@@ -29,11 +29,11 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.accordion.trigger.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.accordion.trigger.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -174,7 +174,7 @@ pub mod composable {
             let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
             let test_id = self.test_id;
             let text_style = trigger_text_style(&theme);
-            let fg = theme.color_required("foreground");
+            let fg = theme.color_token("foreground");
             let radius = MetricRef::radius(Radius::Md).resolve(&theme);
 
             let pressable_layout = decl_style::layout_style(
@@ -224,7 +224,7 @@ pub mod composable {
                             move |cx| {
                                 let chevron_fg = theme
                                     .color_by_key("muted-foreground")
-                                    .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                                    .unwrap_or_else(|| theme.color_token("muted-foreground"));
                                 let chevron_layout = decl_style::layout_style(
                                     &theme,
                                     LayoutRefinement::default()
@@ -969,7 +969,7 @@ impl AccordionTrigger {
         let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
         let test_id = self.test_id;
         let text_style = trigger_text_style(&theme);
-        let fg = theme.color_required("foreground");
+        let fg = theme.color_token("foreground");
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
 
         let pressable_layout = decl_style::layout_style(
@@ -1018,7 +1018,7 @@ impl AccordionTrigger {
                         move |cx| {
                             let chevron_fg = theme
                                 .color_by_key("muted-foreground")
-                                .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                                .unwrap_or_else(|| theme.color_token("muted-foreground"));
                             let chevron_layout = decl_style::layout_style(
                                 &theme,
                                 LayoutRefinement::default()

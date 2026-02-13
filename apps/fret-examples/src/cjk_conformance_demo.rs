@@ -97,7 +97,7 @@ impl CjkConformanceDriver {
                         size: Px(12.0),
                         ..Default::default()
                     }),
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::Word,
                     overflow: fret_core::TextOverflow::Clip,
                 })
@@ -124,7 +124,7 @@ impl CjkConformanceDriver {
                 layout: Default::default(),
                 text: Arc::from("Fallback smoke (default style):"),
                 style: Some(label_style.clone()),
-                color: Some(theme.color_required("muted-foreground")),
+                color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -132,7 +132,7 @@ impl CjkConformanceDriver {
                 layout: Default::default(),
                 text: Arc::from(FALLBACK_SMOKE),
                 style: Some(default_style),
-                color: Some(theme.color_required("foreground")),
+                color: Some(theme.color_token("foreground")),
                 wrap: TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -140,7 +140,7 @@ impl CjkConformanceDriver {
                 layout: Default::default(),
                 text: Arc::from("Fallback smoke (forced CJK family):"),
                 style: Some(label_style.clone()),
-                color: Some(theme.color_required("muted-foreground")),
+                color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -148,7 +148,7 @@ impl CjkConformanceDriver {
                 layout: Default::default(),
                 text: Arc::from(FALLBACK_SMOKE),
                 style: Some(sample_style.clone()),
-                color: Some(theme.color_required("foreground")),
+                color: Some(theme.color_token("foreground")),
                 wrap: TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -158,7 +158,7 @@ impl CjkConformanceDriver {
                     layout: Default::default(),
                     text: Arc::from(case.label),
                     style: Some(label_style.clone()),
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: fret_core::TextOverflow::Clip,
                 }));
@@ -167,7 +167,7 @@ impl CjkConformanceDriver {
                     layout: Default::default(),
                     text: Arc::from(case.text),
                     style: Some(sample_style.clone()),
-                    color: Some(theme.color_required("foreground")),
+                    color: Some(theme.color_token("foreground")),
                     wrap: TextWrap::Word,
                     overflow: fret_core::TextOverflow::Clip,
                 }));
@@ -205,7 +205,7 @@ impl CjkConformanceDriver {
                     .items_center()
                     .into_element(cx)]
             })
-            .bg(ColorRef::Color(theme.color_required("muted")))
+            .bg(ColorRef::Color(theme.color_token("muted")))
             .p(Space::N6)
             .w_full()
             .h_full()

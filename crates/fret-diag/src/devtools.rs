@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpV1, DevtoolsScreenshotRequestV1, DiagTransportMessageV1, UiInspectConfigV1,
-    UiSemanticsNodeGetV1,
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsScreenshotRequestV1,
+    DiagTransportMessageV1, UiInspectConfigV1, UiSemanticsNodeGetV1,
 };
 
 use crate::transport::ToolingDiagClient;
@@ -86,6 +86,27 @@ impl DevtoolsOps {
             payload: serde_json::to_value(DevtoolsBundleDumpV1 {
                 schema_version: 1,
                 label: label.map(|s| s.to_string()),
+                max_snapshots: None,
+            })
+            .unwrap_or(serde_json::Value::Null),
+        });
+    }
+
+    pub fn bundle_dump_with_max_snapshots(
+        &self,
+        session_id: Option<&str>,
+        label: Option<&str>,
+        max_snapshots: u32,
+    ) {
+        self.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "bundle.dump".to_string(),
+            session_id: session_id.map(|s| s.to_string()),
+            request_id: None,
+            payload: serde_json::to_value(DevtoolsBundleDumpV1 {
+                schema_version: 1,
+                label: label.map(|s| s.to_string()),
+                max_snapshots: Some(max_snapshots),
             })
             .unwrap_or(serde_json::Value::Null),
         });
@@ -150,5 +171,25 @@ impl DevtoolsOps {
             .unwrap_or(serde_json::Value::Null),
         });
         request_id
+    }
+
+    pub fn app_exit_request(
+        &self,
+        session_id: Option<&str>,
+        reason: Option<&str>,
+        delay_ms: Option<u64>,
+    ) {
+        self.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "app.exit.request".to_string(),
+            session_id: session_id.map(|s| s.to_string()),
+            request_id: None,
+            payload: serde_json::to_value(DevtoolsAppExitRequestV1 {
+                schema_version: 1,
+                reason: reason.map(|s| s.to_string()),
+                delay_ms,
+            })
+            .unwrap_or(serde_json::Value::Null),
+        });
     }
 }

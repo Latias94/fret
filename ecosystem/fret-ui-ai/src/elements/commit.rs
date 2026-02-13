@@ -37,7 +37,7 @@ fn muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn status_color(status: CommitFileStatusKind) -> ColorRef {
@@ -87,7 +87,7 @@ fn monospace_text_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyl
         size,
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -289,7 +289,7 @@ impl CommitContent {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let mut wrapper = ContainerProps::default();
         wrapper.layout = decl_style::layout_style(&theme, self.layout);
@@ -334,7 +334,7 @@ impl CommitHash {
             cx,
             ids::ui::GIT_COMMIT,
             Some(Px(12.0)),
-            Some(ColorRef::Color(theme.color_required("foreground"))),
+            Some(ColorRef::Color(theme.color_token("foreground"))),
         );
 
         let text = cx.text_props(TextProps {
@@ -347,7 +347,7 @@ impl CommitHash {
                     .unwrap_or(Px(12.0)),
                 FontWeight::NORMAL,
             )),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
         });
@@ -383,13 +383,13 @@ impl CommitMessage {
                 font: FontId::default(),
                 size: theme
                     .metric_by_key("component.commit.message_text_px")
-                    .unwrap_or_else(|| theme.metric_required("font.size")),
+                    .unwrap_or_else(|| theme.metric_token("font.size")),
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("font.line_height")),
+                line_height: Some(theme.metric_token("font.line_height")),
                 letter_spacing_em: None,
             }),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
         })
@@ -766,13 +766,13 @@ impl CommitCopyButton {
             pressable.a11y.label = Some(label);
             pressable.a11y.test_id = test_id.clone();
 
-            let fg = theme.color_required("muted-foreground");
+            let fg = theme.color_token("muted-foreground");
             let bg_hover = theme
                 .color_by_key("color.menu.item.hover")
-                .unwrap_or_else(|| theme.color_required("secondary"));
+                .unwrap_or_else(|| theme.color_token("secondary"));
             let bg_pressed = theme
                 .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_required("secondary"));
+                .unwrap_or_else(|| theme.color_token("secondary"));
 
             let bg = if st.pressed {
                 alpha(bg_pressed, 0.9)
@@ -783,7 +783,7 @@ impl CommitCopyButton {
             };
 
             let size = Px(28.0);
-            let radius = theme.metric_required("metric.radius.sm");
+            let radius = theme.metric_token("metric.radius.sm");
 
             let icon_id = if copied {
                 ids::ui::CHECK
@@ -912,7 +912,7 @@ impl CommitFile {
         let hover_bg = theme
             .color_by_key("muted")
             .map(|c| alpha(c, 0.5))
-            .unwrap_or_else(|| alpha(theme.color_required("accent"), 0.2));
+            .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.2));
 
         let children = self.children;
         let test_id = self.test_id;
@@ -1078,7 +1078,7 @@ impl CommitFilePath {
         let theme = Theme::global(&*cx.app).clone();
         let fg_primary = theme
             .color_by_key("primary")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let path = self.path;
         let base_props = TextProps {
@@ -1093,7 +1093,7 @@ impl CommitFilePath {
             },
             text: path.clone(),
             style: Some(monospace_text_style(&theme, Px(12.0), FontWeight::NORMAL)),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
         };

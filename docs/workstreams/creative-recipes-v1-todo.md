@@ -72,10 +72,18 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
     - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/ui-gallery-magic-sparkles-text.windows-local.v1.json`
   - [ ] Extend coverage (optional):
-    - Lens (`tools/diag-scripts/ui-gallery-magic-lens-*-perf-steady.json`)
-    - BorderBeam (`tools/diag-scripts/ui-gallery-magic-border-beam-*-perf-steady.json`)
-    - Dock (`tools/diag-scripts/ui-gallery-magic-dock-*-perf-steady.json`)
-    - Marquee (`tools/diag-scripts/ui-gallery-magic-marquee-*-perf-steady.json`)
+    - [x] Lens:
+      - `tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json`
+    - [x] BorderBeam:
+      - `tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-border-beam.windows-local.v1.json`
+    - [x] Dock:
+      - `tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-dock.windows-local.v1.json`
+    - [x] Marquee:
+      - `tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-marquee.windows-local.v1.json`
 
 ## P1 — Effect steps extension
 
@@ -154,14 +162,14 @@ to `fret-ui` (ADR 0234).
         `RenderTargetUpdate::Update` (GPU copy, no CPU readback).
     - Evidence: `apps/fret-examples/src/external_texture_imports_web_demo.rs`,
       `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
-  - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
-        (capability-gated) with deterministic fallback.
+    - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
+          (capability-gated) with deterministic fallback.
         Note: currently blocked on wgpu's WebGPU backend implementing `ExternalTexture`
         (wgpu v28: `wgpu/src/backend/webgpu.rs` contains `unimplemented!("ExternalTexture not implemented for web")`).
-  - [x] native (v1 copy path): software decode → CPU upload (`Queue::write_texture`) →
-        `RenderTargetUpdate::Update` with deterministic fallback.
-    - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source)
-- [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
+    - [x] native (v1 copy path): software decode → CPU upload (`Queue::write_texture`) →
+          `RenderTargetUpdate::Update` with deterministic fallback.
+      - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source)
+  - [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
 - [x] Decide and implement the minimal render target descriptor metadata seam needed by real imports:
       alpha semantics (`premul` vs `straight`), orientation/transform metadata, and frame timing hints
       for diagnostics (ADR 0234 D4).

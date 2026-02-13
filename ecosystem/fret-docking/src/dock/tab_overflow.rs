@@ -13,7 +13,7 @@ pub(super) struct TabOverflowMenuState {
 }
 
 pub(super) fn tab_overflow_button_rect(theme: ThemeSnapshot, tab_bar: Rect) -> Rect {
-    let pad = theme.metric_required("metric.padding.sm").0.max(0.0);
+    let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
     let size = (tab_bar.size.height.0 * 0.80).clamp(18.0, 24.0);
     let x = tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - size;
     let y = tab_bar.origin.y.0 + (tab_bar.size.height.0 - size) * 0.5;
@@ -25,7 +25,7 @@ pub(super) fn tab_overflow_menu_rect(
     tab_bar: Rect,
     tab_count: usize,
 ) -> Rect {
-    let pad = theme.metric_required("metric.padding.sm").0.max(0.0);
+    let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
     let width = (tab_bar.size.width.0 * 0.55).clamp(180.0, 320.0);
     let rows = overflow_menu_row_count(tab_count) as f32;
     let height = (rows * tab_bar.size.height.0).clamp(tab_bar.size.height.0 * 2.0, 320.0);
@@ -38,7 +38,7 @@ pub(super) fn tab_overflow_menu_rect(
 ///
 /// This should only be used when the tab bar actually overflows.
 pub(super) fn tab_strip_rect_with_overflow_button(theme: ThemeSnapshot, tab_bar: Rect) -> Rect {
-    let pad = theme.metric_required("metric.padding.sm").0.max(0.0);
+    let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
     let button = tab_overflow_button_rect(theme, tab_bar);
     let end_x = (button.origin.x.0 - pad).max(tab_bar.origin.x.0);
     let w = (end_x - tab_bar.origin.x.0).max(0.0);

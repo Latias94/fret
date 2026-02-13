@@ -55,7 +55,7 @@ fn color_mode_system_syncs_style_from_theme() {
     let mut services = NullServices::default();
     let theme = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
 
-    assert_eq!(canvas.style.background, theme.color_required("background"));
+    assert_eq!(canvas.style.background, theme.color_token("background"));
 }
 
 #[test]

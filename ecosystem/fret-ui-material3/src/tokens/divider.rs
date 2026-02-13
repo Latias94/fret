@@ -16,5 +16,5 @@ pub(crate) fn color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.divider.color")
         .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline-variant"))
 }

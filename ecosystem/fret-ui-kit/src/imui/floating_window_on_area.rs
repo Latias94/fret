@@ -245,9 +245,9 @@ where
         let (popover, border, muted) = {
             let theme = fret_ui::Theme::global(&*cx.app);
             (
-                theme.color_required("popover"),
-                theme.color_required("border"),
-                theme.color_required("muted"),
+                theme.color_token("popover"),
+                theme.color_token("border"),
+                theme.color_token("muted"),
             )
         };
 
@@ -520,6 +520,7 @@ where
                         PointerRegionProps {
                             layout,
                             enabled: true,
+                            ..Default::default()
                         },
                         move |cx| {
                             let region_id = cx.root_id();
@@ -599,6 +600,7 @@ where
                     PointerRegionProps {
                         layout,
                         enabled: true,
+                        ..Default::default()
                     },
                     move |cx| {
                         cx.pointer_region_clear_on_pointer_down();

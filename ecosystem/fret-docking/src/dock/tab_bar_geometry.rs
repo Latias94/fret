@@ -195,7 +195,7 @@ pub(super) fn dock_tab_width_for_title(
     title_width: Px,
     close_glyph_present: bool,
 ) -> Px {
-    let pad_x = theme.metric_required("metric.padding.md");
+    let pad_x = theme.metric_token("metric.padding.md");
     let reserve = if close_glyph_present {
         Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0)
     } else {

@@ -20,7 +20,7 @@ fn split_log(_args: std::fmt::Arguments<'_>) {
             sync::{Mutex, OnceLock},
         };
 
-        if std::env::var_os("FRET_RESIZABLE_SPLIT_LOG").is_none() {
+        if !crate::runtime_config::ui_runtime_config().resizable_split_log {
             return;
         }
 
@@ -181,7 +181,26 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
 
         self.last_bounds = cx.bounds;
 
-        let fraction = cx.app.models().get_copied(&self.fraction).unwrap_or(0.5);
+        let fraction = match cx.app.models().try_get_copied(&self.fraction) {
+            Ok(Some(v)) => v,
+            Ok(None) => {
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    model_id = ?self.fraction.id(),
+                    "resizable_split: fraction model not found"
+                );
+                0.5
+            }
+            Err(err) => {
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    ?err,
+                    model_id = ?self.fraction.id(),
+                    "resizable_split: failed to read fraction model"
+                );
+                0.5
+            }
+        };
         let (_a, _b, handle_rect, handle_center) = self.compute_layout(cx.bounds, fraction);
         self.last_handle_rect = handle_rect;
 
@@ -292,7 +311,26 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
 
-        let fraction = cx.app.models().get_copied(&self.fraction).unwrap_or(0.5);
+        let fraction = match cx.app.models().try_get_copied(&self.fraction) {
+            Ok(Some(v)) => v,
+            Ok(None) => {
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    model_id = ?self.fraction.id(),
+                    "resizable_split: fraction model not found"
+                );
+                0.5
+            }
+            Err(err) => {
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    ?err,
+                    model_id = ?self.fraction.id(),
+                    "resizable_split: failed to read fraction model"
+                );
+                0.5
+            }
+        };
         let (rect_a, rect_b, handle_rect, _center) = self.compute_layout(cx.bounds, fraction);
         self.last_handle_rect = handle_rect;
 

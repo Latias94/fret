@@ -47,6 +47,22 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
     { "type": "wait_frames", "n": 5 },
 
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "font_catalog_populated" },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "system_font_rescan_idle" },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "text_font_stack_key_stable", "stable_frames": 120 },
+      "timeout_frames": 600
+    },
+
     { "type": "reset_diagnostics" },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dropdown-trigger" } },
@@ -64,4 +80,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-

@@ -22,7 +22,7 @@ fn otp_gap(theme: &Theme) -> Px {
 }
 
 fn otp_separator_color(theme: &Theme) -> Color {
-    theme.color_required("muted-foreground")
+    theme.color_token("muted-foreground")
 }
 
 fn sanitize_otp(input: &str, length: usize, numeric_only: bool) -> String {
@@ -201,7 +201,7 @@ impl InputOtp {
         let slot_gap = self.slot_gap_override.unwrap_or(Px(0.0));
         let slot_gap_is_nonzero = slot_gap.0.abs() >= 0.5;
 
-        let font_line_height = theme.metric_required("font.line_height");
+        let font_line_height = theme.metric_token("font.line_height");
         let slot_line_height = self
             .slot_line_height_px_override
             .unwrap_or(font_line_height);

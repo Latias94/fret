@@ -163,7 +163,7 @@ fn color_fallback_theme_token_alpha_mul_derives_from_base_token() {
     Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
     let theme = Theme::global(&app);
-    let base = theme.color_required("primary");
+    let base = theme.color_token("primary");
 
     let derived = ColorRef::Token {
         key: "primary.hover.background",
@@ -195,7 +195,7 @@ fn state_specific_token_overrides_fallback_derivation() {
     Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
     let theme = Theme::global(&app);
-    let expected = theme.color_required("primary.hover.background");
+    let expected = theme.color_token("primary.hover.background");
 
     let resolved = ColorRef::Token {
         key: "primary.hover.background",

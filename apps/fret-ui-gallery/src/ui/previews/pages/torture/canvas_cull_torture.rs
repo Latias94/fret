@@ -30,10 +30,10 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
 
     let canvas =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-            let bg_even = theme.color_required("background");
-            let bg_odd = theme.color_required("muted");
-            let fg = theme.color_required("foreground");
-            let grid = theme.color_required("border");
+            let bg_even = theme.color_token("background");
+            let bg_odd = theme.color_token("muted");
+            let fg = theme.color_token("foreground");
+            let grid = theme.color_token("border");
 
             let text_style = TextStyle {
                 font: FontId::monospace(),

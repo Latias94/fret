@@ -81,6 +81,102 @@ fn pointer_move_observers_are_suppressed_when_pointer_is_captured_by_another_lay
 }
 
 #[test]
+fn pointer_capture_switch_dispatches_pointer_cancel_to_previous_capture_target() {
+    #[derive(Default)]
+    struct CaptureTarget;
+
+    impl<H: UiHost> Widget<H> for CaptureTarget {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+    }
+
+    struct CaptureAndTransfer {
+        target: NodeId,
+        cancels: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for CaptureAndTransfer {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            match event {
+                Event::Pointer(PointerEvent::Down { button, .. })
+                    if *button == fret_core::MouseButton::Left =>
+                {
+                    cx.capture_pointer(cx.node);
+                }
+                Event::Pointer(PointerEvent::Move { .. }) => {
+                    cx.capture_pointer(self.target);
+                }
+                Event::PointerCancel(_) => {
+                    self.cancels.fetch_add(1, Ordering::SeqCst);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    let target = ui.create_node(CaptureTarget);
+    let cancels = Arc::new(AtomicUsize::new(0));
+    let source = ui.create_node(CaptureAndTransfer {
+        target,
+        cancels: cancels.clone(),
+    });
+
+    ui.add_child(root, target);
+    ui.add_child(root, source);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(20.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pointer_id = fret_core::PointerId(0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(pointer_id), Some(source));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(20.0), Px(10.0)),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(pointer_id), Some(target));
+    assert_eq!(
+        cancels.load(Ordering::SeqCst),
+        1,
+        "expected the previous capture target to receive PointerCancel when capture switches"
+    );
+}
+
+#[test]
 fn pointer_move_observers_ignore_touch_pointers() {
     #[derive(Default)]
     struct CountObserverMoves {

@@ -21,7 +21,7 @@ use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
 use std::slice;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 mod bounds_tree;
 mod commands;
@@ -502,27 +502,13 @@ struct LayoutNodeProfileConfig {
 
 impl LayoutNodeProfileConfig {
     fn from_env() -> Option<Self> {
-        let enabled = std::env::var("FRET_LAYOUT_NODE_PROFILE")
-            .ok()
-            .is_some_and(|v| v == "1");
-        if !enabled {
+        let Some(cfg) = crate::runtime_config::ui_runtime_config().layout_node_profile else {
             return None;
-        }
-
-        let top_n = std::env::var("FRET_LAYOUT_NODE_PROFILE_TOP")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(16)
-            .clamp(1, 128);
-
-        let min_us = std::env::var("FRET_LAYOUT_NODE_PROFILE_MIN_US")
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(500);
+        };
 
         Some(Self {
-            top_n,
-            min_elapsed: Duration::from_micros(min_us),
+            top_n: cfg.top_n,
+            min_elapsed: cfg.min_elapsed,
         })
     }
 }
@@ -635,27 +621,13 @@ struct MeasureNodeProfileConfig {
 
 impl MeasureNodeProfileConfig {
     fn from_env() -> Option<Self> {
-        let enabled = std::env::var("FRET_MEASURE_NODE_PROFILE")
-            .ok()
-            .is_some_and(|v| v == "1");
-        if !enabled {
+        let Some(cfg) = crate::runtime_config::ui_runtime_config().measure_node_profile else {
             return None;
-        }
-
-        let top_n = std::env::var("FRET_MEASURE_NODE_PROFILE_TOP")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(16)
-            .clamp(1, 128);
-
-        let min_us = std::env::var("FRET_MEASURE_NODE_PROFILE_MIN_US")
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(500);
+        };
 
         Some(Self {
-            top_n,
-            min_elapsed: Duration::from_micros(min_us),
+            top_n: cfg.top_n,
+            min_elapsed: cfg.min_elapsed,
         })
     }
 }
@@ -1412,6 +1384,10 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(1);
     }
 
+    pub(crate) fn hover_edge_changed_this_frame(&self) -> bool {
+        self.debug_hover_edge_this_frame
+    }
+
     pub(crate) fn debug_record_hover_declarative_invalidation(
         &mut self,
         node: NodeId,
@@ -1995,7 +1971,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         #[cfg(debug_assertions)]
-        if std::env::var_os("FRET_DEBUG_INTERACTIVITY_GATE_SYNC").is_some() {
+        if crate::runtime_config::ui_runtime_config().debug_interactivity_gate_sync {
             eprintln!(
                 "sync_interactivity_gate_widget: node={node:?} present={present} interactive={interactive}"
             );
@@ -2015,7 +1991,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         #[cfg(debug_assertions)]
-        if std::env::var_os("FRET_DEBUG_HIT_TEST_GATE_SYNC").is_some() {
+        if crate::runtime_config::ui_runtime_config().debug_hit_test_gate_sync {
             eprintln!("sync_hit_test_gate_widget: node={node:?} hit_test={hit_test}");
         }
         self.with_widget_mut(node, |w, _ui| {
@@ -2033,7 +2009,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         #[cfg(debug_assertions)]
-        if std::env::var_os("FRET_DEBUG_FOCUS_TRAVERSAL_GATE_SYNC").is_some() {
+        if crate::runtime_config::ui_runtime_config().debug_focus_traversal_gate_sync {
             eprintln!("sync_focus_traversal_gate_widget: node={node:?} traverse={traverse}");
         }
         self.with_widget_mut(node, |w, _ui| {
@@ -2328,7 +2304,6 @@ impl<H: UiHost> UiTree<H> {
                 .interactive_resize_last_bounds_delta
                 .is_some_and(|(dw, dh)| {
                     dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
-                        && dh.0.abs() <= 1.0
                         && (dw.0 != 0.0 || dh.0 != 0.0)
                 });
             if !small_step {
@@ -2361,7 +2336,6 @@ impl<H: UiHost> UiTree<H> {
                 .interactive_resize_last_bounds_delta
                 .is_some_and(|(dw, dh)| {
                     dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
-                        && dh.0.abs() <= 1.0
                         && (dw.0 != 0.0 || dh.0 != 0.0)
                 })
     }
@@ -4463,7 +4437,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_POINTER_DOWN_OUTSIDE").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_pointer_down_outside {
                 eprintln!(
                     "pointer_down_outside: layer={layer_id:?} root={root:?} consume={consume} focus_before={:?} hit={hit:?} hit_root={hit_root:?}",
                     self.focus(),
@@ -4482,7 +4456,7 @@ impl<H: UiHost> UiTree<H> {
             // dispatch can still assign focus to the underlay target.
             self.set_focus(None);
             #[cfg(debug_assertions)]
-            if std::env::var_os("FRET_DEBUG_POINTER_DOWN_OUTSIDE").is_some() {
+            if crate::runtime_config::ui_runtime_config().debug_pointer_down_outside {
                 eprintln!(
                     "pointer_down_outside: focus_after={:?} (suppress_hit_test_dispatch={consume})",
                     self.focus(),
@@ -5848,8 +5822,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let profile_semantics =
-            std::env::var_os("FRET_SEMANTICS_PROFILE").is_some_and(|v| !v.is_empty() && v != "0");
+        let profile_semantics = crate::runtime_config::ui_runtime_config().semantics_profile;
         let profile_started = profile_semantics.then(Instant::now);
         let mut t_element_id_map: Option<Duration> = None;
         let mut t_window_frame_children: Option<Duration> = None;
@@ -6335,58 +6308,19 @@ fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {
 }
 
 fn interactive_resize_stable_frames_required() -> u8 {
-    static STABLE_FRAMES: OnceLock<u8> = OnceLock::new();
-    *STABLE_FRAMES.get_or_init(|| {
-        std::env::var("FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES")
-            .ok()
-            .and_then(|v| v.parse::<u8>().ok())
-            .unwrap_or(2)
-            .min(60)
-    })
+    crate::runtime_config::ui_runtime_config().interactive_resize_stable_frames_required
 }
 
 fn text_wrap_width_bucket_px() -> u8 {
-    static BUCKET_PX: OnceLock<u8> = OnceLock::new();
-    *BUCKET_PX.get_or_init(|| {
-        // Default: off. Set to a small value (e.g. 2) to bucket wrap widths during interactive
-        // resize and reduce text prepare churn under width jitter.
-        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX")
-            .ok()
-            .and_then(|v| v.parse::<u8>().ok())
-            .unwrap_or(0)
-            .min(64)
-    })
+    crate::runtime_config::ui_runtime_config().text_wrap_width_bucket_px
 }
 
 fn text_wrap_width_small_step_bucket_px() -> u8 {
-    static BUCKET_PX: OnceLock<u8> = OnceLock::new();
-    *BUCKET_PX.get_or_init(|| {
-        // Default: 32px. Used only for small-step interactive resizes when no explicit bucketing
-        // policy is configured via `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
-        //
-        // Set to 0/1 to disable the default small-step bucketing, or to another small value to
-        // tune the tradeoff between resize smoothness and layout accuracy during live-resizing.
-        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX")
-            .ok()
-            .and_then(|v| v.parse::<u8>().ok())
-            .unwrap_or(32)
-            .min(64)
-    })
+    crate::runtime_config::ui_runtime_config().text_wrap_width_small_step_bucket_px
 }
 
 fn text_wrap_width_small_step_max_dw_px() -> u8 {
-    static MAX_DW: OnceLock<u8> = OnceLock::new();
-    *MAX_DW.get_or_init(|| {
-        // Default: 64px. This defines what “small-step” means for the default interactive-resize
-        // wrap-width bucketing. Increasing this makes the bucketing kick in at higher live-resize
-        // speeds, at the cost of less accurate wrapping while the user is dragging.
-        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX")
-            .ok()
-            .and_then(|v| v.parse::<u8>().ok())
-            .unwrap_or(64)
-            .max(1)
-            .min(255)
-    })
+    crate::runtime_config::ui_runtime_config().text_wrap_width_small_step_max_dw_px
 }
 
 #[cfg(test)]

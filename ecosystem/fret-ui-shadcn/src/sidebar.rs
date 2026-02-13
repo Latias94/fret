@@ -186,14 +186,14 @@ fn sidebar_bg(theme: &Theme) -> Color {
     theme
         .color_by_key("sidebar.background")
         .or_else(|| theme.color_by_key("sidebar"))
-        .unwrap_or_else(|| theme.color_required("sidebar"))
+        .unwrap_or_else(|| theme.color_token("sidebar"))
 }
 
 fn sidebar_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("sidebar.foreground")
         .or_else(|| theme.color_by_key("sidebar-foreground"))
-        .unwrap_or_else(|| theme.color_required("sidebar-foreground"))
+        .unwrap_or_else(|| theme.color_token("sidebar-foreground"))
 }
 
 fn sidebar_border(theme: &Theme) -> Color {
@@ -201,7 +201,7 @@ fn sidebar_border(theme: &Theme) -> Color {
         .color_by_key("sidebar.border")
         .or_else(|| theme.color_by_key("sidebar-border"))
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or_else(|| theme.color_required("sidebar-border"))
+        .unwrap_or_else(|| theme.color_token("sidebar-border"))
 }
 
 fn sidebar_accent(theme: &Theme) -> Color {
@@ -209,7 +209,7 @@ fn sidebar_accent(theme: &Theme) -> Color {
         .color_by_key("sidebar.accent")
         .or_else(|| theme.color_by_key("sidebar-accent"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("sidebar-accent"))
+        .unwrap_or_else(|| theme.color_token("sidebar-accent"))
 }
 
 fn sidebar_accent_fg(theme: &Theme) -> Color {
@@ -217,7 +217,7 @@ fn sidebar_accent_fg(theme: &Theme) -> Color {
         .color_by_key("sidebar.accent.foreground")
         .or_else(|| theme.color_by_key("sidebar-accent-foreground"))
         .or_else(|| theme.color_by_key("accent-foreground"))
-        .unwrap_or_else(|| theme.color_required("sidebar-accent-foreground"))
+        .unwrap_or_else(|| theme.color_token("sidebar-accent-foreground"))
 }
 
 fn sidebar_ring(theme: &Theme, radius: Px) -> RingStyle {
@@ -228,11 +228,11 @@ fn menu_button_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key("component.sidebar.menu_button_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.sidebar.menu_button_line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
     TextStyle {
         font: FontId::default(),
         size,
@@ -1473,7 +1473,7 @@ impl SidebarInset {
             .as_ref()
             .is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
 
-        let background = Theme::global(&*cx.app).color_required("background");
+        let background = Theme::global(&*cx.app).color_token("background");
         let mut chrome = ChromeRefinement::default().bg(ColorRef::Color(background));
         let mut layout = LayoutRefinement::default().w_full().h_full().flex_1();
 
@@ -1560,7 +1560,7 @@ impl SidebarInput {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let background = Theme::global(&*cx.app).color_required("background");
+        let background = Theme::global(&*cx.app).color_token("background");
 
         let mut input = Input::new(self.model)
             .disabled(self.disabled)
@@ -3486,7 +3486,7 @@ impl SidebarMenuButton {
                 };
 
                 let chrome = if matches!(variant, SidebarMenuButtonVariant::Outline) {
-                    let background = theme.color_required("background");
+                    let background = theme.color_token("background");
                     let border = sidebar_border(theme);
                     let mut chrome = ChromeRefinement::default()
                         .bg(ColorRef::Color(background))
@@ -3620,10 +3620,10 @@ impl SidebarMenuButton {
             let theme = Theme::global(&*cx.app);
             let popover_bg = theme
                 .color_by_key("popover.background")
-                .unwrap_or_else(|| theme.color_required("popover.background"));
+                .unwrap_or_else(|| theme.color_token("popover.background"));
             let border = theme
                 .color_by_key("border")
-                .unwrap_or_else(|| theme.color_required("border"));
+                .unwrap_or_else(|| theme.color_token("border"));
             let fg = sidebar_fg(theme);
             let label_style = menu_button_style(theme);
             (popover_bg, border, fg, label_style)

@@ -297,7 +297,7 @@ fn view(
         [
             tip_status,
             ui::text(_cx, tip_text)
-                .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
+                .text_color(ColorRef::Color(theme.color_token(tip_color_key)))
                 .into_element(_cx),
         ]
     })
@@ -386,7 +386,7 @@ fn view(
                     cx,
                     format!("No {} tasks", filter_value.as_label().to_lowercase()),
                 )
-                .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                 .into_element(cx),
             );
         }
@@ -417,7 +417,7 @@ fn view(
             derived.total, derived.active, derived.completed
         ),
     )
-    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
     .into_element(cx);
 
     let card = shadcn::Card::new([
@@ -441,10 +441,10 @@ fn view(
         .into_element(cx),
     ])
     .ui()
-    .bg(ColorRef::Color(theme.color_required("background")))
+    .bg(ColorRef::Color(theme.color_token("background")))
     .rounded(Radius::Lg)
     .border_1()
-    .border_color(ColorRef::Color(theme.color_required("border")))
+    .border_color(ColorRef::Color(theme.color_token("border")))
     .w_full()
     .max_w(Px(560.0))
     .into_element(cx);
@@ -457,7 +457,7 @@ fn view(
             .items_center()
             .into_element(cx)]
     })
-    .bg(ColorRef::Color(theme.color_required("muted")))
+    .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .w_full()
     .h_full()
@@ -506,7 +506,7 @@ fn todo_row(
         layout: Default::default(),
         text: row.text.clone(),
         style: None,
-        color: Some(theme.color_required(if row.done {
+        color: Some(theme.color_token(if row.done {
             "muted-foreground"
         } else {
             "foreground"
@@ -530,7 +530,7 @@ fn todo_row(
 
     ui::container(cx, |_cx| [row_body])
         .border_1()
-        .border_color(ColorRef::Color(theme.color_required("border")))
+        .border_color(ColorRef::Color(theme.color_token("border")))
         .rounded(Radius::Md)
         .p(Space::N3)
         .w_full()

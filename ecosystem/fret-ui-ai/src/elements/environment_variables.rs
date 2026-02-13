@@ -69,7 +69,7 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         size,
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -322,18 +322,18 @@ impl EnvironmentVariablesTitle {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("foreground");
+        let fg = theme.color_token("foreground");
         let text = self
             .text
             .unwrap_or_else(|| Arc::<str>::from("Environment Variables"));
 
-        let px = theme.metric_required("font.size");
+        let px = theme.metric_token("font.size");
         let style = TextStyle {
             font: FontId::default(),
             size: px,
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
-            line_height: Some(theme.metric_required("font.line_height")),
+            line_height: Some(theme.metric_token("font.line_height")),
             letter_spacing_em: None,
         };
 
@@ -409,7 +409,7 @@ impl EnvironmentVariablesToggle {
         };
 
         let theme = Theme::global(&*cx.app).clone();
-        let fg_muted = theme.color_required("muted-foreground");
+        let fg_muted = theme.color_token("muted-foreground");
         let show_values = cx
             .get_model_copied(&controller.show_values, Invalidation::Paint)
             .unwrap_or(false);
@@ -636,8 +636,8 @@ impl EnvironmentVariableName {
             .or_else(|| data.as_ref().map(|d| d.name.clone()))
             .unwrap_or_else(|| Arc::<str>::from(""));
 
-        let fg = theme.color_required("foreground");
-        let px = theme.metric_required("font.size");
+        let fg = theme.color_token("foreground");
+        let px = theme.metric_token("font.size");
         let style = monospace_style(&theme, px, FontWeight::NORMAL);
 
         cx.text_props(TextProps {
@@ -692,8 +692,8 @@ impl EnvironmentVariableValue {
             masked_value(&value)
         };
 
-        let fg = theme.color_required("muted-foreground");
-        let px = theme.metric_required("font.size");
+        let fg = theme.color_token("muted-foreground");
+        let px = theme.metric_token("font.size");
         let style = monospace_style(&theme, px, FontWeight::NORMAL);
 
         cx.text_props(TextProps {
@@ -889,13 +889,13 @@ impl EnvironmentVariableCopyButton {
             pressable.a11y.label = Some(label);
             pressable.a11y.test_id = test_id.clone();
 
-            let fg = theme.color_required("muted-foreground");
+            let fg = theme.color_token("muted-foreground");
             let bg_hover = theme
                 .color_by_key("muted")
-                .unwrap_or_else(|| theme.color_required("accent"));
+                .unwrap_or_else(|| theme.color_token("accent"));
             let bg_pressed = theme
                 .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_required("secondary"));
+                .unwrap_or_else(|| theme.color_token("secondary"));
 
             let bg = if st.pressed {
                 alpha(bg_pressed, 0.9)
@@ -906,7 +906,7 @@ impl EnvironmentVariableCopyButton {
             };
 
             let size = Px(24.0);
-            let radius = theme.metric_required("metric.radius.sm");
+            let radius = theme.metric_token("metric.radius.sm");
 
             let icon_id = if copied {
                 ids::ui::CHECK
@@ -1059,7 +1059,7 @@ fn environment_variable_divider<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
 ) -> AnyElement {
-    let border = theme.color_required("border");
+    let border = theme.color_token("border");
     cx.container(
         decl_style::container_props(
             theme,

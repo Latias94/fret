@@ -71,27 +71,48 @@ impl ElementHostWidget {
             return;
         }
 
-        let should_dispatch = matches!(
-            event,
-            Event::Pointer(fret_core::PointerEvent::Down { .. })
-                | Event::Pointer(fret_core::PointerEvent::Up { .. })
-                | Event::PointerCancel(_)
-        ) || (cx.captured.is_some()
-            && matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })));
+        match instance {
+            ElementInstance::PointerRegion(props) => {
+                let should_dispatch =
+                    matches!(
+                        event,
+                        Event::Pointer(fret_core::PointerEvent::Down { .. })
+                            | Event::Pointer(fret_core::PointerEvent::Up { .. })
+                            | Event::PointerCancel(_)
+                    ) || (matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }))
+                        && (cx.captured.is_some() || props.capture_phase_pointer_moves));
 
-        if should_dispatch {
-            match instance {
-                ElementInstance::PointerRegion(props) => {
+                if should_dispatch {
                     pointer_region::handle_pointer_region(self, cx, window, props, event);
                 }
-                ElementInstance::Scroll(props) => {
+            }
+            ElementInstance::Scroll(props) => {
+                let should_dispatch = matches!(
+                    event,
+                    Event::Pointer(fret_core::PointerEvent::Down { .. })
+                        | Event::Pointer(fret_core::PointerEvent::Up { .. })
+                        | Event::PointerCancel(_)
+                ) || (cx.captured.is_some()
+                    && matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })));
+
+                if should_dispatch {
                     let _ = scroll::handle_scroll(self, cx, window, props, event);
                 }
-                ElementInstance::VirtualList(props) => {
+            }
+            ElementInstance::VirtualList(props) => {
+                let should_dispatch = matches!(
+                    event,
+                    Event::Pointer(fret_core::PointerEvent::Down { .. })
+                        | Event::Pointer(fret_core::PointerEvent::Up { .. })
+                        | Event::PointerCancel(_)
+                ) || (cx.captured.is_some()
+                    && matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })));
+
+                if should_dispatch {
                     let _ = scroll::handle_virtual_list(self, cx, window, props, event);
                 }
-                _ => {}
             }
+            _ => {}
         }
     }
 

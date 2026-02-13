@@ -7,8 +7,7 @@
 //! - and keep component authoring surfaces free of backend handles.
 
 use fret_app::App;
-use fret_core::{MaterialDescriptor, MaterialKind};
-use fret_render::Renderer;
+use fret_core::{MaterialDescriptor, MaterialKind, MaterialService};
 use fret_ui_kit::recipes::catalog::VisualCatalog;
 
 /// Register the baseline materials used by `fret-ui-magic` Phase 0 and cache them in the app-owned
@@ -16,29 +15,34 @@ use fret_ui_kit::recipes::catalog::VisualCatalog;
 ///
 /// This should be called from a runner/driver hook that has access to the renderer (e.g.
 /// `WinitAppDriver::gpu_ready`).
-pub fn ensure_magic_materials(app: &mut App, renderer: &mut Renderer) {
+pub fn ensure_magic_materials(app: &mut App, material_service: &mut dyn MaterialService) {
     app.with_global_mut_untracked(VisualCatalog::default, |cat, _app| {
         // Patterns (Phase 0).
-        let _ = cat
-            .materials
-            .get_or_register(renderer, MaterialDescriptor::new(MaterialKind::DotGrid));
-        let _ = cat
-            .materials
-            .get_or_register(renderer, MaterialDescriptor::new(MaterialKind::Grid));
-        let _ = cat
-            .materials
-            .get_or_register(renderer, MaterialDescriptor::new(MaterialKind::Stripe));
         let _ = cat.materials.get_or_register(
-            renderer,
+            material_service,
+            MaterialDescriptor::new(MaterialKind::DotGrid),
+        );
+        let _ = cat.materials.get_or_register(
+            material_service,
+            MaterialDescriptor::new(MaterialKind::Grid),
+        );
+        let _ = cat.materials.get_or_register(
+            material_service,
+            MaterialDescriptor::new(MaterialKind::Stripe),
+        );
+        let _ = cat.materials.get_or_register(
+            material_service,
             MaterialDescriptor::new(MaterialKind::Checkerboard),
         );
 
         // Future Phase 0 targets.
-        let _ = cat
-            .materials
-            .get_or_register(renderer, MaterialDescriptor::new(MaterialKind::Noise));
-        let _ = cat
-            .materials
-            .get_or_register(renderer, MaterialDescriptor::new(MaterialKind::Sparkle));
+        let _ = cat.materials.get_or_register(
+            material_service,
+            MaterialDescriptor::new(MaterialKind::Noise),
+        );
+        let _ = cat.materials.get_or_register(
+            material_service,
+            MaterialDescriptor::new(MaterialKind::Sparkle),
+        );
     });
 }

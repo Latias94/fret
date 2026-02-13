@@ -2858,8 +2858,8 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         let theme = fret_ui::Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
-        let bg = theme.color_required("background");
+        let border = theme.color_token("border");
+        let bg = theme.color_token("background");
 
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
 
@@ -4586,7 +4586,7 @@ fn web_vs_fret_calendar_14_focus_ring_matches_web() {
             use fret_ui_headless::calendar::CalendarMonth;
 
             let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let border = theme.color_required("border");
+            let border = theme.color_token("border");
 
             let month_model: fret_runtime::Model<CalendarMonth> = cx.app.models_mut().insert(
                 CalendarMonth::new(selected_date.year(), selected_date.month()),
@@ -4676,7 +4676,7 @@ fn web_vs_fret_calendar_14_vp375x320_focus_ring_matches_web() {
             use fret_ui_headless::calendar::CalendarMonth;
 
             let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let border = theme.color_required("border");
+            let border = theme.color_token("border");
 
             let month_model: fret_runtime::Model<CalendarMonth> = cx.app.models_mut().insert(
                 CalendarMonth::new(selected_date.year(), selected_date.month()),
@@ -4775,7 +4775,7 @@ fn web_vs_fret_calendar_03_focus_ring_matches_web() {
             use fret_ui_headless::calendar::CalendarMonth;
 
             let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let border = theme.color_required("border");
+            let border = theme.color_token("border");
 
             let month_model: fret_runtime::Model<CalendarMonth> = cx.app.models_mut().insert(
                 CalendarMonth::new(focused_date.year(), focused_date.month()),
@@ -4877,7 +4877,7 @@ fn web_vs_fret_calendar_03_vp375x320_focus_ring_matches_web() {
             use fret_ui_headless::calendar::CalendarMonth;
 
             let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let border = theme.color_required("border");
+            let border = theme.color_token("border");
 
             let month_model: fret_runtime::Model<CalendarMonth> = cx.app.models_mut().insert(
                 CalendarMonth::new(focused_date.year(), focused_date.month()),
@@ -4989,7 +4989,7 @@ fn web_vs_fret_calendar_04_focus_ring_matches_web() {
             use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 
             let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let border = theme.color_required("border");
+            let border = theme.color_token("border");
 
             let month_model: fret_runtime::Model<CalendarMonth> = cx.app.models_mut().insert(
                 CalendarMonth::new(focused_date.year(), focused_date.month()),
@@ -5102,7 +5102,7 @@ fn web_vs_fret_calendar_04_vp375x320_focus_ring_matches_web() {
             use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 
             let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let border = theme.color_required("border");
+            let border = theme.color_token("border");
 
             let month_model: fret_runtime::Model<CalendarMonth> = cx.app.models_mut().insert(
                 CalendarMonth::new(focused_date.year(), focused_date.month()),

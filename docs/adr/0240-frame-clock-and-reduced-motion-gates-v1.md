@@ -1,6 +1,6 @@
 # ADR 0240: Frame Clock and Reduced Motion Gates (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -116,4 +116,3 @@ scene contracts.
 - This ADR does not standardize a full timeline/animation graph system.
 - This ADR does not guarantee that `delta` is stable across background/foreground transitions;
   components must handle large deltas defensively.
-

@@ -396,7 +396,7 @@ impl DatePickerDialog {
             if presence.present {
                 let scrim_base = {
                     let theme = Theme::global(&*cx.app);
-                    theme.color_required("md.sys.color.scrim")
+                    theme.color_token("md.sys.color.scrim")
                 };
                 let scrim_alpha = (scrim_base.a * self.scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
@@ -817,7 +817,7 @@ fn month_nav_header<H: UiHost>(
             let style = theme
                 .text_style_by_key("md.sys.typescale.title-large")
                 .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
-            let color = theme.color_required("md.sys.color.on-surface");
+            let color = theme.color_token("md.sys.color.on-surface");
             (style, color)
         };
 

@@ -130,7 +130,16 @@ pub struct OutsidePressCx {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerDownCx {
     pub pointer_id: PointerId,
+    /// Pointer position in the target widget's untransformed layout space (ADR 0238).
     pub position: Point,
+    /// Pointer position in the target element's local coordinate space (origin at `(0, 0)`).
+    ///
+    /// This is derived as `position - host.bounds().origin` (ADR 0238).
+    pub position_local: Point,
+    /// Pointer position in window-local logical pixels (pre-mapping).
+    ///
+    /// This is best-effort: events may arrive before the runtime has recorded a window snapshot.
+    pub position_window: Option<Point>,
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     ///
@@ -147,7 +156,16 @@ pub struct PointerDownCx {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerMoveCx {
     pub pointer_id: PointerId,
+    /// Pointer position in the target widget's untransformed layout space (ADR 0238).
     pub position: Point,
+    /// Pointer position in the target element's local coordinate space (origin at `(0, 0)`).
+    ///
+    /// This is derived as `position - host.bounds().origin` (ADR 0238).
+    pub position_local: Point,
+    /// Pointer position in window-local logical pixels (pre-mapping).
+    ///
+    /// This is best-effort: events may arrive before the runtime has recorded a window snapshot.
+    pub position_window: Option<Point>,
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
@@ -168,11 +186,23 @@ pub struct PointerMoveCx {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WheelCx {
     pub pointer_id: PointerId,
+    /// Pointer position in the target widget's untransformed layout space (ADR 0238).
     pub position: Point,
+    /// Pointer position in the target element's local coordinate space (origin at `(0, 0)`).
+    ///
+    /// This is derived as `position - host.bounds().origin` (ADR 0238).
+    pub position_local: Point,
+    /// Pointer position in window-local logical pixels (pre-mapping).
+    ///
+    /// This is best-effort: events may arrive before the runtime has recorded a window snapshot.
+    pub position_window: Option<Point>,
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
+    /// Wheel delta mapped into the target widget's untransformed layout space (ADR 0238).
     pub delta: Point,
+    /// Wheel delta in window-local logical pixels (pre-mapping).
+    pub delta_window: Option<Point>,
     pub modifiers: Modifiers,
     pub pointer_type: PointerType,
 }
@@ -181,7 +211,16 @@ pub struct WheelCx {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PinchGestureCx {
     pub pointer_id: PointerId,
+    /// Pointer position in the target widget's untransformed layout space (ADR 0238).
     pub position: Point,
+    /// Pointer position in the target element's local coordinate space (origin at `(0, 0)`).
+    ///
+    /// This is derived as `position - host.bounds().origin` (ADR 0238).
+    pub position_local: Point,
+    /// Pointer position in window-local logical pixels (pre-mapping).
+    ///
+    /// This is best-effort: events may arrive before the runtime has recorded a window snapshot.
+    pub position_window: Option<Point>,
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
@@ -199,6 +238,14 @@ pub struct PointerCancelCx {
     pub pointer_id: PointerId,
     /// When provided by the platform, this is the last known pointer position (logical pixels).
     pub position: Option<Point>,
+    /// When provided by the platform, this is the last known pointer position in element-local
+    /// logical pixels.
+    ///
+    /// Derived as `position - host.bounds().origin` (ADR 0238).
+    pub position_local: Option<Point>,
+    /// When provided by the platform, this is the last known pointer position in window-local
+    /// logical pixels (pre-mapping).
+    pub position_window: Option<Point>,
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
@@ -212,7 +259,16 @@ pub struct PointerCancelCx {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerUpCx {
     pub pointer_id: PointerId,
+    /// Pointer position in the target widget's untransformed layout space (ADR 0238).
     pub position: Point,
+    /// Pointer position in the target element's local coordinate space (origin at `(0, 0)`).
+    ///
+    /// This is derived as `position - host.bounds().origin` (ADR 0238).
+    pub position_local: Point,
+    /// Pointer position in window-local logical pixels (pre-mapping).
+    ///
+    /// This is best-effort: events may arrive before the runtime has recorded a window snapshot.
+    pub position_window: Option<Point>,
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,

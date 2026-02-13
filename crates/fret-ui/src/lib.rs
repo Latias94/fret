@@ -34,6 +34,7 @@ pub mod pixel_snap;
 mod pointer_motion;
 #[cfg(feature = "unstable-retained-bridge")]
 pub mod retained_bridge;
+mod runtime_config;
 pub type ItemKey = u64;
 #[allow(dead_code)]
 pub(crate) mod resizable_panel_group;

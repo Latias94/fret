@@ -1,16 +1,19 @@
+use std::cell::Cell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
+use fret_core::{Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack::{HStackProps, hstack};
 use fret_ui_kit::declarative::table::TableViewOutput;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
@@ -19,6 +22,22 @@ use crate::dropdown_menu::{
     DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
 use crate::input::Input;
+use crate::{
+    CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
+    PopoverAlign, PopoverContent, PopoverTrigger,
+};
+
+fn sanitize_test_id_segment(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+        } else {
+            out.push('-');
+        }
+    }
+    out.trim_matches('-').to_string()
+}
 
 fn is_column_visible(state: &TableState, id: &ColumnId) -> bool {
     state.column_visibility.get(id).copied().unwrap_or(true)
@@ -178,15 +197,40 @@ impl Clone for ColumnPinningBinding {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct DataTableFacetedFilterOption {
+    pub value: Arc<str>,
+    pub label: Arc<str>,
+    pub icon: Option<fret_icons::IconId>,
+}
+
+impl DataTableFacetedFilterOption {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: label.into(),
+            icon: None,
+        }
+    }
+
+    pub fn icon(mut self, icon: fret_icons::IconId) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+}
+
 #[derive(Clone)]
 struct FacetedFilterConfig {
     column_id: ColumnId,
     button_label: Arc<str>,
-    options: Arc<[Arc<str>]>,
+    options: Arc<[DataTableFacetedFilterOption]>,
+    counts: Option<Model<HashMap<Arc<str>, usize>>>,
 }
 
 struct FacetedFilterItemBinding {
     value: Arc<str>,
+    label: Arc<str>,
+    icon: Option<fret_icons::IconId>,
     model: Model<bool>,
 }
 
@@ -194,6 +238,8 @@ impl Clone for FacetedFilterItemBinding {
     fn clone(&self) -> Self {
         Self {
             value: self.value.clone(),
+            label: self.label.clone(),
+            icon: self.icon.clone(),
             model: self.model.clone(),
         }
     }
@@ -206,6 +252,8 @@ struct DataTableToolbarState {
     columns_open: Option<Model<bool>>,
     pinning_open: Option<Model<bool>>,
     faceted_open: Option<Model<bool>>,
+    faceted_query: Option<Model<String>>,
+    faceted_last_open: Option<bool>,
     faceted_column: Option<ColumnId>,
     faceted_items: Vec<FacetedFilterItemBinding>,
     column_visibility: Vec<ColumnVisibilityBinding>,
@@ -224,11 +272,19 @@ pub struct DataTableToolbar<TData> {
     state: Model<TableState>,
     columns: Arc<[ColumnDef<TData>]>,
     column_label: Arc<dyn Fn(&ColumnDef<TData>) -> Arc<str>>,
+    show_global_filter: bool,
     filter_placeholder: Arc<str>,
+    filter_layout: LayoutRefinement,
     column_filter: Option<ColumnId>,
     column_filter_placeholder: Arc<str>,
     column_filter_a11y_label: Arc<str>,
+    show_columns_menu: bool,
+    columns_button_label: Arc<str>,
+    show_pinning_menu: bool,
+    pinning_button_label: Arc<str>,
+    show_selected_text: bool,
     faceted_filter: Option<FacetedFilterConfig>,
+    trailing: Vec<AnyElement>,
 }
 
 impl<TData> std::fmt::Debug for DataTableToolbar<TData> {
@@ -249,16 +305,34 @@ impl<TData> DataTableToolbar<TData> {
             state,
             columns: columns.into(),
             column_label: Arc::new(column_label),
+            show_global_filter: true,
             filter_placeholder: Arc::from("Filter..."),
+            filter_layout: LayoutRefinement::default(),
             column_filter: None,
             column_filter_placeholder: Arc::from("Filter..."),
             column_filter_a11y_label: Arc::from("Column filter"),
+            show_columns_menu: true,
+            columns_button_label: Arc::from("Columns"),
+            show_pinning_menu: true,
+            pinning_button_label: Arc::from("Pin"),
+            show_selected_text: true,
             faceted_filter: None,
+            trailing: Vec::new(),
         }
+    }
+
+    pub fn show_global_filter(mut self, show: bool) -> Self {
+        self.show_global_filter = show;
+        self
     }
 
     pub fn filter_placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.filter_placeholder = placeholder.into();
+        self
+    }
+
+    pub fn filter_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.filter_layout = self.filter_layout.merge(layout);
         self
     }
 
@@ -281,6 +355,36 @@ impl<TData> DataTableToolbar<TData> {
         self
     }
 
+    pub fn show_columns_menu(mut self, show: bool) -> Self {
+        self.show_columns_menu = show;
+        self
+    }
+
+    pub fn columns_button_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.columns_button_label = label.into();
+        self
+    }
+
+    pub fn show_pinning_menu(mut self, show: bool) -> Self {
+        self.show_pinning_menu = show;
+        self
+    }
+
+    pub fn pinning_button_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.pinning_button_label = label.into();
+        self
+    }
+
+    pub fn show_selected_text(mut self, show: bool) -> Self {
+        self.show_selected_text = show;
+        self
+    }
+
+    pub fn trailing(mut self, trailing: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.trailing = trailing.into_iter().collect();
+        self
+    }
+
     /// Adds a simple faceted multi-select filter control for a categorical column.
     ///
     /// The selected values are stored as a JSON array of strings in `TableState.column_filters`
@@ -291,11 +395,40 @@ impl<TData> DataTableToolbar<TData> {
         button_label: impl Into<Arc<str>>,
         options: impl Into<Arc<[Arc<str>]>>,
     ) -> Self {
+        let options: Arc<[Arc<str>]> = options.into();
+        self.faceted_filter = Some(FacetedFilterConfig {
+            column_id: column_id.into(),
+            button_label: button_label.into(),
+            options: Arc::from(
+                options
+                    .iter()
+                    .map(|s| DataTableFacetedFilterOption::new(s.clone(), s.clone()))
+                    .collect::<Vec<_>>(),
+            ),
+            counts: None,
+        });
+        self
+    }
+
+    pub fn faceted_filter_options(
+        mut self,
+        column_id: impl Into<ColumnId>,
+        button_label: impl Into<Arc<str>>,
+        options: impl Into<Arc<[DataTableFacetedFilterOption]>>,
+    ) -> Self {
         self.faceted_filter = Some(FacetedFilterConfig {
             column_id: column_id.into(),
             button_label: button_label.into(),
             options: options.into(),
+            counts: None,
         });
+        self
+    }
+
+    pub fn faceted_filter_counts(mut self, counts: Model<HashMap<Arc<str>, usize>>) -> Self {
+        if let Some(cfg) = self.faceted_filter.as_mut() {
+            cfg.counts = Some(counts);
+        }
         self
     }
 
@@ -313,9 +446,10 @@ impl<TData> DataTableToolbar<TData> {
 
         let filter_model =
             cx.with_state(DataTableToolbarState::default, |st| st.filter_model.clone());
-        let filter_model = match filter_model {
-            Some(m) => m,
-            None => {
+        let filter_model = match (self.show_global_filter, filter_model) {
+            (false, _) => None,
+            (true, Some(m)) => Some(m),
+            (true, None) => {
                 let initial = state_value
                     .global_filter
                     .as_ref()
@@ -327,7 +461,7 @@ impl<TData> DataTableToolbar<TData> {
                 cx.with_state(DataTableToolbarState::default, move |st| {
                     st.filter_model = Some(m_for_state);
                 });
-                m
+                Some(m)
             }
         };
 
@@ -397,6 +531,34 @@ impl<TData> DataTableToolbar<TData> {
             }
         };
 
+        let faceted_query = cx.with_state(DataTableToolbarState::default, |st| {
+            st.faceted_query.clone()
+        });
+        let faceted_query = match (self.faceted_filter.as_ref(), faceted_query) {
+            (None, _) => None,
+            (Some(_), Some(m)) => Some(m),
+            (Some(_), None) => {
+                let m = cx.app.models_mut().insert(String::new());
+                let m_for_state = m.clone();
+                cx.with_state(DataTableToolbarState::default, move |st| {
+                    st.faceted_query = Some(m_for_state);
+                });
+                Some(m)
+            }
+        };
+
+        if let (Some(open), Some(query)) = (faceted_open.as_ref(), faceted_query.as_ref()) {
+            let open_now = cx.watch_model(open).layout().copied().unwrap_or(false);
+            let last_open =
+                cx.with_state(DataTableToolbarState::default, |st| st.faceted_last_open);
+            if last_open == Some(true) && !open_now {
+                let _ = cx.app.models_mut().update(query, |s| s.clear());
+            }
+            cx.with_state(DataTableToolbarState::default, move |st| {
+                st.faceted_last_open = Some(open_now);
+            });
+        }
+
         let mut bindings = cx.with_state(DataTableToolbarState::default, |st| {
             st.column_visibility.clone()
         });
@@ -448,10 +610,10 @@ impl<TData> DataTableToolbar<TData> {
             st.faceted_column.clone()
         });
         if let Some(cfg) = self.faceted_filter.as_ref() {
-            let should_rebuild = faceted_column
+            let column_changed = faceted_column
                 .as_ref()
-                .is_none_or(|id| id.as_ref() != cfg.column_id.as_ref())
-                || faceted_items.len() != cfg.options.len();
+                .is_none_or(|id| id.as_ref() != cfg.column_id.as_ref());
+            let should_rebuild = column_changed || faceted_items.len() != cfg.options.len();
             if should_rebuild {
                 let selected: std::collections::HashSet<Arc<str>> = state_value
                     .column_filters
@@ -476,8 +638,10 @@ impl<TData> DataTableToolbar<TData> {
                     .options
                     .iter()
                     .map(|opt| FacetedFilterItemBinding {
-                        value: opt.clone(),
-                        model: cx.app.models_mut().insert(selected.contains(opt)),
+                        value: opt.value.clone(),
+                        label: opt.label.clone(),
+                        icon: opt.icon.clone(),
+                        model: cx.app.models_mut().insert(selected.contains(&opt.value)),
                     })
                     .collect();
                 let next_items = faceted_items.clone();
@@ -486,6 +650,12 @@ impl<TData> DataTableToolbar<TData> {
                     st.faceted_items = next_items;
                     st.faceted_column = Some(next_column);
                 });
+
+                if column_changed {
+                    if let Some(model) = faceted_query.as_ref() {
+                        let _ = cx.app.models_mut().update(model, |s| s.clear());
+                    }
+                }
             }
         }
 
@@ -532,12 +702,14 @@ impl<TData> DataTableToolbar<TData> {
             });
         }
 
-        let filter_value = cx
-            .watch_model(&filter_model)
-            .layout()
-            .cloned()
-            .unwrap_or_default();
-        sync_global_filter(&mut *cx.app, &self.state, &filter_value);
+        if let Some(filter_model) = filter_model.as_ref() {
+            let filter_value = cx
+                .watch_model(filter_model)
+                .layout()
+                .cloned()
+                .unwrap_or_default();
+            sync_global_filter(&mut *cx.app, &self.state, &filter_value);
+        }
 
         if let (Some(column_id), Some(model)) =
             (self.column_filter.as_ref(), column_filter_model.as_ref())
@@ -663,16 +835,34 @@ impl<TData> DataTableToolbar<TData> {
             })
             .collect();
 
-        let cols_menu = DropdownMenu::new(columns_open.clone()).into_element(
-            cx,
-            |cx| {
-                Button::new("Columns")
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Sm)
-                    .into_element(cx)
-            },
-            move |_cx| visibility_items.clone(),
-        );
+        let columns_button_label = self.columns_button_label.clone();
+        let cols_menu = self.show_columns_menu.then(|| {
+            DropdownMenu::new(columns_open.clone()).into_element(
+                cx,
+                move |cx| {
+                    Button::new(columns_button_label.clone())
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Sm)
+                        .children([
+                            crate::icon::icon(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.settings-2"),
+                            ),
+                            ui::text(cx, columns_button_label.clone()).into_element(cx),
+                        ])
+                        .into_element(cx)
+                },
+                move |_cx| {
+                    let mut entries = Vec::new();
+                    entries.push(DropdownMenuEntry::Label(
+                        DropdownMenuLabel::new("Toggle columns").inset(true),
+                    ));
+                    entries.push(DropdownMenuEntry::Separator);
+                    entries.extend(visibility_items.clone());
+                    entries
+                },
+            )
+        });
 
         let mut pin_items: Vec<DropdownMenuEntry> = pinning_bindings
             .iter()
@@ -706,56 +896,389 @@ impl<TData> DataTableToolbar<TData> {
             pin_items.pop();
         }
 
-        let pin_menu = DropdownMenu::new(pinning_open.clone()).into_element(
-            cx,
-            |cx| {
-                Button::new("Pin")
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Sm)
-                    .into_element(cx)
-            },
-            move |_cx| pin_items.clone(),
-        );
+        let pinning_button_label = self.pinning_button_label.clone();
+        let pin_menu = self.show_pinning_menu.then(|| {
+            DropdownMenu::new(pinning_open.clone()).into_element(
+                cx,
+                move |cx| {
+                    Button::new(pinning_button_label.clone())
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Sm)
+                        .into_element(cx)
+                },
+                move |_cx| pin_items.clone(),
+            )
+        });
 
         let faceted_menu = self
             .faceted_filter
             .as_ref()
-            .and_then(|cfg| faceted_open.clone().map(|open| (cfg.clone(), open)))
-            .map(|(cfg, open)| {
+            .and_then(|cfg| {
+                faceted_open
+                    .clone()
+                    .zip(faceted_query.clone())
+                    .map(|(open, query)| (cfg.clone(), open, query))
+            })
+            .map(|(cfg, open, query)| {
+                let faceted_items = faceted_items.clone();
                 let button_label = cfg.button_label.clone();
-                let entries: Vec<DropdownMenuEntry> = faceted_items
+                let selected_labels: Vec<Arc<str>> = faceted_items
                     .iter()
-                    .map(|it| {
-                        DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
-                            it.model.clone(),
-                            it.value.clone(),
-                        ))
+                    .filter_map(|it| {
+                        cx.watch_model(&it.model)
+                            .layout()
+                            .copied()
+                            .unwrap_or(false)
+                            .then(|| it.label.clone())
                     })
                     .collect();
+                let selected_count = selected_labels.len();
 
-                DropdownMenu::new(open).into_element(
-                    cx,
-                    |cx| {
-                        Button::new(button_label.clone())
-                            .variant(ButtonVariant::Outline)
-                            .size(ButtonSize::Sm)
+                let counts = cfg
+                    .counts
+                    .as_ref()
+                    .and_then(|m| cx.watch_model(m).layout().cloned())
+                    .unwrap_or_default();
+
+                let col_seg = sanitize_test_id_segment(cfg.column_id.as_ref());
+                let trigger_test_id =
+                    Arc::<str>::from(format!("data-table-toolbar-faceted-{col_seg}-trigger"));
+                let input_test_id =
+                    Arc::<str>::from(format!("data-table-toolbar-faceted-{col_seg}-input"));
+                let item_prefix =
+                    Arc::<str>::from(format!("data-table-toolbar-faceted-{col_seg}-item-"));
+
+                let input_id_cell: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+                let trigger_button_label = button_label.clone();
+                let content_button_label = button_label.clone();
+                let trigger_test_id = trigger_test_id.clone();
+                let trigger_selected_labels = selected_labels.clone();
+                let trigger_selected_count = selected_count;
+
+                let faceted_items_for_content = faceted_items.clone();
+                let query = query.clone();
+                let input_test_id = input_test_id.clone();
+                let item_prefix = item_prefix.clone();
+                let counts_for_content = Arc::new(counts);
+                let input_id_cell_for_content = input_id_cell.clone();
+
+                Popover::new(open)
+                    .align(PopoverAlign::Start)
+                    .auto_focus(true)
+                    .initial_focus_from_cell(input_id_cell)
+                    .into_element(
+                        cx,
+                        move |cx| {
+                            PopoverTrigger::new(
+                                Button::new(trigger_button_label.clone())
+                                    .variant(ButtonVariant::Outline)
+                                    .size(ButtonSize::Sm)
+                                    .test_id(trigger_test_id.clone())
+                                    .children({
+                                        let mut children = Vec::new();
+                                        children.push(crate::icon::icon(
+                                            cx,
+                                            fret_icons::IconId::new_static("lucide.plus-circle"),
+                                        ));
+                                        children.push(
+                                            ui::text(cx, trigger_button_label.clone())
+                                                .into_element(cx),
+                                        );
+                                        if trigger_selected_count > 0 {
+                                            children.push(
+                                                crate::Separator::new()
+                                                    .orientation(
+                                                        crate::SeparatorOrientation::Vertical,
+                                                    )
+                                                    .refine_layout(
+                                                        LayoutRefinement::default()
+                                                            .h_px(Px(16.0))
+                                                            .mx(Space::N2),
+                                                    )
+                                                    .into_element(cx),
+                                            );
+
+                                            let show_labels = fret_ui_kit::declarative::viewport_width_at_least(
+                                                cx,
+                                                fret_ui::Invalidation::Layout,
+                                                fret_ui_kit::declarative::viewport_tailwind::LG,
+                                                fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+                                            );
+
+                                            let badge_style = ChromeRefinement::default()
+                                                .rounded(Radius::Sm)
+                                                .px(Space::N1)
+                                                .py(Space::N0p5);
+
+                                            if !show_labels {
+                                                children.push(
+                                                    crate::badge::Badge::new(Arc::<str>::from(
+                                                        trigger_selected_count.to_string(),
+                                                    ))
+                                                    .variant(crate::badge::BadgeVariant::Secondary)
+                                                    .refine_style(badge_style.clone())
+                                                    .into_element(cx),
+                                                );
+                                            } else if trigger_selected_count > 2 {
+                                                children.push(
+                                                    crate::badge::Badge::new(Arc::<str>::from(
+                                                        format!("{trigger_selected_count} selected"),
+                                                    ))
+                                                    .variant(crate::badge::BadgeVariant::Secondary)
+                                                    .refine_style(badge_style.clone())
+                                                    .into_element(cx),
+                                                );
+                                            } else {
+                                                for label in trigger_selected_labels.iter().cloned() {
+                                                    children.push(
+                                                        crate::badge::Badge::new(label)
+                                                            .variant(
+                                                                crate::badge::BadgeVariant::Secondary,
+                                                            )
+                                                            .refine_style(badge_style.clone())
+                                                            .into_element(cx),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        children
+                                    })
+                                    .into_element(cx),
+                            )
                             .into_element(cx)
-                    },
-                    move |_cx| entries.clone(),
-                )
+                        },
+                        move |cx| {
+                            let theme = Theme::global(&*cx.app).clone();
+                            let transparent = theme.color_token("transparent");
+
+                            let items: Vec<CommandEntry> = faceted_items_for_content
+                                .iter()
+                                .map(|it| {
+                                    let checked = cx
+                                        .watch_model(&it.model)
+                                        .layout()
+                                        .copied()
+                                        .unwrap_or(false);
+                                    let model_for_toggle = it.model.clone();
+                                    let on_select_action: OnActivate =
+                                        Arc::new(move |host, acx, _reason| {
+                                            let _ =
+                                                host.models_mut().update(&model_for_toggle, |v| {
+                                                    *v = !*v;
+                                                });
+                                            host.notify(acx);
+                                        });
+
+                                    let maybe_icon = it.icon.as_ref().map(|icon_id| {
+                                        let icon = crate::icon::icon(cx, icon_id.clone());
+                                        cx.opacity(0.6, move |_cx| vec![icon])
+                                    });
+
+                                    let label = ui::raw_text(cx, it.label.clone())
+                                        .nowrap()
+                                        .into_element(cx);
+
+                                    let check = crate::icon::icon(
+                                        cx,
+                                        fret_icons::IconId::new_static("lucide.check"),
+                                    );
+                                    let check = cx.opacity(if checked { 1.0 } else { 0.0 }, move |_cx| {
+                                        vec![check]
+                                    });
+                                    let indicator = {
+                                        let border = theme.color_token("input");
+                                        let primary = theme.color_token("primary");
+
+                                        let mut props = fret_ui::element::ContainerProps::default();
+                                        props.layout = fret_ui_kit::declarative::style::layout_style(
+                                            &theme,
+                                            LayoutRefinement::default()
+                                                .w_px(Px(16.0))
+                                                .h_px(Px(16.0))
+                                                .min_w_0()
+                                                .min_h_0(),
+                                        );
+                                        props.border = fret_core::Edges::all(Px(1.0));
+                                        props.border_color = Some(if checked { primary } else { border });
+                                        props.corner_radii = fret_core::Corners::all(Px(4.0));
+                                        props.background = checked.then_some(primary);
+
+                                        let child = hstack(
+                                            cx,
+                                            HStackProps::default()
+                                                .layout(
+                                                    LayoutRefinement::default()
+                                                        .w_full()
+                                                        .h_full(),
+                                                )
+                                                .justify_center()
+                                                .items_center(),
+                                            move |_cx| vec![check],
+                                        );
+                                        cx.container(props, move |_cx| vec![child])
+                                    };
+
+                                    let count_el = counts_for_content
+                                        .get(it.value.as_ref())
+                                        .copied()
+                                        .map(|n| {
+                                            let fg_muted = theme.color_token("muted-foreground");
+                                            let count = ui::text(cx, Arc::<str>::from(n.to_string()))
+                                                .text_xs()
+                                                .text_color(ColorRef::Color(fg_muted))
+                                                .nowrap()
+                                                .into_element(cx);
+
+                                            hstack(
+                                                cx,
+                                                HStackProps::default()
+                                                    .layout(
+                                                        LayoutRefinement::default()
+                                                            .w_px(Px(16.0))
+                                                            .h_px(Px(16.0))
+                                                            .min_w_0()
+                                                            .min_h_0(),
+                                                    )
+                                                    .items_center()
+                                                    .justify_center(),
+                                                move |_cx| vec![count],
+                                            )
+                                        });
+
+                                    let left = hstack(
+                                        cx,
+                                        HStackProps::default().gap_x(Space::N2).items_center(),
+                                        move |_cx| {
+                                            let mut out = Vec::new();
+                                            out.push(indicator);
+                                            if let Some(icon) = maybe_icon.clone() {
+                                                out.push(icon);
+                                            }
+                                            out.push(label);
+                                            out
+                                        },
+                                    );
+
+                                    let row = hstack(
+                                        cx,
+                                        HStackProps::default()
+                                            .layout(LayoutRefinement::default().w_full())
+                                            .items_center()
+                                            .justify_between(),
+                                        move |_cx| {
+                                            let mut out = vec![left];
+                                            if let Some(count_el) = count_el.clone() {
+                                                out.push(count_el);
+                                            }
+                                            out
+                                        },
+                                    );
+
+                                    CommandItem::new(it.label.clone())
+                                        .value(it.value.clone())
+                                        .checkmark(checked)
+                                        .on_select_action(on_select_action)
+                                        .children([row])
+                                        .into()
+                                })
+                                .collect();
+
+                            let option_items = items
+                                .into_iter()
+                                .filter_map(|entry| match entry {
+                                    CommandEntry::Item(item) => Some(item),
+                                    _ => None,
+                                })
+                                .collect::<Vec<_>>();
+                            let mut entries: Vec<CommandEntry> =
+                                vec![CommandGroup::new(option_items).into()];
+
+                            if selected_count > 0 {
+                                let models_for_clear: Vec<Model<bool>> = faceted_items_for_content
+                                    .iter()
+                                    .map(|it| it.model.clone())
+                                    .collect();
+                                let query_for_clear = query.clone();
+                                let on_clear: OnActivate = Arc::new(move |host, acx, _reason| {
+                                    for model in models_for_clear.iter() {
+                                        let _ = host.models_mut().update(model, |v| *v = false);
+                                    }
+                                    let _ =
+                                        host.models_mut().update(&query_for_clear, |s| s.clear());
+                                    host.notify(acx);
+                                });
+
+                                entries.push(CommandSeparator.into());
+                                let clear_row = hstack(
+                                    cx,
+                                    HStackProps::default()
+                                        .layout(LayoutRefinement::default().w_full())
+                                        .items_center()
+                                        .justify_center(),
+                                    move |_cx| {
+                                        vec![
+                                            ui::text(_cx, Arc::<str>::from("Clear filters"))
+                                                .into_element(_cx),
+                                        ]
+                                    },
+                                );
+                                entries.push(
+                                    CommandGroup::new(vec![
+                                        CommandItem::new("Clear filters")
+                                            .value(Arc::<str>::from("__clear_filters"))
+                                            .on_select_action(on_clear)
+                                            .children([clear_row]),
+                                    ])
+                                    .into(),
+                                );
+                            }
+
+                            let palette =
+                                CommandPalette::new(query.clone(), Vec::<CommandItem>::new())
+                                    .entries(entries)
+                                    .a11y_label(Arc::<str>::from("Faceted filter"))
+                                    .placeholder(content_button_label.clone())
+                                    .empty_text("No results found.")
+                                    .a11y_selected_mode(
+                                        crate::command::CommandPaletteA11ySelectedMode::Checked,
+                                    )
+                                    .test_id_input(input_test_id.clone())
+                                    .test_id_item_prefix(item_prefix.clone())
+                                    .input_id_out_cell(input_id_cell_for_content.clone())
+                                    .refine_style(
+                                        ChromeRefinement::default()
+                                            .radius(Px(0.0))
+                                            .border_width(Px(0.0))
+                                            .bg(ColorRef::Color(transparent))
+                                            .border_color(ColorRef::Color(transparent)),
+                                    );
+
+                            PopoverContent::new(vec![palette.into_element(cx)])
+                                .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+                                .refine_style(ChromeRefinement::default().p(Space::N0))
+                                .a11y_label(content_button_label.clone())
+                                .into_element(cx)
+                        },
+                    )
             });
 
-        let global_filter = Input::new(filter_model.clone())
-            .a11y_label("Global filter")
-            .a11y_role(SemanticsRole::TextField)
-            .placeholder(self.filter_placeholder.clone())
-            .into_element(cx);
+        let filter_layout = self.filter_layout.clone();
+        let global_filter = filter_model.as_ref().map(|m| {
+            Input::new(m.clone())
+                .a11y_label("Global filter")
+                .a11y_role(SemanticsRole::TextField)
+                .placeholder(self.filter_placeholder.clone())
+                .refine_layout(filter_layout.clone())
+                .into_element(cx)
+        });
 
         let column_filter = column_filter_model.as_ref().map(|m| {
             Input::new(m.clone())
                 .a11y_label(self.column_filter_a11y_label.clone())
                 .a11y_role(SemanticsRole::TextField)
                 .placeholder(self.column_filter_placeholder.clone())
+                .refine_layout(filter_layout.clone())
                 .into_element(cx)
         });
 
@@ -774,6 +1297,7 @@ impl<TData> DataTableToolbar<TData> {
             let columns_open = columns_open.clone();
             let pinning_open = pinning_open.clone();
             let faceted_open = faceted_open.clone();
+            let faceted_query = faceted_query.clone();
             let faceted_models: Vec<Model<bool>> =
                 faceted_items.iter().map(|it| it.model.clone()).collect();
 
@@ -784,12 +1308,17 @@ impl<TData> DataTableToolbar<TData> {
                     st.pagination.page_index = 0;
                 });
 
-                let _ = host.models_mut().update(&filter_model, |s| s.clear());
+                if let Some(filter_model) = filter_model.as_ref() {
+                    let _ = host.models_mut().update(filter_model, |s| s.clear());
+                }
                 if let Some(model) = column_filter_model.as_ref() {
                     let _ = host.models_mut().update(model, |s| s.clear());
                 }
                 for model in faceted_models.iter() {
                     let _ = host.models_mut().update(model, |v| *v = false);
+                }
+                if let Some(model) = faceted_query.as_ref() {
+                    let _ = host.models_mut().update(model, |s| s.clear());
                 }
 
                 let _ = host.models_mut().update(&columns_open, |v| *v = false);
@@ -802,39 +1331,43 @@ impl<TData> DataTableToolbar<TData> {
             });
 
             Button::new("Reset")
-                .variant(ButtonVariant::Outline)
+                .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::Sm)
                 .test_id("data-table-toolbar-reset-filters")
+                .children([
+                    ui::text(cx, Arc::<str>::from("Reset")).into_element(cx),
+                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
+                ])
                 .on_activate(on_activate)
                 .into_element(cx)
         });
 
-        let selected_text: Option<AnyElement> = (selected_count > 0).then(|| {
-            let mut text =
-                ui::raw_text(cx, Arc::from(format!("Selected: {selected_count}"))).nowrap();
-            if let Some(color) = theme.color_by_key("muted-foreground") {
-                text = text.text_color(ColorRef::Color(color));
-            }
-            text.into_element(cx)
-        });
+        let selected_text: Option<AnyElement> = (self.show_selected_text && selected_count > 0)
+            .then(|| {
+                let mut text =
+                    ui::raw_text(cx, Arc::from(format!("Selected: {selected_count}"))).nowrap();
+                if let Some(color) = theme.color_by_key("muted-foreground") {
+                    text = text.text_color(ColorRef::Color(color));
+                }
+                text.into_element(cx)
+            });
 
-        hstack(
+        let trailing = self.trailing.clone();
+
+        let left_group = hstack(
             cx,
-            HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center()
-                .gap_x(Space::N2),
+            HStackProps::default().gap_x(Space::N2).items_center(),
             move |_cx| {
                 let mut children = Vec::new();
-                children.push(global_filter);
+                if let Some(global_filter) = global_filter.clone() {
+                    children.push(global_filter);
+                }
                 if let Some(filter) = column_filter.clone() {
                     children.push(filter);
                 }
                 if let Some(menu) = faceted_menu.clone() {
                     children.push(menu);
                 }
-                children.push(cols_menu);
-                children.push(pin_menu);
                 if let Some(btn) = reset_button.clone() {
                     children.push(btn);
                 }
@@ -843,6 +1376,32 @@ impl<TData> DataTableToolbar<TData> {
                 }
                 children
             },
+        );
+
+        let right_group = hstack(
+            cx,
+            HStackProps::default().gap_x(Space::N2).items_center(),
+            move |_cx| {
+                let mut children = Vec::new();
+                if let Some(cols_menu) = cols_menu.clone() {
+                    children.push(cols_menu);
+                }
+                if let Some(pin_menu) = pin_menu.clone() {
+                    children.push(pin_menu);
+                }
+                children.extend(trailing.clone());
+                children
+            },
+        );
+
+        hstack(
+            cx,
+            HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .items_center()
+                .justify_between()
+                .gap_x(Space::N2),
+            move |_cx| vec![left_group, right_group],
         )
     }
 }
@@ -877,7 +1436,7 @@ impl DataTablePagination {
         Self {
             state,
             output,
-            page_sizes: Arc::from([10usize, 20, 50, 100]),
+            page_sizes: Arc::from([10usize, 20, 25, 30, 40, 50]),
         }
     }
 
@@ -982,6 +1541,24 @@ impl DataTablePagination {
 
         let prev_enabled = output_value.pagination.can_prev;
         let next_enabled = output_value.pagination.can_next;
+        let first_enabled = output_value.pagination.page_index > 0;
+        let last_enabled = output_value.pagination.page_count > 0
+            && output_value.pagination.page_index + 1 < output_value.pagination.page_count;
+
+        let selected_count = state_value.row_selection.len();
+        let filtered_count = output_value.filtered_row_count;
+        let selected_label: Arc<str> = Arc::from(format!(
+            "{selected_count} of {filtered_count} row(s) selected."
+        ));
+
+        let first_on_activate: OnActivate = {
+            let state = self.state.clone();
+            Arc::new(move |host, _acx, _reason| {
+                let _ = host.models_mut().update(&state, |st| {
+                    st.pagination.page_index = 0;
+                });
+            })
+        };
         let prev_on_activate: OnActivate = {
             let state = self.state.clone();
             Arc::new(move |host, _acx, _reason| {
@@ -995,6 +1572,15 @@ impl DataTablePagination {
             Arc::new(move |host, _acx, _reason| {
                 let _ = host.models_mut().update(&state, |st| {
                     st.pagination.page_index = st.pagination.page_index.saturating_add(1);
+                });
+            })
+        };
+        let last_on_activate: OnActivate = {
+            let state = self.state.clone();
+            let page_count = output_value.pagination.page_count;
+            Arc::new(move |host, _acx, _reason| {
+                let _ = host.models_mut().update(&state, |st| {
+                    st.pagination.page_index = page_count.saturating_sub(1);
                 });
             })
         };
@@ -1013,7 +1599,7 @@ impl DataTablePagination {
         let page_size_menu = DropdownMenu::new(page_size_open).into_element(
             cx,
             |cx| {
-                Button::new(Arc::from(format!("Rows: {current_size}")))
+                Button::new(Arc::from(format!("Rows per page: {current_size}")))
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::Sm)
                     .into_element(cx)
@@ -1037,22 +1623,59 @@ impl DataTablePagination {
                 .items_center()
                 .gap_x(Space::N2),
             move |cx| {
+                let theme = Theme::global(&*cx.app);
+                let muted_fg = theme.color_by_key("muted-foreground");
+                let mut text = ui::raw_text(cx, selected_label.clone()).nowrap();
+                if let Some(color) = muted_fg {
+                    text = text.text_color(ColorRef::Color(color));
+                }
+
                 vec![
-                    Button::new("Prev")
+                    text.into_element(cx),
+                    cx.spacer(fret_ui::element::SpacerProps::default()),
+                    Button::new("Go to first page")
                         .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
+                        .size(ButtonSize::IconSm)
+                        .disabled(!first_enabled)
+                        .on_activate(first_on_activate.clone())
+                        .children([crate::icon::icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.chevrons-left"),
+                        )])
+                        .into_element(cx),
+                    Button::new("Go to previous page")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::IconSm)
                         .disabled(!prev_enabled)
                         .on_activate(prev_on_activate.clone())
+                        .children([crate::icon::icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.chevron-left"),
+                        )])
                         .into_element(cx),
                     Button::new(page_label.clone())
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
                         .into_element(cx),
-                    Button::new("Next")
+                    Button::new("Go to next page")
                         .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
+                        .size(ButtonSize::IconSm)
                         .disabled(!next_enabled)
                         .on_activate(next_on_activate.clone())
+                        .children([crate::icon::icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.chevron-right"),
+                        )])
+                        .into_element(cx),
+                    Button::new("Go to last page")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::IconSm)
+                        .disabled(!last_enabled)
+                        .on_activate(last_on_activate.clone())
+                        .children([crate::icon::icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.chevrons-right"),
+                        )])
                         .into_element(cx),
                     page_size_menu,
                 ]

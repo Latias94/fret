@@ -20,17 +20,17 @@ fn resolve_list_colors(theme: &Theme) -> (Color, Color, Color) {
     let list_bg = theme
         .color_by_key("list.background")
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or_else(|| theme.color_required("card"));
+        .unwrap_or_else(|| theme.color_token("card"));
     let row_hover = theme
         .color_by_key("list.hover.background")
         .or_else(|| theme.color_by_key("list.row.hover"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
     let row_active = theme
         .color_by_key("list.active.background")
         .or_else(|| theme.color_by_key("list.row.active"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
     (list_bg, row_hover, row_active)
 }
 

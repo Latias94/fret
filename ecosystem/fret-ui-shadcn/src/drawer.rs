@@ -175,10 +175,10 @@ impl DrawerContent {
         let theme = Theme::global(&*cx.app).clone();
         let side = drawer_side_in_scope(cx);
 
-        let bg = theme.color_required("background");
-        let border = theme.color_required("border");
-        let muted = theme.color_required("muted");
-        let radius = theme.metric_required("metric.radius.lg");
+        let bg = theme.color_token("background");
+        let border = theme.color_token("border");
+        let muted = theme.color_token("muted");
+        let radius = theme.metric_token("metric.radius.lg");
 
         let (borders, corners) = match side {
             DrawerSide::Bottom => (
@@ -896,6 +896,7 @@ impl Drawer {
                 PointerRegionProps {
                     layout: LayoutStyle::default(),
                     enabled: is_open,
+                    ..Default::default()
                 },
                 move |cx| {
                     cx.pointer_region_on_pointer_down(on_down);

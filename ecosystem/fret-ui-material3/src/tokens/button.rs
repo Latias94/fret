@@ -28,12 +28,12 @@ pub(crate) fn label_color(theme: &Theme, variant: ButtonVariant, enabled: bool) 
                 ButtonVariant::Outlined => theme.color_by_key("md.sys.color.on-surface-variant"),
             })
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
     } else {
         let base = theme
             .color_by_key(disabled_label_color_key(variant))
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = disabled_label_opacity(theme, variant);
         let mut c = base;
         c.a *= opacity;
@@ -55,7 +55,7 @@ pub(crate) fn container_background(
                     theme
                         .color_by_key("md.comp.button.filled.container.color")
                         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-                        .unwrap_or_else(|| theme.color_required("md.sys.color.primary")),
+                        .unwrap_or_else(|| theme.color_token("md.sys.color.primary")),
                 )
             } else {
                 Some(disabled_container_color(
@@ -73,7 +73,7 @@ pub(crate) fn container_background(
                         .color_by_key("md.comp.button.tonal.container.color")
                         .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
                         .unwrap_or_else(|| {
-                            theme.color_required("md.sys.color.secondary-container")
+                            theme.color_token("md.sys.color.secondary-container")
                         }),
                 )
             } else {
@@ -92,7 +92,7 @@ pub(crate) fn container_background(
                         .color_by_key("md.comp.button.elevated.container.color")
                         .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
                         .unwrap_or_else(|| {
-                            theme.color_required("md.sys.color.surface-container-low")
+                            theme.color_token("md.sys.color.surface-container-low")
                         }),
                 )
             } else {

@@ -61,7 +61,7 @@ fn base_item_background(theme: &Theme, variant: ItemVariant) -> Option<Color> {
         ItemVariant::Muted => Some(alpha(
             theme
                 .color_by_key("muted")
-                .unwrap_or_else(|| theme.color_required("muted.background")),
+                .unwrap_or_else(|| theme.color_token("muted.background")),
             0.5,
         )),
     }
@@ -73,7 +73,7 @@ fn base_item_border_color(theme: &Theme, variant: ItemVariant) -> Option<Color> 
         ItemVariant::Outline => Some(
             theme
                 .color_by_key("border")
-                .unwrap_or_else(|| theme.color_required("border")),
+                .unwrap_or_else(|| theme.color_token("border")),
         ),
         ItemVariant::Muted => Some(Color::TRANSPARENT),
     }
@@ -174,7 +174,7 @@ impl ItemSeparator {
             let theme = Theme::global(&*cx.app);
             let border = theme
                 .color_by_key("border")
-                .unwrap_or_else(|| theme.color_required("border"));
+                .unwrap_or_else(|| theme.color_token("border"));
             let layout = decl_style::layout_style(
                 theme,
                 LayoutRefinement::default()
@@ -240,10 +240,10 @@ impl ItemMedia {
                 ItemMediaVariant::Icon => {
                     let bg = theme
                         .color_by_key("muted")
-                        .unwrap_or_else(|| theme.color_required("muted.background"));
+                        .unwrap_or_else(|| theme.color_token("muted.background"));
                     let border = theme
                         .color_by_key("border")
-                        .unwrap_or_else(|| theme.color_required("border"));
+                        .unwrap_or_else(|| theme.color_token("border"));
                     let chrome = ChromeRefinement::default()
                         .rounded(Radius::Sm)
                         .border_1()
@@ -517,15 +517,15 @@ impl ItemTitle {
             let theme = Theme::global(&*cx.app);
             let fg = theme
                 .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_required("foreground"));
+                .unwrap_or_else(|| theme.color_token("foreground"));
             let px = theme
                 .metric_by_key("component.item.title_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.item.title_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -556,15 +556,15 @@ impl ItemDescription {
             let fg = theme
                 .color_by_key("muted.foreground")
                 .or_else(|| theme.color_by_key("muted-foreground"))
-                .unwrap_or_else(|| theme.color_required("muted.foreground"));
+                .unwrap_or_else(|| theme.color_token("muted.foreground"));
             let px = theme
                 .metric_by_key("component.item.description_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.item.description_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -694,7 +694,7 @@ impl Item {
             let base_bg = base_item_background(theme, variant);
             let accent = theme
                 .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_required("accent"));
+                .unwrap_or_else(|| theme.color_token("accent"));
             let hover_bg = alpha(accent, 0.5);
             let pressed_bg = alpha(accent, 0.7);
             let pressable_layout = decl_style::layout_style(theme, layout.clone());

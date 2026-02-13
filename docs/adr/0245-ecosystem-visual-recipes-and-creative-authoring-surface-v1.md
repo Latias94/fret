@@ -1,6 +1,6 @@
 # ADR 0245: Ecosystem Visual Recipes and Creative Authoring Surface (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

@@ -261,7 +261,7 @@ where
                                                 theme
                                                     .color_by_key("muted-foreground")
                                                     .unwrap_or_else(|| {
-                                                        theme.color_required("muted-foreground")
+                                                        theme.color_token("muted-foreground")
                                                     }),
                                             )),
                                         )]
@@ -343,6 +343,14 @@ where
                     viewport_id_out.set(Some(scroll.id));
 
                     let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
+                    let scroll = if let Some(active_element) = active_element_ref.get() {
+                        scroll.attach_semantics(
+                            fret_ui::element::SemanticsDecoration::default()
+                                .active_descendant_element(active_element.0),
+                        )
+                    } else {
+                        scroll
+                    };
 
                     if let Some(active_element) = active_element_ref.get() {
                         let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
@@ -413,12 +421,7 @@ where
                             // active row changes via keyboard/typeahead. Do not continuously
                             // "chase" the active row during wheel scrolling.
                             if consume_pending_active_scroll_into_view() {
-                                let _ = active_desc::scroll_active_element_into_view_y(
-                                    cx,
-                                    &handle_for_stack,
-                                    scroll.id,
-                                    active_element,
-                                );
+                                let _ = scroll_active_nearest(cx);
                             }
                         }
                     }
@@ -1112,7 +1115,7 @@ fn select_impl<H: UiHost>(
             theme
                 .metric_by_key("component.select.arrow_padding")
                 .or_else(|| theme.metric_by_key("component.popover.arrow_padding"))
-                .unwrap_or_else(|| theme.metric_required("metric.radius.md"))
+                .unwrap_or_else(|| theme.metric_token("metric.radius.md"))
         });
 
         let resolved = resolve_input_chrome(
@@ -1132,7 +1135,7 @@ fn select_impl<H: UiHost>(
             slant: Default::default(),
             line_height: theme
                 .metric_by_key("font.line_height")
-                .or(Some(theme.metric_required("font.line_height"))),
+                .or(Some(theme.metric_token("font.line_height"))),
             letter_spacing_em: None,
         };
 
@@ -1161,10 +1164,10 @@ fn select_impl<H: UiHost>(
         let fg = resolved.text_color;
         let fg_muted = theme
             .color_by_key("muted-foreground")
-            .unwrap_or_else(|| theme.color_required("muted-foreground"));
+            .unwrap_or_else(|| theme.color_token("muted-foreground"));
 
         if aria_invalid {
-            let border_color = theme.color_required("destructive");
+            let border_color = theme.color_token("destructive");
             border = border_color;
             border_focus = border_color;
 
@@ -2190,7 +2193,7 @@ fn select_impl<H: UiHost>(
                         let arrow_bg = theme_for_overlay.colors.panel_background;
                         let overlay_border = theme_for_overlay
                             .color_by_key("border")
-                            .unwrap_or_else(|| theme_for_overlay.color_required("border"));
+                            .unwrap_or_else(|| theme_for_overlay.color_token("border"));
                         let arrow_border = overlay_border;
                                         let initial_scroll_to_y = {
                                             let mut state = trigger_state_for_overlay
@@ -2427,12 +2430,12 @@ fn select_impl<H: UiHost>(
                                                                             let fg = theme
                                                                                 .color_by_key("muted.foreground")
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
-                                                                                .unwrap_or_else(|| theme.color_required("muted.foreground"));
+                                                                                .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
-                                                                            let base_size = theme.metric_required(
+                                                                            let base_size = theme.metric_token(
                                                                                 theme_tokens::metric::COMPONENT_TEXT_SM_PX,
                                                                             );
-                                                                            let base_line_height = theme.metric_required(
+                                                                            let base_line_height = theme.metric_token(
                                                                                 theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT,
                                                                             );
                                                                             let label_text_px =
@@ -2480,7 +2483,7 @@ fn select_impl<H: UiHost>(
                                                                             let theme = Theme::global(&*cx.app).clone();
                                                                             let border = theme
                                                                                 .color_by_key("border")
-                                                                                .unwrap_or_else(|| theme.color_required("border"));
+                                                                                .unwrap_or_else(|| theme.color_token("border"));
 
                                                                             out.push(cx.container(
                                                                                 ContainerProps {
@@ -2662,11 +2665,11 @@ fn select_impl<H: UiHost>(
                                                                                     let bg_accent = theme
                                                                                         .color_by_key("accent")
                                                                                         .or_else(|| theme.color_by_key("accent.background"))
-                                                                                        .unwrap_or_else(|| theme.color_required("accent"));
+                                                                                        .unwrap_or_else(|| theme.color_token("accent"));
                                                                                     let fg_accent = theme
                                                                                         .color_by_key("accent-foreground")
                                                                                         .or_else(|| theme.color_by_key("accent.foreground"))
-                                                                                        .unwrap_or_else(|| theme.color_required("accent.foreground"));
+                                                                                        .unwrap_or_else(|| theme.color_token("accent.foreground"));
 
                                                                                     let item_enabled = !item_disabled;
 
@@ -2748,6 +2751,7 @@ fn select_impl<H: UiHost>(
                                                                                                 layout
                                                                                             },
                                                                                             enabled: true,
+                                                                                            ..Default::default()
                                                                                          },
                                                                                          move |cx| {
                                                                                               vec![cx.container(
@@ -2773,7 +2777,7 @@ fn select_impl<H: UiHost>(
                                                                                                     border: Edges::all(Px(0.0)),
                                                                                                     border_color: None,
                                                                                                     corner_radii: Corners::all(
-                                                                                                        theme.metric_required("metric.radius.sm"),
+                                                                                                        theme.metric_token("metric.radius.sm"),
                                                                                                     ),
                                                                                                     ..Default::default()
                                                                                                 },

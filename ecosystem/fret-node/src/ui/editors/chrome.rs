@@ -25,18 +25,18 @@ impl PortalSmallButtonUi {
             c
         }
 
-        let font_size = theme.metric_required("metric.font.size").0;
-        let radius_sm = theme.metric_required("metric.radius.sm").0;
+        let font_size = theme.metric_token("metric.font.size").0;
+        let radius_sm = theme.metric_token("metric.radius.sm").0;
 
         Self {
             size: 20.0,
             corner_radius: (radius_sm * 0.75).max(3.0),
             border_width: 1.0,
-            border_color: theme.color_required("border"),
-            background: theme.color_required("card"),
-            background_hover: theme.color_required("accent"),
-            background_pressed: alpha(theme.color_required("ring"), 0.22),
-            text_color: theme.color_required("foreground"),
+            border_color: theme.color_token("border"),
+            background: theme.color_token("card"),
+            background_hover: theme.color_token("accent"),
+            background_pressed: alpha(theme.color_token("ring"), 0.22),
+            text_color: theme.color_token("foreground"),
             text_style: TextStyle {
                 size: Px((font_size - 1.0).max(10.0)),
                 ..TextStyle::default()

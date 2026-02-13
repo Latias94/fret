@@ -130,7 +130,7 @@ pub(crate) fn sidebar_view(
                     layout: Default::default(),
                     text: Arc::from(group.title),
                     style: None,
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 }),
@@ -172,7 +172,7 @@ pub(crate) fn sidebar_view(
                 .bg(ColorRef::Color(
                     theme
                         .color_by_key("sidebar")
-                        .unwrap_or_else(|| theme.color_required("background")),
+                        .unwrap_or_else(|| theme.color_token("background")),
                 ))
                 .p(Space::N4),
             LayoutRefinement::default().w_px(Px(280.0)).h_full(),

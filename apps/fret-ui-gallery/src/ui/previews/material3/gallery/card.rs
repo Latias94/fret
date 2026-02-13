@@ -18,9 +18,9 @@ pub(in crate::ui) fn preview_material3_card(
         let body_style = theme
             .text_style_by_key("md.sys.typescale.body-medium")
             .unwrap_or_else(|| fret_core::TextStyle::default());
-        let body_color = theme.color_required("md.sys.color.on-surface");
-        let hover_container = theme.color_required("md.sys.color.tertiary-container");
-        let hover_outline = theme.color_required("md.sys.color.tertiary");
+        let body_color = theme.color_token("md.sys.color.on-surface");
+        let hover_container = theme.color_token("md.sys.color.tertiary-container");
+        let hover_outline = theme.color_token("md.sys.color.tertiary");
         (body_style, body_color, hover_container, hover_outline)
     });
 

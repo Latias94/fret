@@ -129,7 +129,7 @@ pub fn icon_with<H: UiHost>(
         let color: Color = color
             .map(|c| c.resolve(theme))
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted-foreground"));
+            .unwrap_or_else(|| theme.color_token("muted-foreground"));
 
         let layout = style::layout_style(
             theme,

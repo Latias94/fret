@@ -1784,6 +1784,7 @@ version = "0.1.0"
 dependencies = [
  "fret-diag-protocol",
  "fret-diag-ws",
+ "glob",
  "image",
  "serde_json",
  "sysinfo",
@@ -2365,6 +2366,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-text-nav",
+ "rustc-hash 2.1.1",
  "serde",
  "serde_json",
  "slotmap",
@@ -2530,7 +2532,6 @@ version = "0.1.0"
 dependencies = [
  "fret-app",
  "fret-core",
- "fret-render",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",

@@ -46,7 +46,7 @@ pub(crate) fn container_shadow_color(theme: &Theme, variant: CardVariant) -> Col
             component_prefix(variant)
         ))
         .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn container_background(theme: &Theme, variant: CardVariant, enabled: bool) -> Color {
@@ -54,7 +54,7 @@ pub(crate) fn container_background(theme: &Theme, variant: CardVariant, enabled:
         theme
             .color_by_key(&format!("{}.container.color", component_prefix(variant)))
             .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-low"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low"))
     } else {
         let base = theme
             .color_by_key(&format!(
@@ -62,7 +62,7 @@ pub(crate) fn container_background(theme: &Theme, variant: CardVariant, enabled:
                 component_prefix(variant)
             ))
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
         let opacity = theme
             .number_by_key(&format!(
@@ -122,7 +122,7 @@ pub(crate) fn outline(
         let base = theme
             .color_by_key(&format!("{prefix}.disabled.outline.color"))
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key(&format!("{prefix}.disabled.outline.opacity"))
             .unwrap_or(0.12);
@@ -142,7 +142,7 @@ pub(crate) fn outline(
         .color_by_key(&format!("{prefix}.{key}"))
         .or_else(|| theme.color_by_key(&format!("{prefix}.outline.color")))
         .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
     color.a = 1.0;
 
     Some(CardOutline { width, color })
@@ -164,7 +164,7 @@ pub(crate) fn state_layer_color(
     theme
         .color_by_key(&format!("{prefix}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 pub(crate) fn state_layer_opacity(

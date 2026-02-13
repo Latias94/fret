@@ -170,7 +170,7 @@ pub(in crate::ui) fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
 
     let image = {
-        let cover_bg = cx.with_theme(|theme| theme.color_required("muted"));
+        let cover_bg = cx.with_theme(|theme| theme.color_token("muted"));
 
         let cover = shadcn::AspectRatio::new(
             16.0 / 9.0,

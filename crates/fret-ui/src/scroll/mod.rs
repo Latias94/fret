@@ -83,8 +83,7 @@ impl ScrollHandle {
         {
             return;
         }
-        if std::env::var_os("FRET_DEBUG_SCROLL_HANDLE_SET_OFFSET")
-            .is_some_and(|v| !v.is_empty() && v != "0")
+        if crate::runtime_config::ui_runtime_config().debug_scroll_handle_set_offset
             && state.offset.y.0 > 0.01
             && clamped.y.0 <= 0.01
         {

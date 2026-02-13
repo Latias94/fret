@@ -545,7 +545,7 @@ fn combobox_with_patch<H: UiHost>(
             slant: Default::default(),
             line_height: theme
                 .metric_by_key("font.line_height")
-                .or(Some(theme.metric_required("font.line_height"))),
+                .or(Some(theme.metric_token("font.line_height"))),
             letter_spacing_em: None,
         };
 
@@ -583,13 +583,13 @@ fn combobox_with_patch<H: UiHost>(
             .unwrap_or_else(|| {
                 theme
                     .color_by_key("background")
-                    .unwrap_or_else(|| theme.color_required("background"))
+                    .unwrap_or_else(|| theme.color_token("background"))
             });
         let bg_hover = theme
             .color_by_key("accent")
             .or_else(|| theme.color_by_key("accent.background"))
-            .unwrap_or_else(|| theme.color_required("accent"));
-        let bg_pressed = theme.color_required("accent");
+            .unwrap_or_else(|| theme.color_token("accent"));
+        let bg_pressed = theme.color_token("accent");
         let fg_base = chrome_patch
             .text_color
             .as_ref()
@@ -597,7 +597,7 @@ fn combobox_with_patch<H: UiHost>(
             .unwrap_or_else(|| {
                 theme
                     .color_by_key("foreground")
-                    .unwrap_or_else(|| theme.color_required("foreground"))
+                    .unwrap_or_else(|| theme.color_token("foreground"))
             });
         let fg_hover = theme
             .color_by_key("accent-foreground")
@@ -611,7 +611,7 @@ fn combobox_with_patch<H: UiHost>(
                 theme
                     .color_by_key("input")
                     .or_else(|| theme.color_by_key("border"))
-                    .unwrap_or_else(|| theme.color_required("border"))
+                    .unwrap_or_else(|| theme.color_token("border"))
             });
 
         let default_trigger_bg = WidgetStateProperty::new(ColorRef::Color(bg_base))
@@ -715,7 +715,11 @@ fn combobox_with_patch<H: UiHost>(
 
                             let children = vec![cx.container(
                                 ContainerProps {
-                                    layout: LayoutStyle::default(),
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size = trigger_layout.size;
+                                        layout
+                                    },
                                     padding: Edges {
                                         top: pad_top,
                                         right: pad_right,
@@ -732,7 +736,11 @@ fn combobox_with_patch<H: UiHost>(
                                 move |cx| {
                                     vec![cx.flex(
                                         FlexProps {
-                                            layout: LayoutStyle::default(),
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
                                             direction: fret_core::Axis::Horizontal,
                                             gap: trigger_gap,
                                             padding: Edges::all(Px(0.0)),
@@ -831,28 +839,43 @@ fn combobox_with_patch<H: UiHost>(
                                 command_items.push(cmd_item);
                             }
 
-                            CommandPalette::new(query_model.clone(), command_items)
-                                .a11y_label("Combobox list")
-                                .input_role(SemanticsRole::ComboBox)
-                                .input_expanded(true)
-                                .placeholder(search_placeholder.clone())
-                                .disabled(disabled)
-                                .empty_text(empty_text.clone())
-                                .refine_style(
-                                    ChromeRefinement::default()
-                                        .radius(Px(0.0))
-                                        .border_width(Px(0.0))
-                                        .bg(ColorRef::Color(transparent))
-                                        .border_color(ColorRef::Color(transparent)),
-                                )
-                                .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
-                                .into_element(cx)
+                            {
+                                let mut palette =
+                                    CommandPalette::new(query_model.clone(), command_items)
+                                        .a11y_label("Combobox list")
+                                        .input_role(SemanticsRole::ComboBox)
+                                        .input_expanded(true)
+                                        .a11y_selected_mode(
+                                            crate::command::CommandPaletteA11ySelectedMode::Checked,
+                                        )
+                                        .placeholder(search_placeholder.clone())
+                                        .disabled(disabled)
+                                        .empty_text(empty_text.clone())
+                                        .refine_style(
+                                            ChromeRefinement::default()
+                                                .radius(Px(0.0))
+                                                .border_width(Px(0.0))
+                                                .bg(ColorRef::Color(transparent))
+                                                .border_color(ColorRef::Color(transparent)),
+                                        )
+                                        .refine_scroll_layout(
+                                            LayoutRefinement::default().max_h(max_list_h),
+                                        );
+
+                                if let Some(prefix) = test_id_prefix.as_deref() {
+                                    palette = palette
+                                        .input_test_id(format!("{prefix}-input"))
+                                        .list_test_id(format!("{prefix}-listbox"));
+                                }
+
+                                palette.into_element(cx)
+                            }
                         } else {
                             let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
                             let fg = theme
                                 .color_by_key("foreground")
-                                .unwrap_or_else(|| theme.color_required("foreground"));
+                                .unwrap_or_else(|| theme.color_token("foreground"));
                             let fg_disabled = alpha_mul(fg, 0.5);
                             let item_text_style = crate::command::item_text_style(&theme);
 
@@ -1130,28 +1153,43 @@ fn combobox_with_patch<H: UiHost>(
                             command_items.push(cmd_item);
                         }
 
-                        CommandPalette::new(query_model.clone(), command_items)
-                            .a11y_label("Combobox list")
-                            .input_role(SemanticsRole::ComboBox)
-                            .input_expanded(true)
-                            .placeholder(search_placeholder.clone())
-                            .disabled(disabled)
-                            .empty_text(empty_text)
-                            .refine_style(
-                                ChromeRefinement::default()
-                                    .radius(Px(0.0))
-                                    .border_width(Px(0.0))
-                                    .bg(ColorRef::Color(transparent))
-                                    .border_color(ColorRef::Color(transparent)),
-                            )
-                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
-                            .into_element(cx)
+                        {
+                            let mut palette =
+                                CommandPalette::new(query_model.clone(), command_items)
+                                    .a11y_label("Combobox list")
+                                    .input_role(SemanticsRole::ComboBox)
+                                    .input_expanded(true)
+                                    .a11y_selected_mode(
+                                        crate::command::CommandPaletteA11ySelectedMode::Checked,
+                                    )
+                                    .placeholder(search_placeholder.clone())
+                                    .disabled(disabled)
+                                    .empty_text(empty_text)
+                                    .refine_style(
+                                        ChromeRefinement::default()
+                                            .radius(Px(0.0))
+                                            .border_width(Px(0.0))
+                                            .bg(ColorRef::Color(transparent))
+                                            .border_color(ColorRef::Color(transparent)),
+                                    )
+                                    .refine_scroll_layout(
+                                        LayoutRefinement::default().max_h(max_list_h),
+                                    );
+
+                            if let Some(prefix) = test_id_prefix.as_deref() {
+                                palette = palette
+                                    .input_test_id(format!("{prefix}-input"))
+                                    .list_test_id(format!("{prefix}-listbox"));
+                            }
+
+                            palette.into_element(cx)
+                        }
                     } else {
                         let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
                         let fg = theme
                             .color_by_key("foreground")
-                            .unwrap_or_else(|| theme.color_required("foreground"));
+                            .unwrap_or_else(|| theme.color_token("foreground"));
                         let fg_disabled = alpha_mul(fg, 0.5);
                         let item_text_style = crate::command::item_text_style(&theme);
 

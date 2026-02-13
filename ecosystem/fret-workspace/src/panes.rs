@@ -885,6 +885,7 @@ where
         PointerRegionProps {
             layout: pane_container_layout(),
             enabled: true,
+            ..Default::default()
         },
         |cx| {
             if let Some(cmd) = activate_cmd {

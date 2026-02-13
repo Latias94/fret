@@ -37,12 +37,12 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
         .color_by_key("table.background")
         .or_else(|| theme.color_by_key("list.background"))
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or_else(|| theme.color_required("card"));
+        .unwrap_or_else(|| theme.color_token("card"));
     let border = theme
         .color_by_key("table.border")
         .or_else(|| theme.color_by_key("border"))
         .or_else(|| theme.color_by_key("list.border"))
-        .unwrap_or_else(|| theme.color_required("border"));
+        .unwrap_or_else(|| theme.color_token("border"));
     let header_bg = theme
         .color_by_key("table.header.background")
         .or_else(|| theme.color_by_key("muted"))
@@ -52,13 +52,13 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
         .or_else(|| theme.color_by_key("list.hover.background"))
         .or_else(|| theme.color_by_key("list.row.hover"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
     let row_active = theme
         .color_by_key("table.row.active")
         .or_else(|| theme.color_by_key("list.active.background"))
         .or_else(|| theme.color_by_key("list.row.active"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_required("accent"));
+        .unwrap_or_else(|| theme.color_token("accent"));
     (table_bg, border, header_bg, row_hover, row_active)
 }
 
@@ -1606,7 +1606,7 @@ where
         a: row_active.a.min(0.18),
         ..row_active
     };
-    let radius = theme.metric_required("metric.radius.md");
+    let radius = theme.metric_token("metric.radius.md");
 
     let row_h = props
         .row_height
@@ -2681,7 +2681,7 @@ where
         a: row_active.a.min(0.18),
         ..row_active
     };
-    let radius = theme.metric_required("metric.radius.md");
+    let radius = theme.metric_token("metric.radius.md");
 
     let row_h = props
         .row_height
@@ -4091,6 +4091,7 @@ where
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             enabled: true,
+                                                                                            capture_phase_pointer_moves: false,
                                                                                         },
                                                                                         |cx| {
                                                                                             let state_model_down = state_model.clone();

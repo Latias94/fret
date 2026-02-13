@@ -1460,7 +1460,7 @@ pub fn render<H: UiHost + 'static>(
                     let gap = gap_override.unwrap_or_else(|| Px(14.0));
                     let radius = toast_style
                         .container_radius
-                        .unwrap_or_else(|| theme.metric_required("metric.radius.md"));
+                        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
                     (desktop_offset, mobile_offset, gap, radius)
                 };
 
@@ -1807,12 +1807,12 @@ pub fn render<H: UiHost + 'static>(
                                                         let bg_default = theme
                                                             .color_by_key("popover")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required("popover")
+                                                                theme.color_token("popover")
                                                             });
                                                         let fg_default = theme
                                                             .color_by_key("popover-foreground")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required(
+                                                                theme.color_token(
                                                                     "popover-foreground",
                                                                 )
                                                             });
@@ -1878,19 +1878,19 @@ pub fn render<H: UiHost + 'static>(
                                                         let border_color = theme
                                                             .color_by_key("border")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required("border")
+                                                                theme.color_token("border")
                                                             });
                                                         let fg_muted = theme
                                                             .color_by_key("muted-foreground")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required(
+                                                                theme.color_token(
                                                                     "muted-foreground",
                                                                 )
                                                             });
                                                         let button_bg = theme
                                                             .color_by_key("muted")
                                                             .unwrap_or_else(|| {
-                                                                theme.color_required("muted")
+                                                                theme.color_token("muted")
                                                             });
 
                                                         (bg, fg, border_color, fg_muted, button_bg)

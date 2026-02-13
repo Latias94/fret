@@ -113,8 +113,8 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     };
 
     let theme = Theme::global(&*cx.app).snapshot();
-    let outline_fg = ColorRef::Color(theme.color_required("foreground"));
-    let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+    let outline_fg = ColorRef::Color(theme.color_token("foreground"));
+    let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
 
     let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
         shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))

@@ -138,8 +138,8 @@ impl Rating {
                 .metric_by_key("component.rating.gap")
                 .unwrap_or_else(|| decl_style::space(&theme, Space::N0p5));
 
-            let fg_active = theme.color_required("foreground");
-            let fg_inactive = theme.color_required("muted-foreground");
+            let fg_active = theme.color_token("foreground");
+            let fg_inactive = theme.color_token("muted-foreground");
 
             let root_layout = decl_style::layout_style(&theme, self.layout);
             let test_id = self

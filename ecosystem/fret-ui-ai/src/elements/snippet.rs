@@ -143,13 +143,13 @@ impl SnippetText {
                     text: self.text,
                     style: Some(TextStyle {
                         font: FontId::monospace(),
-                        size: theme.metric_required("metric.font.mono_size"),
+                        size: theme.metric_token("metric.font.mono_size"),
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
-                        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                         letter_spacing_em: None,
                     }),
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 })]
@@ -202,13 +202,13 @@ impl SnippetInput {
         };
         props.style = Some(TextStyle {
             font: FontId::monospace(),
-            size: theme.metric_required("metric.font.mono_size"),
+            size: theme.metric_token("metric.font.mono_size"),
             weight: FontWeight::NORMAL,
             slant: Default::default(),
-            line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+            line_height: Some(theme.metric_token("metric.font.mono_line_height")),
             letter_spacing_em: None,
         });
-        props.color = Some(theme.color_required("foreground"));
+        props.color = Some(theme.color_token("foreground"));
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Clip;
 
@@ -387,13 +387,13 @@ impl SnippetCopyButton {
             props.a11y.label = Some(Arc::<str>::from(label));
             props.a11y.test_id = test_id.clone();
 
-            let fg = theme.color_required("muted-foreground");
+            let fg = theme.color_token("muted-foreground");
             let bg_hover = theme
                 .color_by_key("color.menu.item.hover")
-                .unwrap_or_else(|| theme.color_required("secondary"));
+                .unwrap_or_else(|| theme.color_token("secondary"));
             let bg_pressed = theme
                 .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_required("secondary"));
+                .unwrap_or_else(|| theme.color_token("secondary"));
 
             let bg = if st.pressed {
                 alpha(bg_pressed, 0.9)
@@ -404,7 +404,7 @@ impl SnippetCopyButton {
             };
 
             let size = Px(28.0);
-            let radius = theme.metric_required("metric.radius.sm");
+            let radius = theme.metric_token("metric.radius.sm");
             let icon_id = if copied {
                 fret_icons::ids::ui::CHECK
             } else {

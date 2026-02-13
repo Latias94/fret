@@ -226,6 +226,7 @@ fn dock_graph_signature_for_window(
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     semantics_test_id: Option<&'static str>,
+    diag_env_enabled: bool,
     last_bounds: Rect,
     prepaint_wants_animation_frames: bool,
     dock_drop_resolve_diagnostics: Option<fret_runtime::DockDropResolveDiagnostics>,
@@ -314,9 +315,14 @@ struct FloatingChrome {
 
 impl DockSpace {
     pub fn new(window: fret_core::AppWindowId) -> Self {
+        // Match `UiDiagnosticsConfig::default()` enable heuristic without pulling a dependency on
+        // `fret-bootstrap` (layering: docking is ecosystem, diagnostics is bootstrap).
+        let diag_env_enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
         Self {
             window,
             semantics_test_id: None,
+            diag_env_enabled,
             last_bounds: Rect::default(),
             prepaint_wants_animation_frames: false,
             dock_drop_resolve_diagnostics: None,
@@ -607,9 +613,9 @@ impl DockSpace {
         layout: &std::collections::HashMap<DockNodeId, Rect>,
         drag_panel: Option<&PanelKey>,
     ) {
-        self.tab_text_style.size = theme.metric_required("font.size");
-        self.tab_close_style.size = theme.metric_required("font.size");
-        self.empty_state_style.size = theme.metric_required("font.size");
+        self.tab_text_style.size = theme.metric_token("font.size");
+        self.tab_close_style.size = theme.metric_token("font.size");
+        self.empty_state_style.size = theme.metric_token("font.size");
 
         let mut visible_set: HashSet<PanelKey> = HashSet::new();
         for &node_id in layout.keys() {
@@ -664,9 +670,11 @@ impl DockSpace {
             services.text().release(glyph.blob);
         }
 
-        let pad_x = theme.metric_required("metric.padding.md");
+        let pad_x = theme.metric_token("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
-        let inner_max_w = Px((DOCK_TAB_MAX_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
+        // Avoid fully clamping tab title constraints to 0px, which can result in "missing" tab
+        // labels when theme metrics are misconfigured (e.g. overly large padding).
+        let inner_max_w = Px((DOCK_TAB_MAX_W.0 - pad_x.0 * 2.0 - reserve.0).max(1.0));
         let constraints = TextConstraints {
             max_width: Some(inner_max_w),
             wrap: TextWrap::None,
@@ -712,10 +720,25 @@ impl DockSpace {
                 .map(|p| p.title.as_str())
                 .unwrap_or(panel.kind.0.as_str());
             let title_hash = hash_title(title);
-            let (blob, metrics) =
+            let (mut blob, mut metrics) =
                 services
                     .text()
                     .prepare_str(title, &self.tab_text_style, constraints);
+            if metrics.size.width.0 <= 0.0 && !title.is_empty() {
+                // Fallback: if the constrained layout returns an empty run for a non-empty title,
+                // re-prepare without a width cap so the tab can at least render a clipped prefix.
+                services.text().release(blob);
+                (blob, metrics) = services.text().prepare_str(
+                    title,
+                    &self.tab_text_style,
+                    TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor,
+                    },
+                );
+            }
             self.tab_titles.insert(
                 panel,
                 PreparedTabTitle {
@@ -882,7 +905,7 @@ impl DockSpace {
         scale_factor: f32,
         max_width: Px,
     ) {
-        self.empty_state_style.size = theme.metric_required("font.size");
+        self.empty_state_style.size = theme.metric_token("font.size");
         if self.last_empty_state_theme_revision == Some(theme.revision)
             && self.last_empty_state_scale_factor == Some(scale_factor)
         {
@@ -919,7 +942,7 @@ impl DockSpace {
         theme: fret_ui::ThemeSnapshot,
         scale_factor: f32,
     ) {
-        self.float_zone_style.size = theme.metric_required("font.size");
+        self.float_zone_style.size = theme.metric_token("font.size");
         if self.last_float_zone_theme_revision == Some(theme.revision)
             && self.last_float_zone_scale_factor == Some(scale_factor)
         {
@@ -955,7 +978,7 @@ impl DockSpace {
         scale_factor: f32,
         msg: &str,
     ) {
-        self.float_zone_tooltip_style.size = theme.metric_required("font.size");
+        self.float_zone_tooltip_style.size = theme.metric_token("font.size");
 
         let hash_title = |s: &str| -> u64 {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -1010,10 +1033,10 @@ impl DockSpace {
         let rect = float_zone(dock_bounds);
         self.rebuild_float_zone_glyph(services, theme, scale_factor);
 
-        let border = theme.color_required("border");
-        let card = theme.color_required("card");
-        let hover_bg = theme.color_required("accent");
-        let fg = theme.color_required("muted-foreground");
+        let border = theme.color_token("border");
+        let card = theme.color_token("card");
+        let hover_bg = theme.color_token("accent");
+        let fg = theme.color_token("muted-foreground");
 
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(20),
@@ -1063,7 +1086,7 @@ impl DockSpace {
             return;
         };
 
-        let pad = theme.metric_required("metric.padding.sm").0.max(4.0);
+        let pad = theme.metric_token("metric.padding.sm").0.max(4.0);
         let border_px = Px(1.0);
         let gap = Px(8.0);
 
@@ -1084,7 +1107,7 @@ impl DockSpace {
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(22),
             rect: tooltip_rect,
-            background: fret_core::Paint::Solid(theme.color_required("popover")),
+            background: fret_core::Paint::Solid(theme.color_token("popover")),
             border: Edges::all(border_px),
             border_paint: fret_core::Paint::Solid(border),
             corner_radii: fret_core::Corners::all(Px(8.0)),
@@ -1098,7 +1121,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(23),
             origin: text_origin,
             text: tooltip.blob,
-            color: theme.color_required("popover-foreground"),
+            color: theme.color_token("popover-foreground"),
         });
     }
 
@@ -1197,13 +1220,13 @@ impl DockSpace {
         cx.scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect: cx.bounds,
-            background: fret_core::Paint::Solid(theme.color_required("card")),
+            background: fret_core::Paint::Solid(theme.color_token("card")),
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
-        let pad = theme.metric_required("metric.padding.md").0.max(0.0);
+        let pad = theme.metric_token("metric.padding.md").0.max(0.0);
         let max_w = Px((cx.bounds.size.width.0 - pad * 2.0).max(0.0));
         self.rebuild_empty_state(cx.services, theme, cx.scale_factor, max_w);
 
@@ -1221,7 +1244,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(1),
             origin: Point::new(Px(x), Px(y)),
             text: text.blob,
-            color: theme.color_required("muted-foreground"),
+            color: theme.color_token("muted-foreground"),
         });
     }
 }
@@ -1258,10 +1281,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         //
         // Important: publish in `prepaint` (not only `paint`) so scripts can rely on the snapshot
         // even when paint is replay-cached.
-        if cx
-            .app
-            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-            .is_some()
+        if self.diag_env_enabled
+            || cx
+                .app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .is_some()
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
@@ -1278,6 +1302,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cross_window_hover: drag.cross_window_hover,
                 })
             });
+            let floating_drag =
+                self.floating_drag
+                    .as_ref()
+                    .map(|d| fret_runtime::DockFloatingDragDiagnostics {
+                        pointer_id: d.pointer_id,
+                        floating: d.floating,
+                        activated: d.activated,
+                    });
             let viewport_capture = self
                 .viewport_capture
                 .iter()
@@ -1306,6 +1338,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         frame_id,
                         fret_runtime::DockingInteractionDiagnostics {
                             dock_drag,
+                            floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
@@ -1348,7 +1381,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
         let theme = cx.theme().snapshot();
-        let font_size = theme.metric_required("font.size");
+        let font_size = theme.metric_token("font.size");
 
         let mut pending_effects: Vec<Effect> = Vec::new();
         let mut pending_redraws: Vec<fret_core::AppWindowId> = Vec::new();
@@ -4415,10 +4448,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // store (avoids allocating globals in production apps).
         //
         // Publish in `layout` so scripts can gate against the snapshot before `paint_all()`.
-        if cx
-            .app
-            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-            .is_some()
+        if self.diag_env_enabled
+            || cx
+                .app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .is_some()
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
@@ -4435,6 +4469,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cross_window_hover: drag.cross_window_hover,
                 })
             });
+            let floating_drag =
+                self.floating_drag
+                    .as_ref()
+                    .map(|d| fret_runtime::DockFloatingDragDiagnostics {
+                        pointer_id: d.pointer_id,
+                        floating: d.floating,
+                        activated: d.activated,
+                    });
             let viewport_capture = self
                 .viewport_capture
                 .iter()
@@ -4463,6 +4505,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         frame_id,
                         fret_runtime::DockingInteractionDiagnostics {
                             dock_drag,
+                            floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
@@ -4585,7 +4628,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let theme = cx.theme().snapshot();
         let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
-        let font_size = theme.metric_required("font.size");
+        let font_size = theme.metric_token("font.size");
         // Keep the dock host "alive" as a stable internal drag route target.
         //
         // This must be refreshed during paint/layout, not only during event handling, because
@@ -4606,10 +4649,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         // Best-effort diagnostics hook: only record if a diagnostics collector has registered the
         // store (avoids allocating globals in production apps).
-        if cx
-            .app
-            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-            .is_some()
+        if self.diag_env_enabled
+            || cx
+                .app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .is_some()
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
@@ -4626,6 +4670,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cross_window_hover: drag.cross_window_hover,
                 })
             });
+            let floating_drag =
+                self.floating_drag
+                    .as_ref()
+                    .map(|d| fret_runtime::DockFloatingDragDiagnostics {
+                        pointer_id: d.pointer_id,
+                        floating: d.floating,
+                        activated: d.activated,
+                    });
             let viewport_capture = self
                 .viewport_capture
                 .iter()
@@ -4654,6 +4706,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         frame_id,
                         fret_runtime::DockingInteractionDiagnostics {
                             dock_drag,
+                            floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
@@ -4878,13 +4931,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     .collect();
 
             for (floating, chrome, layout) in &floating_layouts {
-                let border = theme.color_required("border");
-                let surface = theme.color_required("background");
-                let hover_bg = theme.color_required("accent");
-                let fg = theme.color_required("foreground");
-                let fg_muted = theme.color_required("muted-foreground");
-                let radius_md = theme.metric_required("metric.radius.md");
-                let radius_sm = theme.metric_required("metric.radius.sm");
+                let border = theme.color_token("border");
+                let surface = theme.color_token("background");
+                let hover_bg = theme.color_token("accent");
+                let fg = theme.color_token("foreground");
+                let fg_muted = theme.color_token("muted-foreground");
+                let radius_md = theme.metric_token("metric.radius.md");
+                let radius_sm = theme.metric_token("metric.radius.sm");
 
                 let border_color = Color { a: 0.85, ..border };
                 scene.push(SceneOp::Quad {

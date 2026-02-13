@@ -129,9 +129,9 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
 
     let (muted, muted_foreground, destructive) = cx.with_theme(|theme| {
         (
-            theme.color_required("muted"),
-            theme.color_required("muted-foreground"),
-            theme.color_required("destructive"),
+            theme.color_token("muted"),
+            theme.color_token("muted-foreground"),
+            theme.color_token("destructive"),
         )
     });
 

@@ -103,7 +103,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let outline = {
-        let muted_foreground = cx.with_theme(|theme| theme.color_required("muted-foreground"));
+        let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
         let empty = shadcn::Empty::new([
             shadcn::empty::EmptyHeader::new([
                 shadcn::empty::EmptyMedia::new([icon(cx, "lucide.cloud")])
@@ -130,7 +130,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let background = {
-        let muted = cx.with_theme(|theme| theme.color_required("muted"));
+        let muted = cx.with_theme(|theme| theme.color_token("muted"));
         let refresh_icon = icon(cx, "lucide.refresh-cw");
         let refresh_text = cx.text("Refresh");
         let refresh_button = shadcn::Button::new("Refresh")

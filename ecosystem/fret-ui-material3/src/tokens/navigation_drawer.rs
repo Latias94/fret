@@ -56,7 +56,7 @@ pub(crate) fn container_background(theme: &Theme, variant: NavigationDrawerVaria
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_required(fallback))
+        .unwrap_or_else(|| theme.color_token(fallback))
 }
 
 pub(crate) fn container_elevation(theme: &Theme, variant: NavigationDrawerVariant) -> Px {
@@ -87,7 +87,7 @@ pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.navigation-drawer.active-indicator.color")
         .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.secondary-container"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"))
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
@@ -170,7 +170,7 @@ pub(crate) fn label_color(
     theme
         .color_by_key(label_color_key(active, interaction))
         .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_required(fallback))
+        .unwrap_or_else(|| theme.color_token(fallback))
 }
 
 fn icon_color_key(active: bool, interaction: NavigationDrawerItemInteraction) -> &'static str {
@@ -220,7 +220,7 @@ pub(crate) fn icon_color(
     theme
         .color_by_key(icon_color_key(active, interaction))
         .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_required(fallback))
+        .unwrap_or_else(|| theme.color_token(fallback))
 }
 
 fn state_layer_color_key(
@@ -273,7 +273,7 @@ pub(crate) fn state_layer_color(
     theme
         .color_by_key(state_layer_color_key(active, interaction))
         .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_required(fallback))
+        .unwrap_or_else(|| theme.color_token(fallback))
 }
 
 pub(crate) fn label_weight(theme: &Theme, active: bool) -> FontWeight {

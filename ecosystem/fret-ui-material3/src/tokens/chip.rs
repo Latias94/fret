@@ -44,7 +44,7 @@ pub(crate) fn label_color(
         let base = theme
             .color_by_key("md.comp.assist-chip.disabled.label-text.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.assist-chip.disabled.label-text.opacity")
             .unwrap_or(0.38);
@@ -62,7 +62,7 @@ pub(crate) fn label_color(
     theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 pub(crate) fn leading_icon_size(theme: &Theme) -> Px {
@@ -80,7 +80,7 @@ pub(crate) fn leading_icon_color(
         let base = theme
             .color_by_key("md.comp.assist-chip.with-icon.disabled.icon.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.assist-chip.with-icon.disabled.icon.opacity")
             .unwrap_or(0.38);
@@ -99,7 +99,7 @@ pub(crate) fn leading_icon_color(
     theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn state_layer_color(theme: &Theme, interaction: Option<PressableInteraction>) -> Color {
@@ -113,7 +113,7 @@ pub(crate) fn state_layer_color(theme: &Theme, interaction: Option<PressableInte
     theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 pub(crate) fn state_layer_opacity(theme: &Theme, interaction: Option<PressableInteraction>) -> f32 {
@@ -143,12 +143,12 @@ pub(crate) fn elevated_container_background(theme: &Theme, enabled: bool) -> Col
         theme
             .color_by_key("md.comp.assist-chip.elevated.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-low"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low"))
     } else {
         let base = theme
             .color_by_key("md.comp.assist-chip.elevated.disabled.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.assist-chip.elevated.disabled.container.opacity")
             .unwrap_or(0.12);
@@ -185,7 +185,7 @@ pub(crate) fn elevated_container_shadow_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.assist-chip.elevated.container.shadow-color")
         .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn flat_outline(
@@ -201,7 +201,7 @@ pub(crate) fn flat_outline(
         let base = theme
             .color_by_key("md.comp.assist-chip.flat.disabled.outline.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.assist-chip.flat.disabled.outline.opacity")
             .unwrap_or(0.12);
@@ -218,7 +218,7 @@ pub(crate) fn flat_outline(
     let mut color = theme
         .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
         .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline-variant"));
     color.a = 1.0;
 
     Some(ChipOutline { width, color })

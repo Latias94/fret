@@ -1,6 +1,6 @@
 # ADR 0247: Compositing Groups and Blend Modes (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

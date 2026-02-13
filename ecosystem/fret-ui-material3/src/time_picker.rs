@@ -449,7 +449,7 @@ impl TimePickerDialog {
                             y2: 1.0,
                         });
 
-                let scrim_base = theme.color_required("md.sys.color.scrim");
+                let scrim_base = theme.color_token("md.sys.color.scrim");
 
                 (open_ms, close_ms, bezier, scrim_base)
             };
@@ -1808,6 +1808,7 @@ fn time_picker_clock_dial<H: UiHost>(
                                 l
                             },
                             enabled: true,
+                            ..Default::default()
                         },
                         move |cx| {
                             cx.pointer_region_on_pointer_down(on_down);

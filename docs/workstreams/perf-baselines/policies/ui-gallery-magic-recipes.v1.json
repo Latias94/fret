@@ -32,7 +32,66 @@
       "scope": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json",
+      "metric": "top_layout_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json",
+      "metric": "top_layout_engine_solve_time_us",
+      "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json",
+      "metric": "top_layout_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json",
+      "metric": "top_layout_engine_solve_time_us",
+      "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json",
+      "metric": "top_layout_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json",
+      "metric": "top_layout_engine_solve_time_us",
+      "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json",
+      "metric": "top_layout_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json",
+      "metric": "top_layout_engine_solve_time_us",
+      "seed": "p95"
     }
   ]
 }
-

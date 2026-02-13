@@ -178,6 +178,31 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_toggle() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_select_and_row_actions() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-guide-demo-select-and-row-actions.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_wait_bounds_stable() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "x" },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn transport_message_roundtrip_envelope() {
     let message_1 = DiagTransportMessageV1 {
         schema_version: 1,
@@ -244,6 +269,61 @@ fn script_v2_roundtrip_bounds_max_size_predicate() {
         "eps_px": 0.5
       },
       "timeout_frames": 1
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_text_font_stack_key_stable_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "text_font_stack_key_stable",
+        "stable_frames": 60
+      },
+      "timeout_frames": 120
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_font_catalog_populated_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "font_catalog_populated"
+      },
+      "timeout_frames": 1800
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_system_font_rescan_idle_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "system_font_rescan_idle"
+      },
+      "timeout_frames": 1800
     }
   ]
 }"#,
