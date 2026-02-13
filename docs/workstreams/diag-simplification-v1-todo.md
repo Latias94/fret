@@ -54,8 +54,8 @@ small, fearless refactors.
 
 ## Phase 4: Retention and evidence (bounded)
 
-- [ ] Add a bounded per-run event log (step start/end, dumps, major traces).
-- [ ] Include the event log in `script.result` evidence (bounded).
+- [x] Add a bounded per-run event log (step start/end, dumps, major traces).
+- [x] Include the event log in `script.result` evidence (bounded).
 - [ ] Add an option to export snapshots around step boundaries (bounded; future).
 - [ ] Ensure every failure path produces:
   - [ ] stable `reason_code`
