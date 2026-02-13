@@ -715,7 +715,11 @@ fn combobox_with_patch<H: UiHost>(
 
                             let children = vec![cx.container(
                                 ContainerProps {
-                                    layout: LayoutStyle::default(),
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size = trigger_layout.size;
+                                        layout
+                                    },
                                     padding: Edges {
                                         top: pad_top,
                                         right: pad_right,
@@ -732,7 +736,11 @@ fn combobox_with_patch<H: UiHost>(
                                 move |cx| {
                                     vec![cx.flex(
                                         FlexProps {
-                                            layout: LayoutStyle::default(),
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
                                             direction: fret_core::Axis::Horizontal,
                                             gap: trigger_gap,
                                             padding: Edges::all(Px(0.0)),
