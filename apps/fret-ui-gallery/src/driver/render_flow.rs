@@ -77,7 +77,9 @@ pub(super) fn begin_frame(
     if state.ui.view_cache_enabled() != cache_enabled {
         state.ui.set_view_cache_enabled(cache_enabled);
         if let Some(root) = state.root {
-            state.ui.invalidate(root, Invalidation::Layout);
+            // Flipping the view-cache flag should not require a full relayout: it affects how the
+            // tree is painted/cached, not the geometry.
+            state.ui.invalidate(root, Invalidation::Paint);
         }
     }
 
