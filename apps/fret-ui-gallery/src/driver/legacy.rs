@@ -3253,11 +3253,12 @@ impl WinitAppDriver for UiGalleryDriver {
         // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
         // VirtualList) have their realized item subtrees available for hit-testing.
         let semantics_snapshot = state.ui.semantics_snapshot();
-        let drive = app.with_global_mut_untracked(
+        let (drive, wants_quit) = app.with_global_mut_untracked(
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
+                let wants_quit = svc.poll_exit_trigger();
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                svc.drive_script_for_window(
+                let drive = svc.drive_script_for_window(
                     &*app,
                     window,
                     bounds,
@@ -3265,9 +3266,15 @@ impl WinitAppDriver for UiGalleryDriver {
                     Some(&state.ui),
                     semantics_snapshot,
                     element_runtime,
-                )
+                );
+                (drive, wants_quit)
             },
         );
+
+        if wants_quit {
+            app.push_effect(Effect::QuitApp);
+            return;
+        }
 
         for effect in drive.effects {
             app.push_effect(effect);
