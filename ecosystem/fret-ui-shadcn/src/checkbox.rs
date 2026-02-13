@@ -17,6 +17,9 @@ use fret_ui_kit::primitives::checkbox::{
     CheckedState, checkbox_a11y, checkbox_use_checked_model, checked_state_from_optional_bool,
     toggle_optional_bool,
 };
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, WidgetState,
@@ -100,6 +103,7 @@ impl CheckboxStyle {
 pub struct Checkbox {
     checked: CheckboxCheckedModel,
     disabled: bool,
+    control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_click: Option<CommandId>,
@@ -120,6 +124,7 @@ impl Checkbox {
         Self {
             checked: CheckboxCheckedModel::Bool(model),
             disabled: false,
+            control_id: None,
             a11y_label: None,
             test_id: None,
             on_click: None,
@@ -133,6 +138,7 @@ impl Checkbox {
         Self {
             checked: CheckboxCheckedModel::TriState(model),
             disabled: false,
+            control_id: None,
             a11y_label: None,
             test_id: None,
             on_click: None,
@@ -149,6 +155,7 @@ impl Checkbox {
         Self {
             checked: CheckboxCheckedModel::OptionalBool(model),
             disabled: false,
+            control_id: None,
             a11y_label: None,
             test_id: None,
             on_click: None,
@@ -202,6 +209,13 @@ impl Checkbox {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Associates this checkbox with a logical form control id so related elements (e.g. labels)
+    /// can forward pointer activation and focus.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -276,6 +290,8 @@ impl Checkbox {
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let chrome = self.chrome.clone();
             let style_override = self.style.clone();
+            let control_id = self.control_id.clone();
+            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
                 cx.key_add_on_key_down_for(
@@ -350,7 +366,55 @@ impl Checkbox {
                 chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
                 chrome_props.layout.size = pressable_layout.size;
 
-                let mut a11y = checkbox_a11y(a11y_label.clone(), state);
+                if let (Some(control_id), Some(control_registry)) =
+                    (control_id.clone(), control_registry.clone())
+                {
+                    let action = match &checked {
+                        CheckboxCheckedModel::Bool(model) => {
+                            ControlAction::ToggleBool(model.clone())
+                        }
+                        CheckboxCheckedModel::OptionalBool(model) => {
+                            ControlAction::ToggleOptionalBool(model.clone())
+                        }
+                        CheckboxCheckedModel::TriState(model) => {
+                            ControlAction::ToggleCheckedState(model.clone())
+                        }
+                    };
+                    let entry = ControlEntry {
+                        element: id,
+                        enabled: !disabled,
+                        action,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+
+                let labelled_by_element = if let (Some(control_id), Some(control_registry)) =
+                    (control_id.as_ref(), control_registry.as_ref())
+                {
+                    cx.app
+                        .models()
+                        .read(control_registry, |reg| {
+                            reg.label_for(cx.window, control_id).map(|l| l.element)
+                        })
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+
+                // Prefer explicit `a11y_label`, but fall back to `labelled-by` when available.
+                let a11y_label = if a11y_label.is_some() || labelled_by_element.is_none() {
+                    a11y_label.clone()
+                } else {
+                    None
+                };
+
+                let mut a11y = checkbox_a11y(a11y_label, state);
+                if let Some(label) = labelled_by_element {
+                    a11y.labelled_by_element = Some(label.0);
+                }
                 a11y.test_id = test_id.clone();
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
