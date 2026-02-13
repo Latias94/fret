@@ -149,6 +149,7 @@ fn template_names() -> &'static [&'static str] {
         "ui-gallery-combobox-roving-skips-disabled-v2",
         "ui-gallery-combobox-flip-tight-window-v2",
         "ui-gallery-combobox-ime-tab-suppressed-v2",
+        "ui-gallery-combobox-long-list-scroll-select-last-v2",
         "ui-gallery-select-commit-and-label-update-bundle-v2",
         "ui-gallery-select-keyboard-commit-apple-v2",
         "ui-gallery-select-typeahead-commit-banana-v2",
@@ -193,6 +194,9 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
         }
         "ui-gallery-combobox-ime-tab-suppressed-v2" => {
             Ok(ui_gallery_combobox_ime_tab_suppressed_v2())
+        }
+        "ui-gallery-combobox-long-list-scroll-select-last-v2" => {
+            Ok(ui_gallery_combobox_long_list_scroll_select_last_v2())
         }
         "ui-gallery-select-commit-and-label-update-bundle-v2" => {
             Ok(ui_gallery_select_commit_and_label_update_bundle_v2())
@@ -795,6 +799,71 @@ fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
     )
 }
 
+fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
+    let trigger = test_id("ui-gallery-combobox-long-list-trigger");
+    let listbox = test_id("ui-gallery-combobox-long-list-listbox");
+    let last_item = test_id("ui-gallery-combobox-long-list-item-249");
+
+    let script = ui_gallery_nav_to_combobox_page()
+        .push(UiActionStepV2::ScrollIntoView {
+            container: test_id("ui-gallery-page-combobox"),
+            target: trigger.clone(),
+            delta_x: 0.0,
+            delta_y: -720.0,
+            require_fully_within_container: false,
+            require_fully_within_window: true,
+            padding_px: 2.0,
+            padding_insets_px: None,
+            timeout_frames: 240,
+        })
+        .click_stable(trigger.clone())
+        .wait_exists(test_id("ui-gallery-combobox-long-list-input"), 240)
+        .wait_exists(listbox.clone(), 240)
+        .push(wait_bounds_within_window_step(listbox.clone(), 240))
+        .push(UiActionStepV2::ScrollIntoView {
+            container: listbox.clone(),
+            target: last_item.clone(),
+            delta_x: 0.0,
+            delta_y: -240.0,
+            require_fully_within_container: true,
+            require_fully_within_window: true,
+            padding_px: 2.0,
+            padding_insets_px: None,
+            timeout_frames: 600,
+        })
+        .click_stable(last_item.clone())
+        .wait_not_exists(listbox.clone(), 240)
+        .click_stable(trigger.clone())
+        .wait_exists(listbox.clone(), 240)
+        .push(UiActionStepV2::ScrollIntoView {
+            container: listbox.clone(),
+            target: last_item.clone(),
+            delta_x: 0.0,
+            delta_y: -240.0,
+            require_fully_within_container: true,
+            require_fully_within_window: true,
+            padding_px: 2.0,
+            padding_insets_px: None,
+            timeout_frames: 600,
+        })
+        .push(UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::SelectedIs {
+                target: last_item.clone(),
+                selected: true,
+            },
+            timeout_frames: 240,
+        })
+        .press_key("escape")
+        .wait_not_exists(listbox.clone(), 240)
+        .capture_bundle(Some(
+            "ui-gallery-combobox-long-list-scroll-select-last".to_string(),
+        ))
+        .build();
+
+    with_required_caps(script, &["diag.script_v2"])
+}
+
 fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
     let script = ScriptV2Builder::new()
         .wait_exists(test_id("ui-gallery-nav-search"), 600)
@@ -1387,6 +1456,10 @@ fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), Stri
             (
                 "ui-gallery-combobox-ime-tab-suppressed-v2",
                 "tools/diag-scripts/ui-gallery-combobox-ime-tab-suppressed.json",
+            ),
+            (
+                "ui-gallery-combobox-long-list-scroll-select-last-v2",
+                "tools/diag-scripts/ui-gallery-combobox-long-list-scroll-select-last.json",
             ),
         ],
         "ui-gallery-select" => &[
