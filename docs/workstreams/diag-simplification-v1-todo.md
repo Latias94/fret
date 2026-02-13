@@ -28,14 +28,14 @@ Evidence pointers:
   - [x] FS implementation (existing behavior)
   - [x] WS implementation (existing behavior)
   - Evidence: `crates/fret-diag/src/transport/mod.rs` (`trait DiagTransport`, `ToolingDiagClient`), `crates/fret-diag/src/transport/fs.rs`, `crates/fret-diag/src/transport/ws.rs`
-- [ ] Make `diag run` and `diag suite` transport-agnostic:
+- [x] Make `diag run` and `diag suite` transport-agnostic:
   - [x] unify "wait ready" behavior
   - [x] unify "send script" behavior
   - [x] unify "read script result" behavior
-- [ ] Route `diag repro` through the shared orchestration path:
+- [x] Route `diag repro` through the shared orchestration path:
   - [x] use `run_script_over_transport` for script execution
   - [x] make bundle selection/dump fully transport-agnostic
-- [ ] Add a transport-agnostic "streaming results" hook:
+- [x] Add a transport-agnostic "streaming results" hook:
   - [x] allow tooling to consume `script.result` updates incrementally (useful for long suites)
     - Evidence: `crates/fret-diag/src/lib.rs` (`run_script_over_transport` incremental writes)
 
@@ -50,14 +50,14 @@ Evidence pointers:
   - [x] write `latest` pointer (same as filesystem mode)
   - [x] plumb through pack/triage/lint paths (operate on local artifacts)
 - [x] Make `--pack` work in WS mode by operating on the materialized local artifact.
-- [ ] Add artifact size reporting:
+- [x] Add artifact size reporting:
   - [x] include bytes on disk and clipped counts in `script.result` evidence (bounded)
 
 ## Phase 3: Exit request parity
 
 - [x] Add a WS message for exit request (`app.exit.request` or `diag.exit.request`).
 - [x] Wire runtime to honor the exit request (native + wasm).
-- [ ] Update tooling:
+- [x] Update tooling:
   - [x] in `--launch` mode, exit after run by default (new behavior)
   - [x] add `--keep-open` to preserve existing workflows
   - [x] keep `--touch-exit-after-run` as an alias or deprecate it in favor of transport-neutral naming
@@ -71,6 +71,7 @@ Evidence pointers:
   - [ ] stable `reason_code`
   - [ ] bounded structured evidence (not just "timeout")
 - [x] Add a "capabilities missing" failure mode that is explicit and immediate.
+- [x] Ensure tooling-side failures/timeouts write a local `script.result.json` with stable `reason_code` (avoid "no artifact + timeout").
 
 ## Phase 5: Artifact format v2 (manifest + chunks)
 

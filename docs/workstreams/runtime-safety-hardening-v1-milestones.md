@@ -56,6 +56,7 @@ Deliverables:
 
 - Menu patch `unsafe` is removed from `crates/fret-runtime`.
 - Global lease violations no longer panic by default (return `Result` errors; strict mode optional).
+- Nested `with_global_mut` no longer relies on `unsafe` (nested leases are treated as an error; non-strict mode runs the closure against a temporary value).
 
 Exit criteria:
 
