@@ -4003,7 +4003,7 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
-            for src in scripts {
+            for (idx, src) in scripts.into_iter().enumerate() {
                 if overall_error.is_some() {
                     break;
                 }
@@ -4060,6 +4060,33 @@ See: `docs/tracy.md`.\n";
                 }
                 last_script_result = Some(result.clone());
 
+                let dump_label = {
+                    let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("script");
+                    let mut sanitized: String = stem
+                        .chars()
+                        .map(|c| {
+                            if c.is_ascii_alphanumeric() {
+                                c.to_ascii_lowercase()
+                            } else {
+                                '-'
+                            }
+                        })
+                        .collect();
+                    while sanitized.contains("--") {
+                        sanitized = sanitized.replace("--", "-");
+                    }
+                    sanitized = sanitized.trim_matches('-').to_string();
+                    if sanitized.is_empty() {
+                        sanitized = "script".to_string();
+                    }
+                    let mut label = format!("repro-{idx:04}-{sanitized}");
+                    if label.len() > 80 {
+                        label.truncate(80);
+                        label = label.trim_matches('-').to_string();
+                    }
+                    label
+                };
+
                 let mut bundle_path = wait_for_bundle_json_from_script_result(
                     &resolved_out_dir,
                     &result,
@@ -4067,13 +4094,22 @@ See: `docs/tracy.md`.\n";
                     poll_ms,
                 );
                 if bundle_path.is_none() {
-                    connected.devtools.bundle_dump(None, None);
-                    bundle_path = wait_for_bundle_json_from_script_result(
+                    match dump_bundle_over_transport(
                         &resolved_out_dir,
-                        &result,
+                        &connected,
+                        Some(dump_label.as_str()),
+                        None,
                         timeout_ms,
                         poll_ms,
-                    );
+                    ) {
+                        Ok(p) => {
+                            bundle_path = Some(p);
+                        }
+                        Err(err) => {
+                            overall_error = Some(err);
+                            break;
+                        }
+                    }
                 }
 
                 if let Some(bundle_path) = bundle_path.as_ref() {
@@ -12385,6 +12421,34 @@ fn run_script_over_transport(
     );
 
     Ok((result, bundle_path))
+}
+
+fn dump_bundle_over_transport(
+    out_dir: &Path,
+    connected: &ConnectedToolingTransport,
+    bundle_label: Option<&str>,
+    dump_max_snapshots: Option<u32>,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<PathBuf, String> {
+    if let Some(max) = dump_max_snapshots {
+        connected
+            .devtools
+            .bundle_dump_with_max_snapshots(None, bundle_label, max);
+    } else {
+        connected.devtools.bundle_dump(None, bundle_label);
+    }
+
+    let dumped = wait_for_devtools_message(&connected.devtools, timeout_ms, poll_ms, |msg| {
+        if msg.r#type != "bundle.dumped"
+            || msg.session_id.as_deref() != Some(&connected.selected_session_id)
+        {
+            return None;
+        }
+        serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
+    })?;
+
+    materialize_devtools_bundle_dumped(out_dir, &dumped)
 }
 
 fn run_script_suite_collect_bundles(
