@@ -24,11 +24,88 @@ use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo,
 use serde::{Deserialize, Serialize};
 use slotmap::{Key as _, KeyData};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 #[cfg(feature = "diagnostics-ws")]
 use crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
+
+static DIAG_CFG_LOG_ONCE: Once = Once::new();
+
+fn ios_home_dir() -> Option<PathBuf> {
+    if !cfg!(target_os = "ios") {
+        return None;
+    }
+    std::env::var_os("HOME")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+}
+
+fn ios_tmp_dir() -> PathBuf {
+    ios_home_dir()
+        .map(|home| home.join("tmp"))
+        .unwrap_or_else(std::env::temp_dir)
+}
+
+fn resolve_ios_diag_out_dir(out_dir: PathBuf) -> PathBuf {
+    if !cfg!(target_os = "ios") {
+        return out_dir;
+    }
+    if out_dir.is_absolute() {
+        return out_dir;
+    }
+    if let Some(home) = ios_home_dir() {
+        return home.join(out_dir);
+    }
+    ios_tmp_dir().join(out_dir)
+}
+
+fn warn_fs_once(
+    warned: &mut bool,
+    out_dir: &Path,
+    message: &str,
+    path: &Path,
+    err: &dyn std::fmt::Display,
+) {
+    if *warned {
+        return;
+    }
+    *warned = true;
+    tracing::warn!(
+        target: "fret",
+        out_dir = ?out_dir,
+        path = %path.display(),
+        error = %err,
+        "{message}"
+    );
+}
+
+fn diag_args_override() -> (bool, Option<PathBuf>) {
+    let mut enabled = false;
+    let mut out_dir = None;
+
+    // Use `args_os()` so we don't panic if the platform provides non-UTF8 argv.
+    let mut args = std::env::args_os().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.to_string_lossy().as_ref() {
+            "--fret-diag" => {
+                enabled = true;
+            }
+            "--fret-diag-dir" => {
+                if let Some(dir) = args.next() {
+                    if !dir.to_string_lossy().trim().is_empty() {
+                        enabled = true;
+                        out_dir = Some(PathBuf::from(dir));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    (enabled, out_dir)
+}
 
 #[derive(Debug, Clone)]
 pub struct UiDiagnosticsConfig {
@@ -88,9 +165,17 @@ pub struct UiDiagnosticsConfig {
 
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
-        let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
-        let diag_enabled =
-            std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()) || out_dir_env.is_some();
+        let (diag_arg_enabled, diag_arg_dir) = diag_args_override();
+
+        let raw_diag = std::env::var_os("FRET_DIAG")
+            .filter(|v| !v.is_empty())
+            .or_else(|| diag_arg_enabled.then(|| OsString::from("1")));
+        let raw_out_dir = std::env::var_os("FRET_DIAG_DIR")
+            .filter(|v| !v.is_empty())
+            .or_else(|| diag_arg_dir.as_ref().map(|p| p.clone().into_os_string()));
+
+        let out_dir_env = raw_out_dir.as_ref();
+        let diag_enabled = raw_diag.is_some() || out_dir_env.is_some();
 
         let (devtools_ws_url, devtools_token) = {
             #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
@@ -114,9 +199,14 @@ impl Default for UiDiagnosticsConfig {
         };
 
         let enabled = diag_enabled || (devtools_ws_url.is_some() && devtools_token.is_some());
-        let out_dir = out_dir_env
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
+        let out_dir = out_dir_env.map(PathBuf::from).unwrap_or_else(|| {
+            if cfg!(target_os = "ios") {
+                ios_tmp_dir().join("fret-diag")
+            } else {
+                PathBuf::from("target").join("fret-diag")
+            }
+        });
+        let out_dir = resolve_ios_diag_out_dir(out_dir);
         let trigger_path = std::env::var_os("FRET_DIAG_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
@@ -129,6 +219,31 @@ impl Default for UiDiagnosticsConfig {
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("exit.touch"));
+
+        if enabled
+            || raw_diag.as_ref().is_some_and(|v| !v.is_empty())
+            || raw_out_dir.as_ref().is_some_and(|v| !v.is_empty())
+            || diag_arg_enabled
+            || diag_arg_dir.is_some()
+        {
+            let diag_val = raw_diag.as_ref().map(|v| v.to_string_lossy().to_string());
+            let dir_val = raw_out_dir
+                .as_ref()
+                .map(|v| v.to_string_lossy().to_string());
+            DIAG_CFG_LOG_ONCE.call_once(|| {
+                tracing::info!(
+                    target: "fret",
+                    enabled,
+                    diag = diag_val.as_deref().unwrap_or(""),
+                    diag_dir = dir_val.as_deref().unwrap_or(""),
+                    diag_arg_enabled,
+                    diag_arg_dir = ?diag_arg_dir,
+                    out_dir = ?out_dir,
+                    trigger_path = ?trigger_path,
+                    "ui diagnostics config",
+                );
+            });
+        }
 
         let max_events = std::env::var("FRET_DIAG_MAX_EVENTS")
             .ok()
@@ -278,7 +393,9 @@ pub struct UiDiagnosticsService {
     exit_armed: bool,
     exit_last_mtime: Option<std::time::SystemTime>,
     ready_written: bool,
+    ready_write_warned: bool,
     capabilities_written: bool,
+    capabilities_write_warned: bool,
     inspect_enabled: bool,
     inspect_consume_clicks: bool,
     pending_script: Option<PendingScript>,
@@ -5000,21 +5117,60 @@ impl UiDiagnosticsService {
         }
 
         if let Some(parent) = self.cfg.ready_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
+            if let Err(err) = std::fs::create_dir_all(parent) {
+                warn_fs_once(
+                    &mut self.ready_write_warned,
+                    &self.cfg.out_dir,
+                    "ui diagnostics: failed to create ready.touch parent dir",
+                    parent,
+                    &err,
+                );
+                return;
+            }
         }
 
         self.ensure_capabilities_file();
 
         let ts = unix_ms_now();
-        if let Ok(mut f) = std::fs::OpenOptions::new()
+        let mut f = match std::fs::OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .open(&self.cfg.ready_path)
         {
-            use std::io::Write as _;
-            let _ = writeln!(f, "{ts}");
-            let _ = f.flush();
+            Ok(f) => f,
+            Err(err) => {
+                warn_fs_once(
+                    &mut self.ready_write_warned,
+                    &self.cfg.out_dir,
+                    "ui diagnostics: failed to open ready.touch",
+                    &self.cfg.ready_path,
+                    &err,
+                );
+                return;
+            }
+        };
+
+        use std::io::Write as _;
+        if let Err(err) = writeln!(f, "{ts}") {
+            warn_fs_once(
+                &mut self.ready_write_warned,
+                &self.cfg.out_dir,
+                "ui diagnostics: failed to write ready.touch",
+                &self.cfg.ready_path,
+                &err,
+            );
+            return;
+        }
+        if let Err(err) = f.flush() {
+            warn_fs_once(
+                &mut self.ready_write_warned,
+                &self.cfg.out_dir,
+                "ui diagnostics: failed to flush ready.touch",
+                &self.cfg.ready_path,
+                &err,
+            );
+            return;
         }
 
         self.ready_written = true;
@@ -5050,7 +5206,16 @@ impl UiDiagnosticsService {
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
-            let _ = std::fs::create_dir_all(parent);
+            if let Err(err) = std::fs::create_dir_all(parent) {
+                warn_fs_once(
+                    &mut self.capabilities_write_warned,
+                    &self.cfg.out_dir,
+                    "ui diagnostics: failed to create capabilities.json parent dir",
+                    parent,
+                    &err,
+                );
+                return;
+            }
         }
 
         let payload = FilesystemCapabilitiesV1 {
@@ -5059,7 +5224,16 @@ impl UiDiagnosticsService {
         };
         if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
             text.push('\n');
-            let _ = std::fs::write(&path, text);
+            if let Err(err) = std::fs::write(&path, text) {
+                warn_fs_once(
+                    &mut self.capabilities_write_warned,
+                    &self.cfg.out_dir,
+                    "ui diagnostics: failed to write capabilities.json",
+                    &path,
+                    &err,
+                );
+                return;
+            }
         }
 
         self.capabilities_written = true;
