@@ -970,13 +970,22 @@ impl<TData> DataTableToolbar<TData> {
                     .into_element(
                         cx,
                         move |cx| {
-                            PopoverTrigger::new(
-                                Button::new(trigger_button_label.clone())
-                                    .variant(ButtonVariant::Outline)
-                                    .size(ButtonSize::Sm)
-                                    .test_id(trigger_test_id.clone())
-                                    .children({
-                                        let mut children = Vec::new();
+                             PopoverTrigger::new(
+                                 Button::new(trigger_button_label.clone())
+                                     .variant(ButtonVariant::Outline)
+                                     .size(ButtonSize::Sm)
+                                     .refine_style(
+                                         ChromeRefinement::default().border_dash(
+                                             fret_core::scene::DashPatternV1::new(
+                                                 Px(4.0),
+                                                 Px(4.0),
+                                                 Px(0.0),
+                                             ),
+                                         ),
+                                     )
+                                     .test_id(trigger_test_id.clone())
+                                     .children({
+                                         let mut children = Vec::new();
                                         children.push(crate::icon::icon(
                                             cx,
                                             fret_icons::IconId::new_static("lucide.plus-circle"),

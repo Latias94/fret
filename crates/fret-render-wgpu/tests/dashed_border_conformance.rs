@@ -167,7 +167,7 @@ fn dashed_border_conformance_stroke_rrect_masks_border_coverage() {
         (v * sf).round() as u32
     }
 
-    for scale_factor in [1.0_f32, 2.0_f32] {
+    for scale_factor in [1.0_f32, 1.5_f32, 2.0_f32] {
         let size = (u(256.0, scale_factor), u(128.0, scale_factor));
         let pixels = render_and_readback(&ctx, &mut renderer, &scene, size, scale_factor);
 
