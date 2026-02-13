@@ -427,6 +427,15 @@ fn with_sidebar_surface_state<H: UiHost, R>(
 }
 
 fn sidebar_collapsed_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
+    if matches!(
+        use_sidebar_surface(cx)
+            .map(|ctx| ctx.collapsible)
+            .unwrap_or_default(),
+        SidebarCollapsible::None
+    ) {
+        return false;
+    }
+
     use_sidebar(cx)
         .map(|ctx| !ctx.is_mobile && ctx.collapsed())
         .unwrap_or(false)
@@ -871,63 +880,102 @@ impl Sidebar {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if collapsed_override { true } else { collapsed };
 
+        let collapsed = collapsed && !matches!(collapsible, SidebarCollapsible::None);
+
         let motion = sidebar_collapse_motion(cx, collapsed);
-        let expanded_progress = motion.progress;
-        let props = {
-            let theme = Theme::global(&*cx.app);
-            let inner_w = transition_prim::lerp_px(
-                sidebar_width_icon(theme),
-                sidebar_width(theme),
-                expanded_progress,
-            );
+        let open_progress = motion.progress;
 
-            let variant_uses_outer_gap =
-                matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
-            let outer_gap = if variant_uses_outer_gap {
-                decl_style::space(theme, Space::N2)
-            } else {
-                Px(0.0)
-            };
-            let outer_border = if variant_uses_outer_gap {
-                Px(1.0)
-            } else {
-                Px(0.0)
-            };
-            let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
-            let layout = LayoutRefinement::default()
-                .w_px(total_w)
-                .h_full()
-                .merge(layout);
+        let theme = Theme::global(&*cx.app);
 
-            let mut chrome = ChromeRefinement::default()
-                .bg(ColorRef::Color(sidebar_bg(theme)))
-                .merge(chrome);
+        let full_inner_w = sidebar_width(theme);
+        let icon_inner_w = sidebar_width_icon(theme);
 
-            if variant_uses_outer_gap {
-                chrome = chrome.px(Space::N2).py(Space::N2);
-            } else {
-                chrome = chrome
-                    .border_1()
-                    .border_color(ColorRef::Color(sidebar_border(theme)));
-            }
-
-            if matches!(variant, SidebarVariant::Floating) {
-                chrome = chrome
-                    .border_1()
-                    .border_color(ColorRef::Color(sidebar_border(theme)))
-                    .rounded(Radius::Lg)
-                    .shadow_sm();
-            }
-
-            let mut props = decl_style::container_props(theme, chrome, layout);
-            props.layout.overflow = Overflow::Clip;
-            props
+        let variant_uses_outer_gap =
+            matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
+        let outer_gap = if variant_uses_outer_gap {
+            decl_style::space(theme, Space::N2)
+        } else {
+            Px(0.0)
         };
+        let outer_border = if variant_uses_outer_gap {
+            Px(1.0)
+        } else {
+            Px(0.0)
+        };
+
+        let total_w_full = Px(full_inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+        let total_w_icon = Px(icon_inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+
+        let (wrapper_w, content_inner_w, offcanvas_offset) = match collapsible {
+            SidebarCollapsible::None => (total_w_full, full_inner_w, Px(0.0)),
+            SidebarCollapsible::Icon => {
+                let content_inner_w =
+                    transition_prim::lerp_px(icon_inner_w, full_inner_w, open_progress);
+                let wrapper_w = transition_prim::lerp_px(total_w_icon, total_w_full, open_progress);
+                (wrapper_w, content_inner_w, Px(0.0))
+            }
+            SidebarCollapsible::Offcanvas => {
+                let wrapper_w = transition_prim::lerp_px(Px(0.0), total_w_full, open_progress);
+                let offcanvas_offset = Px(total_w_full.0 * (1.0 - open_progress));
+                (wrapper_w, full_inner_w, offcanvas_offset)
+            }
+        };
+
+        let wrapper_layout = LayoutRefinement::default()
+            .w_px(wrapper_w)
+            .h_full()
+            .merge(layout)
+            .relative();
+        let mut wrapper_props =
+            decl_style::container_props(theme, ChromeRefinement::default(), wrapper_layout);
+        wrapper_props.layout.overflow = if matches!(collapsible, SidebarCollapsible::Offcanvas) {
+            Overflow::Clip
+        } else {
+            Overflow::Visible
+        };
+
+        let mut chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(sidebar_bg(theme)))
+            .merge(chrome);
+
+        if variant_uses_outer_gap {
+            chrome = chrome.px(Space::N2).py(Space::N2);
+        } else {
+            chrome = chrome
+                .border_1()
+                .border_color(ColorRef::Color(sidebar_border(theme)));
+        }
+
+        if matches!(variant, SidebarVariant::Floating) {
+            chrome = chrome
+                .border_1()
+                .border_color(ColorRef::Color(sidebar_border(theme)))
+                .rounded(Radius::Lg)
+                .shadow_sm();
+        }
+
+        let inner_w = match collapsible {
+            SidebarCollapsible::Icon => content_inner_w,
+            SidebarCollapsible::Offcanvas | SidebarCollapsible::None => full_inner_w,
+        };
+        let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+
+        let mut surface_layout = LayoutRefinement::default().w_px(total_w).h_full();
+        if matches!(collapsible, SidebarCollapsible::Offcanvas) && offcanvas_offset.0 > 0.0 {
+            surface_layout = match side {
+                SidebarSide::Left => surface_layout.relative().left_neg_px(offcanvas_offset),
+                SidebarSide::Right => surface_layout.relative().left_px(offcanvas_offset),
+            };
+        }
+
+        let mut props = decl_style::container_props(theme, chrome, surface_layout);
+        props.layout.overflow = Overflow::Clip;
 
         let children = with_sidebar_surface_state(cx, surface_context, |cx| {
             render_children(cx).into_iter().collect::<Vec<_>>()
         });
-        shadcn_layout::container_flow(cx, props, children)
+        let surface = shadcn_layout::container_flow(cx, props, children);
+        shadcn_layout::container_flow(cx, wrapper_props, vec![surface])
     }
 
     #[track_caller]
@@ -1010,62 +1058,101 @@ impl Sidebar {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if collapsed_override { true } else { collapsed };
 
+        let collapsed = collapsed && !matches!(collapsible, SidebarCollapsible::None);
+
         let motion = sidebar_collapse_motion(cx, collapsed);
-        let expanded_progress = motion.progress;
-        let props = {
-            let theme = Theme::global(&*cx.app);
-            let inner_w = transition_prim::lerp_px(
-                sidebar_width_icon(theme),
-                sidebar_width(theme),
-                expanded_progress,
-            );
+        let open_progress = motion.progress;
 
-            let variant_uses_outer_gap =
-                matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
-            let outer_gap = if variant_uses_outer_gap {
-                decl_style::space(theme, Space::N2)
-            } else {
-                Px(0.0)
-            };
-            let outer_border = if variant_uses_outer_gap {
-                Px(1.0)
-            } else {
-                Px(0.0)
-            };
-            let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
-            let layout = LayoutRefinement::default()
-                .w_px(total_w)
-                .h_full()
-                .merge(layout);
+        let theme = Theme::global(&*cx.app);
 
-            let mut chrome = ChromeRefinement::default()
-                .bg(ColorRef::Color(sidebar_bg(theme)))
-                .merge(chrome);
+        let full_inner_w = sidebar_width(theme);
+        let icon_inner_w = sidebar_width_icon(theme);
 
-            if variant_uses_outer_gap {
-                chrome = chrome.px(Space::N2).py(Space::N2);
-            } else {
-                chrome = chrome
-                    .border_1()
-                    .border_color(ColorRef::Color(sidebar_border(theme)));
-            }
-
-            if matches!(variant, SidebarVariant::Floating) {
-                chrome = chrome
-                    .border_1()
-                    .border_color(ColorRef::Color(sidebar_border(theme)))
-                    .rounded(Radius::Lg)
-                    .shadow_sm();
-            }
-
-            let mut props = decl_style::container_props(theme, chrome, layout);
-            props.layout.overflow = Overflow::Clip;
-            props
+        let variant_uses_outer_gap =
+            matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
+        let outer_gap = if variant_uses_outer_gap {
+            decl_style::space(theme, Space::N2)
+        } else {
+            Px(0.0)
+        };
+        let outer_border = if variant_uses_outer_gap {
+            Px(1.0)
+        } else {
+            Px(0.0)
         };
 
-        with_sidebar_surface_state(cx, surface_context, |cx| {
+        let total_w_full = Px(full_inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+        let total_w_icon = Px(icon_inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+
+        let (wrapper_w, content_inner_w, offcanvas_offset) = match collapsible {
+            SidebarCollapsible::None => (total_w_full, full_inner_w, Px(0.0)),
+            SidebarCollapsible::Icon => {
+                let content_inner_w =
+                    transition_prim::lerp_px(icon_inner_w, full_inner_w, open_progress);
+                let wrapper_w = transition_prim::lerp_px(total_w_icon, total_w_full, open_progress);
+                (wrapper_w, content_inner_w, Px(0.0))
+            }
+            SidebarCollapsible::Offcanvas => {
+                let wrapper_w = transition_prim::lerp_px(Px(0.0), total_w_full, open_progress);
+                let offcanvas_offset = Px(total_w_full.0 * (1.0 - open_progress));
+                (wrapper_w, full_inner_w, offcanvas_offset)
+            }
+        };
+
+        let wrapper_layout = LayoutRefinement::default()
+            .w_px(wrapper_w)
+            .h_full()
+            .merge(layout)
+            .relative();
+        let mut wrapper_props =
+            decl_style::container_props(theme, ChromeRefinement::default(), wrapper_layout);
+        wrapper_props.layout.overflow = if matches!(collapsible, SidebarCollapsible::Offcanvas) {
+            Overflow::Clip
+        } else {
+            Overflow::Visible
+        };
+
+        let mut chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(sidebar_bg(theme)))
+            .merge(chrome);
+
+        if variant_uses_outer_gap {
+            chrome = chrome.px(Space::N2).py(Space::N2);
+        } else {
+            chrome = chrome
+                .border_1()
+                .border_color(ColorRef::Color(sidebar_border(theme)));
+        }
+
+        if matches!(variant, SidebarVariant::Floating) {
+            chrome = chrome
+                .border_1()
+                .border_color(ColorRef::Color(sidebar_border(theme)))
+                .rounded(Radius::Lg)
+                .shadow_sm();
+        }
+
+        let inner_w = match collapsible {
+            SidebarCollapsible::Icon => content_inner_w,
+            SidebarCollapsible::Offcanvas | SidebarCollapsible::None => full_inner_w,
+        };
+        let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+
+        let mut surface_layout = LayoutRefinement::default().w_px(total_w).h_full();
+        if matches!(collapsible, SidebarCollapsible::Offcanvas) && offcanvas_offset.0 > 0.0 {
+            surface_layout = match side {
+                SidebarSide::Left => surface_layout.relative().left_neg_px(offcanvas_offset),
+                SidebarSide::Right => surface_layout.relative().left_px(offcanvas_offset),
+            };
+        }
+
+        let mut props = decl_style::container_props(theme, chrome, surface_layout);
+        props.layout.overflow = Overflow::Clip;
+
+        let surface = with_sidebar_surface_state(cx, surface_context, |cx| {
             shadcn_layout::container_flow(cx, props, children)
-        })
+        });
+        shadcn_layout::container_flow(cx, wrapper_props, vec![surface])
     }
 }
 
