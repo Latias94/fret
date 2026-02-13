@@ -178,6 +178,21 @@ Current shadcn drawer spring keys (ecosystem policy; overrideable via theme JSON
 - `duration.shadcn.motion.spring.drawer.inertia_bounce` (ms)
 - `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`
 
+Theme JSON example:
+
+```json
+{
+  "durations_ms": {
+    "duration.shadcn.motion.spring.drawer.settle": 240,
+    "duration.shadcn.motion.spring.drawer.inertia_bounce": 240
+  },
+  "numbers": {
+    "number.shadcn.motion.spring.drawer.settle.bounce": 0.0,
+    "number.shadcn.motion.spring.drawer.inertia_bounce.bounce": 0.25
+  }
+}
+```
+
 Spring cookbook (starter presets; tune with diag gates):
 
 | Preset | duration_ms | bounce | Notes |
