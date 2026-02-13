@@ -77,15 +77,20 @@ pub(super) fn preview_forms(
                 .into_element(cx),
                 shadcn::Field::new([
                     shadcn::Checkbox::new(checkbox.clone())
+                        .control_id("ui-gallery-form-checkbox-terms")
                         .a11y_label("Accept terms")
                         .into_element(cx),
-                    shadcn::FieldLabel::new("Accept terms").into_element(cx),
+                    shadcn::FieldLabel::new("Accept terms")
+                        .for_control("ui-gallery-form-checkbox-terms")
+                        .into_element(cx),
                 ])
                 .orientation(shadcn::FieldOrientation::Horizontal)
                 .into_element(cx),
                 shadcn::Field::new([
                     shadcn::FieldContent::new([
-                        shadcn::FieldLabel::new("Enable feature").into_element(cx),
+                        shadcn::FieldLabel::new("Enable feature")
+                            .for_control("ui-gallery-form-switch-feature")
+                            .into_element(cx),
                         shadcn::FieldDescription::new(
                             "This toggles an optional feature for the current session.",
                         )
@@ -93,6 +98,7 @@ pub(super) fn preview_forms(
                     ])
                     .into_element(cx),
                     shadcn::Switch::new(switch.clone())
+                        .control_id("ui-gallery-form-switch-feature")
                         .a11y_label("Enable feature")
                         .into_element(cx),
                 ])
@@ -232,8 +238,11 @@ pub(super) fn preview_forms(
                     ])
                     .into_element(cx),
                     shadcn::Field::new([
-                        shadcn::FieldLabel::new("????? ??????").into_element(cx),
+                        shadcn::FieldLabel::new("????? ??????")
+                            .for_control("ui-gallery-form-switch-rtl")
+                            .into_element(cx),
                         shadcn::Switch::new(switch.clone())
+                            .control_id("ui-gallery-form-switch-rtl")
                             .a11y_label("????? ??????")
                             .into_element(cx),
                     ])

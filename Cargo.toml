@@ -30,7 +30,7 @@ objc = "0.2"
 pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-image = { version = "0.25", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 slotmap = "1"
 smallvec = "1"
 stacksafe = "1"

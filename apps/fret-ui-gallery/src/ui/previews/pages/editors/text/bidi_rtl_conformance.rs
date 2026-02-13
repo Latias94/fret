@@ -197,9 +197,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                             .border_1()
                                             .rounded(Radius::Md)
                                             .p(Space::N2)
-                                            .bg(ColorRef::Color(
-                                                theme.color_token("background"),
-                                            )),
+                                            .bg(ColorRef::Color(theme.color_token("background"))),
                                         LayoutRefinement::default().w_full(),
                                     ),
                                     move |_cx| vec![text],

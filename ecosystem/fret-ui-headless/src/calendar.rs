@@ -209,7 +209,9 @@ pub fn day_picker_cell_state(
     modifiers: &DayPickerModifiers,
 ) -> DayPickerCellState {
     let base = day_picker_day_modifiers(day, show_outside_days, modifiers);
-    let hidden = base.hidden || !in_bounds;
+    // Align with react-day-picker/shadcn behavior: bounds make days *disabled* (not hidden),
+    // so the grid stays visually aligned without blank gaps.
+    let hidden = base.hidden;
 
     let mut disabled = base.disabled || (!day.in_month && disable_outside_days) || !in_bounds;
     if hidden {
@@ -737,6 +739,19 @@ pub fn week_number(date: Date, week_start: Weekday) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn day_picker_cell_state_out_of_bounds_is_disabled_not_hidden() {
+        let d = Date::from_calendar_date(2026, Month::January, 1).unwrap();
+        let day = CalendarDay {
+            date: d,
+            in_month: true,
+        };
+
+        let st = day_picker_cell_state(day, true, false, false, &DayPickerModifiers::default());
+        assert!(!st.hidden);
+        assert!(st.disabled);
+    }
 
     #[test]
     fn month_grid_is_stable_42_days() {

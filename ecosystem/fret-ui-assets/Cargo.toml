@@ -13,6 +13,10 @@ documentation.workspace = true
 default = []
 # Optional integration helpers that wire `UiAssets` into `fret-app`-based applications.
 app-integration = ["dep:fret-app"]
+# Optional `ElementContext` sugar (ViewCache-safe observation), consistent with other ecosystem crates.
+ui = ["dep:fret-ui"]
+# Optional integration with `fret-query` (ergonomics only; baseline image loading must not require it).
+query-integration = ["dep:fret-query"]
 image-decode = ["dep:image"]
 image-metadata = ["dep:fret-ui-kit"]
 
@@ -22,8 +26,11 @@ fret-executor = { path = "../fret-executor" }
 fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui", optional = true }
+fret-query = { path = "../fret-query", optional = true }
 fret-ui-kit = { path = "../fret-ui-kit", optional = true }
 image = { workspace = true, optional = true }
+tracing.workspace = true
 
 [dev-dependencies]
 slotmap.workspace = true

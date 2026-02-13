@@ -116,6 +116,11 @@ pub struct UiDiagnosticsConfig {
     pub trigger_path: PathBuf,
     pub ready_path: PathBuf,
     pub exit_path: PathBuf,
+    /// When enabled, keep requesting redraws even when no script is running.
+    ///
+    /// This is intended for scripted diagnostics runs where the external driver triggers scripts
+    /// via filesystem touch stamps, but the app might otherwise go idle between frames.
+    pub script_keepalive: bool,
     pub max_events: usize,
     pub max_snapshots: usize,
     /// Maximum number of snapshots to include in script-driven bundle dumps (auto-dump and
@@ -222,6 +227,7 @@ impl Default for UiDiagnosticsConfig {
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("exit.touch"));
 
+        let script_keepalive = enabled && env_flag_default_true("FRET_DIAG_SCRIPT_KEEPALIVE");
         if enabled
             || raw_diag.as_ref().is_some_and(|v| !v.is_empty())
             || raw_out_dir.as_ref().is_some_and(|v| !v.is_empty())
@@ -349,6 +355,7 @@ impl Default for UiDiagnosticsConfig {
             trigger_path,
             ready_path,
             exit_path,
+            script_keepalive,
             max_events,
             max_snapshots,
             script_dump_max_snapshots,
@@ -1030,7 +1037,10 @@ impl UiDiagnosticsService {
         }
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: self.cfg.script_keepalive,
+                ..UiScriptFrameOutput::default()
+            };
         };
 
         if active.next_step >= active.steps.len() {
@@ -5429,6 +5439,7 @@ impl UiDiagnosticsService {
                 self.active_scripts.insert(window, active);
             }
         }
+
         output
     }
 
@@ -6506,39 +6517,7 @@ impl UiDiagnosticsService {
         }
         self.last_script_trigger_stamp = Some(stamp);
 
-        let bytes = std::fs::read(&self.cfg.script_path).ok();
-        let Some(bytes) = bytes else {
-            return;
-        };
-        let schema_version: u32 = serde_json::from_slice::<serde_json::Value>(&bytes)
-            .ok()
-            .and_then(|v| v.get("schema_version").and_then(|v| v.as_u64()))
-            .unwrap_or(0)
-            .min(u32::MAX as u64) as u32;
-
-        let script = match schema_version {
-            1 => {
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
-                    return;
-                };
-                let Some(script) = PendingScript::from_v1(script) else {
-                    return;
-                };
-                script
-            }
-            2 => {
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV2>(&bytes) else {
-                    return;
-                };
-                let Some(script) = PendingScript::from_v2(script) else {
-                    return;
-                };
-                script
-            }
-            _ => return,
-        };
         let run_id = self.next_script_run_id();
-        self.pending_script = Some(script);
         self.pending_script_run_id = Some(run_id);
         self.write_script_result(UiScriptResultV1 {
             schema_version: 1,
@@ -6556,6 +6535,148 @@ impl UiDiagnosticsService {
                 .map(|p| display_path(&self.cfg.out_dir, p)),
             last_bundle_artifact: self.last_dump_artifact_stats.clone(),
         });
+
+        let bytes = match std::fs::read(&self.cfg.script_path) {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                self.pending_script_run_id = None;
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Failed,
+                    step_index: None,
+                    reason_code: Some("script.read_failed".to_string()),
+                    reason: Some("failed to read script.json".to_string()),
+                    evidence: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                });
+                return;
+            }
+        };
+        let schema_version: u32 = serde_json::from_slice::<serde_json::Value>(&bytes)
+            .ok()
+            .and_then(|v| v.get("schema_version").and_then(|v| v.as_u64()))
+            .unwrap_or(0)
+            .min(u32::MAX as u64) as u32;
+
+        let script = match schema_version {
+            1 => {
+                let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.parse_failed".to_string()),
+                        reason: Some("failed to parse script as schema v1".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                let Some(script) = PendingScript::from_v1(script) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.invalid".to_string()),
+                        reason: Some("invalid schema v1 script".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                script
+            }
+            2 => {
+                let Ok(script) = serde_json::from_slice::<UiActionScriptV2>(&bytes) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.parse_failed".to_string()),
+                        reason: Some("failed to parse script as schema v2".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                let Some(script) = PendingScript::from_v2(script) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.invalid".to_string()),
+                        reason: Some("invalid schema v2 script".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                script
+            }
+            _ => {
+                self.pending_script_run_id = None;
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Failed,
+                    step_index: None,
+                    reason_code: Some("script.schema_unsupported".to_string()),
+                    reason: Some(format!(
+                        "unsupported script schema_version={schema_version}"
+                    )),
+                    evidence: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                });
+                return;
+            }
+        };
+        self.pending_script = Some(script);
+        self.pending_script_run_id = Some(run_id);
     }
 
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {

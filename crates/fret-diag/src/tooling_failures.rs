@@ -197,7 +197,10 @@ mod tests {
         let bytes = std::fs::read(&script_result_path).expect("read script.result.json");
         let parsed: UiScriptResultV1 = serde_json::from_slice(&bytes).expect("parse script.result");
         assert!(matches!(parsed.stage, UiScriptStageV1::Failed));
-        assert_eq!(parsed.reason_code.as_deref(), Some("tooling.bundle_dump.failed"));
+        assert_eq!(
+            parsed.reason_code.as_deref(),
+            Some("tooling.bundle_dump.failed")
+        );
         assert_eq!(parsed.reason.as_deref(), Some("bundle dump failed"));
         assert_eq!(parsed.run_id, 42);
         assert!(
@@ -214,6 +217,9 @@ mod tests {
         let copied: UiScriptResultV1 =
             serde_json::from_slice(&bytes).expect("parse run_id script.result");
         assert!(matches!(copied.stage, UiScriptStageV1::Failed));
-        assert_eq!(copied.reason_code.as_deref(), Some("tooling.bundle_dump.failed"));
+        assert_eq!(
+            copied.reason_code.as_deref(),
+            Some("tooling.bundle_dump.failed")
+        );
     }
 }

@@ -20,13 +20,13 @@ pub mod devtools;
 mod gates;
 mod lint;
 mod perf_seed_policy;
+mod run_artifacts;
 mod script_tooling;
 mod shrink;
 mod stats;
 mod suite_summary;
-pub mod transport;
-mod run_artifacts;
 mod tooling_failures;
+pub mod transport;
 mod util;
 
 use compare::{
@@ -43,6 +43,11 @@ use gates::{
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
+use run_artifacts::{
+    materialize_bundle_json_from_manifest_chunks_if_missing,
+    materialize_run_id_bundle_json_from_chunks_if_missing, run_id_artifact_dir,
+    write_run_id_bundle_json, write_run_id_script_result,
+};
 use script_tooling::{
     NormalizedScript, ScriptLintReport, ScriptSchemaReport, lint_scripts,
     normalize_script_from_path, validate_scripts,
@@ -124,14 +129,9 @@ use stats::{
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
 };
-use run_artifacts::{
-    materialize_bundle_json_from_manifest_chunks_if_missing,
-    materialize_run_id_bundle_json_from_chunks_if_missing, run_id_artifact_dir,
-    write_run_id_bundle_json, write_run_id_script_result,
-};
 use tooling_failures::{
-    mark_existing_script_result_tooling_failure, write_tooling_failure_script_result,
-    write_tooling_failure_script_result_if_missing, push_tooling_event_log_entry,
+    mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
+    write_tooling_failure_script_result, write_tooling_failure_script_result_if_missing,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
@@ -12679,11 +12679,7 @@ fn wait_for_devtools_bundle_dumped(
                 return Ok(dumped);
             }
 
-            if let (
-                Some(chunk),
-                Some(chunk_index),
-                Some(chunk_count_value),
-            ) = (
+            if let (Some(chunk), Some(chunk_index), Some(chunk_count_value)) = (
                 dumped.bundle_json_chunk.clone(),
                 dumped.bundle_json_chunk_index,
                 dumped.bundle_json_chunk_count,
@@ -13185,30 +13181,30 @@ fn run_script_over_transport(
             timeout_ms,
             poll_ms,
         ) {
-                Ok(v) => v,
-                Err(err) => {
-                    let reason_code = if err.contains("timed out waiting") {
-                        "timeout.tooling.bundle_dump"
-                    } else {
-                        "tooling.bundle_dump.failed"
-                    };
-                    push_tooling_event_log_entry(
-                        &mut result,
-                        "tooling_bundle_dump_failed",
-                        Some(err.clone()),
-                    );
-                    if matches!(result.stage, UiScriptStageV1::Passed) {
-                        result.stage = UiScriptStageV1::Failed;
-                        result.reason_code = Some(reason_code.to_string());
-                        result.reason = Some(err.clone());
-                    }
-                    let _ = write_json_value(
-                        script_result_path,
-                        &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-                    );
-                    return Err(err);
+            Ok(v) => v,
+            Err(err) => {
+                let reason_code = if err.contains("timed out waiting") {
+                    "timeout.tooling.bundle_dump"
+                } else {
+                    "tooling.bundle_dump.failed"
+                };
+                push_tooling_event_log_entry(
+                    &mut result,
+                    "tooling_bundle_dump_failed",
+                    Some(err.clone()),
+                );
+                if matches!(result.stage, UiScriptStageV1::Passed) {
+                    result.stage = UiScriptStageV1::Failed;
+                    result.reason_code = Some(reason_code.to_string());
+                    result.reason = Some(err.clone());
                 }
-            };
+                let _ = write_json_value(
+                    script_result_path,
+                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+                );
+                return Err(err);
+            }
+        };
 
         let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {
             Ok(v) => v,
