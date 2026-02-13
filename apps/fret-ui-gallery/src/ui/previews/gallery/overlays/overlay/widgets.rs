@@ -265,7 +265,23 @@ fn popover(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyEleme
                     .toggle_model(popover_open.clone())
                     .into_element(cx);
 
-                shadcn::PopoverContent::new(vec![cx.text("Popover content"), open_dialog, close])
+                let header = shadcn::PopoverHeader::new(vec![
+                    shadcn::PopoverTitle::new("Popover").into_element(cx),
+                    shadcn::PopoverDescription::new("Escape / outside click closes.")
+                        .into_element(cx),
+                ])
+                .into_element(cx);
+
+                let actions = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N2)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full()),
+                    move |_cx| vec![open_dialog, close],
+                );
+
+                shadcn::PopoverContent::new(vec![header, actions])
                     .into_element(cx)
                     .test_id("ui-gallery-popover-content")
             },
@@ -286,6 +302,7 @@ fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElemen
         },
         |cx| {
             shadcn::DialogContent::new(vec![
+                shadcn::DialogClose::new(dialog_open.clone()).into_element(cx),
                 shadcn::DialogHeader::new(vec![
                     shadcn::DialogTitle::new("Dialog").into_element(cx),
                     shadcn::DialogDescription::new("Escape / overlay click closes")
