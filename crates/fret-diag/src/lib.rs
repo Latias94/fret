@@ -2595,9 +2595,6 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             .to_string(),
                     );
                 }
-                if wants_pack {
-                    return Err("--pack is not supported with --devtools-ws-url yet".to_string());
-                }
 
                 let ws_url = devtools_ws_url.clone().ok_or_else(|| {
                     "missing --devtools-ws-url (required when using DevTools WS transport)"
@@ -2705,7 +2702,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     token.as_str(),
                     devtools_session_id.as_deref(),
                     script_json,
-                    wants_post_run_checks,
+                    wants_post_run_checks || wants_pack,
                     timeout_ms,
                     poll_ms,
                 )?;
@@ -2715,19 +2712,41 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
                 );
 
-                if !matches!(result.stage, fret_diag_protocol::UiScriptStageV1::Passed) {
-                    eprintln!(
-                        "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                        src.display(),
-                        result.run_id,
-                        result.step_index.unwrap_or(0),
-                        result.reason.as_deref().unwrap_or("unknown"),
-                        result.last_bundle_dir.as_deref().unwrap_or("")
-                    );
-                    std::process::exit(1);
+                let stage = match result.stage {
+                    fret_diag_protocol::UiScriptStageV1::Passed => "passed",
+                    fret_diag_protocol::UiScriptStageV1::Failed => "failed",
+                    fret_diag_protocol::UiScriptStageV1::Queued => "queued",
+                    fret_diag_protocol::UiScriptStageV1::Running => "running",
+                };
+
+                let mut summary = crate::stats::ScriptResultSummary {
+                    run_id: result.run_id,
+                    stage: Some(stage.to_string()),
+                    step_index: result.step_index.map(|n| n as u64),
+                    reason_code: result.reason_code.clone(),
+                    reason: result.reason.clone(),
+                    last_bundle_dir: result.last_bundle_dir.clone(),
+                };
+
+                if summary
+                    .last_bundle_dir
+                    .as_deref()
+                    .unwrap_or("")
+                    .trim()
+                    .is_empty()
+                {
+                    if let Some(bundle_path) = bundle_path.as_ref() {
+                        summary.last_bundle_dir = bundle_path
+                            .parent()
+                            .and_then(|p| p.file_name())
+                            .and_then(|s| s.to_str())
+                            .map(|s| s.to_string());
+                    }
                 }
 
-                if wants_post_run_checks {
+                if wants_post_run_checks
+                    && matches!(result.stage, fret_diag_protocol::UiScriptStageV1::Passed)
+                {
                     let Some(bundle_path) = bundle_path.as_ref() else {
                         return Err(
                             "script passed but no bundle.json was captured (required for post-run checks)"
@@ -2830,7 +2849,51 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         warmup_frames,
                     )?;
                 }
-                return Ok(());
+
+                if wants_pack {
+                    if let Some(bundle_path) = bundle_path.as_ref() {
+                        let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
+                        let out = pack_out
+                            .clone()
+                            .map(|p| resolve_path(&workspace_root, p))
+                            .unwrap_or_else(|| {
+                                default_pack_out_path(&resolved_out_dir, &bundle_dir)
+                            });
+
+                        let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                            resolved_out_dir.clone()
+                        } else {
+                            bundle_dir
+                                .parent()
+                                .unwrap_or(&resolved_out_dir)
+                                .to_path_buf()
+                        };
+
+                        if let Err(err) = pack_bundle_dir_to_zip(
+                            &bundle_dir,
+                            &out,
+                            pack_defaults.0,
+                            pack_defaults.1,
+                            pack_defaults.2,
+                            false,
+                            false,
+                            &artifacts_root,
+                            stats_top,
+                            sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                            warmup_frames,
+                        ) {
+                            eprintln!("PACK-ERROR {err}");
+                        } else {
+                            println!("PACK {}", out.display());
+                        }
+                    } else {
+                        eprintln!(
+                            "PACK-ERROR no bundle.json captured over DevTools WS (ensure bundles are embedded or the runtime bundle dir is accessible)"
+                        );
+                    }
+                }
+
+                report_result_and_exit(&summary);
             }
             let script_wants_screenshots = script_requests_screenshots(&src);
             let mut run_launch_env = launch_env.clone();
@@ -5442,8 +5505,87 @@ See: `docs/tracy.md`.\n";
 
             let suite_launch_env = launch_env.clone();
 
-            let reuse_process = launch.is_none() || reuse_launch;
-            let mut child = if reuse_process {
+            let use_devtools_ws = devtools_ws_url.is_some()
+                || devtools_token.is_some()
+                || devtools_session_id.is_some();
+
+            let mut devtools_ws: Option<DevtoolsOps> = None;
+            let mut devtools_ws_selected_session_id: Option<String> = None;
+            let mut devtools_ws_available_caps: Vec<String> = Vec::new();
+            if use_devtools_ws {
+                if launch.is_some() || reuse_launch {
+                    return Err(
+                        "--launch/--reuse-launch is not supported with --devtools-ws-url"
+                            .to_string(),
+                    );
+                }
+
+                use crate::transport::{
+                    ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
+                };
+
+                let ws_url = devtools_ws_url.clone().ok_or_else(|| {
+                    "missing --devtools-ws-url (required when using DevTools WS transport)"
+                        .to_string()
+                })?;
+                let token = devtools_token.clone().ok_or_else(|| {
+                    "missing --devtools-token (required when using DevTools WS transport)"
+                        .to_string()
+                })?;
+
+                let mut cfg =
+                    DevtoolsWsClientConfig::with_defaults(ws_url.to_string(), token.to_string());
+                cfg.client_kind = ClientKindV1::Tooling;
+                cfg.capabilities = vec![
+                    // Backwards-compatible (legacy, un-namespaced) control plane capabilities.
+                    "inspect".to_string(),
+                    "pick".to_string(),
+                    "scripts".to_string(),
+                    "bundles".to_string(),
+                    "sessions".to_string(),
+                    // Namespaced control plane capabilities (recommended).
+                    "devtools.inspect".to_string(),
+                    "devtools.pick".to_string(),
+                    "devtools.scripts".to_string(),
+                    "devtools.bundles".to_string(),
+                    "devtools.sessions".to_string(),
+                ];
+
+                let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))?;
+                let devtools = DevtoolsOps::new(client);
+
+                let sessions = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
+                    if msg.r#type != "session.list" {
+                        return None;
+                    }
+                    serde_json::from_value::<DevtoolsSessionListV1>(msg.payload).ok()
+                })?;
+
+                let selected_session_id =
+                    devtools_select_session_id(&sessions, devtools_session_id.as_deref())?;
+                devtools.set_default_session_id(Some(selected_session_id.clone()));
+
+                let mut available_caps: Vec<String> = sessions
+                    .sessions
+                    .iter()
+                    .find(|s| s.session_id == selected_session_id)
+                    .map(|s| s.capabilities.clone())
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(|c| normalize_capability_string(&c))
+                    .collect();
+                available_caps.sort();
+                available_caps.dedup();
+
+                devtools_ws = Some(devtools);
+                devtools_ws_selected_session_id = Some(selected_session_id);
+                devtools_ws_available_caps = available_caps;
+            }
+
+            let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
+            let mut child = if use_devtools_ws {
+                None
+            } else if reuse_process {
                 maybe_launch_demo(
                     &launch,
                     &suite_launch_env,
@@ -5469,7 +5611,7 @@ See: `docs/tracy.md`.\n";
             let mut suite_rows: Vec<serde_json::Value> = Vec::new();
             let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
 
-            for src in scripts {
+            for (idx, src) in scripts.into_iter().enumerate() {
                 if !reuse_process {
                     child = maybe_launch_demo(
                         &launch,
@@ -5483,27 +5625,140 @@ See: `docs/tracy.md`.\n";
                         poll_ms,
                     )?;
                 }
-                let mut result = run_script_and_wait(
-                    &src,
-                    &resolved_script_path,
-                    &resolved_script_trigger_path,
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
-                    timeout_ms,
-                    poll_ms,
-                );
-                if let Ok(summary) = &result
-                    && summary.stage.as_deref() == Some("failed")
-                {
-                    if let Some(dir) = wait_for_failure_dump_bundle(
-                        &resolved_out_dir,
-                        summary,
+                let mut result = if use_devtools_ws {
+                    let devtools = devtools_ws.as_ref().ok_or_else(|| {
+                        "missing DevTools WS client (this is a tooling bug)".to_string()
+                    })?;
+                    let selected_session_id =
+                        devtools_ws_selected_session_id.as_deref().ok_or_else(|| {
+                            "missing DevTools WS session id (this is a tooling bug)".to_string()
+                        })?;
+
+                    let script_json: serde_json::Value =
+                        serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
+                            .map_err(|e| e.to_string())?;
+
+                    let required_caps = script_required_capabilities_value(&script_json);
+                    if !required_caps.is_empty() {
+                        gate_required_capabilities_with_source(
+                            &resolved_out_dir.join("check.capabilities.json"),
+                            &required_caps,
+                            &devtools_ws_available_caps,
+                            "devtools_ws",
+                        )?;
+                    }
+
+                    devtools.script_run_value(None, script_json);
+                    let script_result =
+                        wait_for_devtools_message(devtools, timeout_ms, poll_ms, |msg| {
+                            if msg.r#type != "script.result"
+                                || msg.session_id.as_deref() != Some(selected_session_id)
+                            {
+                                return None;
+                            }
+                            let result =
+                                serde_json::from_value::<UiScriptResultV1>(msg.payload).ok()?;
+                            match result.stage {
+                                fret_diag_protocol::UiScriptStageV1::Passed
+                                | fret_diag_protocol::UiScriptStageV1::Failed => Some(result),
+                                _ => None,
+                            }
+                        })?;
+
+                    let _ = write_json_value(
+                        &resolved_script_result_path,
+                        &serde_json::to_value(&script_result)
+                            .unwrap_or_else(|_| serde_json::json!({})),
+                    );
+
+                    // Always dump a bounded bundle for suite runs so lint and post-run checks
+                    // can operate on a local artifact (parity with filesystem mode).
+                    let dump_label = {
+                        let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("script");
+                        let mut sanitized: String = stem
+                            .chars()
+                            .map(|c| {
+                                if c.is_ascii_alphanumeric() {
+                                    c.to_ascii_lowercase()
+                                } else {
+                                    '-'
+                                }
+                            })
+                            .collect();
+                        while sanitized.contains("--") {
+                            sanitized = sanitized.replace("--", "-");
+                        }
+                        sanitized = sanitized.trim_matches('-').to_string();
+                        if sanitized.is_empty() {
+                            sanitized = "script".to_string();
+                        }
+                        let mut label = format!("suite-{idx:04}-{sanitized}");
+                        if label.len() > 80 {
+                            label.truncate(80);
+                            label = label.trim_matches('-').to_string();
+                        }
+                        label
+                    };
+
+                    devtools.bundle_dump_with_max_snapshots(None, Some(&dump_label), 30);
+                    let dumped = wait_for_devtools_message(devtools, timeout_ms, poll_ms, |msg| {
+                        if msg.r#type != "bundle.dumped"
+                            || msg.session_id.as_deref() != Some(selected_session_id)
+                        {
+                            return None;
+                        }
+                        serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
+                    })?;
+
+                    let bundle_path =
+                        materialize_devtools_bundle_dumped(&resolved_out_dir, &dumped)?;
+                    let last_bundle_dir = bundle_path
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_string());
+
+                    let stage = match script_result.stage {
+                        fret_diag_protocol::UiScriptStageV1::Passed => "passed",
+                        fret_diag_protocol::UiScriptStageV1::Failed => "failed",
+                        fret_diag_protocol::UiScriptStageV1::Queued => "queued",
+                        fret_diag_protocol::UiScriptStageV1::Running => "running",
+                    };
+
+                    Ok(crate::stats::ScriptResultSummary {
+                        run_id: script_result.run_id,
+                        stage: Some(stage.to_string()),
+                        step_index: script_result.step_index.map(|n| n as u64),
+                        reason_code: script_result.reason_code.clone(),
+                        reason: script_result.reason.clone(),
+                        last_bundle_dir,
+                    })
+                } else {
+                    run_script_and_wait(
+                        &src,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
                         timeout_ms,
                         poll_ms,
-                    ) {
-                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                            if let Ok(summary) = result.as_mut() {
-                                summary.last_bundle_dir = Some(name.to_string());
+                    )
+                };
+
+                if !use_devtools_ws {
+                    if let Ok(summary) = &result
+                        && summary.stage.as_deref() == Some("failed")
+                    {
+                        if let Some(dir) = wait_for_failure_dump_bundle(
+                            &resolved_out_dir,
+                            summary,
+                            timeout_ms,
+                            poll_ms,
+                        ) {
+                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                if let Ok(summary) = result.as_mut() {
+                                    summary.last_bundle_dir = Some(name.to_string());
+                                }
                             }
                         }
                     }
@@ -11564,6 +11819,83 @@ fn devtools_sanitize_export_dir_name(raw: &str) -> String {
         .to_string()
 }
 
+fn wait_for_devtools_message<T>(
+    devtools: &DevtoolsOps,
+    timeout_ms: u64,
+    poll_ms: u64,
+    mut decode: impl FnMut(fret_diag_protocol::DiagTransportMessageV1) -> Option<T>,
+) -> Result<T, String> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
+    loop {
+        while let Some(msg) = devtools.try_recv() {
+            if let Some(v) = decode(msg) {
+                return Ok(v);
+            }
+        }
+        if Instant::now() >= deadline {
+            return Err("timed out waiting for DevTools WS message".to_string());
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
+    }
+}
+
+fn materialize_devtools_bundle_dumped(
+    out_dir: &Path,
+    dumped: &DevtoolsBundleDumpedV1,
+) -> Result<PathBuf, String> {
+    let export_dir_name = devtools_sanitize_export_dir_name(&dumped.dir);
+    let export_dir = out_dir.join(&export_dir_name);
+    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
+
+    let bundle_path = export_dir.join("bundle.json");
+
+    match dumped.bundle.clone() {
+        Some(bundle) => {
+            write_json_value(&bundle_path, &bundle)?;
+        }
+        None => {
+            // Native apps may choose to omit embedding the bundle payload in the WS message
+            // because the bundle is already written to disk. When possible, materialize by
+            // reading the runtime's bundle.json from the advertised output directory.
+            let runtime_out_dir = PathBuf::from(dumped.out_dir.as_str());
+            let dumped_dir = PathBuf::from(dumped.dir.as_str());
+            let runtime_dir = if dumped_dir.is_absolute() {
+                dumped_dir
+            } else {
+                runtime_out_dir.join(dumped_dir)
+            };
+            let runtime_bundle_path = resolve_bundle_json_path(&runtime_dir);
+
+            if runtime_bundle_path != bundle_path || !bundle_path.is_file() {
+                let bytes = std::fs::read(&runtime_bundle_path).map_err(|e| {
+                    format!(
+                        "bundle.dumped did not include an embedded bundle payload, and runtime bundle.json was not readable ({}): {}",
+                        runtime_bundle_path.display(),
+                        e
+                    )
+                })?;
+                let bundle = serde_json::from_slice::<serde_json::Value>(&bytes).map_err(|e| {
+                    format!(
+                        "runtime bundle.json was not valid JSON ({}): {}",
+                        runtime_bundle_path.display(),
+                        e
+                    )
+                })?;
+                write_json_value(&bundle_path, &bundle)?;
+            }
+        }
+    }
+
+    let dumped_path = export_dir.join("bundle.dumped.json");
+    write_json_value(
+        &dumped_path,
+        &serde_json::to_value(dumped).unwrap_or_else(|_| serde_json::json!({})),
+    )?;
+    let _ = std::fs::write(out_dir.join("latest.txt"), export_dir_name.as_bytes());
+
+    Ok(bundle_path)
+}
+
 fn devtools_select_session_id(
     list: &DevtoolsSessionListV1,
     want: Option<&str>,
@@ -11621,26 +11953,6 @@ fn run_script_over_devtools_ws(
         ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
     };
 
-    fn wait_for_message<T>(
-        devtools: &DevtoolsOps,
-        timeout_ms: u64,
-        poll_ms: u64,
-        mut decode: impl FnMut(fret_diag_protocol::DiagTransportMessageV1) -> Option<T>,
-    ) -> Result<T, String> {
-        let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
-        loop {
-            while let Some(msg) = devtools.try_recv() {
-                if let Some(v) = decode(msg) {
-                    return Ok(v);
-                }
-            }
-            if Instant::now() >= deadline {
-                return Err("timed out waiting for DevTools WS message".to_string());
-            }
-            std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
-        }
-    }
-
     let mut cfg = DevtoolsWsClientConfig::with_defaults(ws_url.to_string(), token.to_string());
     cfg.client_kind = ClientKindV1::Tooling;
     cfg.capabilities = vec![
@@ -11660,7 +11972,7 @@ fn run_script_over_devtools_ws(
     let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))?;
     let devtools = DevtoolsOps::new(client);
 
-    let sessions = wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
+    let sessions = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
         if msg.r#type != "session.list" {
             return None;
         }
@@ -11693,12 +12005,17 @@ fn run_script_over_devtools_ws(
     }
 
     devtools.script_run_value(None, script_json);
-    let result = wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
+    let result = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
         if msg.r#type != "script.result" || msg.session_id.as_deref() != Some(&selected_session_id)
         {
             return None;
         }
-        serde_json::from_value::<UiScriptResultV1>(msg.payload).ok()
+        let result = serde_json::from_value::<UiScriptResultV1>(msg.payload).ok()?;
+        match result.stage {
+            fret_diag_protocol::UiScriptStageV1::Passed
+            | fret_diag_protocol::UiScriptStageV1::Failed => Some(result),
+            _ => None,
+        }
     })?;
 
     if !dump_bundle {
@@ -11706,7 +12023,7 @@ fn run_script_over_devtools_ws(
     }
 
     devtools.bundle_dump(None, Some("diag-run"));
-    let dumped = wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
+    let dumped = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
         if msg.r#type != "bundle.dumped" || msg.session_id.as_deref() != Some(&selected_session_id)
         {
             return None;
@@ -11714,21 +12031,7 @@ fn run_script_over_devtools_ws(
         serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
     })?;
 
-    let export_dir_name = devtools_sanitize_export_dir_name(&dumped.dir);
-    let export_dir = out_dir.join(&export_dir_name);
-    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
-    let bundle = dumped.bundle.clone().ok_or_else(|| {
-        "bundle.dumped did not include an embedded bundle payload (set diagnostics to embed bundles)"
-            .to_string()
-    })?;
-    let bundle_path = export_dir.join("bundle.json");
-    write_json_value(&bundle_path, &bundle)?;
-    let dumped_path = export_dir.join("bundle.dumped.json");
-    write_json_value(
-        &dumped_path,
-        &serde_json::to_value(&dumped).unwrap_or_else(|_| serde_json::json!({})),
-    )?;
-    let _ = std::fs::write(out_dir.join("latest.txt"), export_dir_name.as_bytes());
+    let bundle_path = materialize_devtools_bundle_dumped(out_dir, &dumped)?;
 
     Ok((result, Some(bundle_path)))
 }
@@ -13148,6 +13451,100 @@ mod tests {
     use serde_json::json;
     use std::path::Path;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn materialize_devtools_bundle_dumped_embedded_writes_bundle_json_and_latest() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-devtools-dumped-embedded-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let dumped = DevtoolsBundleDumpedV1 {
+            schema_version: 1,
+            exported_unix_ms: 1,
+            out_dir: root.to_string_lossy().to_string(),
+            dir: "123-embedded".to_string(),
+            bundle: Some(json!({
+                "schema_version": 1,
+                "windows": [],
+            })),
+        };
+
+        let bundle_path =
+            materialize_devtools_bundle_dumped(&root, &dumped).expect("materialize dumped");
+        assert!(bundle_path.is_file());
+
+        let bytes = std::fs::read(&bundle_path).expect("read bundle.json");
+        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse bundle.json");
+        assert_eq!(
+            parsed.get("schema_version").and_then(|v| v.as_u64()),
+            Some(1)
+        );
+
+        let latest = std::fs::read_to_string(root.join("latest.txt"))
+            .ok()
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default();
+        assert_eq!(latest, "123-embedded");
+    }
+
+    #[test]
+    fn materialize_devtools_bundle_dumped_falls_back_to_runtime_bundle_json() {
+        let runtime_root = std::env::temp_dir().join(format!(
+            "fret-diag-devtools-dumped-runtime-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let local_root = std::env::temp_dir().join(format!(
+            "fret-diag-devtools-dumped-local-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&runtime_root);
+        let _ = std::fs::remove_dir_all(&local_root);
+        std::fs::create_dir_all(&runtime_root).expect("create runtime root");
+        std::fs::create_dir_all(&local_root).expect("create local root");
+
+        let runtime_dir = runtime_root.join("456-runtime");
+        std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
+        std::fs::write(
+            runtime_dir.join("bundle.json"),
+            br#"{ "schema_version": 1, "windows": [ { "window": 1 } ] }"#,
+        )
+        .expect("write runtime bundle.json");
+
+        let dumped = DevtoolsBundleDumpedV1 {
+            schema_version: 1,
+            exported_unix_ms: 1,
+            out_dir: runtime_root.to_string_lossy().to_string(),
+            dir: "456-runtime".to_string(),
+            bundle: None,
+        };
+
+        let bundle_path =
+            materialize_devtools_bundle_dumped(&local_root, &dumped).expect("materialize dumped");
+        assert!(bundle_path.is_file());
+
+        let bytes = std::fs::read(&bundle_path).expect("read bundle.json");
+        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse bundle.json");
+        assert_eq!(
+            parsed.get("schema_version").and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert!(parsed.get("windows").is_some());
+
+        let dumped_path = local_root.join("456-runtime").join("bundle.dumped.json");
+        assert!(dumped_path.is_file());
+    }
 
     #[test]
     fn stale_scene_check_fails_when_label_changes_without_scene_change() {

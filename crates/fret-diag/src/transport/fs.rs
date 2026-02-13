@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use fret_diag_protocol::DiagTransportMessageV1;
+use fret_diag_protocol::{DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 
 use crate::util::{now_unix_ms, read_json_value, touch, write_json_value};
 
@@ -266,11 +266,14 @@ impl State {
             r#type: "bundle.dumped".to_string(),
             session_id: self.default_session_id.clone(),
             request_id: None,
-            payload: serde_json::json!({
-                "exported_unix_ms": now_unix_ms(),
-                "out_dir": self.cfg.out_dir.to_string_lossy(),
-                "dir": latest,
-            }),
+            payload: serde_json::to_value(DevtoolsBundleDumpedV1 {
+                schema_version: 1,
+                exported_unix_ms: now_unix_ms(),
+                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                dir: latest,
+                bundle: None,
+            })
+            .unwrap_or_else(|_| serde_json::json!({})),
         });
     }
 }
