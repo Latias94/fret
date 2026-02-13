@@ -24,8 +24,14 @@ Use `--launch` with release binaries and keep diagnostics overhead stable:
 
 - `FRET_UI_GALLERY_VIEW_CACHE=1`
 - `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+- `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`
 - `FRET_DIAG_SEMANTICS=0`
+
+Note: recent `fretboard diag perf` builds make the UI gallery cache knobs implicit for the built-in
+`ui-gallery(-steady)` and resize probe suites (caller-overridable via `--env KEY=...`). The VirtualList
+known-heights knob is only made implicit for `ui-gallery(-steady)`. Keep them explicit when bisecting
+older `fretboard.exe` builds.
 
 Gate triage loop:
 
@@ -80,7 +86,9 @@ Commit-addressable gate results for the `windows-rtx4090` machine profile:
     - out-dir: `target/fret-diag-perf/ui-code-editor-resize-probes.hoverstrip.3x.20260213-151711`
   - `ui-gallery-steady --repeat 3`: PASS
     - out-dir: `target/fret-diag-perf/ui-gallery-steady.hoverstrip.3x.20260213-152340`
+  - `ui-gallery-steady --repeat 3` (VirtualList known heights): PASS
+    - out-dir: `target/fret-diag-perf/ui-gallery-steady.hoverstrip.3x.20260213-183818.vlist-known`
 - Commands used (PowerShell, release):
   - `target/release/fretboard.exe diag perf ui-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
   - `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
-  - `target/release/fretboard.exe diag perf ui-gallery-steady --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
