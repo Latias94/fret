@@ -2,6 +2,11 @@
 
 Status: Draft (notes only; ADRs remain the source of truth)
 
+See:
+
+- Milestones: `docs/workstreams/motion-foundation-v1-milestones.md`
+- TODO tracker: `docs/workstreams/motion-foundation-v1-todo.md`
+
 This workstream defines a reusable **motion/animation foundation** for Fret’s ecosystem layers
 (shadcn/Radix-inspired, Material 3-inspired, MagicUI-inspired), while keeping `crates/fret-ui`
 mechanism-only.
@@ -73,6 +78,10 @@ Mechanism vs policy:
   - `repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss`
 - shadcn/ui v4 usage (durations + easings in recipes):
   - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/*.tsx` (e.g. `sheet.tsx`, `sidebar.tsx`)
+- Animata (recipe inspiration; Framer Motion / DOM-based, treat as “spec” not “runtime”):
+  - Local mirror root (this workstation): `F:\SourceCodes\Rust\fret\repo-ref\animata`
+  - `repo-ref/animata/README.md`
+  - `repo-ref/animata/animata/overlay/*.tsx`
 
 ## Proposed foundation (v1)
 
@@ -184,6 +193,43 @@ Suggested steps:
    - `NavigationMenu` viewport motion.
 3) Keep tick-driven `TransitionTimeline` for fully deterministic unit tests where it is useful,
    but stop encoding production UX durations as “60fps ticks”.
+
+## Animata alignment notes (how to use it safely)
+
+Animata is a curated set of interaction recipes built for web (React/DOM) with Framer Motion. We
+should not try to port its runtime model, but it is still valuable as a **source of “what moves,
+when, and how it feels”**.
+
+Recommended approach:
+
+1) Treat Animata as a **UX spec** (timing curves, sequencing, variant breakdown), not an API to
+   reproduce.
+2) Translate each recipe into a small, portable “motion recipe” vocabulary (tween + spring +
+   inertia + timeline/stagger).
+3) Implement only the missing primitives in `fret-ui-headless` + `fret-ui-kit` (ecosystem policy),
+   and keep `crates/fret-ui` mechanism-only.
+4) Add deterministic diag gates under fixed `delta` for every feel-sensitive recipe.
+
+High-value pilot recipes to align next (draft):
+
+- Sidebar collapse/expand (layout-affecting + perceived snappiness)
+- Drawer/sheet (drag → release inertia/spring settle)
+- Modal/dialog (presence + focus/dismiss choreography)
+- Tabs underline / navigation indicator (timeline + easing polish)
+- Toast stack (stagger + interrupt/re-target behavior)
+
+### Recipe alignment matrix (draft)
+
+This table is intentionally spec-first. The goal is to make the intended feel explicit, then
+land deterministic gates before polishing implementation details.
+
+| Pilot | Recipe | Spec sources | Fret target | Motion channels & primitives | Tokens & gates | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| P1 | Sidebar collapse/expand | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/sidebar.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` (`sidebar_collapse_motion`) | width / rail reveal (+ optional opacity)<br>tween timeline<br>optional: layout-aware choreography (future) | tokens (current): `duration.shadcn.motion.200`, `easing.shadcn.motion`<br>gate: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json` | Landed (baseline) |
+| P1 | Drawer / Sheet settle | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`, `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/drawer.rs`<br>`ecosystem/fret-ui-shadcn/src/sheet.rs` | translate + scrim opacity<br>drag velocity projection -> inertia -> spring settle<br>retarget mid-flight (no restart stutter) | tokens (current): shadcn overlay motion tokens (duration/easing)<br>gate: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json` | Landed (baseline) |
+| P1 | Dialog / Modal presence | Animata modal: `repo-ref/animata/animata/overlay/modal.tsx`<br>shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`, `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs`<br>`ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | opacity + scale (and optional blur)<br>barrier fade + focus/dismiss choreography<br>optional: spring-based settle for native-like feel | tokens (current): shadcn overlay motion tokens (duration/easing)<br>gate (existing): `tools/diag-scripts/ui-gallery-overlay-dialog-open-motion-snapshots.json`<br>missing: fixed-delta open/close gate | Partial (needs fixed-delta gate) |
+| P2 | Tabs indicator | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/tabs.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | indicator translate + width<br>tween or spring (theme-controlled)<br>layout measurement coherence | tokens (planned): semantic tabs motion keys<br>gate (perf-only today): `tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json` | Planned |
+| P2 | Toast stack (Sonner) | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/toast.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/toast.rs`<br>`ecosystem/fret-ui-shadcn/src/sonner.rs` | enter/exit presence + stack shift<br>stagger + interrupt/re-target behavior<br>swipe dismiss inertia (future) | gate (exists): `tools/diag-scripts/ui-gallery-toast-visible.json`<br>missing: fixed-delta motion gate + interrupt coverage | Planned |
 
 ## Acceptance criteria (v1)
 

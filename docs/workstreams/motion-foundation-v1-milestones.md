@@ -1,0 +1,120 @@
+# Motion Foundation (v1) — Milestones
+
+This file tracks milestone gates for the motion foundation workstream.
+
+See:
+
+- Overview: `docs/workstreams/motion-foundation-v1.md`
+- Task list: `docs/workstreams/motion-foundation-v1-todo.md`
+
+## M0 — Refresh-rate stable time model (Duration-first)
+
+Deliverables:
+
+- Production UX durations are expressed as `Duration` (wall-time), not “60fps ticks”.
+- Drivers convert `Duration -> 60Hz ticks -> frame ticks` (refresh-rate stable).
+- Diagnostics can force fixed `delta` for deterministic scripted repros.
+
+Status: Landed
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/declarative/transition.rs`
+- `ecosystem/fret-ui-kit/src/declarative/presence.rs`
+- `ecosystem/fret-ui-kit/src/declarative/hover_intent.rs`
+- `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
+- `tools/diag-scripts/ui-gallery-dropdown-open-fixed-frame-delta.json`
+
+## M1 — shadcn motion tokens (duration + easing)
+
+Deliverables:
+
+- shadcn overlay motion uses theme tokens (overrideable) for durations + cubic-bezier easing.
+- Components do not hard-code tick presets for production UX durations.
+
+Status: Landed
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`
+- `ecosystem/fret-ui-shadcn/src/sheet.rs`
+- `ecosystem/fret-ui-shadcn/src/{context_menu,dropdown_menu,hover_card,menubar,popover,select,tooltip}.rs`
+
+## M2 — Headless motion primitives (portable)
+
+Deliverables:
+
+- A headless motion module exists in `fret-ui-headless` (no theme, no scheduling).
+- At least: tween + spring + friction/inertia primitives with deterministic stepping.
+
+Status: Landed
+
+Evidence:
+
+- `ecosystem/fret-ui-headless/src/motion/`
+- `ecosystem/fret-ui-headless/src/motion/tween.rs`
+- `ecosystem/fret-ui-headless/src/motion/spring.rs`
+- `ecosystem/fret-ui-headless/src/motion/friction.rs`
+- `ecosystem/fret-ui-headless/src/motion/inertia.rs`
+
+## M3 — UI-kit motion drivers (MotionValue)
+
+Deliverables:
+
+- `fret-ui-kit` exposes a small driver surface that binds headless motion to the frame clock.
+- At least one “physics feel” interaction uses `MotionValue` and pointer velocity projection.
+
+Status: Landed
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/declarative/motion.rs`
+- `ecosystem/fret-ui-kit/src/declarative/motion_value.rs`
+- `crates/fret-ui/src/action.rs` (pointer velocity snapshots)
+- `ecosystem/fret-ui-shadcn/src/drawer.rs`
+- `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`
+
+## M4 — Recipe parity pilot (Animata-informed)
+
+Deliverables:
+
+- Pick 3 high-value recipes (recommended: sidebar, drawer/sheet, modal/dialog).
+- For each recipe:
+  - document the intended motion channels (opacity/transform/clip/blur),
+  - define tokens (duration/easing and, if needed, spring params),
+  - add a deterministic diag gate under fixed `delta`.
+
+Status: In progress (spec mapping landed; gates pending)
+
+Exit criteria:
+
+- A small “motion pilot suite” of scripts exists and runs deterministically under
+  `--fixed-frame-delta-ms 16` (native runner).
+- Evidence anchors exist in the workstream TODO tracker.
+
+Evidence:
+
+- `docs/workstreams/motion-foundation-v1.md` (section "Recipe alignment matrix (draft)")
+
+## M5 — Motion token taxonomy (shadcn ↔ Material 3)
+
+Deliverables:
+
+- A stable semantic key scheme is documented for:
+  - duration (short/medium/long + “component semantic” keys),
+  - easing (standard/emphasized/decelerate/accelerate),
+  - spring (stiffness/damping or duration+bounce).
+- shadcn tokens remain as aliases (ecosystem-level), not mechanism-layer contracts.
+
+Status: Planned
+
+## M6 — Layout-affecting motion (optional v1 follow-up)
+
+Deliverables:
+
+- A recommended approach for layout transitions is chosen and documented:
+  - FLIP-like approach for “measure -> animate delta -> settle to layout” (ecosystem policy),
+  - or explicit layout + animation choreography rules (opt-in per component).
+- Interrupt/re-target rules are tested (no “restart stutter”).
+
+Status: Future

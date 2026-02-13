@@ -61,6 +61,9 @@ Active workstreams:
 - `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
+- `docs/workstreams/motion-foundation-v1.md`
+- `docs/workstreams/motion-foundation-v1-todo.md`
+- `docs/workstreams/motion-foundation-v1-milestones.md`
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ai-elements-port-milestones.md`
