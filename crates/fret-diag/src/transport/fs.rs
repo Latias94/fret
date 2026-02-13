@@ -368,6 +368,7 @@ fn read_touch_stamp(path: &Path) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_diag_protocol::DevtoolsSessionListV1;
 
     #[test]
     fn fs_transport_emits_session_list_and_pick_result() {
@@ -379,11 +380,34 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create temp dir");
 
+        let caps = FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec![
+                "script_v2".to_string(),
+                "foo.bar".to_string(),
+                "diag.screenshot_png".to_string(),
+            ],
+        };
+        write_json_value(
+            &dir.join("capabilities.json"),
+            &serde_json::to_value(caps).unwrap(),
+        )
+        .expect("write capabilities.json");
+
         let cfg = FsDiagTransportConfig::from_out_dir(&dir);
         let client = crate::transport::ToolingDiagClient::connect_fs(cfg).expect("connect_fs");
 
         let msg = client.try_recv().expect("session.list");
         assert_eq!(msg.r#type, "session.list");
+        let list: DevtoolsSessionListV1 =
+            serde_json::from_value(msg.payload).expect("parse session.list payload");
+        assert_eq!(list.sessions.len(), 1);
+        assert_eq!(list.sessions[0].session_id, "fs");
+        let caps = &list.sessions[0].capabilities;
+        assert!(caps.iter().any(|c| c == "devtools.sessions"));
+        assert!(caps.iter().any(|c| c == "diag.script_v2"));
+        assert!(caps.iter().any(|c| c == "diag.screenshot_png"));
+        assert!(caps.iter().any(|c| c == "foo.bar"));
 
         let pick_payload = serde_json::json!({
             "schema_version": 1,
