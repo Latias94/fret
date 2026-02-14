@@ -41,12 +41,55 @@ fn print_hotpatch_summary(
         HotpatchModeSummary::ReloadBoundary => "reload-boundary",
     };
 
-    let view_call =
-        if std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty()) {
-            "direct (view hotpatch disabled)"
-        } else {
-            "hotfn"
-        };
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum ViewCallStrategy {
+        Auto,
+        HotFn,
+        Direct,
+    }
+
+    fn parse_view_call_strategy(raw: &str) -> Option<ViewCallStrategy> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "auto" => Some(ViewCallStrategy::Auto),
+            "hotfn" => Some(ViewCallStrategy::HotFn),
+            "direct" => Some(ViewCallStrategy::Direct),
+            _ => None,
+        }
+    }
+
+    let legacy_direct =
+        std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
+    let env_strategy = if legacy_direct {
+        Some(ViewCallStrategy::Direct)
+    } else if let Ok(raw) = std::env::var("FRET_HOTPATCH_VIEW_CALL_STRATEGY") {
+        parse_view_call_strategy(&raw).or(Some(ViewCallStrategy::Auto))
+    } else {
+        Some(ViewCallStrategy::Auto)
+    };
+
+    let effective_use_direct = match env_strategy.unwrap_or(ViewCallStrategy::Auto) {
+        ViewCallStrategy::Direct => true,
+        ViewCallStrategy::HotFn => false,
+        ViewCallStrategy::Auto => cfg!(windows),
+    };
+
+    let view_call = match (effective_use_direct, legacy_direct, env_strategy) {
+        (true, true, _) => {
+            "direct (view hotpatch disabled; FRET_HOTPATCH_VIEW_CALL_DIRECT=1)".to_string()
+        }
+        (true, false, Some(ViewCallStrategy::Direct)) => {
+            "direct (view hotpatch disabled; FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct)".to_string()
+        }
+        (true, false, Some(ViewCallStrategy::Auto)) if cfg!(windows) => {
+            "direct (view hotpatch disabled; auto Windows safety default)".to_string()
+        }
+        (true, _, _) => "direct (view hotpatch disabled)".to_string(),
+        (false, _, Some(ViewCallStrategy::HotFn)) => {
+            "hotfn (FRET_HOTPATCH_VIEW_CALL_STRATEGY=hotfn)".to_string()
+        }
+        (false, _, Some(ViewCallStrategy::Auto)) if !cfg!(windows) => "hotfn".to_string(),
+        (false, _, _) => "hotfn".to_string(),
+    };
 
     eprintln!("Hotpatch Summary:");
     eprintln!("  bin: {bin}");
@@ -358,10 +401,10 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         #[cfg(windows)]
         {
             eprintln!(
-                "  windows note: view-level hotpatch may crash on the first patched view call; see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
+                "  windows note: default view_call strategy is `direct` (safe; view hotpatch disabled); see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
             );
             eprintln!(
-                "    workaround: set FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (disables view-level hotpatching)"
+                "    to force view-level hotpatching: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=hotfn (may crash)"
             );
         }
     }
@@ -487,10 +530,10 @@ fn dev_native_hotpatch_dx(
     #[cfg(windows)]
     {
         eprintln!(
-            "Hotpatch(dx): windows note: view-level hotpatch may crash on the first patched view call; see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
+            "Hotpatch(dx): windows note: default view_call strategy is `direct` (safe; view hotpatch disabled); see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
         );
         eprintln!(
-            "  workaround: set FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (disables view-level hotpatching)"
+            "  to force view-level hotpatching: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=hotfn (may crash)"
         );
     }
 

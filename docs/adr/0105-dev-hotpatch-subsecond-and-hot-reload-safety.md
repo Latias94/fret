@@ -262,7 +262,9 @@ Notes:
     - Enable `FRET_HOTPATCH_DIAG_BYTES=1` to capture the mapped module path and prologue bytes in `.fret/hotpatch_bootstrap.log`.
     - The patched view entrypoint is mapped into `lib*-patch-*.dll` and its prologue includes a large stack frame with a ThinLink thunk that jumps into the base EXE (stack-probe style).
   - Workarounds:
-    - Set `FRET_HOTPATCH_VIEW_CALL_DIRECT=1` to bypass `HotFn` for the `ViewFn` call (prevents the crash but disables view-level hotpatching).
+    - On Windows, prefer a **direct** view-call strategy in hotpatch mode (safe; view-level hotpatching disabled).
+    - To force direct explicitly: set `FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct` (preferred) or the legacy `FRET_HOTPATCH_VIEW_CALL_DIRECT=1`.
+    - To experiment with view-level Subsecond calling: set `FRET_HOTPATCH_VIEW_CALL_STRATEGY=hotfn` (may crash).
     - Prefer full rebuild + restart (`r` in `dx serve`) for now when iterating on view code on Windows.
   - Tracking: `docs/todo-tracker.md` ("Hotpatch golden path validation loop").
 

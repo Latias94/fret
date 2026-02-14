@@ -1042,21 +1042,75 @@ fn hotpatch_trace_log(line: &str) {
 }
 
 #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
-fn hotpatch_view_call_direct_enabled() -> bool {
-    let enabled = std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
-    if !enabled {
-        return false;
+fn hotpatch_view_call_use_direct() -> bool {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum Strategy {
+        Auto,
+        HotFn,
+        Direct,
     }
 
-    // This environment variable is a dev-only escape hatch. Make it explicit when it's on because
-    // it disables view-level hotpatching (patched code won't be executed for the view call).
-    static WARNED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
-    WARNED.get_or_init(|| {
-        hotpatch_trace_log("warning: FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (view call bypasses Subsecond HotFn; view-level hotpatching disabled)");
-        eprintln!("warning: FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (view call bypasses Subsecond HotFn; view-level hotpatching disabled)");
-    });
+    fn parse_strategy(raw: &str) -> Option<Strategy> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "auto" => Some(Strategy::Auto),
+            "hotfn" => Some(Strategy::HotFn),
+            "direct" => Some(Strategy::Direct),
+            _ => None,
+        }
+    }
 
-    true
+    // Legacy escape hatch. Prefer `FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct` going forward.
+    let legacy_direct =
+        std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
+
+    let strategy = if legacy_direct {
+        Strategy::Direct
+    } else if let Ok(raw) = std::env::var("FRET_HOTPATCH_VIEW_CALL_STRATEGY") {
+        parse_strategy(&raw).unwrap_or(Strategy::Auto)
+    } else {
+        Strategy::Auto
+    };
+
+    let hotpatch_enabled = std::env::var_os("FRET_HOTPATCH").is_some_and(|v| !v.is_empty())
+        || std::env::var_os("DIOXUS_CLI_ENABLED").is_some_and(|v| !v.is_empty());
+
+    let use_direct = match strategy {
+        Strategy::Direct => true,
+        Strategy::HotFn => false,
+        Strategy::Auto => {
+            // Default posture: on Windows, prefer a safe boundary (direct view call + runner reload)
+            // over view-level Subsecond hotpatching due to a known crash mode (ADR 0105).
+            //
+            // Non-Windows platforms default to `HotFn` for view-level hotpatching.
+            cfg!(windows) && hotpatch_enabled
+        }
+    };
+
+    static WARNED_DIRECT: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    if use_direct {
+        WARNED_DIRECT.get_or_init(|| {
+            let reason = if legacy_direct {
+                "FRET_HOTPATCH_VIEW_CALL_DIRECT=1"
+            } else if std::env::var_os("FRET_HOTPATCH_VIEW_CALL_STRATEGY")
+                .is_some_and(|v| !v.is_empty())
+            {
+                "FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct"
+            } else if cfg!(windows) && hotpatch_enabled {
+                "auto (Windows safety default; see ADR 0105)"
+            } else {
+                "direct"
+            };
+
+            hotpatch_trace_log(&format!(
+                "warning: view call strategy=direct ({reason}) (view-level hotpatching disabled)"
+            ));
+            eprintln!(
+                "warning: view call strategy=direct ({reason}) (view-level hotpatching disabled)"
+            );
+        });
+    }
+
+    use_direct
 }
 
 #[cfg(all(windows, feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
@@ -1818,7 +1872,7 @@ fn ui_app_render<S>(
                     }
                 }
 
-                let use_direct = hotpatch_view_call_direct_enabled();
+                let use_direct = hotpatch_view_call_use_direct();
                 hotpatch_trace_log(&format!(
                     "ui_app_render: view call strategy={}",
                     if use_direct { "direct" } else { "hotfn" }

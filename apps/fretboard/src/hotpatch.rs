@@ -89,9 +89,40 @@ fn hotpatch_status(args: Vec<String>) -> Result<(), String> {
     println!("  workspace: {}", root.display());
     println!("  tail: {tail}");
 
-    let direct = std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
-    if direct {
-        println!("  view_call: direct (FRET_HOTPATCH_VIEW_CALL_DIRECT=1)");
+    let legacy_direct =
+        std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
+    let strategy_env = std::env::var("FRET_HOTPATCH_VIEW_CALL_STRATEGY").ok();
+    if legacy_direct {
+        println!("  view_call_strategy: direct (legacy; FRET_HOTPATCH_VIEW_CALL_DIRECT=1)");
+    } else if let Some(raw) = strategy_env.as_deref() {
+        println!("  view_call_strategy: {raw} (FRET_HOTPATCH_VIEW_CALL_STRATEGY)");
+    } else {
+        println!("  view_call_strategy: auto (default)");
+        if cfg!(windows) {
+            println!(
+                "  windows note: auto defaults to `direct` when running with `--hotpatch` (ADR 0105)"
+            );
+        }
+    }
+
+    // Prefer the runtime's own trace if available (this reflects the effective strategy even when
+    // the env vars are unset in the current shell).
+    if let Some(path) = hotpatch_bootstrap_log_paths(&root)
+        .into_iter()
+        .find(|p| p.is_file())
+    {
+        if let Ok(lines) = read_tail_lines(&path, 200, 256 * 1024) {
+            let needle = "ui_app_render: view call strategy=";
+            let last = lines.iter().rev().find_map(|line| {
+                line.find(needle)
+                    .map(|idx| line[(idx + needle.len())..].trim().to_string())
+            });
+            if let Some(strategy) = last {
+                if strategy == "direct" || strategy == "hotfn" {
+                    println!("  last_view_call: {strategy} (from bootstrap log)");
+                }
+            }
+        }
     }
 
     print_log_tail_group(
