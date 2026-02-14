@@ -1190,6 +1190,72 @@ fn a11y_window_includes_decorations_when_composed() {
 }
 
 #[test]
+fn a11y_window_composed_selection_preserves_direction_for_preedit_cursor() {
+    let handle = CodeEditorHandle::new("hello");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret("hello".len());
+    handle.set_preedit_debug("yo", Some((2, 0)));
+
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "helloyo");
+    assert_eq!(
+        composition,
+        Some(("hello".len() as u32, "helloyo".len() as u32))
+    );
+    assert_eq!(
+        selection,
+        Some(("helloyo".len() as u32, "hello".len() as u32)),
+        "ADR 0071: preserve (anchor, focus) directionality"
+    );
+}
+
+#[test]
+fn a11y_window_composed_mapping_clamps_inside_utf8_scalars() {
+    let handle = CodeEditorHandle::new("a😀b");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "a😀b");
+
+    // Offset 2 lands inside the UTF-8 bytes of 😀 (starts at 1, ends at 5).
+    let (mapped_anchor, mapped_focus) = map_a11y_offsets_to_buffer_composed(&mut st, 1024, 2, 2);
+    assert_eq!((mapped_anchor, mapped_focus), (1, 1));
+}
+
+#[test]
+fn a11y_window_composed_newline_offsets_map_to_line_end() {
+    let handle = CodeEditorHandle::new("ab\ncd");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "ab\ncd");
+
+    // In the composed display window, a newline is inserted between lines. Both the byte offset
+    // at the end of the first line and the offset "inside the inserted newline" should map to
+    // the same buffer boundary (the newline byte index).
+    let newline_byte = "ab".len();
+    let (at_end, _) = map_a11y_offsets_to_buffer_composed(
+        &mut st,
+        1024,
+        u32::try_from(newline_byte).unwrap(),
+        u32::try_from(newline_byte).unwrap(),
+    );
+    let (after_nl, _) = map_a11y_offsets_to_buffer_composed(
+        &mut st,
+        1024,
+        u32::try_from(newline_byte + 1).unwrap(),
+        u32::try_from(newline_byte + 1).unwrap(),
+    );
+    assert_eq!(at_end, newline_byte);
+    assert_eq!(after_nl, newline_byte);
+}
+
+#[test]
 fn a11y_preedit_offset_mapping_honors_window_start() {
     let handle = CodeEditorHandle::new("0123456789");
     let st = handle.state.borrow();
