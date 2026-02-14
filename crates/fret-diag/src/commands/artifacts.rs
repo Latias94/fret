@@ -1,0 +1,173 @@
+use std::path::{Path, PathBuf};
+
+use crate::lint::{LintOptions, lint_bundle_from_path};
+use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
+
+pub(crate) fn cmd_pack(
+    rest: &[String],
+    workspace_root: &Path,
+    out_dir: &Path,
+    pack_out: Option<PathBuf>,
+    pack_include_root_artifacts: bool,
+    pack_include_triage: bool,
+    pack_include_screenshots: bool,
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    if rest.len() > 1 {
+        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+    }
+
+    let bundle_dir = match rest.first() {
+        Some(src) => {
+            let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+            crate::resolve_bundle_root_dir(&src)?
+        }
+        None => crate::read_latest_pointer(out_dir)
+            .or_else(|| crate::find_latest_export_dir(out_dir))
+            .ok_or_else(|| {
+                format!(
+                    "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                    out_dir.display()
+                )
+            })?,
+    };
+
+    let bundle_dir = crate::resolve_bundle_root_dir(&bundle_dir)?;
+    let out = pack_out
+        .map(|p| crate::resolve_path(workspace_root, p))
+        .unwrap_or_else(|| crate::default_pack_out_path(out_dir, &bundle_dir));
+
+    let artifacts_root = if bundle_dir.starts_with(out_dir) {
+        out_dir.to_path_buf()
+    } else {
+        bundle_dir.parent().unwrap_or(out_dir).to_path_buf()
+    };
+
+    crate::pack_bundle_dir_to_zip(
+        &bundle_dir,
+        &out,
+        pack_include_root_artifacts,
+        pack_include_triage,
+        pack_include_screenshots,
+        false,
+        false,
+        &artifacts_root,
+        stats_top,
+        sort_override.unwrap_or(BundleStatsSort::Invalidation),
+        warmup_frames,
+    )?;
+    println!("{}", out.display());
+    Ok(())
+}
+
+pub(crate) fn cmd_triage(
+    rest: &[String],
+    pack_after_run: bool,
+    workspace_root: &Path,
+    triage_out: Option<PathBuf>,
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+    stats_json: bool,
+) -> Result<(), String> {
+    if pack_after_run {
+        return Err("--pack is only supported with `diag run`".to_string());
+    }
+    let Some(src) = rest.first().cloned() else {
+        return Err(
+            "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
+                .to_string(),
+        );
+    };
+    if rest.len() != 1 {
+        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+    }
+
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+
+    let report = bundle_stats_from_path(
+        &bundle_path,
+        stats_top,
+        sort,
+        BundleStatsOptions { warmup_frames },
+    )?;
+    let payload = crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+
+    let out = triage_out
+        .map(|p| crate::resolve_path(workspace_root, p))
+        .unwrap_or_else(|| crate::default_triage_out_path(&bundle_path));
+
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+    if stats_json {
+        println!("{pretty}");
+    } else {
+        println!("{}", out.display());
+    }
+    Ok(())
+}
+
+pub(crate) fn cmd_lint(
+    rest: &[String],
+    pack_after_run: bool,
+    workspace_root: &Path,
+    lint_out: Option<PathBuf>,
+    lint_all_test_ids_bounds: bool,
+    lint_eps_px: f32,
+    warmup_frames: u64,
+    stats_json: bool,
+) -> Result<(), String> {
+    if pack_after_run {
+        return Err("--pack is only supported with `diag run`".to_string());
+    }
+    let Some(src) = rest.first().cloned() else {
+        return Err(
+            "missing bundle path (try: fretboard diag lint ./target/fret-diag/1234/bundle.json)"
+                .to_string(),
+        );
+    };
+    if rest.len() != 1 {
+        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+    }
+
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let bundle_path = crate::resolve_bundle_json_path(&src);
+
+    let report = lint_bundle_from_path(
+        &bundle_path,
+        warmup_frames,
+        LintOptions {
+            all_test_ids_bounds: lint_all_test_ids_bounds,
+            eps_px: lint_eps_px,
+        },
+    )?;
+
+    let out = lint_out
+        .map(|p| crate::resolve_path(workspace_root, p))
+        .unwrap_or_else(|| crate::default_lint_out_path(&bundle_path));
+
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
+    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+    if stats_json {
+        println!("{pretty}");
+    } else {
+        println!("{}", out.display());
+    }
+
+    if report.error_issues > 0 {
+        std::process::exit(1);
+    }
+    Ok(())
+}

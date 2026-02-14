@@ -1932,148 +1932,38 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 resolved_out_dir.display()
             ))
         }
-        "pack" => {
-            if rest.len() > 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let bundle_dir = match rest.first() {
-                Some(src) => {
-                    let src = resolve_path(&workspace_root, PathBuf::from(src));
-                    resolve_bundle_root_dir(&src)?
-                }
-                None => read_latest_pointer(&resolved_out_dir)
-                    .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                    .ok_or_else(|| {
-                        format!(
-                            "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
-                            resolved_out_dir.display()
-                        )
-                    })?,
-            };
-
-            let bundle_dir = resolve_bundle_root_dir(&bundle_dir)?;
-            let out = pack_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
-
-            let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                resolved_out_dir.clone()
-            } else {
-                bundle_dir
-                    .parent()
-                    .unwrap_or(&resolved_out_dir)
-                    .to_path_buf()
-            };
-
-            pack_bundle_dir_to_zip(
-                &bundle_dir,
-                &out,
-                pack_include_root_artifacts,
-                pack_include_triage,
-                pack_include_screenshots,
-                false,
-                false,
-                &artifacts_root,
-                stats_top,
-                sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                warmup_frames,
-            )?;
-            println!("{}", out.display());
-            Ok(())
-        }
-        "triage" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let bundle_path = resolve_bundle_json_path(&src);
-            let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
-
-            let report = bundle_stats_from_path(
-                &bundle_path,
-                stats_top,
-                sort,
-                BundleStatsOptions { warmup_frames },
-            )?;
-            let payload = triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
-
-            let out = triage_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_triage_out_path(&bundle_path));
-
-            if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-            }
-            let pretty =
-                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-            if stats_json {
-                println!("{pretty}");
-            } else {
-                println!("{}", out.display());
-            }
-            Ok(())
-        }
-        "lint" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing bundle path (try: fretboard diag lint ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let bundle_path = resolve_bundle_json_path(&src);
-
-            let report = lint_bundle_from_path(
-                &bundle_path,
-                warmup_frames,
-                LintOptions {
-                    all_test_ids_bounds: lint_all_test_ids_bounds,
-                    eps_px: lint_eps_px,
-                },
-            )?;
-
-            let out = lint_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_lint_out_path(&bundle_path));
-
-            if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-            }
-            let pretty =
-                serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
-            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-            if stats_json {
-                println!("{pretty}");
-            } else {
-                println!("{}", out.display());
-            }
-
-            if report.error_issues > 0 {
-                std::process::exit(1);
-            }
-            Ok(())
-        }
+        "pack" => commands::artifacts::cmd_pack(
+            &rest,
+            &workspace_root,
+            &resolved_out_dir,
+            pack_out,
+            pack_include_root_artifacts,
+            pack_include_triage,
+            pack_include_screenshots,
+            stats_top,
+            sort_override,
+            warmup_frames,
+        ),
+        "triage" => commands::artifacts::cmd_triage(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            triage_out,
+            stats_top,
+            sort_override,
+            warmup_frames,
+            stats_json,
+        ),
+        "lint" => commands::artifacts::cmd_lint(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            lint_out,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            warmup_frames,
+            stats_json,
+        ),
         "script" => {
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
@@ -9870,7 +9760,7 @@ See: `docs/tracy.md`.\n";
     }
 }
 
-fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
+pub(crate) fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
     if path.is_dir() {
         return Ok(path.to_path_buf());
     }
@@ -9880,7 +9770,7 @@ fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
     Ok(parent.to_path_buf())
 }
 
-fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
+pub(crate) fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     let name = bundle_dir
         .file_name()
         .and_then(|s| s.to_str())
@@ -9893,17 +9783,17 @@ fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     }
 }
 
-fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
+pub(crate) fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("triage.json")
 }
 
-fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
+pub(crate) fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("check.lint.json")
 }
 
-fn pack_bundle_dir_to_zip(
+pub(crate) fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,
     out_path: &Path,
     include_root_artifacts: bool,
@@ -10045,7 +9935,7 @@ fn pack_bundle_dir_to_zip(
     Ok(())
 }
 
-fn triage_json_from_stats(
+pub(crate) fn triage_json_from_stats(
     bundle_path: &Path,
     report: &BundleStatsReport,
     sort: BundleStatsSort,
@@ -10829,7 +10719,7 @@ fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
     );
 }
 
-fn resolve_bundle_json_path(path: &Path) -> PathBuf {
+pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     if !path.is_dir() {
         return path.to_path_buf();
     }
