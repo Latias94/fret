@@ -86,8 +86,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## P2 — Missing primitives (only if needed by multiple recipes)
 
-- [ ] AR-PRIM-001 Add a small “stagger/sequence” helper surface in `fret-ui-headless` + `fret-ui-kit` if multiple recipes need it.
+- [x] AR-PRIM-001 Add a small “stagger/sequence” helper surface in `fret-ui-headless` + `fret-ui-kit` if multiple recipes need it.
   - Goal:
     - Avoid re-implementing per-recipe ad-hoc stagger math.
   - Gate:
     - one deterministic script demonstrating staggered toast stack or list insert.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/motion/stagger.rs`
+    - `ecosystem/fret-ui-kit/src/headless/mod.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` (stagger demo)
+    - `tools/diag-scripts/ui-gallery-motion-presets-stagger-fixed-frame-delta.json`
