@@ -25,15 +25,16 @@ Exit criteria:
   - fold/inlay epochs (decorations participate in display rows).
 - Large documents do not require `to_string()` of the whole buffer per frame.
 
-Status (code exists; tests pending):
+Status (code + initial regression gates exist):
 
 - Row text cache + LRU exists in the editor paint path:
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range`)
-- Remaining: add a regression gate that fails if paint materializes the whole buffer per frame.
+- Regression gate exists to prevent whole-buffer string materialization in paint:
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`paint_source_does_not_materialize_whole_buffer_string`)
 
 Evidence checklist:
 
-- Add a unit test or micro benchmark-like test that:
+- Add (optional) a unit test or micro benchmark-like test that:
   - edits a large buffer,
   - repaints a small viewport,
   - and asserts bounded allocations / bounded row rebuild.

@@ -4,11 +4,11 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 
 ## M0 — Document boundary + invariants
 
-- [ ] Identify and document the current call chain from editor paint → renderer `TextSystem`.
-- [ ] List invariants to preserve:
-  - [ ] byte/utf16 mapping rules,
-  - [ ] cursor/selection geometry alignment,
-  - [ ] wrap stability under resize jitter.
+- [x] Identify and document the current call chain from editor paint → renderer `TextSystem`.
+- [x] List invariants to preserve:
+  - [x] byte/utf16 mapping rules,
+  - [x] cursor/selection geometry alignment,
+  - [x] wrap stability under resize jitter.
 
 ## M1 — Row text caching
 
@@ -18,7 +18,8 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - [x] display row index,
   - [x] wrap cols / width bucket (best-effort),
   - [x] fold/inlay epochs (to keep decorated display rows stable).
-- [ ] Add a regression test that guards against whole-buffer `to_string()` on paint.
+- [x] Add a regression test that guards against whole-buffer `to_string()` on paint.
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`paint_source_does_not_materialize_whole_buffer_string`)
 
 ## M2 — Syntax spans per row
 
