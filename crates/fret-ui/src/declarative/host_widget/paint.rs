@@ -23,45 +23,6 @@ fn compute_text_vertical_offset(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use fret_core::{FontId, FontWeight, Px, TextStyle};
-
-    #[test]
-    fn text_vertical_offset_centers_em_box_in_fixed_line_box() {
-        let style = TextStyle {
-            font: FontId::default(),
-            size: Px(12.0),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(Px(16.0)),
-            letter_spacing_em: None,
-        };
-
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(16.0)), Px(16.0), Px(12.0));
-        assert_eq!(offset, Px(2.0));
-    }
-
-    #[test]
-    fn text_vertical_offset_clamps_negative_half_leading_to_zero() {
-        let style = TextStyle {
-            font: FontId::default(),
-            size: Px(14.0),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(Px(12.0)),
-            letter_spacing_em: None,
-        };
-
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(12.0)), Px(12.0), Px(14.0));
-        assert_eq!(offset, Px(0.0));
-    }
-}
-
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
@@ -1821,5 +1782,44 @@ impl ElementHostWidget {
                 });
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_core::{FontId, FontWeight, Px, TextStyle};
+
+    #[test]
+    fn text_vertical_offset_centers_em_box_in_fixed_line_box() {
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(12.0),
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(Px(16.0)),
+            letter_spacing_em: None,
+        };
+
+        let offset =
+            compute_text_vertical_offset(Some(&style), Length::Px(Px(16.0)), Px(16.0), Px(12.0));
+        assert_eq!(offset, Px(2.0));
+    }
+
+    #[test]
+    fn text_vertical_offset_clamps_negative_half_leading_to_zero() {
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(14.0),
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(Px(12.0)),
+            letter_spacing_em: None,
+        };
+
+        let offset =
+            compute_text_vertical_offset(Some(&style), Length::Px(Px(12.0)), Px(12.0), Px(14.0));
+        assert_eq!(offset, Px(0.0));
     }
 }
