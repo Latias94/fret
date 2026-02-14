@@ -20,7 +20,6 @@ use slotmap::{Key, SecondaryMap, SlotMap};
 use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
-use std::slice;
 use std::sync::Arc;
 
 mod bounds_tree;
@@ -276,6 +275,15 @@ impl<H: UiHost> Node<H> {
     }
 }
 
+/// # Safety
+///
+/// The caller must guarantee that every element in `slice` is initialized.
+#[inline]
+unsafe fn assume_init_slice_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
+    // SAFETY: `MaybeUninit<T>` has the same layout as `T`. The caller guarantees initialization.
+    unsafe { &*(slice as *const [MaybeUninit<T>] as *const [T]) }
+}
+
 #[derive(Debug)]
 pub(super) struct SmallNodeList<const N: usize> {
     len: usize,
@@ -312,7 +320,8 @@ impl<const N: usize> SmallNodeList<N> {
         if !self.spill.is_empty() {
             return self.spill.as_slice();
         }
-        unsafe { slice::from_raw_parts(self.inline.as_ptr() as *const NodeId, self.len) }
+        // SAFETY: when `spill` is empty, indices `0..len` are initialized via `set()`.
+        unsafe { assume_init_slice_ref(&self.inline[..self.len]) }
     }
 }
 
@@ -343,11 +352,9 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
 
         if self.spill.is_empty() {
             self.spill.reserve(self.len.saturating_add(1));
-            for i in 0..self.len {
-                // SAFETY: indices 0..len have been written.
-                let v = unsafe { self.inline[i].assume_init() };
-                self.spill.push(v);
-            }
+            // SAFETY: indices `0..len` are initialized while `spill` is empty.
+            let inline = unsafe { assume_init_slice_ref(&self.inline[..self.len]) };
+            self.spill.extend_from_slice(inline);
             self.len = 0;
         }
 
@@ -358,7 +365,8 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
         if !self.spill.is_empty() {
             return self.spill.as_slice();
         }
-        unsafe { slice::from_raw_parts(self.inline.as_ptr() as *const T, self.len) }
+        // SAFETY: indices `0..len` are initialized until we spill.
+        unsafe { assume_init_slice_ref(&self.inline[..self.len]) }
     }
 }
 
