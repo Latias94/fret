@@ -2,7 +2,7 @@
 
 Status: Active (workstream tracker)
 
-Current state (as of 2026-02-13):
+Current state (as of 2026-02-14):
 
 - WS artifact materialization + `--pack` parity landed (tooling materializes `bundle.dumped` to a local `bundle.json` directory).
 - Artifact size stats are reported in `script.result.json` for locally materialized bundles (bytes + bounded counts).
@@ -20,6 +20,8 @@ Current state (as of 2026-02-13):
 - Missing required diagnostics capabilities now fail fast with a stable `reason_code` and structured evidence (avoid timeouts).
 - WS exit request landed (`app.exit.request`) and tooling supports `--exit-after-run` (`--touch-exit-after-run` remains as an alias).
 - Default deterministic exit in `--launch` mode landed and `--keep-open` preserves long-running/manual workflows.
+- `FRET_DIAG_CONFIG_PATH` landed: tooling writes a per-run `diag.config.json` when launching and the runtime consumes it (compat-first config consolidation).
+- Per-run `manifest.json` v2 layout is now explicit and typed (files index + chunk layout), reducing churn risk and clarifying the v2 artifact surface.
 
 ## Context
 
@@ -164,6 +166,7 @@ Additionally, support two export modes for `capture_bundle`:
 Do not remove env vars, but add a single canonical config file entry point:
 
 - `FRET_DIAG_CONFIG_PATH` (tooling sets this when launching).
+  - Default: `<out_dir>/diag.config.json` (tooling writes this when launching).
 - The config file contains all paths/caps and feature toggles.
 - Env vars remain as overrides (for manual workflows), but tooling defaults should come from the config file.
 

@@ -407,6 +407,8 @@ Core:
 
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
+- `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
+  - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
     (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
@@ -439,6 +441,7 @@ Screenshot capture:
 
 - Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
 - `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
+  - Alternatively, set `screenshots_enabled=true` in the `FRET_DIAG_CONFIG_PATH` config file.
 - `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
 - `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
 - `FRET_DIAG_SCREENSHOT_RESULT_PATH=...`: screenshot completion log JSON path (default `<dir>/screenshots.result.json`).

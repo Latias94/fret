@@ -85,7 +85,7 @@ Evidence pointers:
 - [x] Tooling writes a minimal per-run `manifest.json` (index + size stats) alongside v1 artifacts.
 - [x] Define an initial v2 chunk layout for bundle payloads: `<run_id>/chunks/bundle_json/*` with `manifest.json` recording chunk list + sizes + hashes.
 - [x] Validate chunk integrity (per-chunk + total hash) and fail fast with a stable `reason_code` when corruption is detected.
-- [ ] Define `manifest.json` + chunk directory layout (v2 artifact format; beyond bundle payload).
+- [x] Define `manifest.json` + chunk directory layout (v2 artifact format; beyond bundle payload).
 - [x] Keep `bundle.json` as a compatibility artifact (can be materialized on-demand from v2 chunks).
 - [x] Update pack/triage/lint to accept both v1 and v2 artifact layouts.
 - [ ] Introduce chunking policy for WS:
@@ -94,6 +94,6 @@ Evidence pointers:
 
 ## Phase 6: Config consolidation (compat-first)
 
-- [ ] Add `FRET_DIAG_CONFIG_PATH` support and a canonical config file.
-- [ ] Make tooling generate and pass the config file when launching.
+- [x] Add `FRET_DIAG_CONFIG_PATH` support and a canonical config file.
+- [x] Make tooling generate and pass the config file when launching.
 - [ ] Deprecate ambiguous env vars by introducing explicit replacements (keep old names supported).
