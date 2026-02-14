@@ -151,6 +151,7 @@ pub fn shadcn_sidebar_toggle_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> 
         cx,
         &[
             THEME_DURATION_SHADCN_MOTION_SIDEBAR_TOGGLE,
+            THEME_DURATION_MOTION_LAYOUT_EXPAND,
             THEME_DURATION_SHADCN_MOTION_200,
             THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE,
         ],
@@ -195,6 +196,7 @@ pub fn shadcn_sidebar_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> Cubi
     let theme = Theme::global(&*cx.app);
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION_SIDEBAR)
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_LAYOUT_EXPAND))
         .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
         .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
         // shadcn/ui v4 Sidebar uses `ease-linear` for width/position transitions.
