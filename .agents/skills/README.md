@@ -55,13 +55,8 @@ python3 .agents/skills/fret_skills.py validate --strict
 
 Optional (upstream schema validation):
 
-If you want to validate against the upstream Agent Skills reference schema as well:
-
-- Prefer a pinned local reference under `repo-ref/agentskills/` (if present in your checkout).
-- Otherwise, search GitHub for `agentskills/agentskills` and run their validator against a single skill folder.
-- For an example of a skills repo that also ships a plugin bundle + installer, see `repo-ref/makepad-skills/`.
-
-Note: this repo does not currently include `repo-ref/agentskills/` by default.
+If you want to validate against the upstream Agent Skills reference schema as well, search GitHub for
+`agentskills/agentskills` and run their validator against a single skill folder.
 
 ## Skill conventions (Fret)
 
