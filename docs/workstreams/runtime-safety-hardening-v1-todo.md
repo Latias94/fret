@@ -169,3 +169,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
     - `cargo nextest run -p fret-ui`: PASS
     - `python3 tools/check_layering.py`: PASS
+
+- [x] RSH-ui-008 Remove redundant text metrics `expect(...)` in declarative host-widget layout (defensive fallback for cache corruption).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout.rs` (remove `expect("cached metrics")`; re-prepare text when metrics missing)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui declarative::host_widget`: PASS

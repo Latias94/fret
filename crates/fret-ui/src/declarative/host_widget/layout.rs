@@ -874,7 +874,30 @@ impl ElementHostWidget {
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
-                    self.text_cache.metrics.expect("cached metrics")
+                    self.text_cache.metrics.unwrap_or_else(|| {
+                        debug_assert!(
+                            false,
+                            "text cache metrics missing while reuse conditions are satisfied"
+                        );
+                        let input = fret_core::TextInput::plain(props.text.clone(), style.clone());
+                        if let Some(blob) = self.text_cache.blob.take() {
+                            cx.services.text().release(blob);
+                        }
+                        let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                        self.text_cache.blob = Some(blob);
+                        self.text_cache.metrics = Some(metrics);
+                        self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.last_text = Some(props.text.clone());
+                        self.text_cache.last_rich = None;
+                        self.text_cache.last_style = Some(style);
+                        self.text_cache.last_wrap = Some(props.wrap);
+                        self.text_cache.last_overflow = Some(props.overflow);
+                        self.text_cache.last_width = Some(measure_width);
+                        self.text_cache.last_measure_width = Some(measure_width);
+                        self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        metrics
+                    })
                 } else {
                     let input = fret_core::TextInput::plain(props.text.clone(), style.clone());
                     if let Some(blob) = self.text_cache.blob.take() {
@@ -957,7 +980,34 @@ impl ElementHostWidget {
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
-                    self.text_cache.metrics.expect("cached metrics")
+                    self.text_cache.metrics.unwrap_or_else(|| {
+                        debug_assert!(
+                            false,
+                            "text cache metrics missing while reuse conditions are satisfied"
+                        );
+                        let input = fret_core::TextInput::attributed(
+                            props.rich.text.clone(),
+                            style.clone(),
+                            props.rich.spans.clone(),
+                        );
+                        if let Some(blob) = self.text_cache.blob.take() {
+                            cx.services.text().release(blob);
+                        }
+                        let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                        self.text_cache.blob = Some(blob);
+                        self.text_cache.metrics = Some(metrics);
+                        self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.last_text = None;
+                        self.text_cache.last_rich = Some(props.rich.clone());
+                        self.text_cache.last_style = Some(style);
+                        self.text_cache.last_wrap = Some(props.wrap);
+                        self.text_cache.last_overflow = Some(props.overflow);
+                        self.text_cache.last_width = Some(measure_width);
+                        self.text_cache.last_measure_width = Some(measure_width);
+                        self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        metrics
+                    })
                 } else {
                     let input = fret_core::TextInput::attributed(
                         props.rich.text.clone(),
@@ -1044,7 +1094,34 @@ impl ElementHostWidget {
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
-                    self.text_cache.metrics.expect("cached metrics")
+                    self.text_cache.metrics.unwrap_or_else(|| {
+                        debug_assert!(
+                            false,
+                            "text cache metrics missing while reuse conditions are satisfied"
+                        );
+                        let input = fret_core::TextInput::attributed(
+                            props.rich.text.clone(),
+                            style.clone(),
+                            props.rich.spans.clone(),
+                        );
+                        if let Some(blob) = self.text_cache.blob.take() {
+                            cx.services.text().release(blob);
+                        }
+                        let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                        self.text_cache.blob = Some(blob);
+                        self.text_cache.metrics = Some(metrics);
+                        self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.last_text = None;
+                        self.text_cache.last_rich = Some(props.rich.clone());
+                        self.text_cache.last_style = Some(style);
+                        self.text_cache.last_wrap = Some(props.wrap);
+                        self.text_cache.last_overflow = Some(props.overflow);
+                        self.text_cache.last_width = Some(measure_width);
+                        self.text_cache.last_measure_width = Some(measure_width);
+                        self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        metrics
+                    })
                 } else {
                     let input = fret_core::TextInput::attributed(
                         props.rich.text.clone(),
