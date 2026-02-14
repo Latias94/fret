@@ -569,6 +569,7 @@ impl Renderer {
             debug_pixelate_scale: 0,
             debug_blur_radius: 0,
             debug_blur_scissor: None,
+            render_plan_compiler_flavor: super::RenderPlanCompilerFlavor::Legacy,
             intermediate_budget_bytes: 256 * 1024 * 1024,
             intermediate_perf_enabled: false,
             intermediate_perf: IntermediatePerfStats::default(),

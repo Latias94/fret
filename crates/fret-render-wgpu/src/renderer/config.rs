@@ -76,6 +76,29 @@ impl Renderer {
             intermediate_pool_evictions: self.perf.intermediate_pool_evictions,
             intermediate_pool_free_bytes: self.perf.intermediate_pool_free_bytes,
             intermediate_pool_free_textures: self.perf.intermediate_pool_free_textures,
+            render_plan_estimated_peak_intermediate_bytes: self
+                .perf
+                .render_plan_estimated_peak_intermediate_bytes,
+            render_plan_degradations: self.perf.render_plan_degradations,
+            render_plan_degradations_budget_zero: self.perf.render_plan_degradations_budget_zero,
+            render_plan_degradations_budget_insufficient: self
+                .perf
+                .render_plan_degradations_budget_insufficient,
+            render_plan_degradations_target_exhausted: self
+                .perf
+                .render_plan_degradations_target_exhausted,
+            render_plan_degradations_backdrop_noop: self
+                .perf
+                .render_plan_degradations_backdrop_noop,
+            render_plan_degradations_filter_content_disabled: self
+                .perf
+                .render_plan_degradations_filter_content_disabled,
+            render_plan_degradations_clip_path_disabled: self
+                .perf
+                .render_plan_degradations_clip_path_disabled,
+            render_plan_degradations_composite_group_blend_to_over: self
+                .perf
+                .render_plan_degradations_composite_group_blend_to_over,
             draw_calls: self.perf.draw_calls,
             quad_draw_calls: self.perf.quad_draw_calls,
             viewport_draw_calls: self.perf.viewport_draw_calls,
@@ -299,6 +322,14 @@ impl Renderer {
         });
     }
 
+    pub fn render_plan_compiler_flavor(&self) -> RenderPlanCompilerFlavor {
+        self.render_plan_compiler_flavor
+    }
+
+    pub fn set_render_plan_compiler_flavor(&mut self, flavor: RenderPlanCompilerFlavor) {
+        self.render_plan_compiler_flavor = flavor;
+    }
+
     pub fn intermediate_budget_bytes(&self) -> u64 {
         self.intermediate_budget_bytes
     }
@@ -308,6 +339,24 @@ impl Renderer {
         self.intermediate_budget_bytes = bytes.max(1024);
         self.intermediate_pool
             .enforce_budget(self.intermediate_budget_bytes);
+    }
+
+    pub fn material_paint_budget_per_frame(&self) -> u64 {
+        self.material_paint_budget_per_frame
+    }
+
+    pub fn set_material_paint_budget_per_frame(&mut self, budget: u64) {
+        // Allow 0 to force deterministic solid-color fallbacks in conformance tests or low-end modes.
+        self.material_paint_budget_per_frame = budget;
+    }
+
+    pub fn material_distinct_budget_per_frame(&self) -> usize {
+        self.material_distinct_budget_per_frame
+    }
+
+    pub fn set_material_distinct_budget_per_frame(&mut self, budget: usize) {
+        // Allow 0 to force deterministic solid-color fallbacks in conformance tests or low-end modes.
+        self.material_distinct_budget_per_frame = budget;
     }
 
     pub fn set_intermediate_perf_enabled(&mut self, enabled: bool) {
