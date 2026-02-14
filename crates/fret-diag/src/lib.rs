@@ -7156,6 +7156,15 @@ See: `docs/tracy.md`.\n";
                             )?;
                             report_warmup_frames = 0;
                         }
+                        if trace_chrome {
+                            if let Some(dir) = bundle_path.parent() {
+                                let trace_path = dir.join("trace.chrome.json");
+                                let _ = crate::trace::write_chrome_trace_from_bundle_path(
+                                    &bundle_path,
+                                    &trace_path,
+                                );
+                            }
+                        }
                         if wants_perf_hints {
                             let triage = triage_json_from_stats(
                                 &bundle_path,
@@ -7887,6 +7896,15 @@ See: `docs/tracy.md`.\n";
                             BundleStatsOptions::default(),
                         )?;
                         report_warmup_frames = 0;
+                    }
+                    if trace_chrome {
+                        if let Some(dir) = bundle_path.parent() {
+                            let trace_path = dir.join("trace.chrome.json");
+                            let _ = crate::trace::write_chrome_trace_from_bundle_path(
+                                &bundle_path,
+                                &trace_path,
+                            );
+                        }
                     }
 
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
