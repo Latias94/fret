@@ -1,8 +1,8 @@
-# Crate audit (L0) — `fret`
+# Crate audit (L0) — `fret-framework`
 
 ## Crate
 
-- Name: `fret`
+- Name: `fret-framework`
 - Path: `crates/fret-framework`
 - Owners / adjacent crates: all kernel crates + launch/platform/runner crates (as optional deps)
 - Current “layer”: user-facing facade (manual/advanced assembly)
@@ -45,7 +45,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-framework/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret`
+- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-framework`
 
 ## 4) Module ownership map (internal seams)
 
@@ -81,4 +81,4 @@ Evidence anchors:
 
 ## 8) Open questions / decisions needed
 
-- Should `fret` keep the current “namespaced modules only” posture, or should it also expose a small set of top-level re-exports for the most common types (risk: API drift)?
+- Should `fret-framework` keep the current “namespaced modules only” posture, or should it also expose a small set of top-level re-exports for the most common types (risk: API drift)?
