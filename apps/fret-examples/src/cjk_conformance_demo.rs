@@ -98,6 +98,7 @@ impl CjkConformanceDriver {
                         ..Default::default()
                     }),
                     color: Some(theme.color_token("muted-foreground")),
+                    align: fret_core::TextAlign::Start,
                     wrap: TextWrap::Word,
                     overflow: fret_core::TextOverflow::Clip,
                 })
@@ -125,6 +126,7 @@ impl CjkConformanceDriver {
                 text: Arc::from("Fallback smoke (default style):"),
                 style: Some(label_style.clone()),
                 color: Some(theme.color_token("muted-foreground")),
+                align: fret_core::TextAlign::Start,
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -133,6 +135,7 @@ impl CjkConformanceDriver {
                 text: Arc::from(FALLBACK_SMOKE),
                 style: Some(default_style),
                 color: Some(theme.color_token("foreground")),
+                align: fret_core::TextAlign::Start,
                 wrap: TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -141,6 +144,7 @@ impl CjkConformanceDriver {
                 text: Arc::from("Fallback smoke (forced CJK family):"),
                 style: Some(label_style.clone()),
                 color: Some(theme.color_token("muted-foreground")),
+                align: fret_core::TextAlign::Start,
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -149,6 +153,7 @@ impl CjkConformanceDriver {
                 text: Arc::from(FALLBACK_SMOKE),
                 style: Some(sample_style.clone()),
                 color: Some(theme.color_token("foreground")),
+                align: fret_core::TextAlign::Start,
                 wrap: TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
             }));
@@ -159,6 +164,7 @@ impl CjkConformanceDriver {
                     text: Arc::from(case.label),
                     style: Some(label_style.clone()),
                     color: Some(theme.color_token("muted-foreground")),
+                    align: fret_core::TextAlign::Start,
                     wrap: TextWrap::None,
                     overflow: fret_core::TextOverflow::Clip,
                 }));
@@ -168,6 +174,7 @@ impl CjkConformanceDriver {
                     text: Arc::from(case.text),
                     style: Some(sample_style.clone()),
                     color: Some(theme.color_token("foreground")),
+                    align: fret_core::TextAlign::Start,
                     wrap: TextWrap::Word,
                     overflow: fret_core::TextOverflow::Clip,
                 }));

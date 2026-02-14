@@ -152,6 +152,7 @@ impl EmojiConformanceDriver {
                         text: msg,
                         style: None,
                         color: Some(theme.color_token("muted-foreground")),
+                        align: fret_core::TextAlign::Start,
                         wrap: TextWrap::Word,
                         overflow: fret_core::TextOverflow::Clip,
                     })
@@ -200,6 +201,7 @@ impl EmojiConformanceDriver {
                         text: Arc::from(case.label),
                         style: Some(label_style.clone()),
                         color: Some(theme.color_token("muted-foreground")),
+                        align: fret_core::TextAlign::Start,
                         wrap: TextWrap::None,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
@@ -209,6 +211,7 @@ impl EmojiConformanceDriver {
                         text: Arc::from(case.text),
                         style: Some(emoji_style.clone()),
                         color: Some(theme.color_token("foreground")),
+                        align: fret_core::TextAlign::Start,
                         wrap: TextWrap::Word,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
@@ -222,6 +225,7 @@ impl EmojiConformanceDriver {
                         text: Arc::from("Emoji-only line forced to the selected family:"),
                         style: Some(label_style.clone()),
                         color: Some(theme.color_token("muted-foreground")),
+                        align: fret_core::TextAlign::Start,
                         wrap: TextWrap::None,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
@@ -233,6 +237,7 @@ impl EmojiConformanceDriver {
                             ..emoji_style
                         }),
                         color: Some(theme.color_token("foreground")),
+                        align: fret_core::TextAlign::Start,
                         wrap: TextWrap::Word,
                         overflow: fret_core::TextOverflow::Clip,
                     }));
