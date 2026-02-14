@@ -127,8 +127,8 @@ use stats::{
     check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
     check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
     check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
-    check_report_for_hover_layout_invalidations, clear_script_result_files,
-    report_result_and_exit, run_script_and_wait, wait_for_failure_dump_bundle,
+    check_report_for_hover_layout_invalidations, clear_script_result_files, report_result_and_exit,
+    run_script_and_wait, wait_for_failure_dump_bundle,
 };
 use tooling_failures::{
     mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
@@ -10063,51 +10063,41 @@ See: `docs/tracy.md`.\n";
                 Err(report.to_human_error())
             }
         }
-        "inspect" => {
-            commands::inspect::cmd_inspect(
-                &rest,
-                &resolved_inspect_path,
-                &resolved_inspect_trigger_path,
-                inspect_consume_clicks,
-            )
-        }
-        "pick-arm" => {
-            commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path)
-        }
-        "pick" => {
-            commands::pick::cmd_pick(
-                &rest,
-                &resolved_pick_trigger_path,
-                &resolved_pick_result_path,
-                &resolved_pick_result_trigger_path,
-                timeout_ms,
-                poll_ms,
-            )
-        }
-        "pick-script" => {
-            commands::pick::cmd_pick_script(
-                &rest,
-                &resolved_pick_trigger_path,
-                &resolved_pick_result_path,
-                &resolved_pick_result_trigger_path,
-                &resolved_pick_script_out,
-                timeout_ms,
-                poll_ms,
-            )
-        }
-        "pick-apply" => {
-            commands::pick::cmd_pick_apply(
-                &rest,
-                &workspace_root,
-                &resolved_pick_trigger_path,
-                &resolved_pick_result_path,
-                &resolved_pick_result_trigger_path,
-                pick_apply_pointer.as_deref(),
-                pick_apply_out,
-                timeout_ms,
-                poll_ms,
-            )
-        }
+        "inspect" => commands::inspect::cmd_inspect(
+            &rest,
+            &resolved_inspect_path,
+            &resolved_inspect_trigger_path,
+            inspect_consume_clicks,
+        ),
+        "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
+        "pick" => commands::pick::cmd_pick(
+            &rest,
+            &resolved_pick_trigger_path,
+            &resolved_pick_result_path,
+            &resolved_pick_result_trigger_path,
+            timeout_ms,
+            poll_ms,
+        ),
+        "pick-script" => commands::pick::cmd_pick_script(
+            &rest,
+            &resolved_pick_trigger_path,
+            &resolved_pick_result_path,
+            &resolved_pick_result_trigger_path,
+            &resolved_pick_script_out,
+            timeout_ms,
+            poll_ms,
+        ),
+        "pick-apply" => commands::pick::cmd_pick_apply(
+            &rest,
+            &workspace_root,
+            &resolved_pick_trigger_path,
+            &resolved_pick_result_path,
+            &resolved_pick_result_trigger_path,
+            pick_apply_pointer.as_deref(),
+            pick_apply_out,
+            timeout_ms,
+            poll_ms,
+        ),
         other => Err(format!("unknown diag subcommand: {other}")),
     }
 }
@@ -15114,15 +15104,15 @@ mod tests {
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
         check_bundle_for_wheel_scroll_hit_changes_json,
         check_bundle_for_windowed_rows_offset_changes_min,
-    check_bundle_for_windowed_rows_visible_start_changes_repainted_json,
+        check_bundle_for_windowed_rows_visible_start_changes_repainted_json,
         scan_semantics_changed_repainted_json,
-};
-use util::json_pointer_set;
+    };
     use fret_diag_protocol::{DevtoolsSessionDescriptorV1, DevtoolsSessionListV1};
     use serde_json::json;
     use std::path::Path;
     use std::time::{Duration, Instant};
     use std::time::{SystemTime, UNIX_EPOCH};
+    use util::json_pointer_set;
 
     #[test]
     fn resolve_bundle_json_path_prefers_run_id_dir_from_script_result() {
