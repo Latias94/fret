@@ -9188,14 +9188,12 @@ See: `docs/tracy.md`.\n";
                 Err(report.to_human_error())
             }
         }
-        "inspect" => {
-            commands::inspect::cmd_inspect(
-                &rest,
-                &resolved_inspect_path,
-                &resolved_inspect_trigger_path,
-                inspect_consume_clicks,
-            )
-        }
+        "inspect" => commands::inspect::cmd_inspect(
+            &rest,
+            &resolved_inspect_path,
+            &resolved_inspect_trigger_path,
+            inspect_consume_clicks,
+        ),
         "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
         "pick" => commands::pick::cmd_pick(
             &rest,
