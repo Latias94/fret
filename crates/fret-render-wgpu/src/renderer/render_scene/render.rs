@@ -253,7 +253,7 @@ impl Renderer {
         } else {
             DebugPostprocess::None
         };
-        let plan = RenderPlan::compile_for_scene(
+        let plan = RenderPlan::compile_for_scene_with_flavor(
             &encoding,
             viewport_size,
             format,
@@ -261,6 +261,7 @@ impl Renderer {
             path_samples,
             postprocess,
             self.intermediate_budget_bytes,
+            self.render_plan_compiler_flavor,
         );
         if perf_enabled {
             use super::super::render_plan::{

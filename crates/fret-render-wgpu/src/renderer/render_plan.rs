@@ -1185,6 +1185,38 @@ impl RenderPlan {
             degradations,
         )
     }
+
+    pub(super) fn compile_for_scene_with_flavor(
+        encoding: &SceneEncoding,
+        viewport_size: (u32, u32),
+        format: wgpu::TextureFormat,
+        clear: wgpu::Color,
+        path_samples: u32,
+        postprocess: DebugPostprocess,
+        intermediate_budget_bytes: u64,
+        flavor: super::RenderPlanCompilerFlavor,
+    ) -> Self {
+        match flavor {
+            super::RenderPlanCompilerFlavor::Legacy => Self::compile_for_scene(
+                encoding,
+                viewport_size,
+                format,
+                clear,
+                path_samples,
+                postprocess,
+                intermediate_budget_bytes,
+            ),
+            super::RenderPlanCompilerFlavor::VNext => Self::compile_for_scene(
+                encoding,
+                viewport_size,
+                format,
+                clear,
+                path_samples,
+                postprocess,
+                intermediate_budget_bytes,
+            ),
+        }
+    }
 }
 
 fn estimate_plan_peak_intermediate_bytes(

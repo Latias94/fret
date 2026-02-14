@@ -40,7 +40,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (plumbs plan stats into perf),
     `crates/fret-render-wgpu/src/renderer/config.rs` (perf snapshot output),
     `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (JSON dump: estimated peak bytes + degradations list).
-- [ ] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
+- [x] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/mod.rs` (`RenderPlanCompilerFlavor`),
+    `crates/fret-render-wgpu/src/renderer/config.rs` (`set_render_plan_compiler_flavor`),
+    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (compiles RenderPlan via selected flavor),
+    `crates/fret-render-wgpu/tests/render_plan_compiler_compare_conformance.rs`.
 
 ## M2 — Isolated opacity (saveLayerAlpha)
 
