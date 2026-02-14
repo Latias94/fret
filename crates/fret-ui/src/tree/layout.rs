@@ -590,6 +590,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_collect_roots_time += roots_started.elapsed();
         }
 
+        let roots_len = roots.len();
+        let trace_layout = tracing::enabled!(tracing::Level::TRACE);
+
         let mut viewport_cursor: usize = 0;
 
         let scroll_started = self.debug_enabled.then(Instant::now);
@@ -719,14 +722,32 @@ impl<H: UiHost> UiTree<H> {
 
         let started_phase = profile_layout_all.then(Instant::now);
         let request_build_started = self.debug_enabled.then(Instant::now);
-        self.request_build_window_roots_if_final(
-            app,
-            services,
-            &roots,
-            bounds,
-            scale_factor,
-            pass_kind,
-        );
+        if trace_layout {
+            let span = tracing::trace_span!(
+                "fret.ui.layout.request_build_roots",
+                window = ?self.window,
+                pass_kind = ?pass_kind,
+                roots_len,
+            );
+            let _guard = span.enter();
+            self.request_build_window_roots_if_final(
+                app,
+                services,
+                &roots,
+                bounds,
+                scale_factor,
+                pass_kind,
+            );
+        } else {
+            self.request_build_window_roots_if_final(
+                app,
+                services,
+                &roots,
+                bounds,
+                scale_factor,
+                pass_kind,
+            );
+        }
         if let Some(started) = started_phase {
             t_request_build_roots = Some(started.elapsed());
         }
@@ -736,17 +757,51 @@ impl<H: UiHost> UiTree<H> {
 
         let started_phase = profile_layout_all.then(Instant::now);
         let roots_started = self.debug_enabled.then(Instant::now);
-        for root in roots {
-            let _ =
-                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
-
-            self.flush_viewport_roots_after_root(
-                app,
-                services,
-                scale_factor,
-                pass_kind,
-                &mut viewport_cursor,
+        if trace_layout {
+            let span = tracing::trace_span!(
+                "fret.ui.layout.roots",
+                window = ?self.window,
+                pass_kind = ?pass_kind,
+                roots_len,
             );
+            let _guard = span.enter();
+            for root in roots {
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    root,
+                    bounds,
+                    scale_factor,
+                    pass_kind,
+                );
+
+                self.flush_viewport_roots_after_root(
+                    app,
+                    services,
+                    scale_factor,
+                    pass_kind,
+                    &mut viewport_cursor,
+                );
+            }
+        } else {
+            for root in roots {
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    root,
+                    bounds,
+                    scale_factor,
+                    pass_kind,
+                );
+
+                self.flush_viewport_roots_after_root(
+                    app,
+                    services,
+                    scale_factor,
+                    pass_kind,
+                    &mut viewport_cursor,
+                );
+            }
         }
         if let Some(roots_started) = roots_started {
             self.debug_stats.layout_roots_time += roots_started.elapsed();
