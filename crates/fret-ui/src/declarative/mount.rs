@@ -1986,6 +1986,7 @@ fn declarative_instance_change_mask(
                 || a.shadow != b.shadow
                 || a.border_color != b.border_color
                 || a.border_paint != b.border_paint
+                || a.border_dash != b.border_dash
                 || a.focus_ring != b.focus_ring
                 || a.focus_border_color != b.focus_border_color
                 || a.focus_within != b.focus_within

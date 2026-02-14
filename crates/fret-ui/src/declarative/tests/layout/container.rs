@@ -471,3 +471,80 @@ fn container_paints_shadow_before_background() {
     assert!(shadow_bounds.size.width.0 > container_bounds.size.width.0);
     assert!(shadow_bounds.size.height.0 > container_bounds.size.height.0);
 }
+
+#[test]
+fn container_emits_stroke_rrect_when_border_dash_is_set() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "container-border-dash-emits-stroke-rrect",
+        |cx| {
+            vec![cx.container(
+                crate::element::ContainerProps {
+                    background: Some(Color {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 1.0,
+                    }),
+                    border: fret_core::Edges::all(Px(2.0)),
+                    border_color: Some(Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    }),
+                    border_dash: Some(fret_core::scene::DashPatternV1::new(
+                        Px(4.0),
+                        Px(4.0),
+                        Px(0.0),
+                    )),
+                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                    ..Default::default()
+                },
+                |_cx| vec![],
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    assert_eq!(scene.ops_len(), 2);
+
+    match scene.ops()[0] {
+        SceneOp::Quad { border, .. } => {
+            assert_eq!(border, fret_core::Edges::all(Px(0.0)));
+        }
+        _ => panic!("expected fill quad first"),
+    }
+
+    match &scene.ops()[1] {
+        SceneOp::StrokeRRect { stroke, style, .. } => {
+            assert_eq!(*stroke, fret_core::Edges::all(Px(2.0)));
+            assert_eq!(
+                style.dash,
+                Some(fret_core::scene::DashPatternV1::new(
+                    Px(4.0),
+                    Px(4.0),
+                    Px(0.0)
+                ))
+            );
+        }
+        _ => panic!("expected stroke rrect second"),
+    }
+}

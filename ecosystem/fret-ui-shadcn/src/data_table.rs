@@ -6,6 +6,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
     TableRowMeasureMode, TableViewOutput, TableViewProps, table_virtualized,
@@ -641,6 +642,7 @@ impl DataTable {
                         let style = header_style.clone();
                         let header_fg = header_fg;
                         let sort_fg = sort_fg;
+                        let can_sort = col.enable_sorting;
                         let state_for_header = state_for_header.clone();
                         return vec![cx.flex(
                             FlexProps {
@@ -672,7 +674,7 @@ impl DataTable {
                                     pieces.push(text.into_element(cx));
                                 }
 
-                                if let Some(desc) = sort_state {
+                                if can_sort {
                                     let sorting = cx
                                         .app
                                         .models()
@@ -687,25 +689,28 @@ impl DataTable {
                                     } else {
                                         None
                                     };
-                                    let indicator: Arc<str> = match order {
-                                        Some(order) => Arc::<str>::from(format!(
-                                            "{}{order}",
-                                            if desc { "▼" } else { "▲" }
-                                        )),
-                                        None => Arc::from(if desc { "▼" } else { "▲" }),
+
+                                    let icon_id = match sort_state {
+                                        Some(true) => "lucide.arrow-down",
+                                        Some(false) => "lucide.arrow-up",
+                                        None => "lucide.arrow-up-down",
                                     };
-                                    let mut text = ui::label(cx, indicator)
-                                        .text_size_px(style.size)
-                                        .font_weight(style.weight)
-                                        .text_color(ColorRef::Color(sort_fg))
-                                        .nowrap();
-                                    if let Some(line_height) = style.line_height {
-                                        text = text.line_height_px(line_height);
+                                    pieces.push(decl_icon::icon_with(
+                                        cx,
+                                        fret_icons::IconId::new_static(icon_id),
+                                        Some(Px(16.0)),
+                                        Some(ColorRef::Color(sort_fg)),
+                                    ));
+
+                                    if let Some(order) = order {
+                                        pieces.push(
+                                            ui::label(cx, Arc::<str>::from(order.to_string()))
+                                                .text_xs()
+                                                .text_color(ColorRef::Color(sort_fg))
+                                                .nowrap()
+                                                .into_element(cx),
+                                        );
                                     }
-                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                        text = text.letter_spacing_em(letter_spacing_em);
-                                    }
-                                    pieces.push(text.into_element(cx));
                                 }
 
                                 pieces
@@ -718,6 +723,7 @@ impl DataTable {
                     let style = header_style.clone();
                     let header_fg = header_fg;
                     let sort_fg = sort_fg;
+                    let can_sort = col.enable_sorting;
                     let state_for_header = state_for_header.clone();
                     let state_for_column_actions = state_for_column_actions_header.clone();
                     let col_id: Arc<str> = Arc::from(col.id.as_ref());
@@ -753,7 +759,7 @@ impl DataTable {
                                 pieces.push(text.into_element(cx));
                             }
 
-                            if let Some(desc) = sort_state {
+                            if can_sort {
                                 let sorting = cx
                                     .app
                                     .models()
@@ -768,25 +774,28 @@ impl DataTable {
                                 } else {
                                     None
                                 };
-                                let indicator: Arc<str> = match order {
-                                    Some(order) => Arc::<str>::from(format!(
-                                        "{}{order}",
-                                        if desc { "▼" } else { "▲" }
-                                    )),
-                                    None => Arc::from(if desc { "▼" } else { "▲" }),
+
+                                let icon_id = match sort_state {
+                                    Some(true) => "lucide.arrow-down",
+                                    Some(false) => "lucide.arrow-up",
+                                    None => "lucide.arrow-up-down",
                                 };
-                                let mut text = ui::label(cx, indicator)
-                                    .text_size_px(style.size)
-                                    .font_weight(style.weight)
-                                    .text_color(ColorRef::Color(sort_fg))
-                                    .nowrap();
-                                if let Some(line_height) = style.line_height {
-                                    text = text.line_height_px(line_height);
+                                pieces.push(decl_icon::icon_with(
+                                    cx,
+                                    fret_icons::IconId::new_static(icon_id),
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(sort_fg)),
+                                ));
+
+                                if let Some(order) = order {
+                                    pieces.push(
+                                        ui::label(cx, Arc::<str>::from(order.to_string()))
+                                            .text_xs()
+                                            .text_color(ColorRef::Color(sort_fg))
+                                            .nowrap()
+                                            .into_element(cx),
+                                    );
                                 }
-                                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                    text = text.letter_spacing_em(letter_spacing_em);
-                                }
-                                pieces.push(text.into_element(cx));
                             }
 
                             pieces.push(cx.spacer(fret_ui::element::SpacerProps::default()));

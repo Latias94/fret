@@ -1,6 +1,7 @@
 use std::{
     any::{Any, TypeId},
     collections::{HashMap, HashSet},
+    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
 };
 
 use fret_core::{AppWindowId, Point, PointerId};
@@ -177,55 +178,44 @@ impl GlobalsHost for TestHost {
         #[derive(Debug)]
         struct GlobalLeaseMarker;
 
-        struct Guard<T: Any> {
-            type_id: TypeId,
-            value: Option<T>,
-            globals: *mut HashMap<TypeId, Box<dyn Any>>,
-        }
-
-        impl<T: Any> Drop for Guard<T> {
-            fn drop(&mut self) {
-                let Some(value) = self.value.take() else {
-                    return;
-                };
-                unsafe {
-                    (*self.globals).insert(self.type_id, Box::new(value));
-                }
-            }
-        }
-
         let type_id = TypeId::of::<T>();
         let existing = self
             .globals
             .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
 
-        let existing = match existing {
-            None => None,
+        let mut value = match existing {
+            None => init(),
             Some(v) => {
                 if v.is::<GlobalLeaseMarker>() {
                     panic!("global already leased: {type_id:?}");
                 }
-                Some(*v.downcast::<T>().expect("global type id must match"))
+                *v.downcast::<T>().expect("global type id must match")
             }
         };
 
-        let mut guard = Guard::<T> {
-            type_id,
-            value: Some(existing.unwrap_or_else(init)),
-            globals: &mut self.globals as *mut _,
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| f(&mut value, self)))
+        } else {
+            Ok(f(&mut value, self))
         };
 
-        let result = {
-            let value = guard.value.as_mut().expect("guard value exists");
-            f(value, self)
+        let replaced = self.globals.insert(type_id, Box::new(value));
+        let Some(replaced) = replaced else {
+            panic!("global lease marker was removed unexpectedly: type_id={type_id:?}");
         };
+        if !replaced.is::<GlobalLeaseMarker>() {
+            panic!("global lease marker was replaced unexpectedly: type_id={type_id:?}");
+        }
 
-        drop(guard);
         self.global_revisions
             .entry(type_id)
             .and_modify(|rev| *rev = rev.saturating_add(1))
             .or_insert(1);
-        result
+
+        match result {
+            Ok(value) => value,
+            Err(panic) => resume_unwind(panic),
+        }
     }
 
     fn with_global_mut_untracked<T: Any, R>(
@@ -236,51 +226,39 @@ impl GlobalsHost for TestHost {
         #[derive(Debug)]
         struct GlobalLeaseMarker;
 
-        struct Guard<T: Any> {
-            type_id: TypeId,
-            value: Option<T>,
-            globals: *mut HashMap<TypeId, Box<dyn Any>>,
-        }
-
-        impl<T: Any> Drop for Guard<T> {
-            fn drop(&mut self) {
-                let Some(value) = self.value.take() else {
-                    return;
-                };
-                unsafe {
-                    (*self.globals).insert(self.type_id, Box::new(value));
-                }
-            }
-        }
-
         let type_id = TypeId::of::<T>();
         let existing = self
             .globals
             .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
 
-        let existing = match existing {
-            None => None,
+        let mut value = match existing {
+            None => init(),
             Some(v) => {
                 if v.is::<GlobalLeaseMarker>() {
                     panic!("global already leased: {type_id:?}");
                 }
-                Some(*v.downcast::<T>().expect("global type id must match"))
+                *v.downcast::<T>().expect("global type id must match")
             }
         };
 
-        let mut guard = Guard::<T> {
-            type_id,
-            value: Some(existing.unwrap_or_else(init)),
-            globals: &mut self.globals as *mut _,
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| f(&mut value, self)))
+        } else {
+            Ok(f(&mut value, self))
         };
 
-        let result = {
-            let value = guard.value.as_mut().expect("guard value exists");
-            f(value, self)
+        let replaced = self.globals.insert(type_id, Box::new(value));
+        let Some(replaced) = replaced else {
+            panic!("global lease marker was removed unexpectedly: type_id={type_id:?}");
         };
+        if !replaced.is::<GlobalLeaseMarker>() {
+            panic!("global lease marker was replaced unexpectedly: type_id={type_id:?}");
+        }
 
-        drop(guard);
-        result
+        match result {
+            Ok(value) => value,
+            Err(panic) => resume_unwind(panic),
+        }
     }
 }
 
