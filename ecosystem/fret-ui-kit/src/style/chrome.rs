@@ -2,6 +2,7 @@ use fret_core::Px;
 
 use super::{ColorFallback, ColorRef, MetricRef, Radius, SignedMetricRef, Space, ThemeTokenRead};
 use crate::Corners4;
+use fret_core::scene::DashPatternV1;
 
 #[derive(Debug, Clone, Default)]
 pub struct PaddingRefinement {
@@ -110,6 +111,7 @@ pub struct ChromeRefinement {
     pub border_width: Option<MetricRef>,
     pub background: Option<ColorRef>,
     pub border_color: Option<ColorRef>,
+    pub border_dash: Option<DashPatternV1>,
     pub text_color: Option<ColorRef>,
 }
 
@@ -174,6 +176,9 @@ impl ChromeRefinement {
         }
         if other.border_color.is_some() {
             self.border_color = other.border_color;
+        }
+        if other.border_dash.is_some() {
+            self.border_dash = other.border_dash;
         }
         if other.text_color.is_some() {
             self.text_color = other.text_color;
@@ -240,6 +245,11 @@ impl ChromeRefinement {
 
     pub fn border_width(mut self, width: impl Into<MetricRef>) -> Self {
         self.border_width = Some(width.into());
+        self
+    }
+
+    pub fn border_dash(mut self, dash: DashPatternV1) -> Self {
+        self.border_dash = Some(dash);
         self
     }
 

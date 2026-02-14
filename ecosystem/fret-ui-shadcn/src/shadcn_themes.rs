@@ -86,6 +86,38 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
     cfg.easings
         .entry("easing.shadcn.motion.toast".to_string())
         .or_insert(shadcn_ease);
+
+    // Canonical cross-ecosystem semantic motion keys (preferred for long-term authoring).
+    //
+    // shadcn recipes still prefer `*.shadcn.motion.*` keys first, but the UI kit supports these as
+    // a fallback so other ecosystems can share a common vocabulary without importing shadcn
+    // namespaces.
+    cfg.durations_ms
+        .entry("duration.motion.presence.enter".to_string())
+        .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.motion.presence.exit".to_string())
+        .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.motion.collapsible.toggle".to_string())
+        .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.motion.layout.expand".to_string())
+        .or_insert(200);
+
+    cfg.durations_ms
+        .entry("duration.motion.spring.drag_release_settle".to_string())
+        .or_insert(240);
+    cfg.numbers
+        .entry("number.motion.spring.drag_release_settle.bounce".to_string())
+        .or_insert(0.25);
+
+    cfg.easings
+        .entry("easing.motion.standard".to_string())
+        .or_insert(shadcn_ease);
+    cfg.easings
+        .entry("easing.motion.emphasized".to_string())
+        .or_insert(shadcn_ease);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -710,5 +742,51 @@ mod tests {
             theme.metric_by_key("component.navigation_menu.viewport.side_offset"),
             Some(fret_core::Px(6.0))
         );
+    }
+
+    #[test]
+    fn new_york_v4_seeds_canonical_motion_tokens() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        assert_eq!(
+            cfg.durations_ms
+                .get("duration.motion.presence.enter")
+                .copied(),
+            Some(200)
+        );
+        assert_eq!(
+            cfg.durations_ms
+                .get("duration.motion.presence.exit")
+                .copied(),
+            Some(200)
+        );
+        assert_eq!(
+            cfg.durations_ms
+                .get("duration.motion.collapsible.toggle")
+                .copied(),
+            Some(200)
+        );
+        assert_eq!(
+            cfg.durations_ms
+                .get("duration.motion.layout.expand")
+                .copied(),
+            Some(200)
+        );
+
+        assert_eq!(
+            cfg.durations_ms
+                .get("duration.motion.spring.drag_release_settle")
+                .copied(),
+            Some(240)
+        );
+        assert_eq!(
+            cfg.numbers
+                .get("number.motion.spring.drag_release_settle.bounce")
+                .copied(),
+            Some(0.25)
+        );
+
+        assert!(cfg.easings.contains_key("easing.motion.standard"));
+        assert!(cfg.easings.contains_key("easing.motion.emphasized"));
     }
 }

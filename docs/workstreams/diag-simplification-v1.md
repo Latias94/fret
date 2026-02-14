@@ -2,7 +2,7 @@
 
 Status: Active (workstream tracker)
 
-Current state (as of 2026-02-13):
+Current state (as of 2026-02-14):
 
 - WS artifact materialization + `--pack` parity landed (tooling materializes `bundle.dumped` to a local `bundle.json` directory).
 - Artifact size stats are reported in `script.result.json` for locally materialized bundles (bytes + bounded counts).
@@ -10,13 +10,18 @@ Current state (as of 2026-02-13):
 - Tooling failures now produce a deterministic `script.result.json` with stable `reason_code` (e.g. `tooling.*`, `timeout.tooling.*`) instead of degrading to "no artifact + timeout".
 - Tooling-side "failure artifact" helpers are now isolated into focused modules (`crates/fret-diag/src/tooling_failures.rs`, `crates/fret-diag/src/run_artifacts.rs`) to reduce monolith churn risk.
 - Tooling now writes a minimal per-run `manifest.json` next to `script.result.json`/`bundle.json` (v2 direction; still v1-compatible).
+- Tooling can now maintain a v2-ish chunked bundle payload under `<run_id>/chunks/bundle_json/*` and records chunk list + sizes + hashes in `manifest.json` (and can materialize `bundle.json` on-demand for compatibility).
+- Tooling validates chunked bundle integrity (per-chunk + total hash) and marks `script.result.json` with a stable `reason_code` when corruption is detected (`tooling.artifact.integrity.failed`).
 - DevTools WS bundle dumps can now be delivered as chunked `bundle.dumped` messages to avoid oversized single payloads; tooling reassembles and materializes locally.
+- DevTools WS request/response commands now echo `request_id` (e.g. `bundle.dump`, `screenshot.request`, `semantics.node.get`), allowing tooling to safely correlate overlapping requests.
 - `diag repro` setup/driver failures now write `repro.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `diag repeat` setup/driver failures now write `repeat.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `script.result.json` now includes a bounded per-run event log (step start/end + bundle dump events) with clipped counts reported.
 - Missing required diagnostics capabilities now fail fast with a stable `reason_code` and structured evidence (avoid timeouts).
 - WS exit request landed (`app.exit.request`) and tooling supports `--exit-after-run` (`--touch-exit-after-run` remains as an alias).
 - Default deterministic exit in `--launch` mode landed and `--keep-open` preserves long-running/manual workflows.
+- `FRET_DIAG_CONFIG_PATH` landed: tooling writes a per-run `diag.config.json` when launching and the runtime consumes it (compat-first config consolidation).
+- Per-run `manifest.json` v2 layout is now explicit and typed (files index + chunk layout), reducing churn risk and clarifying the v2 artifact surface.
 
 ## Context
 
@@ -161,6 +166,7 @@ Additionally, support two export modes for `capture_bundle`:
 Do not remove env vars, but add a single canonical config file entry point:
 
 - `FRET_DIAG_CONFIG_PATH` (tooling sets this when launching).
+  - Default: `<out_dir>/diag.config.json` (tooling writes this when launching).
 - The config file contains all paths/caps and feature toggles.
 - Env vars remain as overrides (for manual workflows), but tooling defaults should come from the config file.
 

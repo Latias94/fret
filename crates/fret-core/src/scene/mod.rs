@@ -12,6 +12,7 @@ mod image_object_fit;
 mod mask;
 mod paint;
 mod replay;
+mod stroke;
 mod validate;
 
 pub use composite::{BlendMode, CompositeGroupDesc};
@@ -22,6 +23,7 @@ pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient,
     TileMode,
 };
+pub use stroke::{DashPatternV1, StrokeStyleV1};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -406,6 +408,15 @@ pub enum SceneOp {
         border: Edges,
         border_paint: Paint,
         corner_radii: Corners,
+    },
+
+    StrokeRRect {
+        order: DrawOrder,
+        rect: Rect,
+        stroke: Edges,
+        stroke_paint: Paint,
+        corner_radii: Corners,
+        style: StrokeStyleV1,
     },
 
     Image {

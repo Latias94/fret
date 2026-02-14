@@ -5,21 +5,24 @@ use fret_core::{
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{
-    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1,
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
+    DevtoolsScreenshotRequestV1, DevtoolsScreenshotResultV1, DiagTransportMessageV1,
+    UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
-    UiArtifactStatsV1, UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1,
-    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
-    UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiInspectConfigV1,
-    UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
-    UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
-    UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
-    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
-    UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1,
-    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
-    UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1,
-    UiTextInputSnapshotV1, UiWebImeTraceEntryV1, UiWindowTargetV1,
+    UiArtifactStatsV1, UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1,
+    UiDiagnosticsConfigFileV1, UiEdgesV1, UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1,
+    UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1,
+    UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1,
+    UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1,
+    UiOverlayPlacementTraceEntryV1, UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1,
+    UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1,
+    UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
+    UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
+    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiWindowTargetV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -34,6 +37,40 @@ use std::sync::{Arc, Once};
 use crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
 
 static DIAG_CFG_LOG_ONCE: Once = Once::new();
+
+fn load_ui_diagnostics_config_file(path: &Path) -> Result<UiDiagnosticsConfigFileV1, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    serde_json::from_slice(&bytes).map_err(|e| e.to_string())
+}
+
+fn env_flag_override(name: &str) -> Option<bool> {
+    let v = std::env::var_os(name)?;
+    let v = v.to_string_lossy().trim().to_ascii_lowercase();
+    if v.is_empty() {
+        return Some(true);
+    }
+    Some(!matches!(v.as_str(), "0" | "false" | "no" | "off"))
+}
+
+fn env_usize_override(name: &str) -> Option<usize> {
+    let Ok(v) = std::env::var(name) else {
+        return None;
+    };
+    let v = v.trim();
+    if v.is_empty() {
+        return None;
+    }
+    v.parse::<usize>().ok()
+}
+
+fn resolve_config_path(out_dir: &Path, raw: &str) -> Option<PathBuf> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    let p = PathBuf::from(raw);
+    Some(if p.is_absolute() { p } else { out_dir.join(p) })
+}
 
 fn ios_home_dir() -> Option<PathBuf> {
     if !cfg!(target_os = "ios") {
@@ -174,15 +211,44 @@ impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let (diag_arg_enabled, diag_arg_dir) = diag_args_override();
 
+        let config_path = std::env::var_os("FRET_DIAG_CONFIG_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from);
+        let config_file = config_path.as_ref().and_then(|p| match load_ui_diagnostics_config_file(p)
+        {
+            Ok(v) => Some(v),
+            Err(err) => {
+                tracing::warn!(
+                    target: "fret",
+                    config_path = ?p,
+                    error = %err,
+                    "failed to load ui diagnostics config file"
+                );
+                None
+            }
+        });
+        let config_enabled = config_file
+            .as_ref()
+            .map(|c| c.enabled.unwrap_or(true))
+            .unwrap_or(false);
+        let config_out_dir = config_file
+            .as_ref()
+            .and_then(|c| c.out_dir.as_deref())
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .map(resolve_ios_diag_out_dir);
+
         let raw_diag = std::env::var_os("FRET_DIAG")
             .filter(|v| !v.is_empty())
             .or_else(|| diag_arg_enabled.then(|| OsString::from("1")));
         let raw_out_dir = std::env::var_os("FRET_DIAG_DIR")
             .filter(|v| !v.is_empty())
-            .or_else(|| diag_arg_dir.as_ref().map(|p| p.clone().into_os_string()));
+            .or_else(|| diag_arg_dir.as_ref().map(|p| p.clone().into_os_string()))
+            .or_else(|| config_out_dir.as_ref().map(|p| p.clone().into_os_string()));
 
         let out_dir_env = raw_out_dir.as_ref();
-        let diag_enabled = raw_diag.is_some() || out_dir_env.is_some();
+        let diag_enabled = raw_diag.is_some() || out_dir_env.is_some() || config_enabled;
 
         let (devtools_ws_url, devtools_token) = {
             #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
@@ -217,22 +283,47 @@ impl Default for UiDiagnosticsConfig {
         let trigger_path = std::env::var_os("FRET_DIAG_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("trigger.touch"));
         let ready_path = std::env::var_os("FRET_DIAG_READY_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.ready_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("ready.touch"));
         let exit_path = std::env::var_os("FRET_DIAG_EXIT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.exit_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("exit.touch"));
 
-        let script_keepalive = enabled && env_flag_default_true("FRET_DIAG_SCRIPT_KEEPALIVE");
+        let script_keepalive = enabled
+            && env_flag_override("FRET_DIAG_SCRIPT_KEEPALIVE")
+                .or_else(|| config_file.as_ref().and_then(|c| c.script_keepalive))
+                .unwrap_or(true);
         if enabled
             || raw_diag.as_ref().is_some_and(|v| !v.is_empty())
             || raw_out_dir.as_ref().is_some_and(|v| !v.is_empty())
             || diag_arg_enabled
             || diag_arg_dir.is_some()
+            || config_file.is_some()
         {
             let diag_val = raw_diag.as_ref().map(|v| v.to_string_lossy().to_string());
             let dir_val = raw_out_dir
@@ -246,6 +337,7 @@ impl Default for UiDiagnosticsConfig {
                     diag_dir = dir_val.as_deref().unwrap_or(""),
                     diag_arg_enabled,
                     diag_arg_dir = ?diag_arg_dir,
+                    config_path = ?config_path,
                     out_dir = ?out_dir,
                     trigger_path = ?trigger_path,
                     "ui diagnostics config",
@@ -253,101 +345,224 @@ impl Default for UiDiagnosticsConfig {
             });
         }
 
-        let max_events = std::env::var("FRET_DIAG_MAX_EVENTS")
-            .ok()
-            .and_then(|v| v.parse().ok())
+        let max_events = env_usize_override("FRET_DIAG_MAX_EVENTS")
+            .or_else(|| config_file.as_ref().and_then(|c| c.max_events).map(|v| v as usize))
             .unwrap_or(2000);
-        let max_snapshots = std::env::var("FRET_DIAG_MAX_SNAPSHOTS")
-            .ok()
-            .and_then(|v| v.parse().ok())
+        let max_snapshots = env_usize_override("FRET_DIAG_MAX_SNAPSHOTS")
+            .or_else(|| config_file.as_ref().and_then(|c| c.max_snapshots).map(|v| v as usize))
             .unwrap_or(300);
-        let script_dump_max_snapshots = std::env::var("FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS")
-            .ok()
-            .and_then(|v| v.parse().ok())
+        let script_dump_max_snapshots = env_usize_override("FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.script_dump_max_snapshots)
+                    .map(|v| v as usize)
+            })
             .unwrap_or(30);
         let script_dump_max_snapshots = if max_snapshots == 0 {
             0
         } else {
             script_dump_max_snapshots.clamp(1, max_snapshots)
         };
-        let capture_semantics = env_flag_default_true("FRET_DIAG_SEMANTICS");
-        let max_semantics_nodes = std::env::var("FRET_DIAG_MAX_SEMANTICS_NODES")
-            .ok()
-            .and_then(|v| v.parse().ok())
+        let capture_semantics = env_flag_override("FRET_DIAG_SEMANTICS")
+            .or_else(|| config_file.as_ref().and_then(|c| c.capture_semantics))
+            .unwrap_or(true);
+        let max_semantics_nodes = env_usize_override("FRET_DIAG_MAX_SEMANTICS_NODES")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_semantics_nodes)
+                    .map(|v| v as usize)
+            })
             .unwrap_or(50_000)
             .clamp(0, 500_000);
-        let semantics_test_ids_only = env_flag_default_false("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY");
-        let screenshots_enabled = env_flag_default_false("FRET_DIAG_SCREENSHOTS");
+        let semantics_test_ids_only = env_flag_override("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY")
+            .or_else(|| config_file.as_ref().and_then(|c| c.semantics_test_ids_only))
+            .unwrap_or(false);
+        let screenshots_enabled = env_flag_override("FRET_DIAG_GPU_SCREENSHOTS")
+            .or_else(|| env_flag_override("FRET_DIAG_SCREENSHOTS"))
+            .or_else(|| config_file.as_ref().and_then(|c| c.screenshots_enabled))
+            .unwrap_or(false);
         let screenshot_request_path = std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.screenshot_request_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("screenshots.request.json"));
         let screenshot_trigger_path = std::env::var_os("FRET_DIAG_SCREENSHOT_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.screenshot_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("screenshots.touch"));
         let screenshot_result_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.screenshot_result_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("screenshots.result.json"));
         let screenshot_result_trigger_path =
             std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH")
                 .filter(|v| !v.is_empty())
                 .map(PathBuf::from)
-                .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
+                .or_else(|| {
+                    config_file
+                        .as_ref()
+                        .and_then(|c| c.paths.as_ref())
+                        .and_then(|p| p.screenshot_result_trigger_path.as_deref())
+                        .and_then(|s| resolve_config_path(&out_dir, s))
+                })
+            .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
         let script_path = std::env::var_os("FRET_DIAG_SCRIPT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("script.json"));
         let script_trigger_path = std::env::var_os("FRET_DIAG_SCRIPT_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("script.touch"));
         let script_result_path = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_result_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("script.result.json"));
         let script_result_trigger_path = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_result_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("script.result.touch"));
-        let script_auto_dump = env_flag_default_true("FRET_DIAG_SCRIPT_AUTO_DUMP");
+        let script_auto_dump = env_flag_override("FRET_DIAG_SCRIPT_AUTO_DUMP")
+            .or_else(|| config_file.as_ref().and_then(|c| c.script_auto_dump))
+            .unwrap_or(true);
         let pick_trigger_path = std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.pick_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("pick.touch"));
         let pick_result_path = std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.pick_result_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("pick.result.json"));
         let pick_result_trigger_path = std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.pick_result_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("pick.result.touch"));
-        let pick_auto_dump = env_flag_default_true("FRET_DIAG_PICK_AUTO_DUMP");
+        let pick_auto_dump = env_flag_override("FRET_DIAG_PICK_AUTO_DUMP")
+            .or_else(|| config_file.as_ref().and_then(|c| c.pick_auto_dump))
+            .unwrap_or(true);
         let inspect_path = std::env::var_os("FRET_DIAG_INSPECT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.inspect_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("inspect.json"));
         let inspect_trigger_path = std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.inspect_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
+            })
             .unwrap_or_else(|| out_dir.join("inspect.touch"));
-        let redact_text = env_flag_default_true("FRET_DIAG_REDACT_TEXT");
-        let max_debug_string_bytes = std::env::var("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(4096);
-        let max_gating_trace_entries = std::env::var("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse().ok())
+        let redact_text = env_flag_override("FRET_DIAG_REDACT_TEXT")
+            .or_else(|| config_file.as_ref().and_then(|c| c.redact_text))
+            .unwrap_or(true);
+        let max_debug_string_bytes = env_usize_override("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_debug_string_bytes)
+                    .map(|v| v as usize)
+            })
+            .unwrap_or(4096)
+            .clamp(0, 256 * 1024);
+        let max_gating_trace_entries = env_usize_override("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_gating_trace_entries)
+                    .map(|v| v as usize)
+            })
             .unwrap_or(200)
             .clamp(0, 2000);
-        let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
+        let screenshot_on_dump = env_flag_override("FRET_DIAG_BUNDLE_SCREENSHOT")
+            .or_else(|| env_flag_override("FRET_DIAG_SCREENSHOT"))
+            .or_else(|| config_file.as_ref().and_then(|c| c.screenshot_on_dump))
+            .unwrap_or(false);
         let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()
             .map(|d| d.as_millis())
             .and_then(|ms| u64::try_from(ms).ok())
-            .filter(|v| *v > 0);
+            .filter(|v| *v > 0)
+            .or_else(|| config_file.as_ref().and_then(|c| c.frame_clock_fixed_delta_ms));
 
         Self {
             enabled,
@@ -385,7 +600,10 @@ impl Default for UiDiagnosticsConfig {
             frame_clock_fixed_delta_ms,
             devtools_ws_url,
             devtools_token,
-            devtools_embed_bundle: cfg!(target_arch = "wasm32"),
+            devtools_embed_bundle: config_file
+                .as_ref()
+                .and_then(|c| c.devtools_embed_bundle)
+                .unwrap_or(cfg!(target_arch = "wasm32")),
         }
     }
 }
@@ -435,6 +653,10 @@ pub struct UiDiagnosticsService {
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     #[cfg(feature = "diagnostics-ws")]
+    pending_devtools_screenshot: Option<PendingDevtoolsScreenshotRequest>,
+    #[cfg(feature = "diagnostics-ws")]
+    pending_devtools_semantics_node_get: Option<PendingDevtoolsSemanticsNodeGetRequest>,
+    #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
 }
 
@@ -444,6 +666,29 @@ struct PendingForceDumpRequest {
     dump_max_snapshots: Option<usize>,
     script_run_id: Option<u64>,
     script_step_index: Option<u32>,
+    request_id: Option<u64>,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+struct PendingDevtoolsScreenshotRequest {
+    request_id: Option<u64>,
+    request_id_str: String,
+    label: Option<String>,
+    timeout_frames: u32,
+    window_ffi: u64,
+    bundle_dir_name: Option<String>,
+    remaining_frames: u32,
+    last_result_trigger_stamp: Option<u64>,
+    started: bool,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+struct PendingDevtoolsSemanticsNodeGetRequest {
+    request_id: Option<u64>,
+    window_ffi: u64,
+    node_id: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -973,6 +1218,12 @@ impl UiDiagnosticsService {
         self.ensure_ready_file();
         self.poll_script_trigger();
 
+        #[cfg(feature = "diagnostics-ws")]
+        let devtools_request_redraw =
+            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+        #[cfg(not(feature = "diagnostics-ws"))]
+        let devtools_request_redraw = false;
+
         if !self.active_scripts.contains_key(&window)
             && let Some(script) = self.pending_script.clone()
         {
@@ -1037,13 +1288,16 @@ impl UiDiagnosticsService {
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
             return UiScriptFrameOutput {
-                request_redraw: self.cfg.script_keepalive,
+                request_redraw: self.cfg.script_keepalive || devtools_request_redraw,
                 ..UiScriptFrameOutput::default()
             };
         };
 
         if active.next_step >= active.steps.len() {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: devtools_request_redraw,
+                ..UiScriptFrameOutput::default()
+            };
         }
 
         if active.last_reported_step != Some(active.next_step) {
@@ -1079,7 +1333,10 @@ impl UiDiagnosticsService {
         let step_index = active.next_step;
         let step = active.steps.get(step_index).cloned();
         let Some(step) = step else {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: devtools_request_redraw,
+                ..UiScriptFrameOutput::default()
+            };
         };
 
         // Keep evidence scoped to the active step so failures remain focused.
@@ -1122,6 +1379,7 @@ impl UiDiagnosticsService {
             .retain(|e| e.step_index == step_index_u32);
 
         let mut output = UiScriptFrameOutput::default();
+        output.request_redraw |= devtools_request_redraw;
         let mut force_dump_label: Option<String> = None;
         let mut force_dump_max_snapshots: Option<usize> = None;
         let mut stop_script = false;
@@ -4312,10 +4570,22 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let Some(container_node) = container_node {
-                            let pos = center_of_rect_clamped_to_rect(
-                                container_node.bounds,
-                                window_bounds,
-                            );
+                            let pos = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        container_node,
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                });
                             if let Some(ui) = ui {
                                 let note =
                                     format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
@@ -4950,9 +5220,32 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
-                            let start =
-                                center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
-                            let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
+                            let start = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        from_node,
+                                        from_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(from_node.bounds, window_bounds)
+                                });
+                            let end = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        to_node,
+                                        to_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
+                                });
                             if let Some(ui) = ui {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
@@ -5358,6 +5651,7 @@ impl UiDiagnosticsService {
                     force_dump_max_snapshots,
                     Some(active.run_id),
                     Some(step_index as u32),
+                    None,
                 );
             }
 
@@ -5400,6 +5694,7 @@ impl UiDiagnosticsService {
                     force_dump_max_snapshots,
                     Some(active.run_id),
                     Some(step_index as u32),
+                    None,
                 );
             }
 
@@ -6276,8 +6571,11 @@ impl UiDiagnosticsService {
         self.poll_ws_inbox();
 
         if let Some(pending) = self.pending_force_dump.take() {
-            let dumped =
-                self.dump_bundle_with_options(Some(&pending.label), pending.dump_max_snapshots);
+            let dumped = self.dump_bundle_with_options(
+                Some(&pending.label),
+                pending.dump_max_snapshots,
+                pending.request_id,
+            );
             if let (Some(script_run_id), Some(dir)) = (pending.script_run_id, dumped.as_ref()) {
                 let bundle_dir = display_path(&self.cfg.out_dir, dir);
                 for active in self
@@ -6336,12 +6634,14 @@ impl UiDiagnosticsService {
         dump_max_snapshots: Option<usize>,
         script_run_id: Option<u64>,
         script_step_index: Option<u32>,
+        request_id: Option<u64>,
     ) {
         self.pending_force_dump = Some(PendingForceDumpRequest {
             label: sanitize_label(&label),
             dump_max_snapshots,
             script_run_id,
             script_step_index,
+            request_id,
         });
     }
 
@@ -6378,7 +6678,12 @@ impl UiDiagnosticsService {
     fn poll_ws_inbox(&mut self) {}
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+    fn ws_send_with_request_id(
+        &mut self,
+        ty: impl Into<String>,
+        request_id: Option<u64>,
+        payload: serde_json::Value,
+    ) {
         if !self.ws_is_configured() {
             return;
         }
@@ -6390,10 +6695,233 @@ impl UiDiagnosticsService {
                 schema_version: 1,
                 r#type: ty.into(),
                 session_id: None,
-                request_id: None,
+                request_id,
                 payload,
             },
         );
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+        self.ws_send_with_request_id(ty, None, payload);
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_requests_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        let mut request_redraw = false;
+        request_redraw |= self.drive_devtools_ws_semantics_node_get(window, ui);
+        request_redraw |= self.drive_devtools_ws_screenshot_request(app, window, scale_factor);
+        request_redraw
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_semantics_node_get(
+        &mut self,
+        window: AppWindowId,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        let Some(pending) = self.pending_devtools_semantics_node_get.clone() else {
+            return false;
+        };
+        if pending.window_ffi != window.data().as_ffi() {
+            return false;
+        }
+        let pending = self
+            .pending_devtools_semantics_node_get
+            .take()
+            .unwrap_or(pending);
+
+        let raw = ui.and_then(|ui| ui.semantics_snapshot());
+        let ack = build_semantics_node_get_ack_v1(
+            raw,
+            pending.window_ffi,
+            pending.node_id,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
+        );
+        let payload = serde_json::to_value(ack).unwrap_or(serde_json::Value::Null);
+        self.ws_send_with_request_id("semantics.node.get_ack", pending.request_id, payload);
+        false
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_screenshot_request(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+    ) -> bool {
+        let Some(mut pending) = self.pending_devtools_screenshot.take() else {
+            return false;
+        };
+        if pending.window_ffi != window.data().as_ffi() {
+            self.pending_devtools_screenshot = Some(pending);
+            return false;
+        }
+
+        // Keep the app ticking while waiting for the runner-owned screenshot to complete.
+        let request_redraw = true;
+
+        if !pending.started {
+            if self
+                .active_scripts
+                .values()
+                .any(|active| active.screenshot_wait.is_some())
+            {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("busy".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name: "".to_string(),
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            let needs_fresh_bundle = pending.label.is_some();
+            if needs_fresh_bundle || self.last_dump_dir.is_none() {
+                let dump_label = pending
+                    .label
+                    .clone()
+                    .unwrap_or_else(|| "devtools-screenshot".to_string());
+                let _ = self.dump_bundle(Some(&dump_label));
+            }
+
+            let bundle_dir_name = self
+                .last_dump_dir
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+                .unwrap_or_default();
+            if bundle_dir_name.is_empty() {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("no_bundle_dir".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name,
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            let req = serde_json::json!({
+                "schema_version": 1,
+                "out_dir": self.cfg.out_dir.to_string_lossy(),
+                "bundle_dir_name": bundle_dir_name.clone(),
+                "request_id": pending.request_id_str.clone(),
+                "windows": [{
+                    "window": pending.window_ffi,
+                    "tick_id": app.tick_id().0,
+                    "frame_id": app.frame_id().0,
+                    "scale_factor": scale_factor as f64,
+                }]
+            });
+
+            let write_ok = serde_json::to_vec_pretty(&req).ok().is_some_and(|bytes| {
+                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
+                    && touch_file(&self.cfg.screenshot_trigger_path).is_ok()
+            });
+
+            if !write_ok {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("screenshot_request_write_failed".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name: "".to_string(),
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            pending.bundle_dir_name = Some(bundle_dir_name);
+            pending.started = true;
+            pending.remaining_frames = pending.timeout_frames;
+            pending.last_result_trigger_stamp = None;
+            self.pending_devtools_screenshot = Some(pending);
+            return request_redraw;
+        }
+
+        let trigger_stamp = read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
+        let completed = trigger_stamp.is_some()
+            && trigger_stamp != pending.last_result_trigger_stamp
+            && screenshot_request_completed(
+                &self.cfg.screenshot_result_path,
+                &pending.request_id_str,
+                pending.window_ffi,
+            );
+
+        if completed {
+            let entry = read_screenshot_result_entry(
+                &self.cfg.screenshot_result_path,
+                &pending.request_id_str,
+                pending.window_ffi,
+            );
+            let screenshots_dir = entry
+                .as_ref()
+                .and_then(|e| e.get("screenshots_dir").and_then(|v| v.as_str()))
+                .map(|s| s.to_string());
+            let bundle_dir_name = pending.bundle_dir_name.clone().unwrap_or_default();
+            let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                schema_version: 1,
+                status: "completed".to_string(),
+                reason: None,
+                request_id: pending.request_id_str.clone(),
+                window: pending.window_ffi,
+                bundle_dir_name,
+                screenshots_dir,
+                entry,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+            return false;
+        }
+
+        pending.last_result_trigger_stamp = trigger_stamp;
+        if pending.remaining_frames == 0 {
+            let bundle_dir_name = pending.bundle_dir_name.clone().unwrap_or_default();
+            let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                schema_version: 1,
+                status: "timeout".to_string(),
+                reason: Some("timeout_frames_exhausted".to_string()),
+                request_id: pending.request_id_str.clone(),
+                window: pending.window_ffi,
+                bundle_dir_name,
+                screenshots_dir: None,
+                entry: None,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+            return false;
+        }
+
+        pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
+        self.pending_devtools_screenshot = Some(pending);
+        request_redraw
     }
 
     #[cfg(feature = "diagnostics-ws")]
@@ -6423,7 +6951,144 @@ impl UiDiagnosticsService {
                     } else {
                         ("bundle".to_string(), None)
                     };
-                self.request_force_dump(label, dump_max_snapshots, None, None);
+                self.request_force_dump(label, dump_max_snapshots, None, None, msg.request_id);
+            }
+            "screenshot.request" => {
+                let Ok(req) = serde_json::from_value::<DevtoolsScreenshotRequestV1>(msg.payload)
+                else {
+                    return;
+                };
+
+                let request_id_str = msg
+                    .request_id
+                    .map(|id| format!("devtools-screenshot-{id}"))
+                    .unwrap_or_else(|| format!("devtools-screenshot-{}", unix_ms_now()));
+
+                if cfg!(target_arch = "wasm32") {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "unsupported".to_string(),
+                        reason: Some("screenshots_not_supported_wasm".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                if !self.cfg.screenshots_enabled {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "disabled".to_string(),
+                        reason: Some("screenshots_disabled".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                if self.pending_devtools_screenshot.is_some() {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "failed".to_string(),
+                        reason: Some("busy".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                let window_ffi = if let Some(window) = req.window {
+                    let want = AppWindowId::from(KeyData::from_ffi(window));
+                    if !self.known_windows.contains(&want) {
+                        let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                            schema_version: 1,
+                            status: "failed".to_string(),
+                            reason: Some("unknown_window".to_string()),
+                            request_id: request_id_str,
+                            window,
+                            bundle_dir_name: "".to_string(),
+                            screenshots_dir: None,
+                            entry: None,
+                        })
+                        .unwrap_or(serde_json::Value::Null);
+                        self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                        return;
+                    }
+                    window
+                } else if let Some(first) = self.known_windows.first().copied() {
+                    first.data().as_ffi()
+                } else {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "failed".to_string(),
+                        reason: Some("no_window".to_string()),
+                        request_id: request_id_str,
+                        window: 0,
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                };
+
+                self.pending_devtools_screenshot = Some(PendingDevtoolsScreenshotRequest {
+                    request_id: msg.request_id,
+                    request_id_str,
+                    label: req.label.map(|s| sanitize_label(&s)),
+                    timeout_frames: req.timeout_frames,
+                    window_ffi,
+                    bundle_dir_name: None,
+                    remaining_frames: req.timeout_frames,
+                    last_result_trigger_stamp: None,
+                    started: false,
+                });
+            }
+            "semantics.node.get" => {
+                let Ok(req) = serde_json::from_value::<UiSemanticsNodeGetV1>(msg.payload) else {
+                    return;
+                };
+
+                let want = AppWindowId::from(KeyData::from_ffi(req.window));
+                if !self.known_windows.contains(&want) {
+                    let payload = serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                        schema_version: 1,
+                        status: "no_semantics".to_string(),
+                        reason: Some("unknown_window".to_string()),
+                        window: req.window,
+                        node_id: req.node_id,
+                        semantics_fingerprint: None,
+                        node: None,
+                        children: Vec::new(),
+                        captured_unix_ms: Some(unix_ms_now()),
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("semantics.node.get_ack", msg.request_id, payload);
+                    return;
+                }
+
+                self.pending_devtools_semantics_node_get =
+                    Some(PendingDevtoolsSemanticsNodeGetRequest {
+                        request_id: msg.request_id,
+                        window_ffi: req.window,
+                        node_id: req.node_id,
+                    });
             }
             "app.exit.request" => {
                 let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
@@ -6656,13 +7321,14 @@ impl UiDiagnosticsService {
     }
 
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
-        self.dump_bundle_with_options(label, None)
+        self.dump_bundle_with_options(label, None, None)
     }
 
     fn dump_bundle_with_options(
         &mut self,
         label: Option<&str>,
         dump_max_snapshots_override: Option<usize>,
+        request_id: Option<u64>,
     ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -6786,7 +7452,7 @@ impl UiDiagnosticsService {
                                 bundle_json_chunk_count: Some(chunk_count),
                             })
                             .unwrap_or(serde_json::Value::Null);
-                            self.ws_send("bundle.dumped", payload);
+                            self.ws_send_with_request_id("bundle.dumped", request_id, payload);
                         }
                     } else {
                         let bundle_value = serde_json::to_value(&bundle).ok();
@@ -6801,7 +7467,7 @@ impl UiDiagnosticsService {
                             bundle_json_chunk_count: None,
                         })
                         .unwrap_or(serde_json::Value::Null);
-                        self.ws_send("bundle.dumped", payload);
+                        self.ws_send_with_request_id("bundle.dumped", request_id, payload);
                     }
                 } else {
                     let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
@@ -6815,7 +7481,7 @@ impl UiDiagnosticsService {
                         bundle_json_chunk_count: None,
                     })
                     .unwrap_or(serde_json::Value::Null);
-                    self.ws_send("bundle.dumped", payload);
+                    self.ws_send_with_request_id("bundle.dumped", request_id, payload);
                 }
             } else {
                 let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
@@ -6829,7 +7495,7 @@ impl UiDiagnosticsService {
                     bundle_json_chunk_count: None,
                 })
                 .unwrap_or(serde_json::Value::Null);
-                self.ws_send("bundle.dumped", payload);
+                self.ws_send_with_request_id("bundle.dumped", request_id, payload);
             }
         }
 
@@ -16026,6 +16692,63 @@ fn center_of_rect_clamped_to_rect(rect: Rect, clamp: Rect) -> Point {
     )
 }
 
+fn wheel_position_prefer_intended_hit(
+    snapshot: &fret_core::SemanticsSnapshot,
+    ui: &UiTree<App>,
+    intended: &fret_core::SemanticsNode,
+    container_bounds: Rect,
+    window_bounds: Rect,
+) -> Point {
+    let cx0 = window_bounds.origin.x.0;
+    let cy0 = window_bounds.origin.y.0;
+    let cx1 = cx0 + window_bounds.size.width.0.max(0.0);
+    let cy1 = cy0 + window_bounds.size.height.0.max(0.0);
+
+    let bx0 = container_bounds.origin.x.0;
+    let by0 = container_bounds.origin.y.0;
+    let bx1 = bx0 + container_bounds.size.width.0.max(0.0);
+    let by1 = by0 + container_bounds.size.height.0.max(0.0);
+
+    let ix0 = bx0.max(cx0);
+    let iy0 = by0.max(cy0);
+    let ix1 = bx1.min(cx1);
+    let iy1 = by1.min(cy1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return center_of_rect(container_bounds);
+    }
+
+    let w = (ix1 - ix0).max(0.0);
+    let h = (iy1 - iy0).max(0.0);
+    let pad_x = 8.0f32.min(w * 0.5);
+    let pad_y = 8.0f32.min(h * 0.5);
+
+    let x_mid = (ix0 + ix1) * 0.5;
+    let y_mid = (iy0 + iy1) * 0.5;
+
+    let candidates = [
+        Point::new(fret_core::Px(x_mid), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy1 - pad_y)),
+    ];
+
+    for pos in candidates {
+        if let Some(hit) = pick_semantics_node_at(snapshot, ui, pos)
+            && hit.id.data().as_ffi() == intended.id.data().as_ffi()
+        {
+            return pos;
+        }
+    }
+
+    candidates[0]
+}
+
 fn pick_semantics_node_at<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     ui: &UiTree<App>,
@@ -16842,6 +17565,73 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+#[cfg(feature = "diagnostics-ws")]
+fn build_semantics_node_get_ack_v1(
+    snapshot: Option<&fret_core::SemanticsSnapshot>,
+    window_ffi: u64,
+    node_id: u64,
+    redact_text: bool,
+    max_string_bytes: usize,
+) -> UiSemanticsNodeGetAckV1 {
+    let captured_unix_ms = Some(unix_ms_now());
+
+    let Some(snapshot) = snapshot else {
+        return UiSemanticsNodeGetAckV1 {
+            schema_version: 1,
+            status: "no_semantics".to_string(),
+            reason: Some("no_semantics_snapshot".to_string()),
+            window: window_ffi,
+            node_id,
+            semantics_fingerprint: None,
+            node: None,
+            children: Vec::new(),
+            captured_unix_ms,
+        };
+    };
+
+    let semantics_fingerprint = Some(semantics_fingerprint_v1(
+        snapshot,
+        redact_text,
+        max_string_bytes,
+    ));
+    let want = NodeId::from(KeyData::from_ffi(node_id));
+
+    let Some(node) = snapshot.nodes.iter().find(|n| n.id == want) else {
+        return UiSemanticsNodeGetAckV1 {
+            schema_version: 1,
+            status: "not_found".to_string(),
+            reason: None,
+            window: window_ffi,
+            node_id,
+            semantics_fingerprint,
+            node: None,
+            children: Vec::new(),
+            captured_unix_ms,
+        };
+    };
+
+    let exported = UiSemanticsNodeV1::from_node(node, redact_text, max_string_bytes);
+    let node = serde_json::to_value(exported).ok();
+    let children = snapshot
+        .nodes
+        .iter()
+        .filter(|n| n.parent == Some(want))
+        .map(|n| key_to_u64(n.id))
+        .collect::<Vec<_>>();
+
+    UiSemanticsNodeGetAckV1 {
+        schema_version: 1,
+        status: "ok".to_string(),
+        reason: None,
+        window: window_ffi,
+        node_id,
+        semantics_fingerprint,
+        node,
+        children,
+        captured_unix_ms,
+    }
+}
+
 fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) -> bool {
     let Ok(bytes) = std::fs::read(path) else {
         return false;
@@ -16856,6 +17646,24 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
         entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
             && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
     })
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn read_screenshot_result_entry(
+    path: &Path,
+    request_id: &str,
+    window_ffi: u64,
+) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
+    let completed = root.get("completed").and_then(|v| v.as_array())?;
+    completed
+        .iter()
+        .find(|entry| {
+            entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+                && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+        })
+        .cloned()
 }
 
 fn display_path(base_dir: &Path, path: &Path) -> String {
@@ -16999,6 +17807,72 @@ mod tests {
             described_by: Vec::new(),
             controls: Vec::new(),
         }
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    #[test]
+    fn devtools_semantics_node_get_ack_includes_node_and_children() {
+        let window = window_id(1);
+        let root_id = 10;
+        let child_id = 11;
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(root_id),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    root_id,
+                    None,
+                    SemanticsRole::Group,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node(
+                    child_id,
+                    Some(root_id),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 10.0, 10.0),
+                    "child",
+                ),
+            ],
+        };
+
+        let ack = build_semantics_node_get_ack_v1(
+            Some(&snapshot),
+            window.data().as_ffi(),
+            root_id,
+            false,
+            4096,
+        );
+        assert_eq!(ack.status, "ok");
+        assert_eq!(ack.window, window.data().as_ffi());
+        assert_eq!(ack.node_id, root_id);
+        assert_eq!(ack.children, vec![key_to_u64(node_id(child_id))]);
+        assert!(ack.node.is_some());
+        assert!(ack.semantics_fingerprint.is_some());
+
+        let ack = build_semantics_node_get_ack_v1(
+            Some(&snapshot),
+            window.data().as_ffi(),
+            999,
+            false,
+            4096,
+        );
+        assert_eq!(ack.status, "not_found");
+
+        let ack =
+            build_semantics_node_get_ack_v1(None, window.data().as_ffi(), root_id, false, 4096);
+        assert_eq!(ack.status, "no_semantics");
     }
 
     fn semantics_node_with_test_id(
@@ -17953,6 +18827,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "collapsed node should fail the min-size gate"
@@ -18022,6 +18899,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to fail"
@@ -18047,6 +18927,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to tolerate a small overlap"
@@ -18094,6 +18977,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected missing test id to satisfy NotExists"
@@ -18163,6 +19049,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to pass"
@@ -18188,6 +19077,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more overlap than available"
@@ -18257,6 +19149,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected x overlap to pass even when y does not overlap"
@@ -18282,6 +19177,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more x overlap than available"
@@ -18351,6 +19249,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected y overlap to pass even when x does not overlap"
@@ -18376,6 +19277,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more y overlap than available"
@@ -18536,8 +19440,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
@@ -18556,8 +19464,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected require_equal=true to fail when the roots differ"

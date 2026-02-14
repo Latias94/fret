@@ -3,6 +3,7 @@ use super::draw;
 use super::mask;
 use super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::*;
+use fret_core::Paint;
 
 pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &SceneOp) {
     match *op {
@@ -185,6 +186,26 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 border,
                 border_paint,
                 corner_radii,
+                None,
+            );
+        }
+        SceneOp::StrokeRRect {
+            rect,
+            stroke,
+            stroke_paint,
+            corner_radii,
+            style,
+            ..
+        } => {
+            draw::encode_quad(
+                renderer,
+                state,
+                rect,
+                Paint::Solid(Color::TRANSPARENT),
+                stroke,
+                stroke_paint,
+                corner_radii,
+                style.dash,
             );
         }
         SceneOp::Image {

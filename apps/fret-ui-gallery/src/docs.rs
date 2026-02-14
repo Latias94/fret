@@ -53,6 +53,40 @@ let root = stack::hstack(
 ```
 "#;
 
+pub(crate) const DOC_MOTION_PRESETS: &str = r#"
+## Motion presets (theme token overrides)
+
+Fret’s motion system is **token-driven**: durations/easings/spring params are read from the global
+`Theme` using string keys.
+
+This page provides a small set of “effect presets” by applying a `ThemeConfig` patch on top of the
+active theme preset:
+
+- shadcn-scoped keys (`duration.shadcn.motion.*`, `easing.shadcn.motion.*`)
+- canonical cross-ecosystem keys (`duration.motion.*`, `easing.motion.*`, `number.motion.spring.*`)
+
+Notes:
+
+- shadcn recipes typically prefer `*.shadcn.motion.*` keys first; canonical keys act as a fallback.
+- Diagnostics gates should use `--fixed-frame-delta-ms 16` for deterministic motion.
+"#;
+
+pub(crate) const USAGE_MOTION_PRESETS: &str = r#"
+```rust
+use fret_ui::{Theme, ThemeConfig};
+
+Theme::with_global_mut(app, |theme| {
+    theme.apply_config_patch(&ThemeConfig {
+        durations_ms: std::collections::HashMap::from([(
+            "duration.motion.presence.enter".to_string(),
+            160,
+        )]),
+        ..ThemeConfig::default()
+    });
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_MARQUEE: &str = r#"
 ## Marquee (fret-ui-magic)
 
@@ -959,6 +993,181 @@ This page demonstrates an AI Elements-aligned `Transcription` surface:
 pub(crate) const USAGE_AI_TRANSCRIPTION_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{Transcription, TranscriptionSegment, TranscriptionSegmentData};
+```
+"#;
+
+pub(crate) const DOC_AI_SPEECH_INPUT_DEMO: &str = r#"
+## AI speech input (demo)
+
+This page demonstrates an AI Elements-aligned `SpeechInput` surface:
+
+- UI-only record/stop chrome (`mic` ↔ `square`),
+- a `processing` state (spinner),
+- an intent seam (`on_listening_change`) so apps own capture + ASR backends.
+"#;
+
+pub(crate) const USAGE_AI_SPEECH_INPUT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::SpeechInput;
+```
+"#;
+
+pub(crate) const DOC_AI_MIC_SELECTOR_DEMO: &str = r#"
+## AI mic selector (demo)
+
+This page demonstrates an AI Elements-aligned `MicSelector` surface:
+
+- a popover-based selector with search input,
+- stable selection model (`value_model`) and popover open model (`open_model`),
+- app-owned device enumeration (UI-only chrome).
+"#;
+
+pub(crate) const USAGE_AI_MIC_SELECTOR_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{MicSelector, MicSelectorContent, MicSelectorInput, MicSelectorList, MicSelectorTrigger, MicSelectorValue};
+```
+"#;
+
+pub(crate) const DOC_AI_VOICE_SELECTOR_DEMO: &str = r#"
+## AI voice selector (demo)
+
+This page demonstrates an AI Elements-aligned `VoiceSelector` surface:
+
+- dialog-based selector with search input,
+- stable selection model (`value_model`) and dialog open model (`open_model`),
+- app-owned voice inventory + preview playback (UI-only chrome).
+"#;
+
+pub(crate) const USAGE_AI_VOICE_SELECTOR_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{VoiceSelector, VoiceSelectorButton, VoiceSelectorContent, VoiceSelectorInput, VoiceSelectorList};
+```
+"#;
+
+pub(crate) const DOC_AI_AGENT_DEMO: &str = r#"
+## AI agent (demo)
+
+This page demonstrates an AI Elements-aligned `Agent` surface:
+
+- header (name + optional model badge),
+- instructions card,
+- tools accordion (schemas rendered as JSON),
+- output schema code block.
+
+Note: this is a UI-only port. Apps own tool execution and schema sources.
+"#;
+
+pub(crate) const USAGE_AI_AGENT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Agent, AgentContent, AgentHeader, AgentInstructions, AgentOutput, AgentTools};
+```
+"#;
+
+pub(crate) const DOC_AI_SANDBOX_DEMO: &str = r#"
+## AI sandbox (demo)
+
+This page demonstrates an AI Elements-aligned `Sandbox` surface:
+
+- collapsible root with status badge,
+- tabs for switching between panels.
+
+Note: this is a UI-only port. Apps own sandbox execution and panel content.
+"#;
+
+pub(crate) const USAGE_AI_SANDBOX_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Sandbox, SandboxContent, SandboxHeader, SandboxTabs};
+```
+"#;
+
+pub(crate) const DOC_AI_PERSONA_DEMO: &str = r#"
+## AI persona (demo)
+
+This page demonstrates an AI Elements-aligned `Persona` surface.
+
+Upstream AI Elements uses a Rive (webgl2) animation loaded from a remote `.riv` asset. The Fret
+port currently provides a UI-only placeholder that preserves the state/variant taxonomy and
+automation anchors.
+"#;
+
+pub(crate) const USAGE_AI_PERSONA_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Persona, PersonaState, PersonaVariant};
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_CHROME_DEMO: &str = r#"
+## AI workflow chrome (demo)
+
+This page demonstrates AI Elements-aligned workflow chrome surfaces:
+
+- `WorkflowPanel` (bordered, rounded panel container),
+- `WorkflowToolbar` (small tool row container).
+
+Note: upstream uses `@xyflow/react` (React Flow). The Fret port is UI-only chrome intended to wrap
+existing ecosystem crates (node graph/canvas/docking) without introducing new engines.
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_CHROME_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{WorkflowPanel, WorkflowToolbar};
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = r#"
+## AI workflow node graph (demo)
+
+This page demonstrates an engine-backed workflow editor surface:
+
+- `fret-node` provides the graph model + interaction (pan/zoom, selection, connect ports),
+- `fret-ui-ai` provides AI Elements-aligned chrome wrappers (`WorkflowPanel`, `WorkflowToolbar`, `WorkflowControls`).
+
+The goal is to validate the recommended layering: keep `fret-ui-ai` policy-light and reuse existing
+ecosystem engines for editor-grade interaction.
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = r#"
+```rust
+use fret_node::io::NodeGraphViewState;
+use fret_node::ui::{NodeGraphCanvas, NodeGraphViewQueue};
+use fret_ui_ai::{WorkflowControls, WorkflowControlsButton, WorkflowPanel, WorkflowToolbar};
+```
+"#;
+
+pub(crate) const DOC_AI_CANVAS_WORLD_LAYER_SPIKE: &str = r#"
+## AI canvas world layer (spike)
+
+This page is a **composition spike** for an XYFlow-like mental model:
+
+- a pan/zoom canvas paint pass (background + edges),
+- nodes as normal element subtrees positioned in **canvas space**,
+- optional screen-space overlays above the world.
+
+It is intentionally **not** a full workflow engine. For editor-grade graph editing, use `fret-node`.
+"#;
+
+pub(crate) const USAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = r#"
+```rust
+use fret_canvas::ui::{CanvasWorldSurfacePanelProps, canvas_world_surface_panel};
+
+let world = canvas_world_surface_panel(
+    cx,
+    CanvasWorldSurfacePanelProps::default(),
+    |p, paint_cx| {
+        // draw grid/edges using paint_cx.view.render_transform(p.bounds())
+        let _ = (p, paint_cx);
+    },
+    |cx, world_cx| {
+        // build nodes as element subtrees in canvas-space coordinates
+        let _ = (cx, world_cx);
+        Vec::new()
+    },
+    |cx, world_cx| {
+        // build overlays (screen-space)
+        let _ = (cx, world_cx);
+        Vec::new()
+    },
+);
 ```
 "#;
 

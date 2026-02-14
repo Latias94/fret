@@ -10,6 +10,9 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 - `docs/workstreams/docking-nary-split-graph-v1.md`
 - `docs/workstreams/docking-nary-split-graph-v1-todo.md`
 - `docs/workstreams/docking-nary-split-graph-v1-milestones.md`
@@ -75,6 +78,10 @@ Active workstreams:
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ai-elements-port-milestones.md`
+- `docs/workstreams/xyflow-gap-analysis.md`
+- `docs/workstreams/canvas-world-layer-v1.md`
+- `docs/workstreams/canvas-world-layer-v1-todo.md`
+- `docs/workstreams/canvas-world-layer-v1-milestones.md`
 - `docs/workstreams/webview-wry-v1.md`
 - `docs/workstreams/webview-wry-v1-todo.md`
 - `docs/workstreams/shadcn-extras.md`

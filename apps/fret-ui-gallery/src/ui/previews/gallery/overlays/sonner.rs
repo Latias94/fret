@@ -69,10 +69,10 @@ pub(in crate::ui) fn preview_sonner(
     };
 
     let demo = {
-        let sonner = sonner.clone();
-        let last_action_model = last_action.clone();
+        let sonner_for_show = sonner.clone();
+        let last_action_model_for_show = last_action.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
+            sonner_for_show.toast_message(
                 host,
                 action_cx.window,
                 "Event has been created",
@@ -80,19 +80,48 @@ pub(in crate::ui) fn preview_sonner(
                     .description("Sunday, December 03, 2023 at 9:00 AM")
                     .action("Undo", CMD_TOAST_ACTION),
             );
-            let _ = host.models_mut().update(&last_action_model, |v| {
+            let _ = host.models_mut().update(&last_action_model_for_show, |v| {
                 *v = Arc::<str>::from("sonner.demo");
             });
             host.request_redraw(action_cx.window);
         });
 
         let show = button(cx, "Show Toast", "ui-gallery-sonner-demo-show", on_activate);
-        let content = centered(cx, show).attach_semantics(
+
+        let show_swipe_dismiss = {
+            let sonner_for_swipe = sonner.clone();
+            let last_action_model_for_swipe = last_action.clone();
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner_for_swipe.toast(
+                        host,
+                        action_cx.window,
+                        shadcn::ToastRequest::new("Swipe to dismiss")
+                            .description("Drag up to dismiss (pinned)")
+                            .duration(None)
+                            .dismissible(true)
+                            .test_id("ui-gallery-sonner-demo-toast-swipe"),
+                    );
+                    let _ = host.models_mut().update(&last_action_model_for_swipe, |v| {
+                        *v = Arc::<str>::from("sonner.demo.swipe_dismiss");
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            button(
+                cx,
+                "Swipe Dismiss Toast",
+                "ui-gallery-sonner-demo-show-swipe",
+                on_activate,
+            )
+        };
+
+        let buttons = row(cx, vec![show, show_swipe_dismiss]);
+        let body = centered(cx, buttons).attach_semantics(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-sonner-demo"),
         );
-        section(cx, "Demo", content)
+        section(cx, "Demo", body)
     };
 
     let types = {
