@@ -1904,33 +1904,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "poke" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            touch(&resolved_trigger_path)?;
-            println!("{}", resolved_trigger_path.display());
-            Ok(())
+            commands::session::cmd_poke(&rest, pack_after_run, &resolved_trigger_path)
         }
         "latest" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            if let Some(path) = read_latest_pointer(&resolved_out_dir)
-                .or_else(|| find_latest_export_dir(&resolved_out_dir))
-            {
-                println!("{}", path.display());
-                return Ok(());
-            }
-            Err(format!(
-                "no diagnostics bundle found under {}",
-                resolved_out_dir.display()
-            ))
+            commands::session::cmd_latest(&rest, pack_after_run, &resolved_out_dir)
         }
         "pack" => commands::artifacts::cmd_pack(
             &rest,

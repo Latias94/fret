@@ -524,7 +524,7 @@ fn compare_focus_and_capture_by_test_id(
     }
 }
 
-pub(super) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
+pub(crate) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
     let s = std::fs::read_to_string(out_dir.join("latest.txt")).ok()?;
     let s = s.trim();
     if s.is_empty() {
@@ -538,7 +538,7 @@ pub(super) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
     })
 }
 
-pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
+pub(crate) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     fn parse_leading_ts(name: &str) -> Option<u64> {
         let digits: String = name.chars().take_while(|c| c.is_ascii_digit()).collect();
         if digits.is_empty() {
