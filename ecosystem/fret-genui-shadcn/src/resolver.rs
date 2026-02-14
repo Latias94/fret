@@ -297,32 +297,33 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
 
                 let model = Self::ensure_bool_model(cx, desired);
 
-                let element_id = cx.root_id();
-                let focused = cx.is_focused_element(element_id);
-                if !focused {
-                    let cur = cx.app.models().get_copied(&model).unwrap_or(false);
-                    if cur != desired {
-                        let _ = cx.app.models_mut().update(&model, |v| *v = desired);
-                    }
-                }
-
                 if let (Some(scope), Some(path)) =
                     (Self::genui_scope(cx), props.bindings.get("checked"))
                 {
                     #[derive(Default)]
                     struct LastState {
-                        last: Option<bool>,
+                        last_model: Option<bool>,
+                        last_desired: Option<bool>,
                     }
                     let cur = cx.app.models().get_copied(&model).unwrap_or(false);
                     let mut to_emit: Option<bool> = None;
+                    let mut sync_model_to: Option<bool> = None;
                     cx.with_state(LastState::default, |st| {
-                        if focused && st.last != Some(cur) {
-                            st.last = Some(cur);
+                        let model_changed = st.last_model.is_some_and(|v| v != cur);
+                        let desired_changed = st.last_desired.is_some_and(|v| v != desired);
+
+                        if model_changed && cur != desired {
                             to_emit = Some(cur);
-                        } else if !focused {
-                            st.last = Some(desired);
+                        } else if desired_changed && !model_changed && cur != desired {
+                            sync_model_to = Some(desired);
                         }
+
+                        st.last_model = Some(cur);
+                        st.last_desired = Some(desired);
                     });
+                    if let Some(v) = sync_model_to {
+                        let _ = cx.app.models_mut().update(&model, |m| *m = v);
+                    }
                     if let Some(cur) = to_emit {
                         Self::emit_set_state(
                             cx,
