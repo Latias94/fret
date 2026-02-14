@@ -2,17 +2,17 @@ use super::*;
 
 impl UiDiagnosticsService {
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_is_configured(&self) -> bool {
+    pub(super) fn ws_is_configured(&self) -> bool {
         self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some()
     }
 
     #[cfg(not(feature = "diagnostics-ws"))]
-    fn ws_is_configured(&self) -> bool {
+    pub(super) fn ws_is_configured(&self) -> bool {
         false
     }
 
     #[cfg(feature = "diagnostics-ws")]
-    fn poll_ws_inbox(&mut self) {
+    pub(super) fn poll_ws_inbox(&mut self) {
         if !self.ws_is_configured() {
             return;
         }
@@ -31,7 +31,7 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(not(feature = "diagnostics-ws"))]
-    fn poll_ws_inbox(&mut self) {}
+    pub(super) fn poll_ws_inbox(&mut self) {}
 
     #[cfg(feature = "diagnostics-ws")]
     fn ws_send_with_request_id(
