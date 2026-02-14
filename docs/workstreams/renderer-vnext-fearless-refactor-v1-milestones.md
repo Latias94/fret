@@ -31,15 +31,20 @@ Exit criteria:
 
 Baseline record (fill in; keep this section short):
 
-- Date:
-- Commit:
-- Platform/backend (native/wasm/mobile):
-- GPU/adapter (if relevant):
+- Date: 2026-02-14
+- Commit: 440ee019
+- Platform/backend (native/wasm/mobile): native (Windows + wgpu)
+- GPU/adapter (if relevant): (not recorded; capture when needed)
 - Commands run (exact):
-- Outputs (paths or pasted summary lines):
   - `python3 tools/check_layering.py`
-  - conformance tests (fixed set)
-  - `fret-svg-atlas-stress` `renderer_perf:` / `headless_renderer_perf:` lines
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`
+  - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance`
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- Outputs (summary):
+  - layering: pass
+  - conformance: pass (12/12 tests)
+  - `headless_renderer_perf: frames=600 encode=0.09ms prepare_svg=19.11ms prepare_text=0.46ms draws=27000 ... cache_hits=596 cache_misses=4`
+  - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
 
 ## M1 — RenderPlan substrate (time-boxed)
 
