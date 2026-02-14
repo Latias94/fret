@@ -158,6 +158,19 @@ Progress record (ClipPath v1):
   - `cargo nextest run -p fret-render-wgpu`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`
 
+Progress record (Image masks v1):
+
+- Date: 2026-02-14
+- Status: Landed (wgpu default renderer; deterministic degradation for nested image masks)
+- Evidence anchors:
+  - `docs/adr/0273-clip-path-and-image-mask-sources-v1.md` (`Mask::Image` sampling + bounds semantics)
+  - `crates/fret-core/src/scene/mask.rs` (`Mask::Image`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` + `crates/fret-render-wgpu/src/renderer/buffers.rs` (uniform bind group layout: mask image bindings)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval` kind=3 image sampling)
+  - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

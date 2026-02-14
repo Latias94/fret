@@ -40,6 +40,21 @@ Gate triage loop:
 3. Attribute via:
    - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
 
+### Deep Profiling (Tracy)
+
+When a worst bundle is dominated by a single phase (e.g. `layout_time_us`) but is still not explainable,
+use a `diag repro` run with Tracy enabled:
+
+- Build: `cargo build -p fret-ui-gallery --release --features fret-bootstrap/tracy`
+- Run (example): `target/release/fretboard.exe diag repro <script.json> --with tracy --launch -- target/release/fret-ui-gallery.exe`
+
+For layout attribution, the `fret-ui` layout pass emits TRACE spans for:
+
+- `fret.ui.layout.request_build_roots`
+- `fret.ui.layout.roots`
+
+These are intended to make “root-building vs root-layout” costs visually separable in the Tracy timeline.
+
 ## Known Hitch Class: System Font Rescan → `TextFontStackKey` Bump
 
 One common tail-spike class on Windows came from **system font rescan results** being applied during
@@ -99,3 +114,35 @@ Commit-addressable gate results for the `windows-rtx4090` machine profile:
   - `target/release/fretboard.exe diag perf ui-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
   - `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
   - `target/release/fretboard.exe diag perf ui-gallery-steady --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+
+## Evidence (2026-02-14)
+
+Re-run P0 gates after merging latest `main` into the worktree branch (baseline: `*.windows-rtx4090.v1.json`):
+
+- `ui-code-editor-resize-probes --repeat 3`: PASS
+  - out-dir: `target/fret-diag-perf/ui-code-editor-resize-probes.p0.r3.20260214-114448`
+- `ui-resize-probes --repeat 3`: PASS
+  - out-dir: `target/fret-diag-perf/ui-resize-probes.p0.r3.20260214-114537`
+- `ui-gallery-steady --repeat 3`: FAIL
+  - out-dir: `target/fret-diag-perf/ui-gallery-steady.p0.r3.20260214-113753`
+  - failures (baseline thresholds):
+    - `ui-gallery-view-cache-toggle-perf-steady` (`top_total_time_us`, `top_layout_time_us`)
+      - worst bundle: `target/fret-diag-perf/ui-gallery-steady.p0.r3.20260214-113753/1771040322789-ui-gallery-view-cache-toggle-perf-steady/bundle.json` (total=40131us, layout=30242us)
+    - `ui-gallery-material3-tabs-switch-perf-steady` (`top_layout_time_us`, `top_layout_engine_solve_time_us`)
+    - `ui-gallery-virtual-list-torture-steady` (`top_layout_engine_solve_time_us`)
+
+Attribution notes:
+
+- The view-cache toggle outlier is dominated by `layout_time_us` (not `solve_us`), and shows a large layout footprint
+  (`layout.nodes=1120` in the top frame). This suggests “tree/layout invalidation work” rather than Taffy solve cost.
+- Current triage hints do not trigger for this outlier (no `solve_heavy` / `observation_heavy`), indicating a need for
+  additional layout sub-phase metrics (e.g. root-building) and/or new hints for cache-root invalidation churn.
+
+### Profiling sanity (2026-02-14)
+
+- `diag repro` (Tracy enabled): `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - out-dir: `target/fret-diag-repro/tracy.resize-stress.span-split.20260214-144328`
+  - bundle: `target/fret-diag-repro/tracy.resize-stress.span-split.20260214-144328/1771051420202-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Note: a merged `main` snapshot on 2026-02-14 triggered a `wgpu` bind group validation crash during resize; this was fixed
+by ensuring the uniform bind group always includes the `RenderSpace` dynamic uniform binding.

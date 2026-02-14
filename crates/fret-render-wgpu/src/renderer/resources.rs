@@ -8,6 +8,12 @@ impl Renderer {
         // wgpu requires uniform dynamic offsets to be aligned to 256 bytes.
         let uniform_stride = uniform_size.div_ceil(256) * 256;
         let uniform_capacity = 256usize;
+
+        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
+        let render_space_stride = render_space_size.div_ceil(256) * 256;
+        // RenderSpace is dynamic (per pass) and must not be overwritten within a frame.
+        // Allocate enough slots for typical worst-case RenderPlan pass counts.
+        let render_space_capacity = 2048usize;
         let clip_capacity = 1024usize;
         let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
         let mask_capacity = 1024usize;
@@ -74,8 +80,26 @@ impl Renderer {
                         visibility: wgpu::ShaderStages::VERTEX,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                            has_dynamic_offset: true,
+                            min_binding_size: Some(
+                                std::num::NonZeroU64::new(render_space_size).unwrap(),
+                            ),
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 6,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 7,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
                         },
                         count: None,
                     },
@@ -91,7 +115,7 @@ impl Renderer {
 
         let render_space_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret render-space uniform buffer"),
-            size: 16,
+            size: render_space_stride * render_space_capacity as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -141,6 +165,34 @@ impl Renderer {
             ..Default::default()
         });
 
+        let mask_image_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret mask image sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let mask_image_identity_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret mask image identity texture"),
+            size: wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let mask_image_identity_view =
+            mask_image_identity_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret quad uniforms bind group"),
             layout: &uniform_bind_group_layout,
@@ -182,8 +234,16 @@ impl Renderer {
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: &render_space_buffer,
                         offset: 0,
-                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: wgpu::BindingResource::Sampler(&mask_image_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: wgpu::BindingResource::TextureView(&mask_image_identity_view),
                 },
             ],
         });
@@ -376,7 +436,13 @@ impl Renderer {
             uniform_buffer,
             uniform_bind_group,
             uniform_bind_group_layout,
+            mask_image_sampler,
+            _mask_image_identity_texture: mask_image_identity_texture,
+            mask_image_identity_view,
+            mask_image_identity_uploaded: false,
             render_space_buffer,
+            render_space_stride,
+            render_space_capacity,
             uniform_stride,
             uniform_capacity,
             clip_buffer,
@@ -515,6 +581,7 @@ impl Renderer {
             image_bind_groups: HashMap::new(),
             image_revisions: HashMap::new(),
             images_generation: 0,
+            uniform_mask_image_bind_groups: HashMap::new(),
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),
@@ -586,6 +653,7 @@ impl Renderer {
         let next = self.image_revisions.get(&id).copied().unwrap_or(0) + 1;
         self.image_revisions.insert(id, next);
         self.image_bind_groups.remove(&id);
+        self.uniform_mask_image_bind_groups.remove(&id);
         self.images_generation = self.images_generation.saturating_add(1);
         true
     }
@@ -596,6 +664,7 @@ impl Renderer {
         }
         self.image_revisions.remove(&id);
         self.image_bind_groups.remove(&id);
+        self.uniform_mask_image_bind_groups.remove(&id);
         self.images_generation = self.images_generation.saturating_add(1);
         true
     }
@@ -623,6 +692,41 @@ impl Renderer {
         self.viewport_bind_groups.remove(&id);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
         true
+    }
+
+    pub(super) fn ensure_mask_image_identity_uploaded(&mut self, queue: &wgpu::Queue) {
+        if self.mask_image_identity_uploaded {
+            return;
+        }
+
+        // Use a 1x1 `R8Unorm` texture filled with 1.0 coverage as the default mask-image source.
+        // This keeps `Mask::Image` deterministic even if an image source disappears between
+        // encoding and rendering.
+        let bytes_per_row = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+        let mut bytes = vec![0u8; bytes_per_row as usize];
+        bytes[0] = 255;
+
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self._mask_image_identity_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            &bytes,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(bytes_per_row),
+                rows_per_image: Some(1),
+            },
+            wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        self.mask_image_identity_uploaded = true;
     }
 
     pub(super) fn ensure_material_catalog_uploaded(&mut self, queue: &wgpu::Queue) {

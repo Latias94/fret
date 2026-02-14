@@ -2829,6 +2829,154 @@ fn assert_calendar_selected_day_background_matches_web(
     assert_rgba_close(bg_label, color_to_rgba(quad.background), expected_bg, 0.02);
 }
 
+fn assert_calendar_selected_day_foreground_matches_web(web_name: &str, fg_label: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+
+    let web_month_grid = find_first(&theme.root, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    })
+    .expect("web month grid");
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let locale = web_month_label
+        .chars()
+        .next()
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                fret_ui_shadcn::calendar::CalendarLocale::En
+            } else {
+                fret_ui_shadcn::calendar::CalendarLocale::Es
+            }
+        })
+        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(!web_day_buttons.is_empty(), "expected calendar day buttons");
+
+    let web_selected_cell = find_first(&theme.root, &|n| {
+        n.attrs.get("aria-selected").is_some_and(|v| v == "true")
+    })
+    .expect("web selected calendar cell (aria-selected=true)");
+    let web_selected_button = find_first(web_selected_cell, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    })
+    .expect("web selected day button");
+
+    let web_selected_label = web_selected_button
+        .attrs
+        .get("aria-label")
+        .expect("web selected day aria-label");
+    let (selected_date, _selected_suffix) = parse_calendar_day_aria_label(web_selected_label)
+        .unwrap_or_else(|| panic!("invalid web selected day aria-label: {web_selected_label}"));
+
+    let web_fg_css = web_selected_button
+        .computed_style
+        .get("color")
+        .expect("web selected day color");
+    let web_fg =
+        parse_css_color(web_fg_css).unwrap_or_else(|| panic!("invalid css color: {web_fg_css}"));
+    let web_opacity = web_selected_button
+        .computed_style
+        .get("opacity")
+        .and_then(|v| v.parse::<f32>().ok())
+        .unwrap_or(1.0);
+    let expected_fg = apply_opacity(web_fg, web_opacity);
+
+    let weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, ") || label.starts_with("Hoy, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+    let show_outside_days = web_day_buttons.len() != (days_in_month(year, month) as usize);
+    let disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label.as_str()) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let cell_size =
+        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+    let config = CalendarChromeConfig {
+        locale,
+        month,
+        year,
+        origin_x: web_origin_x,
+        origin_y: web_origin_y,
+        cell_size,
+        week_start,
+        today,
+        show_week_number,
+        show_outside_days,
+        disable_outside_days,
+        selected: selected_date,
+    };
+    let (_snap, scene) = render_calendar_in_bounds_with_scene(bounds, move |cx| {
+        render_calendar_chrome_from_config(cx, config)
+    });
+
+    let target = Rect::new(
+        Point::new(
+            Px(web_selected_button.rect.x),
+            Px(web_selected_button.rect.y),
+        ),
+        CoreSize::new(
+            Px(web_selected_button.rect.w),
+            Px(web_selected_button.rect.h),
+        ),
+    );
+    let fret_fg = find_best_text_color_in_rect(&scene, target)
+        .unwrap_or_else(|| panic!("painted selected-day text for {web_name}"));
+    assert_rgba_close(fg_label, fret_fg, expected_fg, 0.03);
+}
+
 #[test]
 fn web_vs_fret_calendar_14_selected_day_background_matches_web() {
     assert_calendar_selected_day_background_matches_web(
@@ -2844,6 +2992,22 @@ fn web_vs_fret_calendar_14_vp375x320_selected_day_background_matches_web() {
         "calendar-14.vp375x320",
         "calendar-14.vp375x320 selected day quad",
         "calendar-14.vp375x320 selected day background",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_14_selected_day_foreground_matches_web() {
+    assert_calendar_selected_day_foreground_matches_web(
+        "calendar-14",
+        "calendar-14 selected day foreground",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_14_vp375x320_selected_day_foreground_matches_web() {
+    assert_calendar_selected_day_foreground_matches_web(
+        "calendar-14.vp375x320",
+        "calendar-14.vp375x320 selected day foreground",
     );
 }
 

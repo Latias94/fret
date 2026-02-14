@@ -107,6 +107,7 @@ impl Renderer {
             .next_power_of_two()
             .max(self.uniform_capacity.saturating_mul(2).max(1));
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
 
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret uniforms buffer (resized)"),
@@ -174,14 +175,23 @@ impl Renderer {
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: &self.render_space_buffer,
                         offset: 0,
-                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: wgpu::BindingResource::Sampler(&self.mask_image_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: wgpu::BindingResource::TextureView(&self.mask_image_identity_view),
                 },
             ],
         });
 
         self.uniform_buffer = uniform_buffer;
         self.uniform_bind_group = uniform_bind_group;
+        self.uniform_mask_image_bind_groups.clear();
         self.uniform_capacity = new_capacity;
     }
 
@@ -238,6 +248,7 @@ impl Renderer {
         });
 
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret uniforms bind group (resized clip buffer)"),
             layout: &self.uniform_bind_group_layout,
@@ -279,14 +290,23 @@ impl Renderer {
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: &self.render_space_buffer,
                         offset: 0,
-                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: wgpu::BindingResource::Sampler(&self.mask_image_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: wgpu::BindingResource::TextureView(&self.mask_image_identity_view),
                 },
             ],
         });
 
         self.clip_buffer = clip_buffer;
         self.uniform_bind_group = uniform_bind_group;
+        self.uniform_mask_image_bind_groups.clear();
         self.clip_capacity = new_capacity;
     }
 
@@ -325,6 +345,7 @@ impl Renderer {
         });
 
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret uniforms bind group (resized mask buffer)"),
             layout: &self.uniform_bind_group_layout,
@@ -366,14 +387,23 @@ impl Renderer {
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: &self.render_space_buffer,
                         offset: 0,
-                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: wgpu::BindingResource::Sampler(&self.mask_image_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: wgpu::BindingResource::TextureView(&self.mask_image_identity_view),
                 },
             ],
         });
 
         self.mask_buffer = mask_buffer;
         self.uniform_bind_group = uniform_bind_group;
+        self.uniform_mask_image_bind_groups.clear();
         self.mask_capacity = new_capacity;
     }
 }

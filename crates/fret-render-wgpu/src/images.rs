@@ -90,6 +90,10 @@ impl ImageRegistry {
         self.images.get(id).map(|t| &t.view)
     }
 
+    pub(crate) fn format(&self, id: ImageId) -> Option<wgpu::TextureFormat> {
+        self.images.get(id).map(|t| t.format)
+    }
+
     pub(crate) fn alpha_mode(&self, id: ImageId) -> Option<AlphaMode> {
         self.images.get(id).map(|t| t.alpha_mode)
     }

@@ -91,6 +91,15 @@ Active workstreams:
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
+- `docs/workstreams/text-shaping-surface-v1.md`
+- `docs/workstreams/text-shaping-surface-v1-todo.md`
+- `docs/workstreams/text-shaping-surface-v1-milestones.md`
+- `docs/workstreams/text-line-breaking-v1.md`
+- `docs/workstreams/text-line-breaking-v1-todo.md`
+- `docs/workstreams/text-line-breaking-v1-milestones.md`
+- `docs/workstreams/editor-text-pipeline-v1.md`
+- `docs/workstreams/editor-text-pipeline-v1-todo.md`
+- `docs/workstreams/editor-text-pipeline-v1-milestones.md`
 - `docs/workstreams/font-system-v1.md`
 - `docs/workstreams/font-catalog-refresh-policy-v1.md`
 - `docs/workstreams/table-forms-calendar.md`

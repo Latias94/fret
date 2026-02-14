@@ -282,6 +282,24 @@ The command prints the export directory path, and writes:
 
    - `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`
 
+4. Compare two bundles (diff by impact):
+
+   - `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 20`
+   - JSON: `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
+
+5. Optional: emit a Chrome trace JSON derived from the bundle:
+
+   - During perf runs: `cargo run -p fretboard -- diag perf ui-gallery --trace --launch -- cargo run -p fret-ui-gallery --release`
+   - For an existing bundle: `cargo run -p fretboard -- diag trace <bundle_dir|bundle.json>`
+
+6. Optional: turn on the perf hints gate (heuristic, explainable warnings):
+
+   - `cargo run -p fretboard -- diag perf ui-gallery --check-perf-hints --launch -- cargo run -p fret-ui-gallery --release`
+   - Output evidence: `<out_dir>/check.perf_hints.json` (also indexed in `evidence.index.json` and included in `repro.zip` when present)
+   - Defaults:
+     - `--check-perf-hints` denies *all* hint codes and fails on `warn`/`error` severities.
+     - Narrow the deny list with `--check-perf-hints-deny <code1,code2,...>` and/or tune severity with `--check-perf-hints-min-severity <info|warn|error>`.
+
 Notes:
 
 - When view caching is active, bundles include cache-root stats (replay ops, reuse reasons) to help

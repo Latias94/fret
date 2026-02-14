@@ -126,6 +126,12 @@ pub struct UiDebugFrameStats {
     pub layout_repair_view_cache_bounds_time: Duration,
     pub layout_contained_view_cache_roots_time: Duration,
     pub layout_collapse_layout_observations_time: Duration,
+    /// Total wall time spent recording layout observations (`observed_in_layout` + globals).
+    pub layout_observation_record_time: Duration,
+    /// Total observed-model edges recorded into `observed_in_layout` during this frame.
+    pub layout_observation_record_models_items: u32,
+    /// Total observed-global edges recorded into `observed_globals_in_layout` during this frame.
+    pub layout_observation_record_globals_items: u32,
     pub layout_prepaint_after_layout_time: Duration,
     pub layout_skipped_engine_frame: bool,
     pub layout_roots_time: Duration,

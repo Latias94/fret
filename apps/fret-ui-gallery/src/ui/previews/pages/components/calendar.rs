@@ -9,7 +9,24 @@ pub(in crate::ui) fn preview_calendar(
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
-    let today = time::OffsetDateTime::now_utc().date();
+
+    fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
+        let raw = raw.trim();
+        let (year, rest) = raw.split_once('-')?;
+        let (month, day) = rest.split_once('-')?;
+
+        let year: i32 = year.parse().ok()?;
+        let month: u8 = month.parse().ok()?;
+        let day: u8 = day.parse().ok()?;
+
+        let month = time::Month::try_from(month).ok()?;
+        Date::from_calendar_date(year, month, day).ok()
+    }
+
+    let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
+        .ok()
+        .and_then(|raw| parse_iso_date_ymd(&raw))
+        .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
 
     let models = models::get_or_init(cx, month, selected, today);
 

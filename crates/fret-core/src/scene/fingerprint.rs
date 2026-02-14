@@ -169,6 +169,14 @@ fn mix_mask(mut state: u64, m: Mask) -> u64 {
             }
             state
         }
+        Mask::Image { image, uv } => {
+            state = mix_u64(state, 3);
+            state = mix_u64(state, image.data().as_ffi());
+            state = mix_f32(state, uv.u0);
+            state = mix_f32(state, uv.v0);
+            state = mix_f32(state, uv.u1);
+            mix_f32(state, uv.v1)
+        }
     }
 }
 

@@ -148,6 +148,7 @@ impl SceneRecording {
                     }
                     true
                 }
+                Mask::Image { uv, .. } => uv_is_finite(uv),
             }
         }
 

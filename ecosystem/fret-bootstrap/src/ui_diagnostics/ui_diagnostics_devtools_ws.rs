@@ -34,7 +34,7 @@ impl UiDiagnosticsService {
     pub(super) fn poll_ws_inbox(&mut self) {}
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send_with_request_id(
+    pub(super) fn ws_send_with_request_id(
         &mut self,
         ty: impl Into<String>,
         request_id: Option<u64>,
@@ -58,7 +58,7 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+    pub(super) fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
         self.ws_send_with_request_id(ty, None, payload);
     }
 

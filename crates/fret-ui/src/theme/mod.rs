@@ -161,6 +161,51 @@ fn fallback_text_style_by_key(key: &str) -> TextStyle {
     default_theme().text_style_by_key(key).unwrap_or_default()
 }
 
+fn canonicalize_config_map<V: Clone>(
+    kind: ThemeTokenKind,
+    map: &HashMap<String, V>,
+) -> HashMap<String, V> {
+    let mut out: HashMap<String, V> = HashMap::new();
+
+    // Keep results deterministic even when the input is a `HashMap` and multiple aliases map to
+    // the same canonical key (config error, but we should behave consistently).
+    let mut keys: Vec<&String> = map.keys().collect();
+    keys.sort_by(|a, b| a.trim().cmp(b.trim()).then_with(|| a.cmp(b)));
+
+    // First pass: keys already in canonical form win over aliases.
+    for k in keys.iter().copied() {
+        let trimmed = k.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let canon = canonicalize_token_key(kind, trimmed);
+        if canon == trimmed {
+            // `k` might include whitespace, but `canon` is derived from `trimmed`, so read the
+            // original value and store under the canonical key.
+            if let Some(v) = map.get(k) {
+                out.insert(canon.to_string(), v.clone());
+            }
+        }
+    }
+
+    // Second pass: fill missing canonical keys from aliases.
+    for k in keys.iter().copied() {
+        let trimmed = k.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let canon = canonicalize_token_key(kind, trimmed);
+        if canon == trimmed {
+            continue;
+        }
+        if let Some(v) = map.get(k) {
+            out.entry(canon.to_string()).or_insert_with(|| v.clone());
+        }
+    }
+
+    out
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CubicBezier {
     pub x1: f32,
@@ -888,31 +933,38 @@ impl Theme {
     }
 
     pub fn color_key_configured(&self, key: &str) -> bool {
-        self.configured_colors.contains(key.trim())
+        let key = canonicalize_token_key(ThemeTokenKind::Color, key);
+        self.configured_colors.contains(key)
     }
 
     pub fn metric_key_configured(&self, key: &str) -> bool {
-        self.configured_metrics.contains(key.trim())
+        let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
+        self.configured_metrics.contains(key)
     }
 
     pub fn corners_key_configured(&self, key: &str) -> bool {
-        self.configured_corners.contains(key.trim())
+        let key = canonicalize_token_key(ThemeTokenKind::Corners, key);
+        self.configured_corners.contains(key)
     }
 
     pub fn number_key_configured(&self, key: &str) -> bool {
-        self.configured_numbers.contains(key.trim())
+        let key = canonicalize_token_key(ThemeTokenKind::Number, key);
+        self.configured_numbers.contains(key)
     }
 
     pub fn duration_ms_key_configured(&self, key: &str) -> bool {
-        self.configured_durations_ms.contains(key.trim())
+        let key = canonicalize_token_key(ThemeTokenKind::DurationMs, key);
+        self.configured_durations_ms.contains(key)
     }
 
     pub fn easing_key_configured(&self, key: &str) -> bool {
-        self.configured_easings.contains(key.trim())
+        let key = canonicalize_token_key(ThemeTokenKind::Easing, key);
+        self.configured_easings.contains(key)
     }
 
     pub fn text_style_key_configured(&self, key: &str) -> bool {
-        self.configured_text_styles.contains(key.trim())
+        let key = canonicalize_token_key(ThemeTokenKind::TextStyle, key);
+        self.configured_text_styles.contains(key)
     }
 
     pub fn snapshot(&self) -> ThemeSnapshot {
@@ -942,6 +994,15 @@ impl Theme {
 
         assert_no_legacy_theme_keys(cfg);
 
+        let cfg_colors = canonicalize_config_map(ThemeTokenKind::Color, &cfg.colors);
+        let cfg_metrics = canonicalize_config_map(ThemeTokenKind::Metric, &cfg.metrics);
+        let cfg_corners = canonicalize_config_map(ThemeTokenKind::Corners, &cfg.corners);
+        let cfg_numbers = canonicalize_config_map(ThemeTokenKind::Number, &cfg.numbers);
+        let cfg_durations_ms =
+            canonicalize_config_map(ThemeTokenKind::DurationMs, &cfg.durations_ms);
+        let cfg_easings = canonicalize_config_map(ThemeTokenKind::Easing, &cfg.easings);
+        let cfg_text_styles = canonicalize_config_map(ThemeTokenKind::TextStyle, &cfg.text_styles);
+
         let mut changed = false;
 
         let mut next_numbers = HashMap::new();
@@ -952,7 +1013,7 @@ impl Theme {
 
         macro_rules! apply_semantic_color {
             ($key:literal, $set:expr) => {
-                if let Some(v) = cfg.colors.get($key) {
+                if let Some(v) = cfg_colors.get($key) {
                     if let Some(c) = parse_color_to_linear(v) {
                         $set(c);
                     }
@@ -962,7 +1023,7 @@ impl Theme {
 
         macro_rules! apply_metric {
             ($key:literal, $field:expr) => {
-                if let Some(v) = cfg.metrics.get($key).copied() {
+                if let Some(v) = cfg_metrics.get($key).copied() {
                     let px = Px(v);
                     if $field != px {
                         $field = px;
@@ -974,7 +1035,7 @@ impl Theme {
 
         macro_rules! apply_semantic_metric {
             ($key:literal, $set:expr) => {
-                if let Some(v) = cfg.metrics.get($key).copied() {
+                if let Some(v) = cfg_metrics.get($key).copied() {
                     let px = Px(v);
                     $set(px);
                 }
@@ -1009,7 +1070,7 @@ impl Theme {
             }
         });
         apply_semantic_color!("input", |c| {
-            if !cfg.colors.contains_key("border") {
+            if !cfg_colors.contains_key("border") {
                 if self.colors.panel_border != c {
                     self.colors.panel_border = c;
                     changed = true;
@@ -1035,8 +1096,8 @@ impl Theme {
                 self.colors.panel_background = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("fret.list.background")
-                && !cfg.colors.contains_key("color.list.background")
+            if !cfg_colors.contains_key("fret.list.background")
+                && !cfg_colors.contains_key("color.list.background")
                 && self.colors.list_background != c
             {
                 self.colors.list_background = c;
@@ -1060,15 +1121,15 @@ impl Theme {
                 self.colors.hover_background = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("fret.menu.item.hover")
-                && !cfg.colors.contains_key("color.menu.item.hover")
+            if !cfg_colors.contains_key("fret.menu.item.hover")
+                && !cfg_colors.contains_key("color.menu.item.hover")
                 && self.colors.menu_item_hover != c
             {
                 self.colors.menu_item_hover = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("fret.list.row.hover")
-                && !cfg.colors.contains_key("color.list.row.hover")
+            if !cfg_colors.contains_key("fret.list.row.hover")
+                && !cfg_colors.contains_key("color.list.row.hover")
                 && self.colors.list_row_hover != c
             {
                 self.colors.list_row_hover = c;
@@ -1080,9 +1141,9 @@ impl Theme {
                 self.colors.accent = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("selection")
-                && !cfg.colors.contains_key("selection.background")
-                && !cfg.colors.contains_key("color.selection.background")
+            if !cfg_colors.contains_key("selection")
+                && !cfg_colors.contains_key("selection.background")
+                && !cfg_colors.contains_key("color.selection.background")
             {
                 let selection = with_alpha(c, 0.4);
                 if self.colors.selection_background != selection {
@@ -1094,7 +1155,7 @@ impl Theme {
 
         macro_rules! apply_baseline_color {
             ($key:literal, $field:expr) => {
-                if let Some(v) = cfg.colors.get($key) {
+                if let Some(v) = cfg_colors.get($key) {
                     if let Some(c) = parse_color_to_linear(v) {
                         if $field != c {
                             $field = c;
@@ -1222,8 +1283,8 @@ impl Theme {
 
         // gpui-component compatibility: accept `font.size` / `mono_font.size` when the canonical
         // `metric.font.*` keys are not present.
-        if !cfg.metrics.contains_key("metric.font.size")
-            && let Some(v) = cfg.metrics.get("font.size").copied()
+        if !cfg_metrics.contains_key("metric.font.size")
+            && let Some(v) = cfg_metrics.get("font.size").copied()
         {
             let px = Px(v);
             if self.metrics.font_size != px {
@@ -1231,8 +1292,8 @@ impl Theme {
                 changed = true;
             }
         }
-        if !cfg.metrics.contains_key("metric.font.mono_size")
-            && let Some(v) = cfg.metrics.get("mono_font.size").copied()
+        if !cfg_metrics.contains_key("metric.font.mono_size")
+            && let Some(v) = cfg_metrics.get("mono_font.size").copied()
         {
             let px = Px(v);
             if self.metrics.mono_font_size != px {
@@ -1240,8 +1301,8 @@ impl Theme {
                 changed = true;
             }
         }
-        if !cfg.metrics.contains_key("metric.font.line_height")
-            && let Some(v) = cfg.metrics.get("font.line_height").copied()
+        if !cfg_metrics.contains_key("metric.font.line_height")
+            && let Some(v) = cfg_metrics.get("font.line_height").copied()
         {
             let px = Px(v);
             if self.metrics.font_line_height != px {
@@ -1249,8 +1310,8 @@ impl Theme {
                 changed = true;
             }
         }
-        if !cfg.metrics.contains_key("metric.font.mono_line_height")
-            && let Some(v) = cfg.metrics.get("mono_font.line_height").copied()
+        if !cfg_metrics.contains_key("metric.font.mono_line_height")
+            && let Some(v) = cfg_metrics.get("mono_font.line_height").copied()
         {
             let px = Px(v);
             if self.metrics.mono_font_line_height != px {
@@ -1262,33 +1323,33 @@ impl Theme {
         let mut next_colors = default_color_tokens(self.colors);
         let mut next_metrics = default_metric_tokens(self.metrics);
 
-        for (k, v) in &cfg.colors {
+        for (k, v) in &cfg_colors {
             if let Some(c) = parse_color_to_linear(v) {
                 next_colors.insert(k.clone(), c);
             }
         }
 
-        for (k, v) in &cfg.metrics {
+        for (k, v) in &cfg_metrics {
             next_metrics.insert(k.clone(), Px(*v));
         }
 
-        for (k, v) in &cfg.numbers {
+        for (k, v) in &cfg_numbers {
             next_numbers.insert(k.clone(), *v);
         }
 
-        for (k, v) in &cfg.durations_ms {
+        for (k, v) in &cfg_durations_ms {
             next_durations_ms.insert(k.clone(), *v);
         }
 
-        for (k, v) in &cfg.easings {
+        for (k, v) in &cfg_easings {
             next_easings.insert(k.clone(), *v);
         }
 
-        for (k, v) in &cfg.text_styles {
+        for (k, v) in &cfg_text_styles {
             next_text_styles.insert(k.clone(), v.clone());
         }
 
-        for (k, v) in &cfg.corners {
+        for (k, v) in &cfg_corners {
             next_corners.insert(k.clone(), *v);
         }
 
@@ -1395,6 +1456,11 @@ impl Theme {
             self.colors.viewport_rotate_gizmo,
         );
 
+        // Keep shadcn semantic aliases coherent with the resolved typed baseline fields.
+        //
+        // Important: do not overwrite config-provided tokens that do *not* map onto typed baseline
+        // fields (e.g. `*-foreground`). Those are part of the shadcn token surface and must
+        // remain author-controlled.
         next_colors.insert("background".to_string(), self.colors.surface_background);
         next_colors.insert("foreground".to_string(), self.colors.text_primary);
         next_colors.insert("border".to_string(), self.colors.panel_border);
@@ -1405,22 +1471,10 @@ impl Theme {
             self.colors.surface_background,
         );
         next_colors.insert("card".to_string(), self.colors.panel_background);
-        next_colors.insert("card-foreground".to_string(), self.colors.text_primary);
         next_colors.insert("popover".to_string(), self.colors.menu_background);
-        next_colors.insert("popover-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("muted".to_string(), self.colors.panel_background);
         next_colors.insert("muted-foreground".to_string(), self.colors.text_muted);
         next_colors.insert("accent".to_string(), self.colors.hover_background);
-        next_colors.insert("accent-foreground".to_string(), self.colors.text_primary);
         next_colors.insert("primary".to_string(), self.colors.accent);
-        next_colors.insert("primary-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("secondary".to_string(), self.colors.panel_background);
-        next_colors.insert("secondary-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("destructive".to_string(), self.colors.viewport_gizmo_x);
-        next_colors.insert(
-            "destructive-foreground".to_string(),
-            self.colors.text_primary,
-        );
 
         next_metrics.insert("metric.radius.sm".to_string(), self.metrics.radius_sm);
         next_metrics.insert("metric.radius.md".to_string(), self.metrics.radius_md);
@@ -1460,17 +1514,17 @@ impl Theme {
             self.metrics.mono_font_line_height,
         );
 
-        let next_configured_colors: HashSet<String> = cfg.colors.keys().cloned().collect();
+        let next_configured_colors: HashSet<String> = cfg_colors.keys().cloned().collect();
         if self.configured_colors != next_configured_colors {
             self.configured_colors = next_configured_colors;
             changed = true;
         }
-        let next_configured_metrics: HashSet<String> = cfg.metrics.keys().cloned().collect();
+        let next_configured_metrics: HashSet<String> = cfg_metrics.keys().cloned().collect();
         if self.configured_metrics != next_configured_metrics {
             self.configured_metrics = next_configured_metrics;
             changed = true;
         }
-        let next_configured_corners: HashSet<String> = cfg.corners.keys().cloned().collect();
+        let next_configured_corners: HashSet<String> = cfg_corners.keys().cloned().collect();
         if self.configured_corners != next_configured_corners {
             self.configured_corners = next_configured_corners;
             changed = true;
@@ -1489,27 +1543,27 @@ impl Theme {
             changed = true;
         }
 
-        let next_configured_numbers: HashSet<String> = cfg.numbers.keys().cloned().collect();
+        let next_configured_numbers: HashSet<String> = cfg_numbers.keys().cloned().collect();
         if self.configured_numbers != next_configured_numbers {
             self.configured_numbers = next_configured_numbers;
             changed = true;
         }
 
         let next_configured_durations_ms: HashSet<String> =
-            cfg.durations_ms.keys().cloned().collect();
+            cfg_durations_ms.keys().cloned().collect();
         if self.configured_durations_ms != next_configured_durations_ms {
             self.configured_durations_ms = next_configured_durations_ms;
             changed = true;
         }
 
-        let next_configured_easings: HashSet<String> = cfg.easings.keys().cloned().collect();
+        let next_configured_easings: HashSet<String> = cfg_easings.keys().cloned().collect();
         if self.configured_easings != next_configured_easings {
             self.configured_easings = next_configured_easings;
             changed = true;
         }
 
         let next_configured_text_styles: HashSet<String> =
-            cfg.text_styles.keys().cloned().collect();
+            cfg_text_styles.keys().cloned().collect();
         if self.configured_text_styles != next_configured_text_styles {
             self.configured_text_styles = next_configured_text_styles;
             changed = true;
@@ -1546,13 +1600,10 @@ impl Theme {
     pub fn extend_tokens_from_config(&mut self, cfg: &ThemeConfig) {
         let mut changed = false;
 
-        for (k, v) in &cfg.colors {
-            let key = k.trim();
-            if key.is_empty() {
-                continue;
-            }
+        let colors = canonicalize_config_map(ThemeTokenKind::Color, &cfg.colors);
+        for (key, v) in &colors {
             if let Some(c) = parse_color_to_linear(v) {
-                match self.extra_colors.get(key).copied() {
+                match self.extra_colors.get(key.as_str()).copied() {
                     Some(prev) if prev == c => {}
                     _ => {
                         self.extra_colors.insert(key.to_string(), c);
@@ -1562,13 +1613,10 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.metrics {
-            let key = k.trim();
-            if key.is_empty() {
-                continue;
-            }
+        let metrics = canonicalize_config_map(ThemeTokenKind::Metric, &cfg.metrics);
+        for (key, v) in &metrics {
             let px = Px(*v);
-            match self.extra_metrics.get(key).copied() {
+            match self.extra_metrics.get(key.as_str()).copied() {
                 Some(prev) if prev == px => {}
                 _ => {
                     self.extra_metrics.insert(key.to_string(), px);
@@ -1577,12 +1625,9 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.corners {
-            let key = k.trim();
-            if key.is_empty() {
-                continue;
-            }
-            match self.extra_corners.get(key).copied() {
+        let corners = canonicalize_config_map(ThemeTokenKind::Corners, &cfg.corners);
+        for (key, v) in &corners {
+            match self.extra_corners.get(key.as_str()).copied() {
                 Some(prev) if prev == *v => {}
                 _ => {
                     self.extra_corners.insert(key.to_string(), *v);
@@ -1591,12 +1636,9 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.numbers {
-            let key = k.trim();
-            if key.is_empty() {
-                continue;
-            }
-            match self.extra_numbers.get(key).copied() {
+        let numbers = canonicalize_config_map(ThemeTokenKind::Number, &cfg.numbers);
+        for (key, v) in &numbers {
+            match self.extra_numbers.get(key.as_str()).copied() {
                 Some(prev) if (prev - *v).abs() < 1e-6 => {}
                 _ => {
                     self.extra_numbers.insert(key.to_string(), *v);
@@ -1605,12 +1647,9 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.durations_ms {
-            let key = k.trim();
-            if key.is_empty() {
-                continue;
-            }
-            match self.extra_durations_ms.get(key).copied() {
+        let durations_ms = canonicalize_config_map(ThemeTokenKind::DurationMs, &cfg.durations_ms);
+        for (key, v) in &durations_ms {
+            match self.extra_durations_ms.get(key.as_str()).copied() {
                 Some(prev) if prev == *v => {}
                 _ => {
                     self.extra_durations_ms.insert(key.to_string(), *v);
@@ -1619,12 +1658,9 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.easings {
-            let key = k.trim();
-            if key.is_empty() {
-                continue;
-            }
-            match self.extra_easings.get(key).copied() {
+        let easings = canonicalize_config_map(ThemeTokenKind::Easing, &cfg.easings);
+        for (key, v) in &easings {
+            match self.extra_easings.get(key.as_str()).copied() {
                 Some(prev) if prev == *v => {}
                 _ => {
                     self.extra_easings.insert(key.to_string(), *v);
@@ -1633,12 +1669,9 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.text_styles {
-            let key = k.trim();
-            if key.is_empty() {
-                continue;
-            }
-            match self.extra_text_styles.get(key) {
+        let text_styles = canonicalize_config_map(ThemeTokenKind::TextStyle, &cfg.text_styles);
+        for (key, v) in &text_styles {
+            match self.extra_text_styles.get(key.as_str()) {
                 Some(prev) if prev == v => {}
                 _ => {
                     self.extra_text_styles.insert(key.to_string(), v.clone());
@@ -1665,20 +1698,13 @@ impl Theme {
 
         let mut changed = false;
 
-        fn key_trim(k: &str) -> Option<&str> {
-            let k = k.trim();
-            (!k.is_empty()).then_some(k)
-        }
-
-        for (k, v) in &cfg.colors {
-            let Some(key) = key_trim(k) else {
-                continue;
-            };
+        let colors = canonicalize_config_map(ThemeTokenKind::Color, &cfg.colors);
+        for (key, v) in &colors {
             self.configured_colors.insert(key.to_string());
             let Some(c) = parse_color_to_linear(v) else {
                 continue;
             };
-            match self.extra_colors.get(key).copied() {
+            match self.extra_colors.get(key.as_str()).copied() {
                 Some(prev) if prev == c => {}
                 _ => {
                     self.extra_colors.insert(key.to_string(), c);
@@ -1687,13 +1713,11 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.metrics {
-            let Some(key) = key_trim(k) else {
-                continue;
-            };
+        let metrics = canonicalize_config_map(ThemeTokenKind::Metric, &cfg.metrics);
+        for (key, v) in &metrics {
             self.configured_metrics.insert(key.to_string());
             let px = Px(*v);
-            match self.extra_metrics.get(key).copied() {
+            match self.extra_metrics.get(key.as_str()).copied() {
                 Some(prev) if prev == px => {}
                 _ => {
                     self.extra_metrics.insert(key.to_string(), px);
@@ -1702,12 +1726,10 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.corners {
-            let Some(key) = key_trim(k) else {
-                continue;
-            };
+        let corners = canonicalize_config_map(ThemeTokenKind::Corners, &cfg.corners);
+        for (key, v) in &corners {
             self.configured_corners.insert(key.to_string());
-            match self.extra_corners.get(key).copied() {
+            match self.extra_corners.get(key.as_str()).copied() {
                 Some(prev) if prev == *v => {}
                 _ => {
                     self.extra_corners.insert(key.to_string(), *v);
@@ -1716,12 +1738,10 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.numbers {
-            let Some(key) = key_trim(k) else {
-                continue;
-            };
+        let numbers = canonicalize_config_map(ThemeTokenKind::Number, &cfg.numbers);
+        for (key, v) in &numbers {
             self.configured_numbers.insert(key.to_string());
-            match self.extra_numbers.get(key).copied() {
+            match self.extra_numbers.get(key.as_str()).copied() {
                 Some(prev) if (prev - *v).abs() < 1e-6 => {}
                 _ => {
                     self.extra_numbers.insert(key.to_string(), *v);
@@ -1730,12 +1750,10 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.durations_ms {
-            let Some(key) = key_trim(k) else {
-                continue;
-            };
+        let durations_ms = canonicalize_config_map(ThemeTokenKind::DurationMs, &cfg.durations_ms);
+        for (key, v) in &durations_ms {
             self.configured_durations_ms.insert(key.to_string());
-            match self.extra_durations_ms.get(key).copied() {
+            match self.extra_durations_ms.get(key.as_str()).copied() {
                 Some(prev) if prev == *v => {}
                 _ => {
                     self.extra_durations_ms.insert(key.to_string(), *v);
@@ -1744,12 +1762,10 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.easings {
-            let Some(key) = key_trim(k) else {
-                continue;
-            };
+        let easings = canonicalize_config_map(ThemeTokenKind::Easing, &cfg.easings);
+        for (key, v) in &easings {
             self.configured_easings.insert(key.to_string());
-            match self.extra_easings.get(key).copied() {
+            match self.extra_easings.get(key.as_str()).copied() {
                 Some(prev) if prev == *v => {}
                 _ => {
                     self.extra_easings.insert(key.to_string(), *v);
@@ -1758,12 +1774,10 @@ impl Theme {
             }
         }
 
-        for (k, v) in &cfg.text_styles {
-            let Some(key) = key_trim(k) else {
-                continue;
-            };
+        let text_styles = canonicalize_config_map(ThemeTokenKind::TextStyle, &cfg.text_styles);
+        for (key, v) in &text_styles {
             self.configured_text_styles.insert(key.to_string());
-            match self.extra_text_styles.get(key) {
+            match self.extra_text_styles.get(key.as_str()) {
                 Some(prev) if prev == v => {}
                 _ => {
                     self.extra_text_styles.insert(key.to_string(), v.clone());
@@ -2567,5 +2581,76 @@ mod tests {
             "expected shadcn-style palette tokens to remain intact after metric patches"
         );
         assert_eq!(theme.metric_by_key("metric.padding.sm"), Some(Px(7.0)));
+    }
+
+    #[test]
+    fn apply_config_prefers_canonical_keys_over_aliases() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+
+        theme.apply_config(&ThemeConfig {
+            name: "Cfg".to_string(),
+            colors: HashMap::from([
+                ("primary-foreground".to_string(), "#ffffff".to_string()),
+                ("primary.foreground".to_string(), "#000000".to_string()),
+            ]),
+            ..ThemeConfig::default()
+        });
+
+        assert!(theme.color_key_configured("primary-foreground"));
+        assert!(theme.color_key_configured("primary.foreground"));
+        assert_eq!(
+            theme.color_by_key("primary-foreground"),
+            parse_color_to_linear("#ffffff")
+        );
+    }
+
+    #[test]
+    fn apply_config_patch_prefers_canonical_keys_over_aliases() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+
+        theme.apply_config_patch(&ThemeConfig {
+            name: "Patch".to_string(),
+            colors: HashMap::from([
+                ("primary-foreground".to_string(), "#ffffff".to_string()),
+                ("primary.foreground".to_string(), "#000000".to_string()),
+            ]),
+            ..ThemeConfig::default()
+        });
+
+        assert!(theme.color_key_configured("primary-foreground"));
+        assert!(theme.color_key_configured("primary.foreground"));
+        assert_eq!(
+            theme.color_by_key("primary-foreground"),
+            parse_color_to_linear("#ffffff")
+        );
+    }
+
+    #[test]
+    fn extend_tokens_from_config_prefers_canonical_keys_over_aliases_without_touching_configured() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+
+        theme.apply_config(&ThemeConfig {
+            name: "Base".to_string(),
+            metrics: HashMap::from([("metric.padding.sm".to_string(), 7.0)]),
+            ..ThemeConfig::default()
+        });
+        assert!(theme.metric_key_configured("metric.padding.sm"));
+        assert!(!theme.color_key_configured("primary-foreground"));
+
+        theme.extend_tokens_from_config(&ThemeConfig {
+            name: "Extras".to_string(),
+            colors: HashMap::from([
+                ("primary-foreground".to_string(), "#ffffff".to_string()),
+                ("primary.foreground".to_string(), "#000000".to_string()),
+            ]),
+            ..ThemeConfig::default()
+        });
+
+        assert!(theme.metric_key_configured("metric.padding.sm"));
+        assert!(!theme.color_key_configured("primary-foreground"));
+        assert_eq!(
+            theme.color_by_key("primary-foreground"),
+            parse_color_to_linear("#ffffff")
+        );
     }
 }

@@ -569,6 +569,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_repair_view_cache_bounds_time = Duration::default();
             self.debug_stats.layout_contained_view_cache_roots_time = Duration::default();
             self.debug_stats.layout_collapse_layout_observations_time = Duration::default();
+            self.debug_stats.layout_observation_record_time = Duration::default();
+            self.debug_stats.layout_observation_record_models_items = 0;
+            self.debug_stats.layout_observation_record_globals_items = 0;
             self.debug_stats.layout_prepaint_after_layout_time = Duration::default();
             self.debug_stats.layout_skipped_engine_frame = false;
             self.debug_stats.layout_fast_path_taken = false;
@@ -586,6 +589,9 @@ impl<H: UiHost> UiTree<H> {
         if let Some(roots_started) = roots_started {
             self.debug_stats.layout_collect_roots_time += roots_started.elapsed();
         }
+
+        let roots_len = roots.len();
+        let trace_layout = tracing::enabled!(tracing::Level::TRACE);
 
         let mut viewport_cursor: usize = 0;
 
@@ -716,14 +722,32 @@ impl<H: UiHost> UiTree<H> {
 
         let started_phase = profile_layout_all.then(Instant::now);
         let request_build_started = self.debug_enabled.then(Instant::now);
-        self.request_build_window_roots_if_final(
-            app,
-            services,
-            &roots,
-            bounds,
-            scale_factor,
-            pass_kind,
-        );
+        if trace_layout {
+            let span = tracing::trace_span!(
+                "fret.ui.layout.request_build_roots",
+                window = ?self.window,
+                pass_kind = ?pass_kind,
+                roots_len,
+            );
+            let _guard = span.enter();
+            self.request_build_window_roots_if_final(
+                app,
+                services,
+                &roots,
+                bounds,
+                scale_factor,
+                pass_kind,
+            );
+        } else {
+            self.request_build_window_roots_if_final(
+                app,
+                services,
+                &roots,
+                bounds,
+                scale_factor,
+                pass_kind,
+            );
+        }
         if let Some(started) = started_phase {
             t_request_build_roots = Some(started.elapsed());
         }
@@ -733,17 +757,51 @@ impl<H: UiHost> UiTree<H> {
 
         let started_phase = profile_layout_all.then(Instant::now);
         let roots_started = self.debug_enabled.then(Instant::now);
-        for root in roots {
-            let _ =
-                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
-
-            self.flush_viewport_roots_after_root(
-                app,
-                services,
-                scale_factor,
-                pass_kind,
-                &mut viewport_cursor,
+        if trace_layout {
+            let span = tracing::trace_span!(
+                "fret.ui.layout.roots",
+                window = ?self.window,
+                pass_kind = ?pass_kind,
+                roots_len,
             );
+            let _guard = span.enter();
+            for root in roots {
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    root,
+                    bounds,
+                    scale_factor,
+                    pass_kind,
+                );
+
+                self.flush_viewport_roots_after_root(
+                    app,
+                    services,
+                    scale_factor,
+                    pass_kind,
+                    &mut viewport_cursor,
+                );
+            }
+        } else {
+            for root in roots {
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    root,
+                    bounds,
+                    scale_factor,
+                    pass_kind,
+                );
+
+                self.flush_viewport_roots_after_root(
+                    app,
+                    services,
+                    scale_factor,
+                    pass_kind,
+                    &mut viewport_cursor,
+                );
+            }
         }
         if let Some(roots_started) = roots_started {
             self.debug_stats.layout_roots_time += roots_started.elapsed();
@@ -2661,10 +2719,30 @@ impl<H: UiHost> UiTree<H> {
 
         if !is_probe {
             if !skip_observation_recording {
+                let obs_started = self.debug_enabled.then(Instant::now);
+                let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
+                let global_items =
+                    global_observations.as_slice().len().min(u32::MAX as usize) as u32;
                 self.observed_in_layout
                     .record(node, observations.as_slice());
                 self.observed_globals_in_layout
                     .record(node, global_observations.as_slice());
+                if let Some(obs_started) = obs_started {
+                    self.debug_stats.layout_observation_record_time = self
+                        .debug_stats
+                        .layout_observation_record_time
+                        .saturating_add(obs_started.elapsed());
+                }
+                if self.debug_enabled {
+                    self.debug_stats.layout_observation_record_models_items = self
+                        .debug_stats
+                        .layout_observation_record_models_items
+                        .saturating_add(model_items);
+                    self.debug_stats.layout_observation_record_globals_items = self
+                        .debug_stats
+                        .layout_observation_record_globals_items
+                        .saturating_add(global_items);
+                }
             }
             if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                 n.measured_size = size;
@@ -2858,10 +2936,29 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if !skip_observation_recording {
+            let obs_started = self.debug_enabled.then(Instant::now);
+            let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
+            let global_items = global_observations.as_slice().len().min(u32::MAX as usize) as u32;
             self.observed_in_layout
                 .record(node, observations.as_slice());
             self.observed_globals_in_layout
                 .record(node, global_observations.as_slice());
+            if let Some(obs_started) = obs_started {
+                self.debug_stats.layout_observation_record_time = self
+                    .debug_stats
+                    .layout_observation_record_time
+                    .saturating_add(obs_started.elapsed());
+            }
+            if self.debug_enabled {
+                self.debug_stats.layout_observation_record_models_items = self
+                    .debug_stats
+                    .layout_observation_record_models_items
+                    .saturating_add(model_items);
+                self.debug_stats.layout_observation_record_globals_items = self
+                    .debug_stats
+                    .layout_observation_record_globals_items
+                    .saturating_add(global_items);
+            }
         }
 
         let popped = self.measure_stack.pop();

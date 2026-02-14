@@ -92,7 +92,7 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         }
 
         SceneOp::PushMask { bounds, mask: m } => {
-            let _ = mask::push_mask(state, bounds, m);
+            let _ = mask::push_mask(renderer, state, bounds, m);
         }
         SceneOp::PopMask => {
             mask::pop_mask(state);
