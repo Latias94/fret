@@ -731,6 +731,9 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_repair_view_cache_bounds_time_us: u64,
     pub(super) layout_contained_view_cache_roots_time_us: u64,
     pub(super) layout_collapse_layout_observations_time_us: u64,
+    pub(super) layout_observation_record_time_us: u64,
+    pub(super) layout_observation_record_models_items: u32,
+    pub(super) layout_observation_record_globals_items: u32,
     pub(super) layout_view_cache_time_us: u64,
     pub(super) layout_semantics_refresh_time_us: u64,
     pub(super) layout_focus_repair_time_us: u64,
@@ -1230,6 +1233,17 @@ impl BundleStatsReport {
                 row.propagated_global_change_observation_edges,
                 row.propagated_global_change_unobserved_globals
             );
+            if row.layout_observation_record_time_us > 0
+                || row.layout_observation_record_models_items > 0
+                || row.layout_observation_record_globals_items > 0
+            {
+                println!(
+                    "    layout_obs_record.us(time)={} items(models/globals)={}/{}",
+                    row.layout_observation_record_time_us,
+                    row.layout_observation_record_models_items,
+                    row.layout_observation_record_globals_items
+                );
+            }
             if row.paint_input_context_time_us > 0
                 || row.paint_scroll_handle_invalidation_time_us > 0
                 || row.paint_collect_roots_time_us > 0
@@ -2103,6 +2117,18 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_collapse_layout_observations_time_us".to_string(),
                     Value::from(row.layout_collapse_layout_observations_time_us),
+                );
+                obj.insert(
+                    "layout_observation_record_time_us".to_string(),
+                    Value::from(row.layout_observation_record_time_us),
+                );
+                obj.insert(
+                    "layout_observation_record_models_items".to_string(),
+                    Value::from(row.layout_observation_record_models_items),
+                );
+                obj.insert(
+                    "layout_observation_record_globals_items".to_string(),
+                    Value::from(row.layout_observation_record_globals_items),
                 );
                 obj.insert(
                     "layout_view_cache_time_us".to_string(),
@@ -8177,6 +8203,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_collapse_layout_observations_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_observation_record_time_us = stats
+                .and_then(|m| m.get("layout_observation_record_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_observation_record_models_items = stats
+                .and_then(|m| m.get("layout_observation_record_models_items"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let layout_observation_record_globals_items = stats
+                .and_then(|m| m.get("layout_observation_record_globals_items"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let layout_view_cache_time_us = stats
                 .and_then(|m| m.get("layout_view_cache_time_us"))
                 .and_then(|v| v.as_u64())
@@ -8562,6 +8604,9 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_repair_view_cache_bounds_time_us,
                 layout_contained_view_cache_roots_time_us,
                 layout_collapse_layout_observations_time_us,
+                layout_observation_record_time_us,
+                layout_observation_record_models_items,
+                layout_observation_record_globals_items,
                 layout_view_cache_time_us,
                 layout_semantics_refresh_time_us,
                 layout_focus_repair_time_us,

@@ -194,19 +194,21 @@ impl Default for UiDiagnosticsConfig {
         let config_path = std::env::var_os("FRET_DIAG_CONFIG_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from);
-        let config_file = config_path.as_ref().and_then(|p| match load_ui_diagnostics_config_file(p)
-        {
-            Ok(v) => Some(v),
-            Err(err) => {
-                tracing::warn!(
-                    target: "fret",
-                    config_path = ?p,
-                    error = %err,
-                    "failed to load ui diagnostics config file"
-                );
-                None
-            }
-        });
+        let config_file =
+            config_path
+                .as_ref()
+                .and_then(|p| match load_ui_diagnostics_config_file(p) {
+                    Ok(v) => Some(v),
+                    Err(err) => {
+                        tracing::warn!(
+                            target: "fret",
+                            config_path = ?p,
+                            error = %err,
+                            "failed to load ui diagnostics config file"
+                        );
+                        None
+                    }
+                });
         let config_enabled = config_file
             .as_ref()
             .map(|c| c.enabled.unwrap_or(true))
@@ -12629,6 +12631,12 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_collapse_layout_observations_time_us: u64,
     #[serde(default)]
+    pub layout_observation_record_time_us: u64,
+    #[serde(default)]
+    pub layout_observation_record_models_items: u32,
+    #[serde(default)]
+    pub layout_observation_record_globals_items: u32,
+    #[serde(default)]
     pub layout_prepaint_after_layout_time_us: u64,
     #[serde(default)]
     pub layout_skipped_engine_frame: bool,
@@ -13059,6 +13067,10 @@ impl UiFrameStatsV1 {
             layout_collapse_layout_observations_time_us: stats
                 .layout_collapse_layout_observations_time
                 .as_micros() as u64,
+            layout_observation_record_time_us: stats.layout_observation_record_time.as_micros()
+                as u64,
+            layout_observation_record_models_items: stats.layout_observation_record_models_items,
+            layout_observation_record_globals_items: stats.layout_observation_record_globals_items,
             layout_prepaint_after_layout_time_us: stats
                 .layout_prepaint_after_layout_time
                 .as_micros() as u64,
