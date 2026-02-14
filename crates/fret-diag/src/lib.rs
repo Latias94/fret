@@ -14693,9 +14693,10 @@ mod tests {
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
         check_bundle_for_wheel_scroll_hit_changes_json,
         check_bundle_for_windowed_rows_offset_changes_min,
-        check_bundle_for_windowed_rows_visible_start_changes_repainted_json, json_pointer_set,
+    check_bundle_for_windowed_rows_visible_start_changes_repainted_json,
         scan_semantics_changed_repainted_json,
-    };
+};
+use util::json_pointer_set;
     use fret_diag_protocol::{DevtoolsSessionDescriptorV1, DevtoolsSessionListV1};
     use serde_json::json;
     use std::path::Path;

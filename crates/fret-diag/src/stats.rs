@@ -9871,8 +9871,6 @@ impl SemanticsIndex {
     }
 }
 
-pub(super) use crate::util::json_pointer_set;
-
 pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
     bundle_path: &Path,
     min_keep_alive_reuse_frames: u64,
