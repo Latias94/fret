@@ -18,6 +18,16 @@ const THEME_DURATION_MOTION_SPRING_DRAG_RELEASE_SETTLE: &str =
 const THEME_NUMBER_MOTION_SPRING_DRAG_RELEASE_SETTLE_BOUNCE: &str =
     "number.motion.spring.drag_release_settle.bounce";
 
+const THEME_DURATION_SHADCN_SPRING_SHARED_INDICATOR: &str =
+    "duration.shadcn.motion.spring.shared_indicator";
+const THEME_NUMBER_SHADCN_SPRING_SHARED_INDICATOR_BOUNCE: &str =
+    "number.shadcn.motion.spring.shared_indicator.bounce";
+
+const THEME_DURATION_MOTION_SPRING_SHARED_INDICATOR: &str =
+    "duration.motion.spring.shared_indicator";
+const THEME_NUMBER_MOTION_SPRING_SHARED_INDICATOR_BOUNCE: &str =
+    "number.motion.spring.shared_indicator.bounce";
+
 fn duration_from_theme_ms<H: UiHost>(app: &H, key: &str) -> Option<Duration> {
     let theme = Theme::global(app);
     let ms = theme.duration_ms_by_key(key)?;
@@ -77,6 +87,22 @@ pub fn shadcn_drawer_inertia_bounce_spring_description<H: UiHost>(app: &H) -> Sp
                 bounce_from_theme_number(app, THEME_NUMBER_MOTION_SPRING_DRAG_RELEASE_SETTLE_BOUNCE)
             })
             .unwrap_or(default_bounce);
+
+    spring_from_duration_and_bounce(duration, bounce)
+}
+
+pub fn shared_indicator_spring_description<H: UiHost>(app: &H) -> SpringDescription {
+    let default_duration = Duration::from_millis(220);
+    let default_bounce = 0.0;
+
+    let duration = duration_from_theme_ms(app, THEME_DURATION_SHADCN_SPRING_SHARED_INDICATOR)
+        .or_else(|| duration_from_theme_ms(app, THEME_DURATION_MOTION_SPRING_SHARED_INDICATOR))
+        .unwrap_or(default_duration);
+    let bounce = bounce_from_theme_number(app, THEME_NUMBER_SHADCN_SPRING_SHARED_INDICATOR_BOUNCE)
+        .or_else(|| {
+            bounce_from_theme_number(app, THEME_NUMBER_MOTION_SPRING_SHARED_INDICATOR_BOUNCE)
+        })
+        .unwrap_or(default_bounce);
 
     spring_from_duration_and_bounce(duration, bounce)
 }

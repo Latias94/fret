@@ -4,8 +4,9 @@
 
 use super::hit_test::{hit_test_split_handle, hit_test_tab, tab_scroll_for_node};
 use super::layout::{
-    active_panel_content_bounds, compute_layout_map, dock_space_regions, float_zone, hidden_bounds,
-    split_tab_bar,
+    active_panel_content_bounds, compute_layout_map,
+    compute_layout_map_with_split_fractions_overrides, dock_space_regions, float_zone,
+    hidden_bounds, split_tab_bar,
 };
 use super::manager::DockManager;
 use super::paint::{
@@ -31,10 +32,19 @@ use super::viewport::{
 use super::{DockingPolicy, DockingPolicyService, default_viewport_min_content_size};
 use crate::invalidation::DockInvalidationService;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use fret_ui_headless::easing as headless_easing;
 
 const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
 const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
+
+const THEME_DURATION_MOTION_LAYOUT_EXPAND: &str = "duration.motion.layout.expand";
+const THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE: &str = "duration.motion.collapsible.toggle";
+
+const THEME_EASING_MOTION_LAYOUT_EXPAND: &str = "easing.motion.layout.expand";
+const THEME_EASING_MOTION_EMPHASIZED: &str = "easing.motion.emphasized";
+const THEME_EASING_MOTION_STANDARD: &str = "easing.motion.standard";
+const THEME_EASING_SHADCN_MOTION: &str = "easing.shadcn.motion";
 
 fn dock_graph_stats_for_window(
     graph: &DockGraph,
@@ -231,6 +241,7 @@ pub struct DockSpace {
     prepaint_wants_animation_frames: bool,
     dock_drop_resolve_diagnostics: Option<fret_runtime::DockDropResolveDiagnostics>,
     divider_drag: Option<DividerDragSession>,
+    split_fraction_motion: HashMap<DockNodeId, SplitFractionsMotion>,
     floating_drag: Option<FloatingDragState>,
     pending_dock_drags: HashMap<fret_core::PointerId, PendingDockDrag>,
     pending_dock_tabs_drags: HashMap<fret_core::PointerId, PendingDockTabsDrag>,
@@ -305,6 +316,16 @@ struct DividerDragSession {
     min_px: Vec<Px>,
 }
 
+#[derive(Debug, Clone)]
+struct SplitFractionsMotion {
+    from: Arc<[f32]>,
+    to: Arc<[f32]>,
+    tick: u64,
+    ticks_total: u64,
+    last_frame: fret_runtime::FrameId,
+    last_tick: fret_runtime::TickId,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct FloatingChrome {
     outer: Rect,
@@ -327,6 +348,7 @@ impl DockSpace {
             prepaint_wants_animation_frames: false,
             dock_drop_resolve_diagnostics: None,
             divider_drag: None,
+            split_fraction_motion: HashMap::new(),
             floating_drag: None,
             pending_dock_drags: HashMap::new(),
             pending_dock_tabs_drags: HashMap::new(),
@@ -386,6 +408,239 @@ impl DockSpace {
             last_active_tabs: None,
             hovered_float_zone: false,
         }
+    }
+
+    fn prefers_reduced_motion<H: UiHost>(app: &H, window: fret_core::AppWindowId) -> bool {
+        app.global::<WindowMetricsService>()
+            .and_then(|svc| {
+                svc.prefers_reduced_motion_is_known(window)
+                    .then(|| svc.prefers_reduced_motion(window))
+                    .flatten()
+            })
+            .unwrap_or(false)
+    }
+
+    fn ticks_60hz_for_duration(duration: std::time::Duration) -> u64 {
+        if duration == std::time::Duration::ZERO {
+            return 0;
+        }
+
+        const REFERENCE_FRAME_DELTA_NS_60HZ: u64 = 1_000_000_000 / 60;
+        let ref_ns = REFERENCE_FRAME_DELTA_NS_60HZ as u128;
+        let ns = duration.as_nanos();
+        if ns == 0 {
+            return 0;
+        }
+
+        // Ceil(duration / (1/60)s) so transitions do not end earlier than requested.
+        let ticks = (ns + ref_ns - 1) / ref_ns;
+        ticks.clamp(1, 10_000) as u64
+    }
+
+    fn scale_60fps_ticks_to_frame_ticks_rounded(
+        ticks: u64,
+        frame_delta: std::time::Duration,
+    ) -> u64 {
+        if ticks == 0 {
+            return 0;
+        }
+        if frame_delta == std::time::Duration::default() {
+            return ticks;
+        }
+        if frame_delta < std::time::Duration::from_millis(1) {
+            // Avoid scaling in ultra-small delta regimes (common in headless tests).
+            return ticks;
+        }
+
+        const REFERENCE_FRAME_DELTA_NS_60HZ: u64 = 1_000_000_000 / 60;
+        let ref_secs = (REFERENCE_FRAME_DELTA_NS_60HZ as f64) / 1_000_000_000.0;
+        let delta_secs = frame_delta.as_secs_f64();
+        if delta_secs <= 0.0 {
+            return ticks;
+        }
+
+        let scaled = (ticks as f64 * ref_secs / delta_secs).round();
+        scaled.clamp(1.0, 10_000.0) as u64
+    }
+
+    fn split_fraction_motion_ticks_and_easing(
+        theme: &fret_ui::Theme,
+        frame_delta: Option<std::time::Duration>,
+        reduced_motion: bool,
+    ) -> (u64, headless_easing::CubicBezier) {
+        let duration_ms = if reduced_motion {
+            0
+        } else {
+            theme
+                .duration_ms_by_key(THEME_DURATION_MOTION_LAYOUT_EXPAND)
+                .or_else(|| theme.duration_ms_by_key(THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE))
+                .unwrap_or(200)
+        };
+
+        let duration = std::time::Duration::from_millis(duration_ms as u64);
+        let ticks_60fps = Self::ticks_60hz_for_duration(duration);
+        let ticks = frame_delta
+            .map(|dt| Self::scale_60fps_ticks_to_frame_ticks_rounded(ticks_60fps, dt))
+            .unwrap_or(ticks_60fps);
+
+        let bezier = theme
+            .easing_by_key(THEME_EASING_MOTION_LAYOUT_EXPAND)
+            .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_EMPHASIZED))
+            .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
+            .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
+            .unwrap_or(fret_ui::theme::CubicBezier {
+                x1: headless_easing::SHADCN_EASE.x1,
+                y1: headless_easing::SHADCN_EASE.y1,
+                x2: headless_easing::SHADCN_EASE.x2,
+                y2: headless_easing::SHADCN_EASE.y2,
+            });
+        let ease = headless_easing::CubicBezier::new(bezier.x1, bezier.y1, bezier.x2, bezier.y2);
+
+        (ticks, ease)
+    }
+
+    fn split_fraction_overrides_for_graph(
+        &mut self,
+        graph: &DockGraph,
+        roots: impl IntoIterator<Item = DockNodeId>,
+        motion_ticks: u64,
+        ease: headless_easing::CubicBezier,
+        now_tick: fret_runtime::TickId,
+        now_frame: fret_runtime::FrameId,
+        allow_motion: bool,
+    ) -> (HashMap<DockNodeId, Arc<[f32]>>, bool) {
+        if !allow_motion || motion_ticks == 0 {
+            self.split_fraction_motion.clear();
+            return (HashMap::new(), false);
+        }
+
+        fn approx_eq(a: &[f32], b: &[f32]) -> bool {
+            if a.len() != b.len() {
+                return false;
+            }
+            a.iter()
+                .zip(b.iter())
+                .all(|(x, y)| (*x - *y).abs() <= 1.0e-5)
+        }
+
+        fn lerp_fractions(from: &[f32], to: &[f32], t: f32) -> Arc<[f32]> {
+            let t = t.clamp(0.0, 1.0);
+            let mut out: Vec<f32> = Vec::with_capacity(from.len().max(to.len()));
+            let len = from.len().min(to.len());
+            for i in 0..len {
+                out.push(from[i] + (to[i] - from[i]) * t);
+            }
+            if from.len() != to.len() {
+                // Fallback: keep the "to" shape if lengths diverge.
+                out = to.to_vec();
+            }
+
+            for v in out.iter_mut() {
+                if !v.is_finite() {
+                    *v = 0.0;
+                }
+                if *v < 0.0 {
+                    *v = 0.0;
+                }
+            }
+            let sum: f32 = out.iter().sum();
+            if sum.is_finite() && sum > 1.0e-6 {
+                for v in out.iter_mut() {
+                    *v /= sum;
+                }
+            }
+            Arc::from(out)
+        }
+
+        let mut overrides: HashMap<DockNodeId, Arc<[f32]>> = HashMap::new();
+        let mut any_active = false;
+        let mut visited: HashSet<DockNodeId> = HashSet::new();
+        let mut seen_splits: HashSet<DockNodeId> = HashSet::new();
+        let mut stack: Vec<DockNodeId> = roots.into_iter().collect();
+
+        while let Some(node) = stack.pop() {
+            if !visited.insert(node) {
+                continue;
+            }
+            let Some(n) = graph.node(node) else {
+                continue;
+            };
+
+            match n {
+                DockNode::Tabs { .. } => {}
+                DockNode::Floating { child } => stack.push(*child),
+                DockNode::Split {
+                    children,
+                    fractions,
+                    ..
+                } => {
+                    seen_splits.insert(node);
+                    for child in children {
+                        stack.push(*child);
+                    }
+
+                    let desired: Arc<[f32]> = Arc::from(fractions.as_slice());
+                    let entry = self.split_fraction_motion.entry(node).or_insert_with(|| {
+                        SplitFractionsMotion {
+                            from: desired.clone(),
+                            to: desired.clone(),
+                            tick: motion_ticks,
+                            ticks_total: motion_ticks,
+                            last_frame: now_frame,
+                            last_tick: now_tick,
+                        }
+                    });
+
+                    if entry.ticks_total != motion_ticks {
+                        entry.ticks_total = motion_ticks;
+                        if entry.tick > motion_ticks {
+                            entry.tick = motion_ticks;
+                        }
+                    }
+
+                    if !approx_eq(entry.to.as_ref(), desired.as_ref()) {
+                        let linear = if entry.ticks_total == 0 {
+                            1.0
+                        } else {
+                            (entry.tick as f32 / entry.ticks_total as f32).clamp(0.0, 1.0)
+                        };
+                        let eased = ease.sample(linear);
+                        let current = lerp_fractions(entry.from.as_ref(), entry.to.as_ref(), eased);
+                        entry.from = current;
+                        entry.to = desired;
+                        entry.tick = 0;
+                        entry.last_frame = now_frame;
+                        entry.last_tick = now_tick;
+                    }
+
+                    if now_frame != entry.last_frame {
+                        entry.last_frame = now_frame;
+                        entry.last_tick = now_tick;
+                        entry.tick = entry.tick.saturating_add(1);
+                    }
+
+                    let done = entry.tick >= entry.ticks_total || entry.ticks_total == 0;
+                    if !done {
+                        let linear = (entry.tick as f32 / entry.ticks_total as f32).clamp(0.0, 1.0);
+                        let eased = ease.sample(linear);
+                        overrides.insert(
+                            node,
+                            lerp_fractions(entry.from.as_ref(), entry.to.as_ref(), eased),
+                        );
+                        any_active = true;
+                    } else {
+                        // Ensure we don't keep stale "from" around after settling.
+                        entry.from = entry.to.clone();
+                        entry.tick = entry.ticks_total;
+                    }
+                }
+            }
+        }
+
+        self.split_fraction_motion
+            .retain(|split, _| seen_splits.contains(split));
+
+        (overrides, any_active)
     }
 
     fn panel_min_content_size(
@@ -1362,10 +1617,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 && (d.source_window == self.window || d.current_window == self.window)
                 && d.dragging
         });
+        let split_motion_active = self
+            .split_fraction_motion
+            .values()
+            .any(|m| m.ticks_total > 0 && m.tick < m.ticks_total);
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()
             || self.floating_drag.is_some()
-            || !self.viewport_capture.is_empty();
+            || !self.viewport_capture.is_empty()
+            || split_motion_active;
 
         // If the node is a view-cache root and paint caching is active, a "no-op" frame can
         // replay the previous paint ops and skip `Widget::paint()`. This makes it easy to miss
@@ -1376,6 +1636,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // one paint pass to establish/tear down the frame loop.
         if wants_animation_frames {
             cx.invalidate_self(Invalidation::Paint);
+            if split_motion_active {
+                cx.invalidate_self(Invalidation::Layout);
+            }
             if !self.prepaint_wants_animation_frames {
                 cx.request_redraw();
             }
@@ -4532,6 +4795,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
         let theme = cx.theme().snapshot();
 
+        let reduced_motion = Self::prefers_reduced_motion(&*cx.app, self.window);
+        let frame_delta = cx.frame_clock().map(|s| s.delta);
+        let (split_motion_ticks, split_motion_ease) = {
+            let theme = cx.theme();
+            Self::split_fraction_motion_ticks_and_easing(theme, frame_delta, reduced_motion)
+        };
+        let now_tick = cx.app.tick_id();
+        let now_frame = cx.app.frame_id();
+        let allow_split_motion = self.divider_drag.is_none();
+
         fret_ui::internal_drag::set_route(
             cx.app,
             self.window,
@@ -4551,39 +4824,64 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 });
         }
 
-        let Some((active_bounds, layout)) = (|| {
+        let Some((active_bounds, layout, wants_split_motion_frame)) = (|| {
             let dock = cx.app.global::<DockManager>()?;
             let root = dock.graph.window_root(self.window)?;
             let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
-            let mut layout = compute_layout_map(
+            let roots = std::iter::once(root).chain(
+                dock.graph
+                    .floating_windows(self.window)
+                    .iter()
+                    .map(|f| f.floating),
+            );
+            let (overrides, any_active) = self.split_fraction_overrides_for_graph(
+                &dock.graph,
+                roots,
+                split_motion_ticks,
+                split_motion_ease,
+                now_tick,
+                now_frame,
+                allow_split_motion,
+            );
+
+            let mut layout = compute_layout_map_with_split_fractions_overrides(
                 &dock.graph,
                 root,
                 dock_bounds,
                 split_handle_gap,
                 split_handle_hit_thickness,
+                &overrides,
             );
 
             for floating in dock.graph.floating_windows(self.window) {
                 let chrome = Self::floating_chrome(floating.rect);
-                let floating_layout = compute_layout_map(
+                let floating_layout = compute_layout_map_with_split_fractions_overrides(
                     &dock.graph,
                     floating.floating,
                     chrome.inner,
                     split_handle_gap,
                     split_handle_hit_thickness,
+                    &overrides,
                 );
                 for (k, v) in floating_layout {
                     layout.insert(k, v);
                 }
             }
 
-            Some((active_panel_content_bounds(&dock.graph, &layout), layout))
+            Some((
+                active_panel_content_bounds(&dock.graph, &layout),
+                layout,
+                any_active,
+            ))
         })() else {
             for &child in cx.children {
                 let _ = cx.layout_in(child, hidden);
             }
             return cx.available;
         };
+        if wants_split_motion_frame {
+            cx.request_animation_frame();
+        }
 
         if let Some(dock) = cx.app.global::<DockManager>() {
             let mut visible_tabs_nodes: HashSet<DockNodeId> = HashSet::new();
@@ -4727,6 +5025,39 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .app
             .global::<DockViewportOverlayHooksService>()
             .and_then(|svc| svc.hooks());
+
+        let reduced_motion = Self::prefers_reduced_motion(&*cx.app, self.window);
+        let frame_delta = cx.frame_clock().map(|s| s.delta);
+        let (split_motion_ticks, split_motion_ease) = {
+            let theme = cx.theme();
+            Self::split_fraction_motion_ticks_and_easing(theme, frame_delta, reduced_motion)
+        };
+        let now_tick = cx.app.tick_id();
+        let now_frame = cx.app.frame_id();
+        let allow_split_motion = self.divider_drag.is_none();
+        let (split_overrides, split_motion_active) = cx
+            .app
+            .global::<DockManager>()
+            .and_then(|dock| {
+                let root = dock.graph.window_root(self.window)?;
+                let roots = std::iter::once(root).chain(
+                    dock.graph
+                        .floating_windows(self.window)
+                        .iter()
+                        .map(|f| f.floating),
+                );
+                Some(self.split_fraction_overrides_for_graph(
+                    &dock.graph,
+                    roots,
+                    split_motion_ticks,
+                    split_motion_ease,
+                    now_tick,
+                    now_frame,
+                    allow_split_motion,
+                ))
+            })
+            .unwrap_or((HashMap::new(), false));
+
         let is_dock_dragging = cx
             .app
             .drag(fret_core::PointerId(0))
@@ -4734,8 +5065,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()
             || self.floating_drag.is_some()
-            || !self.viewport_capture.is_empty();
-        if wants_animation_frames {
+            || !self.viewport_capture.is_empty()
+            || split_motion_active;
+        if split_motion_active {
+            cx.request_animation_frame();
+        } else if wants_animation_frames {
             cx.request_animation_frame_paint_only();
         }
         if cx.app.global::<DockManager>().is_none() {
@@ -4795,12 +5129,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 return None;
             };
 
-            let root_layout = compute_layout_map(
+            let root_layout = compute_layout_map_with_split_fractions_overrides(
                 &dock.graph,
                 root,
                 dock_bounds,
                 split_handle_gap,
                 split_handle_hit_thickness,
+                &split_overrides,
             );
 
             let mut floating_layouts: Vec<(
@@ -4811,12 +5146,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let mut layout_all = root_layout.clone();
             for floating in dock.graph.floating_windows(self.window) {
                 let chrome = Self::floating_chrome(floating.rect);
-                let layout = compute_layout_map(
+                let layout = compute_layout_map_with_split_fractions_overrides(
                     &dock.graph,
                     floating.floating,
                     chrome.inner,
                     split_handle_gap,
                     split_handle_hit_thickness,
+                    &split_overrides,
                 );
                 for (k, v) in layout.iter() {
                     layout_all.insert(*k, *v);

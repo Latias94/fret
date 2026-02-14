@@ -685,6 +685,7 @@ pub(crate) fn maybe_launch_demo(
     let child = cmd
         .spawn()
         .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
+    let pid = child.id();
 
     #[cfg(windows)]
     if launch_high_priority {
@@ -700,6 +701,21 @@ pub(crate) fn maybe_launch_demo(
             );
         }
     }
+
+    // Write the PID for external profilers (ETW/WPA) and post-run triage.
+    //
+    // Best-effort: avoid failing the run due to filesystem issues.
+    let _ = std::fs::write(out_dir.join("launched.pid"), pid.to_string());
+    let _ = std::fs::write(
+        out_dir.join("launched.demo.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "pid": pid,
+            "launched_unix_ms": launched_unix_ms,
+            "launch_cmd": launch,
+        }))
+        .unwrap_or_else(|_| b"{}".to_vec()),
+    );
 
     let mut demo = LaunchedDemo {
         child,

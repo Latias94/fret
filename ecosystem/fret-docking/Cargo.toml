@@ -14,6 +14,7 @@ fret-core = { path = "../../crates/fret-core" }
 fret-dnd = { path = "../fret-dnd" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+fret-ui-headless = { path = "../fret-ui-headless" }
 fret-authoring = { path = "../fret-authoring", optional = true }
 slotmap.workspace = true
 tracing.workspace = true

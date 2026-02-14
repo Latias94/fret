@@ -116,7 +116,7 @@ pub(super) fn preview_motion_presets(
     let preset_select = {
         let select = shadcn::Select::new(motion_preset, motion_preset_open)
             .placeholder("Motion preset")
-            .trigger_test_id("ui-gallery-motion-preset-trigger")
+            .trigger_test_id("ui-gallery-motion-presets-preset-trigger")
             .items([
                 shadcn::SelectItem::new("theme", "Theme (baseline)")
                     .test_id("ui-gallery-motion-preset-item-theme"),
@@ -403,6 +403,78 @@ pub(super) fn preview_motion_presets(
         .refine_layout(shell_layout)
         .into_element(cx)
         .test_id("ui-gallery-motion-presets-overlay-demo")
+    };
+
+    let fluid_tabs_demo = {
+        let panel =
+            |cx: &mut ElementContext<'_, App>, title: &'static str, description: &'static str| {
+                shadcn::Alert::new([
+                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
+                    shadcn::AlertTitle::new(title).into_element(cx),
+                    shadcn::AlertDescription::new(description).into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
+            };
+
+        let tabs = shadcn::Tabs::uncontrolled(Some("accounts"))
+            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .shared_indicator_motion(true)
+            .content_presence_motion(true)
+            .test_id("ui-gallery-motion-presets-fluid-tabs")
+            .items([
+                shadcn::TabsItem::new(
+                    "accounts",
+                    "Accounts",
+                    [panel(
+                        cx,
+                        "Accounts",
+                        "Crossfade content on selection change (semantic presence tokens).",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-accounts"),
+                shadcn::TabsItem::new(
+                    "deposits",
+                    "Deposits",
+                    [panel(
+                        cx,
+                        "Deposits",
+                        "Uses a Duration-based driver so it stays stable across refresh rates.",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-deposits"),
+                shadcn::TabsItem::new(
+                    "funds",
+                    "Funds",
+                    [panel(
+                        cx,
+                        "Funds",
+                        "This is intentionally not DOM/Framer Motion: same semantics, different runtime.",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-funds"),
+            ])
+            .into_element(cx);
+
+        shadcn::Card::new([
+            shadcn::CardHeader::new([
+                shadcn::CardTitle::new("Fluid tabs demo").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Shared indicator + content presence (crossfade) using semantic motion tokens.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new([tabs]).into_element(cx),
+        ])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(760.0))
+                .min_w_0(),
+        )
+        .into_element(cx)
+        .test_id("ui-gallery-motion-presets-fluid-tabs-demo")
     };
 
     let stagger_demo = {
@@ -905,6 +977,7 @@ pub(super) fn preview_motion_presets(
         preset_select,
         token_snapshot,
         overlay_demo,
+        fluid_tabs_demo,
         stagger_demo,
         stack_shift_list_demo,
     ]

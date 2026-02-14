@@ -39,9 +39,9 @@ Recommended env (avoid extra I/O + keep cached rendering on):
 
 P0 commands:
 
-- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 
 ## Failure triage (when a gate fails)
 
@@ -58,6 +58,7 @@ P0 commands:
 3) Summarize and attribute:
 
 - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30 --json`
+  - `diag stats --json` includes `sum` / `avg` / `max` plus `p50` / `p95` for key frame timings (typical perf).
 - Compare “good vs bad” bundles:
   - `target/release/fretboard.exe diag stats --diff <ok_bundle.json> <bad_bundle.json> --sort time --json`
 
@@ -70,6 +71,53 @@ P0 commands:
 - Trace artifacts (for a single run, not for gate runs):
   - `target/release/fretboard.exe diag perf ... --trace`
   - `target/release/fretboard.exe diag trace <bundle.json>`
+  - The exported `trace.chrome.json` includes phase sub-events derived from `debug.stats.*_time_us`
+    (e.g. `layout.collect_roots`, `layout.request_build_roots`, `layout.engine_solve`, `paint.cache_replay`).
+
+## Windows ETW/WPR (schedule noise vs real CPU work)
+
+When a perf gate fails due to rare spikes (max) but typical percentiles look fine, verify whether the
+UI thread is actually running CPU work or is being delayed by OS scheduling (Ready time), DPC/ISR,
+or other system noise.
+
+Recommended capture (WPR built-in profiles):
+
+- `GeneralProfile.Verbose` (best first-pass triage: CPU + CSwitch + ReadyThread + DPC/Interrupt).
+- `CPU.Verbose` (lighter: CPU + CSwitch + ReadyThread + SampledProfile stacks).
+
+Runbook:
+
+1) Start WPR (filemode avoids memory pressure during capture):
+
+- `wpr -start GeneralProfile.Verbose -filemode`
+
+2) Run a repro that tends to spike (prefer `--reuse-launch` to reduce relaunch noise; add `--trace`
+   so the worst bundle includes `trace.chrome.json`):
+
+- `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json --repeat 200 --warmup-frames 5 --reuse-launch --trace --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --timeout-ms 900000 --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+3) Stop WPR and write the ETL:
+
+- `wpr -stop ui-perf.etl`
+
+Note: Some environments block WPR/ETW system profiling via policy (e.g. `0xc5585011`). If WPR fails:
+
+- Prefer in-app evidence (`--trace`, `diag stats`, `FRET_LAYOUT_NODE_PROFILE=1`) to confirm CPU phase attribution.
+- Use Windows best-effort isolation knobs (`--launch-high-priority`, `--reuse-launch`) to reduce scheduling noise.
+
+4) Open in Windows Performance Analyzer (WPA) and filter to the app process:
+
+- The diagnostics out dir writes `launched.demo.json` with the launched `pid` (when using `--launch`).
+- In WPA, focus on:
+  - **CPU Usage (Sampled)** for stacks (are we actually executing?)
+  - **Context Switches / ReadyThread** (are we ready-but-not-running?)
+  - **DPC/ISR** (are interrupts/DPC stealing time?)
+
+Interpretation:
+
+- High **ReadyThread** time + low sampled CPU in the spike window ⇒ scheduling contention / priority / background noise.
+- High sampled CPU with stable stacks in Fret code ⇒ real work regression (optimize the hottest phase).
+- DPC/ISR spikes aligned with frame spikes ⇒ driver/OS noise; consider isolating (priority, affinity, power plan, background activity).
 
 ## What “typical perf” means here (not tail)
 
@@ -79,7 +127,7 @@ Tail (spikes) is “max / worst frame”. Typical perf should use **percentiles*
 Preferred workflow:
 
 - Use `fretboard diag perf ... --json` and review `p50`/`p95` for the top metrics.
-- Use `diag stats` for within-bundle averages and budgets (`avg.*`, `budget_pct.*`).
+- Use `diag stats --json` for within-bundle `p50` / `p95` (typical), `avg.*`, and `budget_pct.*`.
 - If you want a **typical-perf gate** (ignore rare max spikes), run with `--perf-threshold-agg p95`.
 
 If a change improves p50/p95 but worsens max occasionally, treat it as “needs jitter work” (allocator,
@@ -100,6 +148,26 @@ Evidence:
 
 - `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` became consistently under the
   `ui-gallery-steady.windows-rtx4090.v1` thresholds in repeated local runs.
+
+## Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)
+
+Observed:
+
+- `ui-gallery-steady --repeat 7` can fail the baseline on:
+  - `ui-gallery-material3-tabs-switch-perf-steady` (`top_layout_time_us`, sometimes `top_layout_engine_solve_time_us`).
+
+Attribution (worst bundle example):
+
+- Bundle: `target/fret-diag/1771077490429-ui-gallery-material3-tabs-switch-perf-steady/bundle.json`
+- Summary: `fretboard diag stats <bundle.json> --sort time`
+  - In the worst frame, `layout_request_build_roots_time_us` dominates `layout_time_us` (solve is small).
+- Trace: `target/fret-diag/1771077490429-ui-gallery-material3-tabs-switch-perf-steady/trace.chrome.json`
+  - Inspect `layout.request_build_roots` events for the slow frames.
+
+Next action:
+
+- Decide whether this is primarily **real CPU work** (optimize `build_viewport_flow_subtree`) or **schedule noise**
+  (needs ETW/WPR or an in-app CPU-time signal).
 
 ## Next steps
 

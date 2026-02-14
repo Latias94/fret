@@ -731,6 +731,24 @@ pub(super) struct BundleStatsReport {
     max_model_change_invalidation_roots: u32,
     max_global_change_invalidation_roots: u32,
     pub(super) max_hover_layout_invalidations: u32,
+    p50_total_time_us: u64,
+    p95_total_time_us: u64,
+    p50_layout_time_us: u64,
+    p95_layout_time_us: u64,
+    p50_prepaint_time_us: u64,
+    p95_prepaint_time_us: u64,
+    p50_paint_time_us: u64,
+    p95_paint_time_us: u64,
+    p50_layout_engine_solve_time_us: u64,
+    p95_layout_engine_solve_time_us: u64,
+    p50_dispatch_time_us: u64,
+    p95_dispatch_time_us: u64,
+    p50_hit_test_time_us: u64,
+    p95_hit_test_time_us: u64,
+    p50_paint_widget_time_us: u64,
+    p95_paint_widget_time_us: u64,
+    p50_paint_text_prepare_time_us: u64,
+    p95_paint_text_prepare_time_us: u64,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
@@ -1124,6 +1142,30 @@ impl BundleStatsReport {
             self.sum_layout_time_us,
             self.sum_prepaint_time_us,
             self.sum_paint_time_us
+        );
+        println!(
+            "time p50/p95 (us): total={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
+            self.p50_total_time_us,
+            self.p95_total_time_us,
+            self.p50_layout_time_us,
+            self.p95_layout_time_us,
+            self.p50_prepaint_time_us,
+            self.p95_prepaint_time_us,
+            self.p50_paint_time_us,
+            self.p95_paint_time_us,
+            self.p50_dispatch_time_us,
+            self.p95_dispatch_time_us,
+            self.p50_hit_test_time_us,
+            self.p95_hit_test_time_us
+        );
+        println!(
+            "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
+            self.p50_layout_engine_solve_time_us,
+            self.p95_layout_engine_solve_time_us,
+            self.p50_paint_widget_time_us,
+            self.p95_paint_widget_time_us,
+            self.p50_paint_text_prepare_time_us,
+            self.p95_paint_text_prepare_time_us
         );
         if self.sum_layout_observation_record_time_us > 0
             || self.sum_layout_observation_record_models_items > 0
@@ -2145,6 +2187,84 @@ impl BundleStatsReport {
             )),
         );
         root.insert("avg".to_string(), Value::Object(avg));
+
+        let mut p50 = Map::new();
+        p50.insert(
+            "total_time_us".to_string(),
+            Value::from(self.p50_total_time_us),
+        );
+        p50.insert(
+            "layout_time_us".to_string(),
+            Value::from(self.p50_layout_time_us),
+        );
+        p50.insert(
+            "prepaint_time_us".to_string(),
+            Value::from(self.p50_prepaint_time_us),
+        );
+        p50.insert(
+            "paint_time_us".to_string(),
+            Value::from(self.p50_paint_time_us),
+        );
+        p50.insert(
+            "layout_engine_solve_time_us".to_string(),
+            Value::from(self.p50_layout_engine_solve_time_us),
+        );
+        p50.insert(
+            "dispatch_time_us".to_string(),
+            Value::from(self.p50_dispatch_time_us),
+        );
+        p50.insert(
+            "hit_test_time_us".to_string(),
+            Value::from(self.p50_hit_test_time_us),
+        );
+        p50.insert(
+            "paint_widget_time_us".to_string(),
+            Value::from(self.p50_paint_widget_time_us),
+        );
+        p50.insert(
+            "paint_text_prepare_time_us".to_string(),
+            Value::from(self.p50_paint_text_prepare_time_us),
+        );
+        root.insert("p50".to_string(), Value::Object(p50));
+
+        let mut p95 = Map::new();
+        p95.insert(
+            "total_time_us".to_string(),
+            Value::from(self.p95_total_time_us),
+        );
+        p95.insert(
+            "layout_time_us".to_string(),
+            Value::from(self.p95_layout_time_us),
+        );
+        p95.insert(
+            "prepaint_time_us".to_string(),
+            Value::from(self.p95_prepaint_time_us),
+        );
+        p95.insert(
+            "paint_time_us".to_string(),
+            Value::from(self.p95_paint_time_us),
+        );
+        p95.insert(
+            "layout_engine_solve_time_us".to_string(),
+            Value::from(self.p95_layout_engine_solve_time_us),
+        );
+        p95.insert(
+            "dispatch_time_us".to_string(),
+            Value::from(self.p95_dispatch_time_us),
+        );
+        p95.insert(
+            "hit_test_time_us".to_string(),
+            Value::from(self.p95_hit_test_time_us),
+        );
+        p95.insert(
+            "paint_widget_time_us".to_string(),
+            Value::from(self.p95_paint_widget_time_us),
+        );
+        p95.insert(
+            "paint_text_prepare_time_us".to_string(),
+            Value::from(self.p95_paint_text_prepare_time_us),
+        );
+        root.insert("p95".to_string(), Value::Object(p95));
 
         root.insert(
             "budget_pct".to_string(),
@@ -9516,6 +9636,38 @@ pub(super) fn bundle_stats_from_json_with_options(
             });
         }
     }
+
+    fn p50_p95(values: impl Iterator<Item = u64>) -> (u64, u64) {
+        let mut sorted: Vec<u64> = values.collect();
+        if sorted.is_empty() {
+            return (0, 0);
+        }
+        sorted.sort_unstable();
+        let p50 = crate::percentile_nearest_rank_sorted(&sorted, 0.50);
+        let p95 = crate::percentile_nearest_rank_sorted(&sorted, 0.95);
+        (p50, p95)
+    }
+
+    (out.p50_total_time_us, out.p95_total_time_us) = p50_p95(rows.iter().map(|r| r.total_time_us));
+    (out.p50_layout_time_us, out.p95_layout_time_us) =
+        p50_p95(rows.iter().map(|r| r.layout_time_us));
+    (out.p50_prepaint_time_us, out.p95_prepaint_time_us) =
+        p50_p95(rows.iter().map(|r| r.prepaint_time_us));
+    (out.p50_paint_time_us, out.p95_paint_time_us) = p50_p95(rows.iter().map(|r| r.paint_time_us));
+    (
+        out.p50_layout_engine_solve_time_us,
+        out.p95_layout_engine_solve_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_engine_solve_time_us));
+    (out.p50_dispatch_time_us, out.p95_dispatch_time_us) =
+        p50_p95(rows.iter().map(|r| r.dispatch_time_us));
+    (out.p50_hit_test_time_us, out.p95_hit_test_time_us) =
+        p50_p95(rows.iter().map(|r| r.hit_test_time_us));
+    (out.p50_paint_widget_time_us, out.p95_paint_widget_time_us) =
+        p50_p95(rows.iter().map(|r| r.paint_widget_time_us));
+    (
+        out.p50_paint_text_prepare_time_us,
+        out.p95_paint_text_prepare_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_text_prepare_time_us));
 
     match sort {
         BundleStatsSort::Invalidation => {

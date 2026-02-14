@@ -19,11 +19,11 @@
 ## Instrumentation gaps (candidate fearless refactor items)
 
 - [ ] Inventory “hot scratch structures” that can reallocate in spikes; add cheap grow counters (opt-in or always-on).
-- [ ] Add optional percentiles (p50/p95/p99) for `diag stats` bundle summaries (typical perf review).
-- [ ] Make trace artifact naming stable and searchable (“phase timeline” + “top hotspots” linkage).
+- [x] Add percentiles (p50/p95) for `diag stats` bundle summaries (typical perf review).
+- [x] Export phase sub-events in `trace.chrome.json` derived from `debug.stats.*_time_us`.
+- [ ] Make “phase timeline” → “top hotspots” linkage explicit in one place (docs + tool output).
 
 ## Windows-specific
 
 - [ ] Document PIX capture steps for `fret-ui-gallery.exe` (GPU-side sanity when CPU looks good).
 - [ ] Document ETW/WPR profile preset to correlate spikes with OS scheduling/IO.
-
