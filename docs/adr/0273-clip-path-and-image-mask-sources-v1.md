@@ -67,6 +67,25 @@ Sampling policy is intentionally minimal in v1:
 
 ## Semantics (normative)
 
+### Bounds are computation bounds (not an implicit clip)
+
+Both `PushClipPath.bounds` and `PushMask.bounds` are **computation bounds**:
+
+- They bound GPU work (scissor-sized intermediates, mask generation cost, caching keys).
+- They MUST NOT change hit-testing by themselves.
+- They MUST NOT behave like an implicit hard clip.
+
+Normative rule (v1):
+
+- Outside `bounds`, the effective coverage of that entry MUST be treated as **identity**:
+  - clip-path fallback coverage: `1.0` (entry does not constrain visibility outside bounds),
+  - mask coverage: `1.0` (entry does not change opacity outside bounds).
+
+Rationale:
+
+- `bounds` exists to keep wasm/mobile-friendly budgeting and deterministic degradation possible
+  without silently changing layout or interaction semantics.
+
 ### Ordering and transform interaction
 
 Clip-path entries follow the same ordering and capture rules as other clip entries:
@@ -97,6 +116,27 @@ Renderers may choose either, but must remain bounded and deterministic:
     - recommended v1 fallback: treat `PushClipPath` as `PushClipRect { rect: bounds }`.
 
 Degradation must be visual-only and must not affect layout.
+
+#### Image-mask channel policy (recommended)
+
+To keep `Mask::Image` portable across backends and predictable under color-space conversions:
+
+- Prefer registering mask images as **linear** `R8Unorm` coverage textures, with coverage in the
+  red channel.
+- If a renderer is given an RGBA mask image, it MAY interpret coverage as alpha (recommended) to
+  avoid sRGB conversion affecting the coverage signal.
+
+#### Nested image masks (allowed degradation)
+
+Some backends cannot efficiently sample multiple arbitrary image sources in the same draw without
+bindless or intermediate baking.
+
+Renderers MAY degrade deterministically when multiple image masks are simultaneously active, e.g.:
+
+- keep the first/outermost image mask and treat subsequent image-mask entries as no-ops, or
+- disable image-mask evaluation entirely for that scope (unmasked rendering).
+
+Such degradation MUST be deterministic and must not affect hit-testing.
 
 ## Consequences
 

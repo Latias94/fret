@@ -1,24 +1,41 @@
-# UI Perf (Windows RTX4090) — Smoothness v1 (Milestones)
+# UI perf: Windows RTX 4090 smoothness v1 — Milestones
 
-## M0 — Baseline + Protocol Locked
+## M0 — Repeatable P0 runbook
 
-- Measurement protocol documented and repeatable.
-- Perf suites run from release binaries with stable env knobs.
-- UI gallery perf suites make cache+shell + VirtualList known-heights defaults implicit (caller-overridable).
+Exit criteria:
 
-## M1 — Resize Probes Majority-Pass
+- P0 commands are stable, copy-pastable, and produce the expected artifacts in `target/fret-diag/`.
+- A reviewer can reproduce a failing bundle and generate `diag stats --diff` in < 2 minutes.
 
-- `ui-resize-probes --attempts 3` passes a strict majority (>= 2/3).
-- Worst bundles are attributable and do not depend on one-off startup events.
-  - Evidence: 2026-02-13 PASS (out-dir: `target/fret-diag-perf/ui-resize-probes.hoverstrip.3x.20260213-151459`)
+## M1 — Stable gates (attempts=3)
 
-## M2 — Steady Suite Pass
+Exit criteria:
 
-- `ui-gallery-steady` passes against the Windows baseline (repeat >= 3).
-- Worst bundles, if any, are explainable and actionable.
-  - Evidence: 2026-02-13 PASS (out-dir: `target/fret-diag-perf/ui-gallery-steady.hoverstrip.3x.20260213-152340`)
+- `ui-gallery-steady` passes `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json` with `--repeat 3` reliably.
+- `ui-resize-probes` passes `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json` with `--repeat 3` reliably.
+- `ui-code-editor-resize-probes` does not regress.
 
-## M3 — Editor Route Guardrail
+## M2 — Tail attribution is one-command
 
-- `ui-code-editor-resize-probes` remains PASS (no regression) after landing improvements for “general UI”.
-  - Evidence: 2026-02-13 PASS (out-dir: `target/fret-diag-perf/ui-code-editor-resize-probes.hoverstrip.3x.20260213-151711`)
+Exit criteria:
+
+- From `check.perf_thresholds.json`, we can jump to the failing metric and identify the responsible phase/hotspot with 1–2 commands.
+- At least one real “tail spike” case is documented with:
+  - the bundle path
+  - `diag stats --diff` output highlights
+  - one trace artifact (Tracy or Chrome trace)
+
+## M3 — Typical perf becomes reviewable
+
+Exit criteria:
+
+- Typical perf (p50/p95) is reported and diffed as a first-class review surface (not just max).
+- Baseline seeding policy and headroom rationale are documented for Windows smoothness.
+
+## M4 — Regression-proof guardrails
+
+Exit criteria:
+
+- A change that regresses Windows tail perf is caught by a gate and has a clear rollback path.
+- A change that improves typical perf but harms tail perf is surfaced explicitly (policy decision, not accidental).
+

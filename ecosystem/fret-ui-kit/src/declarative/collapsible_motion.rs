@@ -8,6 +8,7 @@
 
 use fret_core::{Px, Size};
 use fret_ui::elements::GlobalElementId;
+use fret_ui::theme::CubicBezier;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::headless::transition::TransitionOutput;
@@ -216,6 +217,66 @@ pub fn measured_height_motion_for_root<H: UiHost>(
         close_ticks,
         ease,
     );
+
+    if wants_measurement {
+        cx.request_frame();
+        return MeasuredHeightMotionOutput {
+            state_id,
+            open,
+            open_for_motion,
+            wants_measurement,
+            transition,
+            should_render: true,
+            wrapper_refinement: collapsible_measurement_wrapper_refinement(),
+            wrapper_opacity: 0.0,
+        };
+    }
+
+    let (should_render, wrapper_refinement) = collapsible_height_wrapper_refinement(
+        open_for_motion,
+        force_mount,
+        require_measurement_for_close,
+        transition,
+        last_height,
+    );
+
+    MeasuredHeightMotionOutput {
+        state_id,
+        open,
+        open_for_motion,
+        wants_measurement,
+        transition,
+        should_render,
+        wrapper_refinement,
+        wrapper_opacity: 1.0,
+    }
+}
+
+/// Like [`measured_height_motion_for_root`], but uses a cubic-bezier easing curve.
+#[allow(clippy::too_many_arguments)]
+pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    force_mount: bool,
+    require_measurement_for_close: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    bezier: CubicBezier,
+) -> MeasuredHeightMotionOutput {
+    let state_id = cx.root_id();
+    let last_height = last_measured_height_for(cx, state_id);
+    let has_measurement = last_height.0 > 0.0;
+    let wants_measurement = open && !has_measurement;
+    let open_for_motion = open && has_measurement;
+
+    let transition =
+        crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier(
+            cx,
+            open_for_motion,
+            open_ticks,
+            close_ticks,
+            bezier,
+        );
 
     if wants_measurement {
         cx.request_frame();

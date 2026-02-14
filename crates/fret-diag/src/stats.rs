@@ -686,13 +686,22 @@ pub(super) struct BundleStatsReport {
     /// Number of snapshots within the derived "pointer move" (or fallback) frame set that had
     /// propagated global changes (`debug.stats.global_change_globals > 0`).
     pub(super) pointer_move_snapshots_with_global_changes: u32,
+    sum_layout_collect_roots_time_us: u64,
+    sum_layout_invalidate_scroll_handle_bindings_time_us: u64,
+    sum_layout_expand_view_cache_invalidations_time_us: u64,
+    sum_layout_request_build_roots_time_us: u64,
+    sum_layout_roots_time_us: u64,
+    sum_layout_collapse_layout_observations_time_us: u64,
     sum_layout_time_us: u64,
+    sum_layout_view_cache_time_us: u64,
+    sum_layout_prepaint_after_layout_time_us: u64,
     sum_layout_observation_record_time_us: u64,
     sum_layout_observation_record_models_items: u64,
     sum_layout_observation_record_globals_items: u64,
     sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
     sum_total_time_us: u64,
+    sum_layout_engine_solve_time_us: u64,
     sum_cache_roots: u64,
     sum_cache_roots_reused: u64,
     sum_cache_replayed_ops: u64,
@@ -701,13 +710,22 @@ pub(super) struct BundleStatsReport {
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
     pub(super) sum_hover_layout_invalidations: u64,
+    max_layout_collect_roots_time_us: u64,
+    max_layout_invalidate_scroll_handle_bindings_time_us: u64,
+    max_layout_expand_view_cache_invalidations_time_us: u64,
+    max_layout_request_build_roots_time_us: u64,
+    max_layout_roots_time_us: u64,
+    max_layout_collapse_layout_observations_time_us: u64,
     max_layout_time_us: u64,
+    max_layout_view_cache_time_us: u64,
+    max_layout_prepaint_after_layout_time_us: u64,
     max_layout_observation_record_time_us: u64,
     max_layout_observation_record_models_items: u32,
     max_layout_observation_record_globals_items: u32,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
+    max_layout_engine_solve_time_us: u64,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -1812,8 +1830,40 @@ impl BundleStatsReport {
 
         let mut sum = Map::new();
         sum.insert(
+            "layout_collect_roots_time_us".to_string(),
+            Value::from(self.sum_layout_collect_roots_time_us),
+        );
+        sum.insert(
+            "layout_invalidate_scroll_handle_bindings_time_us".to_string(),
+            Value::from(self.sum_layout_invalidate_scroll_handle_bindings_time_us),
+        );
+        sum.insert(
+            "layout_expand_view_cache_invalidations_time_us".to_string(),
+            Value::from(self.sum_layout_expand_view_cache_invalidations_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_time_us),
+        );
+        sum.insert(
+            "layout_roots_time_us".to_string(),
+            Value::from(self.sum_layout_roots_time_us),
+        );
+        sum.insert(
+            "layout_collapse_layout_observations_time_us".to_string(),
+            Value::from(self.sum_layout_collapse_layout_observations_time_us),
+        );
+        sum.insert(
             "layout_time_us".to_string(),
             Value::from(self.sum_layout_time_us),
+        );
+        sum.insert(
+            "layout_view_cache_time_us".to_string(),
+            Value::from(self.sum_layout_view_cache_time_us),
+        );
+        sum.insert(
+            "layout_prepaint_after_layout_time_us".to_string(),
+            Value::from(self.sum_layout_prepaint_after_layout_time_us),
         );
         sum.insert(
             "layout_observation_record_time_us".to_string(),
@@ -1838,6 +1888,10 @@ impl BundleStatsReport {
         sum.insert(
             "total_time_us".to_string(),
             Value::from(self.sum_total_time_us),
+        );
+        sum.insert(
+            "layout_engine_solve_time_us".to_string(),
+            Value::from(self.sum_layout_engine_solve_time_us),
         );
         sum.insert("cache_roots".to_string(), Value::from(self.sum_cache_roots));
         sum.insert(
@@ -1872,8 +1926,40 @@ impl BundleStatsReport {
 
         let mut max = Map::new();
         max.insert(
+            "layout_collect_roots_time_us".to_string(),
+            Value::from(self.max_layout_collect_roots_time_us),
+        );
+        max.insert(
+            "layout_invalidate_scroll_handle_bindings_time_us".to_string(),
+            Value::from(self.max_layout_invalidate_scroll_handle_bindings_time_us),
+        );
+        max.insert(
+            "layout_expand_view_cache_invalidations_time_us".to_string(),
+            Value::from(self.max_layout_expand_view_cache_invalidations_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_time_us),
+        );
+        max.insert(
+            "layout_roots_time_us".to_string(),
+            Value::from(self.max_layout_roots_time_us),
+        );
+        max.insert(
+            "layout_collapse_layout_observations_time_us".to_string(),
+            Value::from(self.max_layout_collapse_layout_observations_time_us),
+        );
+        max.insert(
             "layout_time_us".to_string(),
             Value::from(self.max_layout_time_us),
+        );
+        max.insert(
+            "layout_view_cache_time_us".to_string(),
+            Value::from(self.max_layout_view_cache_time_us),
+        );
+        max.insert(
+            "layout_prepaint_after_layout_time_us".to_string(),
+            Value::from(self.max_layout_prepaint_after_layout_time_us),
         );
         max.insert(
             "layout_observation_record_time_us".to_string(),
@@ -1900,6 +1986,10 @@ impl BundleStatsReport {
             Value::from(self.max_total_time_us),
         );
         max.insert(
+            "layout_engine_solve_time_us".to_string(),
+            Value::from(self.max_layout_engine_solve_time_us),
+        );
+        max.insert(
             "invalidation_walk_calls".to_string(),
             Value::from(self.max_invalidation_walk_calls),
         );
@@ -1923,8 +2013,64 @@ impl BundleStatsReport {
 
         let mut avg = Map::new();
         avg.insert(
+            "layout_collect_roots_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_collect_roots_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_invalidate_scroll_handle_bindings_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_invalidate_scroll_handle_bindings_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_expand_view_cache_invalidations_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_expand_view_cache_invalidations_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_roots_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_roots_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_collapse_layout_observations_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_collapse_layout_observations_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_time_us".to_string(),
             Value::from(avg_us(self.sum_layout_time_us, self.snapshots_considered)),
+        );
+        avg.insert(
+            "layout_view_cache_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_view_cache_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_prepaint_after_layout_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_prepaint_after_layout_time_us,
+                self.snapshots_considered,
+            )),
         );
         avg.insert(
             "layout_observation_record_time_us".to_string(),
@@ -1958,6 +2104,13 @@ impl BundleStatsReport {
         avg.insert(
             "total_time_us".to_string(),
             Value::from(avg_us(self.sum_total_time_us, self.snapshots_considered)),
+        );
+        avg.insert(
+            "layout_engine_solve_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_engine_solve_time_us,
+                self.snapshots_considered,
+            )),
         );
         avg.insert(
             "cache_roots".to_string(),
@@ -3239,6 +3392,45 @@ pub(super) fn bundle_stats_diff_from_paths(
             },
         },
         BundleStatsDiffDelta {
+            key: "avg.layout_request_build_roots_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_layout_request_build_roots_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_layout_request_build_roots_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
+            key: "avg.layout_roots_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_layout_roots_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_layout_roots_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
+            key: "avg.layout_engine_solve_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_layout_engine_solve_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_layout_engine_solve_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
             key: "avg.prepaint_time_us",
             a: if a.snapshots_considered == 0 {
                 0
@@ -3286,6 +3478,21 @@ pub(super) fn bundle_stats_diff_from_paths(
             key: "max.layout_time_us",
             a: a.max_layout_time_us,
             b: b.max_layout_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "max.layout_request_build_roots_time_us",
+            a: a.max_layout_request_build_roots_time_us,
+            b: b.max_layout_request_build_roots_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "max.layout_roots_time_us",
+            a: a.max_layout_roots_time_us,
+            b: b.max_layout_roots_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "max.layout_engine_solve_time_us",
+            a: a.max_layout_engine_solve_time_us,
+            b: b.max_layout_engine_solve_time_us,
         },
         BundleStatsDiffDelta {
             key: "max.prepaint_time_us",
@@ -8973,6 +9180,30 @@ pub(super) fn bundle_stats_from_json_with_options(
             let global_change_unobserved = snapshot_global_change_unobserved(s, 3);
 
             out.sum_layout_time_us = out.sum_layout_time_us.saturating_add(layout_time_us);
+            out.sum_layout_collect_roots_time_us = out
+                .sum_layout_collect_roots_time_us
+                .saturating_add(layout_collect_roots_time_us);
+            out.sum_layout_invalidate_scroll_handle_bindings_time_us = out
+                .sum_layout_invalidate_scroll_handle_bindings_time_us
+                .saturating_add(layout_invalidate_scroll_handle_bindings_time_us);
+            out.sum_layout_expand_view_cache_invalidations_time_us = out
+                .sum_layout_expand_view_cache_invalidations_time_us
+                .saturating_add(layout_expand_view_cache_invalidations_time_us);
+            out.sum_layout_request_build_roots_time_us = out
+                .sum_layout_request_build_roots_time_us
+                .saturating_add(layout_request_build_roots_time_us);
+            out.sum_layout_roots_time_us = out
+                .sum_layout_roots_time_us
+                .saturating_add(layout_roots_time_us);
+            out.sum_layout_collapse_layout_observations_time_us = out
+                .sum_layout_collapse_layout_observations_time_us
+                .saturating_add(layout_collapse_layout_observations_time_us);
+            out.sum_layout_view_cache_time_us = out
+                .sum_layout_view_cache_time_us
+                .saturating_add(layout_view_cache_time_us);
+            out.sum_layout_prepaint_after_layout_time_us = out
+                .sum_layout_prepaint_after_layout_time_us
+                .saturating_add(layout_prepaint_after_layout_time_us);
             out.sum_layout_observation_record_time_us = out
                 .sum_layout_observation_record_time_us
                 .saturating_add(layout_observation_record_time_us);
@@ -8985,6 +9216,9 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.sum_prepaint_time_us = out.sum_prepaint_time_us.saturating_add(prepaint_time_us);
             out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint_time_us);
             out.sum_total_time_us = out.sum_total_time_us.saturating_add(total_time_us);
+            out.sum_layout_engine_solve_time_us = out
+                .sum_layout_engine_solve_time_us
+                .saturating_add(layout_engine_solve_time_us);
             out.sum_cache_roots = out.sum_cache_roots.saturating_add(cache_roots as u64);
             out.sum_cache_roots_reused = out
                 .sum_cache_roots_reused
@@ -9036,6 +9270,28 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .max_hover_layout_invalidations
                 .max(hover_declarative_layout_invalidations);
             out.max_layout_time_us = out.max_layout_time_us.max(layout_time_us);
+            out.max_layout_collect_roots_time_us = out
+                .max_layout_collect_roots_time_us
+                .max(layout_collect_roots_time_us);
+            out.max_layout_invalidate_scroll_handle_bindings_time_us = out
+                .max_layout_invalidate_scroll_handle_bindings_time_us
+                .max(layout_invalidate_scroll_handle_bindings_time_us);
+            out.max_layout_expand_view_cache_invalidations_time_us = out
+                .max_layout_expand_view_cache_invalidations_time_us
+                .max(layout_expand_view_cache_invalidations_time_us);
+            out.max_layout_request_build_roots_time_us = out
+                .max_layout_request_build_roots_time_us
+                .max(layout_request_build_roots_time_us);
+            out.max_layout_roots_time_us = out.max_layout_roots_time_us.max(layout_roots_time_us);
+            out.max_layout_view_cache_time_us = out
+                .max_layout_view_cache_time_us
+                .max(layout_view_cache_time_us);
+            out.max_layout_collapse_layout_observations_time_us = out
+                .max_layout_collapse_layout_observations_time_us
+                .max(layout_collapse_layout_observations_time_us);
+            out.max_layout_prepaint_after_layout_time_us = out
+                .max_layout_prepaint_after_layout_time_us
+                .max(layout_prepaint_after_layout_time_us);
             out.max_layout_observation_record_time_us = out
                 .max_layout_observation_record_time_us
                 .max(layout_observation_record_time_us);
@@ -9048,6 +9304,9 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
+            out.max_layout_engine_solve_time_us = out
+                .max_layout_engine_solve_time_us
+                .max(layout_engine_solve_time_us);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,

@@ -131,4 +131,14 @@ Deliverables:
   - or explicit layout + animation choreography rules (opt-in per component).
 - Interrupt/re-target rules are tested (no “restart stutter”).
 
-Status: Future
+Status: Landed (pilot)
+
+Evidence:
+
+- Layout strategy doc (explicit choreography, no generic FLIP layer): `docs/workstreams/motion-foundation-v1.md` (section "Layout-affecting motion (v1)")
+- Layout-expand motion token seeded in shadcn themes (cross-ecosystem semantic key):
+  - `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
+- Layout-expand pilot (Animata: Expandable carousel) consumes semantic duration + easing:
+  - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
+- Deterministic retarget/interrupt gate (fixed delta; click item 3 then item 4 mid-flight):
+  - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`

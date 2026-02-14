@@ -118,6 +118,9 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
     cfg.easings
         .entry("easing.motion.emphasized".to_string())
         .or_insert(shadcn_ease);
+    cfg.easings
+        .entry("easing.motion.layout.expand".to_string())
+        .or_insert(shadcn_ease);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

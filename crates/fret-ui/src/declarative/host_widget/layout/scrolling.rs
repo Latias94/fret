@@ -112,7 +112,7 @@ impl ElementHostWidget {
                     props.scroll_margin,
                 );
                 (
-                    state.metrics.clone(),
+                    std::mem::take(&mut state.metrics),
                     state.items_revision,
                     state.render_window_range,
                     state.window_range,

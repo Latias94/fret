@@ -43,6 +43,8 @@ pub struct TaffyLayoutEngine {
     seen_stamp: SecondaryMap<NodeId, u32>,
     child_nodes_scratch: Vec<TaffyNodeId>,
     mark_seen_stack_scratch: Vec<NodeId>,
+    mark_solved_stack_scratch: Vec<NodeId>,
+    clear_solved_stack_scratch: Vec<NodeId>,
     solve_generation: u64,
     node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
     root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
@@ -102,6 +104,8 @@ impl Default for TaffyLayoutEngine {
             seen_stamp: SecondaryMap::new(),
             child_nodes_scratch: Vec::new(),
             mark_seen_stack_scratch: Vec::new(),
+            mark_solved_stack_scratch: Vec::new(),
+            clear_solved_stack_scratch: Vec::new(),
             solve_generation: 0,
             node_solved_stamp: SecondaryMap::new(),
             root_solve_stamp: SecondaryMap::new(),
@@ -951,8 +955,9 @@ impl TaffyLayoutEngine {
         let Some(frame_id) = self.frame_id else {
             return;
         };
-        let mut stack: Vec<NodeId> = vec![root];
-        while let Some(node) = stack.pop() {
+        self.mark_solved_stack_scratch.clear();
+        self.mark_solved_stack_scratch.push(root);
+        while let Some(node) = self.mark_solved_stack_scratch.pop() {
             self.node_solved_stamp.insert(
                 node,
                 SolvedStamp {
@@ -961,17 +966,20 @@ impl TaffyLayoutEngine {
                 },
             );
             if let Some(children) = self.children.get(node) {
-                stack.extend(children.iter().copied());
+                self.mark_solved_stack_scratch
+                    .extend(children.iter().copied());
             }
         }
     }
 
     fn clear_solved_subtree(&mut self, root: NodeId) {
-        let mut stack: Vec<NodeId> = vec![root];
-        while let Some(node) = stack.pop() {
+        self.clear_solved_stack_scratch.clear();
+        self.clear_solved_stack_scratch.push(root);
+        while let Some(node) = self.clear_solved_stack_scratch.pop() {
             self.node_solved_stamp.remove(node);
             if let Some(children) = self.children.get(node) {
-                stack.extend(children.iter().copied());
+                self.clear_solved_stack_scratch
+                    .extend(children.iter().copied());
             }
         }
     }

@@ -819,7 +819,7 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::VirtualListProps,
     ) -> Size {
-        let metrics = crate::elements::with_element_state(
+        let content_extent = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
@@ -832,10 +832,9 @@ impl ElementHostWidget {
                     props.gap,
                     props.scroll_margin,
                 );
-                state.metrics.clone()
+                state.metrics.total_height()
             },
         );
-        let content_extent = metrics.total_height();
 
         let estimate_extent = Px(props.estimate_row_height.0.max(0.0));
         let available_w = cx

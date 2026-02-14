@@ -40,9 +40,11 @@ const THEME_EASING_SHADCN_MOTION_SIDEBAR: &str = "easing.shadcn.motion.sidebar";
 const THEME_DURATION_MOTION_PRESENCE_ENTER: &str = "duration.motion.presence.enter";
 const THEME_DURATION_MOTION_PRESENCE_EXIT: &str = "duration.motion.presence.exit";
 const THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE: &str = "duration.motion.collapsible.toggle";
+const THEME_DURATION_MOTION_LAYOUT_EXPAND: &str = "duration.motion.layout.expand";
 
 const THEME_EASING_MOTION_STANDARD: &str = "easing.motion.standard";
 const THEME_EASING_MOTION_EMPHASIZED: &str = "easing.motion.emphasized";
+const THEME_EASING_MOTION_LAYOUT_EXPAND: &str = "easing.motion.layout.expand";
 
 fn theme_duration_ms_by_key<H: UiHost>(cx: &ElementContext<'_, H>, key: &str) -> Option<Duration> {
     let theme = Theme::global(&*cx.app);
@@ -149,6 +151,7 @@ pub fn shadcn_sidebar_toggle_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> 
         cx,
         &[
             THEME_DURATION_SHADCN_MOTION_SIDEBAR_TOGGLE,
+            THEME_DURATION_MOTION_LAYOUT_EXPAND,
             THEME_DURATION_SHADCN_MOTION_200,
             THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE,
         ],
@@ -156,11 +159,44 @@ pub fn shadcn_sidebar_toggle_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> 
     .unwrap_or(SHADCN_MOTION_DURATION_200)
 }
 
+/// Semantic layout-expand duration (cross-ecosystem key).
+///
+/// This is intended for width/height transitions that affect layout (e.g. a navigation menu
+/// viewport resizing as content switches, expandable carousels, etc.).
+pub fn motion_layout_expand_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_keys(
+        cx,
+        &[
+            THEME_DURATION_MOTION_LAYOUT_EXPAND,
+            THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE,
+            THEME_DURATION_SHADCN_MOTION_200,
+        ],
+    )
+    .unwrap_or(SHADCN_MOTION_DURATION_200)
+}
+
+/// Semantic layout-expand easing curve (cross-ecosystem key).
+pub fn motion_layout_expand_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
+    let theme = Theme::global(&*cx.app);
+    theme
+        .easing_by_key(THEME_EASING_MOTION_LAYOUT_EXPAND)
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_EMPHASIZED))
+        .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
+        .unwrap_or(CubicBezier {
+            x1: crate::headless::easing::SHADCN_EASE.x1,
+            y1: crate::headless::easing::SHADCN_EASE.y1,
+            x2: crate::headless::easing::SHADCN_EASE.x2,
+            y2: crate::headless::easing::SHADCN_EASE.y2,
+        })
+}
+
 /// shadcn semantic sidebar easing curve (defaults to `easing.shadcn.motion`).
 pub fn shadcn_sidebar_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
     let theme = Theme::global(&*cx.app);
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION_SIDEBAR)
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_LAYOUT_EXPAND))
         .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
         .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
         // shadcn/ui v4 Sidebar uses `ease-linear` for width/position transitions.
