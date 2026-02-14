@@ -5,7 +5,8 @@ use fret_core::{
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{
-    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1,
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DevtoolsScreenshotRequestV1,
+    DevtoolsScreenshotResultV1, DiagTransportMessageV1, UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
@@ -435,6 +436,10 @@ pub struct UiDiagnosticsService {
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     #[cfg(feature = "diagnostics-ws")]
+    pending_devtools_screenshot: Option<PendingDevtoolsScreenshotRequest>,
+    #[cfg(feature = "diagnostics-ws")]
+    pending_devtools_semantics_node_get: Option<PendingDevtoolsSemanticsNodeGetRequest>,
+    #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
 }
 
@@ -445,6 +450,28 @@ struct PendingForceDumpRequest {
     script_run_id: Option<u64>,
     script_step_index: Option<u32>,
     request_id: Option<u64>,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+struct PendingDevtoolsScreenshotRequest {
+    request_id: Option<u64>,
+    request_id_str: String,
+    label: Option<String>,
+    timeout_frames: u32,
+    window_ffi: u64,
+    bundle_dir_name: Option<String>,
+    remaining_frames: u32,
+    last_result_trigger_stamp: Option<u64>,
+    started: bool,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+struct PendingDevtoolsSemanticsNodeGetRequest {
+    request_id: Option<u64>,
+    window_ffi: u64,
+    node_id: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -974,6 +1001,12 @@ impl UiDiagnosticsService {
         self.ensure_ready_file();
         self.poll_script_trigger();
 
+        #[cfg(feature = "diagnostics-ws")]
+        let devtools_request_redraw =
+            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+        #[cfg(not(feature = "diagnostics-ws"))]
+        let devtools_request_redraw = false;
+
         if !self.active_scripts.contains_key(&window)
             && let Some(script) = self.pending_script.clone()
         {
@@ -1038,13 +1071,16 @@ impl UiDiagnosticsService {
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
             return UiScriptFrameOutput {
-                request_redraw: self.cfg.script_keepalive,
+                request_redraw: self.cfg.script_keepalive || devtools_request_redraw,
                 ..UiScriptFrameOutput::default()
             };
         };
 
         if active.next_step >= active.steps.len() {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: devtools_request_redraw,
+                ..UiScriptFrameOutput::default()
+            };
         }
 
         if active.last_reported_step != Some(active.next_step) {
@@ -1080,7 +1116,10 @@ impl UiDiagnosticsService {
         let step_index = active.next_step;
         let step = active.steps.get(step_index).cloned();
         let Some(step) = step else {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: devtools_request_redraw,
+                ..UiScriptFrameOutput::default()
+            };
         };
 
         // Keep evidence scoped to the active step so failures remain focused.
@@ -1123,6 +1162,7 @@ impl UiDiagnosticsService {
             .retain(|e| e.step_index == step_index_u32);
 
         let mut output = UiScriptFrameOutput::default();
+        output.request_redraw |= devtools_request_redraw;
         let mut force_dump_label: Option<String> = None;
         let mut force_dump_max_snapshots: Option<usize> = None;
         let mut stop_script = false;
@@ -6415,6 +6455,227 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_requests_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        let mut request_redraw = false;
+        request_redraw |= self.drive_devtools_ws_semantics_node_get(window, ui);
+        request_redraw |= self.drive_devtools_ws_screenshot_request(app, window, scale_factor);
+        request_redraw
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_semantics_node_get(
+        &mut self,
+        window: AppWindowId,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        let Some(pending) = self.pending_devtools_semantics_node_get.clone() else {
+            return false;
+        };
+        if pending.window_ffi != window.data().as_ffi() {
+            return false;
+        }
+        let pending = self
+            .pending_devtools_semantics_node_get
+            .take()
+            .unwrap_or(pending);
+
+        let raw = ui.and_then(|ui| ui.semantics_snapshot());
+        let ack = build_semantics_node_get_ack_v1(
+            raw,
+            pending.window_ffi,
+            pending.node_id,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
+        );
+        let payload = serde_json::to_value(ack)
+        .unwrap_or(serde_json::Value::Null);
+        self.ws_send_with_request_id("semantics.node.get_ack", pending.request_id, payload);
+        false
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_screenshot_request(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+    ) -> bool {
+        let Some(mut pending) = self.pending_devtools_screenshot.take() else {
+            return false;
+        };
+        if pending.window_ffi != window.data().as_ffi() {
+            self.pending_devtools_screenshot = Some(pending);
+            return false;
+        }
+
+        // Keep the app ticking while waiting for the runner-owned screenshot to complete.
+        let request_redraw = true;
+
+        if !pending.started {
+            if self
+                .active_scripts
+                .values()
+                .any(|active| active.screenshot_wait.is_some())
+            {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("busy".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name: "".to_string(),
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            let needs_fresh_bundle = pending.label.is_some();
+            if needs_fresh_bundle || self.last_dump_dir.is_none() {
+                let dump_label = pending
+                    .label
+                    .clone()
+                    .unwrap_or_else(|| "devtools-screenshot".to_string());
+                let _ = self.dump_bundle(Some(&dump_label));
+            }
+
+            let bundle_dir_name = self
+                .last_dump_dir
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+                .unwrap_or_default();
+            if bundle_dir_name.is_empty() {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("no_bundle_dir".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name,
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            let req = serde_json::json!({
+                "schema_version": 1,
+                "out_dir": self.cfg.out_dir.to_string_lossy(),
+                "bundle_dir_name": bundle_dir_name.clone(),
+                "request_id": pending.request_id_str.clone(),
+                "windows": [{
+                    "window": pending.window_ffi,
+                    "tick_id": app.tick_id().0,
+                    "frame_id": app.frame_id().0,
+                    "scale_factor": scale_factor as f64,
+                }]
+            });
+
+            let write_ok = serde_json::to_vec_pretty(&req)
+                .ok()
+                .is_some_and(|bytes| {
+                    if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                    std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
+                        && touch_file(&self.cfg.screenshot_trigger_path).is_ok()
+                });
+
+            if !write_ok {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("screenshot_request_write_failed".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name: "".to_string(),
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            pending.bundle_dir_name = Some(bundle_dir_name);
+            pending.started = true;
+            pending.remaining_frames = pending.timeout_frames;
+            pending.last_result_trigger_stamp = None;
+            self.pending_devtools_screenshot = Some(pending);
+            return request_redraw;
+        }
+
+        let trigger_stamp = read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
+        let completed = trigger_stamp.is_some()
+            && trigger_stamp != pending.last_result_trigger_stamp
+            && screenshot_request_completed(
+                &self.cfg.screenshot_result_path,
+                &pending.request_id_str,
+                pending.window_ffi,
+            );
+
+        if completed {
+            let entry = read_screenshot_result_entry(
+                &self.cfg.screenshot_result_path,
+                &pending.request_id_str,
+                pending.window_ffi,
+            );
+            let screenshots_dir = entry
+                .as_ref()
+                .and_then(|e| e.get("screenshots_dir").and_then(|v| v.as_str()))
+                .map(|s| s.to_string());
+            let bundle_dir_name = pending.bundle_dir_name.clone().unwrap_or_default();
+            let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                schema_version: 1,
+                status: "completed".to_string(),
+                reason: None,
+                request_id: pending.request_id_str.clone(),
+                window: pending.window_ffi,
+                bundle_dir_name,
+                screenshots_dir,
+                entry,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+            return false;
+        }
+
+        pending.last_result_trigger_stamp = trigger_stamp;
+        if pending.remaining_frames == 0 {
+            let bundle_dir_name = pending.bundle_dir_name.clone().unwrap_or_default();
+            let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                schema_version: 1,
+                status: "timeout".to_string(),
+                reason: Some("timeout_frames_exhausted".to_string()),
+                request_id: pending.request_id_str.clone(),
+                window: pending.window_ffi,
+                bundle_dir_name,
+                screenshots_dir: None,
+                entry: None,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+            return false;
+        }
+
+        pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
+        self.pending_devtools_screenshot = Some(pending);
+        request_redraw
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
     fn apply_ws_message(&mut self, msg: DiagTransportMessageV1) {
         match msg.r#type.as_str() {
             "inspect.set" => {
@@ -6448,6 +6709,142 @@ impl UiDiagnosticsService {
                     None,
                     msg.request_id,
                 );
+            }
+            "screenshot.request" => {
+                let Ok(req) = serde_json::from_value::<DevtoolsScreenshotRequestV1>(msg.payload)
+                else {
+                    return;
+                };
+
+                let request_id_str = msg
+                    .request_id
+                    .map(|id| format!("devtools-screenshot-{id}"))
+                    .unwrap_or_else(|| format!("devtools-screenshot-{}", unix_ms_now()));
+
+                if cfg!(target_arch = "wasm32") {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "unsupported".to_string(),
+                        reason: Some("screenshots_not_supported_wasm".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                if !self.cfg.screenshots_enabled {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "disabled".to_string(),
+                        reason: Some("screenshots_disabled".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                if self.pending_devtools_screenshot.is_some() {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "failed".to_string(),
+                        reason: Some("busy".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                let window_ffi = if let Some(window) = req.window {
+                    let want = AppWindowId::from(KeyData::from_ffi(window));
+                    if !self.known_windows.contains(&want) {
+                        let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                            schema_version: 1,
+                            status: "failed".to_string(),
+                            reason: Some("unknown_window".to_string()),
+                            request_id: request_id_str,
+                            window,
+                            bundle_dir_name: "".to_string(),
+                            screenshots_dir: None,
+                            entry: None,
+                        })
+                        .unwrap_or(serde_json::Value::Null);
+                        self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                        return;
+                    }
+                    window
+                } else if let Some(first) = self.known_windows.first().copied() {
+                    first.data().as_ffi()
+                } else {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "failed".to_string(),
+                        reason: Some("no_window".to_string()),
+                        request_id: request_id_str,
+                        window: 0,
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                };
+
+                self.pending_devtools_screenshot = Some(PendingDevtoolsScreenshotRequest {
+                    request_id: msg.request_id,
+                    request_id_str,
+                    label: req.label.map(|s| sanitize_label(&s)),
+                    timeout_frames: req.timeout_frames,
+                    window_ffi,
+                    bundle_dir_name: None,
+                    remaining_frames: req.timeout_frames,
+                    last_result_trigger_stamp: None,
+                    started: false,
+                });
+            }
+            "semantics.node.get" => {
+                let Ok(req) = serde_json::from_value::<UiSemanticsNodeGetV1>(msg.payload) else {
+                    return;
+                };
+
+                let want = AppWindowId::from(KeyData::from_ffi(req.window));
+                if !self.known_windows.contains(&want) {
+                    let payload = serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                        schema_version: 1,
+                        status: "no_semantics".to_string(),
+                        reason: Some("unknown_window".to_string()),
+                        window: req.window,
+                        node_id: req.node_id,
+                        semantics_fingerprint: None,
+                        node: None,
+                        children: Vec::new(),
+                        captured_unix_ms: Some(unix_ms_now()),
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("semantics.node.get_ack", msg.request_id, payload);
+                    return;
+                }
+
+                self.pending_devtools_semantics_node_get = Some(PendingDevtoolsSemanticsNodeGetRequest {
+                    request_id: msg.request_id,
+                    window_ffi: req.window,
+                    node_id: req.node_id,
+                });
             }
             "app.exit.request" => {
                 let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
@@ -16867,6 +17264,69 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+#[cfg(feature = "diagnostics-ws")]
+fn build_semantics_node_get_ack_v1(
+    snapshot: Option<&fret_core::SemanticsSnapshot>,
+    window_ffi: u64,
+    node_id: u64,
+    redact_text: bool,
+    max_string_bytes: usize,
+) -> UiSemanticsNodeGetAckV1 {
+    let captured_unix_ms = Some(unix_ms_now());
+
+    let Some(snapshot) = snapshot else {
+        return UiSemanticsNodeGetAckV1 {
+            schema_version: 1,
+            status: "no_semantics".to_string(),
+            reason: Some("no_semantics_snapshot".to_string()),
+            window: window_ffi,
+            node_id,
+            semantics_fingerprint: None,
+            node: None,
+            children: Vec::new(),
+            captured_unix_ms,
+        };
+    };
+
+    let semantics_fingerprint = Some(semantics_fingerprint_v1(snapshot, redact_text, max_string_bytes));
+    let want = NodeId::from(KeyData::from_ffi(node_id));
+
+    let Some(node) = snapshot.nodes.iter().find(|n| n.id == want) else {
+        return UiSemanticsNodeGetAckV1 {
+            schema_version: 1,
+            status: "not_found".to_string(),
+            reason: None,
+            window: window_ffi,
+            node_id,
+            semantics_fingerprint,
+            node: None,
+            children: Vec::new(),
+            captured_unix_ms,
+        };
+    };
+
+    let exported = UiSemanticsNodeV1::from_node(node, redact_text, max_string_bytes);
+    let node = serde_json::to_value(exported).ok();
+    let children = snapshot
+        .nodes
+        .iter()
+        .filter(|n| n.parent == Some(want))
+        .map(|n| key_to_u64(n.id))
+        .collect::<Vec<_>>();
+
+    UiSemanticsNodeGetAckV1 {
+        schema_version: 1,
+        status: "ok".to_string(),
+        reason: None,
+        window: window_ffi,
+        node_id,
+        semantics_fingerprint,
+        node,
+        children,
+        captured_unix_ms,
+    }
+}
+
 fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) -> bool {
     let Ok(bytes) = std::fs::read(path) else {
         return false;
@@ -16881,6 +17341,20 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
         entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
             && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
     })
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn read_screenshot_result_entry(path: &Path, request_id: &str, window_ffi: u64) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
+    let completed = root.get("completed").and_then(|v| v.as_array())?;
+    completed
+        .iter()
+        .find(|entry| {
+            entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+                && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+        })
+        .cloned()
 }
 
 fn display_path(base_dir: &Path, path: &Path) -> String {
@@ -17024,6 +17498,71 @@ mod tests {
             described_by: Vec::new(),
             controls: Vec::new(),
         }
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    #[test]
+    fn devtools_semantics_node_get_ack_includes_node_and_children() {
+        let window = window_id(1);
+        let root_id = 10;
+        let child_id = 11;
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(root_id),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    root_id,
+                    None,
+                    SemanticsRole::Group,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node(
+                    child_id,
+                    Some(root_id),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 10.0, 10.0),
+                    "child",
+                ),
+            ],
+        };
+
+        let ack = build_semantics_node_get_ack_v1(
+            Some(&snapshot),
+            window.data().as_ffi(),
+            root_id,
+            false,
+            4096,
+        );
+        assert_eq!(ack.status, "ok");
+        assert_eq!(ack.window, window.data().as_ffi());
+        assert_eq!(ack.node_id, root_id);
+        assert_eq!(ack.children, vec![key_to_u64(node_id(child_id))]);
+        assert!(ack.node.is_some());
+        assert!(ack.semantics_fingerprint.is_some());
+
+        let ack = build_semantics_node_get_ack_v1(
+            Some(&snapshot),
+            window.data().as_ffi(),
+            999,
+            false,
+            4096,
+        );
+        assert_eq!(ack.status, "not_found");
+
+        let ack = build_semantics_node_get_ack_v1(None, window.data().as_ffi(), root_id, false, 4096);
+        assert_eq!(ack.status, "no_semantics");
     }
 
     fn semantics_node_with_test_id(
@@ -17978,6 +18517,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "collapsed node should fail the min-size gate"
@@ -18047,6 +18589,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to fail"
@@ -18072,6 +18617,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to tolerate a small overlap"
@@ -18119,6 +18667,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected missing test id to satisfy NotExists"
@@ -18188,6 +18739,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to pass"
@@ -18213,6 +18767,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more overlap than available"
@@ -18282,6 +18839,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected x overlap to pass even when y does not overlap"
@@ -18307,6 +18867,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more x overlap than available"
@@ -18376,6 +18939,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected y overlap to pass even when x does not overlap"
@@ -18401,6 +18967,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more y overlap than available"
@@ -18561,8 +19130,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
@@ -18581,8 +19154,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected require_equal=true to fail when the roots differ"
