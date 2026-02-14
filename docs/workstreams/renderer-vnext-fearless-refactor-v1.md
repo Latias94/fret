@@ -285,3 +285,35 @@ Use this checklist before starting any renderer-internal refactor step.
 - [ ] `python3 tools/check_layering.py` passes.
 - [ ] Renderer conformance anchors still pass (workstream fixed scene set).
 - [ ] Record any new degradations/telemetry counters in the milestone log (peak bytes, pass counts, degradations applied).
+
+---
+
+## Appendix B — Paint support inventory (current)
+
+This appendix is a living inventory for M4 (`Paint/Material evolution`). It answers:
+
+- which scene primitives accept `Paint` today,
+- which are still solid-color only,
+- and where portability/fallback behavior is already conformance-gated.
+
+### B1) Scene primitive paint surfaces
+
+| Scene op | Surface | Current support | Notes / evidence |
+| --- | --- | --- | --- |
+| `SceneOp::Quad` | fill/background | `Paint` (solid + gradients + `Paint::Material`) | Renderer conformance: `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`, `crates/fret-render-wgpu/tests/materials_conformance.rs`, `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`. |
+| `SceneOp::Quad` | border | `Paint` (solid + gradients + `Paint::Material`) | Same gates as fill; border paint is a `Paint` in the contract. |
+| `SceneOp::StrokeRRect` | stroke | `Paint` (solid + gradients + `Paint::Material`) | Contract: `crates/fret-core/src/scene/mod.rs` (`StrokeRRect.stroke_paint: Paint`). |
+| `SceneOp::Text` | glyph color | solid `Color` only | Paint expansion would need an explicit contract (e.g. gradient text, material text) and dedicated conformance scenes. |
+| `SceneOp::Path` | fill color | solid `Color` only | Contract expansion candidate tracked as `REN-VNEXT-paint-002`. |
+| `SceneOp::{Image,ImageRegion}` | texture sample | image + opacity | Sampling hints are tracked as M5; mask-image uses `Mask::Image` (ADR 0273), not `Paint`. |
+| `SceneOp::MaskImage` / `SceneOp::SvgMaskIcon` | alpha mask tint | solid `Color` tint + opacity | Coverage is expected in red for `MaskImage`. |
+| `SceneOp::SvgImage` | RGBA sample | image + opacity | Rasterization policy is renderer-owned; does not accept `Paint`. |
+| `SceneOp::ViewportSurface` | embedded target | target + opacity | Portability depends on platform/runner; ordering invariants are covered by renderer conformance. |
+
+### B2) Known gaps / next decisions
+
+- `SceneOp::Path` being solid-only is the largest “paint surface discontinuity” today.
+  - If we expand it to accept `Paint`, we must define: tiling semantics, local coordinate mapping
+    (origin + transform), and deterministic fallbacks for wasm/mobile (ADR + conformance gate).
+- `SceneOp::Text` paint expansion is deferred until text pipeline constraints are settled; keep the
+  v1 contract simple and predictable.
