@@ -428,6 +428,7 @@ fn compile_for_scene_blur_emits_separable_passes() {
 fn downsample_half_quarter_helper_emits_two_passes() {
     let viewport_size = (100, 100);
     let mut plan = RenderPlan {
+        segments: Vec::new(),
         passes: Vec::new(),
         compile_stats: RenderPlanCompileStats::default(),
         degradations: Vec::new(),

@@ -169,6 +169,9 @@ fn compile_for_scene_inner(
         _ => false,
     });
 
+    let mut segments: Vec<super::RenderPlanSegment> = Vec::new();
+    let mut next_segment_id: usize = 0;
+
     let mut passes: Vec<RenderPlanPass> = Vec::new();
     let mut degradations: Vec<RenderPlanDegradation> = Vec::new();
     let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
@@ -201,33 +204,72 @@ fn compile_for_scene_inner(
                 <= intermediate_budget_bytes
         };
 
-    let flush_scene_range = |end: usize,
-                             passes: &mut Vec<RenderPlanPass>,
-                             draw_scopes: &mut Vec<DrawScope>,
-                             scene_range_start: &mut usize| {
-        let scope = draw_scopes.last_mut().expect("draw scope");
-        if scope.needs_clear {
-            passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                segment: super::SceneSegmentId(0),
-                target: scope.target,
-                target_origin: scope.origin,
-                target_size: scope.size,
-                load: wgpu::LoadOp::Clear(scope.clear_color),
-                draw_range: *scene_range_start..end,
-            }));
-            scope.needs_clear = false;
-        } else if *scene_range_start < end {
-            passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                segment: super::SceneSegmentId(0),
-                target: scope.target,
-                target_origin: scope.origin,
-                target_size: scope.size,
-                load: wgpu::LoadOp::Load,
-                draw_range: *scene_range_start..end,
-            }));
+    let mut alloc_segment = |draw_range: std::ops::Range<usize>| -> super::SceneSegmentId {
+        let id = super::SceneSegmentId(next_segment_id);
+        next_segment_id += 1;
+
+        let start_uniform_index = draws.get(draw_range.start).map(|d| match d {
+            OrderedDraw::Quad(d) => d.uniform_index,
+            OrderedDraw::Viewport(d) => d.uniform_index,
+            OrderedDraw::Image(d) => d.uniform_index,
+            OrderedDraw::Mask(d) => d.uniform_index,
+            OrderedDraw::Text(d) => d.uniform_index,
+            OrderedDraw::Path(d) => d.uniform_index,
+        });
+
+        let mut flags = super::RenderPlanSegmentFlags::default();
+        for draw in draws.get(draw_range.start..draw_range.end).unwrap_or(&[]) {
+            match draw {
+                OrderedDraw::Quad(_) => flags.has_quad = true,
+                OrderedDraw::Viewport(_) => flags.has_viewport = true,
+                OrderedDraw::Image(_) => flags.has_image = true,
+                OrderedDraw::Mask(_) => flags.has_mask = true,
+                OrderedDraw::Text(_) => flags.has_text = true,
+                OrderedDraw::Path(_) => flags.has_path = true,
+            }
         }
-        *scene_range_start = end;
+
+        segments.push(super::RenderPlanSegment {
+            id,
+            draw_range,
+            start_uniform_index,
+            flags,
+        });
+
+        id
     };
+
+    let flush_scene_range =
+        |end: usize,
+         passes: &mut Vec<RenderPlanPass>,
+         draw_scopes: &mut Vec<DrawScope>,
+         alloc_segment: &mut dyn FnMut(std::ops::Range<usize>) -> super::SceneSegmentId,
+         scene_range_start: &mut usize| {
+            let scope = draw_scopes.last_mut().expect("draw scope");
+            if scope.needs_clear {
+                let segment = alloc_segment(*scene_range_start..end);
+                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                    segment,
+                    target: scope.target,
+                    target_origin: scope.origin,
+                    target_size: scope.size,
+                    load: wgpu::LoadOp::Clear(scope.clear_color),
+                    draw_range: *scene_range_start..end,
+                }));
+                scope.needs_clear = false;
+            } else if *scene_range_start < end {
+                let segment = alloc_segment(*scene_range_start..end);
+                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                    segment,
+                    target: scope.target,
+                    target_origin: scope.origin,
+                    target_size: scope.size,
+                    load: wgpu::LoadOp::Load,
+                    draw_range: *scene_range_start..end,
+                }));
+            }
+            *scene_range_start = end;
+        };
 
     let apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
@@ -304,6 +346,7 @@ fn compile_for_scene_inner(
                 cursor,
                 &mut passes,
                 &mut draw_scopes,
+                &mut alloc_segment,
                 &mut scene_range_start,
             );
 
@@ -865,6 +908,7 @@ fn compile_for_scene_inner(
                 cursor,
                 &mut passes,
                 &mut draw_scopes,
+                &mut alloc_segment,
                 &mut scene_range_start,
             );
 
@@ -883,8 +927,9 @@ fn compile_for_scene_inner(
 
             let scope = draw_scopes.last().expect("draw scope");
             let target = scope.target;
+            let segment = alloc_segment(cursor..end);
             passes.push(RenderPlanPass::PathMsaaBatch(super::PathMsaaBatchPass {
-                segment: super::SceneSegmentId(0),
+                segment,
                 target,
                 target_origin: scope.origin,
                 target_size: scope.size,
@@ -902,6 +947,7 @@ fn compile_for_scene_inner(
     }
 
     super::RenderPlan::finalize(
+        segments,
         passes,
         viewport_size,
         postprocess,

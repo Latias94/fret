@@ -778,7 +778,7 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::SceneDrawRange(scene_pass) => {
-                    debug_assert_eq!(scene_pass.segment.0, 0);
+                    debug_assert!(scene_pass.segment.0 < plan.segments.len());
                     let target_origin = scene_pass.target_origin;
                     let target_size = scene_pass.target_size;
                     let load = scene_pass.load;
@@ -1564,7 +1564,7 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::PathMsaaBatch(path_pass) => {
-                    debug_assert_eq!(path_pass.segment.0, 0);
+                    debug_assert!(path_pass.segment.0 < plan.segments.len());
                     let target_origin = path_pass.target_origin;
                     let target_size = path_pass.target_size;
                     let pass_target_view_owned = match path_pass.target {

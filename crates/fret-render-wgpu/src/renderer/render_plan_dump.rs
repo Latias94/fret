@@ -426,6 +426,24 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
 }
 
 #[derive(Debug, serde::Serialize)]
+struct JsonDumpSegmentFlags {
+    has_quad: bool,
+    has_viewport: bool,
+    has_image: bool,
+    has_mask: bool,
+    has_text: bool,
+    has_path: bool,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpSegment {
+    id: usize,
+    draw_range: [usize; 2],
+    start_uniform_index: Option<u32>,
+    flags: JsonDumpSegmentFlags,
+}
+
+#[derive(Debug, serde::Serialize)]
 struct JsonDumpCounts {
     total: usize,
     scene: usize,
@@ -487,6 +505,7 @@ struct RenderPlanJsonDump {
     format: String,
     postprocess: JsonDumpDebugPostprocess,
     ordered_draws_len: usize,
+    segments: Vec<JsonDumpSegment>,
     effect_markers: Vec<JsonDumpEffectMarker>,
     pass_counts: JsonDumpCounts,
     estimated_peak_intermediate_bytes: u64,
@@ -579,12 +598,29 @@ pub(super) fn maybe_dump_render_plan_json(
     let _ = std::fs::create_dir_all(&dir);
 
     let dump = RenderPlanJsonDump {
-        schema_version: 3,
+        schema_version: 4,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),
         postprocess: encode_debug_postprocess(postprocess),
         ordered_draws_len,
+        segments: plan
+            .segments
+            .iter()
+            .map(|s| JsonDumpSegment {
+                id: s.id.0,
+                draw_range: [s.draw_range.start, s.draw_range.end],
+                start_uniform_index: s.start_uniform_index,
+                flags: JsonDumpSegmentFlags {
+                    has_quad: s.flags.has_quad,
+                    has_viewport: s.flags.has_viewport,
+                    has_image: s.flags.has_image,
+                    has_mask: s.flags.has_mask,
+                    has_text: s.flags.has_text,
+                    has_path: s.flags.has_path,
+                },
+            })
+            .collect(),
         effect_markers: effect_markers
             .iter()
             .copied()

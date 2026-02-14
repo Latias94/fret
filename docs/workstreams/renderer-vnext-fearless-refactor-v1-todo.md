@@ -30,9 +30,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M1 — RenderPlan compilation substrate
 
-- [~] REN-VNEXT-plan-001 Define the internal RenderPlan IR (segments, sequence points, state snapshots).
+- [x] REN-VNEXT-plan-001 Define the internal RenderPlan IR (segments, sequence points, state snapshots).
   - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.1.1–3.1.5).
-  - Evidence (partial): `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene_inner`, `EffectMarkerKind::ClipPathPush`/`ClipPathPop`, `EffectMarkerKind::CompositeGroupPush`/`CompositeGroupPop`).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanSegment`, `RenderPlanSegmentFlags`),
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`alloc_segment`, sequence points at markers + path MSAA batches).
 - [x] REN-VNEXT-plan-005 Remove the legacy plan compiler (and temporary switches/tests) after vNext parity is proven.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderPlan compilation has no flavor switch),
     `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`compile_for_scene` delegates to vNext),

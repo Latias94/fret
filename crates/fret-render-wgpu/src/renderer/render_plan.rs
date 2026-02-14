@@ -7,6 +7,24 @@ use std::ops::Range;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct SceneSegmentId(pub(super) usize);
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct RenderPlanSegmentFlags {
+    pub(super) has_quad: bool,
+    pub(super) has_viewport: bool,
+    pub(super) has_image: bool,
+    pub(super) has_mask: bool,
+    pub(super) has_text: bool,
+    pub(super) has_path: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct RenderPlanSegment {
+    pub(super) id: SceneSegmentId,
+    pub(super) draw_range: Range<usize>,
+    pub(super) start_uniform_index: Option<u32>,
+    pub(super) flags: RenderPlanSegmentFlags,
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct RenderPlanCompileStats {
     pub(super) estimated_peak_intermediate_bytes: u64,
@@ -235,6 +253,7 @@ pub(super) struct PathMsaaBatchPass {
 
 #[derive(Debug)]
 pub(super) struct RenderPlan {
+    pub(super) segments: Vec<RenderPlanSegment>,
     pub(super) passes: Vec<RenderPlanPass>,
     pub(super) compile_stats: RenderPlanCompileStats,
     pub(super) degradations: Vec<RenderPlanDegradation>,
@@ -242,6 +261,7 @@ pub(super) struct RenderPlan {
 
 impl RenderPlan {
     pub(super) fn finalize(
+        segments: Vec<RenderPlanSegment>,
         passes: Vec<RenderPlanPass>,
         viewport_size: (u32, u32),
         postprocess: DebugPostprocess,
@@ -250,6 +270,7 @@ impl RenderPlan {
         degradations: Vec<RenderPlanDegradation>,
     ) -> Self {
         let mut plan = Self {
+            segments,
             passes,
             compile_stats: RenderPlanCompileStats {
                 estimated_peak_intermediate_bytes: 0,
