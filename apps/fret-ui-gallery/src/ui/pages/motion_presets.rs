@@ -150,6 +150,22 @@ pub(super) fn preview_motion_presets(
                     .to_string(),
             ),
             (
+                "duration.shadcn.motion.toast.stack.shift",
+                theme
+                    .duration_ms_token("duration.shadcn.motion.toast.stack.shift")
+                    .to_string(),
+            ),
+            (
+                "duration.shadcn.motion.toast.stack.shift.stagger",
+                theme
+                    .duration_ms_token("duration.shadcn.motion.toast.stack.shift.stagger")
+                    .to_string(),
+            ),
+            (
+                "easing.shadcn.motion.toast.stack.shift",
+                fmt_bezier(theme.easing_token("easing.shadcn.motion.toast.stack.shift")),
+            ),
+            (
                 "duration.shadcn.motion.spring.drawer.settle",
                 theme
                     .duration_ms_token("duration.shadcn.motion.spring.drawer.settle")
@@ -173,6 +189,22 @@ pub(super) fn preview_motion_presets(
                 theme
                     .duration_ms_token("duration.motion.layout.expand")
                     .to_string(),
+            ),
+            (
+                "duration.motion.stack.shift",
+                theme
+                    .duration_ms_token("duration.motion.stack.shift")
+                    .to_string(),
+            ),
+            (
+                "duration.motion.stack.shift.stagger",
+                theme
+                    .duration_ms_token("duration.motion.stack.shift.stagger")
+                    .to_string(),
+            ),
+            (
+                "easing.motion.stack.shift",
+                fmt_bezier(theme.easing_token("easing.motion.stack.shift")),
             ),
             (
                 "easing.motion.standard",
