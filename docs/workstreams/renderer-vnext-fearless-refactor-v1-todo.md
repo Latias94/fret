@@ -73,7 +73,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] REN-VNEXT-paint-002 Decide whether `SceneOp::Path` should accept `Paint` in v1/v2 (or remain solid-only).
 - [x] REN-VNEXT-mat-001 Document the renderer’s MaterialId capability matrix and deterministic fallbacks for wasm/mobile.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C).
-- [ ] REN-VNEXT-mat-002 Fill the capability matrix table with concrete “Must/May/Degrade” decisions per target.
+- [x] REN-VNEXT-mat-002 Fill the capability matrix table with concrete “Must/May/Degrade” decisions per target.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C).
 - [ ] REN-VNEXT-mat-003 Add at least one conformance scene for `Paint::Material` fallback behavior (unsupported registration, missing id, and budget pressure).
 
 ### M4b — Optional contract expansion

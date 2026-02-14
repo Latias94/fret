@@ -348,3 +348,12 @@ Draw-time material fallbacks must remain deterministic:
 - budget-driven degradation must be observable (telemetry counters + conformance scenes).
 
 The detailed “Must/May/Degrade” per-target policy remains tracked as `REN-VNEXT-mat-002`.
+
+### C3) Per-target policy (v1 decisions)
+
+The v1 policy is intentionally simple and deterministic:
+
+| Material surface | Native (wgpu) | Web (wasm/WebGPU) | Mobile (wgpu) | Deterministic fallback |
+| --- | --- | --- | --- | --- |
+| `ParamsOnly` materials | **Must** | **Must** | **Must** | Registration must not fail; unknown ids degrade at draw time (transparent). |
+| `ParamsPlusCatalogTexture` (sampled) | **May** | **May** | **May** | If unsupported, registration fails with `Unsupported` and callers must select a non-sampled alternative. |
