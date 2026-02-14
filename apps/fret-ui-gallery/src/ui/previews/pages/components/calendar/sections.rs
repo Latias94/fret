@@ -31,6 +31,7 @@ pub(super) fn basic(
 
             vec![
                 shadcn::Calendar::new(month.clone(), selected.clone())
+                    .test_id_prefix("ui-gallery.calendar.basic")
                     .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
                     .into_element(cx),
                 stack::vstack(
@@ -123,6 +124,7 @@ pub(super) fn month_year_selector(
     let caption_selected = models.caption_selected.clone();
 
     let body = shadcn::Calendar::new(caption_month, caption_selected)
+        .test_id_prefix("ui-gallery.calendar.caption")
         .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
@@ -156,6 +158,7 @@ pub(super) fn presets(
         };
 
     let calendar = shadcn::Calendar::new(presets_month.clone(), presets_selected.clone())
+        .test_id_prefix("ui-gallery.calendar.presets")
         .cell_size(Px(38.0))
         .refine_style(ChromeRefinement::default().p(Space::N0))
         .into_element(cx);
@@ -233,6 +236,7 @@ pub(super) fn date_and_time_picker(
     };
 
     let calendar = shadcn::Calendar::new(time_month, time_selected)
+        .test_id_prefix("ui-gallery.calendar.time")
         .refine_style(ChromeRefinement::default().p(Space::N0))
         .into_element(cx);
 
@@ -281,6 +285,7 @@ pub(super) fn booked_dates(
         |cx| {
             vec![
                 shadcn::Calendar::new(booked_month.clone(), booked_selected.clone())
+                    .test_id_prefix("ui-gallery.calendar.booked")
                     .disabled_by(|d| {
                         matches!(d.weekday(), time::Weekday::Saturday | time::Weekday::Sunday)
                     })
@@ -309,6 +314,7 @@ pub(super) fn custom_cell_size(
     let custom_cell_selected = models.custom_cell_selected.clone();
 
     let body = shadcn::Calendar::new(custom_cell_month, custom_cell_selected)
+        .test_id_prefix("ui-gallery.calendar.custom-cell")
         .cell_size(Px(44.0))
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
@@ -323,6 +329,7 @@ pub(super) fn week_numbers(
     let week_number_selected = models.week_number_selected.clone();
 
     let body = shadcn::Calendar::new(week_number_month, week_number_selected)
+        .test_id_prefix("ui-gallery.calendar.week-numbers")
         .show_week_number(true)
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
@@ -338,6 +345,7 @@ pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) ->
         fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
         |cx| {
             shadcn::Calendar::new(rtl_month, rtl_selected)
+                .test_id_prefix("ui-gallery.calendar.rtl")
                 .cell_size(Px(36.0))
                 .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
                 .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))

@@ -2937,7 +2937,8 @@ fn assert_calendar_selected_day_foreground_matches_web(web_name: &str, fg_label:
             || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
     });
 
-    let cell_size = parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+    let cell_size =
+        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

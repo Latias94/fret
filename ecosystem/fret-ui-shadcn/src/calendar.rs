@@ -220,6 +220,7 @@ pub struct Calendar {
     disable_outside_days: bool,
     show_week_number: bool,
     cell_size: Option<Px>,
+    test_id_prefix: Option<Arc<str>>,
     today: Option<Date>,
     modifiers: DayPickerModifiers,
     close_on_select: Option<Model<bool>>,
@@ -247,6 +248,7 @@ impl std::fmt::Debug for Calendar {
             .field("hidden_matchers", &self.modifiers.hidden.len())
             .field("close_on_select", &self.close_on_select.is_some())
             .field("initial_focus_out", &self.initial_focus_out.is_some())
+            .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .finish()
     }
 }
@@ -268,6 +270,7 @@ impl Calendar {
             disable_outside_days: false,
             show_week_number: false,
             cell_size: None,
+            test_id_prefix: None,
             today: None,
             modifiers: DayPickerModifiers::default(),
             close_on_select: None,
@@ -341,6 +344,11 @@ impl Calendar {
 
     pub fn cell_size(mut self, size: Px) -> Self {
         self.cell_size = Some(size);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -516,6 +524,7 @@ impl Calendar {
 
         let chrome_override = self.chrome;
         let layout_override = self.layout;
+        let test_id_prefix = self.test_id_prefix.clone();
 
         let region_props = LayoutQueryRegionProps {
             layout: decl_style::layout_style(
@@ -1199,6 +1208,7 @@ impl Calendar {
                                             focus_date.is_some_and(|d| d == day.date),
                                             day_size,
                                             row_bottom_gap,
+                                            test_id_prefix.as_ref(),
                                             &selected_model,
                                             required,
                                             close_on_select.clone(),
@@ -1779,6 +1789,7 @@ fn calendar_month_view<H: UiHost>(
                     focus_date.is_some_and(|d| d == day.date),
                     day_size,
                     row_bottom_gap,
+                    None,
                     &selected_model,
                     required,
                     close_on_select.clone(),
@@ -2030,6 +2041,30 @@ fn calendar_centered_text_cell<H: UiHost>(
     )
 }
 
+fn calendar_cell_slot<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    size: Px,
+    row_bottom_gap: Px,
+    child: AnyElement,
+) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Px(size);
+    layout.size.height = Length::Px(Px(size.0 + row_bottom_gap.0));
+
+    cx.flex(
+        FlexProps {
+            layout,
+            direction: fret_core::Axis::Vertical,
+            gap: Px(0.0),
+            padding: fret_core::Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: fret_ui::element::CrossAlign::Start,
+            wrap: false,
+        },
+        move |_cx| vec![child],
+    )
+}
+
 fn calendar_hidden_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -2039,9 +2074,8 @@ fn calendar_hidden_day_cell<H: UiHost>(
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(size);
     layout.size.height = Length::Px(size);
-    layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
 
-    control_chrome_pressable_with_id_props(cx, move |_cx, _st, _id| {
+    let inner = control_chrome_pressable_with_id_props(cx, move |_cx, _st, _id| {
         let mut chrome_props = decl_style::container_props(
             theme,
             ChromeRefinement::default(),
@@ -2063,7 +2097,9 @@ fn calendar_hidden_day_cell<H: UiHost>(
 
         let children = move |_cx: &mut ElementContext<'_, H>| Vec::new();
         (pressable, chrome_props, children)
-    })
+    });
+
+    calendar_cell_slot(cx, size, week_row_gap, inner)
 }
 
 fn calendar_day_cell<H: UiHost>(
@@ -2078,6 +2114,7 @@ fn calendar_day_cell<H: UiHost>(
     focus_candidate: bool,
     size: Px,
     week_row_gap: Px,
+    test_id_prefix: Option<&Arc<str>>,
     selected_model: &Model<Option<Date>>,
     required: bool,
     close_on_select: Option<Model<bool>>,
@@ -2086,7 +2123,6 @@ fn calendar_day_cell<H: UiHost>(
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(size);
     layout.size.height = Length::Px(size);
-    layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
 
     let muted_fg = theme
         .color_by_key("muted-foreground")
@@ -2109,6 +2145,11 @@ fn calendar_day_cell<H: UiHost>(
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
     let date_label = locale.day_aria_label(date, today, selected);
+    let test_id: Arc<str> = if let Some(prefix) = test_id_prefix {
+        Arc::from(format!("{prefix}:{date}"))
+    } else {
+        Arc::from(date.to_string())
+    };
 
     let text_sm_px = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
@@ -2117,7 +2158,7 @@ fn calendar_day_cell<H: UiHost>(
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-    control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
+    let inner = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
         if focus_candidate
             && !disabled
             && let Some(out) = initial_focus_out.as_ref()
@@ -2172,8 +2213,7 @@ fn calendar_day_cell<H: UiHost>(
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
-        // Margins are outside the control box (CSS mental model). Keep them on the pressable node
-        // so row gaps don't inflate the chrome/background quad.
+        // Keep chrome margins cleared; calendar row gaps are modeled by the outer slot wrapper.
         chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
@@ -2186,7 +2226,7 @@ fn calendar_day_cell<H: UiHost>(
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),
-                test_id: Some(Arc::from(date.to_string())),
+                test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
             },
@@ -2237,7 +2277,9 @@ fn calendar_day_cell<H: UiHost>(
         };
 
         (pressable, chrome_props, children)
-    })
+    });
+
+    calendar_cell_slot(cx, size, week_row_gap, inner)
 }
 
 #[cfg(test)]
