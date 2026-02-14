@@ -178,15 +178,12 @@ fn compile_for_scene_vnext_with_markers(
     // Incremental rollout:
     //
     // - Start by compiling only the effect marker subset needed by the current conformance scenes
-    //   (Backdrop + FilterContent).
+    //   (Backdrop + FilterContent + ClipPath).
     // - Fallback to the legacy compiler for other marker kinds until migrated.
     let has_unsupported_markers = encoding.effect_markers.iter().any(|m| {
         matches!(
             m.kind,
-            EffectMarkerKind::ClipPathPush { .. }
-                | EffectMarkerKind::ClipPathPop
-                | EffectMarkerKind::CompositeGroupPush { .. }
-                | EffectMarkerKind::CompositeGroupPop
+            EffectMarkerKind::CompositeGroupPush { .. } | EffectMarkerKind::CompositeGroupPop
         )
     });
     if has_unsupported_markers {
@@ -225,6 +222,10 @@ fn compile_for_scene_vnext_effects_only(
 ) -> super::RenderPlan {
     let draws = &encoding.ordered_draws;
     let markers = &encoding.effect_markers;
+    let scissor_sized_intermediates = !markers.iter().any(|m| match m.kind {
+        EffectMarkerKind::Push { mode, .. } => mode == fret_core::EffectMode::Backdrop,
+        _ => false,
+    });
 
     let mut passes: Vec<RenderPlanPass> = Vec::new();
     let mut degradations: Vec<RenderPlanDegradation> = Vec::new();
@@ -236,22 +237,26 @@ fn compile_for_scene_vnext_effects_only(
         clear_color: clear,
     }];
     let mut effect_scopes: Vec<EffectScope> = Vec::new();
+    let mut clip_path_scopes: Vec<ClipPathScope> = Vec::new();
+    let mut clip_path_mask_in_use_bytes: u64 = 0;
 
-    let can_allocate_intermediate_bytes = |draw_scopes: &[DrawScope], required: u64| -> bool {
-        let in_use: u64 = draw_scopes
-            .iter()
-            .filter(|s| {
-                matches!(
-                    s.target,
-                    super::PlanTarget::Intermediate0
-                        | super::PlanTarget::Intermediate1
-                        | super::PlanTarget::Intermediate2
-                )
-            })
-            .map(|s| estimate_texture_bytes(s.size, format, 1))
-            .sum();
-        in_use.saturating_add(required) <= intermediate_budget_bytes
-    };
+    let can_allocate_intermediate_bytes =
+        |draw_scopes: &[DrawScope], required: u64, extra_in_use: u64| -> bool {
+            let in_use: u64 = draw_scopes
+                .iter()
+                .filter(|s| {
+                    matches!(
+                        s.target,
+                        super::PlanTarget::Intermediate0
+                            | super::PlanTarget::Intermediate1
+                            | super::PlanTarget::Intermediate2
+                    )
+                })
+                .map(|s| estimate_texture_bytes(s.size, format, 1))
+                .sum();
+            in_use.saturating_add(extra_in_use).saturating_add(required)
+                <= intermediate_budget_bytes
+        };
 
     let flush_scene_range = |end: usize,
                              passes: &mut Vec<RenderPlanPass>,
@@ -426,6 +431,7 @@ fn compile_for_scene_vnext_effects_only(
                                         && !can_allocate_intermediate_bytes(
                                             &draw_scopes,
                                             estimate_texture_bytes(content_size, format, 1),
+                                            clip_path_mask_in_use_bytes,
                                         )
                                     {
                                         content_target = None;
@@ -521,10 +527,198 @@ fn compile_for_scene_vnext_effects_only(
                             let _ = draw_scopes.pop();
                         }
                     }
-                    EffectMarkerKind::ClipPathPush { .. }
-                    | EffectMarkerKind::ClipPathPop
-                    | EffectMarkerKind::CompositeGroupPush { .. }
-                    | EffectMarkerKind::CompositeGroupPop => unreachable!("filtered by preflight"),
+                    EffectMarkerKind::ClipPathPush {
+                        scissor,
+                        uniform_index,
+                        mask_draw_index,
+                    } => {
+                        let parent_scope = draw_scopes.last().expect("draw scope");
+                        let parent_target = parent_scope.target;
+                        let parent_origin = parent_scope.origin;
+                        let parent_size = parent_scope.size;
+
+                        let mut content_target: Option<super::PlanTarget> = None;
+                        let mut mask_target: Option<super::PlanTarget> = None;
+                        let mut had_free_content_target = false;
+                        let mut had_free_mask_target = false;
+
+                        let (content_origin, content_size) = if scissor_sized_intermediates {
+                            ((scissor.x, scissor.y), (scissor.w, scissor.h))
+                        } else {
+                            ((0, 0), viewport_size)
+                        };
+                        let mask_size = (scissor.w, scissor.h);
+
+                        if content_size.0 != 0
+                            && content_size.1 != 0
+                            && mask_size.0 != 0
+                            && mask_size.1 != 0
+                        {
+                            for t in [
+                                super::PlanTarget::Intermediate0,
+                                super::PlanTarget::Intermediate1,
+                                super::PlanTarget::Intermediate2,
+                            ] {
+                                if draw_scopes.iter().any(|s| s.target == t) {
+                                    continue;
+                                }
+                                content_target = Some(t);
+                                had_free_content_target = true;
+                                break;
+                            }
+
+                            for t in [
+                                super::PlanTarget::Mask0,
+                                super::PlanTarget::Mask1,
+                                super::PlanTarget::Mask2,
+                            ] {
+                                if clip_path_scopes.iter().any(|s| s.mask_target == Some(t)) {
+                                    continue;
+                                }
+                                mask_target = Some(t);
+                                had_free_mask_target = true;
+                                break;
+                            }
+
+                            if let (Some(_content_target), Some(_mask_target)) =
+                                (content_target, mask_target)
+                            {
+                                let required_color =
+                                    estimate_texture_bytes(content_size, format, 1);
+                                let required_mask = estimate_texture_bytes(
+                                    mask_size,
+                                    wgpu::TextureFormat::R8Unorm,
+                                    1,
+                                );
+                                if !can_allocate_intermediate_bytes(
+                                    &draw_scopes,
+                                    required_color.saturating_add(required_mask),
+                                    clip_path_mask_in_use_bytes,
+                                ) {
+                                    content_target = None;
+                                    mask_target = None;
+                                }
+                            }
+                        }
+
+                        if (content_target.is_none() || mask_target.is_none())
+                            && content_size.0 != 0
+                            && content_size.1 != 0
+                            && mask_size.0 != 0
+                            && mask_size.1 != 0
+                        {
+                            let reason = if intermediate_budget_bytes == 0 {
+                                RenderPlanDegradationReason::BudgetZero
+                            } else if !had_free_content_target || !had_free_mask_target {
+                                RenderPlanDegradationReason::TargetExhausted
+                            } else {
+                                RenderPlanDegradationReason::BudgetInsufficient
+                            };
+                            degradations.push(RenderPlanDegradation {
+                                draw_ix: cursor,
+                                kind: RenderPlanDegradationKind::ClipPathDisabled,
+                                reason,
+                            });
+                        }
+
+                        if let (Some(content_target), Some(mask_target)) =
+                            (content_target, mask_target)
+                        {
+                            let mask_draw = encoding.clip_path_masks[mask_draw_index as usize];
+                            debug_assert_eq!(mask_draw.scissor, scissor);
+                            debug_assert_eq!(mask_draw.uniform_index, uniform_index);
+                            passes.push(RenderPlanPass::PathClipMask(super::PathClipMaskPass {
+                                dst: mask_target,
+                                dst_origin: (scissor.x, scissor.y),
+                                dst_size: mask_size,
+                                scissor,
+                                uniform_index,
+                                first_vertex: mask_draw.first_vertex,
+                                vertex_count: mask_draw.vertex_count,
+                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                            }));
+
+                            draw_scopes.push(DrawScope {
+                                target: content_target,
+                                origin: content_origin,
+                                size: content_size,
+                                needs_clear: true,
+                                clear_color: wgpu::Color::TRANSPARENT,
+                            });
+
+                            clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
+                                .saturating_add(estimate_texture_bytes(
+                                    mask_size,
+                                    wgpu::TextureFormat::R8Unorm,
+                                    1,
+                                ));
+                        }
+
+                        clip_path_scopes.push(ClipPathScope {
+                            scissor,
+                            uniform_index,
+                            mask_draw_index,
+                            parent_target,
+                            parent_origin,
+                            parent_size,
+                            content_target,
+                            content_origin,
+                            content_size,
+                            mask_target,
+                            mask_size,
+                        });
+                    }
+                    EffectMarkerKind::ClipPathPop => {
+                        let Some(scope) = clip_path_scopes.pop() else {
+                            marker_ix += 1;
+                            continue;
+                        };
+
+                        if let (Some(content_target), Some(mask_target)) =
+                            (scope.content_target, scope.mask_target)
+                        {
+                            debug_assert_eq!(
+                                draw_scopes.last().expect("draw scope").target,
+                                content_target
+                            );
+
+                            passes.push(RenderPlanPass::CompositePremul(
+                                super::CompositePremulPass {
+                                    src: content_target,
+                                    src_origin: scope.content_origin,
+                                    dst: scope.parent_target,
+                                    src_size: scope.content_size,
+                                    dst_origin: scope.parent_origin,
+                                    dst_size: scope.parent_size,
+                                    dst_scissor: Some(scope.scissor),
+                                    mask_uniform_index: Some(scope.uniform_index),
+                                    mask: Some(super::MaskRef {
+                                        target: mask_target,
+                                        size: scope.mask_size,
+                                        viewport_rect: scope.scissor,
+                                    }),
+                                    blend_mode: fret_core::BlendMode::Over,
+                                    opacity: 1.0,
+                                    load: wgpu::LoadOp::Load,
+                                },
+                            ));
+
+                            let _ = draw_scopes.pop();
+
+                            clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
+                                .saturating_sub(estimate_texture_bytes(
+                                    scope.mask_size,
+                                    wgpu::TextureFormat::R8Unorm,
+                                    1,
+                                ));
+                        } else {
+                            let _ = scope.mask_draw_index;
+                        }
+                    }
+                    EffectMarkerKind::CompositeGroupPush { .. }
+                    | EffectMarkerKind::CompositeGroupPop => {
+                        unreachable!("filtered by preflight")
+                    }
                 }
 
                 marker_ix += 1;
