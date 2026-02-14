@@ -5,8 +5,19 @@
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
   },
   "steps": [
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "alert" },
     {
       "type": "wait_until",
       "predicate": {
@@ -15,13 +26,7 @@
       },
       "timeout_frames": 240
     },
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-alert" },
-      "stable_frames": 6,
-      "max_move_px": 0.5,
-      "timeout_frames": 240
-    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-alert" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -51,4 +56,3 @@
     }
   ]
 }
-
