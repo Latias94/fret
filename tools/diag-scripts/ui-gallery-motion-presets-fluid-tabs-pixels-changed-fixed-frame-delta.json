@@ -1,0 +1,60 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-motion-presets" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-motion-presets" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-fluid-tabs-trigger-accounts"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "capture_bundle", "label": "ui-gallery-motion-presets-fluid-tabs-before" },
+    { "type": "capture_screenshot", "label": "ui-gallery-motion-presets-fluid-tabs-before" },
+
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-motion-presets-fluid-tabs-trigger-deposits"
+      },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 24 },
+    { "type": "capture_bundle", "label": "ui-gallery-motion-presets-fluid-tabs-after" },
+    { "type": "capture_screenshot", "label": "ui-gallery-motion-presets-fluid-tabs-after" },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta"
+    }
+  ]
+}
+

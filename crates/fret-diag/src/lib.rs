@@ -4599,6 +4599,12 @@ See: `docs/tracy.md`.\n";
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json",
                                 ),
                             ),
@@ -11248,6 +11254,9 @@ fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static st
     match name {
         "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json" => {
             Some("ui-gallery-alert-tabs-shared-indicator")
+        }
+        "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json" => {
+            Some("ui-gallery-motion-presets-fluid-tabs-content-stage")
         }
         "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json" => {
             Some("ui-gallery-code-editor-torture-root")
