@@ -64,6 +64,71 @@ This workstream exists to make the renderer implementation **fearlessly evolvabl
    - Capability gating must have deterministic, documented fallbacks.
    - No “best effort” behavior that silently diverges per backend.
 
+## 2.1) Always-run gates (pragmatic)
+
+This workstream is intentionally “fearless but gated”. Before and after each milestone step:
+
+- Crate layering: `python3 tools/check_layering.py`
+- Renderer conformance anchors (GPU readback when available):
+  - `crates/fret-render-wgpu/tests/affine_clip_conformance.rs`
+  - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
+  - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`
+  - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
+  - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
+  - `crates/fret-render-wgpu/tests/materials_conformance.rs`
+  - `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
+
+When a new contract is added, extend this list with the smallest conformance gate that proves:
+
+- ordering is preserved,
+- the fallback path is deterministic,
+- and the wasm/mobile story is explicit.
+
+## 2.2) Baseline runbook (copy/paste)
+
+This section describes a minimal, reproducible baseline capture for the refactor.
+
+### 2.2.1 Layering gate
+
+```bash
+python3 tools/check_layering.py
+```
+
+### 2.2.2 Renderer conformance (fixed scene set)
+
+Prefer `cargo nextest` when available:
+
+```bash
+cargo nextest run -p fret-render-wgpu --test affine_clip_conformance
+cargo nextest run -p fret-render-wgpu --test viewport_surface_metadata_conformance
+cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance
+cargo nextest run -p fret-render-wgpu --test mask_gradient_conformance
+cargo nextest run -p fret-render-wgpu --test composite_group_conformance
+cargo nextest run -p fret-render-wgpu --test materials_conformance
+cargo nextest run -p fret-render-wgpu --test materials_sampled_conformance
+```
+
+Fallback (no nextest):
+
+```bash
+cargo test -p fret-render-wgpu --test affine_clip_conformance
+```
+
+### 2.2.3 Renderer perf snapshot baseline (deterministic stress)
+
+Record perf snapshots using the deterministic SVG atlas stress harness (prints `renderer_perf:` /
+`headless_renderer_perf:` lines). Suggested baseline capture:
+
+```bash
+set FRET_RENDERER_PERF_PIPELINES=1
+cargo run -p fret-svg-atlas-stress -- --headless --frames 600
+```
+
+Notes:
+
+- Keep the run duration and flags stable (e.g. 600 frames) so future diffs are meaningful.
+- Capture both `renderer_perf:` and `renderer_perf_pipelines:` lines if enabled.
+
 ## 3) Proposed internal architecture (implementation, not contract)
 
 ## 3.0) Cost model checklist (design-time, not contracts)
@@ -133,10 +198,18 @@ Each addition must have:
 - at least one conformance gate (GPU readback test when feasible),
 - and evidence anchors (paths + tests + perf snapshot hooks).
 
+Portability closure (paint/material) is tracked as a dedicated ADR so wasm/mobile behavior stays
+explicit and testable:
+
+- `docs/adr/0274-paint-and-material-portability-closure-v1.md`
+
 ## 5) References (contracts and guardrails)
 
 - Ordered display list and batching: `docs/adr/0002-display-list.md`, `docs/adr/0009-renderer-ordering-and-batching.md`
 - Transform + clip semantics: `docs/adr/0078-scene-transform-and-clip-composition.md`
+- Renderer plan/compile substrate (internal architecture guidance):
+  - `docs/adr/0116-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
+  - `docs/adr/0088-renderer-architecture-v2-scene-compiler.md`
 - Effects + budgets: `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`,
   `docs/adr/0118-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Mask semantics (paint-only by default): `docs/adr/0239-mask-layers-and-alpha-masks-v1.md`

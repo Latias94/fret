@@ -13,7 +13,7 @@ Current state (as of 2026-02-13):
 - Tooling can now maintain a v2-ish chunked bundle payload under `<run_id>/chunks/bundle_json/*` and records chunk list + sizes + hashes in `manifest.json` (and can materialize `bundle.json` on-demand for compatibility).
 - Tooling validates chunked bundle integrity (per-chunk + total hash) and marks `script.result.json` with a stable `reason_code` when corruption is detected (`tooling.artifact.integrity.failed`).
 - DevTools WS bundle dumps can now be delivered as chunked `bundle.dumped` messages to avoid oversized single payloads; tooling reassembles and materializes locally.
-- DevTools WS bundle dumps now carry a `request_id` and `bundle.dumped` replies echo it, allowing tooling to safely correlate overlapping dumps.
+- DevTools WS request/response commands now echo `request_id` (e.g. `bundle.dump`, `screenshot.request`, `semantics.node.get`), allowing tooling to safely correlate overlapping requests.
 - `diag repro` setup/driver failures now write `repro.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `diag repeat` setup/driver failures now write `repeat.summary.json` with `error_reason_code` (and still produce a local `script.result.json`).
 - `script.result.json` now includes a bounded per-run event log (step start/end + bundle dump events) with clipped counts reported.

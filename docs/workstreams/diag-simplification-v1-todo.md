@@ -52,7 +52,10 @@ Evidence pointers:
 - [x] Make `--pack` work in WS mode by operating on the materialized local artifact.
 - [x] Add artifact size reporting:
   - [x] include bytes on disk and clipped counts in `script.result` evidence (bounded)
-- [x] Correlate `bundle.dump` ↔ `bundle.dumped` over WS via `request_id` (avoid cross-talk when dumps overlap).
+- [x] Correlate WS request/response commands via envelope `request_id` (avoid cross-talk when requests overlap):
+  - `bundle.dump` ↔ `bundle.dumped`
+  - `screenshot.request` ↔ `screenshot.result`
+  - `semantics.node.get` ↔ `semantics.node.get_ack`
 
 ## Phase 3: Exit request parity
 
