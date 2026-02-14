@@ -107,6 +107,7 @@ pub(super) fn begin_frame(
     }
 
     UiGalleryDriver::sync_shadcn_theme(app, state);
+    UiGalleryDriver::sync_motion_preset(app, state);
     let last_debug_stats = state.ui.debug_stats();
 
     let debug_hud = debug_stats::compute_debug_hud_bundle(

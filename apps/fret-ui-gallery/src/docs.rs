@@ -53,6 +53,40 @@ let root = stack::hstack(
 ```
 "#;
 
+pub(crate) const DOC_MOTION_PRESETS: &str = r#"
+## Motion presets (theme token overrides)
+
+Fret’s motion system is **token-driven**: durations/easings/spring params are read from the global
+`Theme` using string keys.
+
+This page provides a small set of “effect presets” by applying a `ThemeConfig` patch on top of the
+active theme preset:
+
+- shadcn-scoped keys (`duration.shadcn.motion.*`, `easing.shadcn.motion.*`)
+- canonical cross-ecosystem keys (`duration.motion.*`, `easing.motion.*`, `number.motion.spring.*`)
+
+Notes:
+
+- shadcn recipes typically prefer `*.shadcn.motion.*` keys first; canonical keys act as a fallback.
+- Diagnostics gates should use `--fixed-frame-delta-ms 16` for deterministic motion.
+"#;
+
+pub(crate) const USAGE_MOTION_PRESETS: &str = r#"
+```rust
+use fret_ui::{Theme, ThemeConfig};
+
+Theme::with_global_mut(app, |theme| {
+    theme.apply_config_patch(&ThemeConfig {
+        durations_ms: std::collections::HashMap::from([(
+            "duration.motion.presence.enter".to_string(),
+            160,
+        )]),
+        ..ThemeConfig::default()
+    });
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_MARQUEE: &str = r#"
 ## Marquee (fret-ui-magic)
 

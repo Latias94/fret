@@ -60,13 +60,39 @@ pub(crate) fn content_view(
                 models.theme_preset_open.clone(),
             )
             .placeholder("Theme preset")
+            .trigger_test_id("ui-gallery-theme-preset-trigger")
             .items([
-                shadcn::SelectItem::new("zinc/light", "Zinc (light)"),
-                shadcn::SelectItem::new("zinc/dark", "Zinc (dark)"),
-                shadcn::SelectItem::new("slate/light", "Slate (light)"),
-                shadcn::SelectItem::new("slate/dark", "Slate (dark)"),
-                shadcn::SelectItem::new("neutral/light", "Neutral (light)"),
-                shadcn::SelectItem::new("neutral/dark", "Neutral (dark)"),
+                shadcn::SelectItem::new("zinc/light", "Zinc (light)")
+                    .test_id("ui-gallery-theme-preset-item-zinc-light"),
+                shadcn::SelectItem::new("zinc/dark", "Zinc (dark)")
+                    .test_id("ui-gallery-theme-preset-item-zinc-dark"),
+                shadcn::SelectItem::new("slate/light", "Slate (light)")
+                    .test_id("ui-gallery-theme-preset-item-slate-light"),
+                shadcn::SelectItem::new("slate/dark", "Slate (dark)")
+                    .test_id("ui-gallery-theme-preset-item-slate-dark"),
+                shadcn::SelectItem::new("neutral/light", "Neutral (light)")
+                    .test_id("ui-gallery-theme-preset-item-neutral-light"),
+                shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
+                    .test_id("ui-gallery-theme-preset-item-neutral-dark"),
+            ])
+            .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+            .into_element(cx);
+
+            let motion_select = shadcn::Select::new(
+                models.motion_preset.clone(),
+                models.motion_preset_open.clone(),
+            )
+            .placeholder("Motion preset")
+            .trigger_test_id("ui-gallery-motion-preset-trigger")
+            .items([
+                shadcn::SelectItem::new("theme", "Theme (baseline)")
+                    .test_id("ui-gallery-motion-preset-item-theme"),
+                shadcn::SelectItem::new("snappy", "Snappy")
+                    .test_id("ui-gallery-motion-preset-item-snappy"),
+                shadcn::SelectItem::new("bouncy", "Bouncy")
+                    .test_id("ui-gallery-motion-preset-item-bouncy"),
+                shadcn::SelectItem::new("gentle", "Gentle")
+                    .test_id("ui-gallery-motion-preset-item-gentle"),
             ])
             .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
             .into_element(cx);
@@ -98,7 +124,7 @@ pub(crate) fn content_view(
             let right = stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N3).items_center(),
-                |_cx| [theme_select, copy_actions],
+                |_cx| [theme_select, motion_select, copy_actions],
             );
 
             [left, right]
@@ -109,6 +135,8 @@ pub(crate) fn content_view(
         cx,
         theme,
         selected,
+        models.motion_preset.clone(),
+        models.motion_preset_open.clone(),
         models.view_cache_enabled.clone(),
         models.view_cache_cache_shell.clone(),
         models.view_cache_inner_enabled.clone(),
@@ -297,6 +325,8 @@ fn page_preview(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     selected: &str,
+    motion_preset: Model<Option<Arc<str>>>,
+    motion_preset_open: Model<bool>,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
     view_cache_inner_enabled: Model<bool>,
@@ -371,6 +401,9 @@ fn page_preview(
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
+        PAGE_MOTION_PRESETS => {
+            preview_motion_presets(cx, theme, motion_preset, motion_preset_open, dialog_open)
+        }
         PAGE_VIEW_CACHE => preview_view_cache(
             cx,
             theme,
