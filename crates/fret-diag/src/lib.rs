@@ -7723,6 +7723,15 @@ See: `docs/tracy.md`.\n";
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
                                 },
+                                "worst_run": {
+                                    "top_total_time_us": top_total,
+                                    "bundle": bundle_path.display().to_string(),
+                                    "trace_chrome": bundle_path
+                                        .parent()
+                                        .map(|dir| dir.join("trace.chrome.json"))
+                                        .filter(|p| p.is_file())
+                                        .map(|p| p.display().to_string()),
+                                },
                                 "max": {
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
@@ -8918,6 +8927,15 @@ See: `docs/tracy.md`.\n";
                                 "top_layout_time_us": observed_layout,
                                 "top_layout_engine_solve_time_us": observed_solve,
                             },
+                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+                                "top_total_time_us": us,
+                                "bundle": bundle.display().to_string(),
+                                "trace_chrome": bundle
+                                    .parent()
+                                    .map(|dir| dir.join("trace.chrome.json"))
+                                    .filter(|p| p.is_file())
+                                    .map(|p| p.display().to_string()),
+                            })),
                             "max": {
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
