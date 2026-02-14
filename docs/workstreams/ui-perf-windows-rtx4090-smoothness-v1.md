@@ -48,6 +48,8 @@ P0 commands:
 1) Look at the generated perf check:
 
 - `<out_dir>/check.perf_thresholds.json`
+  - Includes `max` and percentiles (`p50`/`p95`) per script.
+  - When a threshold fails, `failures[]` also includes `actual_p95_us` and `outlier_suspected` for quick triage.
 
 2) Open the worst evidence bundle:
 
@@ -78,6 +80,7 @@ Preferred workflow:
 
 - Use `fretboard diag perf ... --json` and review `p50`/`p95` for the top metrics.
 - Use `diag stats` for within-bundle averages and budgets (`avg.*`, `budget_pct.*`).
+- If you want a **typical-perf gate** (ignore rare max spikes), run with `--perf-threshold-agg p95`.
 
 If a change improves p50/p95 but worsens max occasionally, treat it as “needs jitter work” (allocator,
 capacity management, background work scheduling).
