@@ -192,3 +192,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Gates:
     - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
     - `cargo nextest run -p fret-ui tree::`: PASS
+
+- [x] RSH-ui-012 Make debug logging paths non-panicking by default (strict mode panics).
+  - Evidence: `crates/fret-ui/src/resizable_split/widget.rs` (opening `target/fret-resizable-split.log` is non-panicking by default)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
