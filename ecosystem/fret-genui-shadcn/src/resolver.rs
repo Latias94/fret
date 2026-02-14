@@ -111,6 +111,7 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                     Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
                 Ok(fret_ui_kit::ui::v_flex(cx, move |_cx| children)
                     .gap(gap)
+                    .items_start()
                     .into_element(cx))
             }
             "HStack" => {
@@ -118,6 +119,7 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                     Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
                 Ok(fret_ui_kit::ui::h_flex(cx, move |_cx| children)
                     .gap(gap)
+                    .items_center()
                     .into_element(cx))
             }
             "Button" => {
