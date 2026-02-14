@@ -5484,8 +5484,8 @@ mod tests {
     };
     use fret_core::{
         AttributedText, CaretAffinity, Color, DecorationLineStyle, FontWeight, Point, Px, Rect,
-        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextShapingStyle,
-        TextSpan, TextStyle, TextWrap, UnderlineStyle,
+        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextPaintStyle,
+        TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
     };
     use std::sync::Arc;
 
@@ -7148,6 +7148,100 @@ mod tests {
             TextShapeKey::from_blob_key(&k_a),
             TextShapeKey::from_blob_key(&k_b),
             "paint changes must not affect shape cache keys"
+        );
+    }
+
+    #[test]
+    fn multispan_paint_changes_do_not_affect_shape_key() {
+        let constraints = TextConstraints {
+            max_width: Some(Px(200.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let base = TextStyle::default();
+        let text = "let x = 1;";
+
+        let mk_spans = |kw: Color, ident: Color| {
+            vec![
+                TextSpan {
+                    len: "let".len(),
+                    shaping: Default::default(),
+                    paint: TextPaintStyle {
+                        fg: Some(kw),
+                        ..Default::default()
+                    },
+                },
+                TextSpan::new(" ".len()),
+                TextSpan {
+                    len: "x".len(),
+                    shaping: Default::default(),
+                    paint: TextPaintStyle {
+                        fg: Some(ident),
+                        ..Default::default()
+                    },
+                },
+                TextSpan::new(" = 1;".len()),
+            ]
+        };
+
+        let spans_a = mk_spans(
+            Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+            Color {
+                r: 0.0,
+                g: 1.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        );
+        let spans_b = mk_spans(
+            Color {
+                r: 0.2,
+                g: 0.2,
+                b: 1.0,
+                a: 1.0,
+            },
+            Color {
+                r: 1.0,
+                g: 0.6,
+                b: 0.2,
+                a: 1.0,
+            },
+        );
+
+        assert_eq!(
+            spans_shaping_fingerprint(&spans_a),
+            spans_shaping_fingerprint(&spans_b),
+            "expected theme-only paint changes to not affect shaping fingerprints"
+        );
+        assert_ne!(
+            spans_paint_fingerprint(&spans_a),
+            spans_paint_fingerprint(&spans_b),
+            "expected paint changes to affect paint fingerprints"
+        );
+
+        let rich_a = fret_core::AttributedText::new(
+            Arc::<str>::from(text),
+            Arc::<[TextSpan]>::from(spans_a),
+        );
+        let rich_b = fret_core::AttributedText::new(
+            Arc::<str>::from(text),
+            Arc::<[TextSpan]>::from(spans_b),
+        );
+
+        let k_a = TextBlobKey::new_attributed(&rich_a, &base, constraints, 7);
+        let k_b = TextBlobKey::new_attributed(&rich_b, &base, constraints, 7);
+        assert_ne!(k_a, k_b, "paint changes should affect blob cache keys");
+        assert_eq!(
+            TextShapeKey::from_blob_key(&k_a),
+            TextShapeKey::from_blob_key(&k_b),
+            "paint changes must not affect shape cache keys, even for multiple spans"
         );
     }
 
