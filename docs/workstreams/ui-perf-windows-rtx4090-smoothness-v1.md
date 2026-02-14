@@ -58,6 +58,7 @@ P0 commands:
 3) Summarize and attribute:
 
 - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30 --json`
+  - `diag stats --json` includes `sum` / `avg` / `max` plus `p50` / `p95` for key frame timings (typical perf).
 - Compare “good vs bad” bundles:
   - `target/release/fretboard.exe diag stats --diff <ok_bundle.json> <bad_bundle.json> --sort time --json`
 
@@ -70,6 +71,8 @@ P0 commands:
 - Trace artifacts (for a single run, not for gate runs):
   - `target/release/fretboard.exe diag perf ... --trace`
   - `target/release/fretboard.exe diag trace <bundle.json>`
+  - The exported `trace.chrome.json` includes phase sub-events derived from `debug.stats.*_time_us`
+    (e.g. `layout.collect_roots`, `layout.request_build_roots`, `layout.engine_solve`, `paint.cache_replay`).
 
 ## Windows ETW/WPR (schedule noise vs real CPU work)
 
@@ -97,6 +100,11 @@ Runbook:
 
 - `wpr -stop ui-perf.etl`
 
+Note: Some environments block WPR/ETW system profiling via policy (e.g. `0xc5585011`). If WPR fails:
+
+- Prefer in-app evidence (`--trace`, `diag stats`, `FRET_LAYOUT_NODE_PROFILE=1`) to confirm CPU phase attribution.
+- Use Windows best-effort isolation knobs (`--launch-high-priority`, `--reuse-launch`) to reduce scheduling noise.
+
 4) Open in Windows Performance Analyzer (WPA) and filter to the app process:
 
 - The diagnostics out dir writes `launched.demo.json` with the launched `pid` (when using `--launch`).
@@ -119,7 +127,7 @@ Tail (spikes) is “max / worst frame”. Typical perf should use **percentiles*
 Preferred workflow:
 
 - Use `fretboard diag perf ... --json` and review `p50`/`p95` for the top metrics.
-- Use `diag stats` for within-bundle averages and budgets (`avg.*`, `budget_pct.*`).
+- Use `diag stats --json` for within-bundle `p50` / `p95` (typical), `avg.*`, and `budget_pct.*`.
 - If you want a **typical-perf gate** (ignore rare max spikes), run with `--perf-threshold-agg p95`.
 
 If a change improves p50/p95 but worsens max occasionally, treat it as “needs jitter work” (allocator,

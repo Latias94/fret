@@ -29,7 +29,7 @@ Exit criteria:
 
 Exit criteria:
 
-- Typical perf (p50/p95) is reported and diffed as a first-class review surface (not just max).
+- Typical perf (p50/p95) is reported as a first-class review surface (not just max), including `diag stats --json` and perf threshold reports.
 - Baseline seeding policy and headroom rationale are documented for Windows smoothness.
 
 ## M4 — Regression-proof guardrails
@@ -38,4 +38,3 @@ Exit criteria:
 
 - A change that regresses Windows tail perf is caught by a gate and has a clear rollback path.
 - A change that improves typical perf but harms tail perf is surfaced explicitly (policy decision, not accidental).
-
