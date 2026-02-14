@@ -139,7 +139,23 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] RSH-ui-005 Remove `expect("text input/text area")` from declarative host widgets (defensive debug assertions + stable fallbacks).
   - Evidence: `crates/fret-ui/src/declarative/host_widget.rs`
   - Evidence: `crates/fret-ui/src/declarative/host_widget/layout.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/paint.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/semantics.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/event/text.rs`
   - Gates:
     - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
     - `cargo nextest run -p fret-ui`: PASS
     - `python3 tools/check_layering.py`: PASS
+
+## M9 — Panic surface audit (fret-ui follow-ups)
+
+- [x] RSH-ui-006 Remove "checked above" `expect(...)` and redundant `Option` unwrapping in input/dispatch hot paths.
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs`
+  - Evidence: `crates/fret-ui/src/text/input/widget.rs`
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui`: PASS
+    - `python3 tools/check_layering.py`: PASS
+- [ ] RSH-ui-007 Decide policy for `taffy` error handling (avoid `expect(...)` on layout engine operations).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/measure.rs` (e.g. `taffy.new_leaf`, `taffy.compute_layout`, `taffy.layout`)
+  - Evidence: `crates/fret-ui/src/layout/engine.rs` (`expect("taffy new_leaf")`)
