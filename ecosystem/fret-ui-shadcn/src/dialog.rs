@@ -12,11 +12,13 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Space, ui,
@@ -31,6 +33,39 @@ fn default_overlay_color() -> Color {
         g: 0.0,
         b: 0.0,
         a: 0.5,
+    }
+}
+
+/// Overlay backdrop visual style for shadcn `Dialog`.
+///
+/// Note: This is a policy/recipe surface (ecosystem layer). Mechanism-level overlay contracts
+/// remain in `crates/fret-ui` and `ecosystem/fret-ui-kit`.
+#[derive(Debug, Clone)]
+pub enum DialogOverlayBackdrop {
+    /// A solid scrim behind the dialog content (default shadcn/Radix baseline).
+    Solid,
+    /// A blurred "glass" backdrop (reduced-transparency aware; implemented via `fret-ui-kit` glass).
+    Glass(DialogGlassBackdropRefinement),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DialogGlassBackdropRefinement {
+    pub blur_radius_px: Px,
+    pub blur_downsample: u32,
+    pub saturation: f32,
+    pub brightness: f32,
+    pub contrast: f32,
+}
+
+impl Default for DialogGlassBackdropRefinement {
+    fn default() -> Self {
+        Self {
+            blur_radius_px: Px(14.0),
+            blur_downsample: 2,
+            saturation: 1.05,
+            brightness: 1.0,
+            contrast: 1.0,
+        }
     }
 }
 
@@ -83,6 +118,7 @@ pub struct Dialog {
     open: Model<bool>,
     overlay_closable: bool,
     overlay_color: Option<Color>,
+    overlay_backdrop: DialogOverlayBackdrop,
     window_padding: Space,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -97,6 +133,7 @@ impl std::fmt::Debug for Dialog {
             .field("open", &"<model>")
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
+            .field("overlay_backdrop", &self.overlay_backdrop)
             .field("window_padding", &self.window_padding)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
@@ -116,6 +153,7 @@ impl Dialog {
             open,
             overlay_closable: true,
             overlay_color: None,
+            overlay_backdrop: DialogOverlayBackdrop::Solid,
             window_padding: Space::N4,
             on_dismiss_request: None,
             on_open_auto_focus: None,
@@ -157,6 +195,28 @@ impl Dialog {
 
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
         self.overlay_color = Some(overlay_color);
+        self
+    }
+
+    pub fn overlay_backdrop(mut self, backdrop: DialogOverlayBackdrop) -> Self {
+        self.overlay_backdrop = backdrop;
+        self
+    }
+
+    pub fn overlay_glass_backdrop(mut self, enabled: bool) -> Self {
+        self.overlay_backdrop = if enabled {
+            DialogOverlayBackdrop::Glass(DialogGlassBackdropRefinement::default())
+        } else {
+            DialogOverlayBackdrop::Solid
+        };
+        self
+    }
+
+    pub fn overlay_glass_backdrop_refinement(
+        mut self,
+        refinement: DialogGlassBackdropRefinement,
+    ) -> Self {
+        self.overlay_backdrop = DialogOverlayBackdrop::Glass(refinement);
         self
     }
 
@@ -296,27 +356,59 @@ impl Dialog {
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
 
                 let opacity = motion.progress;
+                let overlay_backdrop = self.overlay_backdrop.clone();
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_fill = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
+                    let barrier_fill: AnyElement = match overlay_backdrop {
+                        DialogOverlayBackdrop::Solid => cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
+                                padding: Edges::all(Px(0.0)),
+                                background: Some(overlay_color),
+                                shadow: None,
+                                border: Edges::all(Px(0.0)),
+                                border_color: None,
+                                corner_radii: Corners::all(Px(0.0)),
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)),
-                            background: Some(overlay_color),
-                            shadow: None,
-                            border: Edges::all(Px(0.0)),
-                            border_color: None,
-                            corner_radii: Corners::all(Px(0.0)),
-                            ..Default::default()
-                        },
-                        |_cx| Vec::new(),
-                    );
+                            |_cx| Vec::new(),
+                        ),
+                        DialogOverlayBackdrop::Glass(refinement) => {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+
+                            let chrome = ChromeRefinement::default()
+                                .p(Space::N0)
+                                .radius(Px(0.0))
+                                .border_width(Px(0.0))
+                                .bg(ColorRef::Color(overlay_color));
+                            let effect = GlassEffectRefinement {
+                                blur_radius_px: Some(refinement.blur_radius_px),
+                                blur_downsample: Some(refinement.blur_downsample),
+                                saturation: Some(refinement.saturation),
+                                brightness: Some(refinement.brightness),
+                                contrast: Some(refinement.contrast),
+                            };
+
+                            glass_panel(
+                                cx,
+                                GlassPanelProps {
+                                    layout,
+                                    chrome,
+                                    effect,
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::<AnyElement>::new(),
+                            )
+                        }
+                    };
 
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);

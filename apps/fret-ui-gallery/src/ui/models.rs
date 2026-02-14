@@ -23,6 +23,7 @@ pub(crate) struct UiGalleryModels {
 
     pub(crate) popover_open: Model<bool>,
     pub(crate) dialog_open: Model<bool>,
+    pub(crate) dialog_glass_open: Model<bool>,
     pub(crate) alert_dialog_open: Model<bool>,
     pub(crate) sheet_open: Model<bool>,
     pub(crate) portal_geometry_popover_open: Model<bool>,
