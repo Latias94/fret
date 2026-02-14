@@ -117,53 +117,6 @@ pub(super) fn preview_alert_dialog(
             section(cx, title, body)
         };
 
-    let media_chip =
-        |cx: &mut ElementContext<'_, App>, icon_name: &'static str, destructive: bool| {
-            let icon = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .items_center()
-                    .justify_center(),
-                move |cx| {
-                    vec![shadcn::icon::icon(
-                        cx,
-                        fret_icons::IconId::new_static(icon_name),
-                    )]
-                },
-            );
-
-            let props = cx.with_theme(|theme| {
-                let (bg, border, fg) = if destructive {
-                    (
-                        ColorRef::Color(theme.color_required("destructive")),
-                        ColorRef::Color(theme.color_required("destructive")),
-                        ColorRef::Color(theme.color_required("destructive-foreground")),
-                    )
-                } else {
-                    (
-                        ColorRef::Color(theme.color_required("muted")),
-                        ColorRef::Color(theme.color_required("border")),
-                        ColorRef::Color(theme.color_required("foreground")),
-                    )
-                };
-
-                decl_style::container_props(
-                    theme,
-                    ChromeRefinement::default()
-                        .border_1()
-                        .rounded(Radius::Full)
-                        .bg(bg)
-                        .border_color(border)
-                        .text_color(fg)
-                        .p(Space::N2),
-                    LayoutRefinement::default().w_px(Px(40.0)).h_px(Px(40.0)),
-                )
-            });
-
-            cx.container(props, move |_cx| [icon])
-        };
-
     let build_dialog = |cx: &mut ElementContext<'_, App>,
                         test_id_prefix: &'static str,
                         open_model: Model<bool>,
@@ -174,9 +127,8 @@ pub(super) fn preview_alert_dialog(
                         cancel_label: &'static str,
                         action_label: &'static str,
                         action_variant: shadcn::ButtonVariant,
-                        max_w: Px,
-                        media_icon: Option<&'static str>,
-                        media_destructive: bool| {
+                        content_size: shadcn::AlertDialogContentSize,
+                        media_icon: Option<&'static str>| {
         let open_for_trigger = open_model.clone();
         let open_for_children = open_model.clone();
         shadcn::AlertDialog::new(open_model).into_element(
@@ -189,15 +141,20 @@ pub(super) fn preview_alert_dialog(
                     .into_element(cx)
             },
             move |cx| {
-                let mut header_children = Vec::new();
+                let mut header = shadcn::AlertDialogHeader::new(vec![
+                    shadcn::AlertDialogTitle::new(title).into_element(cx),
+                    shadcn::AlertDialogDescription::new(description).into_element(cx),
+                ]);
                 if let Some(icon_name) = media_icon {
-                    header_children.push(media_chip(cx, icon_name, media_destructive));
+                    let icon = shadcn::icon::icon_with(
+                        cx,
+                        fret_icons::IconId::new_static(icon_name),
+                        Some(Px(32.0)),
+                        None,
+                    );
+                    header = header.media(shadcn::AlertDialogMedia::new(icon).into_element(cx));
                 }
-                header_children.push(shadcn::AlertDialogTitle::new(title).into_element(cx));
-                header_children
-                    .push(shadcn::AlertDialogDescription::new(description).into_element(cx));
-
-                let header = shadcn::AlertDialogHeader::new(header_children).into_element(cx);
+                let header = header.into_element(cx);
                 let footer = shadcn::AlertDialogFooter::new(vec![
                     shadcn::AlertDialogCancel::new(cancel_label, open_for_children.clone())
                         .test_id(format!("{test_id_prefix}-cancel"))
@@ -210,7 +167,7 @@ pub(super) fn preview_alert_dialog(
                 .into_element(cx);
 
                 shadcn::AlertDialogContent::new(vec![header, footer])
-                    .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
+                    .size(content_size)
                     .into_element(cx)
                     .test_id(format!("{test_id_prefix}-content"))
             },
@@ -228,9 +185,8 @@ pub(super) fn preview_alert_dialog(
         "Cancel",
         "Continue",
         shadcn::ButtonVariant::Default,
-        Px(520.0),
+        shadcn::AlertDialogContentSize::Default,
         None,
-        false,
     );
     let demo = section_card(cx, "Demo", demo_content);
 
@@ -245,9 +201,8 @@ pub(super) fn preview_alert_dialog(
         "Cancel",
         "Continue",
         shadcn::ButtonVariant::Default,
-        Px(520.0),
+        shadcn::AlertDialogContentSize::Default,
         None,
-        false,
     );
     let basic = section_card(cx, "Basic", basic_content);
 
@@ -262,9 +217,8 @@ pub(super) fn preview_alert_dialog(
         "Don't allow",
         "Allow",
         shadcn::ButtonVariant::Default,
-        Px(400.0),
+        shadcn::AlertDialogContentSize::Sm,
         None,
-        false,
     );
     let small = section_card(cx, "Small", small_content);
 
@@ -279,9 +233,8 @@ pub(super) fn preview_alert_dialog(
         "Cancel",
         "Share",
         shadcn::ButtonVariant::Default,
-        Px(520.0),
+        shadcn::AlertDialogContentSize::Default,
         Some("lucide.circle-plus"),
-        false,
     );
     let media = section_card(cx, "Media", media_content);
 
@@ -296,9 +249,8 @@ pub(super) fn preview_alert_dialog(
         "Don't allow",
         "Allow",
         shadcn::ButtonVariant::Default,
-        Px(400.0),
+        shadcn::AlertDialogContentSize::Sm,
         Some("lucide.bluetooth"),
-        false,
     );
     let small_with_media = section_card(cx, "Small with Media", small_with_media_content);
 
@@ -313,9 +265,8 @@ pub(super) fn preview_alert_dialog(
         "Cancel",
         "Delete",
         shadcn::ButtonVariant::Destructive,
-        Px(400.0),
+        shadcn::AlertDialogContentSize::Default,
         Some("lucide.trash-2"),
-        true,
     );
     let destructive = section_card(cx, "Destructive", destructive_content);
 
@@ -334,9 +285,8 @@ pub(super) fn preview_alert_dialog(
                 "?????",
                 "??????",
                 shadcn::ButtonVariant::Default,
-                Px(520.0),
+                shadcn::AlertDialogContentSize::Default,
                 None,
-                false,
             )
         },
     );
@@ -399,8 +349,10 @@ pub(super) fn preview_alert_dialog(
                     cx,
                     "Small + Media",
                     r#"AlertDialogContent::new([...])
-    .refine_layout(LayoutRefinement::default().max_w(Px(400.0)))
-// current Fret API has no size or AlertDialogMedia prop; use layout + inline media chip"#,
+    .size(AlertDialogContentSize::Sm)
+
+let header = AlertDialogHeader::new([title, description])
+    .media(AlertDialogMedia::new(icon).into_element(cx))"#,
                 ),
                 code_block(
                     cx,
@@ -425,10 +377,6 @@ with_direction_provider(LayoutDirection::Rtl, |cx| ...)"#,
                 shadcn::typography::muted(
                     cx,
                     "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current API does not expose `size` or `AlertDialogMedia`; this page approximates those examples via `refine_layout(max_w)` and an inline media chip.",
                 ),
                 shadcn::typography::muted(
                     cx,

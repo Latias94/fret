@@ -30,6 +30,7 @@ Workstream entry:
 - [x] Apply a minimal policy in `apps/fret-ui-gallery` so focused inputs are not obscured by IME.
   - Start with bottom “scroll slack” based on `occlusion_insets.bottom`.
   - Keep a scripted diag gate that simulates keyboard occlusion in CI.
+  - Treat “unknown vs known-but-zero” insets explicitly (ADR 0267) to avoid startup regressions.
 
 ## Android plumbing (runner/backend)
 
@@ -39,12 +40,15 @@ Workstream entry:
 - [x] Handle winit lifecycle events:
   - on `Suspended`: drop surfaces / pause rendering,
   - on `Resumed`: rebuild surfaces and request redraw.
-- [ ] Android packaging loop (dev):
+- [x] Android packaging loop (dev):
   - `apps/fret-ui-gallery-mobile` provides `android_main()` entrypoint.
-  - `tools/mobile/android_apk_run.sh` can build + install + launch on a device/emulator.
+  - `apps/fret-ui-gallery-mobile/android` provides a `GameActivity` wrapper.
+  - `tools/mobile/android_game_activity_run.sh` can build + install + launch on a device (emulator is best-effort).
 
 Notes:
 
+- Android Emulator caveat: the default Vulkan adapter is often GFXStream/SwiftShader and may be unstable
+  for our `wgpu` path. Prefer a real device for the first end-to-end smoke test.
 - Winit’s Android backend receives `InsetsChanged` internally but does not currently forward it as
   a public winit event (upstream TODO). Treat insets as “best-effort platform glue” and commit via
   `WindowMetricsService` when available.

@@ -41,7 +41,7 @@ pub(super) fn sidebar_view(
                         decl_style::container_props(
                             theme,
                             ChromeRefinement::default()
-                                .bg(ColorRef::Color(theme.color_required("muted")))
+                                .bg(ColorRef::Color(theme.color_token("muted")))
                                 .p(Space::N4),
                             LayoutRefinement::default().w_px(Px(280.0)).h_full(),
                         ),
@@ -74,7 +74,7 @@ pub(super) fn sidebar_view(
                     decl_style::container_props(
                         theme,
                         ChromeRefinement::default()
-                            .bg(ColorRef::Color(theme.color_required("muted")))
+                            .bg(ColorRef::Color(theme.color_token("muted")))
                             .p(Space::N4),
                         LayoutRefinement::default().w_px(Px(280.0)).h_full(),
                     ),
@@ -126,7 +126,7 @@ pub(super) fn content_view(
                             decl_style::container_props(
                                 theme,
                                 ChromeRefinement::default()
-                                    .bg(ColorRef::Color(theme.color_required("background")))
+                                    .bg(ColorRef::Color(theme.color_token("background")))
                                     .p(Space::N6),
                                 LayoutRefinement::default().w_full().h_full(),
                             ),
@@ -150,7 +150,7 @@ pub(super) fn content_view(
                         decl_style::container_props(
                             theme,
                             ChromeRefinement::default()
-                                .bg(ColorRef::Color(theme.color_required("background")))
+                                .bg(ColorRef::Color(theme.color_token("background")))
                                 .p(Space::N6),
                             LayoutRefinement::default().w_full().h_full(),
                         ),

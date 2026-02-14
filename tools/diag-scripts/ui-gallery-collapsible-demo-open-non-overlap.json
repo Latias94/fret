@@ -63,6 +63,10 @@
     {
       "type": "capture_bundle",
       "label": "ui-gallery-collapsible-demo-open-non-overlap"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-collapsible-demo-open-non-overlap"
     }
   ]
 }

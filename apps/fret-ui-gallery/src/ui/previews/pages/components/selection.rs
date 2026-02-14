@@ -38,7 +38,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
             .into_element(cx);
 
         let body = centered(cx, group);
-        section(cx, "Demo", body)
+        section(cx, "Demo", body).test_id("ui-gallery-radio-group-demo")
     });
 
     let description = cx.keyed("ui_gallery.radio_group.description", |cx| {
@@ -78,7 +78,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
             .into_element(cx);
 
         let body = centered(cx, group);
-        section(cx, "Description", body)
+        section(cx, "Description", body).test_id("ui-gallery-radio-group-description")
     });
 
     let choice_card = cx.keyed("ui_gallery.radio_group.choice_card", |cx| {
@@ -124,7 +124,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
             .into_element(cx);
 
         let body = centered(cx, group);
-        section(cx, "Choice Card", body)
+        section(cx, "Choice Card", body).test_id("ui-gallery-radio-group-choice-card")
     });
 
     let fieldset = cx.keyed("ui_gallery.radio_group.fieldset", |cx| {
@@ -156,7 +156,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
         .into_element(cx);
 
         let body = centered(cx, fieldset);
-        section(cx, "Fieldset", body)
+        section(cx, "Fieldset", body).test_id("ui-gallery-radio-group-fieldset")
     });
 
     let disabled = cx.keyed("ui_gallery.radio_group.disabled", |cx| {
@@ -169,11 +169,11 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
             .into_element(cx);
 
         let body = centered(cx, group);
-        section(cx, "Disabled", body)
+        section(cx, "Disabled", body).test_id("ui-gallery-radio-group-disabled")
     });
 
     let invalid = cx.keyed("ui_gallery.radio_group.invalid", |cx| {
-        let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
+        let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
 
         let group = shadcn::RadioGroup::uncontrolled(Some("email"))
             .a11y_label("Notification Preferences")
@@ -219,7 +219,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
         .into_element(cx);
 
         let body = centered(cx, fieldset);
-        section(cx, "Invalid", body)
+        section(cx, "Invalid", body).test_id("ui-gallery-radio-group-invalid")
     });
 
     let rtl = cx.keyed("ui_gallery.radio_group.rtl", |cx| {
@@ -265,7 +265,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
         );
 
         let body = centered(cx, group);
-        section(cx, "RTL", body)
+        section(cx, "RTL", body).test_id("ui-gallery-radio-group-rtl")
     });
 
     let examples = stack::vstack(
@@ -276,6 +276,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
             .layout(LayoutRefinement::default().w_full()),
         |_cx| vec![description, choice_card, fieldset, disabled, invalid, rtl],
     );
+    let examples = examples.test_id("ui-gallery-radio-group-examples");
 
     vec![demo, examples]
 }

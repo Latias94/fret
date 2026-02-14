@@ -41,7 +41,7 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         size,
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -84,7 +84,7 @@ impl TestStatusKind {
         match self {
             Self::Failed => theme
                 .color_by_key("destructive")
-                .unwrap_or_else(|| theme.color_required("foreground")),
+                .unwrap_or_else(|| theme.color_token("foreground")),
             Self::Passed => Color {
                 r: 0.086,
                 g: 0.639,
@@ -151,11 +151,11 @@ fn status_badge<H: UiHost>(
     let text_px = theme
         .metric_by_key("component.badge.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.badge.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     let mut props = ContainerProps::default();
     props.padding = Edges::symmetric(
@@ -343,7 +343,7 @@ impl TestResultsHeader {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let row = stack::hstack(
             cx,
@@ -490,7 +490,7 @@ impl TestResultsDuration {
         };
 
         let label = format_duration(ms);
-        let fg = theme.color_required("muted-foreground");
+        let fg = theme.color_token("muted-foreground");
 
         let text = cx.text_props(TextProps {
             layout: decl_style::layout_style(&theme, self.layout),
@@ -556,7 +556,7 @@ impl TestResultsProgress {
         let total = self.summary.total as f32;
         let passed_percent = ((passed / total) * 100.0).clamp(0.0, 100.0);
 
-        let bar_bg = theme.color_required("muted");
+        let bar_bg = theme.color_token("muted");
         let passed_color = TestStatusKind::Passed.color(&theme);
         let failed_color = TestStatusKind::Failed.color(&theme);
 
@@ -619,7 +619,7 @@ impl TestResultsProgress {
             self.summary.passed, self.summary.total
         ));
         let text_right: Arc<str> = Arc::from(format!("{:.0}%", passed_percent));
-        let fg = theme.color_required("muted-foreground");
+        let fg = theme.color_token("muted-foreground");
 
         let labels = stack::hstack(
             cx,
@@ -833,7 +833,7 @@ impl TestSuiteName {
         let center = Point::new(Px(8.0), Px(8.0));
         let chevron_rotation = if is_open { 90.0 } else { 0.0 };
         let chevron_transform = Transform2D::rotation_about_degrees(chevron_rotation, center);
-        let chevron_fg = theme.color_required("muted-foreground");
+        let chevron_fg = theme.color_token("muted-foreground");
         let chevron = cx.visual_transform_props(
             VisualTransformProps {
                 layout: decl_style::layout_style(
@@ -1080,7 +1080,7 @@ impl Test {
                     layout: LayoutStyle::default(),
                     text: Arc::<str>::from(format!("{ms}ms")),
                     style: None,
-                    color: Some(theme_for_content.color_required("muted-foreground")),
+                    color: Some(theme_for_content.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 })
@@ -1120,11 +1120,11 @@ impl Test {
         let hover_bg = theme
             .color_by_key("muted")
             .map(|c| alpha(c, 0.5))
-            .unwrap_or_else(|| alpha(theme.color_required("accent"), 0.2));
+            .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.2));
         let pressed_bg = theme
             .color_by_key("accent")
             .map(|c| alpha(c, 0.35))
-            .unwrap_or_else(|| alpha(theme.color_required("muted"), 0.8));
+            .unwrap_or_else(|| alpha(theme.color_token("muted"), 0.8));
 
         let label_name = name.clone();
         let mut pressable = PressableProps::default();
@@ -1195,7 +1195,7 @@ impl TestError {
         let theme = Theme::global(&*cx.app).clone();
         let destructive = theme
             .color_by_key("destructive")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
         let bg = alpha(destructive, 0.12);
 
         let chrome = self.chrome.bg(ColorRef::Color(bg));
@@ -1333,7 +1333,7 @@ impl TestSuiteContent {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let border = theme.color_required("border");
+        let border = theme.color_token("border");
 
         let children = self.children;
         let divided: Vec<AnyElement> = children

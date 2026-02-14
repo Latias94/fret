@@ -20,25 +20,10 @@ struct ScrollLayoutProfileConfig {
 
 impl ScrollLayoutProfileConfig {
     fn from_env() -> Option<Self> {
-        let enabled = std::env::var("FRET_SCROLL_LAYOUT_PROFILE")
-            .ok()
-            .is_some_and(|v| v == "1");
-        if !enabled {
-            return None;
-        }
-
-        let min_us = std::env::var("FRET_SCROLL_LAYOUT_PROFILE_MIN_US")
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(2_000);
-        let min_measure_us = std::env::var("FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US")
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(1_000);
-
+        let cfg = crate::runtime_config::ui_runtime_config().scroll_layout_profile?;
         Some(Self {
-            min_elapsed: Duration::from_micros(min_us),
-            min_self_measure: Duration::from_micros(min_measure_us),
+            min_elapsed: cfg.min_elapsed,
+            min_self_measure: cfg.min_self_measure,
         })
     }
 }
@@ -71,32 +56,15 @@ fn available_space_cache_key(space: AvailableSpace) -> u64 {
 }
 
 fn scroll_defer_unbounded_probe_on_resize_enabled() -> bool {
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| {
-        // Default-on for interactive resize/viewport churn. Set to "0" to disable.
-        std::env::var("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_RESIZE")
-            .ok()
-            .is_none_or(|v| v != "0")
-    })
+    crate::runtime_config::ui_runtime_config().scroll_defer_unbounded_probe_on_resize
 }
 
 fn scroll_defer_unbounded_probe_on_invalidation_enabled() -> bool {
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| {
-        std::env::var_os("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION")
-            .is_some_and(|v| !v.is_empty())
-    })
+    crate::runtime_config::ui_runtime_config().scroll_defer_unbounded_probe_on_invalidation
 }
 
 fn scroll_defer_unbounded_probe_stable_frames() -> u8 {
-    static STABLE_FRAMES: OnceLock<u8> = OnceLock::new();
-    *STABLE_FRAMES.get_or_init(|| {
-        std::env::var("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES")
-            .ok()
-            .and_then(|v| v.parse::<u8>().ok())
-            .unwrap_or(2)
-            .min(60)
-    })
+    crate::runtime_config::ui_runtime_config().scroll_defer_unbounded_probe_stable_frames
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

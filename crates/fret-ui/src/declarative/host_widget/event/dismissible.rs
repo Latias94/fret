@@ -60,6 +60,10 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+
         #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
@@ -145,11 +149,21 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                 return;
             };
 
+            let velocity_window = cx
+                .app
+                .global::<crate::pointer_motion::WindowPointerMotionService>()
+                .and_then(|svc| svc.velocity_window(window, *pointer_id));
             let mv = action::PointerMoveCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: Point::new(
+                    Px(position.x.0 - cx.bounds.origin.x.0),
+                    Px(position.y.0 - cx.bounds.origin.y.0),
+                ),
+                position_window: None,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
+                velocity_window,
                 buttons: *buttons,
                 modifiers: *modifiers,
                 pointer_type: *pointer_type,
@@ -238,6 +252,10 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+
         #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
@@ -314,11 +332,21 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 return;
             };
 
+            let velocity_window = cx
+                .app
+                .global::<crate::pointer_motion::WindowPointerMotionService>()
+                .and_then(|svc| svc.velocity_window(window, *pointer_id));
             let mv = action::PointerMoveCx {
                 pointer_id: *pointer_id,
                 position: *position,
+                position_local: Point::new(
+                    Px(position.x.0 - cx.bounds.origin.x.0),
+                    Px(position.y.0 - cx.bounds.origin.y.0),
+                ),
+                position_window: None,
                 tick_id: cx.app.tick_id(),
                 pixels_per_point,
+                velocity_window,
                 buttons: *buttons,
                 modifiers: *modifiers,
                 pointer_type: *pointer_type,

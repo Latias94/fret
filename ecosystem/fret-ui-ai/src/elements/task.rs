@@ -22,23 +22,23 @@ fn muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn border_muted(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or_else(|| theme.color_required("border"))
+        .unwrap_or_else(|| theme.color_token("border"))
 }
 
 fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
     TextStyle {
         font: FontId::default(),
-        size: theme.metric_required("component.text.sm_px"),
+        size: theme.metric_token("component.text.sm_px"),
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("component.text.sm_line_height")),
+        line_height: Some(theme.metric_token("component.text.sm_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -491,7 +491,7 @@ impl TaskItemFile {
             .merge(self.chrome);
 
         let mut props = decl_style::container_props(&theme, chrome, self.layout);
-        props.border_color = Some(theme.color_required("border"));
+        props.border_color = Some(theme.color_token("border"));
 
         let content = stack::hstack(
             cx,

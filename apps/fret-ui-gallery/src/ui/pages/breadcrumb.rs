@@ -1,9 +1,32 @@
 use super::super::*;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
 pub(super) fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
     _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct BreadcrumbModels {
+        dropdown_open: Option<Model<bool>>,
+        dropdown_rtl_open: Option<Model<bool>>,
+    }
+
+    let (dropdown_open, dropdown_rtl_open) = cx.with_state(BreadcrumbModels::default, |st| {
+        (st.dropdown_open.clone(), st.dropdown_rtl_open.clone())
+    });
+    let (dropdown_open, dropdown_rtl_open) = match (dropdown_open, dropdown_rtl_open) {
+        (Some(dropdown_open), Some(dropdown_rtl_open)) => (dropdown_open, dropdown_rtl_open),
+        _ => {
+            let dropdown_open = cx.app.models_mut().insert(false);
+            let dropdown_rtl_open = cx.app.models_mut().insert(false);
+            cx.with_state(BreadcrumbModels::default, |st| {
+                st.dropdown_open = Some(dropdown_open.clone());
+                st.dropdown_rtl_open = Some(dropdown_rtl_open.clone());
+            });
+            (dropdown_open, dropdown_rtl_open)
+        }
+    };
+
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -14,14 +37,41 @@ pub(super) fn preview_breadcrumb(
         )
     };
 
+    fn slugify_section_title(title: &str) -> String {
+        title
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>()
+            .trim_matches('-')
+            .split('-')
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("-")
+    }
+
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        let title_test_id = format!(
+            "ui-gallery-breadcrumb-section-title-{}",
+            slugify_section_title(title)
+        );
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
+            move |cx| {
+                vec![
+                    shadcn::typography::h4(cx, title).test_id(title_test_id),
+                    body,
+                ]
+            },
         )
     };
 
@@ -70,7 +120,10 @@ pub(super) fn preview_breadcrumb(
     let basic = section_card(cx, "Basic", basic_content);
 
     let custom_separator_content = shadcn::Breadcrumb::new()
-        .separator(shadcn::BreadcrumbSeparator::Text(Arc::from("?")))
+        .separator(shadcn::BreadcrumbSeparator::Icon {
+            icon: fret_icons::IconId::new_static("lucide.dot"),
+            size: Px(14.0),
+        })
         .items([
             shadcn::BreadcrumbItem::new("Home"),
             shadcn::BreadcrumbItem::new("Components"),
@@ -80,15 +133,114 @@ pub(super) fn preview_breadcrumb(
         .test_id("ui-gallery-breadcrumb-separator");
     let custom_separator = section_card(cx, "Custom Separator", custom_separator_content);
 
-    let dropdown_content = shadcn::Breadcrumb::new()
-        .separator(shadcn::BreadcrumbSeparator::Text(Arc::from("?")))
-        .items([
-            shadcn::BreadcrumbItem::new("Home"),
-            shadcn::BreadcrumbItem::new("Components ?"),
-            shadcn::BreadcrumbItem::new("Breadcrumb"),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-breadcrumb-dropdown");
+    let dropdown_content = {
+        let crumb = shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
+            let list =
+                shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
+                    let home = shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(
+                        cx,
+                        |cx| {
+                            vec![
+                                shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let dot = |cx: &mut ElementContext<'_, App>| {
+                        shadcn::breadcrumb::primitives::BreadcrumbSeparator::new()
+                            .kind(
+                                shadcn::breadcrumb::primitives::BreadcrumbSeparatorKind::Icon {
+                                    icon: fret_icons::IconId::new_static("lucide.dot"),
+                                    size: Px(14.0),
+                                },
+                            )
+                            .into_element(cx)
+                    };
+
+                    let components_dropdown = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                        .into_element(cx, |cx| {
+                            let open_for_trigger = dropdown_open.clone();
+                            let menu = shadcn::DropdownMenu::new(dropdown_open.clone())
+                                .align(shadcn::DropdownMenuAlign::Start)
+                                .into_element(
+                                    cx,
+                                    move |cx| {
+                                        let (fg, muted) = cx.with_theme(|theme| {
+                                            (
+                                                theme.color_token("foreground"),
+                                                theme.color_token("muted-foreground"),
+                                            )
+                                        });
+                                        let mut props = fret_ui::element::PressableProps::default();
+                                        props.a11y.label = Some(Arc::<str>::from("Components"));
+                                        props.a11y.test_id = Some(Arc::<str>::from(
+                                            "ui-gallery-breadcrumb-dropdown-trigger",
+                                        ));
+
+                                        cx.pressable(props, move |cx, st| {
+                                            cx.pressable_toggle_bool(&open_for_trigger);
+                                            let color = if st.hovered { fg } else { muted };
+                                            let label = ui::text(cx, "Components")
+                                                .text_color(fret_ui_kit::ColorRef::Color(color))
+                                                .nowrap()
+                                                .into_element(cx);
+                                            let chevron = shadcn::icon::icon_with(
+                                                cx,
+                                                fret_icons::IconId::new_static(
+                                                    "lucide.chevron-down",
+                                                ),
+                                                Some(Px(14.0)),
+                                                Some(fret_ui_kit::ColorRef::Color(color)),
+                                            );
+
+                                            vec![stack::hstack(
+                                                cx,
+                                                stack::HStackProps::default()
+                                                    .gap_x(Space::N1)
+                                                    .items_center(),
+                                                move |_cx| vec![label, chevron],
+                                            )]
+                                        })
+                                    },
+                                    |_cx| {
+                                        vec![
+                                            shadcn::DropdownMenuEntry::Item(
+                                                shadcn::DropdownMenuItem::new("Documentation")
+                                                    .on_select(CMD_APP_OPEN)
+                                                    .test_id("ui-gallery-breadcrumb-dropdown-docs"),
+                                            ),
+                                            shadcn::DropdownMenuEntry::Item(
+                                                shadcn::DropdownMenuItem::new("Themes")
+                                                    .on_select(CMD_APP_OPEN),
+                                            ),
+                                            shadcn::DropdownMenuEntry::Item(
+                                                shadcn::DropdownMenuItem::new("GitHub")
+                                                    .on_select(CMD_APP_OPEN),
+                                            ),
+                                        ]
+                                    },
+                                );
+                            vec![menu]
+                        });
+
+                    let page = shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(
+                        cx,
+                        |cx| {
+                            vec![
+                                shadcn::breadcrumb::primitives::BreadcrumbPage::new("Breadcrumb")
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    vec![home, dot(cx), components_dropdown, dot(cx), page]
+                });
+
+            vec![list]
+        });
+        crumb.test_id("ui-gallery-breadcrumb-dropdown")
+    };
     let dropdown = section_card(cx, "Dropdown", dropdown_content);
 
     let collapsed_content = shadcn::Breadcrumb::new()
@@ -119,14 +271,96 @@ pub(super) fn preview_breadcrumb(
         cx,
         fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
         |cx| {
-            shadcn::Breadcrumb::new()
-                .separator(shadcn::BreadcrumbSeparator::Text(Arc::from("?")))
-                .items([
-                    shadcn::BreadcrumbItem::new("Home"),
-                    shadcn::BreadcrumbItem::new("Components"),
-                    shadcn::BreadcrumbItem::new("Breadcrumb"),
-                ])
-                .into_element(cx)
+            let crumb = shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
+                let list =
+                    shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
+                        let home = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                            .into_element(cx, |cx| {
+                                vec![shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
+                                    .into_element(cx)]
+                            });
+                        let dot = |cx: &mut ElementContext<'_, App>| {
+                            shadcn::breadcrumb::primitives::BreadcrumbSeparator::new()
+                                .kind(shadcn::breadcrumb::primitives::BreadcrumbSeparatorKind::Icon {
+                                    icon: fret_icons::IconId::new_static("lucide.dot"),
+                                    size: Px(14.0),
+                                })
+                                .into_element(cx)
+                        };
+                        let components_dropdown = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                            .into_element(cx, |cx| {
+                                let open_for_trigger = dropdown_rtl_open.clone();
+                                let menu = shadcn::DropdownMenu::new(dropdown_rtl_open.clone())
+                                    .align(shadcn::DropdownMenuAlign::End)
+                                    .into_element(
+                                        cx,
+                                        move |cx| {
+                                            let (fg, muted) = cx.with_theme(|theme| {
+                                                (
+                                                    theme.color_token("foreground"),
+                                                    theme.color_token("muted-foreground"),
+                                                )
+                                            });
+                                            let mut props = fret_ui::element::PressableProps::default();
+                                            props.a11y.label = Some(Arc::<str>::from("Components"));
+                                            props.a11y.test_id = Some(Arc::<str>::from(
+                                                "ui-gallery-breadcrumb-rtl-dropdown-trigger",
+                                            ));
+
+                                            cx.pressable(props, move |cx, st| {
+                                                cx.pressable_toggle_bool(&open_for_trigger);
+                                                let color = if st.hovered { fg } else { muted };
+                                                let label = ui::text(cx, "Components")
+                                                    .text_color(fret_ui_kit::ColorRef::Color(color))
+                                                    .nowrap()
+                                                    .into_element(cx);
+                                                let chevron = shadcn::icon::icon_with(
+                                                    cx,
+                                                    fret_icons::IconId::new_static("lucide.chevron-down"),
+                                                    Some(Px(14.0)),
+                                                    Some(fret_ui_kit::ColorRef::Color(color)),
+                                                );
+
+                                                vec![stack::hstack(
+                                                    cx,
+                                                    stack::HStackProps::default()
+                                                        .gap_x(Space::N1)
+                                                        .items_center(),
+                                                    move |_cx| vec![label, chevron],
+                                                )]
+                                            })
+                                        },
+                                        |_cx| {
+                                            vec![
+                                                shadcn::DropdownMenuEntry::Item(
+                                                    shadcn::DropdownMenuItem::new("Documentation")
+                                                        .on_select(CMD_APP_OPEN)
+                                                        .test_id("ui-gallery-breadcrumb-rtl-dropdown-docs"),
+                                                ),
+                                                shadcn::DropdownMenuEntry::Item(
+                                                    shadcn::DropdownMenuItem::new("Themes")
+                                                        .on_select(CMD_APP_OPEN),
+                                                ),
+                                                shadcn::DropdownMenuEntry::Item(
+                                                    shadcn::DropdownMenuItem::new("GitHub")
+                                                        .on_select(CMD_APP_OPEN),
+                                                ),
+                                            ]
+                                        },
+                                    );
+                                vec![menu]
+                            });
+                        let page = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                            .into_element(cx, |cx| {
+                                vec![shadcn::breadcrumb::primitives::BreadcrumbPage::new("Breadcrumb")
+                                    .into_element(cx)]
+                            });
+
+                        vec![home, dot(cx), components_dropdown, dot(cx), page]
+                    });
+                vec![list]
+            });
+            crumb
         },
     )
     .test_id("ui-gallery-breadcrumb-rtl");
@@ -189,7 +423,10 @@ pub(super) fn preview_breadcrumb(
                     cx,
                     "Custom Separator + Collapsed",
                     r#"Breadcrumb::new()
-    .separator(BreadcrumbSeparator::Text(Arc::from("?")))
+    .separator(BreadcrumbSeparator::Icon {
+        icon: IconId::new_static("lucide.dot"),
+        size: Px(14.0),
+    })
     .items([BreadcrumbItem::new("Home"), BreadcrumbItem::ellipsis(), ...])"#,
                 ),
                 code_block(

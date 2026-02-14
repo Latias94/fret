@@ -106,10 +106,10 @@ impl MessageParts {
         let fg = match self.role {
             MessageRole::User => theme
                 .color_by_key(role_fg_key(self.role))
-                .unwrap_or_else(|| theme.color_required("secondary-foreground")),
+                .unwrap_or_else(|| theme.color_token("secondary-foreground")),
             _ => theme
                 .color_by_key(role_fg_key(self.role))
-                .unwrap_or_else(|| theme.color_required("foreground")),
+                .unwrap_or_else(|| theme.color_token("foreground")),
         };
 
         let on_link_activate = self.on_link_activate;
@@ -132,10 +132,10 @@ impl MessageParts {
                         MessagePart::Text(text) => {
                             let text_style = TextStyle {
                                 font: Default::default(),
-                                size: theme.metric_required("font.size"),
+                                size: theme.metric_token("font.size"),
                                 weight: FontWeight::NORMAL,
                                 slant: Default::default(),
-                                line_height: Some(theme.metric_required("font.line_height")),
+                                line_height: Some(theme.metric_token("font.line_height")),
                                 letter_spacing_em: None,
                             };
 

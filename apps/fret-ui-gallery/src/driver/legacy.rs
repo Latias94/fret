@@ -957,9 +957,9 @@ impl UiGalleryDriver {
         let resizable_h_fractions = app.models_mut().insert(vec![0.5, 0.5]);
         let resizable_v_fractions = app.models_mut().insert(vec![0.25, 0.75]);
 
-        let data_table_state = app
-            .models_mut()
-            .insert(fret_ui_headless::table::TableState::default());
+        let mut data_table_state_value = fret_ui_headless::table::TableState::default();
+        data_table_state_value.pagination.page_size = 25;
+        let data_table_state = app.models_mut().insert(data_table_state_value);
         let data_grid_selected_row = app.models_mut().insert(None::<u64>);
         let tabs_value = app
             .models_mut()
@@ -2060,7 +2060,10 @@ pub fn build_app() -> App {
     }
 
     let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
+    let mut caps = PlatformCapabilities::default();
+    caps.shell.share_sheet = true;
+    caps.shell.incoming_open = true;
+    app.set_global(caps);
     app.set_global(UiGalleryRecentItemsService::default());
     shadcn::shadcn_themes::apply_shadcn_new_york_v4(
         &mut app,
@@ -2152,8 +2155,42 @@ pub fn run() -> anyhow::Result<()> {
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
+        .run()
+        .map_err(anyhow::Error::from)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::Result<()> {
+    let app = build_app();
+    let config = build_runner_config();
+    let project_root = std::env::var_os("FRET_UI_GALLERY_PROJECT_ROOT")
+        .and_then(|v| (!v.is_empty()).then_some(v))
+        .map(|v| {
+            let s = v.to_string_lossy();
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                std::path::PathBuf::from(".")
+            } else {
+                std::path::PathBuf::from(trimmed)
+            }
+        })
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+    fret_bootstrap::BootstrapBuilder::new(app, build_driver())
+        .configure(move |c| {
+            *c = config;
+        })
+        .with_default_diagnostics()
+        .with_default_config_files_for_root(&project_root)?
+        .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
+        .with_lucide_icons()
+        .preload_icon_svgs_on_gpu_ready()
+        .into_inner()
+        .with_event_loop(event_loop)
         .run()
         .map_err(anyhow::Error::from)
 }
@@ -2174,26 +2211,27 @@ impl WinitAppDriver for UiGalleryDriver {
     ) {
         let wants_bootstrap_fonts =
             std::env::var_os("FRET_UI_GALLERY_BOOTSTRAP_FONTS").is_some_and(|v| !v.is_empty());
-        if !wants_bootstrap_fonts {
-            return;
+        if wants_bootstrap_fonts {
+            let fonts = fret_fonts::default_fonts()
+                .iter()
+                .map(|bytes| bytes.to_vec())
+                .collect::<Vec<_>>();
+            let _ = renderer.add_fonts(fonts);
+
+            let update = fret_runtime::apply_font_catalog_update(
+                app,
+                renderer.all_font_names(),
+                fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+            );
+            let _ = renderer.set_text_font_families(&update.config);
+            app.set_global::<fret_core::TextFontFamilyConfig>(update.config.clone());
+            app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+                renderer.text_font_stack_key(),
+            ));
         }
 
-        let fonts = fret_fonts::default_fonts()
-            .iter()
-            .map(|bytes| bytes.to_vec())
-            .collect::<Vec<_>>();
-        let _ = renderer.add_fonts(fonts);
-
-        let update = fret_runtime::apply_font_catalog_update(
-            app,
-            renderer.all_font_names(),
-            fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
-        );
-        let _ = renderer.set_text_font_families(&update.config);
-        app.set_global::<fret_core::TextFontFamilyConfig>(update.config.clone());
-        app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-            renderer.text_font_stack_key(),
-        ));
+        // Ensure magic ecosystem components can use renderer-controlled Tier B materials.
+        fret_ui_magic::app_integration::ensure_magic_materials(app, renderer);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -2468,6 +2506,35 @@ impl WinitAppDriver for UiGalleryDriver {
 
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("clipboard.copy");
+                });
+            }
+            crate::spec::CMD_SHELL_SHARE_SHEET_SMOKE => {
+                let token = app.next_share_sheet_token();
+                app.push_effect(Effect::ShareSheetShow {
+                    window,
+                    token,
+                    items: vec![
+                        fret_core::ShareItem::Text("Hello from Fret (share sheet)".to_string()),
+                        fret_core::ShareItem::Url("https://example.com".to_string()),
+                        fret_core::ShareItem::Bytes {
+                            name: "hello.txt".to_string(),
+                            mime: Some("text/plain".to_string()),
+                            bytes: b"Hello from Fret!\n".to_vec(),
+                        },
+                    ],
+                });
+
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_message(
+                    &mut host,
+                    window,
+                    "Share sheet",
+                    shadcn::ToastMessageOptions::new().description("Requested."),
+                );
+
+                let _ = host.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("shell.share_sheet");
                 });
             }
             CMD_MENU_DROPDOWN_APPLE => {
@@ -2860,6 +2927,49 @@ impl WinitAppDriver for UiGalleryDriver {
                         .description("The file dialog completed without a selection."),
                 );
             }
+            Event::ShareSheetCompleted { token: _, outcome } => {
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                match outcome {
+                    fret_core::ShareSheetOutcome::Shared => {
+                        sonner.toast_success_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new()
+                                .description("Shared successfully."),
+                        );
+                    }
+                    fret_core::ShareSheetOutcome::Canceled => {
+                        sonner.toast_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new().description("Canceled."),
+                        );
+                    }
+                    fret_core::ShareSheetOutcome::Unavailable => {
+                        sonner.toast_error_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new().description("Unavailable."),
+                        );
+                    }
+                    fret_core::ShareSheetOutcome::Failed { message } => {
+                        sonner.toast_error_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new().description(message.clone()),
+                        );
+                    }
+                }
+                let _ = host.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("shell.share_sheet.completed");
+                });
+                host.request_redraw(window);
+            }
             Event::ImageRegistered { token, image, .. } => {
                 if state.avatar_demo_image_token == Some(*token) {
                     state.avatar_demo_image_token = None;
@@ -3023,7 +3133,18 @@ impl WinitAppDriver for UiGalleryDriver {
         } = context;
 
         Self::render_ui(app, services, window, state, bounds);
-        state.ui.request_semantics_snapshot();
+
+        let diag_wants_semantics_snapshot = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, _app| svc.wants_semantics_snapshot(window),
+        );
+        if diag_wants_semantics_snapshot {
+            // Diagnostics scripts select targets by semantics bounds. Ensure we have a fresh
+            // semantics snapshot for the current frame before we drive scripted input; otherwise,
+            // scripts may act on a 1-frame-stale snapshot and mis-predict visibility in
+            // virtualized lists (estimate -> measured jumps).
+            state.ui.request_semantics_snapshot();
+        }
         state.ui.ingest_paint_cache_source(scene);
 
         let (inspection_active, diag_enabled) = app.with_global_mut_untracked(
@@ -3036,16 +3157,6 @@ impl WinitAppDriver for UiGalleryDriver {
         state.ui.set_debug_enabled(diag_enabled);
 
         scene.clear();
-
-        if app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled())
-        {
-            // Diagnostics scripts select targets by semantics bounds. We must ensure we have a
-            // fresh semantics snapshot for the current frame *before* we drive scripted input;
-            // otherwise, scripts may act on a 1-frame-stale snapshot and mis-predict visibility
-            // in virtualized lists (estimate -> measured jumps).
-            state.ui.request_semantics_snapshot();
-        }
 
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
@@ -3143,11 +3254,12 @@ impl WinitAppDriver for UiGalleryDriver {
         // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
         // VirtualList) have their realized item subtrees available for hit-testing.
         let semantics_snapshot = state.ui.semantics_snapshot();
-        let drive = app.with_global_mut_untracked(
+        let (drive, wants_quit) = app.with_global_mut_untracked(
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
+                let wants_quit = svc.poll_exit_trigger();
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                svc.drive_script_for_window(
+                let drive = svc.drive_script_for_window(
                     &*app,
                     window,
                     bounds,
@@ -3155,9 +3267,15 @@ impl WinitAppDriver for UiGalleryDriver {
                     Some(&state.ui),
                     semantics_snapshot,
                     element_runtime,
-                )
+                );
+                (drive, wants_quit)
             },
         );
+
+        if wants_quit {
+            app.push_effect(Effect::QuitApp);
+            return;
+        }
 
         for effect in drive.effects {
             app.push_effect(effect);
@@ -3270,6 +3388,11 @@ impl WinitAppDriver for UiGalleryDriver {
         _window: AppWindowId,
         state: &mut Self::WindowState,
     ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+        // This is called by the runner after layout when accessibility is active (or when a
+        // platform feature like WebView placement needs semantics). Requesting semantics here
+        // ensures we start producing snapshots on the next frame without forcing semantics on
+        // every frame.
+        state.ui.request_semantics_snapshot();
         state.ui.semantics_snapshot_arc()
     }
 }

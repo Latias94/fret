@@ -10,6 +10,9 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 - `docs/workstreams/docking-nary-split-graph-v1.md`
 - `docs/workstreams/docking-nary-split-graph-v1-todo.md`
 - `docs/workstreams/docking-nary-split-graph-v1-milestones.md`
@@ -25,12 +28,24 @@ Active workstreams:
 - `docs/workstreams/mobile-bringup-v1.md`
 - `docs/workstreams/mobile-bringup-v1-todo.md`
 - `docs/workstreams/mobile-bringup-v1-milestones.md`
+- `docs/workstreams/mobile-gfx-backend-v1/design.md`
+- `docs/workstreams/mobile-gfx-backend-v1/todo.md`
+- `docs/workstreams/mobile-gfx-backend-v1/milestones.md`
+- `docs/workstreams/mobile-contracts-v1/design.md`
+- `docs/workstreams/mobile-contracts-v1/todo.md`
+- `docs/workstreams/mobile-contracts-v1/milestones.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/design.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/todo.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/milestones.md`
 - `docs/workstreams/gesture-recognizers-v1.md`
 - `docs/workstreams/gesture-recognizers-v1-todo.md`
 - `docs/workstreams/gesture-recognizers-v1-milestones.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
-- `docs/workstreams/diag-extensibility-and-capabilities-v1.md`
+- `docs/workstreams/external-texture-imports-v1.md`
+- `docs/workstreams/external-texture-imports-v1-todo.md`
+- `docs/workstreams/external-texture-imports-v1-milestones.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/milestones.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
@@ -38,6 +53,11 @@ Active workstreams:
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
+- `docs/workstreams/diag-simplification-v1.md`
+- `docs/workstreams/diag-simplification-v1-m0-baseline.md`
+- `docs/workstreams/diag-simplification-v1-todo.md`
+- `docs/workstreams/diag-simplification-v1-milestones.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`
@@ -52,6 +72,9 @@ Active workstreams:
 - `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
+- `docs/workstreams/motion-foundation-v1.md`
+- `docs/workstreams/motion-foundation-v1-todo.md`
+- `docs/workstreams/motion-foundation-v1-milestones.md`
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ai-elements-port-milestones.md`
@@ -150,3 +173,9 @@ Active workstreams:
 - `docs/workstreams/creative-recipes-v1.md`
 - `docs/workstreams/creative-recipes-v1-todo.md`
 - `docs/workstreams/creative-recipes-v1-milestones.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-todo.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/runtime-safety-hardening-v1.md`
+- `docs/workstreams/runtime-safety-hardening-v1-todo.md`
+- `docs/workstreams/runtime-safety-hardening-v1-milestones.md`

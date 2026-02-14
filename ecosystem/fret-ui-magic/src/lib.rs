@@ -8,11 +8,24 @@
 //! - Ecosystem crates provide recipes and authoring helpers.
 //! - Components are built out of the stable primitives (paint/materials/masks/effects/compositing).
 
+pub mod border_beam;
+pub mod dock;
+pub mod lens;
 pub mod magic_card;
 pub mod marquee;
+pub mod patterns;
+pub mod sparkles_text;
 
+pub use border_beam::{BorderBeamProps, border_beam};
+pub use dock::{DockProps, dock};
+pub use lens::{LensProps, lens};
 pub use magic_card::{MagicCardProps, magic_card};
 pub use marquee::{MarqueeDirection, MarqueeProps, marquee};
+pub use patterns::{
+    DotPatternProps, GridPatternProps, PatternMotionProps, StripePatternProps, dot_pattern,
+    grid_pattern, stripe_pattern,
+};
+pub use sparkles_text::{SparklesTextProps, sparkles_text};
 
 #[cfg(feature = "app-integration")]
 pub mod app_integration;

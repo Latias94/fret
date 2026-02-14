@@ -88,10 +88,10 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
     TextStyle {
         font: FontId::default(),
-        size: theme.metric_required("component.text.sm_px"),
+        size: theme.metric_token("component.text.sm_px"),
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("component.text.sm_line_height")),
+        line_height: Some(theme.metric_token("component.text.sm_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -100,7 +100,7 @@ fn muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn transparent_button_group_text_chrome(theme: &Theme) -> ChromeRefinement {
@@ -972,7 +972,7 @@ impl AudioPlayerElement {
             layout: LayoutStyle::default(),
             text: Arc::<str>::from(""),
             style: Some(text_sm(&theme, FontWeight::NORMAL)),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
         });

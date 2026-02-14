@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use crate::docs;
-use fret_kit::mvu::KeyedMessageRouter;
+use fret_kit::mvu_router::KeyedMessageRouter;
 use fret_runtime::CommandId;
 
 #[cfg(target_arch = "wasm32")]
@@ -102,6 +102,7 @@ pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
 pub(crate) const PAGE_MARKDOWN_EDITOR_SOURCE: &str = "markdown_editor_source";
 pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
+pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
@@ -167,8 +168,14 @@ pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
 pub(crate) const PAGE_AVATAR: &str = "avatar";
 pub(crate) const PAGE_IMAGE_OBJECT_FIT: &str = "image_object_fit";
+pub(crate) const PAGE_MAGIC_LENS: &str = "magic_lens";
 pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
 pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
+pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
+pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
+pub(crate) const PAGE_MAGIC_PATTERNS: &str = "magic_patterns";
+pub(crate) const PAGE_MAGIC_SPARKLES_TEXT: &str = "magic_sparkles_text";
+pub(crate) const PAGE_MAGIC_BLOOM: &str = "magic_bloom";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
@@ -274,6 +281,8 @@ pub(crate) const CMD_NAV_MARKDOWN_EDITOR_SOURCE: &str =
 pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str = "ui_gallery.nav.select.text_selection_perf";
 pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
     "ui_gallery.nav.select.text_bidi_rtl_conformance";
+pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
+    "ui_gallery.nav.select.text_mixed_script_fallback";
 pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.text_measure_overlay";
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
@@ -359,6 +368,12 @@ pub(crate) const CMD_NAV_AVATAR: &str = "ui_gallery.nav.select.avatar";
 pub(crate) const CMD_NAV_IMAGE_OBJECT_FIT: &str = "ui_gallery.nav.select.image_object_fit";
 pub(crate) const CMD_NAV_MAGIC_MARQUEE: &str = "ui_gallery.nav.select.magic_marquee";
 pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
+pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
+pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
+pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
+pub(crate) const CMD_NAV_MAGIC_PATTERNS: &str = "ui_gallery.nav.select.magic_patterns";
+pub(crate) const CMD_NAV_MAGIC_SPARKLES_TEXT: &str = "ui_gallery.nav.select.magic_sparkles_text";
+pub(crate) const CMD_NAV_MAGIC_BLOOM: &str = "ui_gallery.nav.select.magic_bloom";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
@@ -512,6 +527,8 @@ pub(crate) const CMD_GALLERY_PAGE_FORWARD: &str = "ui_gallery.page.forward";
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
 pub(crate) const CMD_CLIPBOARD_COPY_NOTES: &str = "ui_gallery.clipboard.copy_notes";
+
+pub(crate) const CMD_SHELL_SHARE_SHEET_SMOKE: &str = "ui_gallery.shell.share_sheet_smoke";
 
 pub(crate) const CMD_CODE_EDITOR_LOAD_FONTS: &str = "ui_gallery.code_editor.load_fonts";
 pub(crate) const CMD_CODE_EDITOR_DUMP_TAFFY: &str = "ui_gallery.code_editor.dump_taffy";
@@ -718,6 +735,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["text", "bidi", "rtl", "geometry", "diagnostics", "tli1"],
                 docs::DOC_TEXT_BIDI_RTL_CONFORMANCE,
                 docs::USAGE_TEXT_BIDI_RTL_CONFORMANCE,
+            ),
+            PageSpec::new(
+                PAGE_TEXT_MIXED_SCRIPT_FALLBACK,
+                "Text Mixed Script (Fallback)",
+                "Text / Mixed-Script Fallback (Bundled Fonts)",
+                "Font system workstream",
+                CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK,
+                &[
+                    "text",
+                    "fonts",
+                    "fallback",
+                    "cjk",
+                    "emoji",
+                    "diagnostics",
+                    "no-tofu",
+                ],
+                docs::DOC_TEXT_MIXED_SCRIPT_FALLBACK,
+                docs::USAGE_TEXT_MIXED_SCRIPT_FALLBACK,
             ),
             PageSpec::new(
                 PAGE_TEXT_MEASURE_OVERLAY,
@@ -2127,6 +2162,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
         title: "Magic",
         items: &[
             PageSpec::new(
+                PAGE_MAGIC_LENS,
+                "Lens",
+                "Lens (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_LENS,
+                &["magic", "lens", "mask", "transform"],
+                docs::DOC_MAGIC_LENS,
+                docs::USAGE_MAGIC_LENS,
+            ),
+            PageSpec::new(
                 PAGE_MAGIC_MARQUEE,
                 "Marquee",
                 "Marquee (Phase 0)",
@@ -2145,6 +2190,56 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["magic", "card", "pointer-follow", "gradient"],
                 docs::DOC_MAGIC_CARD,
                 docs::USAGE_MAGIC_CARD,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_BORDER_BEAM,
+                "BorderBeam",
+                "BorderBeam (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_BORDER_BEAM,
+                &["magic", "border", "beam", "glow", "blend"],
+                docs::DOC_MAGIC_BORDER_BEAM,
+                docs::USAGE_MAGIC_BORDER_BEAM,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_DOCK,
+                "Dock",
+                "Dock (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_DOCK,
+                &["magic", "dock", "pointer", "magnify"],
+                docs::DOC_MAGIC_DOCK,
+                docs::USAGE_MAGIC_DOCK,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_PATTERNS,
+                "Patterns",
+                "Patterns (Tier B materials)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_PATTERNS,
+                &["magic", "patterns", "materials", "tier-b"],
+                docs::DOC_MAGIC_PATTERNS,
+                docs::USAGE_MAGIC_PATTERNS,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_SPARKLES_TEXT,
+                "SparklesText",
+                "SparklesText (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_SPARKLES_TEXT,
+                &["magic", "sparkles", "text", "materials", "tier-b"],
+                docs::DOC_MAGIC_SPARKLES_TEXT,
+                docs::USAGE_MAGIC_SPARKLES_TEXT,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_BLOOM,
+                "Bloom",
+                "Bloom (Tier B recipe example)",
+                "fret-ui-kit",
+                CMD_NAV_MAGIC_BLOOM,
+                &["bloom", "threshold", "blur", "blend"],
+                docs::DOC_MAGIC_BLOOM,
+                docs::USAGE_MAGIC_BLOOM,
             ),
         ],
     },

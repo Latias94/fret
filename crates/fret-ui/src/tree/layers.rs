@@ -447,7 +447,11 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
-            if layer.hit_testable {
+            // Focus barriers can become active before a layer is hit-testable (e.g. during open/close
+            // transitions). Include the barrier root itself so focus can still be moved into the
+            // barrier scope; otherwise `set_focus` can reject all targets while the underlay is
+            // blocked, leading to spurious focus loss.
+            if layer.hit_testable || barrier_root == Some(layer.root) {
                 roots.push(layer.root);
             }
 

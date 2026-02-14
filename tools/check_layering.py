@@ -40,6 +40,8 @@ def _run_cargo_metadata() -> dict[str, Any]:
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        encoding="utf-8",
+        errors="replace",
         text=True,
     )
     if proc.returncode != 0:

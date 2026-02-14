@@ -171,6 +171,10 @@ impl<H: UiHost> UiTree<H> {
             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                 self.app.next_clipboard_token()
             }
+
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
+            }
         }
 
         let mut host = PressableHoverHookHost {
@@ -209,6 +213,7 @@ impl<H: UiHost> UiTree<H> {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_hover_state_from_hit(
         &mut self,
         app: &mut H,
@@ -679,6 +684,10 @@ impl<H: UiHost> UiTree<H> {
             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                 self.app.next_clipboard_token()
             }
+
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
+            }
         }
 
         let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
@@ -859,6 +868,24 @@ impl<H: UiHost> UiTree<H> {
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
+            let pointer_hit_is_text_input =
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+                    && let Some(window) = self.window
+                {
+                    chain.iter().any(|(node_id, _)| {
+                        crate::declarative::element_record_for_node(app, window, *node_id)
+                            .is_some_and(|record| {
+                                matches!(
+                                    &record.instance,
+                                    crate::declarative::ElementInstance::TextInput(_)
+                                        | crate::declarative::ElementInstance::TextArea(_)
+                                        | crate::declarative::ElementInstance::TextInputRegion(_)
+                                )
+                            })
+                    })
+                } else {
+                    false
+                };
             for (node_id, event_for_node) in chain {
                 let (
                     invalidations,
@@ -884,6 +911,7 @@ impl<H: UiHost> UiTree<H> {
                         event_window_position,
                         event_window_wheel_delta,
                         input_ctx: input_ctx.clone(),
+                        pointer_hit_is_text_input,
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
@@ -977,6 +1005,28 @@ impl<H: UiHost> UiTree<H> {
                     && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
                     && let Some(pointer_id) = pointer_id_for_capture
                 {
+                    if let Some(new_capture) = capture
+                        && !matches!(event, Event::PointerCancel(_))
+                        && let Some(old_capture) = self.captured.get(&pointer_id).copied()
+                        && old_capture != new_capture
+                        && self.node_in_any_layer(old_capture, &active_roots)
+                    {
+                        // When a component steals pointer capture mid-sequence (e.g. gesture arena
+                        // outcomes), cancel the previous capture target so pressables/widgets can
+                        // clear any "pressed" state.
+                        let cancel_event =
+                            pointer_cancel_event_for_capture_switch(event, pointer_id);
+                        let _ = self.dispatch_event_to_node_chain(
+                            app,
+                            services,
+                            input_ctx,
+                            old_capture,
+                            &cancel_event,
+                            needs_redraw,
+                            invalidation_visited,
+                        );
+                    }
+
                     match capture {
                         Some(node) => {
                             self.captured.insert(pointer_id, node);
@@ -1032,6 +1082,7 @@ impl<H: UiHost> UiTree<H> {
                     event_window_position,
                     event_window_wheel_delta,
                     input_ctx: input_ctx.clone(),
+                    pointer_hit_is_text_input: false,
                     prevented_default_actions: &mut prevented_default_actions,
                     children,
                     focus: tree.focus,
@@ -1123,6 +1174,24 @@ impl<H: UiHost> UiTree<H> {
                 && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
                 && let Some(pointer_id) = pointer_id_for_capture
             {
+                if let Some(new_capture) = capture
+                    && !matches!(event, Event::PointerCancel(_))
+                    && let Some(old_capture) = self.captured.get(&pointer_id).copied()
+                    && old_capture != new_capture
+                    && self.node_in_any_layer(old_capture, &active_roots)
+                {
+                    let cancel_event = pointer_cancel_event_for_capture_switch(event, pointer_id);
+                    let _ = self.dispatch_event_to_node_chain(
+                        app,
+                        services,
+                        input_ctx,
+                        old_capture,
+                        &cancel_event,
+                        needs_redraw,
+                        invalidation_visited,
+                    );
+                }
+
                 match capture {
                     Some(node) => {
                         self.captured.insert(pointer_id, node);
@@ -1238,8 +1307,6 @@ impl<H: UiHost> UiTree<H> {
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
         let (active_layers, barrier_root) = self.active_input_layers();
-        let active_pointer_down_outside_layers =
-            self.active_pointer_down_outside_layer_roots(barrier_root);
         self.enforce_modal_barrier_scope(&active_layers);
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
@@ -1811,6 +1878,8 @@ impl<H: UiHost> UiTree<H> {
                     // layer remains mounted for a close transition.
                     pointer_down_outside = PointerDownOutsideOutcome::default();
                 } else {
+                    let active_pointer_down_outside_layers =
+                        self.active_pointer_down_outside_layer_roots(barrier_root);
                     pointer_down_outside = self.dispatch_pointer_down_outside(
                         app,
                         services,
@@ -2030,6 +2099,24 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 self.build_unmapped_event_chain(node_id, event)
             };
+            let pointer_hit_is_text_input =
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+                    && let Some(window) = self.window
+                {
+                    chain.iter().any(|(node_id, _)| {
+                        crate::declarative::element_record_for_node(app, window, *node_id)
+                            .is_some_and(|record| {
+                                matches!(
+                                    &record.instance,
+                                    crate::declarative::ElementInstance::TextInput(_)
+                                        | crate::declarative::ElementInstance::TextArea(_)
+                                        | crate::declarative::ElementInstance::TextInputRegion(_)
+                                )
+                            })
+                    })
+                } else {
+                    false
+                };
             let should_run_capture_phase = match event {
                 Event::Pointer(PointerEvent::Down { .. })
                 | Event::Pointer(PointerEvent::Up { .. })
@@ -2073,6 +2160,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: capture_ctx.clone(),
+                            pointer_hit_is_text_input,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2150,6 +2238,27 @@ impl<H: UiHost> UiTree<H> {
                                 let allow = !dock_drag_affects_window
                                     || dock_drag_capture_anchor == Some(node);
                                 if allow {
+                                    if !matches!(event, Event::PointerCancel(_))
+                                        && let Some(old_capture) =
+                                            self.captured.get(&pointer_id).copied()
+                                        && old_capture != node
+                                        && self.node_in_any_layer(old_capture, &active_layers)
+                                    {
+                                        let mut cancel_ctx = input_ctx.clone();
+                                        cancel_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+                                        let cancel_event = pointer_cancel_event_for_capture_switch(
+                                            event, pointer_id,
+                                        );
+                                        let _ = self.dispatch_event_to_node_chain(
+                                            app,
+                                            services,
+                                            &cancel_ctx,
+                                            old_capture,
+                                            &cancel_event,
+                                            &mut needs_redraw,
+                                            &mut invalidation_visited,
+                                        );
+                                    }
                                     self.captured.insert(pointer_id, node);
                                 }
                             }
@@ -2210,6 +2319,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: bubble_ctx.clone(),
+                            pointer_hit_is_text_input,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2290,6 +2400,27 @@ impl<H: UiHost> UiTree<H> {
                                 let allow = !dock_drag_affects_window
                                     || dock_drag_capture_anchor == Some(node);
                                 if allow {
+                                    if !matches!(event, Event::PointerCancel(_))
+                                        && let Some(old_capture) =
+                                            self.captured.get(&pointer_id).copied()
+                                        && old_capture != node
+                                        && self.node_in_any_layer(old_capture, &active_layers)
+                                    {
+                                        let mut cancel_ctx = input_ctx.clone();
+                                        cancel_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+                                        let cancel_event = pointer_cancel_event_for_capture_switch(
+                                            event, pointer_id,
+                                        );
+                                        let _ = self.dispatch_event_to_node_chain(
+                                            app,
+                                            services,
+                                            &cancel_ctx,
+                                            old_capture,
+                                            &cancel_event,
+                                            &mut needs_redraw,
+                                            &mut invalidation_visited,
+                                        );
+                                    }
                                     self.captured.insert(pointer_id, node);
                                 }
                             }
@@ -2362,6 +2493,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: capture_ctx.clone(),
+                            pointer_hit_is_text_input: false,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2489,6 +2621,7 @@ impl<H: UiHost> UiTree<H> {
                             event_window_position,
                             event_window_wheel_delta,
                             input_ctx: bubble_ctx.clone(),
+                            pointer_hit_is_text_input: false,
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2643,6 +2776,7 @@ impl<H: UiHost> UiTree<H> {
                         event_window_position,
                         event_window_wheel_delta,
                         input_ctx: input_ctx.clone(),
+                        pointer_hit_is_text_input: false,
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
@@ -2751,7 +2885,11 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Event::Pointer(PointerEvent::Down { button, .. }) = event
+        if let Event::Pointer(PointerEvent::Down {
+            button,
+            pointer_type,
+            ..
+        }) = event
             && *button == fret_core::MouseButton::Left
             && !focus_requested
             && !prevented_default_actions.contains(fret_runtime::DefaultAction::FocusOnPointerDown)
@@ -2769,6 +2907,17 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.focus = Some(focus);
                 self.mark_invalidation(focus, Invalidation::Paint);
+
+                // Mobile-friendly best-effort: if touch input focused a text-editing widget,
+                // request the virtual keyboard within the same input turn so platforms that
+                // require user activation can comply (ADR 0261).
+                if *pointer_type == fret_core::PointerType::Touch && self.focus_is_text_input(app) {
+                    app.push_effect(Effect::ImeRequestVirtualKeyboard {
+                        window,
+                        visible: true,
+                    });
+                }
+
                 // Pointer-driven focus should not scroll: the user is already interacting at the
                 // pointer location, and scrolling here can move content under the cursor between
                 // pointer-down and pointer-up.
@@ -2841,6 +2990,10 @@ impl<H: UiHost> UiTree<H> {
 
                     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                         self.app.next_clipboard_token()
+                    }
+
+                    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                        self.app.next_share_sheet_token()
                     }
                 }
 
@@ -3624,4 +3777,81 @@ impl<H: UiHost> UiTree<H> {
 
         None
     }
+}
+
+fn pointer_cancel_event_for_capture_switch(
+    event: &Event,
+    pointer_id: fret_core::PointerId,
+) -> Event {
+    let (position, buttons, modifiers, pointer_type) = match event {
+        Event::Pointer(PointerEvent::Move {
+            position,
+            buttons,
+            modifiers,
+            pointer_type,
+            ..
+        }) => (Some(*position), *buttons, *modifiers, *pointer_type),
+        Event::Pointer(PointerEvent::Down {
+            position,
+            modifiers,
+            pointer_type,
+            ..
+        }) => (
+            Some(*position),
+            fret_core::MouseButtons::default(),
+            *modifiers,
+            *pointer_type,
+        ),
+        Event::Pointer(PointerEvent::Up {
+            position,
+            modifiers,
+            pointer_type,
+            ..
+        }) => (
+            Some(*position),
+            fret_core::MouseButtons::default(),
+            *modifiers,
+            *pointer_type,
+        ),
+        Event::Pointer(PointerEvent::Wheel {
+            position,
+            modifiers,
+            pointer_type,
+            ..
+        }) => (
+            Some(*position),
+            fret_core::MouseButtons::default(),
+            *modifiers,
+            *pointer_type,
+        ),
+        Event::Pointer(PointerEvent::PinchGesture {
+            position,
+            modifiers,
+            pointer_type,
+            ..
+        }) => (
+            Some(*position),
+            fret_core::MouseButtons::default(),
+            *modifiers,
+            *pointer_type,
+        ),
+        Event::PointerCancel(e) => (e.position, e.buttons, e.modifiers, e.pointer_type),
+        _ => (
+            event_position(event),
+            fret_core::MouseButtons::default(),
+            fret_core::Modifiers::default(),
+            fret_core::PointerType::Unknown,
+        ),
+    };
+
+    Event::PointerCancel(fret_core::PointerCancelEvent {
+        pointer_id,
+        position,
+        buttons,
+        modifiers,
+        pointer_type,
+        // We do not have a dedicated cancel reason for capture switches yet.
+        // Treat this as a best-effort cancellation signal to clear pressed/drag state.
+        reason: fret_core::PointerCancelReason::LeftWindow,
+    })
 }

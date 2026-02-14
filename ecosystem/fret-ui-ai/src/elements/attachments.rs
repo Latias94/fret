@@ -36,20 +36,20 @@ fn alpha(color: Color, a: f32) -> Color {
 fn resolve_muted(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
-        .unwrap_or_else(|| theme.color_required("muted.background"))
+        .unwrap_or_else(|| theme.color_token("muted.background"))
 }
 
 fn resolve_muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn resolve_border(theme: &Theme) -> Color {
     theme
         .color_by_key("border")
-        .unwrap_or_else(|| theme.color_required("border"))
+        .unwrap_or_else(|| theme.color_token("border"))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -648,7 +648,7 @@ impl AttachmentPreview {
 
         let bg = match self.variant {
             AttachmentVariant::Grid | AttachmentVariant::List => Some(muted),
-            AttachmentVariant::Inline => Some(theme.color_required("background")),
+            AttachmentVariant::Inline => Some(theme.color_token("background")),
         };
 
         let mut wrapper = ContainerProps::default();
@@ -763,15 +763,15 @@ impl AttachmentInfo {
             text: label,
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(
-                    theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                    theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                 ),
                 letter_spacing_em: None,
             }),
-            color: Some(theme.color_required("foreground")),
+            color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
         });
@@ -786,13 +786,11 @@ impl AttachmentInfo {
                     text: media_type,
                     style: Some(TextStyle {
                         font: FontId::default(),
-                        size: theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
+                        size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
                         line_height: Some(
-                            theme.metric_required(
-                                theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT,
-                            ),
+                            theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
                         ),
                         letter_spacing_em: None,
                     }),
@@ -985,11 +983,11 @@ impl AttachmentEmpty {
                 text: Arc::<str>::from("No attachments"),
                 style: Some(TextStyle {
                     font: FontId::default(),
-                    size: theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                    size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
                     weight: FontWeight::NORMAL,
                     slant: Default::default(),
                     line_height: Some(
-                        theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                        theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                     ),
                     letter_spacing_em: None,
                 }),

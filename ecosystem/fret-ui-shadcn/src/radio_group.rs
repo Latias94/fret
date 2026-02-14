@@ -12,6 +12,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{
@@ -52,7 +53,7 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.radio_group.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.radio_group.line_height")
         .unwrap_or(px);
@@ -75,15 +76,15 @@ fn radio_border(theme: &Theme) -> Color {
 }
 
 fn radio_ring(theme: &Theme) -> Color {
-    theme.color_required("ring")
+    theme.color_token("ring")
 }
 
 fn radio_fg(theme: &Theme) -> Color {
-    theme.color_required("foreground")
+    theme.color_token("foreground")
 }
 
 fn radio_indicator(theme: &Theme) -> Color {
-    theme.color_required("primary")
+    theme.color_token("primary")
 }
 
 pub use fret_ui_kit::primitives::radio_group::RadioGroupOrientation;
@@ -336,6 +337,8 @@ impl RadioGroup {
                 default_value.clone()
             })
             .model();
+            let is_rtl = direction_prim::use_direction_in_scope(cx, None)
+                == direction_prim::LayoutDirection::Rtl;
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
@@ -364,11 +367,18 @@ impl RadioGroup {
             let list = radix_root.list(values_arc.clone(), disabled_arc.clone());
 
             let container_props = decl_style::container_props(&theme, chrome, layout);
+            let list_layout =
+                decl_style::layout_style(&theme, fret_ui_kit::LayoutRefinement::default().w_full());
 
             let list_element = list.into_element(
                 cx,
                 RovingFlexProps {
                     flex: FlexProps {
+                        layout: list_layout,
+                        direction: match orientation {
+                            RadioGroupOrientation::Vertical => fret_core::Axis::Vertical,
+                            RadioGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
+                        },
                         gap: match orientation {
                             RadioGroupOrientation::Vertical => gap_y,
                             RadioGroupOrientation::Horizontal => gap_x,
@@ -404,7 +414,7 @@ impl RadioGroup {
                             ring_style.color = theme
                                 .color_by_key(ring_key)
                                 .or_else(|| theme.color_by_key("destructive/20"))
-                                .unwrap_or_else(|| theme.color_required("destructive"));
+                                .unwrap_or_else(|| theme.color_token("destructive"));
                         }
                         let pressable_layout = decl_style::layout_style(
                             &theme,
@@ -459,7 +469,7 @@ impl RadioGroup {
                                         )
                                         .resolve(&theme);
                                         let border_color = if aria_invalid {
-                                            let destructive = theme.color_required("destructive");
+                                            let destructive = theme.color_token("destructive");
                                             if item_enabled {
                                                 destructive
                                             } else {
@@ -565,13 +575,23 @@ impl RadioGroup {
                                             )]
                                             });
 
+                                        let justify = if is_rtl
+                                            && matches!(
+                                                item_variant,
+                                                RadioGroupItemVariant::Default
+                                            ) {
+                                            MainAlign::End
+                                        } else {
+                                            MainAlign::Start
+                                        };
+
                                         let item_content = cx.flex(
                                             FlexProps {
                                                 layout: row_layout,
                                                 direction: fret_core::Axis::Horizontal,
                                                 gap: gap_x,
                                                 padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::Start,
+                                                justify,
                                                 align: CrossAlign::Center,
                                                 wrap: false,
                                             },
@@ -580,13 +600,17 @@ impl RadioGroup {
 
                                                 match item_variant {
                                                     RadioGroupItemVariant::Default => {
-                                                        out.push(icon_element.clone());
                                                         if let Some(children) =
                                                             item_children.clone()
                                                         {
                                                             out.extend(children);
                                                         } else {
                                                             out.push(cx.text_props(label_props));
+                                                        }
+                                                        if is_rtl {
+                                                            out.push(icon_element.clone());
+                                                        } else {
+                                                            out.insert(0, icon_element.clone());
                                                         }
                                                     }
                                                     RadioGroupItemVariant::ChoiceCard => {
@@ -913,7 +937,7 @@ mod tests {
 
         let theme = Theme::global(&app).clone();
         let icon = icon_size(&theme);
-        let destructive = theme.color_required("destructive");
+        let destructive = theme.color_token("destructive");
 
         let mut icon_border_colors: Vec<Color> = Vec::new();
         for op in scene.ops() {
@@ -1033,6 +1057,97 @@ mod tests {
         }
 
         assert!(found, "missing checked choice-card background/border quad");
+    }
+
+    #[test]
+    fn radio_group_choice_card_items_stretch_to_group_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("pro")));
+        let items = vec![
+            RadioGroupItem::new("plus", "Plus").variant(RadioGroupItemVariant::ChoiceCard),
+            RadioGroupItem::new("pro", "Pro").variant(RadioGroupItemVariant::ChoiceCard),
+            RadioGroupItem::new("enterprise", "Enterprise")
+                .variant(RadioGroupItemVariant::ChoiceCard),
+        ];
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(360.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-choice-card-stretch-width",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .a11y_label("Plans")
+                        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+                        .item(items[0].clone())
+                        .item(items[1].clone())
+                        .item(items[2].clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let group_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioGroup && n.label.as_deref() == Some("Plans"))
+            .map(|n| n.bounds)
+            .expect("radio group semantics node");
+
+        let mut item_bounds: Vec<(String, Rect)> = Vec::new();
+        for label in ["Plus", "Pro", "Enterprise"] {
+            let b = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some(label))
+                .map(|n| n.bounds)
+                .expect("radio button semantics node");
+            item_bounds.push((label.to_string(), b));
+        }
+
+        let eps = 0.5;
+        for (label, b) in &item_bounds {
+            assert!(
+                (b.size.width.0 - group_bounds.size.width.0).abs() <= eps,
+                "expected choice-card item '{label}' width {} close to group width {}",
+                b.size.width.0,
+                group_bounds.size.width.0
+            );
+        }
+
+        let w0 = item_bounds[0].1.size.width.0;
+        for (label, b) in &item_bounds[1..] {
+            assert!(
+                (b.size.width.0 - w0).abs() <= eps,
+                "expected choice-card item '{label}' width {} close to first item width {}",
+                b.size.width.0,
+                w0
+            );
+        }
     }
 
     #[test]

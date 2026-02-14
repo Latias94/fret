@@ -7,7 +7,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         rtl_value: Option<Model<Option<Arc<str>>>>,
     }
 
-    let muted_foreground = cx.with_theme(|theme| theme.color_required("muted-foreground"));
+    let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(

@@ -153,8 +153,8 @@ pub(in crate::ui) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<An
     let badge = {
         let (secondary_fg, outline_fg) = cx.with_theme(|theme| {
             (
-                ColorRef::Color(theme.color_required("secondary-foreground")),
-                ColorRef::Color(theme.color_required("foreground")),
+                ColorRef::Color(theme.color_token("secondary-foreground")),
+                ColorRef::Color(theme.color_token("foreground")),
             )
         });
 

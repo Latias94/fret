@@ -6,6 +6,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
     TableRowMeasureMode, TableViewOutput, TableViewProps, table_virtualized,
@@ -23,18 +24,18 @@ use crate::dropdown_menu::{
 };
 
 fn border_color(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn table_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.table.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.table.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     TextStyle {
         font: FontId::default(),
@@ -471,6 +472,88 @@ impl DataTable {
     where
         TData: 'static,
     {
+        self.into_element_with_header_cell_opt(
+            cx,
+            data,
+            data_revision,
+            state,
+            columns,
+            get_row_key,
+            header_label,
+            None::<
+                Arc<
+                    dyn Fn(
+                        &mut ElementContext<'_, H>,
+                        &ColumnDef<TData>,
+                        Option<bool>,
+                    ) -> Option<Vec<AnyElement>>,
+                >,
+            >,
+            cell_at,
+        )
+    }
+
+    /// Like [`Self::into_element`], but allows overriding header cell rendering for specific columns.
+    ///
+    /// Return `Some(Vec<AnyElement>)` to fully replace the default header content for that column.
+    /// Return `None` to fall back to the default (label + sort indicator + optional column menu).
+    #[track_caller]
+    pub fn into_element_with_header_cell<H: UiHost, TData>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: Model<TableState>,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        header_cell_at: impl Fn(
+            &mut ElementContext<'_, H>,
+            &ColumnDef<TData>,
+            Option<bool>,
+        ) -> Option<Vec<AnyElement>>
+        + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        TData: 'static,
+    {
+        self.into_element_with_header_cell_opt(
+            cx,
+            data,
+            data_revision,
+            state,
+            columns,
+            get_row_key,
+            header_label,
+            Some(Arc::new(header_cell_at)),
+            cell_at,
+        )
+    }
+
+    fn into_element_with_header_cell_opt<H: UiHost, TData>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: Model<TableState>,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        header_cell_at: Option<
+            Arc<
+                dyn Fn(
+                    &mut ElementContext<'_, H>,
+                    &ColumnDef<TData>,
+                    Option<bool>,
+                ) -> Option<Vec<AnyElement>>,
+            >,
+        >,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        TData: 'static,
+    {
         let DataTable {
             overscan,
             keep_alive,
@@ -506,8 +589,8 @@ impl DataTable {
                 weight: FontWeight::MEDIUM,
                 ..table_text_style(&theme)
             };
-            let header_fg = theme.color_required("foreground");
-            let sort_fg = theme.color_required("muted-foreground");
+            let header_fg = theme.color_token("foreground");
+            let sort_fg = theme.color_token("muted-foreground");
 
             let get_row_key = Arc::new(get_row_key);
             let header_label = Arc::new(header_label);
@@ -531,6 +614,7 @@ impl DataTable {
             let state_for_header = state.clone();
             let state_for_column_actions_header = state.clone();
             let column_actions_menu_enabled = column_actions_menu;
+            let header_cell_at = header_cell_at.clone();
             let columns = columns.clone();
             let state = state.clone();
             let data = data.clone();
@@ -546,12 +630,19 @@ impl DataTable {
                 view_props,
                 |_row| None,
                 move |cx, col, sort_state| {
+                    if let Some(header_cell_at) = header_cell_at.as_ref() {
+                        if let Some(custom) = header_cell_at(cx, col, sort_state) {
+                            return custom;
+                        }
+                    }
+
                     if !column_actions_menu_enabled {
                         let theme = Theme::global(&*cx.app).clone();
                         let label = (header_label)(col);
                         let style = header_style.clone();
                         let header_fg = header_fg;
                         let sort_fg = sort_fg;
+                        let can_sort = col.enable_sorting;
                         let state_for_header = state_for_header.clone();
                         return vec![cx.flex(
                             FlexProps {
@@ -583,7 +674,7 @@ impl DataTable {
                                     pieces.push(text.into_element(cx));
                                 }
 
-                                if let Some(desc) = sort_state {
+                                if can_sort {
                                     let sorting = cx
                                         .app
                                         .models()
@@ -598,25 +689,28 @@ impl DataTable {
                                     } else {
                                         None
                                     };
-                                    let indicator: Arc<str> = match order {
-                                        Some(order) => Arc::<str>::from(format!(
-                                            "{}{order}",
-                                            if desc { "▼" } else { "▲" }
-                                        )),
-                                        None => Arc::from(if desc { "▼" } else { "▲" }),
+
+                                    let icon_id = match sort_state {
+                                        Some(true) => "lucide.arrow-down",
+                                        Some(false) => "lucide.arrow-up",
+                                        None => "lucide.arrow-up-down",
                                     };
-                                    let mut text = ui::label(cx, indicator)
-                                        .text_size_px(style.size)
-                                        .font_weight(style.weight)
-                                        .text_color(ColorRef::Color(sort_fg))
-                                        .nowrap();
-                                    if let Some(line_height) = style.line_height {
-                                        text = text.line_height_px(line_height);
+                                    pieces.push(decl_icon::icon_with(
+                                        cx,
+                                        fret_icons::IconId::new_static(icon_id),
+                                        Some(Px(16.0)),
+                                        Some(ColorRef::Color(sort_fg)),
+                                    ));
+
+                                    if let Some(order) = order {
+                                        pieces.push(
+                                            ui::label(cx, Arc::<str>::from(order.to_string()))
+                                                .text_xs()
+                                                .text_color(ColorRef::Color(sort_fg))
+                                                .nowrap()
+                                                .into_element(cx),
+                                        );
                                     }
-                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                        text = text.letter_spacing_em(letter_spacing_em);
-                                    }
-                                    pieces.push(text.into_element(cx));
                                 }
 
                                 pieces
@@ -629,6 +723,7 @@ impl DataTable {
                     let style = header_style.clone();
                     let header_fg = header_fg;
                     let sort_fg = sort_fg;
+                    let can_sort = col.enable_sorting;
                     let state_for_header = state_for_header.clone();
                     let state_for_column_actions = state_for_column_actions_header.clone();
                     let col_id: Arc<str> = Arc::from(col.id.as_ref());
@@ -664,7 +759,7 @@ impl DataTable {
                                 pieces.push(text.into_element(cx));
                             }
 
-                            if let Some(desc) = sort_state {
+                            if can_sort {
                                 let sorting = cx
                                     .app
                                     .models()
@@ -679,25 +774,28 @@ impl DataTable {
                                 } else {
                                     None
                                 };
-                                let indicator: Arc<str> = match order {
-                                    Some(order) => Arc::<str>::from(format!(
-                                        "{}{order}",
-                                        if desc { "▼" } else { "▲" }
-                                    )),
-                                    None => Arc::from(if desc { "▼" } else { "▲" }),
+
+                                let icon_id = match sort_state {
+                                    Some(true) => "lucide.arrow-down",
+                                    Some(false) => "lucide.arrow-up",
+                                    None => "lucide.arrow-up-down",
                                 };
-                                let mut text = ui::label(cx, indicator)
-                                    .text_size_px(style.size)
-                                    .font_weight(style.weight)
-                                    .text_color(ColorRef::Color(sort_fg))
-                                    .nowrap();
-                                if let Some(line_height) = style.line_height {
-                                    text = text.line_height_px(line_height);
+                                pieces.push(decl_icon::icon_with(
+                                    cx,
+                                    fret_icons::IconId::new_static(icon_id),
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(sort_fg)),
+                                ));
+
+                                if let Some(order) = order {
+                                    pieces.push(
+                                        ui::label(cx, Arc::<str>::from(order.to_string()))
+                                            .text_xs()
+                                            .text_color(ColorRef::Color(sort_fg))
+                                            .nowrap()
+                                            .into_element(cx),
+                                    );
                                 }
-                                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                    text = text.letter_spacing_em(letter_spacing_em);
-                                }
-                                pieces.push(text.into_element(cx));
                             }
 
                             pieces.push(cx.spacer(fret_ui::element::SpacerProps::default()));

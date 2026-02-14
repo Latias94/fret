@@ -22,8 +22,22 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 
 - **Module(s):** `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/focus_visible.rs`
 - **ADR(s):** `docs/adr/0068-focus-traversal-and-focus-scopes.md`
+- **Related ADR(s):** `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - **Reference(s):**
   - WAI-ARIA Authoring Practices (APG): focus/keyboard interaction outcomes (policy lives in components)
+- **Pointer capture arbitration (mechanism):**
+  - When pointer capture switches to a different node mid-sequence (gesture arbitration), the
+    previous capture target receives `PointerCancel` so it can clear pressed/drag state.
+  - Evidence anchors:
+    - Mechanism: `crates/fret-ui/src/tree/dispatch.rs`
+    - Regression test: `crates/fret-ui/src/tree/tests/pointer_move_layers.rs`
+- **Capture-phase pointer move opt-in (mechanism):**
+  - `PointerRegionProps.capture_phase_pointer_moves` routes `PointerEvent::Move` via the Capture phase
+    (root → target) so parent wrappers can observe moves even when a descendant has captured and/or
+    stopped bubbling (gesture arena style arbitration).
+  - Evidence anchors:
+    - Contract surface: `crates/fret-ui/src/element.rs` (`PointerRegionProps`)
+    - PointerRegion dispatch: `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs`
 - **Runner snapshot seam (data-only):**
   - `fret-runtime::WindowInputContextService` publishes a window-scoped `InputContext` snapshot for
     runner/platform integration surfaces (OS menubars, etc.).
@@ -121,4 +135,3 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 
 - `UiTree` + `Widget` exist as an internal hosting mechanism for declarative elements; they are not
   a public component authoring model (see ADR 0066).
-

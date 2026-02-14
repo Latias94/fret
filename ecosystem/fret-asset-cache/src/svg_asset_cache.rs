@@ -132,8 +132,8 @@ mod tests {
     use std::collections::HashMap;
 
     use fret_core::{
-        ClipboardToken, FrameId, PathId, SvgService, TextBlobId, TextMetrics, TextService,
-        TimerToken,
+        ClipboardToken, FrameId, PathId, ShareSheetToken, SvgService, TextBlobId, TextMetrics,
+        TextService, TimerToken,
     };
     use fret_runtime::TickId;
     use slotmap::KeyData;
@@ -212,6 +212,7 @@ mod tests {
         tick_id: TickId,
         next_timer_token: u64,
         next_clipboard_token: u64,
+        next_share_sheet_token: u64,
         next_image_upload_token: u64,
     }
 
@@ -264,6 +265,12 @@ mod tests {
         fn next_clipboard_token(&mut self) -> ClipboardToken {
             let out = ClipboardToken(self.next_clipboard_token);
             self.next_clipboard_token += 1;
+            out
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            let out = ShareSheetToken(self.next_share_sheet_token);
+            self.next_share_sheet_token += 1;
             out
         }
 

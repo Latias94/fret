@@ -13,6 +13,9 @@
 //! This module provides a stable, Radix-named facade surface and keeps call sites from reaching
 //! into the `declarative` module directly. See <https://github.com/radix-ui/primitives>.
 
+use std::time::Duration;
+
+use fret_ui::theme::CubicBezier;
 use fret_ui::{ElementContext, UiHost};
 
 pub use crate::headless::presence::{
@@ -92,6 +95,44 @@ pub fn scale_fade_presence_with_durations_and_easing<H: UiHost>(
         from_scale,
         to_scale,
         ease,
+    )
+}
+
+#[track_caller]
+pub fn fade_presence_with_durations_and_cubic_bezier_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    bezier: CubicBezier,
+) -> PresenceOutput {
+    crate::declarative::presence::fade_presence_with_durations_and_cubic_bezier_duration(
+        cx,
+        open,
+        open_duration,
+        close_duration,
+        bezier,
+    )
+}
+
+#[track_caller]
+pub fn scale_fade_presence_with_durations_and_cubic_bezier_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    from_scale: f32,
+    to_scale: f32,
+    bezier: CubicBezier,
+) -> ScaleFadePresenceOutput {
+    crate::declarative::presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+        cx,
+        open,
+        open_duration,
+        close_duration,
+        from_scale,
+        to_scale,
+        bezier,
     )
 }
 
@@ -243,6 +284,43 @@ mod tests {
         assert!(out0.animating);
         assert!((out0.opacity - 0.25).abs() < 1e-6);
         assert!((out0.scale - 0.85).abs() < 1e-6);
+    }
+
+    #[test]
+    fn scale_fade_presence_with_durations_and_cubic_bezier_duration_applies_custom_bezier() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let duration = Duration::from_millis(100);
+        let ticks = crate::declarative::transition::ticks_60hz_for_duration(duration) as f32;
+
+        let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p3b", |cx| {
+            scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                cx,
+                true,
+                duration,
+                duration,
+                0.8,
+                1.0,
+                CubicBezier {
+                    x1: 0.0,
+                    y1: 0.0,
+                    x2: 1.0,
+                    y2: 1.0,
+                },
+            )
+        });
+        assert!(out0.present);
+        assert!(out0.animating);
+
+        // With a linear cubic-bezier curve and 100ms → 6 ticks at 60Hz, progress should be ~1/6.
+        // This is intentionally different from the default smoothstep-based driver.
+        let expected_opacity = 1.0 / ticks;
+        assert!((out0.opacity - expected_opacity).abs() < 1e-6);
+        assert!((out0.scale - (0.8 + (1.0 - 0.8) * expected_opacity)).abs() < 1e-6);
     }
 
     #[test]

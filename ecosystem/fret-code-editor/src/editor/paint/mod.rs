@@ -1421,14 +1421,14 @@ pub(super) fn syntax_color(theme: &fret_ui::Theme, highlight: &str) -> Option<Co
     let fallback = highlight.split('.').next().unwrap_or(highlight);
 
     match fallback {
-        "comment" => Some(theme.color_required("muted-foreground")),
-        "keyword" | "operator" => Some(theme.color_required("primary")),
-        "property" | "variable" => Some(theme.color_required("foreground")),
-        "punctuation" => Some(theme.color_required("muted-foreground")),
+        "comment" => Some(theme.color_token("muted-foreground")),
+        "keyword" | "operator" => Some(theme.color_token("primary")),
+        "property" | "variable" => Some(theme.color_token("foreground")),
+        "punctuation" => Some(theme.color_token("muted-foreground")),
 
-        "string" => Some(theme.color_required("foreground")),
-        "number" | "boolean" | "constant" => Some(theme.color_required("primary")),
-        "type" | "constructor" | "function" => Some(theme.color_required("foreground")),
+        "string" => Some(theme.color_token("foreground")),
+        "number" | "boolean" | "constant" => Some(theme.color_token("primary")),
+        "type" | "constructor" | "function" => Some(theme.color_token("foreground")),
         _ => None,
     }
 }

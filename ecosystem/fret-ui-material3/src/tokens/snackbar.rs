@@ -34,7 +34,7 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.snackbar.container.shadow-color")
         .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn container_shadow(theme: &Theme) -> Option<fret_ui::element::ShadowStyle> {

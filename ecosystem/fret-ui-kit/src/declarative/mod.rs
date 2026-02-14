@@ -1,6 +1,7 @@
 pub mod accent_color_queries;
 pub mod action_hooks;
 pub mod active_descendant;
+pub mod bloom;
 pub mod cached_subtree;
 #[cfg(feature = "recipes")]
 pub mod canvas_surface;
@@ -16,16 +17,17 @@ pub mod file_tree;
 pub mod focus_scope;
 pub mod forced_colors_queries;
 pub mod form;
-#[cfg(feature = "recipes")]
 pub mod glass;
 pub mod global_watch;
 pub mod hover_intent;
 pub mod keyboard_avoidance;
 pub mod list;
 pub mod model_watch;
+pub mod motion;
+pub mod motion_springs;
+pub mod motion_value;
 pub mod occlusion_queries;
 pub mod overlay_motion;
-#[cfg(feature = "recipes")]
 pub mod pixelate;
 pub mod pointer_queries;
 pub mod prelude;
@@ -44,6 +46,7 @@ pub mod table;
 pub mod text;
 pub mod text_scale_queries;
 pub mod theme_access;
+pub mod toast_motion;
 pub mod touch_pan_scroll;
 pub mod transition;
 pub mod tree;

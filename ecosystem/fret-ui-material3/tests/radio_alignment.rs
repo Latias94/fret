@@ -5544,7 +5544,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                         let body_style = theme
                             .text_style_by_key("md.sys.typescale.body-medium")
                             .unwrap_or_else(|| fret_core::TextStyle::default());
-                        let body_color = theme.color_required("md.sys.color.on-surface");
+                        let body_color = theme.color_token("md.sys.color.on-surface");
 
                         let card_content =
                             |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
@@ -6437,8 +6437,7 @@ fn material3_headless_badge_suite_goldens_v1() {
                     "badge_root",
                     |cx| {
                         let theme = Theme::global(&*cx.app).clone();
-                        let anchor_color =
-                            theme.color_required("md.sys.color.surface-container-low");
+                        let anchor_color = theme.color_token("md.sys.color.surface-container-low");
 
                         let anchor = |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
                                       size: Px| {
@@ -6603,8 +6602,7 @@ fn material3_headless_top_app_bar_suite_goldens_v1() {
                                 let mut bg = ContainerProps::default();
                                 bg.layout.size.width = fret_ui::element::Length::Fill;
                                 bg.layout.size.height = fret_ui::element::Length::Fill;
-                                bg.background =
-                                    Some(theme.color_required("md.sys.color.background"));
+                                bg.background = Some(theme.color_token("md.sys.color.background"));
 
                                 let bar = TopAppBar::new(case_label)
                                     .variant(variant)
@@ -11543,7 +11541,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                             let body_style = theme
                                 .text_style_by_key("md.sys.typescale.body-medium")
                                 .unwrap_or_default();
-                            let body_color = theme.color_required("md.sys.color.on-surface");
+                            let body_color = theme.color_token("md.sys.color.on-surface");
 
                             let item_content =
                                 |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,

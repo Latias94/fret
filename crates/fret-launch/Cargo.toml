@@ -41,21 +41,24 @@ fret-webview = { version = "0.1.0", path = "../fret-webview", optional = true }
 fret-webview-wry = { version = "0.1.0", path = "../fret-webview-wry", optional = true }
 pollster.workspace = true
 slotmap.workspace = true
-renderdog.workspace = true
 stacksafe.workspace = true
 serde_json = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
 subsecond = { version = "0.7.2", optional = true }
 tungstenite = { version = "0.27.0", optional = true }
 
+[target.'cfg(all(not(target_arch = "wasm32"), any(target_os = "windows", target_os = "macos", target_os = "linux")))'.dependencies]
+renderdog.workspace = true
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
 fret-platform-web = { version = "0.1.0", path = "../fret-platform-web" }
 fret-runner-web = { version = "0.1.0", path = "../fret-runner-web" }
 getrandom = { workspace = true, features = ["wasm_js"] }
+wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
-web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "VisualViewport", "Window", "console"] }
+web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "File", "FilePropertyBag", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "VisualViewport", "Window", "console"] }
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "macos"))'.dependencies]
 cocoa.workspace = true

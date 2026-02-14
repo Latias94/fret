@@ -99,7 +99,7 @@ pub(in crate::ui) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Ve
                                             ChromeRefinement::default()
                                                 .rounded(Radius::Md)
                                                 .border_1()
-                                                .bg(ColorRef::Color(theme.color_required("muted"))),
+                                                .bg(ColorRef::Color(theme.color_token("muted"))),
                                             LayoutRefinement::default()
                                                 .w_px(Px(140.0))
                                                 .h_px(Px(180.0)),

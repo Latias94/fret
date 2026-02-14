@@ -94,7 +94,7 @@ fn build_breadcrumb_dropdown_button(
                         cx,
                         |cx| {
                             let theme = fret_ui::Theme::global(&*cx.app).clone();
-                            let muted = theme.color_required("muted-foreground");
+                            let muted = theme.color_token("muted-foreground");
 
                             let mut props = fret_ui::element::PressableProps::default();
                             props.a11y.role = Some(SemanticsRole::Button);
@@ -116,8 +116,8 @@ fn build_breadcrumb_dropdown_button(
                                             layout: Default::default(),
                                             text: Arc::from("Components"),
                                             style: Some(shadcn_text_style(
-                                                theme.metric_required("font.size"),
-                                                theme.metric_required("font.line_height"),
+                                                theme.metric_token("font.size"),
+                                                theme.metric_token("font.line_height"),
                                                 FontWeight::NORMAL,
                                             )),
                                             color: Some(muted),
@@ -223,8 +223,8 @@ fn build_breadcrumb_responsive_drawer(
     };
 
     let theme = fret_ui::Theme::global(&*cx.app).clone();
-    let text_px = theme.metric_required("font.size");
-    let line_height = theme.metric_required("font.line_height");
+    let text_px = theme.metric_token("font.size");
+    let line_height = theme.metric_token("font.line_height");
 
     let drawer = Drawer::new(open.clone());
 

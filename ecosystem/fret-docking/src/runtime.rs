@@ -854,9 +854,13 @@ mod tests {
                     viewport: None,
                 },
             );
+
+            // Keep a stable target tabs node in the main window even if the only "real" panel is
+            // temporarily floated away. Canonicalization in `fret-core` prunes empty tabs nodes,
+            // so tests should avoid assuming an empty root tabs survives as a drop target.
             let tabs = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![panel.clone()],
-                active: 0,
+                tabs: vec![PanelKey::new("main.placeholder"), panel.clone()],
+                active: 1,
             });
             dock.graph.set_window_root(window_a, tabs);
         });

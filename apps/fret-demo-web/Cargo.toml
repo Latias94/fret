@@ -16,13 +16,14 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 
 [features]
-default = ["cjk-lite-fonts"]
+default = ["cjk-lite-fonts", "devtools-ws"]
 emoji-fonts = ["fret-launch/wasm-emoji-fonts"]
 cjk-lite-fonts = ["fret-launch/wasm-cjk-lite-fonts"]
+devtools-ws = ["fret-examples/devtools-ws", "fret-ui-gallery/devtools-ws"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-examples = { path = "../fret-examples" }
-fret-ui-gallery = { path = "../fret-ui-gallery" }
+fret-examples = { path = "../fret-examples", default-features = false }
+fret-ui-gallery = { path = "../fret-ui-gallery", default-features = false }
 fret-router = { path = "../../ecosystem/fret-router", features = ["web-history", "hash-routing"] }
 fret-launch = { path = "../../crates/fret-launch" }
 wasm-bindgen = "0.2"

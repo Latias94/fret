@@ -92,8 +92,8 @@ fn render_mermaid_svg<H: UiHost + 'static>(
     header: fret_code_view::CodeBlockHeaderSlots,
     ready: MermaidSvgReady,
 ) -> AnyElement {
-    let bg = theme.color_required("card");
-    let border = theme.color_required("border");
+    let bg = theme.color_token("card");
+    let border = theme.color_token("border");
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Fill;
@@ -105,7 +105,7 @@ fn render_mermaid_svg<H: UiHost + 'static>(
         Edges::all(Px(0.0))
     };
     container.border_color = Some(border);
-    container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
+    container.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.md"));
 
     let header_row = render_mermaid_header_row(cx, theme, header);
 
@@ -147,7 +147,7 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
     theme: &Theme,
     header: fret_code_view::CodeBlockHeaderSlots,
 ) -> AnyElement {
-    let border = theme.color_required("border");
+    let border = theme.color_token("border");
 
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
@@ -158,7 +158,7 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
         left: Px(0.0),
     };
     props.border_color = Some(border);
-    props.padding = Edges::all(theme.metric_required("metric.padding.sm"));
+    props.padding = Edges::all(theme.metric_token("metric.padding.sm"));
 
     cx.container(props, |cx| {
         let mut row = FlexProps::default();
@@ -167,11 +167,11 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
         row.align = CrossAlign::Center;
 
         let mut left_props = FlexProps::default();
-        left_props.gap = theme.metric_required("metric.gap.sm");
+        left_props.gap = theme.metric_token("metric.gap.sm");
         left_props.align = CrossAlign::Center;
 
         let mut right_props = FlexProps::default();
-        right_props.gap = theme.metric_required("metric.gap.sm");
+        right_props.gap = theme.metric_token("metric.gap.sm");
         right_props.align = CrossAlign::Center;
 
         vec![cx.flex(row, |cx| {
@@ -181,13 +181,13 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
                     text: Arc::<str>::from("Mermaid"),
                     style: Some(TextStyle {
                         font: FontId::monospace(),
-                        size: theme.metric_required("metric.font.mono_size"),
+                        size: theme.metric_token("metric.font.mono_size"),
                         weight: FontWeight::SEMIBOLD,
                         slant: TextSlant::Normal,
-                        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                         letter_spacing_em: None,
                     }),
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 })]

@@ -61,7 +61,7 @@ pub(in crate::ui) fn preview_hit_test_only_paint_cache_probe(
                                 ChromeRefinement::default()
                                     .border_1()
                                     .rounded(Radius::Md)
-                                    .bg(ColorRef::Color(theme.color_required("background"))),
+                                    .bg(ColorRef::Color(theme.color_token("background"))),
                                 LayoutRefinement::default()
                                     .w_full()
                                     .h_px(MetricRef::Px(Px(320.0))),
@@ -71,12 +71,12 @@ pub(in crate::ui) fn preview_hit_test_only_paint_cache_probe(
                                     cx.canvas(canvas, move |p| {
                                         let bounds = p.bounds();
                                         let accent_bg =
-                                            with_alpha(p.theme().color_required("accent"), 0.10);
-                                        let border_color = p.theme().color_required("border");
+                                            with_alpha(p.theme().color_token("accent"), 0.10);
+                                        let border_color = p.theme().color_token("border");
                                         let secondary_bg =
-                                            with_alpha(p.theme().color_required("secondary"), 0.16);
+                                            with_alpha(p.theme().color_token("secondary"), 0.16);
                                         let muted_border = with_alpha(
-                                            p.theme().color_required("muted-foreground"),
+                                            p.theme().color_token("muted-foreground"),
                                             0.35,
                                         );
 

@@ -98,16 +98,16 @@ impl MetricFallback {
     pub(super) fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Px {
         match *self {
             Self::Px(px) => px,
-            Self::ThemeRadiusSm => theme.metric_required("metric.radius.sm"),
-            Self::ThemeRadiusMd => theme.metric_required("metric.radius.md"),
-            Self::ThemeRadiusLg => theme.metric_required("metric.radius.lg"),
-            Self::ThemePaddingSm => theme.metric_required("metric.padding.sm"),
-            Self::ThemePaddingMd => theme.metric_required("metric.padding.md"),
+            Self::ThemeRadiusSm => theme.metric_token("metric.radius.sm"),
+            Self::ThemeRadiusMd => theme.metric_token("metric.radius.md"),
+            Self::ThemeRadiusLg => theme.metric_token("metric.radius.lg"),
+            Self::ThemePaddingSm => theme.metric_token("metric.padding.sm"),
+            Self::ThemePaddingMd => theme.metric_token("metric.padding.md"),
             Self::ThemePaddingSmMulDiv { mul, div } => {
                 if div == 0 {
                     return Px(0.0);
                 }
-                let base = theme.metric_required("metric.padding.sm");
+                let base = theme.metric_token("metric.padding.sm");
                 Px(base.0 * (mul as f32) / (div as f32))
             }
         }
@@ -134,17 +134,17 @@ impl ColorFallback {
     pub(super) fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Color {
         match *self {
             Self::Color(c) => c,
-            Self::ThemeSurfaceBackground => theme.color_required("background"),
-            Self::ThemePanelBackground => theme.color_required("card"),
-            Self::ThemePanelBorder => theme.color_required("border"),
-            Self::ThemeTextPrimary => theme.color_required("foreground"),
-            Self::ThemeTextMuted => theme.color_required("muted-foreground"),
-            Self::ThemeTextDisabled => alpha_mul(theme.color_required("muted-foreground"), 0.5),
-            Self::ThemeAccent => theme.color_required("primary"),
-            Self::ThemeHoverBackground => theme.color_required("accent"),
-            Self::ThemeSelectionBackground => theme.color_required("selection.background"),
-            Self::ThemeFocusRing => theme.color_required("ring"),
-            Self::ThemeTokenAlphaMul { key, mul } => alpha_mul(theme.color_required(key), mul),
+            Self::ThemeSurfaceBackground => theme.color_token("background"),
+            Self::ThemePanelBackground => theme.color_token("card"),
+            Self::ThemePanelBorder => theme.color_token("border"),
+            Self::ThemeTextPrimary => theme.color_token("foreground"),
+            Self::ThemeTextMuted => theme.color_token("muted-foreground"),
+            Self::ThemeTextDisabled => alpha_mul(theme.color_token("muted-foreground"), 0.5),
+            Self::ThemeAccent => theme.color_token("primary"),
+            Self::ThemeHoverBackground => theme.color_token("accent"),
+            Self::ThemeSelectionBackground => theme.color_token("selection.background"),
+            Self::ThemeFocusRing => theme.color_token("ring"),
+            Self::ThemeTokenAlphaMul { key, mul } => alpha_mul(theme.color_token(key), mul),
         }
     }
 }

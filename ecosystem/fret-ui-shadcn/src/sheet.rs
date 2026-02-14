@@ -290,12 +290,12 @@ impl Sheet {
             let id = trigger.id;
             let overlay_root_name = radix_dialog::dialog_root_name(id);
 
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_500,
-                overlay_motion::SHADCN_MOTION_TICKS_300,
-                overlay_motion::shadcn_ease,
+                overlay_motion::shadcn_motion_duration_500(cx),
+                overlay_motion::shadcn_motion_duration_300(cx),
+                overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
                 .with_state(SheetOpenChangeCallbackState::default, |state| {
@@ -573,10 +573,10 @@ impl SheetContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme.color_required("background");
-        let border = theme.color_required("border");
+        let bg = theme.color_token("background");
+        let border = theme.color_token("border");
 
-        let radius = theme.metric_required("metric.radius.lg");
+        let radius = theme.metric_token("metric.radius.lg");
         let shadow = decl_style::shadow_lg(&theme, radius);
 
         let chrome = ChromeRefinement::default()
@@ -754,16 +754,16 @@ impl SheetTitle {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let px = theme
             .metric_by_key("component.sheet.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.sheet.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -793,16 +793,16 @@ impl SheetDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
+            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.sheet.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.sheet.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -1495,6 +1495,29 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
         assert!(content_id.get().is_some());
 
+        // Let the enter transition settle so hit-testing lands inside the sheet content for
+        // deterministic pointer tests.
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        for _ in 0..settle_frames {
+            let _ = render_sheet_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                None,
+                true,
+                SheetSide::Right,
+                content_id.clone(),
+                Rc::new(Cell::new(None)),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
         // Click inside sheet should not close.
         ui.dispatch_event(
             &mut app,
@@ -1953,7 +1976,10 @@ mod tests {
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) as usize
+            + 1;
         for _ in 0..settle_frames {
             let _ = render_sheet_frame(
                 &mut ui,
@@ -2085,7 +2111,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) + 2;
         for _ in 0..settle_frames {
             render_sheet_frame_with_underlay(
                 &mut ui,
@@ -2513,7 +2541,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(fret_runtime::FrameId(2 + i as u64));
             let _ = render_sheet_frame_with_auto_focus_hooks(

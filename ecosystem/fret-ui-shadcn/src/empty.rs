@@ -36,8 +36,8 @@ impl Empty {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let border = theme.color_required("border");
-        let fg = theme.color_required("foreground");
+        let border = theme.color_token("border");
+        let fg = theme.color_token("foreground");
 
         let chrome_override = self.chrome;
         let layout_override = self.layout;
@@ -73,6 +73,11 @@ impl Empty {
                     .p(padding)
                     .rounded(Radius::Lg)
                     .border_1()
+                    .border_dash(fret_core::scene::DashPatternV1::new(
+                        Px(4.0),
+                        Px(4.0),
+                        Px(0.0),
+                    ))
                     .border_color(ColorRef::Color(border))
                     .text_color(ColorRef::Color(fg))
                     .merge(chrome_override);
@@ -208,8 +213,8 @@ impl EmptyMedia {
         if self.variant == EmptyMediaVariant::Icon {
             let bg = theme
                 .color_by_key("muted")
-                .unwrap_or_else(|| theme.color_required("muted.background"));
-            let fg = theme.color_required("foreground");
+                .unwrap_or_else(|| theme.color_token("muted.background"));
+            let fg = theme.color_token("foreground");
             layout = layout
                 .w_px(MetricRef::space(Space::N10))
                 .h_px(MetricRef::space(Space::N10));
@@ -253,15 +258,15 @@ impl EmptyTitle {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("foreground");
+        let fg = theme.color_token("foreground");
         let px = theme
             .metric_by_key("component.empty.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.empty.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -285,15 +290,15 @@ impl EmptyDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
+        let fg = theme.color_token("muted-foreground");
         let px = theme
             .metric_by_key("component.empty.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.empty.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)

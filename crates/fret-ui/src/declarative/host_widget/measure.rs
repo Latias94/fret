@@ -86,10 +86,20 @@ fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap
         AvailableSpace::Definite(px) => Some(px),
         AvailableSpace::MaxContent => None,
         AvailableSpace::MinContent => match wrap {
-            // Model `TextWrap::Word` as "break when needed" for min-content sizing. This keeps the
-            // layout engine honest when it probes intrinsic sizes and later assigns a smaller
-            // definite width (e.g. flex/grid shrink), avoiding multi-line paint overflows.
-            TextWrap::Word | TextWrap::Grapheme => Some(Px(0.0)),
+            // Taffy probes text intrinsic sizes using min/max-content constraints.
+            //
+            // For `TextWrap::Grapheme`, min-content can legitimately approach the width of a single
+            // cluster, so a "near-zero" wrap width is a reasonable approximation.
+            //
+            // For `TextWrap::Word`, treating min-content as near-zero is *pathological* for common
+            // UI labels/headings: it forces mid-word wrapping during intrinsic sizing, and when the
+            // parent uses those intrinsic widths (e.g. `items_start()` stacks), it produces narrow
+            // text nodes like `Multipl\ne`.
+            //
+            // Until we have a proper "longest word" intrinsic measurement path, treat word-wrap
+            // min-content as unconstrained (max-content) to avoid surprising layout.
+            TextWrap::Grapheme => Some(Px(0.0)),
+            TextWrap::Word => None,
             TextWrap::None => None,
         },
     }

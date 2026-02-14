@@ -124,3 +124,34 @@ fn web_vs_fret_layout_badge_demo_heights() {
     .expect("fret badge outline");
     assert_badge_height("badge outline height", fret_outline, web_outline.rect.h);
 }
+
+fn first_text_color(el: &AnyElement) -> Option<fret_core::Color> {
+    match &el.kind {
+        fret_ui::element::ElementKind::Text(props) => props.color,
+        _ => el.children.iter().find_map(first_text_color),
+    }
+}
+
+#[test]
+fn fret_badge_destructive_label_color_is_white_like_shadcn() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(200.0)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let _snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let theme = Theme::global(&*cx.app).clone();
+        let badge = fret_ui_shadcn::Badge::new("Destructive")
+            .variant(fret_ui_shadcn::BadgeVariant::Destructive)
+            .into_element(cx);
+
+        let expected = theme
+            .color_by_key("white")
+            .unwrap_or_else(|| theme.color_token("destructive-foreground"));
+        let actual = first_text_color(&badge).expect("expected Text node under badge");
+        assert_eq!(actual, expected);
+
+        Vec::new()
+    });
+}

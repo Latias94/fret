@@ -1,6 +1,6 @@
 use fret_core::{Point, Px, Transform2D};
 use fret_icons::{IconId, ids};
-use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SvgIconProps, VisualTransformProps};
 use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::icon as icon_runtime;
 use fret_ui_kit::declarative::scheduling;
@@ -72,7 +72,7 @@ impl Spinner {
             .color
             .map(|c| c.resolve(&theme))
             .or_else(|| theme.color_by_key("foreground"))
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let svg: SvgSource = icon_runtime::resolve_svg_source_from_globals(
             cx.app,
@@ -91,6 +91,12 @@ impl Spinner {
 
         cx.visual_transform_props(VisualTransformProps { layout, transform }, |cx| {
             let mut props = SvgIconProps::new(svg);
+            props.layout = {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Fill;
+                layout
+            };
             props.color = color;
             vec![cx.svg_icon_props(props)]
         })

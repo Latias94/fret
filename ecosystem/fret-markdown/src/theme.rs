@@ -46,37 +46,36 @@ impl MarkdownTheme {
                 .or_else(|| theme.metric_by_key(&format!("markdown.{suffix}")))
         }
 
-        let link = color(theme, "link").unwrap_or_else(|| theme.color_required("primary"));
-        let muted =
-            color(theme, "muted").unwrap_or_else(|| theme.color_required("muted-foreground"));
-        let hr = color(theme, "hr").unwrap_or_else(|| theme.color_required("border"));
+        let link = color(theme, "link").unwrap_or_else(|| theme.color_token("primary"));
+        let muted = color(theme, "muted").unwrap_or_else(|| theme.color_token("muted-foreground"));
+        let hr = color(theme, "hr").unwrap_or_else(|| theme.color_token("border"));
 
         let blockquote_border =
-            color(theme, "blockquote.border").unwrap_or_else(|| theme.color_required("border"));
+            color(theme, "blockquote.border").unwrap_or_else(|| theme.color_token("border"));
         let blockquote_border_width = metric(theme, "blockquote.border_width").unwrap_or(Px(3.0));
         let blockquote_padding = metric(theme, "blockquote.padding")
-            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+            .unwrap_or_else(|| theme.metric_token("metric.padding.sm"));
 
         let inline_code_fg =
-            color(theme, "inline_code.fg").unwrap_or_else(|| theme.color_required("foreground"));
+            color(theme, "inline_code.fg").unwrap_or_else(|| theme.color_token("foreground"));
         let inline_code_bg =
-            color(theme, "inline_code.bg").unwrap_or_else(|| theme.color_required("accent"));
+            color(theme, "inline_code.bg").unwrap_or_else(|| theme.color_token("accent"));
         let inline_code_padding_x = metric(theme, "inline_code.padding_x").unwrap_or(Px(3.0));
         let inline_code_padding_y = metric(theme, "inline_code.padding_y").unwrap_or(Px(1.0));
 
         let task_checked =
-            color(theme, "task.checked").unwrap_or_else(|| theme.color_required("primary"));
-        let task_unchecked = color(theme, "task.unchecked")
-            .unwrap_or_else(|| theme.color_required("muted-foreground"));
+            color(theme, "task.checked").unwrap_or_else(|| theme.color_token("primary"));
+        let task_unchecked =
+            color(theme, "task.unchecked").unwrap_or_else(|| theme.color_token("muted-foreground"));
 
         let table_border =
-            color(theme, "table.border").unwrap_or_else(|| theme.color_required("border"));
+            color(theme, "table.border").unwrap_or_else(|| theme.color_token("border"));
         let table_header_bg =
-            color(theme, "table.header_bg").unwrap_or_else(|| theme.color_required("muted"));
+            color(theme, "table.header_bg").unwrap_or_else(|| theme.color_token("muted"));
         let table_cell_padding_x = metric(theme, "table.cell.padding_x")
-            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+            .unwrap_or_else(|| theme.metric_token("metric.padding.sm"));
         let table_cell_padding_y = metric(theme, "table.cell.padding_y")
-            .unwrap_or_else(|| Px(theme.metric_required("metric.padding.sm").0 * 0.5));
+            .unwrap_or_else(|| Px(theme.metric_token("metric.padding.sm").0 * 0.5));
 
         let inline_math_fg = color(theme, "math.inline.fg").unwrap_or(inline_code_fg);
         let inline_math_bg = color(theme, "math.inline.bg").unwrap_or(inline_code_bg);
@@ -86,18 +85,18 @@ impl MarkdownTheme {
             metric(theme, "math.inline.padding_y").unwrap_or(inline_code_padding_y);
         #[cfg(feature = "mathjax-svg")]
         let inline_math_height = metric(theme, "math.inline.height")
-            .unwrap_or_else(|| theme.metric_required("metric.font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("metric.font.line_height"));
 
         let math_block_fg =
-            color(theme, "math.block.fg").unwrap_or_else(|| theme.color_required("foreground"));
+            color(theme, "math.block.fg").unwrap_or_else(|| theme.color_token("foreground"));
         let math_block_bg =
-            color(theme, "math.block.bg").unwrap_or_else(|| theme.color_required("card"));
+            color(theme, "math.block.bg").unwrap_or_else(|| theme.color_token("card"));
         let math_block_padding = metric(theme, "math.block.padding")
-            .unwrap_or_else(|| theme.metric_required("metric.padding.md"));
+            .unwrap_or_else(|| theme.metric_token("metric.padding.md"));
         #[cfg(feature = "mathjax-svg")]
         let math_block_height = metric(theme, "math.block.height").unwrap_or_else(|| {
-            let font_size = theme.metric_required("metric.font.size").0;
-            let line_height = theme.metric_required("metric.font.line_height").0;
+            let font_size = theme.metric_token("metric.font.size").0;
+            let line_height = theme.metric_token("metric.font.line_height").0;
             Px((line_height * 3.25).max(font_size * 4.0))
         });
 

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
@@ -111,10 +112,15 @@ pub enum PopoverModalMode {
     TrapFocus,
 }
 
-const POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY_FRAMES: u32 =
-    overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+const POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY: Duration = Duration::from_millis(300);
 const POPOVER_OPEN_ON_HOVER_DEFAULT_CLOSE_DELAY_FRAMES: u32 = 0;
 const POPOVER_OPEN_ON_HOVER_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
+
+fn popover_open_on_hover_default_open_delay_frames() -> u32 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+        POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY,
+    ) as u32
+}
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -284,7 +290,7 @@ impl Popover {
             consume_outside_pointer_events: false,
             modal_mode: PopoverModalMode::NonModal,
             open_on_hover: false,
-            hover_open_delay_frames: POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY_FRAMES,
+            hover_open_delay_frames: popover_open_on_hover_default_open_delay_frames(),
             hover_close_delay_frames: POPOVER_OPEN_ON_HOVER_DEFAULT_CLOSE_DELAY_FRAMES,
             auto_focus: None,
             initial_focus: None,
@@ -689,15 +695,16 @@ impl Popover {
                 radix_popover::popover_root_name(trigger_id)
             };
 
-            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                cx,
-                is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                0.95,
-                1.0,
-                overlay_motion::shadcn_ease,
-            );
+            let motion =
+                radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                    cx,
+                    is_open,
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    0.95,
+                    1.0,
+                    overlay_motion::shadcn_motion_ease_bezier(cx),
+                );
             let (open_change, open_change_complete) =
                 cx.with_state(PopoverOpenChangeCallbackState::default, |state| {
                     popover_open_change_events(state, is_open, motion.present, motion.animating)
@@ -754,7 +761,7 @@ impl Popover {
                 let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
                     theme
                         .metric_by_key("component.popover.arrow_padding")
-                        .unwrap_or_else(|| theme.metric_required("metric.radius.md"))
+                        .unwrap_or_else(|| theme.metric_token("metric.radius.md"))
                 });
 
                 let opacity = motion.opacity;
@@ -870,8 +877,8 @@ impl Popover {
                     let reference_hidden = anchor_fallback
                         .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
 
-                    let bg = theme.color_required("popover.background");
-                    let border = theme.color_required("border");
+                    let bg = theme.color_token("popover.background");
+                    let border = theme.color_token("border");
 
                     let anchor = anchor_fallback.unwrap_or_default();
                     let constrained_height = has_height_constraint_px(hint);
@@ -1274,16 +1281,16 @@ impl PopoverTitle {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("popover.foreground");
+        let fg = theme.color_token("popover.foreground");
 
         let px = theme
             .metric_by_key("component.popover.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.popover.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -1312,16 +1319,16 @@ impl PopoverDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
+            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.popover.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.popover.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -2090,8 +2097,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames =
-            fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(3 + i as u64));
             let _ = render_popover_frame_with_auto_focus_hooks(
@@ -3980,7 +3989,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for i in 0..settle_frames {
             render_frame(&mut ui, &mut app, &mut services, 4 + i);
         }

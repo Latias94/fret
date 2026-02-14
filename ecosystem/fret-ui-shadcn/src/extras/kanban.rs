@@ -586,16 +586,16 @@ impl Kanban {
 
                     let col_el = cx.keyed(col_dnd_id.0, |cx| {
                         let border_color = if over == Some(col_dnd_id) {
-                            theme.color_required("primary")
+                            theme.color_token("primary")
                         } else {
-                            theme.color_required("border")
+                            theme.color_token("border")
                         };
                         let col_chrome = ChromeRefinement::default()
                             .border_1()
                             .rounded(Radius::Md)
-                            .bg(ColorRef::Color(theme.color_required("secondary")))
+                            .bg(ColorRef::Color(theme.color_token("secondary")))
                             .border_color(ColorRef::Color(border_color))
-                            .text_color(ColorRef::Color(theme.color_required("foreground")));
+                            .text_color(ColorRef::Color(theme.color_token("foreground")));
                         let mut col_props =
                             decl_style::container_props(&theme, col_chrome, column_layout.clone());
                         let radius = col_props.corner_radii.top_left;
@@ -1016,18 +1016,18 @@ impl Kanban {
                                     layout.size.height = Length::Auto;
 
                                     let border_color = if over_card {
-                                        theme.color_required("primary")
+                                        theme.color_token("primary")
                                     } else {
-                                        theme.color_required("border")
+                                        theme.color_token("border")
                                     };
 
                                     let card_chrome = ChromeRefinement::default()
                                         .border_1()
                                         .rounded(Radius::Md)
-                                        .bg(ColorRef::Color(theme.color_required("card")))
+                                        .bg(ColorRef::Color(theme.color_token("card")))
                                         .border_color(ColorRef::Color(border_color))
                                         .text_color(ColorRef::Color(
-                                            theme.color_required("card-foreground"),
+                                            theme.color_token("card-foreground"),
                                         ))
                                         .p(Space::N3);
                                     let card_layout = LayoutRefinement::default().w_full();
@@ -1221,16 +1221,14 @@ impl Kanban {
                         ));
 
                         let overlay_el = cx.container(overlay_props, |cx| {
-                            let card_border_color = theme.color_required("primary");
+                            let card_border_color = theme.color_token("primary");
 
                             let card_chrome = ChromeRefinement::default()
                                 .border_1()
                                 .rounded(Radius::Md)
-                                .bg(ColorRef::Color(theme.color_required("card")))
+                                .bg(ColorRef::Color(theme.color_token("card")))
                                 .border_color(ColorRef::Color(card_border_color))
-                                .text_color(ColorRef::Color(
-                                    theme.color_required("card-foreground"),
-                                ))
+                                .text_color(ColorRef::Color(theme.color_token("card-foreground")))
                                 .p(Space::N3);
                             let card_layout = LayoutRefinement::default().size_full();
 

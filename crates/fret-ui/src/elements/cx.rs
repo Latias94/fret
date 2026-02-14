@@ -314,6 +314,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
         self.stack = prev_stack;
         self.callsite_counters = prev_counters;
+        debug_assert_eq!(self.callsite_counters.len(), self.stack.len());
         out
     }
 
@@ -678,6 +679,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let _ = (overlay_root_name, anchor_element, content_element, trace);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn diagnostics_record_overlay_placement_placed_rect(
         &mut self,
         overlay_root_name: Option<&str>,

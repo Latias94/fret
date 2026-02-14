@@ -120,6 +120,10 @@ mod tests {
             self.frame_id
         }
 
+        fn next_share_sheet_token(&mut self) -> fret_core::ShareSheetToken {
+            fret_core::ShareSheetToken(0)
+        }
+
         fn next_timer_token(&mut self) -> TimerToken {
             let token = TimerToken(self.next_timer_token);
             self.next_timer_token += 1;

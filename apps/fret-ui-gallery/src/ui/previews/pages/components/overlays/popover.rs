@@ -117,11 +117,18 @@ pub(in crate::ui) fn preview_popover(
                             .items_center(),
                         move |cx| {
                             vec![
-                                ui::label(cx, label)
-                                    .layout(
-                                        LayoutRefinement::default().w_px(Px(96.0)).flex_shrink_0(),
-                                    )
-                                    .into_element(cx),
+                                stack::hstack(
+                                    cx,
+                                    stack::HStackProps::default()
+                                        .layout(
+                                            LayoutRefinement::default()
+                                                .w_px(Px(96.0))
+                                                .flex_shrink_0(),
+                                        )
+                                        .justify_end()
+                                        .items_center(),
+                                    move |cx| vec![ui::label(cx, label).into_element(cx)],
+                                ),
                                 shadcn::Input::new(model)
                                     .size(fret_ui_kit::Size::Small)
                                     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())

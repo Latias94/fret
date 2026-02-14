@@ -15,7 +15,7 @@ pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: Do
 }
 
 pub(super) fn tab_close_rect(theme: fret_ui::ThemeSnapshot, tab_rect: Rect) -> Rect {
-    let pad = theme.metric_required("metric.padding.sm").0.max(0.0);
+    let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
     let x = tab_rect.origin.x.0 + tab_rect.size.width.0 - pad - DOCK_TAB_CLOSE_SIZE.0;
     let y = tab_rect.origin.y.0 + (tab_rect.size.height.0 - DOCK_TAB_CLOSE_SIZE.0) * 0.5;
     Rect::new(
@@ -127,6 +127,7 @@ pub(super) fn hit_test_split_handle(
     split_handle_gap: Px,
     split_handle_hit_thickness: Px,
     position: Point,
+    mut min_px_for_split: impl FnMut(DockNodeId, fret_core::Axis, &[DockNodeId]) -> Vec<Px>,
 ) -> Option<DividerDragState> {
     for (&node, &bounds) in layout.iter() {
         let Some(DockNode::Split {
@@ -144,6 +145,7 @@ pub(super) fn hit_test_split_handle(
             continue;
         }
 
+        let min_px = min_px_for_split(node, *axis, children);
         let computed = resizable::compute_layout(
             *axis,
             bounds,
@@ -151,7 +153,7 @@ pub(super) fn hit_test_split_handle(
             fractions,
             split_handle_gap,
             split_handle_hit_thickness,
-            &[],
+            &min_px,
         );
         for (handle_ix, rect) in computed.handle_hit_rects.iter().enumerate() {
             if !rect.contains(position) {

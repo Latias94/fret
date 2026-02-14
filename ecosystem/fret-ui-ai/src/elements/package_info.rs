@@ -84,7 +84,7 @@ fn muted_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
 fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
@@ -93,7 +93,7 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         size,
         weight,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
     }
 }
@@ -294,7 +294,7 @@ impl PackageInfo {
             .border_1()
             .bg(ColorRef::Token {
                 key: "background",
-                fallback: ColorFallback::Color(theme.color_required("background")),
+                fallback: ColorFallback::Color(theme.color_token("background")),
             })
             .p(Space::N4)
             .merge(self.chrome);
@@ -453,7 +453,7 @@ impl PackageInfoName {
             text: label,
             style: Some(monospace_style(
                 &theme,
-                theme.metric_required("component.text.sm_px"),
+                theme.metric_token("component.text.sm_px"),
                 FontWeight::MEDIUM,
             )),
             color: None,
@@ -597,7 +597,7 @@ impl PackageInfoVersion {
                 text: current.clone(),
                 style: Some(monospace_style(
                     &theme,
-                    theme.metric_required("component.text.sm_px"),
+                    theme.metric_token("component.text.sm_px"),
                     FontWeight::NORMAL,
                 )),
                 color: Some(muted_fg(&theme)),
@@ -619,7 +619,7 @@ impl PackageInfoVersion {
                 text: new.clone(),
                 style: Some(monospace_style(
                     &theme,
-                    theme.metric_required("component.text.sm_px"),
+                    theme.metric_token("component.text.sm_px"),
                     FontWeight::MEDIUM,
                 )),
                 color: None,
@@ -691,10 +691,10 @@ impl PackageInfoDescription {
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metric_required("component.text.sm_px"),
+                size: theme.metric_token("component.text.sm_px"),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("component.text.sm_line_height")),
+                line_height: Some(theme.metric_token("component.text.sm_line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(muted_fg(&theme)),
@@ -757,7 +757,7 @@ impl PackageInfoContent {
             top: Px(1.0),
             bottom: Px(0.0),
         };
-        props.border_color = Some(theme.color_required("border"));
+        props.border_color = Some(theme.color_token("border"));
 
         cx.container(props, move |_cx| self.children)
     }
@@ -796,10 +796,10 @@ impl PackageInfoDependencies {
             text: Arc::<str>::from("Dependencies"),
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metric_required("component.text.xs_px"),
+                size: theme.metric_token("component.text.xs_px"),
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("component.text.xs_line_height")),
+                line_height: Some(theme.metric_token("component.text.xs_line_height")),
                 letter_spacing_em: Some(0.08),
             }),
             color: Some(muted_fg(&theme)),
@@ -873,7 +873,7 @@ impl PackageInfoDependency {
             text: self.name,
             style: Some(monospace_style(
                 &theme,
-                theme.metric_required("component.text.sm_px"),
+                theme.metric_token("component.text.sm_px"),
                 FontWeight::NORMAL,
             )),
             color: Some(muted_fg(&theme)),
@@ -895,7 +895,7 @@ impl PackageInfoDependency {
                 text: version,
                 style: Some(monospace_style(
                     &theme,
-                    theme.metric_required("component.text.xs_px"),
+                    theme.metric_token("component.text.xs_px"),
                     FontWeight::NORMAL,
                 )),
                 color: None,

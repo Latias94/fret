@@ -48,11 +48,11 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 fn plan_base_chrome(theme: &Theme) -> ChromeRefinement {
-    let bg = theme.color_required("card");
-    let border = theme.color_required("border");
+    let bg = theme.color_token("card");
+    let border = theme.color_token("border");
 
     // shadcn/ui v4 Card uses `rounded-xl`, which is derived from the base `--radius`.
-    let base_radius = theme.metric_required("metric.radius.lg");
+    let base_radius = theme.metric_token("metric.radius.lg");
     let rounded_xl = Px(base_radius.0 + 4.0);
 
     ChromeRefinement::default()
@@ -384,7 +384,7 @@ impl PlanTrigger {
             cx,
             ids::ui::CHEVRON_DOWN,
             Some(icon_size),
-            Some(ColorRef::Color(theme.color_required("muted-foreground"))),
+            Some(ColorRef::Color(theme.color_token("muted-foreground"))),
         );
 
         let mut button = Button::new(self.a11y_label)

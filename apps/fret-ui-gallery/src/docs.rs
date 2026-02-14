@@ -80,6 +80,162 @@ let marquee = magic::marquee(cx, props, |cx| vec![/* repeated content */]);
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_LENS: &str = r#"
+## Lens (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Uses `MaskLayer` (ADR 0239) to alpha-mask a zoomed copy of the subtree.
+- Uses `VisualTransform` to scale about the current pointer position.
+- Phase 0 keeps the implementation simple by **duplicating the subtree** (base + zoomed copy).
+
+Non-goals (v1):
+
+- Perfect React/Motion animation parity.
+- Supporting interactive children without duplicated state.
+"#;
+
+pub(crate) const USAGE_MAGIC_LENS: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let lens = magic::lens(cx, magic::LensProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_BORDER_BEAM: &str = r#"
+## BorderBeam (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Animates a moving highlight around the border using a runner-owned frame clock (ADR 0240).
+- Renders glow via `GaussianBlur` + additive compositing groups (ADR 0247).
+- Uses `Paint::RadialGradient` for Phase 0; a future revision may switch to a Tier B material kind.
+
+Non-goals (v1):
+
+- Pixel-perfect CSS conic-gradient parity.
+- Exposing custom shader code at the component layer.
+"#;
+
+pub(crate) const USAGE_MAGIC_BORDER_BEAM: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let card = magic::border_beam(cx, magic::BorderBeamProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_DOCK: &str = r#"
+## Dock (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI / macOS dock-style affordances:
+
+- Items are magnified based on pointer proximity.
+- The implementation uses a pointer region + a small model to store the last pointer position.
+- Hover is used to gate magnification without needing pointer-leave callbacks.
+
+Non-goals (v1):
+
+- Pixel-perfect spring smoothing and bounce physics (can be layered on later).
+- A full “roving focus + typeahead” dock interaction policy.
+"#;
+
+pub(crate) const USAGE_MAGIC_DOCK: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let dock = magic::dock(cx, magic::DockProps::default(), |cx| {
+    vec![
+        cx.text(\"A\"),
+        cx.text(\"B\"),
+        cx.text(\"C\"),
+    ]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_PATTERNS: &str = r#"
+## Patterns (fret-ui-magic)
+
+This page demonstrates a small set of “creative parity” pattern backgrounds built on Tier B
+procedural materials (ADR 0235).
+
+- Patterns are expressed as `Paint::Material { id, params }` on `ContainerProps.background_paint`.
+- `MaterialId`s are renderer-controlled and registered via an app-owned `VisualCatalog` (ADR 0245).
+- Determinism is explicit: authors provide `seed` (and optionally `phase`), and no hidden time is used.
+
+Non-goals (v1):
+
+- Pixel-perfect CSS/SVG pattern parity.
+- Arbitrary shader authoring at the component layer.
+"#;
+
+pub(crate) const USAGE_MAGIC_PATTERNS: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let dot = magic::dot_pattern(cx, magic::DotPatternProps::default(), |cx| {
+    vec![cx.text(\"DotGrid\")]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_SPARKLES_TEXT: &str = r#"
+## SparklesText (fret-ui-magic)
+
+This is a Phase 0 “SparklesText-like” wrapper inspired by MagicUI.
+
+The v1 implementation:
+
+- draws a deterministic sparkle field procedural material (Tier B, ADR 0235),
+- animates using the runner-owned frame clock (ADR 0240) when motion is allowed,
+- respects `prefers-reduced-motion` (static sparkle field),
+- uses additive compositing (ADR 0247) to layer sparkles over the child content.
+
+Non-goals (v1):
+
+- Clipping sparkles to glyph alpha (requires a richer alpha mask substrate than v1 gradient masks).
+"#;
+
+pub(crate) const USAGE_MAGIC_SPARKLES_TEXT: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let sparkle = magic::sparkles_text(cx, magic::SparklesTextProps::default(), |cx| {
+    vec![cx.text(\"Sparkles\")]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_BLOOM: &str = r#"
+## Bloom (fret-ui-kit recipe)
+
+This demo is a “bloom-like” example built from:
+
+- `EffectStep::ColorMatrix` (luma-to-alpha),
+- `EffectStep::AlphaThreshold`,
+- `EffectStep::GaussianBlur`,
+- additive compositing groups (ADR 0247).
+
+It is meant as a Tier B authoring example (ADR 0236) rather than a pixel-perfect reproduction of any
+single web implementation.
+"#;
+
+pub(crate) const USAGE_MAGIC_BLOOM: &str = r#"
+```rust
+use fret_ui_kit::declarative::bloom::{BloomPanelProps, bloom_panel};
+
+let panel = bloom_panel(cx, BloomPanelProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_CARD: &str = r#"
 ## MagicCard (fret-ui-magic)
 
@@ -352,6 +508,27 @@ pub(crate) const USAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
 // - shift-click / drag: extend selection from the current anchor
 //
 // Try the selectable samples above to validate editor-like text selection on BiDi strings.
+```
+"#;
+
+pub(crate) const DOC_TEXT_MIXED_SCRIPT_FALLBACK: &str = r#"
+## Text mixed-script fallback (bundled fonts)
+
+This page is a small correctness harness for **mixed-script fallback**:
+
+- Latin (UI font)
+- CJK (common fallback)
+- Emoji (color font)
+
+It is designed to remain meaningful even when system fonts are disabled (see `FRET_TEXT_SYSTEM_FONTS=0`),
+by explicitly injecting the bundled font set on first render.
+"#;
+
+pub(crate) const USAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = r#"
+```rust
+// Expectation:
+// - missing/tofu glyphs should remain 0 for the provided sample strings
+// - a font trace should exist if missing glyphs ever regress
 ```
 "#;
 
@@ -2898,12 +3075,13 @@ let field = shadcn::Field::new(vec![
 pub(crate) const DOC_ALERT: &str = r#"
 ## Alert
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/alert.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx`.
 "#;
 
 pub(crate) const USAGE_ALERT: &str = r#"
 ```rust
 let alert = shadcn::Alert::new(vec![
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.terminal")),
     shadcn::AlertTitle::new("Heads up!").into_element(cx),
     shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
 ])
@@ -2914,7 +3092,7 @@ let alert = shadcn::Alert::new(vec![
 pub(crate) const DOC_ALERT_DIALOG: &str = r#"
 ## Alert Dialog
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`.
 "#;
 
 pub(crate) const USAGE_ALERT_DIALOG: &str = r#"

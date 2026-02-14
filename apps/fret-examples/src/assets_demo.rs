@@ -203,7 +203,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
                 layout: Default::default(),
                 text: Arc::from(line),
                 style: None,
-                color: Some(theme.color_required("muted-foreground")),
+                color: Some(theme.color_token("muted-foreground")),
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
             })
@@ -237,7 +237,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
             .items_center()
             .into_element(cx)]
     })
-    .bg(ColorRef::Color(theme.color_required("muted")))
+    .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .w_full()
     .h_full()
@@ -272,7 +272,7 @@ fn render_image_panel(
         }
     })
     .border_1()
-    .border_color(ColorRef::Color(theme.color_required("border")))
+    .border_color(ColorRef::Color(theme.color_token("border")))
     .rounded(Radius::Lg)
     .w_px(fret_core::Px(160.0))
     .h_px(fret_core::Px(160.0))
@@ -329,7 +329,7 @@ fn render_svg_panel(
                 .h_px(fret_core::Px(160.0)),
         );
         props.fit = fret_core::SvgFit::Contain;
-        props.color = theme.color_required("foreground");
+        props.color = theme.color_token("foreground");
         Some(props)
     } else {
         None
@@ -346,7 +346,7 @@ fn render_svg_panel(
         None => [cx.spinner()],
     })
     .border_1()
-    .border_color(ColorRef::Color(theme.color_required("border")))
+    .border_color(ColorRef::Color(theme.color_token("border")))
     .rounded(Radius::Lg)
     .p(Space::N4)
     .into_element(cx);

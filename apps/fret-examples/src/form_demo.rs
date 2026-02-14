@@ -238,7 +238,7 @@ impl WinitAppDriver for FormDemoDriver {
                     cx.observe_model(&status, Invalidation::Layout);
 
                     let theme = cx.theme_snapshot();
-                    let padding = theme.metric_required("metric.padding.md");
+                    let padding = theme.metric_token("metric.padding.md");
 
                     let (submit_count, valid, dirty) = cx
                         .app
@@ -342,7 +342,7 @@ impl WinitAppDriver for FormDemoDriver {
                     vec![cx.container(
                         ContainerProps {
                             layout: root_layout,
-                            background: Some(theme.color_required("background")),
+                            background: Some(theme.color_token("background")),
                             ..Default::default()
                         },
                         move |cx| {
@@ -366,9 +366,9 @@ impl WinitAppDriver for FormDemoDriver {
                                                     ..Default::default()
                                                 },
                                                 border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_required("border")),
+                                                border_color: Some(theme.color_token("border")),
                                                 corner_radii: Corners::all(
-                                                    theme.metric_required("metric.radius.md"),
+                                                    theme.metric_token("metric.radius.md"),
                                                 ),
                                                 ..Default::default()
                                             },

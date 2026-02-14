@@ -9,7 +9,7 @@ pub(in crate::ui) fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -
         props.layout.size.width = Length::Px(size);
         props.layout.size.height = Length::Px(size);
         props.background =
-            Some(cx.with_theme(|theme| theme.color_required("md.sys.color.surface-container-low")));
+            Some(cx.with_theme(|theme| theme.color_token("md.sys.color.surface-container-low")));
         props.corner_radii = Corners::all(Px(8.0));
         cx.container(props, |_cx| Vec::<AnyElement>::new())
             .test_id(test_id)

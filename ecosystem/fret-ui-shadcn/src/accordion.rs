@@ -29,11 +29,11 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.accordion.trigger.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.accordion.trigger.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -104,6 +104,7 @@ pub mod composable {
     pub struct AccordionTrigger {
         disabled: bool,
         a11y_label: Option<Arc<str>>,
+        test_id: Option<Arc<str>>,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
         children: Vec<AnyElement>,
@@ -114,6 +115,7 @@ pub mod composable {
             f.debug_struct("AccordionTrigger")
                 .field("disabled", &self.disabled)
                 .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+                .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
                 .field("chrome", &self.chrome)
                 .field("layout", &self.layout)
                 .field("children_len", &self.children.len())
@@ -127,6 +129,7 @@ pub mod composable {
             Self {
                 disabled: false,
                 a11y_label: None,
+                test_id: None,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
                 children,
@@ -140,6 +143,11 @@ pub mod composable {
 
         pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
             self.a11y_label = Some(label.into());
+            self
+        }
+
+        pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+            self.test_id = Some(id.into());
             self
         }
 
@@ -164,8 +172,9 @@ pub mod composable {
             let theme = Theme::global(&*cx.app).clone();
 
             let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
+            let test_id = self.test_id;
             let text_style = trigger_text_style(&theme);
-            let fg = theme.color_required("foreground");
+            let fg = theme.color_token("foreground");
             let radius = MetricRef::radius(Radius::Md).resolve(&theme);
 
             let pressable_layout = decl_style::layout_style(
@@ -178,7 +187,7 @@ pub mod composable {
             let chrome = self.chrome;
             let children = self.children;
 
-            radix_accordion::AccordionTrigger::new(value.clone())
+            let trigger = radix_accordion::AccordionTrigger::new(value.clone())
                 .label(a11y_label.clone())
                 .disabled(!enabled)
                 .tab_stop(focusable)
@@ -215,7 +224,7 @@ pub mod composable {
                             move |cx| {
                                 let chevron_fg = theme
                                     .color_by_key("muted-foreground")
-                                    .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                                    .unwrap_or_else(|| theme.color_token("muted-foreground"));
                                 let chevron_layout = decl_style::layout_style(
                                     &theme,
                                     LayoutRefinement::default()
@@ -303,12 +312,19 @@ pub mod composable {
                             },
                         )]
                     },
-                )
+                );
+
+            if let Some(test_id) = test_id {
+                trigger.test_id(test_id)
+            } else {
+                trigger
+            }
         }
     }
 
     #[derive(Clone)]
     pub struct AccordionContent {
+        test_id: Option<Arc<str>>,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
         children: Vec<AnyElement>,
@@ -317,6 +333,7 @@ pub mod composable {
     impl std::fmt::Debug for AccordionContent {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("AccordionContent")
+                .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
                 .field("chrome", &self.chrome)
                 .field("layout", &self.layout)
                 .field("children_len", &self.children.len())
@@ -328,10 +345,16 @@ pub mod composable {
         pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
             let children = children.into_iter().collect();
             Self {
+                test_id: None,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
                 children,
             }
+        }
+
+        pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+            self.test_id = Some(id.into());
+            self
         }
 
         pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -380,6 +403,7 @@ pub mod composable {
         value: Arc<str>,
         trigger: Option<AccordionTrigger>,
         content: Option<AccordionContent>,
+        test_id: Option<Arc<str>>,
         disabled: bool,
         layout: LayoutRefinement,
         chrome: ChromeRefinement,
@@ -389,6 +413,7 @@ pub mod composable {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("AccordionItem")
                 .field("value", &self.value.as_ref())
+                .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
                 .field("disabled", &self.disabled)
                 .field("layout", &self.layout)
                 .field("chrome", &self.chrome)
@@ -402,6 +427,7 @@ pub mod composable {
                 value: value.into(),
                 trigger: None,
                 content: None,
+                test_id: None,
                 disabled: false,
                 layout: LayoutRefinement::default(),
                 chrome: ChromeRefinement::default(),
@@ -415,6 +441,11 @@ pub mod composable {
 
         pub fn content(mut self, content: AccordionContent) -> Self {
             self.content = Some(content);
+            self
+        }
+
+        pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+            self.test_id = Some(id.into());
             self
         }
 
@@ -729,6 +760,8 @@ pub mod composable {
                                 let theme = theme.clone();
                                 let value = item.value.clone();
                                 let content = content.clone();
+                                let content_test_id = content.test_id.clone();
+                                let item_test_id = item.test_id.clone();
 
                                 let mut props = decl_style::container_props(
                                     &theme,
@@ -745,7 +778,7 @@ pub mod composable {
                                     props.border.bottom = Px(0.0);
                                 }
 
-                                out.push(cx.container(props, move |cx| {
+                                let item_el = cx.container(props, move |cx| {
                                     let mut children = Vec::new();
 
                                     let motion =
@@ -806,6 +839,13 @@ pub mod composable {
                                             let wrapper_el =
                                                 AnyElement::new(content_id, wrapper_kind, children);
 
+                                            let wrapper_el =
+                                                if let Some(test_id) = content_test_id.clone() {
+                                                    wrapper_el.test_id(test_id)
+                                                } else {
+                                                    wrapper_el
+                                                };
+
                                             (content_id, Some(wrapper_el))
                                         });
 
@@ -824,7 +864,13 @@ pub mod composable {
                                     }
 
                                     children
-                                }));
+                                });
+
+                                out.push(if let Some(test_id) = item_test_id {
+                                    item_el.test_id(test_id)
+                                } else {
+                                    item_el
+                                });
                             }
 
                             out
@@ -853,6 +899,7 @@ enum AccordionModel {
 pub struct AccordionTrigger {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
@@ -863,6 +910,7 @@ impl std::fmt::Debug for AccordionTrigger {
         f.debug_struct("AccordionTrigger")
             .field("disabled", &self.disabled)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("children_len", &self.children.len())
@@ -876,6 +924,7 @@ impl AccordionTrigger {
         Self {
             disabled: false,
             a11y_label: None,
+            test_id: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             children,
@@ -889,6 +938,11 @@ impl AccordionTrigger {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -913,8 +967,9 @@ impl AccordionTrigger {
         let theme = Theme::global(&*cx.app).clone();
 
         let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
+        let test_id = self.test_id;
         let text_style = trigger_text_style(&theme);
-        let fg = theme.color_required("foreground");
+        let fg = theme.color_token("foreground");
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
 
         let pressable_layout = decl_style::layout_style(
@@ -927,7 +982,7 @@ impl AccordionTrigger {
         let chrome = self.chrome;
         let children = self.children;
 
-        radix_accordion::AccordionTrigger::new(value.clone())
+        let trigger = radix_accordion::AccordionTrigger::new(value.clone())
             .label(a11y_label.clone())
             .disabled(!enabled)
             .tab_stop(focusable)
@@ -963,7 +1018,7 @@ impl AccordionTrigger {
                         move |cx| {
                             let chevron_fg = theme
                                 .color_by_key("muted-foreground")
-                                .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                                .unwrap_or_else(|| theme.color_token("muted-foreground"));
                             let chevron_layout = decl_style::layout_style(
                                 &theme,
                                 LayoutRefinement::default()
@@ -1050,12 +1105,19 @@ impl AccordionTrigger {
                         },
                     )]
                 },
-            )
+            );
+
+        if let Some(test_id) = test_id {
+            trigger.test_id(test_id)
+        } else {
+            trigger
+        }
     }
 }
 
 #[derive(Clone)]
 pub struct AccordionContent {
+    test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
@@ -1064,6 +1126,7 @@ pub struct AccordionContent {
 impl std::fmt::Debug for AccordionContent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AccordionContent")
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("children_len", &self.children.len())
@@ -1075,10 +1138,16 @@ impl AccordionContent {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self {
+            test_id: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             children,
         }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -1127,6 +1196,7 @@ pub struct AccordionItem {
     value: Arc<str>,
     trigger: AccordionTrigger,
     content: AccordionContent,
+    test_id: Option<Arc<str>>,
     disabled: bool,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
@@ -1136,6 +1206,7 @@ impl std::fmt::Debug for AccordionItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AccordionItem")
             .field("value", &self.value.as_ref())
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("disabled", &self.disabled)
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
@@ -1153,10 +1224,16 @@ impl AccordionItem {
             value: value.into(),
             trigger,
             content,
+            test_id: None,
             disabled: false,
             layout: LayoutRefinement::default(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -1458,6 +1535,8 @@ impl Accordion {
                             let content = item.content;
                             let theme = theme.clone();
                             let value = item.value.clone();
+                            let content_test_id = content.test_id.clone();
+                            let item_test_id = item.test_id.clone();
 
                             let mut props = decl_style::container_props(
                                 &theme,
@@ -1474,7 +1553,7 @@ impl Accordion {
                                 props.border.bottom = Px(0.0);
                             }
 
-                            out.push(cx.container(props, move |cx| {
+                            let item_el = cx.container(props, move |cx| {
                                 let mut children = Vec::new();
 
                                 let motion = cx.keyed(("accordion-motion", value.clone()), |cx| {
@@ -1532,6 +1611,13 @@ impl Accordion {
                                         let wrapper_el =
                                             AnyElement::new(content_id, wrapper_kind, children);
 
+                                        let wrapper_el =
+                                            if let Some(test_id) = content_test_id.clone() {
+                                                wrapper_el.test_id(test_id)
+                                            } else {
+                                                wrapper_el
+                                            };
+
                                         (content_id, Some(wrapper_el))
                                     });
 
@@ -1559,7 +1645,13 @@ impl Accordion {
                                     },
                                     move |_cx| children,
                                 )]
-                            }));
+                            });
+
+                            out.push(if let Some(test_id) = item_test_id {
+                                item_el.test_id(test_id)
+                            } else {
+                                item_el
+                            });
                         }
 
                         out

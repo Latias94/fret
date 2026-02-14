@@ -119,6 +119,53 @@ pub(super) fn basic(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -
     helpers::section_card(cx, "Basic", content)
 }
 
+pub(super) fn long_list(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
+    let items: Vec<shadcn::ComboboxItem> = (0..250)
+        .map(|i| {
+            let value = format!("{i:03}");
+            let label = format!("Item {i:03}");
+            shadcn::ComboboxItem::new(value, label)
+        })
+        .collect();
+
+    let combo = shadcn::Combobox::new(
+        models.long_list_value.clone(),
+        models.long_list_open.clone(),
+    )
+    .a11y_label("Combobox long list")
+    .width(Px(320.0))
+    .placeholder("Pick an item")
+    .query_model(models.long_list_query.clone())
+    .test_id_prefix("ui-gallery-combobox-long-list")
+    .items(items)
+    .into_element(cx)
+    .test_id("ui-gallery-combobox-long-list-trigger");
+
+    let content = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
+        move |cx| {
+            vec![
+                combo,
+                shadcn::typography::muted(
+                    cx,
+                    "This section exists to support long-list scroll regression gates (and future virtualization invariants).",
+                ),
+                helpers::state_rows(
+                    cx,
+                    &models.long_list_value,
+                    &models.long_list_query,
+                    "ui-gallery-combobox-long-list",
+                ),
+            ]
+        },
+    );
+    helpers::section_card(cx, "Long List", content)
+}
+
 pub(super) fn multiple(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let content = shadcn::typography::muted(
         cx,
@@ -407,6 +454,7 @@ pub(super) fn component_panel(
     custom_items_top: AnyElement,
     multiple_selection: AnyElement,
     basic: AnyElement,
+    long_list: AnyElement,
     multiple: AnyElement,
     clear_button: AnyElement,
     groups: AnyElement,
@@ -435,6 +483,7 @@ pub(super) fn component_panel(
                 custom_items_top,
                 multiple_selection,
                 basic,
+                long_list,
                 multiple,
                 clear_button,
                 groups,

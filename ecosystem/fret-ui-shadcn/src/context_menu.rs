@@ -411,9 +411,9 @@ impl ContextMenuShortcut {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
-        let font_size = theme.metric_required("font.size");
-        let font_line_height = theme.metric_required("font.line_height");
+        let fg = theme.color_token("muted-foreground");
+        let font_size = theme.metric_token("font.size");
+        let font_line_height = theme.metric_token("font.line_height");
 
         ui::text(cx, self.text)
             .layout(LayoutRefinement::default().ml_auto())
@@ -2118,15 +2118,15 @@ fn context_menu_submenu_panel<H: UiHost>(
     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-    let border = theme.color_required("border");
+    let border = theme.color_token("border");
     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
     let panel_chrome = crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Md);
     let ring = decl_style::focus_ring(&theme, radius_sm);
     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
-    let font_size = theme.metric_required("font.size");
-    let font_line_height = theme.metric_required("font.line_height");
+    let font_size = theme.metric_token("font.size");
+    let font_line_height = theme.metric_token("font.line_height");
     let text_style = TextStyle {
         font: fret_core::FontId::default(),
         size: font_size,
@@ -2135,12 +2135,12 @@ fn context_menu_submenu_panel<H: UiHost>(
         line_height: Some(font_line_height),
         letter_spacing_em: None,
     };
-    let text_disabled = alpha_mul(theme.color_required("foreground"), 0.5);
-    let label_fg = theme.color_required("muted-foreground");
-    let accent = theme.color_required("accent");
-    let accent_fg = theme.color_required("accent-foreground");
-    let fg = theme.color_required("foreground");
-    let destructive_fg = theme.color_required("destructive");
+    let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
+    let label_fg = theme.color_token("muted-foreground");
+    let accent = theme.color_token("accent");
+    let accent_fg = theme.color_token("accent-foreground");
+    let fg = theme.color_token("foreground");
+    let destructive_fg = theme.color_token("destructive");
     let destructive_bg = menu_destructive_focus_bg(&theme, destructive_fg);
 
     let labelled_by_element = cx
@@ -2459,14 +2459,14 @@ impl ContextMenu {
                 .layout()
                 .copied()
                 .unwrap_or(false);
-            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
+            let motion = radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::shadcn_motion_duration_100(cx),
+                overlay_motion::shadcn_motion_duration_100(cx),
                 0.95,
                 1.0,
-                overlay_motion::shadcn_ease,
+                overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) =
                 cx.with_state(ContextMenuOpenChangeCallbackState::default, |state| {
@@ -2803,7 +2803,7 @@ impl ContextMenu {
                         .metric_by_key("component.context_menu.max_height")
                         .map(|h| Px(h.0.min(popper_vars.available_height.0)))
                         .unwrap_or(popper_vars.available_height);
-                    let menu_font_line_height = theme.metric_required("font.line_height");
+                    let menu_font_line_height = theme.metric_token("font.line_height");
                     let menu_pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let menu_row_height = Px(menu_font_line_height.0 + menu_pad_y.0 * 2.0);
                     let desired_h =
@@ -2834,14 +2834,14 @@ impl ContextMenu {
                         opening,
                     );
 
-                    let border = theme.color_required("border");
+                    let border = theme.color_token("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
-                    let font_size = theme.metric_required("font.size");
-                    let font_line_height = theme.metric_required("font.line_height");
+                    let font_size = theme.metric_token("font.size");
+                    let font_line_height = theme.metric_token("font.line_height");
                     let text_style = TextStyle {
                         font: fret_core::FontId::default(),
                         size: font_size,
@@ -2850,14 +2850,14 @@ impl ContextMenu {
                         line_height: Some(font_line_height),
                         letter_spacing_em: None,
                     };
-                    let text_disabled = alpha_mul(theme.color_required("foreground"), 0.5);
-                    let label_fg = theme.color_required("muted-foreground");
-                    let accent = theme.color_required("accent");
-                    let accent_fg = theme.color_required("accent-foreground");
-                    let fg = theme.color_required("foreground");
-                    let destructive_fg = theme.color_required("destructive");
+                    let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
+                    let label_fg = theme.color_token("muted-foreground");
+                    let accent = theme.color_token("accent");
+                    let accent_fg = theme.color_token("accent-foreground");
+                    let fg = theme.color_token("foreground");
+                    let destructive_fg = theme.color_token("destructive");
                     let destructive_bg = menu_destructive_focus_bg(&theme, destructive_fg);
-                    let panel_bg = theme.color_required("popover.background");
+                    let panel_bg = theme.color_token("popover.background");
                     let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
 
                     let entries_for_submenu = entries_tree.clone();
@@ -4087,15 +4087,16 @@ mod tests {
 
                 let theme = Theme::global(&*cx.app).clone();
                 let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
-                let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                    cx,
-                    is_open,
-                    overlay_motion::SHADCN_MOTION_TICKS_100,
-                    overlay_motion::SHADCN_MOTION_TICKS_100,
-                    0.95,
-                    1.0,
-                    overlay_motion::shadcn_ease,
-                );
+                let motion =
+                    radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                        cx,
+                        is_open,
+                        overlay_motion::shadcn_motion_duration_100(cx),
+                        overlay_motion::shadcn_motion_duration_100(cx),
+                        0.95,
+                        1.0,
+                        overlay_motion::shadcn_motion_ease_bezier(cx),
+                    );
                 let overlay_presence = OverlayPresence {
                     present: motion.present,
                     interactive: is_open,

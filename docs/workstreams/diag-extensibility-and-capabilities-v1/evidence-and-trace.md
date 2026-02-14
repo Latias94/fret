@@ -7,7 +7,7 @@ scope: diagnostics, automation, evidence, trace, triage
 
 # Diagnostics Extensibility + Capabilities v1 - Evidence & Trace
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Thesis: screenshots and logs are helpful, but self-drawn UI debugging only scales when failures produce
 **structured evidence** with **explainable reasons**.
@@ -83,11 +83,27 @@ Hit-test / routing trace entry fields:
 - `selector` (the selector associated with the injected action)
 - `position` (the injected pointer position)
 - `hit_node_id` (the immediate hit-test result, if any; not stable across runs)
+- `hit_node_path` (debug-only root→leaf path for `hit_node_id`; treat as in-run references only)
 - `hit_semantics_node_id` / `hit_semantics_test_id` (best-effort semantics node observed at that position)
 - `includes_intended` (best-effort: whether the hit semantics matches the intended target)
+- `hit_path_contains_intended` (best-effort: whether the hit-test path contains the intended node id)
 - `barrier_root` / `focus_barrier_root` (in-run references)
+- `pointer_occlusion` / `pointer_occlusion_layer_id` (input arbitration snapshot; explains occlusion)
+- `pointer_occlusion_node_id` / `pointer_occlusion_test_id` / `pointer_occlusion_role` / `pointer_occlusion_bounds` (best-effort occlusion owner; in-run references only)
+- `pointer_capture_active` / `pointer_capture_layer_id` / `pointer_capture_multiple_layers` (input arbitration snapshot; explains capture)
+- `pointer_capture_node_id` / `pointer_capture_test_id` / `pointer_capture_role` / `pointer_capture_bounds` (best-effort capture owner; in-run references only)
+- `pointer_capture_element` / `pointer_capture_element_path` (best-effort capture owner element path; in-run references only)
+- `blocking_reason` / `blocking_root` / `blocking_layer_id` (best-effort attribution for fast triage; prefer raw fields when debugging novel cases)
+  - when available, `blocking_root` points to the responsible `layer_root` (in-run reference only)
+- `routing_explain` (best-effort human-readable hint for `blocking_reason`; not a contract)
 - `scope_roots` (layer roots + pointer occlusion hints; bounded, intended to explain “why input did not reach underlay”)
 - `note` (action kind / phase, e.g. `click`, `drag_pointer.start`, `scroll_into_view.wheel`)
+
+Click-stable trace entry fields (v2 `click_stable` only):
+
+- `step_index`
+- `stable_required` / `stable_count` / `moved_px` / `max_move_px` / `remaining_frames`
+- `hit_test` (a full `UiHitTestTraceEntryV1` captured at the would-be click point)
 
 Focus trace entry fields:
 

@@ -5,6 +5,7 @@
 
 pub mod calendar;
 pub mod calendar_solar_hijri;
+pub mod carousel;
 pub mod checked_state;
 pub mod cmdk_score;
 pub mod cmdk_selection;
@@ -14,6 +15,7 @@ pub mod form_validation;
 pub mod grid_viewport;
 pub mod hover_intent;
 pub mod menu_nav;
+pub mod motion;
 pub mod presence;
 pub mod roving_focus;
 pub mod safe_hover;

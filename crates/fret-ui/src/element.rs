@@ -53,6 +53,7 @@ impl AnyElement {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum ElementKind {
     Container(ContainerProps),
@@ -190,6 +191,16 @@ pub struct PointerRegionState {
 pub struct PointerRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
+    /// When set, `PointerEvent::Move` is dispatched to this region during the Capture phase
+    /// (root → target) rather than Bubble.
+    ///
+    /// This is a mechanism-only knob intended for "gesture arena" style arbitration where a
+    /// parent wrapper must observe pointer moves even when a descendant would otherwise stop
+    /// bubbling (e.g. pressables capturing/stopping on pointer down).
+    ///
+    /// When enabled, Bubble-phase handling for `PointerEvent::Move` is skipped to avoid
+    /// double-dispatch.
+    pub capture_phase_pointer_moves: bool,
 }
 
 /// A focusable event region that participates in text input / IME routing.
@@ -252,6 +263,7 @@ impl Default for PointerRegionProps {
         Self {
             layout: LayoutStyle::default(),
             enabled: true,
+            capture_phase_pointer_moves: false,
         }
     }
 }
@@ -425,6 +437,8 @@ pub struct ContainerProps {
     ///
     /// When set, this takes precedence over `border_color`.
     pub border_paint: Option<Paint>,
+    /// Optional dashed border pattern (v1).
+    pub border_dash: Option<fret_core::scene::DashPatternV1>,
     /// Optional focus-visible ring decoration.
     pub focus_ring: Option<RingStyle>,
     /// Optional border-color override applied when focus-visible is active.
@@ -450,6 +464,7 @@ impl Default for ContainerProps {
             border: Edges::all(Px(0.0)),
             border_color: None,
             border_paint: None,
+            border_dash: None,
             focus_ring: None,
             focus_border_color: None,
             focus_within: false,
@@ -642,22 +657,13 @@ impl Default for SemanticsProps {
 ///
 /// This is a mechanism-only primitive: breakpoint tables and hysteresis policies live in the
 /// component ecosystem (ADR 0066 / ADR 0231).
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct LayoutQueryRegionProps {
     pub layout: LayoutStyle,
     /// Optional name used for diagnostics and audit readability.
     ///
     /// This is not a stable identifier and must not be used for equality.
     pub name: Option<Arc<str>>,
-}
-
-impl Default for LayoutQueryRegionProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            name: None,
-        }
-    }
 }
 
 /// A transparent focus-scope wrapper that can trap focus traversal within its subtree.
@@ -1397,8 +1403,12 @@ pub struct ResizablePanelGroupProps {
 
 impl ResizablePanelGroupProps {
     pub fn new(axis: fret_core::Axis, model: Model<Vec<f32>>) -> Self {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+
         Self {
-            layout: LayoutStyle::default(),
+            layout,
             axis,
             model,
             min_px: Vec::new(),

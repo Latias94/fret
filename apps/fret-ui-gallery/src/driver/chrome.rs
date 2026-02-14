@@ -6,7 +6,7 @@ use fret_workspace::commands::CMD_WORKSPACE_TAB_CLOSE_PREFIX;
 use fret_workspace::{WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar};
 use std::sync::Arc;
 
-use crate::spec::{PAGE_INTRO, page_meta, page_spec};
+use crate::spec::{CMD_APP_SETTINGS, PAGE_INTRO, page_meta, page_spec};
 
 pub(super) fn tab_strip_view(
     cx: &mut ElementContext<'_, App>,
@@ -65,6 +65,12 @@ pub(super) fn top_bar_view(
         .left(left)
         .center(vec![tab_strip])
         .right(vec![
+            shadcn::Button::new("Settings")
+                .test_id("ui-gallery-settings-open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CommandId::new(CMD_APP_SETTINGS))
+                .into_element(cx),
             shadcn::Button::new("Command palette")
                 .test_id("ui-gallery-command-palette")
                 .variant(shadcn::ButtonVariant::Outline)

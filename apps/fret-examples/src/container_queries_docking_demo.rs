@@ -83,9 +83,9 @@ impl DemoDockPanelRegistry {
         cx: &mut ElementContext<'_, H>,
         theme: &Theme,
     ) -> Vec<AnyElement> {
-        let padding = theme.metric_required("metric.padding.md");
-        let background = theme.color_required("background");
-        let muted = theme.color_required("muted");
+        let padding = theme.metric_token("metric.padding.md");
+        let background = theme.color_token("background");
+        let muted = theme.color_token("muted");
 
         let mut fill = LayoutStyle::default();
         fill.size.width = Length::Fill;
@@ -153,7 +153,7 @@ impl DemoDockPanelRegistry {
                                     layout
                                 },
                                 padding: fret_core::Edges::all(Px(8.0)),
-                                background: Some(theme.color_required("secondary")),
+                                background: Some(theme.color_token("secondary")),
                                 corner_radii: fret_core::Corners::all(Px(6.0)),
                                 ..Default::default()
                             },
@@ -208,8 +208,8 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
                             layout.size.height = Length::Fill;
                             layout
                         },
-                        padding: fret_core::Edges::all(theme.metric_required("metric.padding.md")),
-                        background: Some(theme.color_required("background")),
+                        padding: fret_core::Edges::all(theme.metric_token("metric.padding.md")),
+                        background: Some(theme.color_token("background")),
                         ..Default::default()
                     },
                     |_cx| vec![],

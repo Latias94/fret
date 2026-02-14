@@ -12,6 +12,10 @@ Usage: $(basename "$0") [--package <name>] [--release] [--device <serial>] [--no
 
 Builds and runs an Android APK on a connected device/emulator using cargo-apk.
 
+NOTE: The workspace now targets GameActivity for Android IME support. For a working
+device loop (including soft keyboard), use:
+  tools/mobile/android_game_activity_run.sh
+
 Defaults:
   --package ${package}
 EOF
@@ -43,6 +47,27 @@ if ! command -v adb >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ -z "${ANDROID_SDK_ROOT:-}" ]]; then
+  if [[ -n "${ANDROID_HOME:-}" ]]; then
+    export ANDROID_SDK_ROOT="${ANDROID_HOME}"
+  fi
+fi
+
+if [[ -z "${ANDROID_NDK_ROOT:-}" ]]; then
+  if [[ -n "${ANDROID_HOME:-}" && -d "${ANDROID_HOME}/ndk" ]]; then
+    ndk="$(ls -1 "${ANDROID_HOME}/ndk" 2>/dev/null | sort -V | tail -n 1 || true)"
+    if [[ -n "${ndk}" && -d "${ANDROID_HOME}/ndk/${ndk}" ]]; then
+      export ANDROID_NDK_ROOT="${ANDROID_HOME}/ndk/${ndk}"
+    fi
+  fi
+fi
+
+if [[ -z "${ANDROID_NDK_ROOT:-}" ]]; then
+  echo "ANDROID_NDK_ROOT is not set and NDK was not auto-detected." >&2
+  echo "Install an NDK and set ANDROID_NDK_ROOT (or ANDROID_HOME)." >&2
+  exit 1
+fi
+
 release_flag=""
 if [[ "${profile}" == "release" ]]; then
   release_flag="--release"
@@ -55,4 +80,3 @@ fi
 
 set -x
 cargo apk run "${device_flag[@]}" ${no_logcat} -p "${package}" ${release_flag}
-

@@ -341,7 +341,7 @@ fn view(
             .items_center()
             .into_element(cx),
             ui::raw_text(cx, last_transition)
-                .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                 .into_element(cx),
             ui::h_flex(cx, |cx| {
                 [
@@ -501,7 +501,7 @@ fn view(
         for line in prefetch_log.iter().take(12) {
             out.push(
                 ui::raw_text(cx, line.clone())
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                     .into_element(cx),
             );
         }
@@ -541,7 +541,7 @@ fn view(
             .items_center()
             .into_element(cx)]
     })
-    .bg(ColorRef::Color(theme.color_required("background")))
+    .bg(ColorRef::Color(theme.color_token("background")))
     .p(Space::N6)
     .w_full()
     .h_full()

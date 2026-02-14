@@ -18,6 +18,9 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Theme, UiTree};
+use fret_ui_kit::declarative::stack::{VStackProps, vstack};
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn as shadcn;
 use std::sync::Arc;
 
 const DOCKING_DEMO_TAB_BAR_H: Px = Px(28.0);
@@ -56,8 +59,11 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingDemoHarnessRoot {
 
         let _ = cx.layout_in(self.dock_space, bounds);
 
-        let x_l = bounds.origin.x.0 + bounds.size.width.0 * 0.25;
-        let x_r = bounds.origin.x.0 + bounds.size.width.0 * 0.75;
+        // Keep the scripted drag anchors inside the *tab* rect even when tabs use natural widths.
+        let mid_x = bounds.origin.x.0 + bounds.size.width.0 * 0.5;
+        let pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
+        let x_l = bounds.origin.x.0 + pad_x;
+        let x_r = mid_x + pad_x;
         let y = bounds.origin.y.0 + (DOCKING_DEMO_TAB_BAR_H.0 * 0.5);
 
         let half = DOCKING_DEMO_DRAG_ANCHOR_SIZE.0 * 0.5;
@@ -95,8 +101,8 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
         panel: &fret_core::PanelKey,
     ) -> Option<fret_core::NodeId> {
         let theme = Theme::global(&*app).clone();
-        let padding = theme.metric_required("metric.padding.md");
-        let background = theme.color_required("background");
+        let padding = theme.metric_token("metric.padding.md");
+        let background = theme.color_token("background");
 
         let label: &str = match panel.kind.0.as_str() {
             "core.hierarchy" => "Hierarchy panel (declarative root)",
@@ -125,7 +131,70 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
                         background: Some(background),
                         ..Default::default()
                     },
-                    |cx| vec![cx.text(label)],
+                    |cx| {
+                        let body = match panel.kind.0.as_str() {
+                            "core.hierarchy" => shadcn::Card::new(vec![
+                                shadcn::CardHeader::new(vec![
+                                    shadcn::CardTitle::new("Hierarchy").into_element(cx),
+                                    shadcn::CardDescription::new(
+                                        "Placeholder content for docking + tab drag smoke tests.",
+                                    )
+                                    .into_element(cx),
+                                ])
+                                .into_element(cx),
+                                shadcn::CardContent::new(vec![vstack(
+                                    cx,
+                                    VStackProps::default()
+                                        .gap(Space::N1)
+                                        .layout(LayoutRefinement::default().w_full()),
+                                    |cx| {
+                                        vec![
+                                            cx.text("Scene"),
+                                            cx.text("  • Camera"),
+                                            cx.text("  • Directional Light"),
+                                            cx.text("  • Player"),
+                                        ]
+                                    },
+                                )])
+                                .into_element(cx),
+                            ])
+                            .size(shadcn::CardSize::Sm)
+                            .into_element(cx),
+                            "core.inspector" => shadcn::Card::new(vec![
+                                shadcn::CardHeader::new(vec![
+                                    shadcn::CardTitle::new("Inspector").into_element(cx),
+                                    shadcn::CardDescription::new(label).into_element(cx),
+                                ])
+                                .into_element(cx),
+                                shadcn::CardContent::new(vec![vstack(
+                                    cx,
+                                    VStackProps::default()
+                                        .gap(Space::N1)
+                                        .layout(LayoutRefinement::default().w_full()),
+                                    |cx| {
+                                        vec![
+                                            cx.text("Name: Player"),
+                                            cx.text("Position: (12.0, 3.0, -8.0)"),
+                                            cx.text("Rotation: (0.0, 90.0, 0.0)"),
+                                        ]
+                                    },
+                                )])
+                                .into_element(cx),
+                            ])
+                            .size(shadcn::CardSize::Sm)
+                            .into_element(cx),
+                            _ => shadcn::Card::new(vec![
+                                shadcn::CardHeader::new(vec![
+                                    shadcn::CardTitle::new(label).into_element(cx),
+                                ])
+                                .into_element(cx),
+                            ])
+                            .size(shadcn::CardSize::Sm)
+                            .into_element(cx),
+                        };
+
+                        vec![body]
+                    },
                 )]
             },
         ))
@@ -146,7 +215,7 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
     ) {
         let border_color = Color {
             a: 0.65,
-            ..theme.color_required("primary")
+            ..theme.color_token("primary")
         };
         let draw_rect = layout.draw_rect;
         scene.push(SceneOp::Quad {

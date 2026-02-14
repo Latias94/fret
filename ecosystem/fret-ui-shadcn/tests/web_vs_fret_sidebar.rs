@@ -8,14 +8,9 @@ use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
-    let delta = (actual.0 - expected).abs();
-    assert!(
-        delta <= tol,
-        "{label}: expected≈{expected} (±{tol}) got={}",
-        actual.0
-    );
-}
+#[path = "support/assert.rs"]
+mod test_assert;
+use test_assert::assert_close_px;
 
 #[derive(Default)]
 struct FakeServices;

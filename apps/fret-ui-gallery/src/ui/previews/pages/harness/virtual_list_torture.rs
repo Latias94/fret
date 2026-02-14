@@ -234,9 +234,9 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                 let row = Arc::new(move |cx: &mut ElementContext<'_, App>, index: usize| {
                     let zebra = (index % 2) == 0;
                     let background = if zebra {
-                        theme.color_required("muted")
+                        theme.color_token("muted")
                     } else {
-                        theme.color_required("background")
+                        theme.color_token("background")
                     };
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
@@ -292,9 +292,9 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                     |cx, index| {
                         let zebra = (index % 2) == 0;
                         let background = if zebra {
-                            theme.color_required("muted")
+                            theme.color_token("muted")
                         } else {
-                            theme.color_required("background")
+                            theme.color_token("background")
                         };
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
@@ -350,11 +350,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
 
                     let zebra = (index % 2) == 0;
                     let background = if is_editing {
-                        theme.color_required("accent")
+                        theme.color_token("accent")
                     } else if zebra {
-                        theme.color_required("muted")
+                        theme.color_token("muted")
                     } else {
-                        theme.color_required("background")
+                        theme.color_token("background")
                     };
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
@@ -469,11 +469,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
 
                         let zebra = (index % 2) == 0;
                         let background = if is_editing {
-                            theme.color_required("accent")
+                            theme.color_token("accent")
                         } else if zebra {
-                            theme.color_required("muted")
+                            theme.color_token("muted")
                         } else {
-                            theme.color_required("background")
+                            theme.color_token("background")
                         };
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };

@@ -109,14 +109,14 @@ fn breadcrumb_with_patch<H: UiHost>(
         let text_px = theme
             .metric_by_key("component.breadcrumb.text_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.breadcrumb.line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let fg = theme.color_required("foreground");
-        let muted = theme.color_required("muted-foreground");
+        let fg = theme.color_token("foreground");
+        let muted = theme.color_token("muted-foreground");
 
         let style = TextStyle {
             font: FontId::default(),
@@ -391,11 +391,11 @@ pub mod primitives {
         let text_px = theme
             .metric_by_key("component.breadcrumb.text_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.breadcrumb.line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         TextStyle {
             font: FontId::default(),
@@ -408,8 +408,8 @@ pub mod primitives {
     }
 
     fn colors(theme: &Theme) -> (Color, Color) {
-        let fg = theme.color_required("foreground");
-        let muted = theme.color_required("muted-foreground");
+        let fg = theme.color_token("foreground");
+        let muted = theme.color_token("muted-foreground");
         (fg, muted)
     }
 
@@ -784,11 +784,15 @@ pub mod primitives {
         }
     }
 
-    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    #[derive(Debug, Clone, Default, PartialEq)]
     pub enum BreadcrumbSeparatorKind {
         #[default]
         ChevronRight,
         Slash,
+        Icon {
+            icon: IconId,
+            size: Px,
+        },
     }
 
     #[derive(Debug, Clone)]
@@ -847,18 +851,14 @@ pub mod primitives {
                 (muted, props)
             };
 
-            let icon = match self.kind {
-                BreadcrumbSeparatorKind::ChevronRight => ids::ui::CHEVRON_RIGHT,
-                BreadcrumbSeparatorKind::Slash => ids::ui::SLASH,
+            let (icon, size) = match self.kind {
+                BreadcrumbSeparatorKind::ChevronRight => (ids::ui::CHEVRON_RIGHT, Px(14.0)),
+                BreadcrumbSeparatorKind::Slash => (ids::ui::SLASH, Px(14.0)),
+                BreadcrumbSeparatorKind::Icon { icon, size } => (icon, size),
             };
 
-            // Upstream applies `[&>svg]:size-3.5` (14px).
-            let icon_el = decl_icon::icon_with(
-                cx,
-                icon,
-                Some(Px(14.0)),
-                Some(fret_ui_kit::ColorRef::Color(muted)),
-            );
+            // Upstream applies `[&>svg]:size-3.5` (14px) by default.
+            let icon_el = decl_icon::icon_with(cx, icon, Some(size), Some(ColorRef::Color(muted)));
 
             // Ensure the separator is a "leaf-sized" node in layouts that scan by size.
             cx.container(props, move |_cx| vec![icon_el])

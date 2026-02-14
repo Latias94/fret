@@ -44,6 +44,7 @@ hash or query string:
 - `?demo=inf_lines_demo` (or `#inf_lines_demo`)
 - `?demo=tags_demo` (or `#tags_demo`)
 - `?demo=drag_demo` (or `#drag_demo`)
+- `?demo=external_texture_imports_web_demo` (or `#external_texture_imports_web_demo`) — external image source → render target (web copy path)
 
 ## Optional bundled fonts (WASM)
 

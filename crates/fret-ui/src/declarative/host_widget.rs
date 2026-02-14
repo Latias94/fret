@@ -3,7 +3,6 @@ use super::frame::element_record_for_node;
 use super::prelude::*;
 use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx};
 use fret_runtime::CommandId;
-use std::sync::OnceLock;
 
 mod event;
 mod layout;
@@ -12,21 +11,7 @@ mod paint;
 mod semantics;
 
 fn interactive_resize_text_width_cache_entries() -> usize {
-    static ENTRIES: OnceLock<usize> = OnceLock::new();
-    *ENTRIES.get_or_init(|| {
-        // Default: keep a tiny LRU of prepared text blobs keyed by wrap width during interactive
-        // resize. This can reduce `Text::prepare` churn when the user drags back-and-forth across
-        // a small number of wrap-width buckets (the common "resize jitter" class).
-        //
-        // Default: keep 1 previous width (2 entries total). This keeps the memory cost bounded
-        // (and ephemeral: the cache is released once interactive resize ends) while addressing
-        // the most common "toggle across two buckets" case.
-        std::env::var("FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(2)
-            .min(8)
-    })
+    crate::runtime_config::ui_runtime_config().interactive_resize_text_width_cache_entries
 }
 
 #[derive(Debug, Clone)]
@@ -281,6 +266,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                     self.app.next_clipboard_token()
+                }
+
+                fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                    self.app.next_share_sheet_token()
                 }
             }
 

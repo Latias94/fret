@@ -47,27 +47,27 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 }
 
 fn toggle_bg_hover(theme: &Theme) -> Color {
-    theme.color_required("muted")
+    theme.color_token("muted")
 }
 
 fn toggle_fg_muted(theme: &Theme) -> Color {
-    theme.color_required("muted-foreground")
+    theme.color_token("muted-foreground")
 }
 
 fn toggle_ring_color(theme: &Theme) -> Color {
-    theme.color_required("ring")
+    theme.color_token("ring")
 }
 
 fn toggle_bg_on(theme: &Theme) -> Color {
-    theme.color_required("accent")
+    theme.color_token("accent")
 }
 
 fn toggle_fg_on(theme: &Theme) -> Color {
-    theme.color_required("accent-foreground")
+    theme.color_token("accent-foreground")
 }
 
 fn toggle_border(theme: &Theme) -> Color {
-    theme.color_required("input")
+    theme.color_token("input")
 }
 
 fn toggle_h(theme: &Theme, size: ToggleSize) -> Px {
@@ -92,11 +92,11 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.toggle.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let line_height = theme
         .metric_by_key("component.toggle.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
     TextStyle {
         size: px,
         weight: FontWeight::MEDIUM,
@@ -322,7 +322,7 @@ impl Toggle {
                 LayoutRefinement::default().min_h(h).min_w(h).merge(layout),
             );
 
-            let fg_default = theme.color_required("foreground");
+            let fg_default = theme.color_token("foreground");
             let fg_disabled = alpha_mul(fg_default, 0.5);
             let fg_muted = toggle_fg_muted(theme);
             let bg_hover = toggle_bg_hover(theme);

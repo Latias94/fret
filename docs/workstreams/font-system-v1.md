@@ -10,6 +10,8 @@ This workstream focuses on the *font system* (not the entire text pipeline):
 - variable font instances (axes/coords/synthesis) correctness across shaping + rasterization.
 
 The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.md`.
+Conformance gates for fallback policy changes live in: `docs/workstreams/font-fallback-conformance-v1.md`.
+Audit follow-ups and refactor milestones are tracked in: `docs/workstreams/font-system-audit-zed-parley-xilem-v1.md`.
 
 ## Goals
 
@@ -67,6 +69,7 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
 - Semantic `FontId` in `fret-core` (portable across runs + wasm): `crates/fret-core/src/ids.rs`.
 - Single source of truth for family resolution: Parley/fontique collection (no legacy bridge).
 - Cache invalidation: `TextBlobKey` includes `font_stack_key`; font config mutations bump key and reset caches.
+- Diagnostics: `fallback_policy_key` + a fallback policy snapshot are recorded to help interpret font traces.
 - Variable font instance coordinates are carried end-to-end (shaping → glyph keys → Swash rasterization) with a
   deterministic fixture test:
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)
@@ -112,6 +115,8 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
      - `tools/diag-scripts/ui-gallery-text-bidi-font-fallback-screenshots.json` (assert step)
    - Deterministic bundled-only conformance (no system fonts):
      - `crates/fret-render-wgpu/src/text/mod.rs` (`mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent`)
+   - Scripted conformance gates:
+     - `docs/workstreams/font-fallback-conformance-v1.md`
 
 3) Font enumeration caching + metadata is best-effort.
    - Renderer caches enumeration and case-insensitive family lookups (invalidate on `add_fonts`):
@@ -171,6 +176,8 @@ Key ideas to borrow:
   - Next: settings UI adoption + explicit refresh/invalidation policy and caching (tracked in
     `docs/workstreams/font-catalog-refresh-policy-v1.md` and ADR 0258).
 - M3 (optional): public shaping knobs (OpenType features + variation axes) and serialized settings.
+  - Partial: per-span axis overrides are now supported via `TextShapingStyle.axes` and mapped to Parley
+    `StyleProperty::FontVariations` (advanced surface; best-effort).
 
 ## Options (tradeoffs)
 

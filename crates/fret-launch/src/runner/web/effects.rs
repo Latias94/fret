@@ -1,6 +1,10 @@
 use fret_app::Effect;
 use fret_core::Event;
-use fret_runtime::WindowRequest;
+use fret_runtime::{PlatformCapabilities, WindowRequest};
+use js_sys::{Array, Function, Object, Promise, Reflect, Uint8Array};
+use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen_futures::{JsFuture, spawn_local};
+use web_sys::{File, FilePropertyBag};
 use winit::cursor::Cursor;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
@@ -9,6 +13,106 @@ use super::super::streaming_upload::StreamingUploadAckKind;
 use super::super::{WinitCommandContext, WinitGlobalContext};
 use super::streaming_images;
 use super::{GfxState, WinitAppDriver, WinitRunner};
+
+fn share_items_to_web_share_data(
+    items: &[fret_core::ShareItem],
+) -> Result<Option<Object>, JsValue> {
+    let mut text_parts: Vec<String> = Vec::new();
+    let mut url: Option<String> = None;
+    let files = Array::new();
+
+    for item in items {
+        match item {
+            fret_core::ShareItem::Text(text) => {
+                if !text.is_empty() {
+                    text_parts.push(text.clone());
+                }
+            }
+            fret_core::ShareItem::Url(u) => {
+                if url.is_none() && !u.is_empty() {
+                    url = Some(u.clone());
+                } else if !u.is_empty() {
+                    text_parts.push(u.clone());
+                }
+            }
+            fret_core::ShareItem::Bytes { name, mime, bytes } => {
+                let parts = Array::new();
+                parts.push(&Uint8Array::from(bytes.as_slice()));
+                let parts: JsValue = parts.into();
+                let file = if let Some(mime) = mime.as_deref()
+                    && !mime.is_empty()
+                {
+                    let opts = FilePropertyBag::new();
+                    opts.set_type(mime);
+                    File::new_with_u8_array_sequence_and_options(&parts, name, &opts)?
+                } else {
+                    File::new_with_u8_array_sequence(&parts, name)?
+                };
+                files.push(&file);
+            }
+        }
+    }
+
+    if text_parts.is_empty() && url.is_none() && files.length() == 0 {
+        return Ok(None);
+    }
+
+    let data = Object::new();
+    if !text_parts.is_empty() {
+        let text = text_parts.join("\n");
+        let _ = Reflect::set(
+            data.as_ref(),
+            &JsValue::from_str("text"),
+            &JsValue::from_str(&text),
+        );
+    }
+    if let Some(url) = url {
+        let _ = Reflect::set(
+            data.as_ref(),
+            &JsValue::from_str("url"),
+            &JsValue::from_str(&url),
+        );
+    }
+
+    if files.length() != 0 {
+        let _ = Reflect::set(data.as_ref(), &JsValue::from_str("files"), files.as_ref());
+    }
+
+    Ok(Some(data))
+}
+
+fn js_error_string(err: &JsValue) -> String {
+    let name = Reflect::get(err, &JsValue::from_str("name"))
+        .ok()
+        .and_then(|v| v.as_string());
+    let message = Reflect::get(err, &JsValue::from_str("message"))
+        .ok()
+        .and_then(|v| v.as_string());
+    match (name, message) {
+        (Some(name), Some(message)) if !message.is_empty() => format!("{name}: {message}"),
+        (Some(name), _) => name,
+        (_, Some(message)) if !message.is_empty() => message,
+        _ => "navigator.share rejected".to_string(),
+    }
+}
+
+fn share_outcome_from_error(err: JsValue) -> fret_core::ShareSheetOutcome {
+    let name = Reflect::get(&err, &JsValue::from_str("name"))
+        .ok()
+        .and_then(|v| v.as_string());
+    if name.as_deref() == Some("AbortError") {
+        return fret_core::ShareSheetOutcome::Canceled;
+    }
+    if matches!(
+        name.as_deref(),
+        Some("TypeError") | Some("NotSupportedError")
+    ) {
+        return fret_core::ShareSheetOutcome::Unavailable;
+    }
+    fret_core::ShareSheetOutcome::Failed {
+        message: js_error_string(&err),
+    }
+}
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn drain_effects(
@@ -136,6 +240,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             family: e.family,
                             has_variable_axes: e.has_variable_axes,
                             known_variable_axes: e.known_variable_axes,
+                            variable_axes: e
+                                .variable_axes
+                                .into_iter()
+                                .map(|a| fret_runtime::FontVariableAxisInfo {
+                                    tag: a.tag,
+                                    min_bits: a.min_bits,
+                                    max_bits: a.max_bits,
+                                    default_bits: a.default_bits,
+                                })
+                                .collect(),
                             is_monospace_candidate: e.is_monospace_candidate,
                         })
                         .collect::<Vec<_>>();
@@ -171,6 +285,90 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         fret_core::CursorIcon::NeswResize => winit::cursor::CursorIcon::NeswResize,
                     };
                     window.set_cursor(Cursor::Icon(cursor));
+                }
+                Effect::DiagClipboardForceUnavailable {
+                    window: target_window,
+                    enabled,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.diag_clipboard_force_unavailable = enabled;
+                }
+                Effect::DiagIncomingOpenInject {
+                    window: target_window,
+                    items,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    let token = fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
+                    self.diag_incoming_open_next_token =
+                        self.diag_incoming_open_next_token.saturating_add(1);
+
+                    let mut payload = super::DiagIncomingOpenPayload::default();
+                    let mut request_items: Vec<fret_core::IncomingOpenItem> = Vec::new();
+                    for item in items {
+                        match item {
+                            fret_runtime::DiagIncomingOpenItem::File {
+                                name,
+                                bytes,
+                                media_type,
+                            } => {
+                                request_items.push(fret_core::IncomingOpenItem::File(
+                                    fret_core::ExternalDragFile {
+                                        name: name.clone(),
+                                        size_bytes: Some(bytes.len() as u64),
+                                        media_type,
+                                    },
+                                ));
+                                payload
+                                    .files
+                                    .push(fret_core::ExternalDropFileData { name, bytes });
+                            }
+                            fret_runtime::DiagIncomingOpenItem::Text { text, media_type } => {
+                                let estimated_size_bytes = Some(text.len() as u64);
+                                request_items.push(fret_core::IncomingOpenItem::Text {
+                                    media_type,
+                                    estimated_size_bytes,
+                                });
+                                payload.texts.push(text);
+                            }
+                        }
+                    }
+                    self.diag_incoming_open_payloads.insert(token, payload);
+                    self.pending_events.push(Event::IncomingOpenRequest {
+                        token,
+                        items: request_items,
+                    });
+                    window.request_redraw();
+                }
+                Effect::ClipboardSetText { text: _ } => {
+                    // Best-effort: clipboard access is platform-dependent on web and may be
+                    // restricted. For now, treat as unsupported.
+                }
+                Effect::ClipboardGetText {
+                    window: target_window,
+                    token,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.pending_events
+                        .push(Event::ClipboardTextUnavailable { token });
+                    window.request_redraw();
+                }
+                Effect::PrimarySelectionSetText { text: _ } => {}
+                Effect::PrimarySelectionGetText {
+                    window: target_window,
+                    token,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.pending_events
+                        .push(Event::PrimarySelectionTextUnavailable { token });
+                    window.request_redraw();
                 }
                 Effect::WindowMetricsSetInsets {
                     window: target_window,
@@ -496,6 +694,146 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Effect::Dock(op) => {
                     self.driver.dock_op(&mut self.app, op);
                 }
+                Effect::ShareSheetShow {
+                    window: target_window,
+                    token,
+                    items,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+
+                    let caps = self
+                        .app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !caps.shell.share_sheet {
+                        self.pending_events.push(Event::ShareSheetCompleted {
+                            token,
+                            outcome: fret_core::ShareSheetOutcome::Unavailable,
+                        });
+                        window.request_redraw();
+                        continue;
+                    }
+
+                    let data = match share_items_to_web_share_data(&items) {
+                        Ok(Some(v)) => v,
+                        Ok(None) => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                        Err(err) => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: share_outcome_from_error(err),
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    let Some(web_window) = web_sys::window() else {
+                        self.pending_events.push(Event::ShareSheetCompleted {
+                            token,
+                            outcome: fret_core::ShareSheetOutcome::Unavailable,
+                        });
+                        window.request_redraw();
+                        continue;
+                    };
+
+                    let navigator =
+                        match Reflect::get(web_window.as_ref(), &JsValue::from_str("navigator")) {
+                            Ok(v) => v,
+                            Err(_) => {
+                                self.pending_events.push(Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: fret_core::ShareSheetOutcome::Unavailable,
+                                });
+                                window.request_redraw();
+                                continue;
+                            }
+                        };
+
+                    let share_fn = match Reflect::get(&navigator, &JsValue::from_str("share"))
+                        .ok()
+                        .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        Some(v) => v,
+                        None => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    // Best-effort: if `navigator.canShare` exists, consult it for the computed payload.
+                    if let Some(can_share_fn) =
+                        Reflect::get(&navigator, &JsValue::from_str("canShare"))
+                            .ok()
+                            .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        if let Ok(v) = can_share_fn.call1(&navigator, data.as_ref())
+                            && v.as_bool() == Some(false)
+                        {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    }
+
+                    // Important: call `navigator.share(...)` synchronously while draining effects so the
+                    // invocation can inherit a browser user-activation gesture when applicable.
+                    let promise = match share_fn.call1(&navigator, data.as_ref()) {
+                        Ok(v) => match v.dyn_into::<Promise>() {
+                            Ok(p) => p,
+                            Err(_) => {
+                                self.pending_events.push(Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: fret_core::ShareSheetOutcome::Failed {
+                                        message: "navigator.share did not return a Promise"
+                                            .to_string(),
+                                    },
+                                });
+                                window.request_redraw();
+                                continue;
+                            }
+                        },
+                        Err(err) => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: share_outcome_from_error(err),
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    let pending = self.pending_async_events.clone();
+                    let proxy = self.event_loop_proxy.clone();
+                    spawn_local(async move {
+                        let outcome = match JsFuture::from(promise).await {
+                            Ok(_) => fret_core::ShareSheetOutcome::Shared,
+                            Err(err) => share_outcome_from_error(err),
+                        };
+                        pending
+                            .borrow_mut()
+                            .push(Event::ShareSheetCompleted { token, outcome });
+                        if let Some(proxy) = proxy {
+                            proxy.wake_up();
+                        }
+                    });
+                }
                 Effect::Window(req) => match req {
                     WindowRequest::Close(target) => {
                         if target != self.app_window {
@@ -509,7 +847,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     WindowRequest::Create(_)
                     | WindowRequest::Raise { .. }
-                    | WindowRequest::SetInnerSize { .. } => {}
+                    | WindowRequest::SetInnerSize { .. }
+                    | WindowRequest::SetOuterPosition { .. } => {}
                 },
                 Effect::QuitApp => {
                     self.exiting = true;
@@ -546,6 +885,172 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     if target == self.app_window {
                         window.request_redraw();
                     }
+                }
+                Effect::IncomingOpenReadAll {
+                    window: target_window,
+                    token,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+
+                    let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
+                        self.pending_events
+                            .push(Event::IncomingOpenUnavailable { token });
+                        window.request_redraw();
+                        continue;
+                    };
+
+                    let cap = fret_core::ExternalDropReadLimits {
+                        max_total_bytes: self.config.file_dialog_max_total_bytes,
+                        max_file_bytes: self.config.file_dialog_max_file_bytes,
+                        max_files: self.config.file_dialog_max_files,
+                    };
+
+                    let limits = cap;
+                    let include_limits = false;
+
+                    let mut total_bytes: u64 = 0;
+                    let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                    let mut texts: Vec<String> = Vec::new();
+                    let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                    for file in payload.files.iter().take(limits.max_files) {
+                        let len = file.bytes.len() as u64;
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "file exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        files.push(file.clone());
+                    }
+
+                    for (idx, text) in payload.texts.iter().enumerate() {
+                        let len = text.len() as u64;
+                        let name = format!("text[{idx}]");
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "text exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        texts.push(text.clone());
+                    }
+
+                    self.pending_events.push(Event::IncomingOpenData(
+                        fret_core::IncomingOpenDataEvent {
+                            token,
+                            files,
+                            texts,
+                            errors,
+                            limits: include_limits.then_some(limits),
+                        },
+                    ));
+                    window.request_redraw();
+                }
+                Effect::IncomingOpenReadAllWithLimits {
+                    window: target_window,
+                    token,
+                    limits,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+
+                    let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
+                        self.pending_events
+                            .push(Event::IncomingOpenUnavailable { token });
+                        window.request_redraw();
+                        continue;
+                    };
+
+                    let cap = fret_core::ExternalDropReadLimits {
+                        max_total_bytes: self.config.file_dialog_max_total_bytes,
+                        max_file_bytes: self.config.file_dialog_max_file_bytes,
+                        max_files: self.config.file_dialog_max_files,
+                    };
+
+                    let limits = limits.capped_by(cap);
+                    let include_limits = true;
+
+                    let mut total_bytes: u64 = 0;
+                    let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                    let mut texts: Vec<String> = Vec::new();
+                    let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                    for file in payload.files.iter().take(limits.max_files) {
+                        let len = file.bytes.len() as u64;
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "file exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        files.push(file.clone());
+                    }
+
+                    for (idx, text) in payload.texts.iter().enumerate() {
+                        let len = text.len() as u64;
+                        let name = format!("text[{idx}]");
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "text exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        texts.push(text.clone());
+                    }
+
+                    self.pending_events.push(Event::IncomingOpenData(
+                        fret_core::IncomingOpenDataEvent {
+                            token,
+                            files,
+                            texts,
+                            errors,
+                            limits: include_limits.then_some(limits),
+                        },
+                    ));
+                    window.request_redraw();
+                }
+                Effect::IncomingOpenRelease { token } => {
+                    self.diag_incoming_open_payloads.remove(&token);
                 }
                 _ => {}
             }

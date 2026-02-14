@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Point, PointerType, Px, Rect, Size};
@@ -28,14 +29,28 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
-// Radix default delays: open=700ms, close=300ms. We approximate with 60fps ticks.
-const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
-    (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
-const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+// Radix default delays: open=700ms, close=300ms.
+const HOVER_CARD_DEFAULT_OPEN_DELAY: Duration = Duration::from_millis(700);
+const HOVER_CARD_DEFAULT_CLOSE_DELAY: Duration = Duration::from_millis(300);
 const HOVER_CARD_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 // A short lease prevents hover-driven close from firing immediately after pointer interactions
 // (e.g. click/drag), while still allowing the card to close promptly once the interaction ends.
-const HOVER_CARD_INTERACTION_LEASE_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+const HOVER_CARD_INTERACTION_LEASE: Duration = Duration::from_millis(300);
+
+fn hover_card_default_open_delay_frames() -> u32 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(HOVER_CARD_DEFAULT_OPEN_DELAY)
+        as u32
+}
+
+fn hover_card_default_close_delay_frames() -> u32 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(HOVER_CARD_DEFAULT_CLOSE_DELAY)
+        as u32
+}
+
+fn hover_card_interaction_lease_frames() -> u32 {
+    fret_ui_kit::declarative::transition::ticks_60hz_for_duration(HOVER_CARD_INTERACTION_LEASE)
+        as u32
+}
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -130,8 +145,8 @@ fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
 }
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
-    let bg = theme.color_required("popover");
-    let border = theme.color_required("border");
+    let bg = theme.color_token("popover");
+    let border = theme.color_token("border");
 
     ChromeRefinement::default()
         .rounded(Radius::Md)
@@ -231,8 +246,8 @@ impl HoverCard {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
-            open_delay_frames: HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES,
-            close_delay_frames: HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES,
+            open_delay_frames: hover_card_default_open_delay_frames(),
+            close_delay_frames: hover_card_default_close_delay_frames(),
             layout: LayoutRefinement::default(),
             anchor_override: None,
             on_open_change: None,
@@ -383,8 +398,8 @@ impl HoverCard {
                 .metric_by_key("component.hover_card.arrow_padding")
                 .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme))
         });
-        let arrow_bg = theme.color_required("popover");
-        let arrow_border = theme.color_required("border");
+        let arrow_bg = theme.color_token("popover");
+        let arrow_border = theme.color_token("border");
 
         let uncontrolled_default_open = self.open.is_none() && self.default_open;
         let open_root = radix_hover_card::HoverCardRoot::new()
@@ -616,15 +631,16 @@ impl HoverCard {
             }
 
             let opening = update.open;
-            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                cx,
-                opening,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                0.95,
-                1.0,
-                overlay_motion::shadcn_ease,
-            );
+            let motion =
+                radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                    cx,
+                    opening,
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    0.95,
+                    1.0,
+                    overlay_motion::shadcn_motion_ease_bezier(cx),
+                );
             let (open_change, open_change_complete) =
                 cx.with_state(HoverCardOpenChangeCallbackState::default, |state| {
                     hover_card_open_change_events(state, opening, motion.present, motion.animating)
@@ -781,6 +797,7 @@ impl HoverCard {
                             PointerRegionProps {
                                 layout: panel_layout,
                                 enabled: true,
+                                ..Default::default()
                             },
                             move |cx| {
                                 let pointer_down_model_for_down =
@@ -798,7 +815,7 @@ impl HoverCard {
                                         let _ = host
                                             .models_mut()
                                             .update(&interaction_lease_model_for_down, |v| {
-                                                *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                                *v = hover_card_interaction_lease_frames();
                                             });
                                         host.request_redraw(cx.window);
                                         false
@@ -820,7 +837,7 @@ impl HoverCard {
                                         let _ = host.models_mut().update(
                                             &interaction_lease_model_for_up,
                                             |v| {
-                                                *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                                *v = hover_card_interaction_lease_frames();
                                             },
                                         );
                                         host.request_redraw(cx.window);
@@ -855,7 +872,7 @@ impl HoverCard {
                                             let _ = host.models_mut().update(
                                                 &interaction_lease_model_for_move,
                                                 |v| {
-                                                    *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                                    *v = hover_card_interaction_lease_frames();
                                                 },
                                             );
                                             host.request_redraw(cx.window);
@@ -878,7 +895,7 @@ impl HoverCard {
                                         let _ = host.models_mut().update(
                                             &interaction_lease_model_for_cancel,
                                             |v| {
-                                                *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                                *v = hover_card_interaction_lease_frames();
                                             },
                                         );
                                         host.request_redraw(cx.window);
@@ -1287,7 +1304,9 @@ mod tests {
         // The hover card uses a render-transform for shadcn-style open motion. Semantics bounds
         // track the transformed geometry, so advance a few frames to reach steady state before
         // asserting placement.
-        let settle_frames: u64 = overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        let settle_frames: u64 = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 2;
         for step in 0..settle_frames {
             let tick = 3 + step;
             app.set_frame_id(FrameId(tick));
@@ -1626,7 +1645,9 @@ mod tests {
             }),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 1;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(3 + i));
             render_hover_card_focus_frame(

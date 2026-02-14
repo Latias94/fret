@@ -89,10 +89,10 @@ impl CalendarMultiple {
             required: false,
             min: None,
             max: None,
-            week_start: Weekday::Monday,
+            week_start: Weekday::Sunday,
             fixed_weeks: false,
             show_outside_days: true,
-            disable_outside_days: true,
+            disable_outside_days: false,
             show_week_number: false,
             cell_size: None,
             today: None,
@@ -264,10 +264,10 @@ impl CalendarMultiple {
 
         let text_sm_px = theme
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let text_sm_line_height = theme
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         let grid_text_style = TextStyle {
             font: Default::default(),
@@ -280,11 +280,11 @@ impl CalendarMultiple {
         let day_size = self.cell_size.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.calendar.day_size")
-                .unwrap_or_else(|| theme.metric_required("component.size.sm.icon_button.size"))
+                .unwrap_or_else(|| theme.metric_token("component.size.sm.icon_button.size"))
         });
         let week_row_gap = theme
             .metric_by_key("component.calendar.week_row_gap")
-            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+            .unwrap_or_else(|| theme.metric_token("metric.padding.sm"));
         let day_grid_width = Px(day_size.0 * 7.0);
         let month_width = if show_week_number {
             Px(day_size.0 * 8.0)
@@ -329,7 +329,7 @@ impl CalendarMultiple {
                     false
                 };
 
-                let bg = theme.color_required("background");
+                let bg = theme.color_token("background");
                 let mut chrome = ChromeRefinement::default()
                     .bg(ColorRef::Color(bg))
                     .p(Space::N3);
@@ -919,7 +919,7 @@ fn calendar_icon_button<H: UiHost>(
 
     let radius = theme
         .metric_by_key("component.button.radius")
-        .unwrap_or_else(|| theme.metric_required("metric.radius.md"));
+        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
 
     control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
         if !enabled {
@@ -1045,25 +1045,21 @@ fn calendar_multi_day_cell<H: UiHost>(
 
     let muted_fg = theme
         .color_by_key("muted-foreground")
-        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+        .unwrap_or_else(|| theme.color_token("muted-foreground"));
     let fg = if in_month {
-        theme.color_required("foreground")
+        theme.color_token("foreground")
     } else {
         muted_fg
     };
 
     let (bg, fg) = if selected {
         (
-            theme.color_required("primary"),
-            theme.color_required("primary-foreground"),
+            theme.color_token("primary"),
+            theme.color_token("primary-foreground"),
         )
     } else {
         (Color::TRANSPARENT, fg)
     };
-
-    let ring_color = theme
-        .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"));
 
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
@@ -1071,10 +1067,10 @@ fn calendar_multi_day_cell<H: UiHost>(
 
     let text_sm_px = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let text_sm_line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
         if focus_candidate
@@ -1109,29 +1105,29 @@ fn calendar_multi_day_cell<H: UiHost>(
             }
         }));
 
-        let hover_bg = theme.color_required("accent");
+        let accent_bg = theme.color_token("accent");
         let pressed_bg = {
-            let mut c = hover_bg;
+            let mut c = accent_bg;
             c.a *= 0.85;
             c
         };
 
         let bg = if selected {
             bg
+        } else if today {
+            accent_bg
         } else if st.pressed {
             pressed_bg
         } else if st.hovered {
-            hover_bg
+            accent_bg
         } else {
             Color::TRANSPARENT
         };
 
-        let mut chrome = ChromeRefinement::default()
-            .rounded(Radius::Sm)
+        // Align with shadcn-web: day buttons are `rounded-md` and `today` is filled (`bg-accent`).
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Md)
             .bg(ColorRef::Color(bg));
-        if today && !selected {
-            chrome = chrome.border_1().border_color(ColorRef::Color(ring_color));
-        }
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
@@ -1144,7 +1140,7 @@ fn calendar_multi_day_cell<H: UiHost>(
             focusable: !disabled,
             focus_ring: Some(decl_style::focus_ring(
                 theme,
-                theme.metric_required("metric.radius.sm"),
+                theme.metric_token("metric.radius.md"),
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),
@@ -1177,7 +1173,13 @@ fn calendar_multi_day_cell<H: UiHost>(
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
                         .font_medium()
-                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .text_color(ColorRef::Color(if disabled {
+                            muted_fg
+                        } else if today && !selected {
+                            theme.color_token("accent-foreground")
+                        } else {
+                            fg
+                        }))
                         .nowrap();
 
                     let label = if disabled {

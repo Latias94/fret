@@ -1,6 +1,148 @@
 use super::*;
 
+#[derive(Debug, Default)]
+struct DockParentIndex {
+    root_for: HashMap<DockNodeId, DockNodeId>,
+    parent: HashMap<DockNodeId, DockNodeId>,
+    split_child_index: HashMap<DockNodeId, usize>,
+}
+
 impl DockGraph {
+    fn build_parent_index_for_window(&self, window: AppWindowId) -> DockParentIndex {
+        fn index_subtree(graph: &DockGraph, root: DockNodeId, index: &mut DockParentIndex) {
+            let mut stack: Vec<DockNodeId> = vec![root];
+            while let Some(node) = stack.pop() {
+                if index.root_for.contains_key(&node) {
+                    continue;
+                }
+                index.root_for.insert(node, root);
+
+                let Some(n) = graph.nodes.get(node) else {
+                    continue;
+                };
+                match n {
+                    DockNode::Tabs { .. } => {}
+                    DockNode::Floating { child } => {
+                        index.parent.insert(*child, node);
+                        stack.push(*child);
+                    }
+                    DockNode::Split { children, .. } => {
+                        for (i, child) in children.iter().copied().enumerate() {
+                            index.parent.insert(child, node);
+                            index.split_child_index.insert(child, i);
+                            stack.push(child);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut index = DockParentIndex::default();
+        if let Some(root) = self.window_root(window) {
+            index_subtree(self, root, &mut index);
+        }
+        if let Some(list) = self.window_floatings.get(&window) {
+            for w in list {
+                index_subtree(self, w.floating, &mut index);
+            }
+        }
+        index
+    }
+
+    /// Decide whether an edge-dock into `target` will insert into an existing same-axis split, or
+    /// wrap the target in a new split.
+    ///
+    /// Returns `None` for `DropZone::Center` (not an edge dock) or if the target is not present in
+    /// the window's dock forest.
+    pub fn edge_dock_decision(
+        &self,
+        window: AppWindowId,
+        target: DockNodeId,
+        zone: DropZone,
+    ) -> Option<EdgeDockDecision> {
+        if zone == DropZone::Center {
+            return None;
+        }
+
+        let axis = match zone {
+            DropZone::Left | DropZone::Right => Axis::Horizontal,
+            DropZone::Top | DropZone::Bottom => Axis::Vertical,
+            DropZone::Center => unreachable!(),
+        };
+
+        // Index parent links for the window's docking forest so we can answer:
+        // - is the target in the forest?
+        // - what is the nearest same-axis split ancestor?
+        //
+        // This avoids repeated subtree scans in edge-dock hot paths.
+        let index = self.build_parent_index_for_window(window);
+        if !index.root_for.contains_key(&target) {
+            return None;
+        }
+
+        // Outer docking can target an existing split container. In that case we can insert at the
+        // boundary without searching for an ancestor.
+        if let Some(DockNode::Split {
+            axis: split_axis,
+            children,
+            fractions,
+        }) = self.nodes.get(target)
+            && *split_axis == axis
+            && !children.is_empty()
+            && children.len() == fractions.len()
+        {
+            let len = children.len();
+            let (anchor_index, insert_index) = match zone {
+                DropZone::Left | DropZone::Top => (0, 0),
+                DropZone::Right | DropZone::Bottom => {
+                    let last = len.saturating_sub(1);
+                    (last, last.saturating_add(1))
+                }
+                DropZone::Center => unreachable!(),
+            };
+            return Some(EdgeDockDecision::InsertIntoSplit {
+                split: target,
+                anchor_index,
+                insert_index,
+            });
+        }
+
+        let mut cur = target;
+        while let Some(parent) = index.parent.get(&cur).copied() {
+            let Some(DockNode::Split {
+                axis: split_axis,
+                children,
+                fractions,
+            }) = self.nodes.get(parent)
+            else {
+                cur = parent;
+                continue;
+            };
+
+            if *split_axis == axis && !children.is_empty() && children.len() == fractions.len() {
+                let Some(anchor_index) = index.split_child_index.get(&cur).copied() else {
+                    break;
+                };
+
+                let insert_index = match zone {
+                    DropZone::Left | DropZone::Top => anchor_index,
+                    DropZone::Right | DropZone::Bottom => anchor_index.saturating_add(1),
+                    DropZone::Center => unreachable!(),
+                };
+
+                return Some(EdgeDockDecision::InsertIntoSplit {
+                    split: parent,
+                    anchor_index,
+                    insert_index,
+                });
+            }
+
+            cur = parent;
+        }
+
+        Some(EdgeDockDecision::WrapNewSplit)
+    }
+
     pub fn compute_layout(
         &self,
         root: DockNodeId,
@@ -19,17 +161,36 @@ impl DockGraph {
                 children,
                 fractions,
             } => {
-                let count = children.len().min(fractions.len());
-                if count == 0 {
+                if children.is_empty() {
                     return;
                 }
 
-                let total: f32 = fractions.iter().take(count).sum();
-                let total = if total <= 0.0 { 1.0 } else { total };
+                // Layout should not silently truncate children if invariants are violated. If the
+                // split is non-canonical (mismatched lengths, non-finite values), repair the shares
+                // locally for deterministic layout.
+                let cleaned_share_at = |i: usize| -> f32 {
+                    let raw = fractions.get(i).copied().unwrap_or(1.0);
+                    if raw.is_finite() && raw > 0.0 {
+                        raw
+                    } else {
+                        0.0
+                    }
+                };
+
+                let mut total = 0.0;
+                for i in 0..children.len() {
+                    total += cleaned_share_at(i);
+                }
+                let uniform = 1.0 / children.len() as f32;
+                let inv_total = if total > 0.0 { 1.0 / total } else { 0.0 };
 
                 let mut cursor = 0.0;
-                for i in 0..count {
-                    let f = fractions[i] / total;
+                for (i, child) in children.iter().copied().enumerate() {
+                    let f = if total > 0.0 {
+                        cleaned_share_at(i) * inv_total
+                    } else {
+                        uniform
+                    };
                     let (child_rect, next_cursor) = match axis {
                         Axis::Horizontal => {
                             let w = bounds.size.width.0 * f;
@@ -50,7 +211,7 @@ impl DockGraph {
                     };
 
                     cursor = next_cursor;
-                    self.compute_layout(children[i], child_rect, out);
+                    self.compute_layout(child, child_rect, out);
                 }
             }
             DockNode::Floating { child } => {
@@ -64,12 +225,15 @@ impl DockGraph {
         window: AppWindowId,
         panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
-        let root = self.window_root(window)?;
-        self.find_panel_in_subtree(root, panel).or_else(|| {
-            self.window_floatings.get(&window).and_then(|list| {
-                list.iter()
-                    .find_map(|w| self.find_panel_in_subtree(w.floating, panel))
-            })
+        if let Some(root) = self.window_root(window)
+            && let Some(found) = self.find_panel_in_subtree(root, panel)
+        {
+            return Some(found);
+        }
+
+        self.window_floatings.get(&window).and_then(|list| {
+            list.iter()
+                .find_map(|w| self.find_panel_in_subtree(w.floating, panel))
         })
     }
 
@@ -93,8 +257,16 @@ impl DockGraph {
     }
 
     pub fn first_tabs_in_window(&self, window: AppWindowId) -> Option<DockNodeId> {
-        let root = self.window_root(window)?;
-        self.first_tabs_in_subtree(root)
+        if let Some(root) = self.window_root(window)
+            && let Some(tabs) = self.first_tabs_in_subtree(root)
+        {
+            return Some(tabs);
+        }
+
+        self.window_floatings.get(&window).and_then(|list| {
+            list.iter()
+                .find_map(|w| self.first_tabs_in_subtree(w.floating))
+        })
     }
 
     pub(super) fn collect_panels_in_subtree(&self, node: DockNodeId) -> Vec<PanelKey> {

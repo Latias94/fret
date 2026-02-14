@@ -69,15 +69,13 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
         .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
         .or_else(|| theme.metric_by_key("metric.font.size"))
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_PX));
+        .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX));
     let line_height = theme
         .metric_by_key("component.navigation_menu.trigger.line_height")
         .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
         .or_else(|| theme.metric_by_key("metric.font.line_height"))
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| {
-            theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        });
+        .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -171,23 +169,23 @@ fn nav_menu_trigger_radius(theme: &Theme) -> Px {
 }
 
 fn nav_menu_trigger_bg_hover(theme: &Theme) -> Color {
-    theme.color_required("accent")
+    theme.color_token("accent")
 }
 
 fn nav_menu_trigger_fg(theme: &Theme) -> Color {
-    theme.color_required("foreground")
+    theme.color_token("foreground")
 }
 
 fn nav_menu_trigger_fg_muted(theme: &Theme) -> Color {
-    theme.color_required("muted-foreground")
+    theme.color_token("muted-foreground")
 }
 
 fn nav_menu_viewport_bg(theme: &Theme) -> Color {
-    theme.color_required("popover")
+    theme.color_token("popover")
 }
 
 fn nav_menu_viewport_border(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn nav_menu_viewport_side_offset(theme: &Theme) -> Px {
@@ -975,12 +973,12 @@ impl NavigationMenu {
                 .copied()
                 .unwrap_or(false);
             let open_for_motion = open && selected.is_some();
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 open_for_motion,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::shadcn_ease,
+                overlay_motion::shadcn_motion_duration_100(cx),
+                overlay_motion::shadcn_motion_duration_100(cx),
+                overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let opacity = motion.progress;
             let scale = if viewport_enabled {
@@ -1091,6 +1089,7 @@ impl NavigationMenu {
                             let pointer_props = PointerRegionProps {
                                 layout: LayoutStyle::default(),
                                 enabled: true,
+                                ..Default::default()
                             };
 
                             let trigger_children = item.trigger.clone();

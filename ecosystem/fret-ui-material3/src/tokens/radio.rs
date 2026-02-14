@@ -74,7 +74,7 @@ pub(crate) fn state_layer_color(
         .unwrap_or_else(|| {
             theme
                 .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
         })
 }
 
@@ -100,7 +100,7 @@ pub(crate) fn icon_color(
         let base = theme
             .color_by_key(color_key)
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme.number_by_key(opacity_key).unwrap_or(0.38);
         return alpha_mul(base, opacity);
     }
@@ -110,7 +110,7 @@ pub(crate) fn icon_color(
         .unwrap_or_else(|| {
             theme
                 .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
         })
 }
 

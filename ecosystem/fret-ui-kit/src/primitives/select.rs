@@ -1137,6 +1137,14 @@ impl SelectTriggerPointerState {
 
         match down.pointer_type {
             PointerType::Mouse | PointerType::Unknown => {
+                let was_open = host.models_mut().get_copied(open).unwrap_or(false);
+                if was_open {
+                    let _ = host.models_mut().update(open, |v| *v = false);
+                    host.request_focus(action_cx.target);
+                    host.request_redraw(action_cx.window);
+                    return true;
+                }
+
                 let _ = host.models_mut().update(open, |v| *v = true);
                 host.request_redraw(action_cx.window);
                 host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
@@ -1468,19 +1476,27 @@ pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
     } else {
         select_modal_barrier_layout()
     };
-    cx.pointer_region(PointerRegionProps { layout, enabled }, move |cx| {
-        let guard_for_pointer_up = guard.clone();
-        cx.pointer_region_on_pointer_up(Arc::new(move |_host, _action_cx, up: PointerUpCx| {
-            match select_mouse_open_guard_pointer_up_decision_shared(&guard_for_pointer_up, up) {
-                SelectMouseOpenGuardPointerUpDecision::NoGuard => false,
-                SelectMouseOpenGuardPointerUpDecision::Suppress => true,
-                // Outside the click slop this element should not be hit, but keep the behavior
-                // conservative in case the host routing changes.
-                SelectMouseOpenGuardPointerUpDecision::Allow => false,
-            }
-        }));
-        Vec::new()
-    })
+    cx.pointer_region(
+        PointerRegionProps {
+            layout,
+            enabled,
+            capture_phase_pointer_moves: false,
+        },
+        move |cx| {
+            let guard_for_pointer_up = guard.clone();
+            cx.pointer_region_on_pointer_up(Arc::new(move |_host, _action_cx, up: PointerUpCx| {
+                match select_mouse_open_guard_pointer_up_decision_shared(&guard_for_pointer_up, up)
+                {
+                    SelectMouseOpenGuardPointerUpDecision::NoGuard => false,
+                    SelectMouseOpenGuardPointerUpDecision::Suppress => true,
+                    // Outside the click slop this element should not be hit, but keep the behavior
+                    // conservative in case the host routing changes.
+                    SelectMouseOpenGuardPointerUpDecision::Allow => false,
+                }
+            }));
+            Vec::new()
+        },
+    )
 }
 
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
@@ -2230,6 +2246,10 @@ mod tests {
         fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
             self.app.next_clipboard_token()
         }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
     }
 
     impl UiFocusActionHost for PointerHost<'_> {
@@ -2791,6 +2811,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2827,6 +2849,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2848,8 +2872,11 @@ mod tests {
             PointerUpCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(13.0), Px(15.0)),
+                position_local: Point::new(Px(13.0), Px(15.0)),
+                position_window: Some(Point::new(Px(13.0), Px(15.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
                 is_click: true,
@@ -2884,6 +2911,8 @@ mod tests {
             PointerDownCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(10.0), Px(12.0)),
+                position_local: Point::new(Px(10.0), Px(12.0)),
+                position_window: Some(Point::new(Px(10.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
@@ -2903,8 +2932,11 @@ mod tests {
             PointerMoveCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                position_local: Point::new(Px(40.0), Px(12.0)),
+                position_window: Some(Point::new(Px(40.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 buttons: fret_core::MouseButtons {
                     left: true,
                     right: false,
@@ -2923,8 +2955,11 @@ mod tests {
             PointerUpCx {
                 pointer_id: fret_core::PointerId(0),
                 position: Point::new(Px(40.0), Px(12.0)),
+                position_local: Point::new(Px(40.0), Px(12.0)),
+                position_window: Some(Point::new(Px(40.0), Px(12.0))),
                 tick_id: fret_runtime::TickId(0),
                 pixels_per_point: 1.0,
+                velocity_window: None,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
                 is_click: false,

@@ -333,7 +333,7 @@ impl InputGroup {
             let compact_px = fret_ui_kit::MetricRef::space(Space::N2).resolve(theme);
             let textarea_py = fret_ui_kit::MetricRef::space(Space::N3).resolve(theme);
 
-            let font_line_height = theme.metric_required("font.line_height");
+            let font_line_height = theme.metric_token("font.line_height");
             let text_style = TextStyle {
                 font: FontId::default(),
                 size: resolved.text_px,
@@ -356,7 +356,7 @@ impl InputGroup {
                 let focus_border = Some(resolved.border_color_focused);
 
                 if self.aria_invalid {
-                    let border_color = theme.color_required("destructive");
+                    let border_color = theme.color_token("destructive");
                     let ring_key = if theme.name.contains("/dark") {
                         "destructive/40"
                     } else {
@@ -890,12 +890,12 @@ impl InputGroupText {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
-        let color = theme.color_required("muted-foreground");
+        let color = theme.color_token("muted-foreground");
 
         let (px, line_height) = match self.size {
             InputGroupTextSize::Sm => (
-                theme.metric_required("metric.font.size"),
-                theme.metric_required("metric.font.line_height"),
+                theme.metric_token("metric.font.size"),
+                theme.metric_token("metric.font.line_height"),
             ),
             // Tailwind: `text-xs leading-4`.
             InputGroupTextSize::Xs => (Px(12.0), Px(16.0)),
@@ -1025,30 +1025,30 @@ impl InputGroupButton {
                         Px(24.0),
                         fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
                         fret_ui_kit::MetricRef::space(Space::N1).resolve(theme),
-                        Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
+                        Px((theme.metric_token("metric.radius.md").0 - 5.0).max(0.0)),
                     ),
                     InputGroupButtonSize::Sm => (
                         Px(32.0),
                         fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
                         fret_ui_kit::MetricRef::space(Space::N1p5).resolve(theme),
-                        theme.metric_required("metric.radius.md"),
+                        theme.metric_token("metric.radius.md"),
                     ),
                     InputGroupButtonSize::IconXs => (
                         Px(24.0),
                         Px(0.0),
                         Px(0.0),
-                        Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
+                        Px((theme.metric_token("metric.radius.md").0 - 5.0).max(0.0)),
                     ),
                     InputGroupButtonSize::IconSm => (
                         Px(32.0),
                         Px(0.0),
                         Px(0.0),
-                        theme.metric_required("metric.radius.md"),
+                        theme.metric_token("metric.radius.md"),
                     ),
                 };
 
-                let text_px = theme.metric_required("metric.font.size");
-                let line_height = theme.metric_required("metric.font.line_height");
+                let text_px = theme.metric_token("metric.font.size");
+                let line_height = theme.metric_token("metric.font.line_height");
 
                 let mut layout = self.layout;
                 layout = match self.size {

@@ -177,7 +177,7 @@ pub(crate) fn trailing_icon_color(
     let color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
     let opacity = opacity_key
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
@@ -219,7 +219,7 @@ fn outlined_text_input_style(
     style.background = theme
         .color_by_key("md.comp.outlined-autocomplete.text-field.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"));
 
     let (border_width, border_color, border_color_focused) = outlined_outline(
         theme,
@@ -310,11 +310,11 @@ fn outlined_outline(
     let border_color = theme
         .color_by_key(color_key)
         .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
     let border_color_focused = theme
         .color_by_key(focused_color_key)
         .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.outline"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
     (border_width, border_color, border_color_focused)
 }
 
@@ -337,7 +337,7 @@ fn outlined_input_text_color(
     let mut out = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     if disabled {
         let opacity = theme
@@ -357,7 +357,7 @@ fn outlined_caret_color(theme: &Theme, _disabled: bool, error: bool, focused: bo
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 fn filled_text_input_style(
@@ -396,13 +396,13 @@ fn filled_text_input_style(
         .color_by_key("md.comp.filled-autocomplete.text-field.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
         .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"));
 
     if disabled {
         let overlay = theme
             .color_by_key("md.comp.filled-autocomplete.text-field.disabled.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.filled-autocomplete.text-field.disabled.container.opacity")
             .unwrap_or(0.04);
@@ -481,7 +481,7 @@ fn filled_active_indicator_color(
     let mut color = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     if disabled {
         let opacity = theme
@@ -513,7 +513,7 @@ fn filled_input_text_color(
     let mut out = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
 
     if disabled {
         let opacity = theme
@@ -533,7 +533,7 @@ fn filled_caret_color(theme: &Theme, _disabled: bool, error: bool, focused: bool
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
 
 pub(crate) fn menu_container_background(theme: &Theme, variant: TextFieldVariant) -> Color {
@@ -544,7 +544,7 @@ pub(crate) fn menu_container_background(theme: &Theme, variant: TextFieldVariant
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container"))
 }
 
 pub(crate) fn menu_container_elevation(theme: &Theme, variant: TextFieldVariant) -> Px {
@@ -563,7 +563,7 @@ pub(crate) fn menu_container_shadow_color(theme: &Theme, variant: TextFieldVaria
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn menu_container_shape(theme: &Theme, variant: TextFieldVariant) -> Corners {
@@ -604,7 +604,7 @@ pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: TextFieldV
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 pub(crate) fn menu_list_item_selected_container_color(
@@ -622,5 +622,5 @@ pub(crate) fn menu_list_item_selected_container_color(
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-highest"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"))
 }

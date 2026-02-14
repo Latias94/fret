@@ -8,6 +8,10 @@ use std::sync::Arc;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
+#[path = "support/assert.rs"]
+mod test_assert;
+use test_assert::assert_close_px;
+
 fn collect_tag<'a>(node: &'a WebNode, tag: &str, out: &mut Vec<&'a WebNode>) {
     if node.tag == tag {
         out.push(node);
@@ -159,15 +163,6 @@ fn find_semantics<'a>(
     role: SemanticsRole,
 ) -> Option<&'a fret_core::SemanticsNode> {
     snap.nodes.iter().find(|n| n.role == role)
-}
-
-fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
-    let delta = (actual.0 - expected).abs();
-    assert!(
-        delta <= tol,
-        "{label}: expected≈{expected} (±{tol}) got={}",
-        actual.0
-    );
 }
 
 const INPUT_KEYS: &[&str] = &[

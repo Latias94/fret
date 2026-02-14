@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
+use fret_ui::theme::CubicBezier;
 
 use crate::declarative::transition;
 use crate::headless::presence::{PresenceOutput, ScaleFadePresenceOutput};
@@ -32,6 +35,50 @@ pub fn fade_presence_with_durations<H: UiHost>(
         open_ticks,
         close_ticks,
         crate::headless::easing::smoothstep,
+    );
+    PresenceOutput {
+        present: out.present,
+        opacity: out.progress,
+        animating: out.animating,
+    }
+}
+
+#[track_caller]
+pub fn fade_presence_with_durations_and_cubic_bezier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    bezier: CubicBezier,
+) -> PresenceOutput {
+    let out = transition::drive_transition_with_durations_and_cubic_bezier(
+        cx,
+        open,
+        open_ticks,
+        close_ticks,
+        bezier,
+    );
+    PresenceOutput {
+        present: out.present,
+        opacity: out.progress,
+        animating: out.animating,
+    }
+}
+
+#[track_caller]
+pub fn fade_presence_with_durations_and_cubic_bezier_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    bezier: CubicBezier,
+) -> PresenceOutput {
+    let out = transition::drive_transition_with_durations_and_cubic_bezier_duration(
+        cx,
+        open,
+        open_duration,
+        close_duration,
+        bezier,
     );
     PresenceOutput {
         present: out.present,
@@ -89,6 +136,58 @@ pub fn scale_fade_presence_with_durations_and_easing<H: UiHost>(
         open_ticks,
         close_ticks,
         ease,
+    );
+    let scale = from_scale + (to_scale - from_scale) * out.progress;
+    ScaleFadePresenceOutput {
+        present: out.present,
+        opacity: out.progress,
+        scale,
+        animating: out.animating,
+    }
+}
+
+#[track_caller]
+pub fn scale_fade_presence_with_durations_and_cubic_bezier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    from_scale: f32,
+    to_scale: f32,
+    bezier: CubicBezier,
+) -> ScaleFadePresenceOutput {
+    let out = transition::drive_transition_with_durations_and_cubic_bezier(
+        cx,
+        open,
+        open_ticks,
+        close_ticks,
+        bezier,
+    );
+    let scale = from_scale + (to_scale - from_scale) * out.progress;
+    ScaleFadePresenceOutput {
+        present: out.present,
+        opacity: out.progress,
+        scale,
+        animating: out.animating,
+    }
+}
+
+#[track_caller]
+pub fn scale_fade_presence_with_durations_and_cubic_bezier_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    from_scale: f32,
+    to_scale: f32,
+    bezier: CubicBezier,
+) -> ScaleFadePresenceOutput {
+    let out = transition::drive_transition_with_durations_and_cubic_bezier_duration(
+        cx,
+        open,
+        open_duration,
+        close_duration,
+        bezier,
     );
     let scale = from_scale + (to_scale - from_scale) * out.progress;
     ScaleFadePresenceOutput {

@@ -503,11 +503,15 @@ fn hit_test_gate_is_layout_transparent_for_intrinsic_sizing() {
 
             let container = cx.container(container_props, |cx| vec![cx.text("x")]);
 
-            let mut gate_layout = crate::element::LayoutStyle::default();
-            gate_layout.position = crate::element::PositionStyle::Absolute;
-            gate_layout.inset.left = Some(Px(10.0));
-            gate_layout.inset.top = Some(Px(30.0));
-            gate_layout.overflow = crate::element::Overflow::Visible;
+            let gate_layout = crate::element::LayoutStyle {
+                position: crate::element::PositionStyle::Absolute,
+                inset: crate::element::InsetStyle {
+                    left: Some(Px(10.0)),
+                    top: Some(Px(30.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
 
             let gate = cx.hit_test_gate_props(
                 crate::element::HitTestGateProps {

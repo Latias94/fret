@@ -37,24 +37,34 @@ fn apply_patch_op(
             .menus
             .iter_mut()
             .find(|m| m.title.as_ref() == *first)?;
-        let mut items: *mut Vec<MenuItem> = &mut menu.items;
 
-        for title in rest {
-            // Safety: we only reborrow `items` inside the loop and never keep references across
-            // iterations.
-            let next = unsafe { &mut *items }
-                .iter_mut()
-                .find_map(|item| match item {
-                    MenuItem::Submenu {
-                        title: t, items, ..
-                    } if t.as_ref() == *title => Some(items as *mut Vec<MenuItem>),
-                    _ => None,
-                })?;
-            items = next;
+        fn resolve_submenu_items_mut<'a>(
+            items: &'a mut [MenuItem],
+            path: &[&str],
+        ) -> Option<&'a mut Vec<MenuItem>> {
+            let (first, rest) = path.split_first()?;
+            for item in items.iter_mut() {
+                if let MenuItem::Submenu {
+                    title,
+                    items: submenu_items,
+                    ..
+                } = item
+                    && title.as_ref() == *first
+                {
+                    if rest.is_empty() {
+                        return Some(submenu_items);
+                    }
+                    return resolve_submenu_items_mut(submenu_items, rest);
+                }
+            }
+            None
         }
 
-        // Safety: `items` points to the last submenu `items` vec (or top-level menu items).
-        Some(unsafe { &mut *items })
+        if rest.is_empty() {
+            return Some(&mut menu.items);
+        }
+
+        resolve_submenu_items_mut(&mut menu.items, rest)
     }
 
     fn resolve_anchor_index(items: &[MenuItem], anchor: &ItemAnchor) -> Option<usize> {

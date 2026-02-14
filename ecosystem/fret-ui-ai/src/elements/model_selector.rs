@@ -304,13 +304,13 @@ impl ModelSelectorLogo {
 
         let bg = theme
             .color_by_key("background")
-            .unwrap_or_else(|| theme.color_required("background"));
+            .unwrap_or_else(|| theme.color_token("background"));
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
         let border = theme
             .color_by_key("border")
-            .unwrap_or_else(|| theme.color_required("border"));
+            .unwrap_or_else(|| theme.color_token("border"));
 
         let size = Px(12.0);
         let initial: Arc<str> = self

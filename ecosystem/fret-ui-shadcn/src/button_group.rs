@@ -94,9 +94,9 @@ impl ButtonGroupText {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme.color_required("muted");
-        let fg = theme.color_required("foreground");
-        let border_color = theme.color_required("border");
+        let bg = theme.color_token("muted");
+        let fg = theme.color_token("foreground");
+        let border_color = theme.color_token("border");
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
 
         let base_chrome = ChromeRefinement::default()
@@ -110,7 +110,7 @@ impl ButtonGroupText {
         let text_color = chrome
             .text_color
             .clone()
-            .unwrap_or_else(|| ColorRef::Color(theme.color_required("foreground")))
+            .unwrap_or_else(|| ColorRef::Color(theme.color_token("foreground")))
             .resolve(&theme);
 
         let corner_radii = self
@@ -138,8 +138,8 @@ impl ButtonGroupText {
         }
 
         let px_4 = MetricRef::space(Space::N4).resolve(&theme);
-        let text_px = theme.metric_required("metric.font.size");
-        let line_height = theme.metric_required("metric.font.line_height");
+        let text_px = theme.metric_token("metric.font.size");
+        let line_height = theme.metric_token("metric.font.line_height");
 
         let mut el = cx.container(props, move |cx| {
             let content = cx.flex(
@@ -320,7 +320,7 @@ impl ButtonGroup {
         let a11y_label = self.a11y_label;
 
         let group = cx.flex(props, move |cx| {
-            let radius = Theme::global(&*cx.app).metric_required("metric.radius.md");
+            let radius = Theme::global(&*cx.app).metric_token("metric.radius.md");
             let len = items.len();
 
             items

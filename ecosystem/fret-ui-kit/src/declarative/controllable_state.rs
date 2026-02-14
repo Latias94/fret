@@ -62,16 +62,27 @@ pub fn use_controllable_model<T: Clone + 'static, H: UiHost>(
         }
     }
 
-    let model = cx.with_state(UncontrolledModelState::<T>::default, |st| st.model.clone());
-    let model = if let Some(model) = model {
-        model
-    } else {
+    // `with_state` is keyed by (current element id, state type). When multiple uncontrolled models
+    // of the same state type are created under the same element scope, they must not collide.
+    //
+    // We allocate a dedicated child scope per invocation (React hook-like slot semantics), so each
+    // call gets its own stable element id and can store an independent internal model.
+    let mut default_value = Some(default_value);
+    let model = cx.scope(|cx| {
+        let model = cx.with_state(UncontrolledModelState::<T>::default, |st| st.model.clone());
+        if let Some(model) = model {
+            return model;
+        }
+
+        let default_value = default_value
+            .take()
+            .expect("default_value closure must be called at most once");
         let model = cx.app.models_mut().insert(default_value());
         cx.with_state(UncontrolledModelState::<T>::default, |st| {
             st.model = Some(model.clone());
         });
         model
-    };
+    });
 
     ControllableModel {
         model,
@@ -233,5 +244,69 @@ mod tests {
         let second = model_id_out.get().expect("model id after second render");
         assert_eq!(called.get(), 1);
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn use_controllable_model_uncontrolled_multiple_instances_do_not_collide() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let b = bounds();
+
+        let called = Cell::new(0);
+        let model_a_id_out = Cell::new(None);
+        let model_b_id_out = Cell::new(None);
+        let mut services = FakeServices::default();
+
+        let render = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            bump_frame(app);
+            let called = &called;
+            let model_a_id_out = &model_a_id_out;
+            let model_b_id_out = &model_b_id_out;
+
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                b,
+                "controllable-state-multi-test",
+                |cx| {
+                    vec![cx.keyed("controllable", |cx| {
+                        let a = use_controllable_model(cx, None::<Model<u32>>, || {
+                            called.set(called.get() + 1);
+                            1u32
+                        });
+                        let b = use_controllable_model(cx, None::<Model<u32>>, || {
+                            called.set(called.get() + 1);
+                            2u32
+                        });
+                        model_a_id_out.set(Some(a.model().id()));
+                        model_b_id_out.set(Some(b.model().id()));
+                        cx.spacer(Default::default())
+                    })]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, b, 1.0);
+        };
+
+        render(&mut ui, &mut app, &mut services);
+        let first_a = model_a_id_out.get().expect("model a id after first render");
+        let first_b = model_b_id_out.get().expect("model b id after first render");
+        assert_eq!(called.get(), 2);
+        assert_ne!(first_a, first_b);
+
+        render(&mut ui, &mut app, &mut services);
+        let second_a = model_a_id_out
+            .get()
+            .expect("model a id after second render");
+        let second_b = model_b_id_out
+            .get()
+            .expect("model b id after second render");
+        assert_eq!(called.get(), 2);
+        assert_eq!(first_a, second_a);
+        assert_eq!(first_b, second_b);
     }
 }

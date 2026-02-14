@@ -3,17 +3,18 @@ use std::sync::Arc;
 use fret_core::{Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
-    MainAlign, RowProps, SemanticsDecoration,
+    MainAlign, PressableA11y, PressableProps, RowProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 fn muted_foreground(theme: &Theme) -> fret_core::Color {
     theme
         .color_by_key("muted.foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or_else(|| theme.color_required("muted.foreground"))
+        .unwrap_or_else(|| theme.color_token("muted.foreground"))
 }
 
 fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
@@ -437,7 +438,7 @@ impl FieldLegend {
             let theme = Theme::global(&*cx.app);
             let fg = theme
                 .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_required("foreground"));
+                .unwrap_or_else(|| theme.color_token("foreground"));
 
             let (size, line_height) = match self.variant {
                 FieldLegendVariant::Legend => {
@@ -451,8 +452,8 @@ impl FieldLegend {
                     (size, line_height)
                 }
                 FieldLegendVariant::Label => {
-                    let size = theme.metric_required("font.size");
-                    let line_height = theme.metric_required("font.line_height");
+                    let size = theme.metric_token("font.size");
+                    let line_height = theme.metric_token("font.line_height");
                     (size, line_height)
                 }
             };
@@ -630,15 +631,15 @@ impl FieldTitle {
             let theme = Theme::global(&*cx.app);
             let fg = theme
                 .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_required("foreground"));
+                .unwrap_or_else(|| theme.color_token("foreground"));
             let px = theme
                 .metric_by_key("component.field.title_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.title_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -656,6 +657,7 @@ impl FieldTitle {
 pub struct FieldLabel {
     text: Arc<str>,
     layout: LayoutRefinement,
+    for_control: Option<ControlId>,
 }
 
 impl FieldLabel {
@@ -663,7 +665,17 @@ impl FieldLabel {
         Self {
             text: text.into(),
             layout: LayoutRefinement::default(),
+            for_control: None,
         }
+    }
+
+    /// Binds this label to a logical form control id (similar to HTML `label[for]`).
+    ///
+    /// When set, pointer activation on the label forwards to the registered control action and
+    /// requests focus for the control.
+    pub fn for_control(mut self, id: impl Into<ControlId>) -> Self {
+        self.for_control = Some(id.into());
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -680,28 +692,118 @@ impl FieldLabel {
             // See: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx`.
             let fg = theme
                 .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_required("foreground"));
+                .unwrap_or_else(|| theme.color_token("foreground"));
             let px = theme
                 .metric_by_key("component.field.label_px")
                 .or_else(|| theme.metric_by_key("component.label.text_px"))
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.label_line_height")
                 .or_else(|| theme.metric_by_key("component.label.line_height"))
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
-        ui::label(cx, self.text)
-            .layout(self.layout)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_medium()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .into_element(cx)
+        let Some(for_control) = self.for_control.clone() else {
+            return ui::label(cx, self.text)
+                .layout(self.layout)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_medium()
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .into_element(cx);
+        };
+
+        let theme = Theme::global(&*cx.app).clone();
+        let pressable_layout = decl_style::layout_style(&theme, self.layout);
+        let control_registry = control_registry_model(cx);
+        let text = self.text.clone();
+
+        cx.pressable_with_id_props(move |cx, _st, id| {
+            let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                reg.register_label(
+                    cx.window,
+                    cx.frame_id,
+                    for_control.clone(),
+                    LabelEntry { element: id },
+                );
+            });
+
+            let control_registry_on_pointer = control_registry.clone();
+            let for_control_on_pointer = for_control.clone();
+            cx.pressable_add_on_pointer_down(Arc::new(move |host, acx, _down| {
+                let target = host
+                    .models_mut()
+                    .read(&control_registry_on_pointer, |reg| {
+                        reg.control_for(acx.window, &for_control_on_pointer)
+                            .map(|c| (c.enabled, c.element))
+                    })
+                    .ok()
+                    .flatten();
+                if let Some((true, element)) = target {
+                    host.request_focus(element);
+                }
+                fret_ui::action::PressablePointerDownResult::Continue
+            }));
+
+            let control_registry_on_activate = control_registry.clone();
+            let for_control_on_activate = for_control.clone();
+            cx.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
+                let control = host
+                    .models_mut()
+                    .read(&control_registry_on_activate, |reg| {
+                        reg.control_for(acx.window, &for_control_on_activate)
+                            .cloned()
+                    })
+                    .ok()
+                    .flatten();
+                let Some(control) = control else {
+                    return;
+                };
+                if !control.enabled {
+                    return;
+                }
+                control.action.invoke(host);
+            }));
+
+            let controls_element = cx
+                .app
+                .models()
+                .read(&control_registry, |reg| {
+                    reg.control_for(cx.window, &for_control).map(|c| c.element)
+                })
+                .ok()
+                .flatten();
+
+            let mut a11y = PressableA11y {
+                role: Some(SemanticsRole::Text),
+                label: Some(text.clone()),
+                ..Default::default()
+            };
+            if let Some(element) = controls_element {
+                a11y.controls_element = Some(element.0);
+            }
+
+            let props = PressableProps {
+                layout: pressable_layout,
+                enabled: true,
+                focusable: false,
+                a11y,
+                ..Default::default()
+            };
+
+            let child = ui::label(cx, text.clone())
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_medium()
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .into_element(cx);
+            (props, vec![child])
+        })
     }
 }
 
@@ -723,11 +825,11 @@ impl FieldDescription {
             let px = theme
                 .metric_by_key("component.field.description_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.description_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -757,15 +859,15 @@ impl FieldError {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
-            let fg = theme.color_required("destructive");
+            let fg = theme.color_token("destructive");
             let px = theme
                 .metric_by_key("component.field.error_px")
                 .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_required("font.size"));
+                .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.error_line_height")
                 .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
 
@@ -812,8 +914,8 @@ impl FieldSeparator {
             let h = theme
                 .metric_by_key("component.field.separator_h")
                 .unwrap_or_else(|| MetricRef::space(Space::N5).resolve(theme));
-            let border = theme.color_required("border");
-            let bg = theme.color_required("background");
+            let border = theme.color_token("border");
+            let bg = theme.color_token("background");
 
             // Upstream uses `-my-2` (negative 8px) to visually tighten the separator in a group.
             let outer_layout = decl_style::layout_style(

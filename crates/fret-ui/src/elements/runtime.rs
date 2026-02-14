@@ -1302,11 +1302,16 @@ impl WindowElementState {
         }
     }
 
-    pub(crate) fn element_nodes(&self) -> Vec<(GlobalElementId, NodeId)> {
-        self.nodes
-            .iter()
-            .map(|(&element, entry)| (element, entry.node))
-            .collect()
+    pub(crate) fn element_nodes_copy_into(&self, out: &mut Vec<(GlobalElementId, NodeId)>) {
+        out.clear();
+        if out.capacity() < self.nodes.len() {
+            out.reserve(self.nodes.len() - out.capacity());
+        }
+        out.extend(
+            self.nodes
+                .iter()
+                .map(|(&element, entry)| (element, entry.node)),
+        );
     }
 
     pub(crate) fn last_bounds(&self, element: GlobalElementId) -> Option<Rect> {
@@ -1402,6 +1407,7 @@ impl WindowElementState {
             .insert(EnvironmentQueryKey::PrefersReducedMotion);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn set_committed_text_scale_factor(&mut self, value: Option<f32>) {
         let changed = match (self.committed_text_scale_factor, value) {
             (Some(a), Some(b)) => (a - b).abs() > 0.0001,
@@ -1421,6 +1427,7 @@ impl WindowElementState {
             .insert(EnvironmentQueryKey::TextScaleFactor);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn set_committed_prefers_reduced_transparency(&mut self, value: Option<bool>) {
         if self.committed_prefers_reduced_transparency == value {
             return;
@@ -1434,6 +1441,7 @@ impl WindowElementState {
             .insert(EnvironmentQueryKey::PrefersReducedTransparency);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn set_committed_accent_color(&mut self, value: Option<Color>) {
         if self.committed_accent_color == value {
             return;

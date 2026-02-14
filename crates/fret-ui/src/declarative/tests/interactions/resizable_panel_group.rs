@@ -67,6 +67,11 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
+
+    assert!(
+        ui.captured_for(fret_core::PointerId(0)).is_some(),
+        "expected pointer capture after handle press"
+    );
     ui.dispatch_event(
         &mut app,
         &mut services,

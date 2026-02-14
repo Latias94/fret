@@ -63,7 +63,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             decl_style::container_props(
                 theme,
                 ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("muted")))
+                    .bg(ColorRef::Color(theme.color_token("muted")))
                     .rounded(Radius::Sm),
                 LayoutRefinement::default().size_full(),
             )

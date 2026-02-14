@@ -142,7 +142,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full()),
             move |cx| vec![shadcn::typography::h4(cx, title), body],
         )
@@ -236,40 +236,48 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         };
 
         let collapsible = match open {
-            Some(open_model) => shadcn::Collapsible::new(open_model).into_element_with_open_model(
-                cx,
-                |cx, open, is_open| {
-                    let toggle_text = if is_open {
-                        "Hide details"
-                    } else {
-                        "Show details"
-                    };
-                    shadcn::Button::new(toggle_text)
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Icon)
-                        .toggle_model(open)
-                        .test_id(format!("{test_id_prefix}-trigger"))
-                        .into_element(cx)
-                },
-                |cx| details_content(cx),
-            ),
-            None => shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
-                cx,
-                |cx, open, is_open| {
-                    let toggle_text = if is_open {
-                        "Hide details"
-                    } else {
-                        "Show details"
-                    };
-                    shadcn::Button::new(toggle_text)
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Icon)
-                        .toggle_model(open)
-                        .test_id(format!("{test_id_prefix}-trigger"))
-                        .into_element(cx)
-                },
-                |cx| details_content(cx),
-            ),
+            Some(open_model) => shadcn::Collapsible::new(open_model)
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element_with_open_model(
+                    cx,
+                    |cx, open, _is_open| {
+                        shadcn::Button::new("Toggle")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Icon)
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)),
+                            )
+                            .children([shadcn::icon::icon(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.chevrons-up-down"),
+                            )])
+                            .toggle_model(open)
+                            .test_id(format!("{test_id_prefix}-trigger"))
+                            .into_element(cx)
+                    },
+                    |cx| details_content(cx),
+                ),
+            None => shadcn::Collapsible::uncontrolled(false)
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element_with_open_model(
+                    cx,
+                    |cx, open, _is_open| {
+                        shadcn::Button::new("Toggle")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Icon)
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)),
+                            )
+                            .children([shadcn::icon::icon(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.chevrons-up-down"),
+                            )])
+                            .toggle_model(open)
+                            .test_id(format!("{test_id_prefix}-trigger"))
+                            .into_element(cx)
+                    },
+                    |cx| details_content(cx),
+                ),
         };
 
         let wrapper_props = container_props(
@@ -282,7 +290,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 cx,
                 stack::VStackProps::default()
                     .gap(Space::N2)
-                    .items_start()
+                    .items_stretch()
                     .layout(LayoutRefinement::default().w_full()),
                 move |cx| {
                     vec![

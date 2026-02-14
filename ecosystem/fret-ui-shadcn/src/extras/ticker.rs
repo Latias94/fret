@@ -145,15 +145,15 @@ impl Ticker {
                 .nowrap()
                 .into_element(cx);
 
-            let muted = theme.color_required("muted-foreground");
+            let muted = theme.color_token("muted-foreground");
             let price_text = ui::text(cx, self.price)
                 .text_color(ColorRef::Color(muted))
                 .nowrap()
                 .into_element(cx);
 
             let change_color = match self.change_kind {
-                TickerChangeKind::Up => theme.color_required("primary"),
-                TickerChangeKind::Down => theme.color_required("destructive"),
+                TickerChangeKind::Up => theme.color_token("primary"),
+                TickerChangeKind::Down => theme.color_token("destructive"),
                 TickerChangeKind::Flat => muted,
             };
             let change_text = ui::text(cx, self.change)

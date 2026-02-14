@@ -60,11 +60,11 @@ fn with_alpha(mut c: Color, a: f32) -> Color {
 }
 
 fn border_color(theme: &Theme) -> Color {
-    theme.color_required("border")
+    theme.color_token("border")
 }
 
 fn muted_bg(theme: &Theme) -> Color {
-    theme.color_required("muted")
+    theme.color_token("muted")
 }
 
 fn row_height_px(theme: &Theme) -> Px {
@@ -82,13 +82,13 @@ fn scrollbar_width(theme: &Theme) -> Px {
 fn scrollbar_thumb(theme: &Theme) -> Color {
     theme
         .color_by_key("scrollbar.thumb.background")
-        .unwrap_or_else(|| with_alpha(theme.color_required("muted-foreground"), 0.35))
+        .unwrap_or_else(|| with_alpha(theme.color_token("muted-foreground"), 0.35))
 }
 
 fn scrollbar_thumb_hover(theme: &Theme) -> Color {
     theme
         .color_by_key("scrollbar.thumb.hover.background")
-        .unwrap_or_else(|| with_alpha(theme.color_required("muted-foreground"), 0.55))
+        .unwrap_or_else(|| with_alpha(theme.color_token("muted-foreground"), 0.55))
 }
 
 #[derive(Debug, Clone)]

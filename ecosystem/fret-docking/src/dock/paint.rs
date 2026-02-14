@@ -38,14 +38,14 @@ pub(super) fn paint_dock(
     overlay_hooks: Option<&dyn DockViewportOverlayHooks>,
     scene: &mut Scene,
 ) {
-    let panel_bg = theme.color_required("card");
-    let surface_bg = theme.color_required("background");
-    let hover_bg = theme.color_required("accent");
-    let primary = theme.color_required("primary");
-    let fg = theme.color_required("foreground");
-    let fg_muted = theme.color_required("muted-foreground");
-    let pad_md = theme.metric_required("metric.padding.md");
-    let radius_sm = theme.metric_required("metric.radius.sm");
+    let panel_bg = theme.color_token("card");
+    let surface_bg = theme.color_token("background");
+    let hover_bg = theme.color_token("accent");
+    let primary = theme.color_token("primary");
+    let fg = theme.color_token("foreground");
+    let fg_muted = theme.color_token("muted-foreground");
+    let pad_md = theme.metric_token("metric.padding.md");
+    let radius_sm = theme.metric_token("metric.radius.sm");
 
     let PaintDockParams {
         window,
@@ -251,8 +251,8 @@ pub(super) fn paint_dock(
             let scroll = Px(menu.scroll.0.clamp(0.0, max_scroll.0));
             let row_h = overflow_menu_row_height(tab_bar).0;
             if row_h > 0.0 {
-                let bg = theme.color_required("popover");
-                let border = theme.color_required("popover.border");
+                let bg = theme.color_token("popover");
+                let border = theme.color_token("popover.border");
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(100),
                     rect: menu_rect,
@@ -398,9 +398,9 @@ pub(super) fn paint_split_handles(
         );
 
         let background = if active == Some(node) {
-            theme.color_required("ring")
+            theme.color_token("ring")
         } else {
-            theme.color_required("border")
+            theme.color_token("border")
         };
 
         let handle = ResizeHandle {
@@ -430,6 +430,8 @@ pub(super) fn paint_drop_overlay(
     bounds: Rect,
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     tab_scroll: &HashMap<DockNodeId, Px>,
     tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
     drag_source_tabs: Option<DockNodeId>,
@@ -441,9 +443,9 @@ pub(super) fn paint_drop_overlay(
         return;
     };
 
-    let primary = theme.color_required("primary");
-    let radius_sm = theme.metric_required("metric.radius.sm");
-    let radius_md = theme.metric_required("metric.radius.md");
+    let primary = theme.color_token("primary");
+    let radius_sm = theme.metric_token("metric.radius.sm");
+    let radius_md = theme.metric_token("metric.radius.md");
 
     match target {
         DockDropTarget::Float { window: w } => {
@@ -542,12 +544,12 @@ pub(super) fn paint_drop_overlay(
                             corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                         });
 
-                        let pad_x = theme.metric_required("metric.padding.md");
+                        let pad_x = theme.metric_token("metric.padding.md");
                         let text_x = Px(preview.origin.x.0 + pad_x.0.max(0.0));
                         let inner_y = preview.origin.y.0
                             + ((preview.size.height.0 - title.metrics.size.height.0) * 0.5);
                         let text_y = Px(inner_y + title.metrics.baseline.0);
-                        let fg = theme.color_required("foreground");
+                        let fg = theme.color_token("foreground");
                         scene.push(SceneOp::PushClipRect { rect: preview });
                         scene.push(SceneOp::Text {
                             order: fret_core::DrawOrder(9_996),
@@ -621,7 +623,48 @@ pub(super) fn paint_drop_overlay(
                 return;
             }
 
-            let overlay = drop_zone_rect(rect, target.zone);
+            let overlay = match graph.edge_dock_decision(window, target.tabs, target.zone) {
+                Some(EdgeDockDecision::InsertIntoSplit {
+                    split,
+                    anchor_index,
+                    insert_index,
+                }) => {
+                    let preview = layout.get(&split).copied().and_then(|bounds| {
+                        let Some(DockNode::Split {
+                            axis,
+                            children,
+                            fractions,
+                        }) = graph.node(split)
+                        else {
+                            return None;
+                        };
+                        if children.is_empty() || children.len() != fractions.len() {
+                            return None;
+                        }
+
+                        let mut next = fractions.clone();
+                        let old = *next.get(anchor_index)?;
+                        let keep = old * 0.5;
+                        let take = old * 0.5;
+
+                        next[anchor_index] = keep;
+                        next.insert(insert_index.min(next.len()), take);
+
+                        let computed = resizable::compute_layout(
+                            *axis,
+                            bounds,
+                            children.len().saturating_add(1),
+                            &next,
+                            split_handle_gap,
+                            split_handle_hit_thickness,
+                            &[],
+                        );
+                        computed.panel_rects.get(insert_index).copied()
+                    });
+                    preview.unwrap_or_else(|| drop_zone_rect(rect, target.zone))
+                }
+                _ => drop_zone_rect(rect, target.zone),
+            };
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: overlay,
@@ -673,13 +716,13 @@ pub(super) fn paint_drop_hints(
     let outer_rects =
         show_outer.then(|| dock_hint_rects_with_font(root_rect, hint_font_size_outer, true));
 
-    let inactive_bg_base = theme.color_required("card");
-    let inactive_border_base = theme.color_required("border");
-    let active_base = theme.color_required("primary");
-    let surface_bg = theme.color_required("background");
-    let radius_sm = theme.metric_required("metric.radius.sm");
-    let radius_md = theme.metric_required("metric.radius.md");
-    let pad_sm = theme.metric_required("metric.padding.sm");
+    let inactive_bg_base = theme.color_token("card");
+    let inactive_border_base = theme.color_token("border");
+    let active_base = theme.color_token("primary");
+    let surface_bg = theme.color_token("background");
+    let radius_sm = theme.metric_token("metric.radius.sm");
+    let radius_md = theme.metric_token("metric.radius.md");
+    let pad_sm = theme.metric_token("metric.padding.sm");
 
     let inactive_bg = Color {
         a: 0.64,
@@ -808,7 +851,7 @@ fn paint_drop_hint_icon(
     let frame = inset(hint_rect, pad);
     let inner = inset(frame, Px((min_dim * 0.08).clamp(2.0, 4.0)));
 
-    let fg = theme.color_required("foreground");
+    let fg = theme.color_token("foreground");
     let stroke = Color {
         a: if is_active { 0.92 } else { 0.80 },
         ..fg
@@ -822,7 +865,7 @@ fn paint_drop_hint_icon(
         ..fg
     };
 
-    let frame_radius = Px(theme.metric_required("metric.radius.sm").0.clamp(2.0, 4.0));
+    let frame_radius = Px(theme.metric_token("metric.radius.sm").0.clamp(2.0, 4.0));
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(order),
         rect: frame,

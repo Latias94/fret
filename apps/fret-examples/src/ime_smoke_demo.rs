@@ -66,7 +66,7 @@ impl ImeSmokeDriver {
             vec![cx.container(
                 ContainerProps {
                     layout: root_layout,
-                    background: Some(theme.color_required("background")),
+                    background: Some(theme.color_token("background")),
                     ..Default::default()
                 },
                 |cx| {
@@ -76,7 +76,7 @@ impl ImeSmokeDriver {
                             direction: fret_core::Axis::Vertical,
                             gap: Px(12.0),
                             padding: fret_core::Edges::all(
-                                theme.metric_required("metric.padding.md"),
+                                theme.metric_token("metric.padding.md"),
                             ),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,

@@ -78,6 +78,11 @@ impl ToolingDiagClient {
     pub fn set_default_session_id(&self, session_id: Option<String>) {
         self.transport.set_default_session_id(session_id);
     }
+
+    #[cfg(test)]
+    pub(crate) fn new_for_test(transport: Arc<dyn DiagTransport>) -> Self {
+        Self { transport }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -105,7 +110,10 @@ impl DiagInbox {
     }
 }
 
-pub fn fs_single_session_list(session_id: &str) -> DiagTransportMessageV1 {
+pub fn fs_single_session_list(
+    session_id: &str,
+    capabilities: Vec<String>,
+) -> DiagTransportMessageV1 {
     DiagTransportMessageV1 {
         schema_version: 1,
         r#type: "session.list".to_string(),
@@ -116,12 +124,7 @@ pub fn fs_single_session_list(session_id: &str) -> DiagTransportMessageV1 {
                 session_id: session_id.to_string(),
                 client_kind: "filesystem".to_string(),
                 client_version: "unknown".to_string(),
-                capabilities: vec![
-                    "inspect".to_string(),
-                    "pick".to_string(),
-                    "scripts".to_string(),
-                    "bundles".to_string(),
-                ],
+                capabilities,
             }],
         })
         .unwrap_or_else(|_| serde_json::json!({ "sessions": [] })),

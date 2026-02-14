@@ -12,6 +12,9 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::switch::{
     switch_a11y, switch_checked_from_optional_bool, switch_use_checked_model, toggle_optional_bool,
@@ -56,26 +59,26 @@ fn switch_padding(theme: &Theme) -> Px {
 fn switch_bg_on(theme: &Theme) -> Color {
     theme
         .color_by_key("primary")
-        .unwrap_or_else(|| theme.color_required("primary"))
+        .unwrap_or_else(|| theme.color_token("primary"))
 }
 
 fn switch_bg_off(theme: &Theme) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or_else(|| theme.color_required("input"))
+        .unwrap_or_else(|| theme.color_token("input"))
 }
 
 fn switch_thumb_bg(theme: &Theme) -> Color {
     theme
         .color_by_key("background")
-        .unwrap_or_else(|| theme.color_required("background"))
+        .unwrap_or_else(|| theme.color_token("background"))
 }
 
 fn switch_ring_color(theme: &Theme) -> Color {
     theme
         .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"))
+        .unwrap_or_else(|| theme.color_token("ring"))
 }
 
 #[derive(Debug, Clone, Default)]
@@ -125,6 +128,7 @@ impl SwitchStyle {
 pub struct Switch {
     model: SwitchModel,
     disabled: bool,
+    control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_click: Option<CommandId>,
@@ -144,6 +148,7 @@ impl Switch {
         Self {
             model: SwitchModel::Determinate(model),
             disabled: false,
+            control_id: None,
             a11y_label: None,
             test_id: None,
             on_click: None,
@@ -161,6 +166,7 @@ impl Switch {
         Self {
             model: SwitchModel::Optional(model),
             disabled: false,
+            control_id: None,
             a11y_label: None,
             test_id: None,
             on_click: None,
@@ -199,6 +205,13 @@ impl Switch {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Associates this switch with a logical form control id so related elements (e.g. labels)
+    /// can forward pointer activation and focus.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -322,8 +335,10 @@ impl Switch {
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let chrome = self.chrome.clone();
             let style_override = self.style.clone();
+            let control_id = self.control_id.clone();
+            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
 
-            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
                 cx.pressable_dispatch_command_if_enabled_opt(on_click);
                 match &model {
                     SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
@@ -389,7 +404,50 @@ impl Switch {
                     + chrome_props.padding.top.0.max(0.0)
                     + chrome_props.padding.bottom.0.max(0.0));
 
-                let mut a11y = switch_a11y(a11y_label.clone(), on);
+                if let (Some(control_id), Some(control_registry)) =
+                    (control_id.clone(), control_registry.clone())
+                {
+                    let action = match &model {
+                        SwitchModel::Determinate(model) => ControlAction::ToggleBool(model.clone()),
+                        SwitchModel::Optional(model) => {
+                            ControlAction::ToggleOptionalBool(model.clone())
+                        }
+                    };
+                    let entry = ControlEntry {
+                        element: id,
+                        enabled: !disabled,
+                        action,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+
+                let labelled_by_element = if let (Some(control_id), Some(control_registry)) =
+                    (control_id.as_ref(), control_registry.as_ref())
+                {
+                    cx.app
+                        .models()
+                        .read(control_registry, |reg| {
+                            reg.label_for(cx.window, control_id).map(|l| l.element)
+                        })
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+
+                // Prefer explicit `a11y_label`, but fall back to `labelled-by` when available.
+                let a11y_label = if a11y_label.is_some() || labelled_by_element.is_none() {
+                    a11y_label.clone()
+                } else {
+                    None
+                };
+
+                let mut a11y = switch_a11y(a11y_label, on);
+                if let Some(label) = labelled_by_element {
+                    a11y.labelled_by_element = Some(label.0);
+                }
                 a11y.test_id = test_id.clone();
                 let pressable_props = PressableProps {
                     layout: pressable_layout,

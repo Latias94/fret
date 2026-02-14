@@ -1,6 +1,123 @@
 use super::*;
 
 #[test]
+fn text_word_wrap_does_not_force_zero_width_under_min_content_constraints() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    #[derive(Default)]
+    struct RecordingTextService {
+        measured: Vec<TextConstraints>,
+    }
+
+    impl TextService for RecordingTextService {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            let metrics = self.measure(input, constraints);
+            (fret_core::TextBlobId::default(), metrics)
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+
+        fn measure(
+            &mut self,
+            input: &fret_core::TextInput,
+            constraints: TextConstraints,
+        ) -> TextMetrics {
+            self.measured.push(constraints);
+            let base_w = (input.text().chars().count() as f32) * 10.0;
+            let w = constraints
+                .max_width
+                .map(|max| base_w.min(max.0))
+                .unwrap_or(base_w);
+            TextMetrics {
+                size: Size::new(Px(w), Px(10.0)),
+                baseline: Px(8.0),
+            }
+        }
+    }
+
+    impl fret_core::PathService for RecordingTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for RecordingTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for RecordingTextService {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut services = RecordingTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-min-content-word-wrap",
+        |cx| vec![cx.text("Clear Button")],
+    );
+    ui.set_root(root);
+    let text = ui.children(root)[0];
+
+    let min_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MinContent),
+    );
+    ui.measure_in(&mut app, &mut services, text, min_constraints, 1.0);
+
+    assert!(
+        !services.measured.iter().any(|c| {
+            matches!(c.wrap, fret_core::TextWrap::Word)
+                && c.max_width.is_some_and(|w| w.0.abs() < 0.01)
+        }),
+        "expected TextWrap::Word not to force max_width=0.0 under min-content constraints; measured={:?}",
+        services.measured
+    );
+}
+
+#[test]
 fn text_measurement_and_paint_agree_on_wrap_width_in_a_column() {
     #[derive(Default)]
     struct RecordingTextService {

@@ -33,14 +33,14 @@ pub struct PortalTextEditorUi {
 
 impl PortalTextEditorUi {
     pub fn from_theme(theme: ThemeSnapshot) -> Self {
-        let font_size = theme.metric_required("metric.font.size").0;
+        let font_size = theme.metric_token("metric.font.size").0;
 
         Self {
             max_width: 180.0,
             gap: 6.0,
             stepper_button: PortalSmallButtonUi::from_theme(theme),
 
-            error_color: theme.color_required("destructive"),
+            error_color: theme.color_token("destructive"),
             error_text_style: TextStyle {
                 size: Px((font_size - 1.0).max(10.0)),
                 ..TextStyle::default()

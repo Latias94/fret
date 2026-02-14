@@ -186,7 +186,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                     layout: Default::default(),
                                     text: Arc::<str>::from(format!("{}:", s.label)),
                                     style: None,
-                                    color: Some(theme.color_required("muted-foreground")),
+                                    color: Some(theme.color_token("muted-foreground")),
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
                                 }),
@@ -197,9 +197,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                             .border_1()
                                             .rounded(Radius::Md)
                                             .p(Space::N2)
-                                            .bg(ColorRef::Color(
-                                                theme.color_required("background"),
-                                            )),
+                                            .bg(ColorRef::Color(theme.color_token("background"))),
                                         LayoutRefinement::default().w_full(),
                                     ),
                                     move |_cx| vec![text],
@@ -254,7 +252,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
-                    .bg(ColorRef::Color(theme.color_required("background"))),
+                    .bg(ColorRef::Color(theme.color_token("background"))),
                 LayoutRefinement::default()
                     .w_full()
                     .h_px(MetricRef::Px(Px(220.0))),
@@ -320,9 +318,9 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                         }
 
                         let scale_factor = p.scale_factor();
-                        let selection_bg = p.theme().color_required("selection.background");
-                        let fg = p.theme().color_required("foreground");
-                        let muted = p.theme().color_required("muted-foreground");
+                        let selection_bg = p.theme().color_token("selection.background");
+                        let fg = p.theme().color_token("foreground");
+                        let muted = p.theme().color_token("muted-foreground");
 
                         let (stats, stats_origin) = {
                             let (services, scene) = p.services_and_scene();

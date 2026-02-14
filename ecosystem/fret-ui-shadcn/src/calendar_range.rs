@@ -94,10 +94,10 @@ impl CalendarRange {
             min_days: 0,
             max_days: 0,
             exclude_disabled: false,
-            week_start: Weekday::Monday,
+            week_start: Weekday::Sunday,
             fixed_weeks: false,
             show_outside_days: true,
-            disable_outside_days: true,
+            disable_outside_days: false,
             show_week_number: false,
             cell_size: None,
             today: None,
@@ -327,10 +327,10 @@ impl CalendarRange {
 
         let text_sm_px = theme
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let text_sm_line_height = theme
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         let grid_text_style = TextStyle {
             font: Default::default(),
@@ -343,11 +343,11 @@ impl CalendarRange {
         let day_size = self.cell_size.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.calendar.day_size")
-                .unwrap_or_else(|| theme.metric_required("component.size.sm.icon_button.size"))
+                .unwrap_or_else(|| theme.metric_token("component.size.sm.icon_button.size"))
         });
         let week_row_gap = theme
             .metric_by_key("component.calendar.week_row_gap")
-            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+            .unwrap_or_else(|| theme.metric_token("metric.padding.sm"));
         let day_col_gap = Px(0.0);
         let day_grid_width = Px(day_size.0 * 7.0);
         let month_width = if show_week_number {
@@ -393,7 +393,7 @@ impl CalendarRange {
                     false
                 };
 
-                let bg = theme.color_required("background");
+                let bg = theme.color_token("background");
                 let mut chrome = ChromeRefinement::default()
                     .bg(ColorRef::Color(bg))
                     .p(Space::N3);
@@ -536,10 +536,10 @@ impl CalendarRange {
                                     let mut title_props = TextProps::new(title.clone());
                                     title_props.style = Some(TextStyle {
                                         font: Default::default(),
-                                        size: theme_header.metric_required("font.size"),
+                                        size: theme_header.metric_token("font.size"),
                                         weight: FontWeight::MEDIUM,
                                         line_height: Some(
-                                            theme_header.metric_required("font.line_height"),
+                                            theme_header.metric_token("font.line_height"),
                                         ),
                                         ..Default::default()
                                     });
@@ -564,7 +564,7 @@ impl CalendarRange {
                                         props.wrap = TextWrap::None;
                                         props.overflow = TextOverflow::Clip;
                                         props.color =
-                                            Some(theme_weekdays.color_required("muted-foreground"));
+                                            Some(theme_weekdays.color_token("muted-foreground"));
                                         props.layout = {
                                             let mut ls = LayoutStyle::default();
                                             ls.size.width = Length::Px(day_size);
@@ -580,7 +580,7 @@ impl CalendarRange {
                                         props.wrap = TextWrap::None;
                                         props.overflow = TextOverflow::Clip;
                                         props.color =
-                                            Some(theme_weekdays.color_required("muted-foreground"));
+                                            Some(theme_weekdays.color_token("muted-foreground"));
                                         props.layout = {
                                             let mut ls = LayoutStyle::default();
                                             ls.size.width = Length::Px(day_size);
@@ -708,6 +708,18 @@ impl CalendarRange {
                                         let is_to = selected.to.is_some_and(|d| d == day.date);
                                         let in_range = selected.contains(day.date);
                                         let selected_flag = in_range || is_from || is_to;
+                                        let col = idx % 7;
+                                        let is_selected_at = |idx: usize| {
+                                            let Some(day) = grid.get(idx) else {
+                                                return false;
+                                            };
+                                            let d = day.date;
+                                            selected.contains(d)
+                                                || selected.from.is_some_and(|it| it == d)
+                                                || selected.to.is_some_and(|it| it == d)
+                                        };
+                                        let left_selected = col > 0 && is_selected_at(idx - 1);
+                                        let right_selected = col < 6 && is_selected_at(idx + 1);
 
                                         calendar_range_day_cell(
                                             cx,
@@ -718,6 +730,8 @@ impl CalendarRange {
                                             is_from,
                                             is_to,
                                             selected_flag,
+                                            left_selected,
+                                            right_selected,
                                             is_today,
                                             is_disabled,
                                             focus_date.is_some_and(|d| d == day.date),
@@ -764,7 +778,7 @@ impl CalendarRange {
                                                     Some(grid_text_style_week_numbers.clone());
                                                 props.color = Some(
                                                     theme_days_for_week_numbers
-                                                        .color_required("muted-foreground"),
+                                                        .color_token("muted-foreground"),
                                                 );
                                                 props.wrap = TextWrap::None;
                                                 props.overflow = TextOverflow::Clip;
@@ -1313,6 +1327,18 @@ fn calendar_range_month_view<H: UiHost>(
                 let is_to = selected.to.is_some_and(|d| d == day.date);
                 let in_range = selected.contains(day.date);
                 let selected_flag = in_range || is_from || is_to;
+                let col = idx % 7;
+                let is_selected_at = |idx: usize| {
+                    let Some(day) = grid.get(idx) else {
+                        return false;
+                    };
+                    let d = day.date;
+                    selected.contains(d)
+                        || selected.from.is_some_and(|it| it == d)
+                        || selected.to.is_some_and(|it| it == d)
+                };
+                let left_selected = col > 0 && is_selected_at(idx - 1);
+                let right_selected = col < 6 && is_selected_at(idx + 1);
 
                 calendar_range_day_cell(
                     cx,
@@ -1323,6 +1349,8 @@ fn calendar_range_month_view<H: UiHost>(
                     is_from,
                     is_to,
                     selected_flag,
+                    left_selected,
+                    right_selected,
                     is_today,
                     is_disabled,
                     focus_date.is_some_and(|d| d == day.date),
@@ -1452,7 +1480,7 @@ fn calendar_icon_button<H: UiHost>(
 
     let radius = theme
         .metric_by_key("component.button.radius")
-        .unwrap_or_else(|| theme.metric_required("metric.radius.md"));
+        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
 
     control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
         cx.pressable_add_on_activate(Arc::new(move |host, _acx, _reason| {
@@ -1558,6 +1586,8 @@ fn calendar_range_day_cell<H: UiHost>(
     is_from: bool,
     is_to: bool,
     selected: bool,
+    left_selected: bool,
+    right_selected: bool,
     today: bool,
     disabled: bool,
     focus_candidate: bool,
@@ -1579,27 +1609,26 @@ fn calendar_range_day_cell<H: UiHost>(
 
     let muted_fg = theme
         .color_by_key("muted-foreground")
-        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+        .unwrap_or_else(|| theme.color_token("muted-foreground"));
     let fg = if in_month {
-        theme.color_required("foreground")
+        theme.color_token("foreground")
     } else {
         muted_fg
     };
 
     let (bg, fg) = if is_from || is_to {
         (
-            theme.color_required("primary"),
-            theme.color_required("primary-foreground"),
+            theme.color_token("primary"),
+            theme.color_token("primary-foreground"),
         )
-    } else if selected {
-        (theme.color_required("accent"), fg)
+    } else if selected || today {
+        (
+            theme.color_token("accent"),
+            theme.color_token("accent-foreground"),
+        )
     } else {
         (Color::TRANSPARENT, fg)
     };
-
-    let ring_color = theme
-        .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_required("ring"));
 
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
@@ -1607,10 +1636,10 @@ fn calendar_range_day_cell<H: UiHost>(
 
     let text_sm_px = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_token("font.size"));
     let text_sm_line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
         if focus_candidate
@@ -1659,28 +1688,36 @@ fn calendar_range_day_cell<H: UiHost>(
             }
         }));
 
-        let hover_bg = theme.color_required("accent");
+        let accent_bg = theme.color_token("accent");
         let pressed_bg = {
-            let mut c = hover_bg;
+            let mut c = accent_bg;
             c.a *= 0.85;
             c
         };
 
         let bg = if is_from || is_to {
             bg
+        } else if selected || today {
+            bg
         } else if st.pressed {
             pressed_bg
         } else if st.hovered {
-            hover_bg
+            accent_bg
         } else {
-            bg
+            Color::TRANSPARENT
         };
 
-        let mut chrome = ChromeRefinement::default()
-            .rounded(Radius::Sm)
-            .bg(ColorRef::Color(bg));
-        if today && !(is_from || is_to) {
-            chrome = chrome.border_1().border_color(ColorRef::Color(ring_color));
+        let mut chrome = ChromeRefinement::default().bg(ColorRef::Color(bg));
+        if selected {
+            // Match shadcn-web: range selection rounds only the visible row edges.
+            if !left_selected {
+                chrome = chrome.rounded_tl(Radius::Md).rounded_bl(Radius::Md);
+            }
+            if !right_selected {
+                chrome = chrome.rounded_tr(Radius::Md).rounded_br(Radius::Md);
+            }
+        } else {
+            chrome = chrome.rounded(Radius::Md);
         }
 
         let mut chrome_props =
@@ -1694,7 +1731,7 @@ fn calendar_range_day_cell<H: UiHost>(
             focusable: !disabled,
             focus_ring: Some(decl_style::focus_ring(
                 theme,
-                theme.metric_required("metric.radius.sm"),
+                theme.metric_token("metric.radius.md"),
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),

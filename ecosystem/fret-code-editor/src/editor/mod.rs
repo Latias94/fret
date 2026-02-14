@@ -1149,12 +1149,12 @@ impl CodeEditor {
             let active_interaction = interaction.unwrap_or_else(|| editor_state.borrow().interaction);
             let theme = cx.theme().clone();
 
-            let row_h = theme.metric_required("metric.font.mono_line_height");
-            let font_size = theme.metric_required("metric.font.mono_size");
-            let fg = theme.color_required("foreground");
-            let selection_bg = theme.color_required("selection.background");
+            let row_h = theme.metric_token("metric.font.mono_line_height");
+            let font_size = theme.metric_token("metric.font.mono_size");
+            let fg = theme.color_token("foreground");
+            let selection_bg = theme.color_token("selection.background");
             let caret_color = fg;
-            let overlay_bg = theme.color_required("muted");
+            let overlay_bg = theme.color_token("muted");
 
             let text_style = TextStyle {
                 font: FontId::monospace(),

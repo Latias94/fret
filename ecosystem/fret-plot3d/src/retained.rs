@@ -120,11 +120,11 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
         let background = self
             .style
             .background
-            .unwrap_or_else(|| theme.color_required("card"));
+            .unwrap_or_else(|| theme.color_token("card"));
         let border = self
             .style
             .border
-            .unwrap_or_else(|| theme.color_required("border"));
+            .unwrap_or_else(|| theme.color_token("border"));
         let border_width = self.style.border_width;
 
         let bounds = cx.bounds;

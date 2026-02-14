@@ -26,6 +26,12 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
+#[path = "support/css_units.rs"]
+mod css_units;
+
+#[path = "support/shadcn_motion.rs"]
+mod shadcn_motion;
+
 #[path = "web_vs_fret_overlay_placement/web.rs"]
 mod web;
 pub(crate) use web::*;
@@ -1165,12 +1171,7 @@ fn parse_align(value: &str) -> Option<Align> {
 }
 
 fn parse_px(value: &str) -> Option<f32> {
-    let value = value.trim();
-    if value == "0" {
-        return Some(0.0);
-    }
-    let value = value.strip_suffix("px").unwrap_or(value);
-    value.parse::<f32>().ok()
+    css_units::parse_px(value)
 }
 
 fn rect_right(r: WebRect) -> f32 {
@@ -2601,7 +2602,7 @@ fn assert_overlay_placement_matches(
         .clone();
 
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for step in 0..=settle_frames {
         let frame = 2 + step;
         let request_semantics = step == settle_frames;
@@ -2888,7 +2889,7 @@ fn assert_centered_overlay_placement_matches(
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for step in 0..=settle_frames {
         let frame = 2 + step;
         let request_semantics = step == settle_frames;
@@ -3052,7 +3053,7 @@ fn assert_viewport_anchored_overlay_placement_matches(
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_500 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_500() + 2;
     for frame_id in 2..=(2 + settle_frames) {
         let request_semantics = frame_id == 2 + settle_frames;
         let build_frame = build.clone();
@@ -3253,7 +3254,7 @@ fn build_dropdown_menu_dialog_open_snapshot(
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -3411,7 +3412,7 @@ fn build_item_dropdown_open_snapshot(
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -3534,7 +3535,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
         )
     }
 
-    let radius = fret_ui::Theme::global(&*cx.app).metric_required("metric.radius.md");
+    let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
 
     let left_button = Button::new("Snooze")
         .variant(ButtonVariant::Outline)
@@ -3777,7 +3778,7 @@ fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str)
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -3915,7 +3916,7 @@ fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -4022,7 +4023,7 @@ fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -4119,7 +4120,7 @@ fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -4337,7 +4338,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -4460,7 +4461,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -4524,7 +4525,7 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
                             cx,
                             |cx| {
                                 let theme = fret_ui::Theme::global(&*cx.app).clone();
-                                let muted = theme.color_required("muted-foreground");
+                                let muted = theme.color_token("muted-foreground");
 
                                 let mut props = fret_ui::element::PressableProps::default();
                                 props.a11y.role = Some(SemanticsRole::Button);
@@ -4546,8 +4547,8 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
                                                 layout: Default::default(),
                                                 text: Arc::from("Components"),
                                                 style: Some(shadcn_text_style(
-                                                    theme.metric_required("font.size"),
-                                                    theme.metric_required("font.line_height"),
+                                                    theme.metric_token("font.size"),
+                                                    theme.metric_token("font.line_height"),
                                                     FontWeight::NORMAL,
                                                 )),
                                                 color: Some(muted),
@@ -4602,7 +4603,7 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -4836,7 +4837,7 @@ fn assert_dropdown_menu_demo_constrained_menu_item_height_matches(web_name: &str
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -5005,7 +5006,7 @@ fn assert_dropdown_menu_demo_profile_item_padding_and_shortcut_match_impl(web_na
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -5182,7 +5183,7 @@ fn assert_dropdown_menu_checkboxes_indicator_slot_inset_matches_web_impl(web_nam
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         let request_semantics = frame == 2 + settle_frames;
         render_frame(
@@ -5284,7 +5285,7 @@ fn assert_dropdown_menu_radio_group_indicator_slot_inset_matches_web_impl(web_na
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         let request_semantics = frame == 2 + settle_frames;
         render_frame(
@@ -5431,7 +5432,7 @@ fn assert_dropdown_menu_demo_constrained_menu_content_insets_match(web_name: &st
         },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for frame in 2..=(2 + settle_frames) {
         render_frame(
             &mut ui,
@@ -5585,8 +5586,7 @@ fn assert_dropdown_menu_demo_constrained_scroll_state_matches(web_name: &str) {
     let _ = app.models_mut().update(&open, |v| *v = true);
     // Web goldens capture shortly after hover (`wait=50ms`), so we compare against that same
     // mid-transition point rather than fully settling the viewport size animation.
-    let hover_settle_frames =
-        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 / 2 + 1;
+    let hover_settle_frames = crate::shadcn_motion::ticks_100() / 2 + 1;
     for tick in 0..hover_settle_frames {
         let request_semantics = tick + 1 == hover_settle_frames;
         render_frame(
@@ -5729,8 +5729,7 @@ fn assert_dropdown_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, w
 
     // Keep consistent with the existing scroll-state gate: compare against the same mid-transition
     // point the web golden captures (after `wait=50ms`).
-    let hover_settle_frames =
-        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 / 2 + 1;
+    let hover_settle_frames = crate::shadcn_motion::ticks_100() / 2 + 1;
     for tick in 0..hover_settle_frames {
         let request_semantics = tick + 1 == hover_settle_frames;
         render_frame(
@@ -5913,7 +5912,7 @@ fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
         },
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -6210,7 +6209,7 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
         },
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     let mut frame: u64 = 3;
 
     // The web golden extractor disables motion before interacting with overlays. In Fret we don't
@@ -6587,7 +6586,7 @@ fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Sema
         },
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     let mut frame: u64 = 3;
 
     // The web golden extractor disables motion before interacting with overlays. In Fret we don't
@@ -7028,7 +7027,7 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..=settle_frames {
         let frame = 2 + tick;
         let request_semantics = tick == settle_frames;
@@ -7276,7 +7275,7 @@ fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7476,7 +7475,7 @@ fn assert_select_scrollable_listbox_option_height_matches(web_name: &str) {
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7611,7 +7610,7 @@ fn assert_select_scrollable_listbox_height_matches(web_name: &str) {
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7742,7 +7741,7 @@ fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7998,7 +7997,7 @@ fn assert_select_scrollable_viewport_insets_match(web_name: &str) {
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -8187,7 +8186,7 @@ fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -8299,7 +8298,7 @@ fn combobox_demo_open_snapshot(
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -8462,7 +8461,7 @@ fn assert_point_anchored_overlay_placement_matches(
 
     open_fret_at(&mut ui, &mut app, &mut services, window, open_point);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     let build_settle = build.clone();
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
@@ -9492,7 +9491,7 @@ fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -9681,7 +9680,7 @@ fn assert_context_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, wh
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -9889,7 +9888,7 @@ fn build_context_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
         render,
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     let mut frame: u64 = 3;
 
     // The web golden extractor disables motion before interacting with overlays. In Fret we don't
@@ -10268,7 +10267,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
         .expect("tooltip trigger node");
     ui.set_focus(Some(trigger_node));
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -10450,7 +10449,7 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
         .expect("hover card trigger node");
     ui.set_focus(Some(trigger_node));
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -10694,7 +10693,7 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -10926,7 +10925,7 @@ fn web_vs_fret_navigation_menu_demo_hover_switch_overlay_placement_matches(
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -11016,7 +11015,7 @@ fn web_vs_fret_navigation_menu_demo_hover_switch_overlay_placement_matches(
     // The upstream demo relies on a hover trigger + viewport size transition that is effectively
     // `duration-300` in the shadcn recipe. Our web golden is captured after a `wait=300`, so we
     // advance enough frames to reach the same steady state before asserting geometry.
-    let hover_settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+    let hover_settle_frames = crate::shadcn_motion::ticks_300() + 2;
     for tick in 0..hover_settle_frames {
         let request_semantics = tick + 1 == hover_settle_frames;
         render_frame(
@@ -11245,7 +11244,7 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -11503,7 +11502,7 @@ fn assert_navigation_menu_demo_mobile_viewport_insets_match(web_name: &str, trig
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -11770,7 +11769,7 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -11883,7 +11882,7 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
     // The upstream demo relies on a hover trigger + viewport size transition that is effectively
     // `duration-300` in the shadcn recipe. Our web golden is captured after a `wait=300`, so we
     // advance enough frames to reach the same steady state before asserting geometry.
-    let hover_settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+    let hover_settle_frames = crate::shadcn_motion::ticks_300() + 2;
     for tick in 0..hover_settle_frames {
         let request_semantics = tick + 1 == hover_settle_frames;
         render_frame(
@@ -12133,7 +12132,7 @@ fn navigation_menu_demo_home_mobile_small_viewport_height_matches_legacy() {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -12324,7 +12323,7 @@ fn assert_menubar_demo_checkbox_indicator_slot_inset_matches_web_impl(web_name: 
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -12470,7 +12469,7 @@ fn assert_menubar_demo_radio_indicator_slot_inset_matches_web_impl(web_name: &st
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -12634,7 +12633,7 @@ fn assert_menubar_demo_constrained_overlay_placement_matches(web_name: &str) {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -12865,7 +12864,7 @@ fn assert_menubar_demo_constrained_menu_item_height_matches(web_name: &str) {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -13016,7 +13015,7 @@ fn assert_menubar_demo_item_padding_and_shortcut_match_impl(web_name: &str) {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -13233,7 +13232,7 @@ fn assert_menubar_demo_constrained_menu_content_insets_match(web_name: &str) {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -13360,7 +13359,7 @@ fn assert_menubar_demo_constrained_scroll_state_matches(web_name: &str) {
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -13490,7 +13489,7 @@ fn assert_menubar_demo_wheel_does_not_move_overlay(web_name: &str, wheel_dy_px: 
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -13720,7 +13719,7 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
         }),
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     let mut frame: u64 = 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
@@ -14059,7 +14058,7 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

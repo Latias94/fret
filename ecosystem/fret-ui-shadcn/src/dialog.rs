@@ -5,9 +5,9 @@ use fret_icons::ids;
 use fret_runtime::{Model, ModelId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsDecoration,
-    SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    OpacityProps, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticFlexProps,
+    SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -228,12 +228,12 @@ impl Dialog {
             let prev_content_element =
                 cx.with_state(DialogA11yState::default, |st| st.content_element);
 
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
-                overlay_motion::shadcn_ease,
+                overlay_motion::shadcn_overlay_open_duration(cx),
+                overlay_motion::shadcn_overlay_close_duration(cx),
+                overlay_motion::shadcn_overlay_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
                 .with_state(DialogOpenChangeCallbackState::default, |state| {
@@ -318,63 +318,35 @@ impl Dialog {
                         |_cx| Vec::new(),
                     );
 
-                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
-                    let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
-                    let available_h =
-                        Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
-
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);
                     let content_id = content.id;
                     content_element_for_trigger.set(Some(content_id));
-                    let max_w_hint =
-                        crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app)
-                            .unwrap_or(Px(512.0));
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
-                    let last_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
 
-                    // Upstream uses `w-full` + `max-w-*`, so dialog width should not collapse to
-                    // intrinsic content. We compute a width hint from the modal content and clamp
-                    // it to the available viewport space (matches `max-w-[calc(100%-2rem)]`).
-                    let content_w = Px(max_w_hint.0.min(available_w.0).max(0.0));
-
-                    // Height remains content-driven; use last-frame bounds as a stable anchor for
-                    // the open zoom transform origin and placement.
-                    let desired_h = last_size.map(|s| s.height).unwrap_or(Px(320.0));
-                    let content_h = Px(desired_h.0.max(0.0));
-
-                    let left = Px(outer.origin.x.0
-                        + window_padding_px.0
-                        + ((available_w.0 - content_w.0) * 0.5).max(0.0));
-                    let top = Px(outer.origin.y.0
-                        + window_padding_px.0
-                        + (available_h.0 - content_h.0) * 0.5);
-
+                    // Center the dialog via an input-transparent flex wrapper so we don't need
+                    // last-frame bounds (which can cause a 1-frame jump on first open).
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let origin = Point::new(
-                        Px(left.0 + content_w.0 * 0.5),
-                        Px(top.0 + content_h.0 * 0.5),
+                        Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
+                        Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
-                    let dialog_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            top: Some(top),
-                            left: Some(left),
-                            right: None,
-                            bottom: None,
-                        },
-                        size: SizeStyle {
-                            width: Length::Px(content_w),
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Visible,
-                        ..Default::default()
-                    };
-                    let dialog_positioned = cx.container(
-                        ContainerProps {
-                            layout: dialog_layout,
-                            ..Default::default()
+                    let mut centered_layout = LayoutStyle::default();
+                    centered_layout.size.width = Length::Fill;
+                    centered_layout.size.height = Length::Fill;
+                    let centered = cx.semantic_flex(
+                        SemanticFlexProps {
+                            role: SemanticsRole::Generic,
+                            flex: FlexProps {
+                                layout: centered_layout,
+                                direction: fret_core::Axis::Vertical,
+                                padding: Edges::all(window_padding_px),
+                                justify: MainAlign::Center,
+                                align: CrossAlign::Center,
+                                ..Default::default()
+                            },
                         },
                         move |_cx| vec![content],
                     );
@@ -382,7 +354,7 @@ impl Dialog {
                         cx,
                         opacity,
                         zoom,
-                        vec![dialog_positioned],
+                        vec![centered],
                     );
 
                     let opacity_layout = LayoutStyle {
@@ -567,7 +539,7 @@ impl DialogClose {
             let fg = theme
                 .color_by_key("muted.foreground")
                 .or_else(|| theme.color_by_key("muted-foreground"))
-                .unwrap_or_else(|| theme.color_required("muted.foreground"));
+                .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
             let a11y_label: Arc<str> = Arc::from("Close");
             let open = self.open.clone();
@@ -604,10 +576,10 @@ impl DialogClose {
 
                 let ring_color = theme
                     .color_by_key("ring")
-                    .unwrap_or_else(|| theme.color_required("ring"));
+                    .unwrap_or_else(|| theme.color_token("ring"));
                 let ring_offset_bg = theme
                     .color_by_key("ring-offset-background")
-                    .unwrap_or_else(|| theme.color_required("ring-offset-background"));
+                    .unwrap_or_else(|| theme.color_token("ring-offset-background"));
 
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
@@ -725,16 +697,16 @@ impl DialogTitle {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let px = theme
             .metric_by_key("component.dialog.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.dialog.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         let title = ui::text(cx, self.text)
             .text_size_px(px)
@@ -766,16 +738,16 @@ impl DialogDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
+            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.dialog.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
+            .unwrap_or_else(|| theme.metric_token("font.size"));
         let line_height = theme
             .metric_by_key("component.dialog.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         let description = ui::text(cx, self.text)
             .text_size_px(px)
@@ -809,6 +781,7 @@ mod tests {
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
+    use fret_ui::element::PositionStyle;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -943,6 +916,152 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn dialog_does_not_jump_on_first_open_frame_with_tall_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            OverlayController::begin_frame(app, window);
+
+            let trigger_id = trigger_id.clone();
+            let content_id = content_id.clone();
+            let open_for_trigger = open.clone();
+            let open_for_close = open.clone();
+
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&open_for_trigger);
+                            trigger_id.set(Some(id));
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let dialog = Dialog::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let tall_body = cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Px(Px(480.0));
+                                        layout
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            );
+
+                            let close = DialogClose::new(open_for_close.clone()).into_element(cx);
+                            let content =
+                                DialogContent::new(vec![tall_body, close]).into_element(cx);
+                            content_id.set(Some(content.id));
+                            content
+                        },
+                    );
+
+                    vec![dialog]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        // Frame 1: closed.
+        render_frame(&mut ui, &mut app, &mut services);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open.
+        render_frame(&mut ui, &mut app, &mut services);
+        let content_frame2 = content_id.get().expect("content element id");
+        let content_node_frame2 =
+            fret_ui::elements::node_for_element(&mut app, window, content_frame2)
+                .expect("content node");
+        let bounds_frame2 = ui
+            .debug_node_bounds(content_node_frame2)
+            .expect("content bounds");
+
+        // Frame 3: open (no additional events).
+        render_frame(&mut ui, &mut app, &mut services);
+        let content_frame3 = content_id.get().expect("content element id");
+        let content_node_frame3 =
+            fret_ui::elements::node_for_element(&mut app, window, content_frame3)
+                .expect("content node");
+        let bounds_frame3 = ui
+            .debug_node_bounds(content_node_frame3)
+            .expect("content bounds");
+
+        assert!(
+            (bounds_frame2.origin.y.0 - bounds_frame3.origin.y.0).abs() <= 1.0,
+            "dialog content jumped between frames: frame2={:?} frame3={:?}",
+            bounds_frame2,
+            bounds_frame3
+        );
     }
 
     fn render_dialog_frame(
@@ -1627,7 +1746,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) + 2;
         for _ in 0..settle_frames {
             render_dialog_frame_with_underlay(
                 &mut ui,
@@ -2616,7 +2737,10 @@ mod tests {
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // apply focus restore when the layer is uninstalled.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) as usize
+            + 1;
         for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,
@@ -3076,7 +3200,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(2 + i as u64));
             OverlayController::begin_frame(&mut app, window);
@@ -3277,7 +3404,10 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Render a few frames to allow presence to complete and focus restore to apply.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) as usize
+            + 1;
         for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,

@@ -12,6 +12,10 @@ pub struct RendererTextPerfSnapshot {
 
     pub font_stack_key: u64,
     pub font_db_revision: u64,
+    /// Fingerprint of the effective font fallback policy (locale + family config + injection).
+    ///
+    /// This is intended for diagnostics only.
+    pub fallback_policy_key: u64,
 
     /// Total count of missing/tofu glyphs observed across text prepared this frame.
     ///
@@ -119,4 +123,24 @@ pub enum RendererTextFontTraceFamilyClass {
     CommonFallback,
     SystemFallback,
     Unknown,
+}
+
+/// Snapshot of the effective renderer font fallback policy, intended for diagnostics bundles.
+#[derive(Debug, Default, Clone)]
+pub struct RendererTextFallbackPolicySnapshot {
+    pub frame_id: FrameId,
+    pub font_stack_key: u64,
+    pub font_db_revision: u64,
+    pub fallback_policy_key: u64,
+
+    pub system_fonts_enabled: bool,
+    pub locale_bcp47: Option<String>,
+
+    pub common_fallback_injection: crate::TextCommonFallbackInjection,
+    pub prefer_common_fallback: bool,
+
+    /// The effective suffix appended to named-family stacks when common fallback is preferred.
+    pub common_fallback_stack_suffix: String,
+    /// The effective candidate list used to build `common_fallback_stack_suffix` (trimmed + deduped, preserving order).
+    pub common_fallback_candidates: Vec<String>,
 }

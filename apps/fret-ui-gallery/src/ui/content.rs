@@ -47,7 +47,7 @@ pub(crate) fn content_view(
                             },
                             text: Arc::from(origin),
                             style: None,
-                            color: Some(theme.color_required("muted-foreground")),
+                            color: Some(theme.color_token("muted-foreground")),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
                         }),
@@ -279,7 +279,7 @@ pub(crate) fn content_view(
                     base_padding,
                 ),
             ),
-            background: Some(ColorRef::Color(theme.color_required("background"))),
+            background: Some(ColorRef::Color(theme.color_token("background"))),
             ..ChromeRefinement::default()
         };
         cx.container(
@@ -420,6 +420,7 @@ fn page_preview(
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
+        PAGE_TEXT_MIXED_SCRIPT_FALLBACK => preview_text_mixed_script_fallback(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
@@ -465,7 +466,7 @@ fn page_preview(
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
-        PAGE_CARD => preview_card(cx),
+        PAGE_CARD => preview_card(cx, image_fit_demo_wide_image),
         PAGE_BADGE => preview_badge(cx),
         PAGE_AVATAR => preview_avatar(cx, avatar_demo_image),
         PAGE_IMAGE_OBJECT_FIT => preview_image_object_fit(
@@ -481,8 +482,14 @@ fn page_preview(
         PAGE_TOOLTIP => preview_tooltip(cx),
         PAGE_SLIDER => preview_slider(cx),
         PAGE_ICONS => preview_icons(cx),
+        PAGE_MAGIC_LENS => preview_magic_lens(cx),
         PAGE_MAGIC_MARQUEE => preview_magic_marquee(cx),
         PAGE_MAGIC_CARD => preview_magic_card(cx),
+        PAGE_MAGIC_BORDER_BEAM => preview_magic_border_beam(cx),
+        PAGE_MAGIC_DOCK => preview_magic_dock(cx),
+        PAGE_MAGIC_PATTERNS => preview_magic_patterns(cx),
+        PAGE_MAGIC_SPARKLES_TEXT => preview_magic_sparkles_text(cx),
+        PAGE_MAGIC_BLOOM => preview_magic_bloom(cx),
         PAGE_FIELD => preview_field(cx),
         PAGE_OVERLAY => preview_overlay(
             cx,

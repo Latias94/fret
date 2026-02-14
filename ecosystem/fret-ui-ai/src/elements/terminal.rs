@@ -405,10 +405,10 @@ impl TerminalTitle {
             text: self.label,
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metric_required("component.text.sm_px"),
+                size: theme.metric_token("component.text.sm_px"),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("component.text.sm_line_height")),
+                line_height: Some(theme.metric_token("component.text.sm_line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(fg),
@@ -705,7 +705,7 @@ impl TerminalCopyButton {
             content_props.layout.flex.shrink = 0.0;
             content_props.background = Some(bg);
             content_props.corner_radii =
-                fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
+                fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
             content_props.border = Edges::all(Px(0.0));
             content_props.padding = Edges::all(Px(0.0));
 
@@ -826,7 +826,7 @@ impl TerminalClearButton {
             content_props.layout.flex.shrink = 0.0;
             content_props.background = Some(bg);
             content_props.corner_radii =
-                fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
+                fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
             content_props.border = Edges::all(Px(0.0));
             content_props.padding = Edges::all(Px(0.0));
 
@@ -938,10 +938,10 @@ impl TerminalContent {
             text: Arc::<str>::from(display),
             style: Some(TextStyle {
                 font: FontId::monospace(),
-                size: theme.metric_required("component.text.sm_px"),
+                size: theme.metric_token("component.text.sm_px"),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("component.text.sm_line_height")),
+                line_height: Some(theme.metric_token("component.text.sm_line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(zinc_100()),
