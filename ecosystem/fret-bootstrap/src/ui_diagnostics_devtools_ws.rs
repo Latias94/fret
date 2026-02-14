@@ -383,6 +383,18 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(feature = "diagnostics-ws")]
+    fn ws_send_script_result_v1(&mut self, result: &UiScriptResultV1) {
+        let payload = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
+        self.ws_send("script.result", payload);
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_send_pick_result_v1(&mut self, result: &UiPickResultV1) {
+        let payload = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
+        self.ws_send("pick.result", payload);
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
     fn apply_ws_message(&mut self, msg: DiagTransportMessageV1) {
         match msg.r#type.as_str() {
             "inspect.set" => {

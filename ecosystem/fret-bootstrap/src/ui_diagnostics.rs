@@ -6975,8 +6975,7 @@ impl UiDiagnosticsService {
 
         #[cfg(feature = "diagnostics-ws")]
         {
-            let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
-            self.ws_send("script.result", payload);
+            self.ws_send_script_result_v1(&result);
         }
     }
 
@@ -6992,8 +6991,7 @@ impl UiDiagnosticsService {
 
         #[cfg(feature = "diagnostics-ws")]
         {
-            let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
-            self.ws_send("pick.result", payload);
+            self.ws_send_pick_result_v1(&result);
         }
     }
 
