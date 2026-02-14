@@ -63,11 +63,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json`
 
-- [ ] AR-GATE-004 Add a fixed-delta diag gate for Animata expandable carousel (layout.expand).
+- [x] AR-GATE-004 Add a fixed-delta diag gate for Animata expandable carousel (layout.expand).
   - Animata source:
     - `repo-ref/animata/animata/carousel/expandable.tsx`
   - Output:
     - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+  - Evidence:
+    - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+    - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (section "Animata: Expandable")
 
 ## P1 — Optional: bring Animata “blurred backdrop” into a reusable recipe
 

@@ -86,6 +86,7 @@ Recommended semantic keys (ecosystem-level; optional):
 - Duration:
   - `duration.motion.presence.enter`, `duration.motion.presence.exit`
   - `duration.motion.collapsible.toggle`
+  - `duration.motion.layout.expand`
   - `duration.motion.tooltip.enter`, `duration.motion.tooltip.exit`
 - Easing:
   - `easing.motion.standard`, `easing.motion.emphasized`
@@ -114,7 +115,7 @@ component API yet; we only commit to the semantic intent + gate.
 | AR-TABS-001 | Nav tabs shared indicator | `repo-ref/animata/animata/container/nav-tabs.tsx` | `ecosystem/fret-ui-material3/src/tabs.rs` + shadcn tabs recipes | `shared_indicator.move` | Landed (M3): `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json` | Landed (M3) / Planned (shadcn) |
 | AR-TABS-002 | Fluid tabs (indicator + content switch) | `repo-ref/animata/animata/card/fluid-tabs.tsx` | shadcn tabs + content presence | `shared_indicator.move` + `presence.enter/exit` | Add a fixed-delta script after shadcn tabs MVP | Planned |
 | AR-NAV-001 | Navigation active pill (bar/rail) | (Animata: reuse `shared_indicator.move` intent) | `ecosystem/fret-ui-material3/src/navigation_bar.rs`, `ecosystem/fret-ui-material3/src/navigation_rail.rs` | `shared_indicator.move` | `tools/diag-scripts/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json` + `tools/diag-scripts/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json` | Landed |
-| AR-CAROUSEL-001 | Expandable carousel (flex-grow + blur) | `repo-ref/animata/animata/carousel/expandable.tsx` | `ecosystem/fret-ui-*/carousel` (or a UI gallery recipe page) | `layout.expand` (+ `hover_micro`) | Add: `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json` | Planned |
+| AR-CAROUSEL-001 | Expandable carousel (flex-grow + blur) | `repo-ref/animata/animata/carousel/expandable.tsx` | UI Gallery carousel page (Animata: Expandable) | `layout.expand` (+ `hover_micro`) | `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json` | Landed (pilot; size interpolation baseline) |
 | AR-TOAST-001 | Toast stack shift + interrupt | (Animata: use `stack.shift` intent) | `ecosystem/fret-ui-shadcn/src/sonner.rs` | `stack.shift` | `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json` | Landed (baseline) |
 | AR-TOAST-002 | Swipe-to-dismiss inertia | (Animata: use `drag_release_settle` intent) | `ecosystem/fret-ui-shadcn/src/sonner.rs` | `drag_release_settle` | `tools/diag-scripts/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-sonner-demo-toast-swipe`) | Landed (gate script) |
 | AR-NAVMENU-001 | NavigationMenu viewport motion | (Animata: use `presence.enter/exit` + `layout.expand`) | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `layout.expand` + interruption | `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-navigation-menu-demo-viewport`) | Landed (gate script) |
