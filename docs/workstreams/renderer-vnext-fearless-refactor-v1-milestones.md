@@ -35,6 +35,14 @@ Deliverables:
 
 - The new `RenderPlan` path is introduced behind an explicit switch (feature/config) so it can be
   compared against the existing path during the refactor.
+- The “fixed scene set” used for old-vs-new comparisons is kept intentionally small and stable:
+  - `crates/fret-render-wgpu/tests/affine_clip_conformance.rs`
+  - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
+  - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`
+  - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
+  - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
+  - `crates/fret-render-wgpu/tests/materials_conformance.rs`
+  - `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
 - Renderer internals compile `SceneOp` into a `RenderPlan` that:
   - preserves strict in-order semantics,
   - treats effect/mask/compositing groups as sequence points,

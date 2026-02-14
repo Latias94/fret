@@ -84,6 +84,51 @@ When a new contract is added, extend this list with the smallest conformance gat
 - the fallback path is deterministic,
 - and the wasm/mobile story is explicit.
 
+## 2.2) Baseline runbook (copy/paste)
+
+This section describes a minimal, reproducible baseline capture for the refactor.
+
+### 2.2.1 Layering gate
+
+```bash
+python3 tools/check_layering.py
+```
+
+### 2.2.2 Renderer conformance (fixed scene set)
+
+Prefer `cargo nextest` when available:
+
+```bash
+cargo nextest run -p fret-render-wgpu --test affine_clip_conformance
+cargo nextest run -p fret-render-wgpu --test viewport_surface_metadata_conformance
+cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance
+cargo nextest run -p fret-render-wgpu --test mask_gradient_conformance
+cargo nextest run -p fret-render-wgpu --test composite_group_conformance
+cargo nextest run -p fret-render-wgpu --test materials_conformance
+cargo nextest run -p fret-render-wgpu --test materials_sampled_conformance
+```
+
+Fallback (no nextest):
+
+```bash
+cargo test -p fret-render-wgpu --test affine_clip_conformance
+```
+
+### 2.2.3 Renderer perf snapshot baseline (deterministic stress)
+
+Record perf snapshots using the deterministic SVG atlas stress harness (prints `renderer_perf:` /
+`headless_renderer_perf:` lines). Suggested baseline capture:
+
+```bash
+set FRET_RENDERER_PERF_PIPELINES=1
+cargo run -p fret-svg-atlas-stress -- --headless --frames 600
+```
+
+Notes:
+
+- Keep the run duration and flags stable (e.g. 600 frames) so future diffs are meaningful.
+- Capture both `renderer_perf:` and `renderer_perf_pipelines:` lines if enabled.
+
 ## 3) Proposed internal architecture (implementation, not contract)
 
 ## 3.0) Cost model checklist (design-time, not contracts)
