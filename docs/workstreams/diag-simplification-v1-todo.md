@@ -110,3 +110,4 @@ Evidence pointers:
 - [x] Extract script subcommand handler into `crates/fret-diag/src/commands/script.rs` (reduce `lib.rs` churn surface).
 - [x] Extract script path helpers into `crates/fret-diag/src/paths.rs` (reduce `lib.rs` churn surface).
 - [x] Extract runtime DevTools WS handling (inbox/send + per-window request drivers + bundle.dumped export + result pushes) into `ecosystem/fret-bootstrap/src/ui_diagnostics_devtools_ws.rs` (reduce `ui_diagnostics.rs` churn surface).
+- [x] Deduplicate wasm+WS-only filesystem gating in runtime diagnostics triggers (reduce repeated `cfg!(wasm32)` checks).
