@@ -2,6 +2,7 @@ use super::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineL
 use fret_core::{CaretAffinity, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextWrap};
 use std::ops::Range;
 use std::sync::OnceLock;
+use swash::text::{WordBreakStrength, analyze};
 use unicode_segmentation::UnicodeSegmentation;
 
 const ELLIPSIS: &str = "\u{2026}";
@@ -68,6 +69,7 @@ pub(crate) fn wrap_word_slices_from_unwrapped_ltr(
     let mut line_start_byte: usize = 0;
     let mut cluster_idx: usize = 0;
     let mut glyph_idx: usize = 0;
+    let breaks = line_break_positions(text, WordBreakStrength::Normal);
 
     while line_start_byte < text.len() && cluster_idx < full.clusters.len() {
         while cluster_idx < full.clusters.len()
@@ -95,6 +97,7 @@ pub(crate) fn wrap_word_slices_from_unwrapped_ltr(
             line_start_byte,
             line_start_x,
             max_width_px,
+            &breaks,
         );
 
         let mut line_end_byte = clamp_to_char_boundary(text, cut_end.min(text.len()));
@@ -932,6 +935,7 @@ fn wrap_word_range_plain_shape_once(
     let mut line_start_byte: usize = 0;
     let mut cluster_idx: usize = 0;
     let mut glyph_idx: usize = 0;
+    let breaks = line_break_positions(slice, WordBreakStrength::Normal);
 
     while line_start_byte < slice.len() && cluster_idx < full.clusters.len() {
         while cluster_idx < full.clusters.len()
@@ -956,6 +960,7 @@ fn wrap_word_range_plain_shape_once(
             line_start_byte,
             line_start_x,
             max_width_px,
+            &breaks,
         );
 
         let mut line_end_byte = clamp_to_char_boundary(slice, cut_end.min(slice.len()));
@@ -1049,6 +1054,7 @@ fn wrap_word_cut_end_from(
     line_start_byte: usize,
     line_start_x: f32,
     max_width_px: f32,
+    breaks: &[usize],
 ) -> usize {
     wrap_word_cut_end_from_with_kind(
         text,
@@ -1057,6 +1063,7 @@ fn wrap_word_cut_end_from(
         line_start_byte,
         line_start_x,
         max_width_px,
+        breaks,
     )
     .0
 }
@@ -1068,11 +1075,15 @@ fn wrap_word_cut_end_from_with_kind(
     line_start_byte: usize,
     line_start_x: f32,
     max_width_px: f32,
+    breaks: &[usize],
 ) -> (usize, bool) {
     let mut last_candidate: usize = line_start_byte;
     let mut last_fit_end: usize = line_start_byte;
     let mut first_non_whitespace: Option<usize> = None;
     let mut prev_ch: char = '\0';
+    let mut break_ix: usize = match breaks.binary_search(&line_start_byte) {
+        Ok(ix) | Err(ix) => ix,
+    };
 
     for c in clusters.iter().skip(cluster_idx) {
         if c.text_range.start >= text.len() {
@@ -1095,11 +1106,16 @@ fn wrap_word_cut_end_from_with_kind(
         }
 
         if first_non_whitespace.is_some() {
-            if is_word_char(ch) {
-                if prev_ch == ' ' && ch != ' ' {
-                    last_candidate = c.text_range.start;
-                }
-            } else if ch != ' ' {
+            while break_ix < breaks.len() && breaks[break_ix] < c.text_range.start {
+                break_ix = break_ix.saturating_add(1);
+            }
+
+            let is_uax_candidate =
+                break_ix < breaks.len() && breaks[break_ix] == c.text_range.start && ch != ' ';
+            let is_heuristic_candidate =
+                (prev_ch == ' ' && ch != ' ') || (!is_word_char(ch) && ch != ' ');
+
+            if is_uax_candidate || is_heuristic_candidate {
                 last_candidate = c.text_range.start;
             }
         }
@@ -1354,10 +1370,33 @@ fn slice_spans(spans: &[TextSpan], start: usize, end: usize) -> Vec<TextSpan> {
     out
 }
 
+fn line_break_positions(text: &str, strength: WordBreakStrength) -> Vec<usize> {
+    use swash::text::cluster::Boundary;
+
+    let mut analysis = analyze(text.chars());
+    analysis.set_break_strength(strength);
+
+    let mut out: Vec<usize> = Vec::new();
+    for (byte_ix, _ch) in text.char_indices() {
+        let Some((_props, boundary)) = analysis.next() else {
+            break;
+        };
+        if matches!(boundary, Boundary::Line | Boundary::Mandatory)
+            && byte_ix > 0
+            && byte_ix < text.len()
+        {
+            out.push(byte_ix);
+        }
+    }
+    out
+}
+
 fn wrap_word_cut_end(text: &str, clusters: &[ShapedCluster], max_width_px: f32) -> usize {
     let mut last_candidate: usize = 0;
     let mut first_non_whitespace: Option<usize> = None;
     let mut prev_ch: char = '\0';
+    let breaks = line_break_positions(text, WordBreakStrength::Normal);
+    let mut break_ix: usize = 0;
 
     for c in clusters {
         if c.text_range.start >= text.len() {
@@ -1376,11 +1415,16 @@ fn wrap_word_cut_end(text: &str, clusters: &[ShapedCluster], max_width_px: f32) 
         }
 
         if first_non_whitespace.is_some() {
-            if is_word_char(ch) {
-                if prev_ch == ' ' && ch != ' ' {
-                    last_candidate = c.text_range.start;
-                }
-            } else if ch != ' ' {
+            while break_ix < breaks.len() && breaks[break_ix] < c.text_range.start {
+                break_ix = break_ix.saturating_add(1);
+            }
+
+            let is_uax_candidate =
+                break_ix < breaks.len() && breaks[break_ix] == c.text_range.start && ch != ' ';
+            let is_heuristic_candidate =
+                (prev_ch == ' ' && ch != ' ') || (!is_word_char(ch) && ch != ' ');
+
+            if is_uax_candidate || is_heuristic_candidate {
                 last_candidate = c.text_range.start;
             }
         }
@@ -1563,6 +1607,20 @@ fn hit_test_x(clusters: &[ShapedCluster], x: f32, text_len: usize) -> (usize, Ca
 mod tests {
     use super::*;
     use fret_core::{FontId, Px, TextPaintStyle, TextShapingStyle, TextStyle};
+    use serde::Deserialize;
+
+    fn shaper_with_bundled_fonts() -> ParleyShaper {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let added = shaper.add_fonts(
+            fret_fonts::bootstrap_fonts()
+                .iter()
+                .chain(fret_fonts::emoji_fonts().iter())
+                .chain(fret_fonts::cjk_lite_fonts().iter())
+                .map(|b| b.to_vec()),
+        );
+        assert!(added > 0, "expected bundled fonts to load");
+        shaper
+    }
 
     #[test]
     fn is_word_char_includes_arabic_and_hebrew() {
@@ -1578,9 +1636,9 @@ mod tests {
 
     #[test]
     fn none_ellipsis_adds_zero_len_cluster_at_cut_end() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Inter"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1625,9 +1683,9 @@ mod tests {
 
     #[test]
     fn no_ellipsis_keeps_full_text() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Inter"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1662,9 +1720,9 @@ mod tests {
 
     #[test]
     fn word_wrap_produces_multiple_lines_and_full_coverage() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Inter"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1717,9 +1775,9 @@ mod tests {
 
     #[test]
     fn newlines_split_into_paragraphs_and_create_gaps_in_ranges() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Inter"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1768,9 +1826,9 @@ mod tests {
 
     #[test]
     fn empty_lines_produce_lines_for_consecutive_newlines() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Inter"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1794,10 +1852,10 @@ mod tests {
 
     #[test]
     fn wrap_measure_only_matches_line_ranges_and_sizes_for_word_wrap() {
-        let mut shaper_full = ParleyShaper::new();
-        let mut shaper_measure = ParleyShaper::new();
+        let mut shaper_full = shaper_with_bundled_fonts();
+        let mut shaper_measure = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Inter"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1847,9 +1905,9 @@ mod tests {
 
     #[test]
     fn grapheme_wrap_breaks_long_token_without_spaces() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Fira Mono"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1875,9 +1933,9 @@ mod tests {
 
     #[test]
     fn grapheme_wrap_handles_cjk_string() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Noto Sans CJK SC"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1903,9 +1961,9 @@ mod tests {
 
     #[test]
     fn grapheme_wrap_does_not_split_zwj_clusters() {
-        let mut shaper = ParleyShaper::new();
+        let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
-            font: FontId::default(),
+            font: FontId::family("Noto Color Emoji"),
             size: Px(16.0),
             ..Default::default()
         };
@@ -1935,5 +1993,135 @@ mod tests {
                 r
             );
         }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    enum FixtureWrapMode {
+        Word,
+        Grapheme,
+    }
+
+    #[derive(Debug, Clone, Deserialize)]
+    struct WrapFixtureCase {
+        id: String,
+        text: String,
+        font_family: String,
+        wrap: FixtureWrapMode,
+        max_width_px: f32,
+        #[serde(default)]
+        expected_line_ranges: Option<Vec<[usize; 2]>>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct WrapFixtureSuite {
+        schema_version: u32,
+        cases: Vec<WrapFixtureCase>,
+    }
+
+    fn wrap_mode_for_fixture(mode: FixtureWrapMode) -> TextWrap {
+        match mode {
+            FixtureWrapMode::Word => TextWrap::Word,
+            FixtureWrapMode::Grapheme => TextWrap::Grapheme,
+        }
+    }
+
+    fn sanitize_line_ranges_for_fixture(ranges: &[std::ops::Range<usize>]) -> Vec<[usize; 2]> {
+        ranges.iter().map(|r| [r.start, r.end]).collect()
+    }
+
+    #[test]
+    fn text_wrap_conformance_v1_fixtures() {
+        let raw = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/text/tests/fixtures/text_wrap_conformance_v1.json"
+        ));
+        let suite: WrapFixtureSuite =
+            serde_json::from_str(raw).expect("wrap conformance fixtures JSON");
+        assert_eq!(suite.schema_version, 1);
+
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let mut failures: Vec<String> = Vec::new();
+        for case in suite.cases {
+            let style = TextStyle {
+                font: FontId::family(case.font_family.clone()),
+                size: Px(16.0),
+                ..Default::default()
+            };
+            let constraints = TextConstraints {
+                max_width: Some(Px(case.max_width_px)),
+                wrap: wrap_mode_for_fixture(case.wrap),
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            };
+
+            let wrapped = wrap_with_constraints(
+                &mut shaper,
+                TextInputRef::plain(&case.text, &style),
+                constraints,
+            );
+
+            let text_len = case.text.len();
+            assert_eq!(
+                wrapped.text_len, text_len,
+                "case {}: expected wrapper text_len to match input length",
+                case.id
+            );
+            assert!(
+                !wrapped.line_ranges.is_empty(),
+                "case {}: expected at least one line range",
+                case.id
+            );
+
+            for r in &wrapped.line_ranges {
+                assert!(
+                    r.start <= r.end && r.end <= text_len,
+                    "case {}: invalid line range {r:?} for len={text_len}",
+                    case.id
+                );
+            }
+
+            for w in wrapped.line_ranges.windows(2) {
+                let prev = &w[0];
+                let next = &w[1];
+                assert!(
+                    prev.end <= next.start,
+                    "case {}: expected non-decreasing line ranges: prev={prev:?} next={next:?}",
+                    case.id
+                );
+                if next.start > prev.end {
+                    let gap = &case.text[prev.end..next.start];
+                    assert!(
+                        gap.chars().all(|ch| ch == '\n'),
+                        "case {}: expected paragraph gaps to contain only newlines (gap={gap:?})",
+                        case.id
+                    );
+                }
+            }
+
+            let got = sanitize_line_ranges_for_fixture(&wrapped.line_ranges);
+            match case.expected_line_ranges.as_ref() {
+                None => failures.push(format!(
+                    "case {}: missing expected_line_ranges; computed={got:?}",
+                    case.id
+                )),
+                Some(expected) => {
+                    if &got != expected {
+                        failures.push(format!(
+                            "case {}: line ranges mismatch: expected={expected:?} got={got:?}",
+                            case.id
+                        ));
+                    }
+                }
+            }
+        }
+
+        assert!(
+            failures.is_empty(),
+            "wrap conformance fixture failures:\n{}",
+            failures.join("\n")
+        );
     }
 }

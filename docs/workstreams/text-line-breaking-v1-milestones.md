@@ -24,6 +24,12 @@ Evidence checklist:
 - `cargo nextest run -p fret-render-wgpu`
 - `cargo nextest run -p fret-render`
 
+Evidence anchors (initial baseline):
+
+- Wrap conformance fixtures:
+  - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
+  - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
+
 ## M1 — Wrapper heuristic upgrade (Unicode break opportunities)
 
 Exit criteria:
@@ -64,4 +70,3 @@ Exit criteria:
   - fully supported, or
   - explicitly routed to the compatibility wrapper path with documented limitations.
 - Additional mapping (if required) is implemented with tests.
-

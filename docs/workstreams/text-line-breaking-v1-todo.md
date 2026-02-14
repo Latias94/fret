@@ -4,20 +4,23 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 
 ## M0 — Conformance suite
 
-- [ ] Add unit test fixtures for wrap breakpoints:
+- [x] Add a fixture-driven wrap conformance harness (baseline goldens):
+  - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
+  - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
+- [ ] Expand fixture coverage and expectations:
   - [ ] CJK punctuation (leading/trailing forbiddens),
   - [ ] identifiers (snake/camel),
   - [ ] paths/URLs,
   - [ ] emoji ZWJ/VS16,
   - [ ] long-token emergency wraps.
-- [ ] Add a “wrap invariants” test module that reasserts:
-  - [ ] trailing whitespace at soft wrap is selectable (keep existing test and expand coverage).
+- [ ] Add a dedicated “wrap invariants” module (optional):
+  - [ ] trailing whitespace at soft wrap is selectable (keep existing gate in `crates/fret-render-wgpu/src/text/mod.rs` and expand coverage).
 
 ## M1 — Wrapper heuristic upgrade
 
-- [ ] Replace `is_word_char`-based candidate selection in:
+- [x] Replace `is_word_char`-based candidate selection in:
   - `crates/fret-render-wgpu/src/text/wrapper.rs`
-  - with Unicode line break opportunities (UAX#14).
+  - with Unicode line break opportunities (UAX#14) via `swash::text::analyze` (keep a small heuristic fallback for now).
 - [ ] Keep the current behavior for:
   - [ ] newline splitting,
   - [ ] ellipsis truncation.
@@ -36,4 +39,3 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 
 - [ ] Which Unicode line-breaking implementation should we standardize on for M1 (if not Parley)?
 - [ ] Do we want a dedicated “code wrap mode” distinct from UI `TextWrap::Word`?
-
