@@ -119,7 +119,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] RSH-ui-002 Add regression gates for small inline list invariants (inline ↔ spill boundaries, stable ordering).
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (tests: `small_list_tests::*`)
 - [x] RSH-ui-003 Tighten `unsafe` in `SmallNodeList` / `SmallCopyList` slice views and spill conversion.
-  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`assume_init_slice_ref`, `Small{Node,Copy}List::as_slice`)
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`assume_init_slice_ref`; `Small{Node,Copy}List::as_slice` debug asserts `len <= N`)
 - [x] RSH-clippy-002 Fix clippy `items_after_test_module` in `fret-ui`.
   - Evidence: `crates/fret-ui/src/declarative/host_widget/paint.rs` (tests moved to file end)
 
