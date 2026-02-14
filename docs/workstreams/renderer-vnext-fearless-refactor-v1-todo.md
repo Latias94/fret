@@ -50,9 +50,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - [x] Clip-path clips to shape (not just bounds): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] Clip capture at push time (does not follow later transforms): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] Budget degradation is deterministic (scissor-only fallback): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
-  - [ ] clip-before-transform scrolling cases (non-translation + clip stack interop)
-  - [ ] clip under rotation (affine)
-  - [ ] nested clips + clips + groups
+  - [ ] clip-before-transform scrolling cases (partial-overlap cases)
+  - [x] clip under rotation (affine): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
+  - [x] nested clips + clips + groups: `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
 
 ### M3b — Image masks v1
 
