@@ -241,10 +241,9 @@ pub(crate) fn materialize_bundle_json_from_manifest_chunks_if_missing(
     let mut out = std::fs::File::create(&tmp_path).map_err(|e| e.to_string())?;
     let mut total_hasher = blake3::Hasher::new();
     for chunk in chunks {
-        let rel = chunk
-            .get("path")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| "invalid manifest.json: bundle_json.chunks[*].path missing".to_string())?;
+        let rel = chunk.get("path").and_then(|v| v.as_str()).ok_or_else(|| {
+            "invalid manifest.json: bundle_json.chunks[*].path missing".to_string()
+        })?;
         let expected_chunk_blake3 = chunk
             .get("blake3")
             .and_then(|v| v.as_str())
@@ -253,7 +252,11 @@ pub(crate) fn materialize_bundle_json_from_manifest_chunks_if_missing(
 
         let chunk_path = dir.join(rel);
         let bytes = std::fs::read(&chunk_path).map_err(|e| {
-            format!("failed to read bundle json chunk ({}): {}", chunk_path.display(), e)
+            format!(
+                "failed to read bundle json chunk ({}): {}",
+                chunk_path.display(),
+                e
+            )
         })?;
         if let Some(expected) = expected_chunk_bytes {
             if expected != bytes.len() as u64 {
@@ -402,7 +405,8 @@ mod tests {
 
         let manifest_path = root.join(run_id.to_string()).join("manifest.json");
         let bytes = std::fs::read(&manifest_path).expect("read manifest.json");
-        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse manifest.json");
+        let parsed: serde_json::Value =
+            serde_json::from_slice(&bytes).expect("parse manifest.json");
         assert!(
             parsed.get("bundle_json").is_some(),
             "expected bundle_json section"
@@ -452,8 +456,11 @@ mod tests {
 
         let run_dir = root.join(run_id.to_string());
         let bundle_json_path = run_dir.join("bundle.json");
-        std::fs::write(&bundle_json_path, br#"{ "schema_version": 1, "windows": [] }"#)
-            .expect("write bundle.json");
+        std::fs::write(
+            &bundle_json_path,
+            br#"{ "schema_version": 1, "windows": [] }"#,
+        )
+        .expect("write bundle.json");
 
         let chunks = write_run_id_bundle_json_chunks(&root, run_id, &bundle_json_path)
             .expect("write chunks");

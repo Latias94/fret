@@ -5,8 +5,9 @@ use fret_core::{
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{
-    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DevtoolsScreenshotRequestV1,
-    DevtoolsScreenshotResultV1, DiagTransportMessageV1, UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
+    DevtoolsScreenshotRequestV1, DevtoolsScreenshotResultV1, DiagTransportMessageV1,
+    UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
@@ -6528,8 +6529,7 @@ impl UiDiagnosticsService {
             self.cfg.redact_text,
             self.cfg.max_debug_string_bytes,
         );
-        let payload = serde_json::to_value(ack)
-        .unwrap_or(serde_json::Value::Null);
+        let payload = serde_json::to_value(ack).unwrap_or(serde_json::Value::Null);
         self.ws_send_with_request_id("semantics.node.get_ack", pending.request_id, payload);
         false
     }
@@ -6618,15 +6618,13 @@ impl UiDiagnosticsService {
                 }]
             });
 
-            let write_ok = serde_json::to_vec_pretty(&req)
-                .ok()
-                .is_some_and(|bytes| {
-                    if let Some(parent) = self.cfg.screenshot_request_path.parent() {
-                        let _ = std::fs::create_dir_all(parent);
-                    }
-                    std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
-                        && touch_file(&self.cfg.screenshot_trigger_path).is_ok()
-                });
+            let write_ok = serde_json::to_vec_pretty(&req).ok().is_some_and(|bytes| {
+                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
+                    && touch_file(&self.cfg.screenshot_trigger_path).is_ok()
+            });
 
             if !write_ok {
                 let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
@@ -6737,13 +6735,7 @@ impl UiDiagnosticsService {
                     } else {
                         ("bundle".to_string(), None)
                     };
-                self.request_force_dump(
-                    label,
-                    dump_max_snapshots,
-                    None,
-                    None,
-                    msg.request_id,
-                );
+                self.request_force_dump(label, dump_max_snapshots, None, None, msg.request_id);
             }
             "screenshot.request" => {
                 let Ok(req) = serde_json::from_value::<DevtoolsScreenshotRequestV1>(msg.payload)
@@ -6875,11 +6867,12 @@ impl UiDiagnosticsService {
                     return;
                 }
 
-                self.pending_devtools_semantics_node_get = Some(PendingDevtoolsSemanticsNodeGetRequest {
-                    request_id: msg.request_id,
-                    window_ffi: req.window,
-                    node_id: req.node_id,
-                });
+                self.pending_devtools_semantics_node_get =
+                    Some(PendingDevtoolsSemanticsNodeGetRequest {
+                        request_id: msg.request_id,
+                        window_ffi: req.window,
+                        node_id: req.node_id,
+                    });
             }
             "app.exit.request" => {
                 let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
@@ -17380,7 +17373,11 @@ fn build_semantics_node_get_ack_v1(
         };
     };
 
-    let semantics_fingerprint = Some(semantics_fingerprint_v1(snapshot, redact_text, max_string_bytes));
+    let semantics_fingerprint = Some(semantics_fingerprint_v1(
+        snapshot,
+        redact_text,
+        max_string_bytes,
+    ));
     let want = NodeId::from(KeyData::from_ffi(node_id));
 
     let Some(node) = snapshot.nodes.iter().find(|n| n.id == want) else {
@@ -17436,7 +17433,11 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
 }
 
 #[cfg(feature = "diagnostics-ws")]
-fn read_screenshot_result_entry(path: &Path, request_id: &str, window_ffi: u64) -> Option<serde_json::Value> {
+fn read_screenshot_result_entry(
+    path: &Path,
+    request_id: &str,
+    window_ffi: u64,
+) -> Option<serde_json::Value> {
     let bytes = std::fs::read(path).ok()?;
     let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
     let completed = root.get("completed").and_then(|v| v.as_array())?;
@@ -17653,7 +17654,8 @@ mod tests {
         );
         assert_eq!(ack.status, "not_found");
 
-        let ack = build_semantics_node_get_ack_v1(None, window.data().as_ffi(), root_id, false, 4096);
+        let ack =
+            build_semantics_node_get_ack_v1(None, window.data().as_ffi(), root_id, false, 4096);
         assert_eq!(ack.status, "no_semantics");
     }
 

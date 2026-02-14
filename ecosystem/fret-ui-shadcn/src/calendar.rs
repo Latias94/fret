@@ -951,30 +951,30 @@ impl Calendar {
                                                 }))
                                                 .into_element(cx);
 
-                                                stack::hstack(
-                                                    cx,
-                                                    stack::HStackProps::default()
-                                                        .gap(Space::N2)
-                                                        .items_center(),
-                                                    move |_cx| vec![month_select, year_select],
-                                                )
-                                            }
-                                            _ => {
-                                                let mut title_props = TextProps::new(title.clone());
-                                                title_props.style = Some(TextStyle {
-                                                    font: Default::default(),
-                                                    size: theme_header.metric_token("font.size"),
-                                                    weight: FontWeight::MEDIUM,
-                                                    line_height: Some(
-                                                        theme_header.metric_token("font.line_height"),
-                                                    ),
-                                                    ..Default::default()
-                                                });
-                                                title_props.wrap = TextWrap::None;
-                                                title_props.overflow = TextOverflow::Clip;
-                                                cx.text_props(title_props)
-                                            }
-                                        };
+                                            stack::hstack(
+                                                cx,
+                                                stack::HStackProps::default()
+                                                    .gap(Space::N2)
+                                                    .items_center(),
+                                                move |_cx| vec![month_select, year_select],
+                                            )
+                                        }
+                                        _ => {
+                                            let mut title_props = TextProps::new(title.clone());
+                                            title_props.style = Some(TextStyle {
+                                                font: Default::default(),
+                                                size: theme_header.metric_token("font.size"),
+                                                weight: FontWeight::MEDIUM,
+                                                line_height: Some(
+                                                    theme_header.metric_token("font.line_height"),
+                                                ),
+                                                ..Default::default()
+                                            });
+                                            title_props.wrap = TextWrap::None;
+                                            title_props.overflow = TextOverflow::Clip;
+                                            cx.text_props(title_props)
+                                        }
+                                    };
 
                                 let title_bar = cx.flex(
                                     FlexProps {

@@ -13250,28 +13250,27 @@ fn dump_bundle_over_transport(
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<PathBuf, String> {
-    let expected_request_id = if connected.devtools.client().kind()
-        == crate::transport::DiagTransportKind::WebSocket
-    {
-        if let Some(max) = dump_max_snapshots {
-            Some(
+    let expected_request_id =
+        if connected.devtools.client().kind() == crate::transport::DiagTransportKind::WebSocket {
+            if let Some(max) = dump_max_snapshots {
+                Some(
+                    connected
+                        .devtools
+                        .bundle_dump_with_max_snapshots(None, bundle_label, max),
+                )
+            } else {
+                Some(connected.devtools.bundle_dump(None, bundle_label))
+            }
+        } else {
+            if let Some(max) = dump_max_snapshots {
                 connected
                     .devtools
-                    .bundle_dump_with_max_snapshots(None, bundle_label, max),
-            )
-        } else {
-            Some(connected.devtools.bundle_dump(None, bundle_label))
-        }
-    } else {
-        if let Some(max) = dump_max_snapshots {
-            connected
-                .devtools
-                .bundle_dump_with_max_snapshots(None, bundle_label, max);
-        } else {
-            connected.devtools.bundle_dump(None, bundle_label);
-        }
-        None
-    };
+                    .bundle_dump_with_max_snapshots(None, bundle_label, max);
+            } else {
+                connected.devtools.bundle_dump(None, bundle_label);
+            }
+            None
+        };
 
     let dumped = wait_for_devtools_bundle_dumped(
         &connected.devtools,
@@ -14799,7 +14798,8 @@ mod tests {
 
         let _ = resolve_bundle_json_path(&run_id_dir);
 
-        let bytes = std::fs::read(run_id_dir.join("script.result.json")).expect("read script.result.json");
+        let bytes =
+            std::fs::read(run_id_dir.join("script.result.json")).expect("read script.result.json");
         let parsed: UiScriptResultV1 =
             serde_json::from_slice(&bytes).expect("parse script.result.json");
         assert!(matches!(parsed.stage, UiScriptStageV1::Failed));
