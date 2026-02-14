@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::prelude::*;
+use fret_genui_core::actions;
 use fret_genui_core::render::{GenUiActionInvocation, GenUiActionQueue, GenUiRuntime, render_spec};
 use fret_genui_core::{json_pointer, spec::SpecV1};
 use fret_genui_shadcn::resolver::ShadcnResolver;
@@ -185,6 +186,10 @@ fn apply_pending_actions(app: &mut App, st: &mut GenUiState) {
 }
 
 fn apply_action(state: &mut Value, inv: &GenUiActionInvocation) {
+    if actions::apply_standard_action(state, inv.action.as_ref(), &inv.params) {
+        return;
+    }
+
     match inv.action.as_ref() {
         "incrementCounter" => {
             let cur = json_pointer::get_opt(state, "/counter")
@@ -197,19 +202,6 @@ fn apply_action(state: &mut Value, inv: &GenUiActionInvocation) {
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
             let _ = json_pointer::set(state, "/enabled", Value::Bool(!cur));
-        }
-        "setState" => {
-            let Some(obj) = inv.params.as_object() else {
-                return;
-            };
-            let path = obj
-                .get("statePath")
-                .or_else(|| obj.get("path"))
-                .and_then(|v| v.as_str());
-            let value = obj.get("value").cloned();
-            if let (Some(path), Some(value)) = (path, value) {
-                let _ = json_pointer::set(state, path, value);
-            }
         }
         _ => {}
     }

@@ -2,6 +2,7 @@
 //!
 //! This crate is ecosystem-only and must not introduce policy into `crates/fret-ui`.
 
+pub mod actions;
 pub mod json_pointer;
 pub mod props;
 pub mod render;

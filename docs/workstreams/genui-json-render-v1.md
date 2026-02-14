@@ -173,6 +173,12 @@ Action execution must be app-owned (effects/state policy stay outside the render
 
 The GenUI layer should not bake in navigation, persistence, or side-effect policy.
 
+Standard actions:
+
+- `setState`: update the JSON state model via JSON Pointer (`/path`) with a new `value`.
+- `fret-genui-core` provides a small helper (`fret_genui_core::actions::apply_standard_action`) so
+  apps can opt into these semantics without embedding them in the renderer.
+
 ## 8. Diagnostics and test strategy
 
 Minimum gates to avoid “AI broke the UI silently”:
