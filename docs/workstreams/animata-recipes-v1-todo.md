@@ -81,6 +81,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`toast_stack_shift_output`)
     - `tools/diag-scripts/ui-gallery-sonner-stack-shift-stagger-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-sonner-stack-shift-stagger-interrupt-fixed-frame-delta.json`
 
 ## P1 — Optional: bring Animata “blurred backdrop” into a reusable recipe
 

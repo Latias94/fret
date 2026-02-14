@@ -11,16 +11,26 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 const THEME_DURATION_SHADCN_MOTION_TOAST_ENTER: &str = "duration.shadcn.motion.toast.enter";
 const THEME_DURATION_SHADCN_MOTION_TOAST_EXIT: &str = "duration.shadcn.motion.toast.exit";
+const THEME_DURATION_SHADCN_MOTION_TOAST_STACK_SHIFT: &str =
+    "duration.shadcn.motion.toast.stack.shift";
+const THEME_DURATION_SHADCN_MOTION_TOAST_STACK_SHIFT_STAGGER: &str =
+    "duration.shadcn.motion.toast.stack.shift.stagger";
 const THEME_EASING_SHADCN_MOTION_TOAST: &str = "easing.shadcn.motion.toast";
+const THEME_EASING_SHADCN_MOTION_TOAST_STACK_SHIFT: &str = "easing.shadcn.motion.toast.stack.shift";
 
 const THEME_EASING_SHADCN_MOTION: &str = "easing.shadcn.motion";
 
 const THEME_DURATION_MOTION_PRESENCE_ENTER: &str = "duration.motion.presence.enter";
 const THEME_DURATION_MOTION_PRESENCE_EXIT: &str = "duration.motion.presence.exit";
+const THEME_DURATION_MOTION_STACK_SHIFT: &str = "duration.motion.stack.shift";
+const THEME_DURATION_MOTION_STACK_SHIFT_STAGGER: &str = "duration.motion.stack.shift.stagger";
 const THEME_EASING_MOTION_STANDARD: &str = "easing.motion.standard";
+const THEME_EASING_MOTION_STACK_SHIFT: &str = "easing.motion.stack.shift";
 
 pub const DEFAULT_SHADCN_TOAST_ENTER_DURATION: Duration = Duration::from_millis(200);
 pub const DEFAULT_SHADCN_TOAST_EXIT_DURATION: Duration = Duration::from_millis(200);
+pub const DEFAULT_SHADCN_TOAST_STACK_SHIFT_DURATION: Duration = Duration::from_millis(200);
+pub const DEFAULT_SHADCN_TOAST_STACK_SHIFT_STAGGER: Duration = Duration::from_millis(20);
 
 fn theme_duration_ms_by_key<H: UiHost>(cx: &ElementContext<'_, H>, key: &str) -> Option<Duration> {
     let theme = Theme::global(&*cx.app);
@@ -41,6 +51,25 @@ pub fn shadcn_toast_exit_duration_opt<H: UiHost>(cx: &ElementContext<'_, H>) -> 
         .or_else(|| theme_duration_ms_by_key(cx, THEME_DURATION_MOTION_PRESENCE_EXIT))
 }
 
+/// Toast stack shift duration (`duration.shadcn.motion.toast.stack.shift`, falling back to
+/// `duration.motion.stack.shift`, then to toast/presence enter durations).
+pub fn shadcn_toast_stack_shift_duration_opt<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<Duration> {
+    theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_TOAST_STACK_SHIFT)
+        .or_else(|| theme_duration_ms_by_key(cx, THEME_DURATION_MOTION_STACK_SHIFT))
+        .or_else(|| shadcn_toast_enter_duration_opt(cx))
+}
+
+/// Toast stack shift stagger delay per item (`duration.shadcn.motion.toast.stack.shift.stagger`,
+/// falling back to `duration.motion.stack.shift.stagger`).
+pub fn shadcn_toast_stack_shift_stagger_opt<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<Duration> {
+    theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_TOAST_STACK_SHIFT_STAGGER)
+        .or_else(|| theme_duration_ms_by_key(cx, THEME_DURATION_MOTION_STACK_SHIFT_STAGGER))
+}
+
 /// shadcn semantic toast easing curve (`easing.shadcn.motion.toast`, falling back to
 /// `easing.shadcn.motion`).
 pub fn shadcn_toast_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
@@ -55,4 +84,14 @@ pub fn shadcn_toast_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicB
             x2: crate::headless::easing::SHADCN_EASE.x2,
             y2: crate::headless::easing::SHADCN_EASE.y2,
         })
+}
+
+/// Toast stack shift easing curve (`easing.shadcn.motion.toast.stack.shift`, falling back to
+/// `easing.motion.stack.shift`, then to the toast easing).
+pub fn shadcn_toast_stack_shift_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
+    let theme = Theme::global(&*cx.app);
+    theme
+        .easing_by_key(THEME_EASING_SHADCN_MOTION_TOAST_STACK_SHIFT)
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STACK_SHIFT))
+        .unwrap_or_else(|| shadcn_toast_ease_bezier(cx))
 }
