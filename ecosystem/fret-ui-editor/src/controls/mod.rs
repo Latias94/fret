@@ -1,6 +1,7 @@
 //! Editor controls (interactive widgets built from primitives).
 
 pub mod checkbox;
+pub mod color_edit;
 pub mod drag_value;
 pub mod enum_select;
 pub mod field_status;
@@ -8,6 +9,7 @@ pub mod mini_search_box;
 pub mod numeric_input;
 
 pub use checkbox::{Checkbox, CheckboxOptions};
+pub use color_edit::{ColorEdit, ColorEditOptions};
 pub use drag_value::DragValue;
 pub use enum_select::{EnumSelect, EnumSelectItem, EnumSelectOptions};
 pub use field_status::{FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions};

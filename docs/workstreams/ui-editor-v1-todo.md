@@ -118,8 +118,9 @@ Exit criteria:
   - [x] tri-state/mixed binding (`Model<Option<bool>>` where `None` = indeterminate)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/checkbox.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - [ ] `ColorEdit` (minimal v1):
-  - [ ] swatch + hex input
-  - [ ] popup picker placeholder (can be minimal)
+  - [x] swatch + hex input
+  - [~] popup picker placeholder (can be minimal)
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/color_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - [ ] copy/paste affordances (optional)
 - [ ] `Vec2Edit` / `Vec3Edit` / `Vec4Edit` (built on `DragValue<T>`):
   - [ ] axis labels + axis color tokens

@@ -17,8 +17,9 @@ use fret_runtime::{
 use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle};
 use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset};
 use fret_ui_editor::controls::{
-    Checkbox, DragValue, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
-    FieldStatusBadge, MiniSearchBox, NumericFormatFn, NumericParseFn, NumericValidateFn,
+    Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
+    EnumSelectOptions, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
+    NumericParseFn, NumericValidateFn,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -157,6 +158,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_alpha_clip_model = editor_demo_alpha_clip_model(cx);
     let editor_cast_shadows_model = editor_demo_cast_shadows_model(cx);
     let editor_shading_model = editor_demo_shading_model(cx);
+    let editor_base_color_model = editor_demo_base_color_model(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
 
@@ -244,6 +246,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                     let show_opacity = material_show_all || matches("opacity");
                     let show_roughness = material_show_all || matches("roughness");
                     let show_metallic = material_show_all || matches("metallic");
+                    let show_base_color = material_show_all || matches("base") || matches("color");
                     let show_shading_model =
                         material_show_all || matches("shading") || matches("model");
                     let show_alpha_clip =
@@ -258,6 +261,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                         show_opacity
                             || show_roughness
                             || show_metallic
+                            || show_base_color
                             || show_shading_model
                             || show_alpha_clip
                             || show_cast_shadows
@@ -460,6 +464,35 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                                     )
                                                                     .into_element(cx),
                                                                 )
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if show_base_color {
+                                                        rows.push(row_cx.row(
+                                                            cx,
+                                                            |cx| cx.text("Base color"),
+                                                            |cx| {
+                                                                ColorEdit::new(
+                                                                    editor_base_color_model
+                                                                        .clone(),
+                                                                )
+                                                                .options(ColorEditOptions {
+                                                                    test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.material.base-color",
+                                                                    )),
+                                                                    swatch_test_id: Some(
+                                                                        Arc::from("imui-editor-proof.editor.material.base-color.swatch"),
+                                                                    ),
+                                                                    input_test_id: Some(
+                                                                        Arc::from("imui-editor-proof.editor.material.base-color.hex"),
+                                                                    ),
+                                                                    popup_test_id: Some(
+                                                                        Arc::from("imui-editor-proof.editor.material.base-color.popup"),
+                                                                    ),
+                                                                    ..Default::default()
+                                                                })
+                                                                .into_element(cx)
                                                             },
                                                         ));
                                                     }
@@ -733,6 +766,30 @@ fn editor_demo_metallic_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Mode
             let model = cx.app.models_mut().insert(0.1_f64);
             cx.with_state(
                 || None::<Model<f64>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_base_color_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Color> {
+    let model = cx.with_state(|| None::<Model<Color>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.2,
+                a: 1.0,
+            });
+            cx.with_state(
+                || None::<Model<Color>>,
                 |st| {
                     if st.is_none() {
                         *st = Some(model.clone());
