@@ -7,12 +7,12 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 - [x] Add a fixture-driven wrap conformance harness (baseline goldens):
   - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
   - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
-- [ ] Expand fixture coverage and expectations:
-  - [ ] CJK punctuation (leading/trailing forbiddens),
-  - [ ] identifiers (snake/camel),
-  - [ ] paths/URLs,
-  - [ ] emoji ZWJ/VS16,
-  - [ ] long-token emergency wraps.
+- [x] Expand fixture coverage and expectations (initial set):
+  - [x] CJK punctuation (leading/trailing forbiddens),
+  - [x] identifiers (snake/camel),
+  - [x] paths/URLs,
+  - [x] emoji ZWJ/VS16,
+  - [x] long-token emergency wraps.
 - [ ] Add a dedicated “wrap invariants” module (optional):
   - [ ] trailing whitespace at soft wrap is selectable (keep existing gate in `crates/fret-render-wgpu/src/text/mod.rs` and expand coverage).
 
@@ -21,10 +21,10 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 - [x] Replace `is_word_char`-based candidate selection in:
   - `crates/fret-render-wgpu/src/text/wrapper.rs`
   - with Unicode line break opportunities (UAX#14) via `swash::text::analyze` (keep a small heuristic fallback for now).
-- [ ] Keep the current behavior for:
-  - [ ] newline splitting,
-  - [ ] ellipsis truncation.
-- [ ] Add a micro perf regression guard for long paragraphs / resize jitter.
+- [x] Keep the current behavior for:
+  - [x] newline splitting,
+  - [x] ellipsis truncation.
+- [x] Add a micro perf regression guard for long paragraphs / resize jitter.
 
 ## M2 — Parley line breaking integration
 

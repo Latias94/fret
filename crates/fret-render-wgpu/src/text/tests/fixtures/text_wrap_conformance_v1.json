@@ -56,7 +56,42 @@
       "font_family": "Noto Sans CJK SC",
       "wrap": "word",
       "max_width_px": 60.0,
+      "assert_no_forbidden_punct": true,
+      "expected_line_ranges": [[0, 3], [3, 9], [9, 12], [12, 18], [18, 21], [21, 27], [27, 30], [30, 36], [36, 39], [39, 45], [45, 54]]
+    },
+    {
+      "id": "newline_paragraphs_word_wrap",
+      "text": "hello world\nhello world hello world",
+      "font_family": "Fira Mono",
+      "wrap": "word",
+      "max_width_px": 60.0,
+      "expected_line_ranges": [[0, 6], [6, 11], [12, 18], [18, 24], [24, 30], [30, 35]]
+    },
+    {
+      "id": "unix_path_word_wrap",
+      "text": "/usr/local/bin/some_long_tool_name --flag",
+      "font_family": "Fira Mono",
+      "wrap": "word",
+      "max_width_px": 90.0,
+      "expected_line_ranges": [[0, 5], [5, 11], [11, 15], [15, 24], [24, 33], [33, 41]]
+    },
+    {
+      "id": "cjk_brackets_word_wrap",
+      "text": "你好（世界）你好（世界）你好（世界）",
+      "font_family": "Noto Sans CJK SC",
+      "wrap": "word",
+      "max_width_px": 60.0,
+      "assert_no_forbidden_punct": true,
       "expected_line_ranges": [[0, 6], [6, 12], [12, 18], [18, 24], [24, 30], [30, 36], [36, 42], [42, 48], [48, 54]]
+    },
+    {
+      "id": "cjk_quotes_word_wrap",
+      "text": "“你好”，他说。“你好”，她说。",
+      "font_family": "Noto Sans CJK SC",
+      "wrap": "word",
+      "max_width_px": 60.0,
+      "assert_no_forbidden_punct": true,
+      "expected_line_ranges": [[0, 6], [6, 15], [15, 18], [18, 24], [24, 30], [30, 39], [39, 48]]
     },
     {
       "id": "emoji_zwj_sequence_grapheme_wrap",
@@ -65,6 +100,14 @@
       "wrap": "grapheme",
       "max_width_px": 60.0,
       "expected_line_ranges": [[0, 75], [75, 100]]
+    },
+    {
+      "id": "emoji_vs16_grapheme_wrap",
+      "text": "✈️✈️✈️✈️✈️✈️",
+      "font_family": "Noto Color Emoji",
+      "wrap": "grapheme",
+      "max_width_px": 60.0,
+      "expected_line_ranges": [[0, 18], [18, 36]]
     },
     {
       "id": "long_token_word_wrap",
