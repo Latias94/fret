@@ -108,3 +108,4 @@ Evidence pointers:
 - [x] Extract pack/triage/lint subcommand handlers into `crates/fret-diag/src/commands/artifacts.rs` (reduce `lib.rs` churn surface).
 - [x] Extract path/poke/latest subcommand handlers into `crates/fret-diag/src/commands/session.rs` (reduce `lib.rs` churn surface).
 - [x] Extract script subcommand handler into `crates/fret-diag/src/commands/script.rs` (reduce `lib.rs` churn surface).
+- [x] Extract script path helpers into `crates/fret-diag/src/paths.rs` (reduce `lib.rs` churn surface).
