@@ -117,7 +117,7 @@ Exit criteria:
   - [x] bool model binding (`Model<bool>`)
   - [x] tri-state/mixed binding (`Model<Option<bool>>` where `None` = indeterminate)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/checkbox.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
-- [ ] `ColorEdit` (minimal v1):
+- [~] `ColorEdit` (minimal v1):
   - [x] swatch + hex input
   - [~] popup picker placeholder (can be minimal)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/color_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
