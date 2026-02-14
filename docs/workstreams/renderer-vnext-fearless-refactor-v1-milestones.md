@@ -146,13 +146,16 @@ Exit criteria:
 Progress record (ClipPath v1):
 
 - Date: 2026-02-14
-- Status: In progress (contract + renderer substrate landed; conformance gates pending)
+- Commit: 305ff59a
+- Status: Landed (contract + renderer substrate; conformance gates pending)
 - Evidence anchors:
   - `docs/adr/0273-clip-path-and-image-mask-sources-v1.md`
   - `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`, `SceneRecording::with_clip_path`)
   - `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (`SceneOp::PushClipPath` encoding)
   - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanPass::PathClipMask`, `EffectMarkerKind::{ClipPathPush,ClipPathPop}`)
   - `crates/fret-render-wgpu/src/renderer/pipelines/path_clip_mask.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_CLIP_MASK_SHADER`)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu`
 
 ## M4 — Paint/Material evolution (staged)
 
