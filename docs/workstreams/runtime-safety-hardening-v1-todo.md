@@ -197,3 +197,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-ui/src/resizable_split/widget.rs` (opening `target/fret-resizable-split.log` is non-panicking by default)
   - Gates:
     - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+
+- [x] RSH-ui-013 Remove `.unwrap()` from default theme hex color parsing (strict mode panics).
+  - Evidence: `crates/fret-ui/src/theme/mod.rs` (`parse_default_theme_hex_color`, `warn_invalid_default_theme_color_once`)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui theme::`: PASS

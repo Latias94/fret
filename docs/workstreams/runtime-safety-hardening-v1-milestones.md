@@ -130,6 +130,7 @@ Deliverables:
 
 - Remove "checked above" `expect(...)` and redundant `Option` unwrapping in input/dispatch hot paths.
 - Avoid `expect(...)` on `taffy` layout engine operations; strict mode may panic, default mode warns once and enables widget fallback.
+- Remove `.unwrap()` from default theme color parsing; strict mode may panic, default mode warns and uses fallback colors.
 
 Exit criteria:
 
