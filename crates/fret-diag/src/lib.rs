@@ -4573,6 +4573,9 @@ See: `docs/tracy.md`.\n";
                     // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
                     // redaction disabled so any role-and-name selectors remain usable in scripts.
                     push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+                    // Some motion feel gates use the `--check-pixels-changed` post-run check, which
+                    // requires GPU screenshots.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
                     (
                         vec![
                             resolve_path(
@@ -4585,6 +4588,12 @@ See: `docs/tracy.md`.\n";
                                 &workspace_root,
                                 PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json",
                                 ),
                             ),
                             resolve_path(
@@ -11237,6 +11246,9 @@ fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static st
     };
 
     match name {
+        "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json" => {
+            Some("ui-gallery-alert-tabs-shared-indicator")
+        }
         "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json" => {
             Some("ui-gallery-code-editor-torture-root")
         }
