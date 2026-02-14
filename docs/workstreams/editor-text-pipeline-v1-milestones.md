@@ -54,3 +54,23 @@ Exit criteria:
 - Editor view model drives wrap segmentation for code.
 - Renderer wrapper is not relied on for editor row segmentation.
 - Cursor movement / selection semantics match the display-row segmentation (no drift).
+
+## M4 — Platform text input interop (TextInputRegion UTF-16)
+
+Exit criteria:
+
+- `TextInputRegion` provides a stable platform-facing view for editor-grade text input by answering:
+  - `PlatformTextInputQuery::{SelectedTextRange, MarkedTextRange, TextForRange}`
+  - in UTF-16 code units over `TextInputRegionProps.a11y_value`.
+- `WindowTextInputSnapshot` is published for focused `TextInputRegion` with:
+  - `text_len_utf16`, `selection_utf16`, `marked_utf16` derived from the composed view.
+- Non-goals for the mechanism layer (stage later):
+  - `BoundsForRange`, `CharacterIndexForPoint`, and `replace_*` are left unimplemented.
+
+Evidence anchors:
+
+- Implementation:
+  - `crates/fret-ui/src/tree/mod.rs` (`text_input_region_platform_text_input_query`)
+  - `crates/fret-ui/src/tree/paint.rs` (snapshot publishing)
+- Tests:
+  - `crates/fret-ui/src/declarative/tests/semantics.rs` (`declarative_text_input_region_answers_platform_text_input_queries_in_utf16`)

@@ -154,6 +154,9 @@ Unit tests:
 - mapping: buffer byte ↔ display point ↔ row-local byte
 - wrapping stability under resize jitter
 - highlight span stability across edits (no off-by-one at UTF-8 boundaries)
+- platform text input interop (UTF-16 over composed view):
+  - `TextInputRegion` should answer `PlatformTextInputQuery` deterministically from its
+    `a11y_value`/ranges (surrogate pairs, clamping inside scalars).
 
 Optional diag scripts:
 
@@ -165,8 +168,27 @@ Optional diag scripts:
 - M1: Harden row text caching and lock allocation regressions behind tests.
 - M2: Integrate per-row attributed spans for syntax highlighting without reshaping on paint-only changes.
 - M3: Wrap policy separation (code wrap driven by editor view model).
+- M4: Platform text input interop surface (UTF-16 over composed view).
 
 For detailed milestone checklists and task breakdown:
 
 - `docs/workstreams/editor-text-pipeline-v1-milestones.md`
 - `docs/workstreams/editor-text-pipeline-v1-todo.md`
+
+## Next refactor direction (staging)
+
+The current v1 seam for platform text input is `TextInputRegion`:
+
+- The editor publishes a composed-window string via `TextInputRegionProps.a11y_value`.
+- Selection/composition are expressed as UTF-8 byte offsets within that value (ADR 0071).
+- The runtime/platform bridge expects UTF-16 code unit indices over the same composed view
+  (`PlatformTextInputQuery` / `WindowTextInputSnapshot`).
+
+Staging plan:
+
+1) Lock down UTF-8↔UTF-16 conversion semantics for `TextInputRegion` (queries + snapshot), without
+   attempting geometry (`BoundsForRange`) or editing (`replace_*`) in the mechanism layer.
+2) Keep the editor in charge of mapping between buffer bytes and the composed display window
+   (folds/inlays/preedit), then publish the composed view + ranges as data-only props.
+3) Later, if needed, introduce a richer ecosystem-owned adapter that can answer bounds/replace
+   queries using cached row geometry, while keeping `fret-ui` as a mechanism-only router.

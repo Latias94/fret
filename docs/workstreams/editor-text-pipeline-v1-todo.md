@@ -34,3 +34,13 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 - [ ] Ensure the policy matches cursor movement and selection semantics.
 - [ ] Coordinate with `docs/workstreams/text-line-breaking-v1.md` so UI wrap improves without
   breaking editor expectations.
+
+## M4 — Platform text input interop (UTF-16 over composed view)
+
+- [x] `TextInputRegion` answers `PlatformTextInputQuery` from `a11y_value` deterministically:
+  - surrogate pairs (e.g. 😀) clamp correctly,
+  - selection/composition map from UTF-8 (ADR 0071) to UTF-16 (platform bridge).
+  - Evidence: `crates/fret-ui/src/declarative/tests/semantics.rs`
+- [ ] (Future) Add bounds + replace support at the ecosystem layer (not `fret-ui` mechanism):
+  - `BoundsForRange` via cached row geometry,
+  - `replace_*` via editor buffer ops + selection mapping.
