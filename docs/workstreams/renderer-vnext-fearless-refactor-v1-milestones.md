@@ -97,6 +97,8 @@ Deliverables:
   - unsupported material registration,
   - unknown/unregistered `MaterialId`,
   - and sampled-material binding shape support.
+- Portability closure requirements are captured in an ADR:
+  - `docs/adr/0274-paint-and-material-portability-closure-v1.md`
 
 ### M4b — Optional contract expansion (only if required)
 
