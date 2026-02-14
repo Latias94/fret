@@ -79,6 +79,9 @@ impl Renderer {
             render_plan_estimated_peak_intermediate_bytes: self
                 .perf
                 .render_plan_estimated_peak_intermediate_bytes,
+            render_plan_segments: self.perf.render_plan_segments,
+            render_plan_segments_changed: self.perf.render_plan_segments_changed,
+            render_plan_segments_passes_increased: self.perf.render_plan_segments_passes_increased,
             render_plan_degradations: self.perf.render_plan_degradations,
             render_plan_degradations_budget_zero: self.perf.render_plan_degradations_budget_zero,
             render_plan_degradations_budget_insufficient: self
