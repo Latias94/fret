@@ -127,10 +127,39 @@ The delta we want here is “Windows smoothness” oriented:
 - clearer typical-perf reporting (p50/p95 as first-class in review)
 - stronger linkage from a failing threshold → responsible phase → top hotspots
 
+### 3) Profiling/stats refactor proposal (what we would change, fearlessly)
+
+We already have many of the right pieces (scripts, bundles, gates, `diag stats`, optional traces).
+The main gap is that reviewers still need “tribal knowledge” to go from **a failing threshold** to
+**a clear root cause**.
+
+Proposed direction (additive, contract-first):
+
+1) Make a stable per-frame schema explicit
+   - Treat perf keys as a contract (`*_time_us`, `*_calls`, `*_items`, `*_bytes`).
+   - Keep changes additive; avoid renames without a compatibility window.
+2) Make typical perf first-class (not just max)
+   - Percentiles (p50/p95/p99) should be available in `diag stats` outputs and diffs.
+   - Review workflow: “p95 moved +X%” becomes a standard callout, not a manual spreadsheet step.
+3) Close the “attribution loop”
+   - For each gated metric, define its closest phase boundary + top hotspots surface.
+   - Example: `top_layout_time_us` → (`layout_request_build_roots` / `layout_roots` / `layout_engine_solve`) + node profile.
+4) Three-lane profiling (borrow the mature pattern)
+   - Always-on: cheap counters + coarse timings (gates).
+   - Opt-in: structured spans / node-level top-N (attribution).
+   - External sampling: ETW/WPR (OS scheduling/IO) + PIX/Nsight (GPU).
+
+Comparative notes (how other UI stacks tend to succeed here):
+
+- Zed/GPUI style: per-frame arenas + scoped CPU profiling (Tracy-style) + explicit frame markers.
+- Immediate-mode UIs (e.g. egui): lightweight in-app profilers (puffin) + consistent “frame budget”
+  dashboards (great for typical perf, weaker for tail unless paired with external profilers).
+- Large engines (Chromium/Flutter): stable trace events + external system profilers; “trace names are
+  a contract” is non-negotiable.
+
 ## References / important code
 
 - Layout pass + phase timers: `crates/fret-ui/src/tree/layout.rs`
 - Layout engine (Taffy): `crates/fret-ui/src/layout/engine.rs`
 - Stats summary / JSON keys: `crates/fret-diag/src/stats.rs`
 - Diagnostics script runner / checks: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-
