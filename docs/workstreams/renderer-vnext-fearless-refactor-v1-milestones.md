@@ -112,6 +112,7 @@ Progress record:
   - Scissor-sized intermediates for `EffectMode::FilterContent` and `CompositeGroup` (budget-gated and deterministic).
   - Disabled when the scene contains any `EffectMode::Backdrop` (fallback to full-viewport intermediates).
 - Evidence anchors:
+  - `docs/adr/0275-render-space-and-scissor-sized-intermediates-v1.md`
   - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (scissor-sized intermediate planning; budget estimation; Backdrop guard)
   - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderSpace uniform + absolute→local scissor mapping)
   - `crates/fret-render-wgpu/src/renderer/resources.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (RenderSpace binding `@group(0) @binding(5)`)
