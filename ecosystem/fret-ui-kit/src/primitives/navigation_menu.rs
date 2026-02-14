@@ -1909,9 +1909,9 @@ pub fn navigation_menu_content_transition<H: UiHost>(
         open,
         selected,
         values,
-        crate::declarative::overlay_motion::shadcn_motion_duration_200(cx),
-        crate::declarative::overlay_motion::shadcn_motion_duration_200(cx),
-        crate::declarative::overlay_motion::shadcn_motion_ease_bezier(cx),
+        crate::declarative::overlay_motion::motion_layout_expand_duration(cx),
+        crate::declarative::overlay_motion::motion_layout_expand_duration(cx),
+        crate::declarative::overlay_motion::motion_layout_expand_ease_bezier(cx),
     )
 }
 
