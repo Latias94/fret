@@ -56,7 +56,7 @@ use script_tooling::{
 };
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    apply_pick_to_script, bundle_stats_diff_from_paths, bundle_stats_from_path,
+    bundle_stats_diff_from_paths, bundle_stats_from_path,
     check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
     check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
