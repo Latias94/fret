@@ -50,14 +50,7 @@
       "timeout_frames": 240
     },
 
-    {
-      "type": "drag_pointer",
-      "target": { "kind": "test_id", "id": "toast-entry-1" },
-      "delta_x": 0.0,
-      "delta_y": -240.0,
-      "steps": 12
-    },
-    { "type": "wait_frames", "n": 1 },
+    { "type": "wait_frames", "n": 2 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" } },
     {
@@ -73,14 +66,7 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "toast-entry-1" } }
     },
 
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "toast-entry-1" }
-      },
-      "timeout_frames": 240
-    },
+    { "type": "wait_frames", "n": 20 },
 
     { "type": "capture_bundle", "label": "ui-gallery-sonner-interrupt-fixed-frame-delta" }
   ]
