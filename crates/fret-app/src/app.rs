@@ -339,7 +339,29 @@ impl App {
 
         let mut value = match existing {
             None => init(),
-            Some(v) => *v.downcast::<T>().expect("global type id must match"),
+            Some(v) => match v.downcast::<T>() {
+                Ok(v) => *v,
+                Err(_v) => {
+                    if strict_runtime_enabled() {
+                        panic!(
+                            "global type mismatch for {} (type_id={type_id:?}) while leasing at {}",
+                            std::any::type_name::<T>(),
+                            leased_at
+                        );
+                    }
+
+                    #[cfg(debug_assertions)]
+                    {
+                        eprintln!(
+                            "global type mismatch for {} (type_id={type_id:?}); replacing with init() while leasing at {}",
+                            std::any::type_name::<T>(),
+                            leased_at
+                        );
+                    }
+
+                    init()
+                }
+            },
         };
 
         let result = if cfg!(panic = "unwind") {
@@ -349,11 +371,36 @@ impl App {
         };
 
         let replaced = self.globals.insert(type_id, Box::new(value));
-        let Some(replaced) = replaced else {
-            panic!("global lease marker was removed unexpectedly: type_id={type_id:?}");
-        };
-        if !replaced.is::<GlobalLeaseMarker>() {
-            panic!("global lease marker was replaced unexpectedly: type_id={type_id:?}");
+        match replaced {
+            Some(replaced) if replaced.is::<GlobalLeaseMarker>() => {}
+            other => {
+                if strict_runtime_enabled() {
+                    panic!(
+                        "global lease marker was not present after mutation: {} (type_id={type_id:?}); replaced={}; leased at {}",
+                        std::any::type_name::<T>(),
+                        if other.is_some() {
+                            "non-marker"
+                        } else {
+                            "missing"
+                        },
+                        leased_at
+                    );
+                }
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!(
+                        "global lease marker missing/overwritten after mutation: {} (type_id={type_id:?}); replaced={}; leased at {}",
+                        std::any::type_name::<T>(),
+                        if other.is_some() {
+                            "non-marker"
+                        } else {
+                            "missing"
+                        },
+                        leased_at
+                    );
+                }
+            }
         }
 
         if let Some(pending) = self.pending_globals.remove(&type_id) {
@@ -1087,6 +1134,46 @@ mod tests {
             || 0u32,
             |_v, app| {
                 app.set_global::<u32>(2);
+            },
+        );
+
+        assert_eq!(app.global::<u32>().copied(), Some(2));
+    }
+
+    #[test]
+    fn with_global_mut_recovers_from_corrupt_existing_global_value_in_non_strict_mode() {
+        if super::strict_runtime_enabled() {
+            return;
+        }
+
+        let mut app = App::new();
+        app.globals
+            .insert(TypeId::of::<u32>(), Box::new("corrupt".to_string()));
+
+        app.with_global_mut(
+            || 0u32,
+            |v, _app| {
+                *v = 7;
+            },
+        );
+
+        assert_eq!(app.global::<u32>().copied(), Some(7));
+    }
+
+    #[test]
+    fn with_global_mut_recovers_when_lease_marker_is_removed_in_non_strict_mode() {
+        if super::strict_runtime_enabled() {
+            return;
+        }
+
+        let mut app = App::new();
+        app.set_global::<u32>(1);
+
+        app.with_global_mut(
+            || 0u32,
+            |v, app| {
+                *v = 2;
+                app.globals.remove(&TypeId::of::<u32>());
             },
         );
 

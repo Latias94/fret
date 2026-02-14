@@ -21,22 +21,7 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
     app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.prepare_window_for_frame(window, frame_id);
         let window_state = runtime.for_window_mut(window);
-
-        let key = (element, TypeId::of::<S>());
-        window_state.record_state_key_access(key);
-        let mut value = window_state
-            .take_state_box(&key)
-            .unwrap_or_else(|| Box::new(init()));
-
-        let out = {
-            let state = value
-                .downcast_mut::<S>()
-                .expect("element state type mismatch");
-            f(state)
-        };
-
-        window_state.insert_state_box(key, value);
-        out
+        window_state.with_state_mut(element, init, f)
     })
 }
 
@@ -272,4 +257,69 @@ pub fn dismissible_has_pointer_move_handler<H: UiHost>(
             .and_then(|any| any.downcast_ref::<DismissibleActionHooks>())
             .is_some_and(|hooks| hooks.on_pointer_move.is_some())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::strict_runtime::strict_runtime_enabled;
+    use std::any::TypeId;
+
+    #[test]
+    fn with_element_state_recovers_from_type_mismatch_in_non_strict_mode() {
+        if strict_runtime_enabled() {
+            return;
+        }
+
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let element = GlobalElementId(1);
+
+        with_window_state(&mut app, window, |st| {
+            st.insert_state_box(
+                (element, TypeId::of::<u32>()),
+                Box::new("corrupt".to_string()),
+            );
+        });
+
+        let out = with_element_state(
+            &mut app,
+            window,
+            element,
+            || 0u32,
+            |v| {
+                *v = 9;
+                *v
+            },
+        );
+        assert_eq!(out, 9);
+
+        let out = with_element_state(&mut app, window, element, || 0u32, |v| *v);
+        assert_eq!(out, 9);
+    }
+
+    #[test]
+    fn with_element_state_restores_state_on_panic() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let element = GlobalElementId(2);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            with_element_state(
+                &mut app,
+                window,
+                element,
+                || 1u32,
+                |v| {
+                    *v = 2;
+                    panic!("boom");
+                },
+            );
+        }));
+        assert!(result.is_err());
+
+        let out = with_element_state(&mut app, window, element, || 0u32, |v| *v);
+        assert_eq!(out, 2);
+    }
 }

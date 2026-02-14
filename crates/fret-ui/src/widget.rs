@@ -385,8 +385,9 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
 /// - `Available`: command should be treated as enabled for the current dispatch path.
 /// - `Blocked`: command must not bubble further to ancestors for availability purposes.
 /// - `NotHandled`: this node does not participate in availability for this command.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum CommandAvailability {
+    #[default]
     NotHandled,
     Available,
     Blocked,
@@ -1570,9 +1571,13 @@ pub trait Widget<H: UiHost> {
     fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {}
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ScrollIntoViewResult {
+    #[default]
     NotHandled,
-    Handled { did_scroll: bool },
+    Handled {
+        did_scroll: bool,
+    },
 }
 
 pub struct ScrollIntoViewCx<'a, H: UiHost> {

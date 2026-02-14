@@ -402,22 +402,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         init: impl FnOnce() -> S,
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
-        let key = (element, TypeId::of::<S>());
-        self.window_state.record_state_key_access(key);
-        let mut value = self
-            .window_state
-            .take_state_box(&key)
-            .unwrap_or_else(|| Box::new(init()));
-
-        let out = {
-            let state = value
-                .downcast_mut::<S>()
-                .expect("element state type mismatch");
-            f(state)
-        };
-
-        self.window_state.insert_state_box(key, value);
-        out
+        self.window_state.with_state_mut(element, init, f)
     }
 
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
