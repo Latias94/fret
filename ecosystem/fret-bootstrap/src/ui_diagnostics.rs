@@ -2516,10 +2516,22 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let Some(container_node) = container_node {
-                            let pos = center_of_rect_clamped_to_rect(
-                                container_node.bounds,
-                                window_bounds,
-                            );
+                            let pos = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        container_node,
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                });
                             if let Some(ui) = ui {
                                 let note =
                                     format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
@@ -3108,9 +3120,32 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
-                            let start =
-                                center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
-                            let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
+                            let start = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        from_node,
+                                        from_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(from_node.bounds, window_bounds)
+                                });
+                            let end = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        to_node,
+                                        to_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
+                                });
                             if let Some(ui) = ui {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
@@ -12262,6 +12297,63 @@ fn center_of_rect_clamped_to_rect(rect: Rect, clamp: Rect) -> Point {
         fret_core::Px((ix0 + ix1) * 0.5),
         fret_core::Px((iy0 + iy1) * 0.5),
     )
+}
+
+fn wheel_position_prefer_intended_hit(
+    snapshot: &fret_core::SemanticsSnapshot,
+    ui: &UiTree<App>,
+    intended: &fret_core::SemanticsNode,
+    container_bounds: Rect,
+    window_bounds: Rect,
+) -> Point {
+    let cx0 = window_bounds.origin.x.0;
+    let cy0 = window_bounds.origin.y.0;
+    let cx1 = cx0 + window_bounds.size.width.0.max(0.0);
+    let cy1 = cy0 + window_bounds.size.height.0.max(0.0);
+
+    let bx0 = container_bounds.origin.x.0;
+    let by0 = container_bounds.origin.y.0;
+    let bx1 = bx0 + container_bounds.size.width.0.max(0.0);
+    let by1 = by0 + container_bounds.size.height.0.max(0.0);
+
+    let ix0 = bx0.max(cx0);
+    let iy0 = by0.max(cy0);
+    let ix1 = bx1.min(cx1);
+    let iy1 = by1.min(cy1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return center_of_rect(container_bounds);
+    }
+
+    let w = (ix1 - ix0).max(0.0);
+    let h = (iy1 - iy0).max(0.0);
+    let pad_x = 8.0f32.min(w * 0.5);
+    let pad_y = 8.0f32.min(h * 0.5);
+
+    let x_mid = (ix0 + ix1) * 0.5;
+    let y_mid = (iy0 + iy1) * 0.5;
+
+    let candidates = [
+        Point::new(fret_core::Px(x_mid), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy1 - pad_y)),
+    ];
+
+    for pos in candidates {
+        if let Some(hit) = pick_semantics_node_at(snapshot, ui, pos)
+            && hit.id.data().as_ffi() == intended.id.data().as_ffi()
+        {
+            return pos;
+        }
+    }
+
+    candidates[0]
 }
 
 fn pick_semantics_node_at<'a>(

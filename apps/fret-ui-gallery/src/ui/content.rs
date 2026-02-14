@@ -248,7 +248,8 @@ pub(crate) fn content_view(
     let content_inner = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         body
     } else {
-        cx.keyed("ui_gallery.content_scroll_area", |cx| {
+        // Key the scroll area by the selected page so navigation resets scroll position.
+        cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), |cx| {
             let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .viewport_test_id("ui-gallery-content-viewport")
