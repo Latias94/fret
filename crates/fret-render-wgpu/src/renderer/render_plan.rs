@@ -45,6 +45,8 @@ pub(super) enum DebugPostprocess {
 pub(super) struct SceneDrawRangePass {
     pub(super) segment: SceneSegmentId,
     pub(super) target: PlanTarget,
+    pub(super) target_origin: (u32, u32),
+    pub(super) target_size: (u32, u32),
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
     pub(super) draw_range: Range<usize>,
 }
@@ -146,8 +148,10 @@ pub(super) struct FullscreenBlitPass {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct CompositePremulPass {
     pub(super) src: PlanTarget,
+    pub(super) src_origin: (u32, u32),
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
+    pub(super) dst_origin: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
@@ -190,6 +194,8 @@ pub(super) struct ScaleNearestPass {
 pub(super) struct PathMsaaBatchPass {
     pub(super) segment: SceneSegmentId,
     pub(super) target: PlanTarget,
+    pub(super) target_origin: (u32, u32),
+    pub(super) target_size: (u32, u32),
     pub(super) draw_range: Range<usize>,
     pub(super) union_scissor: ScissorRect,
     pub(super) batch_uniform_index: u32,
@@ -283,6 +289,8 @@ impl RenderPlan {
                     passes: vec![RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                         segment: SceneSegmentId(0),
                         target: scene_target,
+                        target_origin: (0, 0),
+                        target_size: viewport_size,
                         load: wgpu::LoadOp::Clear(clear),
                         draw_range: 0..draws.len(),
                     })],
@@ -303,6 +311,8 @@ impl RenderPlan {
                         passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                             segment: SceneSegmentId(0),
                             target: scene_target,
+                            target_origin: (0, 0),
+                            target_size: viewport_size,
                             load: wgpu::LoadOp::Clear(clear),
                             draw_range: scene_range_start..cursor,
                         }));
@@ -311,6 +321,8 @@ impl RenderPlan {
                         passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                             segment: SceneSegmentId(0),
                             target: scene_target,
+                            target_origin: (0, 0),
+                            target_size: viewport_size,
                             load: wgpu::LoadOp::Load,
                             draw_range: scene_range_start..cursor,
                         }));
@@ -332,6 +344,8 @@ impl RenderPlan {
                     passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
                         segment: SceneSegmentId(0),
                         target: scene_target,
+                        target_origin: (0, 0),
+                        target_size: viewport_size,
                         draw_range: cursor..end,
                         union_scissor: union,
                         batch_uniform_index,
@@ -349,6 +363,8 @@ impl RenderPlan {
                 passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
                     target: scene_target,
+                    target_origin: (0, 0),
+                    target_size: viewport_size,
                     load: wgpu::LoadOp::Clear(clear),
                     draw_range: 0..draws.len(),
                 }));
@@ -356,6 +372,8 @@ impl RenderPlan {
                 passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
                     target: scene_target,
+                    target_origin: (0, 0),
+                    target_size: viewport_size,
                     load: wgpu::LoadOp::Load,
                     draw_range: scene_range_start..draws.len(),
                 }));
@@ -370,6 +388,8 @@ impl RenderPlan {
         #[derive(Clone, Copy, Debug)]
         struct DrawScope {
             target: PlanTarget,
+            origin: (u32, u32),
+            size: (u32, u32),
             needs_clear: bool,
             clear_color: wgpu::Color,
         }
@@ -382,7 +402,11 @@ impl RenderPlan {
             scissor: ScissorRect,
             uniform_index: u32,
             parent_target: PlanTarget,
+            parent_origin: (u32, u32),
+            parent_size: (u32, u32),
             content_target: Option<PlanTarget>,
+            content_origin: (u32, u32),
+            content_size: (u32, u32),
         }
 
         #[derive(Clone, Copy, Debug)]
@@ -393,12 +417,18 @@ impl RenderPlan {
             uniform_index: u32,
             opacity: f32,
             parent_target: PlanTarget,
+            parent_origin: (u32, u32),
+            parent_size: (u32, u32),
             content_target: Option<PlanTarget>,
+            content_origin: (u32, u32),
+            content_size: (u32, u32),
         }
 
         let mut passes: Vec<RenderPlanPass> = Vec::new();
         let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
             target: scene_target,
+            origin: (0, 0),
+            size: viewport_size,
             needs_clear: true,
             clear_color: clear,
         }];
@@ -409,10 +439,14 @@ impl RenderPlan {
         let mut cursor: usize = 0;
         let mut marker_ix: usize = 0;
         let markers = &encoding.effect_markers;
+        let scissor_sized_intermediates = !markers.iter().any(|m| match m.kind {
+            EffectMarkerKind::Push { mode, .. } => mode == fret_core::EffectMode::Backdrop,
+            _ => false,
+        });
 
-        let can_allocate_full_intermediate = |draw_scopes: &[DrawScope]| -> bool {
-            let required = estimate_texture_bytes(viewport_size, format, 1);
-            let in_use = draw_scopes
+        let can_allocate_intermediate = |draw_scopes: &[DrawScope], size: (u32, u32)| -> bool {
+            let required = estimate_texture_bytes(size, format, 1);
+            let in_use: u64 = draw_scopes
                 .iter()
                 .filter(|s| {
                     matches!(
@@ -422,8 +456,9 @@ impl RenderPlan {
                             | PlanTarget::Intermediate2
                     )
                 })
-                .count() as u64;
-            in_use.saturating_mul(required).saturating_add(required) <= intermediate_budget_bytes
+                .map(|s| estimate_texture_bytes(s.size, format, 1))
+                .sum();
+            in_use.saturating_add(required) <= intermediate_budget_bytes
         };
 
         let flush_scene_range = |end: usize,
@@ -435,6 +470,8 @@ impl RenderPlan {
                 passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
                     target: scope.target,
+                    target_origin: scope.origin,
+                    target_size: scope.size,
                     load: wgpu::LoadOp::Clear(scope.clear_color),
                     draw_range: *scene_range_start..end,
                 }));
@@ -443,18 +480,13 @@ impl RenderPlan {
                 passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
                     target: scope.target,
+                    target_origin: scope.origin,
+                    target_size: scope.size,
                     load: wgpu::LoadOp::Load,
                     draw_range: *scene_range_start..end,
                 }));
             }
             *scene_range_start = end;
-        };
-
-        let effect_ctx = effects::EffectCompileCtx {
-            viewport_size,
-            format,
-            intermediate_budget_bytes,
-            clear,
         };
 
         let apply_chain_in_place =
@@ -463,6 +495,7 @@ impl RenderPlan {
              srcdst: PlanTarget,
              chain: fret_core::EffectChain,
              quality: fret_core::EffectQuality,
+             ctx_viewport_size: (u32, u32),
              scissor: ScissorRect,
              mask_uniform_index: Option<u32>| {
                 if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
@@ -479,7 +512,12 @@ impl RenderPlan {
                     quality,
                     scissor,
                     mask_uniform_index,
-                    effect_ctx,
+                    effects::EffectCompileCtx {
+                        viewport_size: ctx_viewport_size,
+                        format,
+                        intermediate_budget_bytes,
+                        clear,
+                    },
                 );
             };
 
@@ -507,7 +545,10 @@ impl RenderPlan {
                             chain,
                             quality,
                         } => {
-                            let parent_target = draw_scopes.last().expect("draw scope").target;
+                            let parent_scope = draw_scopes.last().expect("draw scope");
+                            let parent_target = parent_scope.target;
+                            let parent_origin = parent_scope.origin;
+                            let parent_size = parent_scope.size;
                             match mode {
                                 fret_core::EffectMode::Backdrop => {
                                     apply_chain_in_place(
@@ -516,6 +557,7 @@ impl RenderPlan {
                                         parent_target,
                                         chain,
                                         quality,
+                                        parent_size,
                                         scissor,
                                         Some(uniform_index),
                                     );
@@ -526,26 +568,43 @@ impl RenderPlan {
                                         scissor,
                                         uniform_index,
                                         parent_target,
+                                        parent_origin,
+                                        parent_size,
                                         content_target: None,
+                                        content_origin: (0, 0),
+                                        content_size: (0, 0),
                                     });
                                 }
                                 fret_core::EffectMode::FilterContent => {
+                                    let (content_origin, content_size) =
+                                        if scissor_sized_intermediates {
+                                            ((scissor.x, scissor.y), (scissor.w, scissor.h))
+                                        } else {
+                                            ((0, 0), viewport_size)
+                                        };
                                     let mut content_target: Option<PlanTarget> = None;
-                                    for t in [
-                                        PlanTarget::Intermediate0,
-                                        PlanTarget::Intermediate1,
-                                        PlanTarget::Intermediate2,
-                                    ] {
-                                        if draw_scopes.iter().any(|s| s.target == t) {
-                                            continue;
+                                    if content_size.0 != 0
+                                        && content_size.1 != 0
+                                        && can_allocate_intermediate(&draw_scopes, content_size)
+                                    {
+                                        for t in [
+                                            PlanTarget::Intermediate0,
+                                            PlanTarget::Intermediate1,
+                                            PlanTarget::Intermediate2,
+                                        ] {
+                                            if draw_scopes.iter().any(|s| s.target == t) {
+                                                continue;
+                                            }
+                                            content_target = Some(t);
+                                            break;
                                         }
-                                        content_target = Some(t);
-                                        break;
                                     }
 
                                     if let Some(content_target) = content_target {
                                         draw_scopes.push(DrawScope {
                                             target: content_target,
+                                            origin: content_origin,
+                                            size: content_size,
                                             needs_clear: true,
                                             clear_color: wgpu::Color::TRANSPARENT,
                                         });
@@ -558,7 +617,11 @@ impl RenderPlan {
                                         scissor,
                                         uniform_index,
                                         parent_target,
+                                        parent_origin,
+                                        parent_size,
                                         content_target,
+                                        content_origin,
+                                        content_size,
                                     });
                                 }
                             }
@@ -583,16 +646,28 @@ impl RenderPlan {
                                     content_target,
                                     scope.chain,
                                     scope.quality,
-                                    scope.scissor,
+                                    scope.content_size,
+                                    if scope.content_size == viewport_size {
+                                        scope.scissor
+                                    } else {
+                                        ScissorRect::full(
+                                            scope.content_size.0,
+                                            scope.content_size.1,
+                                        )
+                                    },
                                     None,
                                 );
 
+                                let cropped = scope.content_origin != (0, 0)
+                                    || scope.content_size != viewport_size;
                                 passes.push(RenderPlanPass::CompositePremul(CompositePremulPass {
                                     src: content_target,
+                                    src_origin: scope.content_origin,
                                     dst: scope.parent_target,
-                                    src_size: viewport_size,
-                                    dst_size: viewport_size,
-                                    dst_scissor: None,
+                                    src_size: scope.content_size,
+                                    dst_origin: scope.parent_origin,
+                                    dst_size: scope.parent_size,
+                                    dst_scissor: cropped.then_some(scope.scissor),
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: None,
                                     blend_mode: fret_core::BlendMode::Over,
@@ -610,9 +685,21 @@ impl RenderPlan {
                             quality,
                             opacity,
                         } => {
-                            let parent_target = draw_scopes.last().expect("draw scope").target;
+                            let parent_scope = draw_scopes.last().expect("draw scope");
+                            let parent_target = parent_scope.target;
+                            let parent_origin = parent_scope.origin;
+                            let parent_size = parent_scope.size;
+
+                            let (content_origin, content_size) = if scissor_sized_intermediates {
+                                ((scissor.x, scissor.y), (scissor.w, scissor.h))
+                            } else {
+                                ((0, 0), viewport_size)
+                            };
                             let mut content_target: Option<PlanTarget> = None;
-                            if can_allocate_full_intermediate(&draw_scopes) {
+                            if content_size.0 != 0
+                                && content_size.1 != 0
+                                && can_allocate_intermediate(&draw_scopes, content_size)
+                            {
                                 for t in [
                                     PlanTarget::Intermediate0,
                                     PlanTarget::Intermediate1,
@@ -629,6 +716,8 @@ impl RenderPlan {
                             if let Some(content_target) = content_target {
                                 draw_scopes.push(DrawScope {
                                     target: content_target,
+                                    origin: content_origin,
+                                    size: content_size,
                                     needs_clear: true,
                                     clear_color: wgpu::Color::TRANSPARENT,
                                 });
@@ -641,7 +730,11 @@ impl RenderPlan {
                                 uniform_index,
                                 opacity,
                                 parent_target,
+                                parent_origin,
+                                parent_size,
                                 content_target,
+                                content_origin,
+                                content_size,
                             });
                         }
                         EffectMarkerKind::CompositeGroupPop => {
@@ -658,9 +751,11 @@ impl RenderPlan {
 
                                 passes.push(RenderPlanPass::CompositePremul(CompositePremulPass {
                                     src: content_target,
+                                    src_origin: scope.content_origin,
                                     dst: scope.parent_target,
-                                    src_size: viewport_size,
-                                    dst_size: viewport_size,
+                                    src_size: scope.content_size,
+                                    dst_origin: scope.parent_origin,
+                                    dst_size: scope.parent_size,
                                     dst_scissor: Some(scope.scissor),
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: None,
@@ -711,10 +806,13 @@ impl RenderPlan {
                     }
                 }
 
-                let target = draw_scopes.last().expect("draw scope").target;
+                let scope = draw_scopes.last().expect("draw scope");
+                let target = scope.target;
                 passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
                     segment: SceneSegmentId(0),
                     target,
+                    target_origin: scope.origin,
+                    target_size: scope.size,
                     draw_range: cursor..end,
                     union_scissor: union,
                     batch_uniform_index,

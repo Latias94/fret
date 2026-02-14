@@ -2,6 +2,36 @@ use super::super::frame_targets::{FrameTargets, downsampled_size};
 use super::super::*;
 use fret_core::time::Instant;
 
+fn set_scissor_rect_absolute(
+    rp: &mut wgpu::RenderPass<'_>,
+    scissor: ScissorRect,
+    dst_origin: (u32, u32),
+    dst_size: (u32, u32),
+) -> bool {
+    if scissor.w == 0 || scissor.h == 0 || dst_size.0 == 0 || dst_size.1 == 0 {
+        return false;
+    }
+
+    let x0 = scissor.x;
+    let y0 = scissor.y;
+    let x1 = scissor.x.saturating_add(scissor.w);
+    let y1 = scissor.y.saturating_add(scissor.h);
+
+    let lx0 = x0.saturating_sub(dst_origin.0).min(dst_size.0);
+    let ly0 = y0.saturating_sub(dst_origin.1).min(dst_size.1);
+    let lx1 = x1.saturating_sub(dst_origin.0).min(dst_size.0);
+    let ly1 = y1.saturating_sub(dst_origin.1).min(dst_size.1);
+
+    let w = lx1.saturating_sub(lx0);
+    let h = ly1.saturating_sub(ly0);
+    if w == 0 || h == 0 {
+        return false;
+    }
+
+    rp.set_scissor_rect(lx0, ly0, w, h);
+    true
+}
+
 impl Renderer {
     pub fn render_scene(
         &mut self,
@@ -496,10 +526,32 @@ impl Renderer {
                     ]);
                 }
                 RenderPlanPass::CompositePremul(pass) => {
-                    let x0 = 0.0;
-                    let y0 = 0.0;
-                    let x1 = pass.dst_size.0 as f32;
-                    let y1 = pass.dst_size.1 as f32;
+                    let (x0, y0, x1, y1) = if let Some(scissor) = pass.dst_scissor {
+                        (
+                            scissor.x as f32,
+                            scissor.y as f32,
+                            (scissor.x + scissor.w) as f32,
+                            (scissor.y + scissor.h) as f32,
+                        )
+                    } else {
+                        let ox = pass.dst_origin.0 as f32;
+                        let oy = pass.dst_origin.1 as f32;
+                        (
+                            ox,
+                            oy,
+                            ox + pass.dst_size.0 as f32,
+                            oy + pass.dst_size.1 as f32,
+                        )
+                    };
+
+                    let src_ox = pass.src_origin.0 as f32;
+                    let src_oy = pass.src_origin.1 as f32;
+                    let src_w = pass.src_size.0.max(1) as f32;
+                    let src_h = pass.src_size.1.max(1) as f32;
+                    let u0 = ((x0 - src_ox) / src_w).clamp(0.0, 1.0);
+                    let v0 = ((y0 - src_oy) / src_h).clamp(0.0, 1.0);
+                    let u1 = ((x1 - src_ox) / src_w).clamp(0.0, 1.0);
+                    let v1 = ((y1 - src_oy) / src_h).clamp(0.0, 1.0);
 
                     let base = quad_vertices.len().min(u32::MAX as usize) as u32;
                     quad_vertex_bases[pass_index] = Some(base);
@@ -507,37 +559,37 @@ impl Renderer {
                     quad_vertices.extend_from_slice(&[
                         ViewportVertex {
                             pos_px: [x0, y0],
-                            uv: [0.0, 0.0],
+                            uv: [u0, v0],
                             opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x1, y0],
-                            uv: [1.0, 0.0],
+                            uv: [u1, v0],
                             opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x1, y1],
-                            uv: [1.0, 1.0],
+                            uv: [u1, v1],
                             opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x0, y0],
-                            uv: [0.0, 0.0],
+                            uv: [u0, v0],
                             opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x1, y1],
-                            uv: [1.0, 1.0],
+                            uv: [u1, v1],
                             opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x0, y1],
-                            uv: [0.0, 1.0],
+                            uv: [u0, v1],
                             opacity,
                             _pad: [0.0; 3],
                         },
@@ -561,6 +613,16 @@ impl Renderer {
             match planned_pass {
                 RenderPlanPass::SceneDrawRange(scene_pass) => {
                     debug_assert_eq!(scene_pass.segment.0, 0);
+                    let target_origin = scene_pass.target_origin;
+                    let target_size = scene_pass.target_size;
+                    queue.write_buffer(
+                        &self.render_space_buffer,
+                        0,
+                        bytemuck::bytes_of(&RenderSpaceUniform {
+                            origin_px: [target_origin.0 as f32, target_origin.1 as f32],
+                            size_px: [target_size.0.max(1) as f32, target_size.1.max(1) as f32],
+                        }),
+                    );
                     let load = scene_pass.load;
                     let pass_target_view_owned = match scene_pass.target {
                         PlanTarget::Output => None,
@@ -568,7 +630,7 @@ impl Renderer {
                             &mut self.intermediate_pool,
                             device,
                             PlanTarget::Intermediate0,
-                            viewport_size,
+                            target_size,
                             format,
                             usage,
                         )),
@@ -576,7 +638,7 @@ impl Renderer {
                             &mut self.intermediate_pool,
                             device,
                             PlanTarget::Intermediate1,
-                            viewport_size,
+                            target_size,
                             format,
                             usage,
                         )),
@@ -584,7 +646,7 @@ impl Renderer {
                             &mut self.intermediate_pool,
                             device,
                             PlanTarget::Intermediate2,
-                            viewport_size,
+                            target_size,
                             format,
                             usage,
                         )),
@@ -712,13 +774,13 @@ impl Renderer {
                                         active_uniform_offset = Some(uniform_offset);
                                     }
                                     if active_scissor != Some(draw.scissor) {
-                                        pass.set_scissor_rect(
-                                            draw.scissor.x,
-                                            draw.scissor.y,
-                                            draw.scissor.w,
-                                            draw.scissor.h,
-                                        );
-                                        if perf_enabled {
+                                        if set_scissor_rect_absolute(
+                                            &mut pass,
+                                            draw.scissor,
+                                            target_origin,
+                                            target_size,
+                                        ) && perf_enabled
+                                        {
                                             frame_perf.scissor_sets =
                                                 frame_perf.scissor_sets.saturating_add(1);
                                         }
@@ -790,13 +852,13 @@ impl Renderer {
                                             .saturating_add(1);
                                     }
                                     if active_scissor != Some(draw.scissor) {
-                                        pass.set_scissor_rect(
-                                            draw.scissor.x,
-                                            draw.scissor.y,
-                                            draw.scissor.w,
-                                            draw.scissor.h,
-                                        );
-                                        if perf_enabled {
+                                        if set_scissor_rect_absolute(
+                                            &mut pass,
+                                            draw.scissor,
+                                            target_origin,
+                                            target_size,
+                                        ) && perf_enabled
+                                        {
                                             frame_perf.scissor_sets =
                                                 frame_perf.scissor_sets.saturating_add(1);
                                         }
@@ -865,13 +927,13 @@ impl Renderer {
                                             .saturating_add(1);
                                     }
                                     if active_scissor != Some(draw.scissor) {
-                                        pass.set_scissor_rect(
-                                            draw.scissor.x,
-                                            draw.scissor.y,
-                                            draw.scissor.w,
-                                            draw.scissor.h,
-                                        );
-                                        if perf_enabled {
+                                        if set_scissor_rect_absolute(
+                                            &mut pass,
+                                            draw.scissor,
+                                            target_origin,
+                                            target_size,
+                                        ) && perf_enabled
+                                        {
                                             frame_perf.scissor_sets =
                                                 frame_perf.scissor_sets.saturating_add(1);
                                         }
@@ -939,13 +1001,13 @@ impl Renderer {
                                             .saturating_add(1);
                                     }
                                     if active_scissor != Some(draw.scissor) {
-                                        pass.set_scissor_rect(
-                                            draw.scissor.x,
-                                            draw.scissor.y,
-                                            draw.scissor.w,
-                                            draw.scissor.h,
-                                        );
-                                        if perf_enabled {
+                                        if set_scissor_rect_absolute(
+                                            &mut pass,
+                                            draw.scissor,
+                                            target_origin,
+                                            target_size,
+                                        ) && perf_enabled
+                                        {
                                             frame_perf.scissor_sets =
                                                 frame_perf.scissor_sets.saturating_add(1);
                                         }
@@ -1151,13 +1213,13 @@ impl Renderer {
                                         active_uniform_offset = Some(uniform_offset);
                                     }
                                     if active_scissor != Some(draw.scissor) {
-                                        pass.set_scissor_rect(
-                                            draw.scissor.x,
-                                            draw.scissor.y,
-                                            draw.scissor.w,
-                                            draw.scissor.h,
-                                        );
-                                        if perf_enabled {
+                                        if set_scissor_rect_absolute(
+                                            &mut pass,
+                                            draw.scissor,
+                                            target_origin,
+                                            target_size,
+                                        ) && perf_enabled
+                                        {
                                             frame_perf.scissor_sets =
                                                 frame_perf.scissor_sets.saturating_add(1);
                                         }
@@ -1211,13 +1273,13 @@ impl Renderer {
                                         active_uniform_offset = Some(uniform_offset);
                                     }
                                     if active_scissor != Some(draw.scissor) {
-                                        pass.set_scissor_rect(
-                                            draw.scissor.x,
-                                            draw.scissor.y,
-                                            draw.scissor.w,
-                                            draw.scissor.h,
-                                        );
-                                        if perf_enabled {
+                                        if set_scissor_rect_absolute(
+                                            &mut pass,
+                                            draw.scissor,
+                                            target_origin,
+                                            target_size,
+                                        ) && perf_enabled
+                                        {
                                             frame_perf.scissor_sets =
                                                 frame_perf.scissor_sets.saturating_add(1);
                                         }
@@ -1242,13 +1304,23 @@ impl Renderer {
                 }
                 RenderPlanPass::PathMsaaBatch(path_pass) => {
                     debug_assert_eq!(path_pass.segment.0, 0);
+                    let target_origin = path_pass.target_origin;
+                    let target_size = path_pass.target_size;
+                    queue.write_buffer(
+                        &self.render_space_buffer,
+                        0,
+                        bytemuck::bytes_of(&RenderSpaceUniform {
+                            origin_px: [target_origin.0 as f32, target_origin.1 as f32],
+                            size_px: [target_size.0.max(1) as f32, target_size.1.max(1) as f32],
+                        }),
+                    );
                     let pass_target_view_owned = match path_pass.target {
                         PlanTarget::Output => None,
                         PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
                             device,
                             PlanTarget::Intermediate0,
-                            viewport_size,
+                            target_size,
                             format,
                             usage,
                         )),
@@ -1256,7 +1328,7 @@ impl Renderer {
                             &mut self.intermediate_pool,
                             device,
                             PlanTarget::Intermediate1,
-                            viewport_size,
+                            target_size,
                             format,
                             usage,
                         )),
@@ -1264,7 +1336,7 @@ impl Renderer {
                             &mut self.intermediate_pool,
                             device,
                             PlanTarget::Intermediate2,
-                            viewport_size,
+                            target_size,
                             format,
                             usage,
                         )),
@@ -1340,13 +1412,13 @@ impl Renderer {
                                 continue;
                             }
                             if active_scissor != Some(draw.scissor) {
-                                path_pass_rp.set_scissor_rect(
-                                    draw.scissor.x,
-                                    draw.scissor.y,
-                                    draw.scissor.w,
-                                    draw.scissor.h,
-                                );
-                                if perf_enabled {
+                                if set_scissor_rect_absolute(
+                                    &mut path_pass_rp,
+                                    draw.scissor,
+                                    target_origin,
+                                    target_size,
+                                ) && perf_enabled
+                                {
                                     frame_perf.scissor_sets =
                                         frame_perf.scissor_sets.saturating_add(1);
                                 }
@@ -1431,8 +1503,9 @@ impl Renderer {
                     let base = u64::from(base) * quad_vertex_size;
                     let len = 6 * quad_vertex_size;
                     pass.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
-                    pass.set_scissor_rect(union.x, union.y, union.w, union.h);
-                    if perf_enabled {
+                    if set_scissor_rect_absolute(&mut pass, union, target_origin, target_size)
+                        && perf_enabled
+                    {
                         frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                     }
                     pass.draw(0..6, 0..1);
@@ -2779,6 +2852,14 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::CompositePremul(pass) => {
+                    queue.write_buffer(
+                        &self.render_space_buffer,
+                        0,
+                        bytemuck::bytes_of(&RenderSpaceUniform {
+                            origin_px: [pass.dst_origin.0 as f32, pass.dst_origin.1 as f32],
+                            size_px: [pass.dst_size.0.max(1) as f32, pass.dst_size.1.max(1) as f32],
+                        }),
+                    );
                     let pipeline_ix = match pass.blend_mode {
                         fret_core::BlendMode::Over => 0,
                         fret_core::BlendMode::Add => 1,
@@ -2945,7 +3026,12 @@ impl Renderer {
                         && scissor.w != 0
                         && scissor.h != 0
                     {
-                        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                        let _ = set_scissor_rect_absolute(
+                            &mut rp,
+                            scissor,
+                            pass.dst_origin,
+                            pass.dst_size,
+                        );
                     }
                     rp.draw(0..6, 0..1);
                     if perf_enabled {

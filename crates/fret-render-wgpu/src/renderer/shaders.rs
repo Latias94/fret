@@ -75,6 +75,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -160,8 +167,9 @@ fn quad_vertex_xy(vertex_index: u32) -> vec2<f32> {
 }
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -784,6 +792,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -830,8 +845,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -1192,6 +1208,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -1385,6 +1408,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -1547,6 +1577,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -1668,6 +1705,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -1847,6 +1891,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -1972,6 +2023,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -2137,6 +2195,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -2248,6 +2313,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -2474,6 +2546,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -2945,6 +3024,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -2989,8 +3075,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -3204,6 +3291,13 @@ struct Viewport {
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
 
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+
 struct MaskGradient {
   bounds: vec4<f32>,
   kind: u32,
@@ -3243,8 +3337,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -3421,6 +3516,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -3460,8 +3562,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -3678,6 +3781,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -3722,8 +3832,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -3973,6 +4084,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -4017,8 +4135,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -4238,6 +4357,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -4282,8 +4408,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 
@@ -4530,6 +4657,13 @@ struct Viewport {
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
 struct ClipStack {
   clips: array<ClipRRect>,
 };
@@ -4574,8 +4708,9 @@ struct VsOut {
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
-  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
-  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  let local = pixel_pos - render_space.origin_px;
+  let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
 }
 

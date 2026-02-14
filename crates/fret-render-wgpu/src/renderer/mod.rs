@@ -59,6 +59,7 @@ pub struct Renderer {
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
+    render_space_buffer: wgpu::Buffer,
     uniform_stride: u64,
     uniform_capacity: usize,
     clip_buffer: wgpu::Buffer,

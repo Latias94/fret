@@ -152,12 +152,16 @@ enum JsonDumpPass {
     SceneDrawRange {
         segment: usize,
         target: String,
+        target_origin: [u32; 2],
+        target_size: [u32; 2],
         load: JsonDumpLoadOp,
         draw_range: [usize; 2],
     },
     PathMsaaBatch {
         segment: usize,
         target: String,
+        target_origin: [u32; 2],
+        target_size: [u32; 2],
         draw_range: [usize; 2],
         union_scissor: JsonDumpScissorRect,
         batch_uniform_index: u32,
@@ -175,6 +179,8 @@ enum JsonDumpPass {
         dst: String,
         src_size: [u32; 2],
         dst_size: [u32; 2],
+        src_origin: [u32; 2],
+        dst_origin: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
         mask_uniform_index: Option<u32>,
         mask: Option<JsonDumpMaskRef>,
@@ -270,12 +276,16 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
         RenderPlanPass::SceneDrawRange(pass) => JsonDumpPass::SceneDrawRange {
             segment: pass.segment.0,
             target: plan_target_name(pass.target).to_string(),
+            target_origin: [pass.target_origin.0, pass.target_origin.1],
+            target_size: [pass.target_size.0, pass.target_size.1],
             load: encode_load_op(pass.load),
             draw_range: [pass.draw_range.start, pass.draw_range.end],
         },
         RenderPlanPass::PathMsaaBatch(pass) => JsonDumpPass::PathMsaaBatch {
             segment: pass.segment.0,
             target: plan_target_name(pass.target).to_string(),
+            target_origin: [pass.target_origin.0, pass.target_origin.1],
+            target_size: [pass.target_size.0, pass.target_size.1],
             draw_range: [pass.draw_range.start, pass.draw_range.end],
             union_scissor: pass.union_scissor.into(),
             batch_uniform_index: pass.batch_uniform_index,
@@ -293,6 +303,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             dst: plan_target_name(pass.dst).to_string(),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
+            src_origin: [pass.src_origin.0, pass.src_origin.1],
+            dst_origin: [pass.dst_origin.0, pass.dst_origin.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
             mask_uniform_index: pass.mask_uniform_index,
             mask: pass.mask.map(Into::into),
@@ -499,7 +511,7 @@ pub(super) fn maybe_dump_render_plan_json(
     let _ = std::fs::create_dir_all(&dir);
 
     let dump = RenderPlanJsonDump {
-        schema_version: 1,
+        schema_version: 2,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),

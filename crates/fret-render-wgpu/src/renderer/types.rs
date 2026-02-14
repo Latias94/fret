@@ -69,6 +69,15 @@ pub(super) struct ViewportUniform {
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct RenderSpaceUniform {
+    /// Absolute (root-scene) pixel origin that maps to framebuffer (0,0) for the current pass.
+    pub(super) origin_px: [f32; 2],
+    /// Framebuffer size in pixels for the current pass.
+    pub(super) size_px: [f32; 2],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct ScaleParamsUniform {
     pub(super) scale: u32,
     pub(super) _pad0: u32,
