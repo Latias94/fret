@@ -64,7 +64,7 @@ build XYFlow-like interactions on top of the world-layer substrate.
   - Mechanism: `CanvasMarqueeSelectionProps::start_filter` (background-only gate).
   - Evidence: `ecosystem/fret-canvas/src/ui/pan_zoom.rs` (`CanvasMarqueeSelectionProps::start_filter`)
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (bounds-store-based filter)
-  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-marquee-blocked`)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (marquee behavior not asserted yet)
   - Reference: `docs/workstreams/xyflow-gap-analysis.md` (Gap B)
 - [x] CWL-M3-002 Provide a minimal node-drag recipe (app-owned model edits):
   - capture pointer in a node subtree,
@@ -73,13 +73,13 @@ build XYFlow-like interactions on top of the world-layer substrate.
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-node-a-drag-handle`)
   - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-node-dragged`)
   - Reference: `repo-ref/xyflow/packages/system/src/xydrag/*`
-- [~] CWL-M3-003 Provide a minimal connect-drag recipe surface:
+- [x] CWL-M3-003 Provide a minimal connect-drag recipe surface:
   - start drag from a handle,
   - preview path,
   - validate + commit/cancel.
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-node-a-source-handle`, `ui-ai-cwl-node-b-target-handle`, `ui-ai-cwl-connection-preview`)
-  - Gate (deterministic): `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-commit-connection`)
-  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-connection-committed`)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (drag `ui-ai-cwl-node-a-source-handle` → `ui-ai-cwl-node-b-target-handle`, assert `ui-ai-cwl-connection-committed`)
+  - Note: `ui-ai-cwl-commit-connection` remains as a manual debug escape hatch, not a gate dependency.
   - Reference: `repo-ref/xyflow/packages/system/src/xyhandle/*`
 - [ ] CWL-M3-004 Optional snap helpers (grid snap + snapline scaffolding).
   - Reference: `repo-ref/xyflow/packages/system/src/xydrag/*` (`snapGrid`, `snapToGrid`)

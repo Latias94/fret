@@ -1,7 +1,7 @@
 ---
 title: Declarative Canvas World Layer v1 (XYFlow-style nodes as element subtrees)
 status: active
-date: 2026-02-12
+date: 2026-02-13
 scope: ecosystem/fret-canvas/ui, ecosystem/fret-ui-kit, apps (UI Gallery demos + diag gates)
 ---
 
@@ -72,7 +72,7 @@ Open questions (to be answered by a spike):
 - How to expose a stable “world-space layout contract” without leaking renderer details into
   `crates/fret-ui`.
 
-## Current v0 status (2026-02-12)
+## Current v0 status (2026-02-13)
 
 Implemented:
 
@@ -140,13 +140,20 @@ Current state:
     (`ui-ai-cwl-node-a-drag-handle`)
   - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
     (assert `ui-ai-cwl-node-dragged`)
-- Connection wiring exists as a UI Gallery spike (handles + preview); commit is currently gated via a deterministic helper button:
+- Connection wiring exists as a UI Gallery spike (handles + preview); commit is gated via a real drag gesture:
   - Handles: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
     (`ui-ai-cwl-node-a-source-handle`, `ui-ai-cwl-node-b-target-handle`)
-  - Commit helper: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
-    (`ui-ai-cwl-commit-connection`)
   - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
-    (assert `ui-ai-cwl-connection-committed`)
+    (drag `ui-ai-cwl-node-a-source-handle` → `ui-ai-cwl-node-b-target-handle`, assert
+    `ui-ai-cwl-connection-committed`)
+
+Notes:
+
+- `ui-ai-cwl-commit-connection` still exists as a manual debug escape hatch but is no longer used by
+  the gate script.
+- Marquee selection integration exists (`canvas_world_surface_panel_with_marquee_selection`), but
+  background-drag gating is not asserted by the current script yet (input arbitration between world
+  element subtrees and the underlying pan/zoom surface remains a v1 ergonomics gap).
 
 Input arbitration note:
 
