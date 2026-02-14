@@ -1,6 +1,6 @@
 # Runtime Safety Hardening v1 — TODO Tracker
 
-Status: Draft
+Status: Active (follow-ups)
 
 This document tracks tasks for:
 
@@ -26,12 +26,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - `cargo nextest run -p fret-ui`
   - `cargo nextest run -p fret-app`
   - `python3 tools/check_layering.py`
-  - Last verified: 2026-02-13
-  - Current status (as of this branch):
-    - `cargo nextest run -p fret-runtime`: PASS
-    - `cargo nextest run -p fret-ui`: PASS
-    - `cargo nextest run -p fret-app`: PASS
-    - `python3 tools/check_layering.py`: PASS
+  - Full gate set last verified: 2026-02-13
+  - Partial re-verification notes:
+    - 2026-02-14: `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - 2026-02-14: `cargo nextest run -p fret-ui`: PASS
+  - Windows note: prefer `cargo fmt -p <crate>` for targeted formatting (workspace-wide `cargo fmt` may fail with `os error 206` on long paths).
 
 ## M1 — `ModelStore v2` (remove public leasing; no panicking reads)
 
@@ -108,3 +107,15 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] RSH-clippy-001 Make `cargo clippy` pass with `-D warnings` for the workstream crates.
   - Evidence: `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
   - Evidence: `cargo clippy -p fret-app --all-targets -- -D warnings`: PASS
+
+## M6 — Local `unsafe` tightening (fret-ui follow-ups)
+
+- [x] RSH-ui-001 Remove avoidable `unsafe` from `TestHost` globals leasing.
+  - Evidence: `crates/fret-ui/src/test_host.rs` (`TestHost::with_globals` no longer uses pointer writes)
+  - Evidence: `cargo nextest run -p fret-ui`: PASS
+- [x] RSH-ui-002 Add regression gates for small inline list invariants (inline ↔ spill boundaries, stable ordering).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (tests: `small_list_tests::*`)
+- [x] RSH-ui-003 Tighten `unsafe` in `SmallNodeList` / `SmallCopyList` slice views and spill conversion.
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`assume_init_slice_ref`, `Small{Node,Copy}List::as_slice`)
+- [x] RSH-clippy-002 Fix clippy `items_after_test_module` in `fret-ui`.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/paint.rs` (tests moved to file end)

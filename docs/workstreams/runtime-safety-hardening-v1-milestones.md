@@ -83,3 +83,16 @@ Deliverables:
 Exit criteria:
 
 - Clippy can be used as a regression gate for the workstream crates without surfacing new warnings.
+
+## M6 — Local `unsafe` tightening (fret-ui follow-ups)
+
+Deliverables:
+
+- `fret-ui` local helpers avoid unnecessary raw pointer casts in hot data structures.
+- `TestHost` no longer relies on avoidable `unsafe` for globals leasing.
+- Small inline list invariants are covered by targeted tests.
+
+Exit criteria:
+
+- `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-ui` is green.
