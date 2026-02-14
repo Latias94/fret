@@ -1993,11 +1993,14 @@ pub fn render<H: UiHost + 'static>(
                                                 })
                                                 .collect();
 
-                                            let stack_shift_duration = crate::declarative::toast_motion::shadcn_toast_enter_duration_opt(cx)
-                                                .unwrap_or(crate::declarative::toast_motion::DEFAULT_SHADCN_TOAST_ENTER_DURATION);
-                                            let stack_shift_each_delay = Duration::from_millis(20);
+                                            let stack_shift_duration =
+                                                crate::declarative::toast_motion::shadcn_toast_stack_shift_duration_opt(cx)
+                                                    .unwrap_or(crate::declarative::toast_motion::DEFAULT_SHADCN_TOAST_STACK_SHIFT_DURATION);
+                                            let stack_shift_each_delay =
+                                                crate::declarative::toast_motion::shadcn_toast_stack_shift_stagger_opt(cx)
+                                                    .unwrap_or(crate::declarative::toast_motion::DEFAULT_SHADCN_TOAST_STACK_SHIFT_STAGGER);
                                             let stack_shift_bezier = toast_style.easing.unwrap_or_else(|| {
-                                                crate::declarative::toast_motion::shadcn_toast_ease_bezier(cx)
+                                                crate::declarative::toast_motion::shadcn_toast_stack_shift_ease_bezier(cx)
                                             });
 
                                             let stack_shift = toast_stack_shift_output(
