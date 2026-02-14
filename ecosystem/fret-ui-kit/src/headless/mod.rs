@@ -12,6 +12,7 @@ pub use fret_ui_headless::form_validation;
 pub use fret_ui_headless::grid_viewport;
 pub use fret_ui_headless::hover_intent;
 pub use fret_ui_headless::menu_nav;
+pub use fret_ui_headless::motion::stagger;
 pub use fret_ui_headless::presence;
 pub use fret_ui_headless::roving_focus;
 pub use fret_ui_headless::safe_hover;
