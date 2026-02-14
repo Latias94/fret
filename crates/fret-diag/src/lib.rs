@@ -4458,6 +4458,7 @@ See: `docs/tracy.md`.\n";
                 UiGalleryCodeEditor,
                 UiGalleryLayout,
                 DockingArbitration,
+                DockingMotionPilot,
             }
 
             let suite_args: Vec<String> = rest.clone();
@@ -4512,6 +4513,8 @@ See: `docs/tracy.md`.\n";
             let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = suite_args.len()
                 == 1
                 && suite_args[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
+            let is_docking_motion_pilot_suite =
+                suite_args.len() == 1 && suite_args[0] == "docking-motion-pilot";
             let is_ui_gallery_chart_torture_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-chart-torture";
             let is_ui_gallery_vlist_window_boundary_suite =
@@ -5295,6 +5298,16 @@ See: `docs/tracy.md`.\n";
                             ),
                         )],
                         None,
+                    )
+                } else if is_docking_motion_pilot_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::DockingMotionPilot),
                     )
                 } else if is_docking_arbitration_suite {
                     (
