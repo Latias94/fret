@@ -18,12 +18,13 @@ pub(super) struct ClipRRectUniform {
 pub(super) struct MaskGradientUniform {
     /// Bounds in local pixel coordinates (x, y, w, h). Outside bounds, the mask is treated as 1.0.
     pub(super) bounds: [f32; 4],
-    /// 1 = LinearGradient, 2 = RadialGradient.
+    /// 1 = LinearGradient, 2 = RadialGradient, 3 = Image (coverage sampled from a renderer-bound texture).
     pub(super) kind: u32,
+    /// For gradients: tile mode encoding. For image masks (kind=3): channel selector (0 = red, 1 = alpha).
     pub(super) tile_mode: u32,
     pub(super) stop_count: u32,
     pub(super) _pad0: u32,
-    /// Linear: start.xy end.xy. Radial: center.xy radius.xy.
+    /// Linear: start.xy end.xy. Radial: center.xy radius.xy. Image: uv0.xy uv1.xy.
     pub(super) params0: [f32; 4],
     pub(super) inv0: [f32; 4],
     pub(super) inv1: [f32; 4],
@@ -603,6 +604,8 @@ pub(super) struct SceneEncoding {
     pub(super) clips: Vec<ClipRRectUniform>,
     pub(super) masks: Vec<MaskGradientUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
+    /// Per-uniform CPU-side mask-image selection used to pick the correct bind group for `Mask::Image`.
+    pub(super) uniform_mask_images: Vec<Option<fret_core::ImageId>>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
 
@@ -623,6 +626,7 @@ impl SceneEncoding {
         self.clips.clear();
         self.masks.clear();
         self.uniforms.clear();
+        self.uniform_mask_images.clear();
         self.ordered_draws.clear();
         self.effect_markers.clear();
         self.material_quad_ops = 0;

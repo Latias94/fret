@@ -1,9 +1,14 @@
-use super::{Color, ColorSpace, GradientStop, LinearGradient, MAX_STOPS, RadialGradient, TileMode};
+use crate::ids::ImageId;
+
+use super::{
+    Color, ColorSpace, GradientStop, LinearGradient, MAX_STOPS, RadialGradient, TileMode, UvRect,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Mask {
     LinearGradient(LinearGradient),
     RadialGradient(RadialGradient),
+    Image { image: ImageId, uv: UvRect },
 }
 
 impl Mask {
@@ -13,6 +18,10 @@ impl Mask {
 
     pub const fn radial_gradient(g: RadialGradient) -> Self {
         Self::RadialGradient(g)
+    }
+
+    pub const fn image(image: ImageId, uv: UvRect) -> Self {
+        Self::Image { image, uv }
     }
 
     pub fn sanitize(self) -> Option<Self> {
@@ -107,6 +116,29 @@ impl Mask {
 
                 g.stops = sort_stops(g.stop_count, g.stops);
                 Some(Mask::RadialGradient(g))
+            }
+            Mask::Image { image, mut uv } => {
+                if !uv.u0.is_finite()
+                    || !uv.v0.is_finite()
+                    || !uv.u1.is_finite()
+                    || !uv.v1.is_finite()
+                {
+                    return None;
+                }
+
+                uv.u0 = clamp01(uv.u0);
+                uv.v0 = clamp01(uv.v0);
+                uv.u1 = clamp01(uv.u1);
+                uv.v1 = clamp01(uv.v1);
+
+                if uv.u0 > uv.u1 {
+                    std::mem::swap(&mut uv.u0, &mut uv.u1);
+                }
+                if uv.v0 > uv.v1 {
+                    std::mem::swap(&mut uv.v0, &mut uv.v1);
+                }
+
+                Some(Mask::Image { image, uv })
             }
         }
     }

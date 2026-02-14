@@ -109,6 +109,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 @group(0) @binding(3) var material_catalog_texture: texture_2d_array<f32>;
 @group(0) @binding(4) var material_catalog_sampler: sampler;
 
@@ -441,6 +444,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
     return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
   }
 
   return 1.0;
@@ -826,6 +840,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 @group(1) @binding(0) var viewport_sampler: sampler;
 @group(1) @binding(1) var viewport_texture: texture_2d<f32>;
 
@@ -975,6 +992,18 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
     return mask_sample_stops(m, tt);
+  }
+
+  // 3 = Image mask
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
   }
 
   return 1.0;
@@ -3058,6 +3087,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 @group(1) @binding(0) var tex_sampler: sampler;
 @group(1) @binding(1) var tex: texture_2d<f32>;
 
@@ -3205,6 +3237,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     return mask_sample_stops(m, tt);
   }
 
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
+  }
+
   return 1.0;
 }
 
@@ -3319,6 +3362,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 @group(1) @binding(0) var tex_sampler: sampler;
 @group(1) @binding(1) var tex: texture_2d<f32>;
 @group(1) @binding(2) var mask_texture: texture_2d<f32>;
@@ -3412,6 +3458,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
     return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
   }
 
   return 1.0;
@@ -3587,6 +3644,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
   @location(1) color: vec4<f32>,
@@ -3729,6 +3789,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     return mask_sample_stops(m, tt);
   }
 
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
+  }
+
   return 1.0;
 }
 
@@ -3851,6 +3922,9 @@ struct MaskStack {
 };
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
+
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
 
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
@@ -3997,6 +4071,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
     return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
   }
 
   return 1.0;
@@ -4155,6 +4240,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
 
@@ -4300,6 +4388,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
     return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
   }
 
   return 1.0;
@@ -4428,6 +4527,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
 
@@ -4573,6 +4675,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
     return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
   }
 
   return 1.0;
@@ -4728,6 +4841,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(6) var mask_image_sampler: sampler;
+@group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
+
 @group(1) @binding(0) var mask_sampler: sampler;
 @group(1) @binding(1) var mask_texture: texture_2d<f32>;
 
@@ -4873,6 +4989,17 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
     return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 3u) {
+    let uv0 = m.params0.xy;
+    let uv1 = m.params0.zw;
+    let denom = max(m.bounds.zw, vec2<f32>(1e-6));
+    let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(uv0, uv1, t);
+    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    let cov = select(s.r, s.a, m.tile_mode == 1u);
+    return clamp(cov, 0.0, 1.0);
   }
 
   return 1.0;

@@ -11,7 +11,12 @@ fn tile_mode_to_u32(m: TileMode) -> u32 {
     }
 }
 
-pub(super) fn push_mask(state: &mut EncodeState<'_>, bounds: Rect, mask: Mask) -> bool {
+pub(super) fn push_mask(
+    renderer: &Renderer,
+    state: &mut EncodeState<'_>,
+    bounds: Rect,
+    mask: Mask,
+) -> bool {
     let Some(mask) = mask.sanitize() else {
         state.mask_pop_stack.push(MaskPop::NoShader);
         return true;
@@ -35,6 +40,7 @@ pub(super) fn push_mask(state: &mut EncodeState<'_>, bounds: Rect, mask: Mask) -
     } else {
         u32::MAX
     };
+    let prev_mask_image = state.mask_image;
 
     let node_index = state.masks.len() as u32;
     let parent_bits = f32::from_bits(prev_head);
@@ -103,6 +109,32 @@ pub(super) fn push_mask(state: &mut EncodeState<'_>, bounds: Rect, mask: Mask) -
                 }
             }
         }
+        Mask::Image { image, uv } => {
+            // v1 wgpu renderer limitation: support at most one concurrently-active image mask.
+            if state.mask_image.is_some() {
+                state.mask_pop_stack.push(MaskPop::NoShader);
+                return true;
+            }
+
+            // Missing mask source is a deterministic degrade-to-unmasked.
+            if renderer.images.get(image).is_none() {
+                state.mask_pop_stack.push(MaskPop::NoShader);
+                return true;
+            }
+
+            uniform.kind = 3;
+            uniform.stop_count = 0;
+            uniform.params0 = [uv.u0, uv.v0, uv.u1, uv.v1];
+
+            // Prefer alpha for sRGB textures (avoid sRGB conversion on RGB channels).
+            let use_alpha_channel = renderer
+                .images
+                .format(image)
+                .is_some_and(|fmt| fmt.is_srgb());
+            uniform.tile_mode = u32::from(use_alpha_channel);
+
+            state.mask_image = Some(image);
+        }
     }
 
     state.masks.push(uniform);
@@ -116,7 +148,10 @@ pub(super) fn push_mask(state: &mut EncodeState<'_>, bounds: Rect, mask: Mask) -
         state.mask_scope_head,
         state.mask_scope_count,
     );
-    state.mask_pop_stack.push(MaskPop::Shader { prev_head });
+    state.mask_pop_stack.push(MaskPop::Shader {
+        prev_head,
+        prev_mask_image,
+    });
     true
 }
 
@@ -127,7 +162,10 @@ pub(super) fn pop_mask(state: &mut EncodeState<'_>) {
 
     match pop {
         MaskPop::NoShader => {}
-        MaskPop::Shader { prev_head } => {
+        MaskPop::Shader {
+            prev_head,
+            prev_mask_image,
+        } => {
             state.flush_quad_batch();
             state.mask_count = state.mask_count.saturating_sub(1);
             state.mask_head = if state.mask_count == 0 || prev_head == u32::MAX {
@@ -135,6 +173,7 @@ pub(super) fn pop_mask(state: &mut EncodeState<'_>) {
             } else {
                 prev_head
             };
+            state.mask_image = prev_mask_image;
             state.current_uniform_index = state.push_uniform_snapshot(
                 state.clip_head,
                 state.clip_count,
