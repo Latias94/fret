@@ -280,8 +280,8 @@ impl<H: UiHost> Node<H> {
 /// The caller must guarantee that every element in `slice` is initialized.
 #[inline]
 unsafe fn assume_init_slice_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
-    // SAFETY: `MaybeUninit<T>` has the same layout as `T`. The caller guarantees initialization.
-    unsafe { &*(slice as *const [MaybeUninit<T>] as *const [T]) }
+    // SAFETY: `MaybeUninit<T>` has the same layout as `T`, and the caller guarantees initialization.
+    unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<T>(), slice.len()) }
 }
 
 #[derive(Debug)]
