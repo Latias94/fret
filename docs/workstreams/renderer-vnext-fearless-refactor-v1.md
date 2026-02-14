@@ -317,3 +317,34 @@ This appendix is a living inventory for M4 (`Paint/Material evolution`). It answ
     (origin + transform), and deterministic fallbacks for wasm/mobile (ADR + conformance gate).
 - `SceneOp::Text` paint expansion is deferred until text pipeline constraints are settled; keep the
   v1 contract simple and predictable.
+
+---
+
+## Appendix C — Material capability notes (wgpu today)
+
+This appendix is a staging note for `REN-VNEXT-mat-001/002`.
+
+### C1) Registration-time capability gating (deterministic)
+
+The default wgpu renderer performs capability gating at **material registration** time:
+
+- `MaterialBindingShape::ParamsOnly`: supported (baseline).
+- `MaterialBindingShape::ParamsPlusCatalogTexture`: supported only when the adapter reports:
+  - `TextureFormat::Rgba8Unorm` is `FILTERABLE`, and
+  - the format allows `TEXTURE_BINDING | COPY_DST` usages.
+
+If the required feature set is not present, registration fails deterministically with
+`MaterialRegistrationError::Unsupported`.
+
+Evidence:
+
+- `crates/fret-render-wgpu/src/renderer/services.rs` (`impl MaterialService for Renderer`).
+
+### C2) Draw-time fallbacks (deterministic)
+
+Draw-time material fallbacks must remain deterministic:
+
+- unknown/unregistered `MaterialId` must degrade to a safe paint (currently transparent).
+- budget-driven degradation must be observable (telemetry counters + conformance scenes).
+
+The detailed “Must/May/Degrade” per-target policy remains tracked as `REN-VNEXT-mat-002`.
