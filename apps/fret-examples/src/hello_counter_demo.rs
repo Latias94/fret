@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::prelude::*;
+use fret_core::Corners;
 
 const TEST_ID_COUNT: &str = "hello-counter.count";
 const TEST_ID_STEP_INPUT: &str = "hello-counter.step";
@@ -129,6 +130,14 @@ fn view(
         .cloned_or_else(String::new);
     let (effective_step, step_valid) = parse_step(&step_text);
 
+    let count_color = if count > 0 {
+        theme.color_token("primary")
+    } else if count < 0 {
+        theme.color_token("destructive")
+    } else {
+        theme.color_token("foreground")
+    };
+
     let inc_cmd = msg.cmd(Msg::Inc);
     let dec_cmd = msg.cmd(Msg::Dec);
     let reset_cmd = msg.cmd(Msg::Reset);
@@ -136,32 +145,72 @@ fn view(
     let step_5_cmd = msg.cmd(Msg::SetStepPreset(5));
     let step_10_cmd = msg.cmd(Msg::SetStepPreset(10));
 
-    let header = shadcn::CardHeader::new([
-        shadcn::CardTitle::new("Hello Counter").into_element(cx),
-        shadcn::CardDescription::new(
-            "A minimal, product-ish demo using `fret` + shadcn/ui (Model + MVU messages).",
-        )
-        .into_element(cx),
-    ])
+    let hero_icon = ui::h_flex(cx, |cx| {
+        [icon::icon_with(
+            cx,
+            IconId::new("lucide.party-popper"),
+            Some(Px(22.0)),
+            Some(ColorRef::Color(theme.color_token("foreground"))),
+        )]
+    })
+    .bg(ColorRef::Color(theme.color_token("secondary")))
+    .rounded(Radius::Full)
+    .w_px(Px(48.0))
+    .h_px(Px(48.0))
+    .items_center()
+    .justify_center()
     .into_element(cx);
+
+    let header_inner = ui::v_flex(cx, |cx| {
+        [
+            hero_icon,
+            shadcn::CardTitle::new("Hello Counter").into_element(cx),
+            shadcn::CardDescription::new(
+                "A minimal counter demo using `fret` + shadcn/ui (MVU messages + Model).",
+            )
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
+
+    let header = shadcn::CardHeader::new([header_inner]).into_element(cx);
 
     let count_text = cx
         .text_props(TextProps {
             layout: Default::default(),
             text: Arc::from(count.to_string()),
             style: Some(fret_core::TextStyle {
-                size: Px(56.0),
+                size: Px(72.0),
                 weight: fret_core::FontWeight::BOLD,
                 ..Default::default()
             }),
-            color: Some(theme.color_token("foreground")),
-            align: fret_core::TextAlign::Start,
+            color: Some(count_color),
+            align: fret_core::TextAlign::Center,
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
         })
         .test_id(TEST_ID_COUNT);
 
-    let step_badge = shadcn::Badge::new(format!("step: {effective_step}"))
+    let status_text: Arc<str> = Arc::from(if count == 0 {
+        "Status: idle"
+    } else if count > 0 {
+        "Status: increasing"
+    } else {
+        "Status: decreasing"
+    });
+    let status_line = cx.text_props(TextProps {
+        layout: Default::default(),
+        text: status_text,
+        style: None,
+        color: Some(theme.color_token("muted-foreground")),
+        align: fret_core::TextAlign::Center,
+        wrap: fret_core::TextWrap::None,
+        overflow: fret_core::TextOverflow::Clip,
+    });
+
+    let step_badge = shadcn::Badge::new(format!("Step: {effective_step}"))
         .variant(if step_valid {
             shadcn::BadgeVariant::Secondary
         } else {
@@ -178,7 +227,7 @@ fn view(
         }),
         style: None,
         color: Some(theme.color_token("muted-foreground")),
-        align: fret_core::TextAlign::Start,
+        align: fret_core::TextAlign::Center,
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
     });
@@ -219,51 +268,70 @@ fn view(
     let step_row = ui::v_flex(cx, |_cx| [step_input, presets])
         .gap(Space::N2)
         .w_full()
+        .items_center()
         .into_element(cx);
 
     let actions = ui::h_flex(cx, |cx| {
         [
-            shadcn::Button::new("−")
+            shadcn::Button::new("")
                 .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconLg)
+                .corner_radii_override(Corners::all(Px(9999.0)))
                 .on_click(dec_cmd)
+                .children([icon::icon(cx, IconId::new("lucide.minus"))])
                 .into_element(cx)
                 .a11y_role(SemanticsRole::Button)
+                .a11y_label("Decrement")
                 .test_id(TEST_ID_DEC),
-            shadcn::Button::new("+")
-                .variant(shadcn::ButtonVariant::Default)
-                .on_click(inc_cmd)
-                .into_element(cx)
-                .a11y_role(SemanticsRole::Button)
-                .test_id(TEST_ID_INC),
             shadcn::Button::new("Reset")
-                .variant(shadcn::ButtonVariant::Ghost)
+                .variant(shadcn::ButtonVariant::Outline)
                 .on_click(reset_cmd)
+                .children([icon::icon(cx, IconId::new("lucide.rotate-ccw"))])
                 .into_element(cx)
                 .a11y_role(SemanticsRole::Button)
                 .test_id(TEST_ID_RESET),
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Default)
+                .size(shadcn::ButtonSize::IconLg)
+                .corner_radii_override(Corners::all(Px(9999.0)))
+                .on_click(inc_cmd)
+                .children([icon::icon(cx, IconId::new("lucide.plus"))])
+                .into_element(cx)
+                .a11y_role(SemanticsRole::Button)
+                .a11y_label("Increment")
+                .test_id(TEST_ID_INC),
         ]
     })
-    .gap(Space::N2)
+    .gap(Space::N4)
     .items_center()
     .into_element(cx);
 
-    let content = shadcn::CardContent::new([
-        ui::v_flex(cx, |_cx| [count_text, step_badge])
-            .gap(Space::N2)
-            .items_center()
-            .into_element(cx),
-        ui::v_flex(cx, |_cx| [step_row, step_help])
-            .gap(Space::N2)
-            .w_full()
-            .into_element(cx),
-        actions,
-    ])
+    let content_body = ui::v_flex(cx, |cx| {
+        [
+            ui::v_flex(cx, |_cx| [count_text, status_line, step_badge])
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx),
+            ui::v_flex(cx, |_cx| [step_row, step_help])
+                .gap(Space::N2)
+                .w_full()
+                .items_center()
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N6)
+    .items_center()
     .into_element(cx);
 
-    let card = shadcn::Card::new([header, content])
+    let content = shadcn::CardContent::new([content_body]).into_element(cx);
+
+    let footer = shadcn::CardFooter::new([actions]).into_element(cx);
+
+    let card = shadcn::Card::new([header, content, footer])
+        .refine_style(ChromeRefinement::default().shadow_lg())
         .ui()
         .w_full()
-        .max_w(Px(420.0))
+        .max_w(Px(480.0))
         .into_element(cx);
 
     ui::container(cx, |cx| {
