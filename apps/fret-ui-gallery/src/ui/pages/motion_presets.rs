@@ -253,6 +253,12 @@ pub(super) fn preview_motion_presets(
                     .to_string(),
             ),
             (
+                "duration.motion.collapsible.toggle",
+                theme
+                    .duration_ms_token("duration.motion.collapsible.toggle")
+                    .to_string(),
+            ),
+            (
                 "duration.motion.layout.expand",
                 theme
                     .duration_ms_token("duration.motion.layout.expand")

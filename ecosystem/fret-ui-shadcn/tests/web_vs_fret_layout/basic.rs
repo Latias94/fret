@@ -205,6 +205,7 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
             color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
         let desc = cx.semantics(
             fret_ui::element::SemanticsProps {

@@ -1,6 +1,7 @@
 //! shadcn/ui `Collapsible` (headless).
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
@@ -12,6 +13,7 @@ use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement};
 
@@ -152,13 +154,21 @@ impl Collapsible {
 
             let trigger = apply_disabled_to_trigger(trigger(cx, open.clone(), is_open), disabled);
 
+            let toggle_duration = theme
+                .duration_ms_by_key("duration.shadcn.motion.collapsible.toggle")
+                .or_else(|| theme.duration_ms_by_key("duration.motion.collapsible.toggle"))
+                .or_else(|| theme.duration_ms_by_key("duration.shadcn.motion.200"))
+                .map(|ms| Duration::from_millis(ms as u64))
+                .unwrap_or(Duration::from_millis(200));
+            let toggle_ticks = ticks_60hz_for_duration(toggle_duration);
+
             let motion = radix_collapsible::measured_height_motion_for_root(
                 cx,
                 is_open,
                 force_mount_content,
                 true,
-                8,
-                8,
+                toggle_ticks,
+                toggle_ticks,
                 overlay_motion::shadcn_ease,
             );
 
