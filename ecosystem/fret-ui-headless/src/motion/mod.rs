@@ -13,5 +13,6 @@ pub mod friction;
 pub mod inertia;
 pub mod simulation;
 pub mod spring;
+pub mod stagger;
 pub mod tolerance;
 pub mod tween;

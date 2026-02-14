@@ -74,17 +74,25 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## P1 — Optional: bring Animata “blurred backdrop” into a reusable recipe
 
-- [ ] AR-OVERLAY-010 Add a dialog variant or a separate recipe that uses backdrop blur (reduce-transparency aware).
+- [x] AR-OVERLAY-010 Add a dialog variant or a separate recipe that uses backdrop blur (reduce-transparency aware).
   - Evidence anchors:
     - `ecosystem/fret-ui-kit/src/recipes/glass.rs`
     - `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`DialogOverlayBackdrop::Glass`)
+    - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs` (`dialog_glass`)
+    - `tools/diag-scripts/ui-gallery-overlay-dialog-glass-backdrop-open-close-fixed-frame-delta.json`
   - Note:
     - Keep default shadcn dialog baseline conservative; make blur an explicit opt-in recipe.
 
 ## P2 — Missing primitives (only if needed by multiple recipes)
 
-- [ ] AR-PRIM-001 Add a small “stagger/sequence” helper surface in `fret-ui-headless` + `fret-ui-kit` if multiple recipes need it.
+- [x] AR-PRIM-001 Add a small “stagger/sequence” helper surface in `fret-ui-headless` + `fret-ui-kit` if multiple recipes need it.
   - Goal:
     - Avoid re-implementing per-recipe ad-hoc stagger math.
   - Gate:
     - one deterministic script demonstrating staggered toast stack or list insert.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/motion/stagger.rs`
+    - `ecosystem/fret-ui-kit/src/headless/mod.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` (stagger demo)
+    - `tools/diag-scripts/ui-gallery-motion-presets-stagger-fixed-frame-delta.json`
