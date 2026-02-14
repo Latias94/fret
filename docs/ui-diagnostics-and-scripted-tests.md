@@ -282,6 +282,11 @@ The command prints the export directory path, and writes:
 
    - `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`
 
+4. Compare two bundles (diff by impact):
+
+   - `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 20`
+   - JSON: `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
+
 Notes:
 
 - When view caching is active, bundles include cache-root stats (replay ops, reuse reasons) to help

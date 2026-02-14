@@ -24,7 +24,7 @@ Deliverables:
   - top deltas by impact,
   - percent deltas,
   - JSON + human view.
-- `diag stats` / `diag triage` includes a budget breakdown view.
+- `diag stats` JSON includes a budget breakdown view (`avg.*` + `budget_pct.*`).
 
 Acceptance:
 

@@ -12,12 +12,14 @@
 
 ## P1 (M1): diff + budget view
 
-- [ ] Add `fretboard diag stats --diff <a> <b>`:
-  - [ ] stable ordering (largest delta first),
-  - [ ] `--json` output,
-  - [ ] human table output.
-- [ ] Add “budget view” to stats/triage output:
-  - [ ] per-frame percent breakdown,
+- [x] Add `fretboard diag stats --diff <a> <b>`:
+  - [x] stable ordering (largest delta first),
+  - [x] `--json` output,
+  - [x] human output.
+- [x] Add “budget view” to `diag stats` JSON output:
+  - [x] `avg.*` fields
+  - [x] `budget_pct.*` percent breakdown
+- [ ] Extend “budget view” into triage output (optional):
   - [ ] unit costs (e.g. `solve_us / solves`, `text_prepare_us / calls`).
 - [ ] Add heuristic hints (bounded, rule-based; no ML):
   - [ ] `layout.observation_heavy`

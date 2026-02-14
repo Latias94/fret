@@ -684,6 +684,9 @@ pub(super) struct BundleStatsReport {
     /// propagated global changes (`debug.stats.global_change_globals > 0`).
     pub(super) pointer_move_snapshots_with_global_changes: u32,
     sum_layout_time_us: u64,
+    sum_layout_observation_record_time_us: u64,
+    sum_layout_observation_record_models_items: u64,
+    sum_layout_observation_record_globals_items: u64,
     sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
     sum_total_time_us: u64,
@@ -696,6 +699,9 @@ pub(super) struct BundleStatsReport {
     sum_global_change_invalidation_roots: u64,
     pub(super) sum_hover_layout_invalidations: u64,
     max_layout_time_us: u64,
+    max_layout_observation_record_time_us: u64,
+    max_layout_observation_record_models_items: u32,
+    max_layout_observation_record_globals_items: u32,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
@@ -1098,6 +1104,24 @@ impl BundleStatsReport {
             self.sum_prepaint_time_us,
             self.sum_paint_time_us
         );
+        if self.sum_layout_observation_record_time_us > 0
+            || self.sum_layout_observation_record_models_items > 0
+            || self.sum_layout_observation_record_globals_items > 0
+            || self.max_layout_observation_record_time_us > 0
+        {
+            println!(
+                "layout obs_record sum (us): time={} items(models/globals)={}/{}",
+                self.sum_layout_observation_record_time_us,
+                self.sum_layout_observation_record_models_items,
+                self.sum_layout_observation_record_globals_items
+            );
+            println!(
+                "layout obs_record max (us): time={} items(models/globals)={}/{}",
+                self.max_layout_observation_record_time_us,
+                self.max_layout_observation_record_models_items,
+                self.max_layout_observation_record_globals_items
+            );
+        }
         println!(
             "time max (us): total={} layout={} prepaint={} paint={}",
             self.max_total_time_us,
@@ -1696,6 +1720,20 @@ impl BundleStatsReport {
     pub(super) fn to_json(&self) -> serde_json::Value {
         use serde_json::{Map, Value};
 
+        fn avg_us(sum: u64, n: u32) -> u64 {
+            if n == 0 {
+                return 0;
+            }
+            sum / (n as u64)
+        }
+
+        fn pct(numer: u64, denom: u64) -> f64 {
+            if denom == 0 {
+                return 0.0;
+            }
+            (numer as f64) * 100.0 / (denom as f64)
+        }
+
         let mut root = Map::new();
         root.insert("schema_version".to_string(), Value::from(1));
         root.insert("sort".to_string(), Value::from(self.sort.as_str()));
@@ -1758,6 +1796,18 @@ impl BundleStatsReport {
             Value::from(self.sum_layout_time_us),
         );
         sum.insert(
+            "layout_observation_record_time_us".to_string(),
+            Value::from(self.sum_layout_observation_record_time_us),
+        );
+        sum.insert(
+            "layout_observation_record_models_items".to_string(),
+            Value::from(self.sum_layout_observation_record_models_items),
+        );
+        sum.insert(
+            "layout_observation_record_globals_items".to_string(),
+            Value::from(self.sum_layout_observation_record_globals_items),
+        );
+        sum.insert(
             "prepaint_time_us".to_string(),
             Value::from(self.sum_prepaint_time_us),
         );
@@ -1806,6 +1856,18 @@ impl BundleStatsReport {
             Value::from(self.max_layout_time_us),
         );
         max.insert(
+            "layout_observation_record_time_us".to_string(),
+            Value::from(self.max_layout_observation_record_time_us),
+        );
+        max.insert(
+            "layout_observation_record_models_items".to_string(),
+            Value::from(self.max_layout_observation_record_models_items),
+        );
+        max.insert(
+            "layout_observation_record_globals_items".to_string(),
+            Value::from(self.max_layout_observation_record_globals_items),
+        );
+        max.insert(
             "prepaint_time_us".to_string(),
             Value::from(self.max_prepaint_time_us),
         );
@@ -1838,6 +1900,89 @@ impl BundleStatsReport {
             Value::from(self.max_hover_layout_invalidations),
         );
         root.insert("max".to_string(), Value::Object(max));
+
+        let mut avg = Map::new();
+        avg.insert(
+            "layout_time_us".to_string(),
+            Value::from(avg_us(self.sum_layout_time_us, self.snapshots_considered)),
+        );
+        avg.insert(
+            "layout_observation_record_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_observation_record_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_observation_record_models_items".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_observation_record_models_items,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_observation_record_globals_items".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_observation_record_globals_items,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "prepaint_time_us".to_string(),
+            Value::from(avg_us(self.sum_prepaint_time_us, self.snapshots_considered)),
+        );
+        avg.insert(
+            "paint_time_us".to_string(),
+            Value::from(avg_us(self.sum_paint_time_us, self.snapshots_considered)),
+        );
+        avg.insert(
+            "total_time_us".to_string(),
+            Value::from(avg_us(self.sum_total_time_us, self.snapshots_considered)),
+        );
+        avg.insert(
+            "cache_roots".to_string(),
+            Value::from(avg_us(self.sum_cache_roots, self.snapshots_considered)),
+        );
+        avg.insert(
+            "cache_roots_reused".to_string(),
+            Value::from(avg_us(
+                self.sum_cache_roots_reused,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "cache_replayed_ops".to_string(),
+            Value::from(avg_us(
+                self.sum_cache_replayed_ops,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "invalidation_walk_calls".to_string(),
+            Value::from(avg_us(
+                self.sum_invalidation_walk_calls,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "invalidation_walk_nodes".to_string(),
+            Value::from(avg_us(
+                self.sum_invalidation_walk_nodes,
+                self.snapshots_considered,
+            )),
+        );
+        root.insert("avg".to_string(), Value::Object(avg));
+
+        root.insert(
+            "budget_pct".to_string(),
+            serde_json::json!({
+                "layout_of_total": pct(self.sum_layout_time_us, self.sum_total_time_us),
+                "prepaint_of_total": pct(self.sum_prepaint_time_us, self.sum_total_time_us),
+                "paint_of_total": pct(self.sum_paint_time_us, self.sum_total_time_us),
+                "layout_obs_record_of_layout": pct(self.sum_layout_observation_record_time_us, self.sum_layout_time_us),
+                "layout_obs_record_of_total": pct(self.sum_layout_observation_record_time_us, self.sum_total_time_us),
+            }),
+        );
 
         let global_type_hotspots = self
             .global_type_hotspots
@@ -2923,6 +3068,288 @@ impl BundleStatsReport {
 #[derive(Debug, Clone, Copy, Default)]
 pub(super) struct BundleStatsOptions {
     pub(super) warmup_frames: u64,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct BundleStatsDiffReport {
+    a_path: PathBuf,
+    b_path: PathBuf,
+    sort: BundleStatsSort,
+    warmup_frames: u64,
+    top: usize,
+    deltas: Vec<BundleStatsDiffDelta>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct BundleStatsDiffDelta {
+    key: &'static str,
+    a: u64,
+    b: u64,
+}
+
+impl BundleStatsDiffDelta {
+    fn delta_us(&self) -> i64 {
+        (self.b as i64).saturating_sub(self.a as i64)
+    }
+
+    fn delta_pct(&self) -> Option<f64> {
+        if self.a == 0 {
+            return None;
+        }
+        Some(((self.b as f64) - (self.a as f64)) * 100.0 / (self.a as f64))
+    }
+
+    fn abs_delta_us(&self) -> u64 {
+        self.delta_us().unsigned_abs()
+    }
+}
+
+impl BundleStatsDiffReport {
+    pub(super) fn print_human(&self) {
+        println!("bundle_a: {}", self.a_path.display());
+        println!("bundle_b: {}", self.b_path.display());
+        println!(
+            "diff: sort={} warmup_frames={}",
+            self.sort.as_str(),
+            self.warmup_frames
+        );
+        if self.deltas.is_empty() {
+            println!("diff: ok (no metrics)");
+            return;
+        }
+
+        println!("top (by |delta_us|):");
+        for d in self.deltas.iter().take(self.top.max(1)) {
+            let delta_us = d.delta_us();
+            let sign = if delta_us >= 0 { "+" } else { "-" };
+            let abs = delta_us.unsigned_abs();
+            let pct = d
+                .delta_pct()
+                .map(|v| format!("{v:.1}%"))
+                .unwrap_or_else(|| "-".to_string());
+            println!(
+                "  {key}: a={a} b={b} delta_us={sign}{abs} delta_pct={pct}",
+                key = d.key,
+                a = d.a,
+                b = d.b
+            );
+        }
+    }
+
+    pub(super) fn to_json(&self) -> serde_json::Value {
+        let deltas = self
+            .deltas
+            .iter()
+            .map(|d| {
+                serde_json::json!({
+                    "key": d.key,
+                    "a": d.a,
+                    "b": d.b,
+                    "delta_us": d.delta_us(),
+                    "delta_pct": d.delta_pct(),
+                    "abs_delta_us": d.abs_delta_us(),
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::json!({
+            "schema_version": 1,
+            "bundle_a": self.a_path.display().to_string(),
+            "bundle_b": self.b_path.display().to_string(),
+            "sort": self.sort.as_str(),
+            "warmup_frames": self.warmup_frames,
+            "top": self.top,
+            "deltas": deltas,
+        })
+    }
+}
+
+fn sort_diff_deltas_in_place(deltas: &mut [BundleStatsDiffDelta]) {
+    deltas.sort_by(|a, b| {
+        b.abs_delta_us()
+            .cmp(&a.abs_delta_us())
+            .then_with(|| a.key.cmp(b.key))
+    });
+}
+
+pub(super) fn bundle_stats_diff_from_paths(
+    a_bundle_path: &Path,
+    b_bundle_path: &Path,
+    top: usize,
+    sort: BundleStatsSort,
+    opts: BundleStatsOptions,
+) -> Result<BundleStatsDiffReport, String> {
+    let mut a = bundle_stats_from_path(a_bundle_path, 0, sort, opts)?;
+    let mut b = bundle_stats_from_path(b_bundle_path, 0, sort, opts)?;
+    if opts.warmup_frames > 0 && (a.snapshots_considered == 0 || b.snapshots_considered == 0) {
+        let fallback_opts = BundleStatsOptions::default();
+        if a.snapshots_considered == 0 {
+            a = bundle_stats_from_path(a_bundle_path, 0, sort, fallback_opts)?;
+        }
+        if b.snapshots_considered == 0 {
+            b = bundle_stats_from_path(b_bundle_path, 0, sort, fallback_opts)?;
+        }
+    }
+
+    // Curated, time-in-us metrics (keep this list small and stable).
+    let mut deltas = vec![
+        BundleStatsDiffDelta {
+            key: "avg.total_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_total_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_total_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
+            key: "avg.layout_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_layout_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_layout_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
+            key: "avg.prepaint_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_prepaint_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_prepaint_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
+            key: "avg.paint_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_paint_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_paint_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
+            key: "avg.layout_obs_record_time_us",
+            a: if a.snapshots_considered == 0 {
+                0
+            } else {
+                a.sum_layout_observation_record_time_us / (a.snapshots_considered as u64)
+            },
+            b: if b.snapshots_considered == 0 {
+                0
+            } else {
+                b.sum_layout_observation_record_time_us / (b.snapshots_considered as u64)
+            },
+        },
+        BundleStatsDiffDelta {
+            key: "max.total_time_us",
+            a: a.max_total_time_us,
+            b: b.max_total_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "max.layout_time_us",
+            a: a.max_layout_time_us,
+            b: b.max_layout_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "max.prepaint_time_us",
+            a: a.max_prepaint_time_us,
+            b: b.max_prepaint_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "max.paint_time_us",
+            a: a.max_paint_time_us,
+            b: b.max_paint_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "max.layout_obs_record_time_us",
+            a: a.max_layout_observation_record_time_us,
+            b: b.max_layout_observation_record_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "pointer_move.max_dispatch_time_us",
+            a: a.pointer_move_max_dispatch_time_us,
+            b: b.pointer_move_max_dispatch_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "pointer_move.max_hit_test_time_us",
+            a: a.pointer_move_max_hit_test_time_us,
+            b: b.pointer_move_max_hit_test_time_us,
+        },
+    ];
+
+    sort_diff_deltas_in_place(&mut deltas);
+
+    Ok(BundleStatsDiffReport {
+        a_path: a_bundle_path.to_path_buf(),
+        b_path: b_bundle_path.to_path_buf(),
+        sort,
+        warmup_frames: opts.warmup_frames,
+        top,
+        deltas,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stats_diff_sorts_by_abs_delta_then_key() {
+        let mut deltas = vec![
+            BundleStatsDiffDelta {
+                key: "b",
+                a: 10,
+                b: 20,
+            }, // +10
+            BundleStatsDiffDelta {
+                key: "a",
+                a: 30,
+                b: 20,
+            }, // -10
+            BundleStatsDiffDelta {
+                key: "z",
+                a: 0,
+                b: 25,
+            }, // +25
+        ];
+        sort_diff_deltas_in_place(&mut deltas);
+        assert_eq!(deltas[0].key, "z");
+        assert_eq!(deltas[1].key, "a");
+        assert_eq!(deltas[2].key, "b");
+    }
+
+    #[test]
+    fn stats_json_includes_avg_and_budget() {
+        let mut report = BundleStatsReport::default();
+        report.sort = BundleStatsSort::Time;
+        report.snapshots_considered = 2;
+        report.sum_total_time_us = 100;
+        report.sum_layout_time_us = 40;
+        report.sum_prepaint_time_us = 10;
+        report.sum_paint_time_us = 50;
+        report.sum_layout_observation_record_time_us = 6;
+
+        let json = report.to_json();
+        assert!(json.get("avg").is_some());
+        assert!(json.get("budget_pct").is_some());
+    }
 }
 
 pub(super) fn bundle_stats_from_path(
@@ -8526,6 +8953,15 @@ pub(super) fn bundle_stats_from_json_with_options(
             let global_change_unobserved = snapshot_global_change_unobserved(s, 3);
 
             out.sum_layout_time_us = out.sum_layout_time_us.saturating_add(layout_time_us);
+            out.sum_layout_observation_record_time_us = out
+                .sum_layout_observation_record_time_us
+                .saturating_add(layout_observation_record_time_us);
+            out.sum_layout_observation_record_models_items = out
+                .sum_layout_observation_record_models_items
+                .saturating_add(layout_observation_record_models_items as u64);
+            out.sum_layout_observation_record_globals_items = out
+                .sum_layout_observation_record_globals_items
+                .saturating_add(layout_observation_record_globals_items as u64);
             out.sum_prepaint_time_us = out.sum_prepaint_time_us.saturating_add(prepaint_time_us);
             out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint_time_us);
             out.sum_total_time_us = out.sum_total_time_us.saturating_add(total_time_us);
@@ -8580,6 +9016,15 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .max_hover_layout_invalidations
                 .max(hover_declarative_layout_invalidations);
             out.max_layout_time_us = out.max_layout_time_us.max(layout_time_us);
+            out.max_layout_observation_record_time_us = out
+                .max_layout_observation_record_time_us
+                .max(layout_observation_record_time_us);
+            out.max_layout_observation_record_models_items = out
+                .max_layout_observation_record_models_items
+                .max(layout_observation_record_models_items);
+            out.max_layout_observation_record_globals_items = out
+                .max_layout_observation_record_globals_items
+                .max(layout_observation_record_globals_items);
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);

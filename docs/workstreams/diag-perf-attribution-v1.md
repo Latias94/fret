@@ -143,6 +143,21 @@ Phase 1 (M1): comparison UX
 - Implement `diag stats --diff`.
 - Add “budget view” to `diag stats` JSON (and optionally a table view).
 
+## Runbook (M1): diff two bundles
+
+1. Identify two bundle paths (directories or `bundle.json` files).
+2. Run:
+
+   - `fretboard diag stats --diff <bundle_a> <bundle_b> --top 20`
+   - JSON: `fretboard diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
+
+Interpretation:
+
+- The diff output is ranked by `|delta_us|` (largest absolute changes first).
+- `avg.*` deltas approximate “typical per-frame” impact for the captured run (coarse; not a percentile).
+- Use `max.*` deltas as a first-pass “tail regression” signal, then inspect the worst frames via
+  `fretboard diag stats <bundle> --sort time --top 30`.
+
 Phase 2 (M2): opt-in trace workflow
 
 - Provide a canonical way to:

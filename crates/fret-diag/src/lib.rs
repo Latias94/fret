@@ -54,7 +54,7 @@ use script_tooling::{
 };
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    apply_pick_to_script, bundle_stats_from_path,
+    apply_pick_to_script, bundle_stats_diff_from_paths, bundle_stats_from_path,
     check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
     check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
@@ -177,6 +177,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
+    let mut stats_diff: Option<(PathBuf, PathBuf)> = None;
     let mut warmup_frames: u64 = 0;
     let mut lint_all_test_ids_bounds: bool = false;
     let mut lint_eps_px: f32 = 0.5;
@@ -659,6 +660,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --sort".to_string());
                 };
                 sort_override = Some(BundleStatsSort::parse(&v)?);
+                i += 1;
+            }
+            "--diff" => {
+                i += 1;
+                let Some(a) = args.get(i).cloned() else {
+                    return Err("missing bundle path a for --diff".to_string());
+                };
+                i += 1;
+                let Some(b) = args.get(i).cloned() else {
+                    return Err("missing bundle path b for --diff".to_string());
+                };
+                stats_diff = Some((PathBuf::from(a), PathBuf::from(b)));
                 i += 1;
             }
             "--top" => {
@@ -9422,6 +9435,34 @@ See: `docs/tracy.md`.\n";
             std::process::exit(0);
         }
         "stats" => {
+            if let Some((a, b)) = stats_diff.take() {
+                if !rest.is_empty() {
+                    return Err(format!("unexpected arguments: {}", rest.join(" ")));
+                }
+                let a = resolve_path(&workspace_root, a);
+                let b = resolve_path(&workspace_root, b);
+                let a_bundle_path = resolve_bundle_json_path(&a);
+                let b_bundle_path = resolve_bundle_json_path(&b);
+                let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+                let report = bundle_stats_diff_from_paths(
+                    &a_bundle_path,
+                    &b_bundle_path,
+                    stats_top,
+                    sort,
+                    BundleStatsOptions { warmup_frames },
+                )?;
+                if stats_json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&report.to_json())
+                            .unwrap_or_else(|_| "{}".to_string())
+                    );
+                } else {
+                    report.print_human();
+                }
+                return Ok(());
+            }
+
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing bundle path (try: fretboard diag stats ./target/fret-diag/1234/bundle.json)".to_string(),
