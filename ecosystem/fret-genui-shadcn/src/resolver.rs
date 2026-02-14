@@ -1,11 +1,16 @@
 use std::sync::Arc;
 
+use fret_genui_core::actions;
 use fret_genui_core::props::ResolvedProps;
-use fret_genui_core::render::ComponentResolver;
+use fret_genui_core::render::{
+    ComponentResolver, GenUiActionInvocation, GenUiActionQueue, GenUiRenderScope,
+};
 use fret_genui_core::spec::{ElementKey, ElementV1};
+use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use serde_json::Value;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ShadcnResolverError {
@@ -82,6 +87,91 @@ impl ShadcnResolver {
             _ => return None,
         })
     }
+
+    fn genui_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<GenUiRenderScope> {
+        cx.inherited_state::<GenUiRenderScope>().cloned()
+    }
+
+    fn emit_set_state<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        scope: &GenUiRenderScope,
+        element_key: &ElementKey,
+        event: &str,
+        state_path: &str,
+        value: Value,
+    ) {
+        let element_id = cx.root_id();
+        let params = Value::Object(
+            [
+                (
+                    "statePath".to_string(),
+                    Value::String(state_path.to_string()),
+                ),
+                ("value".to_string(), value),
+            ]
+            .into_iter()
+            .collect(),
+        );
+
+        // Preferred path: emit into the queue (app decides when/how to apply).
+        if let Some(queue) = scope.action_queue.as_ref() {
+            let inv = GenUiActionInvocation {
+                window: cx.window,
+                source: element_id,
+                element_key: Arc::from(element_key.0.as_str()),
+                event: Arc::from(event),
+                action: Arc::from("setState"),
+                params,
+            };
+
+            let _ = cx
+                .app
+                .models_mut()
+                .update(queue, |q: &mut GenUiActionQueue| q.invocations.push(inv));
+            cx.app.request_redraw(cx.window);
+            return;
+        }
+
+        // Fallback: apply directly if no queue is available.
+        let Some(state_model) = scope.state.as_ref() else {
+            return;
+        };
+        let _ = cx.app.models_mut().update(state_model, |state| {
+            actions::apply_standard_action(state, "setState", &params)
+        });
+        cx.app.request_redraw(cx.window);
+    }
+
+    fn ensure_string_model<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        initial: String,
+    ) -> Model<String> {
+        #[derive(Default)]
+        struct ModelState {
+            model: Option<Model<String>>,
+        }
+        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
+        if let Some(model) = existing {
+            return model;
+        }
+        let model = cx.app.models_mut().insert(initial);
+        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
+        model
+    }
+
+    fn ensure_bool_model<H: UiHost>(cx: &mut ElementContext<'_, H>, initial: bool) -> Model<bool> {
+        #[derive(Default)]
+        struct ModelState {
+            model: Option<Model<bool>>,
+        }
+        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
+        if let Some(model) = existing {
+            return model;
+        }
+        let model = cx.app.models_mut().insert(initial);
+        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
+        model
+    }
 }
 
 impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
@@ -129,6 +219,136 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                     button = button.on_activate(on_activate);
                 }
                 Ok(button.into_element(cx))
+            }
+            "Input" => {
+                let placeholder = resolved_props
+                    .get("placeholder")
+                    .and_then(|v| v.as_str())
+                    .map(Arc::<str>::from);
+
+                let desired = Self::json_to_label(resolved_props.get("value")).to_string();
+
+                let model = Self::ensure_string_model(cx, desired.clone());
+
+                let element_id = cx.root_id();
+                let focused = cx.is_focused_element(element_id);
+                if !focused {
+                    let cur = cx.app.models().get_cloned(&model).unwrap_or_default();
+                    if cur != desired {
+                        let _ = cx.app.models_mut().update(&model, |v| *v = desired.clone());
+                    }
+                }
+
+                if let (Some(scope), Some(path)) =
+                    (Self::genui_scope(cx), props.bindings.get("value"))
+                {
+                    #[derive(Default)]
+                    struct LastState {
+                        last: Option<String>,
+                    }
+                    let cur = cx.app.models().get_cloned(&model).unwrap_or_default();
+                    let mut to_emit: Option<String> = None;
+                    cx.with_state(LastState::default, |st| {
+                        if focused && st.last.as_deref() != Some(cur.as_str()) {
+                            st.last = Some(cur.clone());
+                            to_emit = Some(cur.clone());
+                        } else if !focused {
+                            st.last = Some(desired.clone());
+                        }
+                    });
+                    if let Some(cur) = to_emit {
+                        Self::emit_set_state(
+                            cx,
+                            &scope,
+                            key,
+                            "change",
+                            path.as_str(),
+                            Value::String(cur),
+                        );
+                    }
+                }
+
+                let mut input = fret_ui_shadcn::Input::new(model);
+                if let Some(placeholder) = placeholder {
+                    input = input.placeholder(placeholder);
+                }
+                input = input.a11y_role(fret_core::SemanticsRole::TextField);
+
+                let input = input.into_element(cx);
+                if children.is_empty() {
+                    Ok(input)
+                } else {
+                    Ok(fret_ui_kit::ui::v_flex(cx, move |_cx| {
+                        let mut out = Vec::with_capacity(children.len().saturating_add(1));
+                        out.push(input);
+                        out.extend(children);
+                        out
+                    })
+                    .gap(fret_ui_kit::Space::N2)
+                    .items_start()
+                    .into_element(cx))
+                }
+            }
+            "Switch" => {
+                let desired = resolved_props
+                    .get("checked")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
+                let model = Self::ensure_bool_model(cx, desired);
+
+                let element_id = cx.root_id();
+                let focused = cx.is_focused_element(element_id);
+                if !focused {
+                    let cur = cx.app.models().get_copied(&model).unwrap_or(false);
+                    if cur != desired {
+                        let _ = cx.app.models_mut().update(&model, |v| *v = desired);
+                    }
+                }
+
+                if let (Some(scope), Some(path)) =
+                    (Self::genui_scope(cx), props.bindings.get("checked"))
+                {
+                    #[derive(Default)]
+                    struct LastState {
+                        last: Option<bool>,
+                    }
+                    let cur = cx.app.models().get_copied(&model).unwrap_or(false);
+                    let mut to_emit: Option<bool> = None;
+                    cx.with_state(LastState::default, |st| {
+                        if focused && st.last != Some(cur) {
+                            st.last = Some(cur);
+                            to_emit = Some(cur);
+                        } else if !focused {
+                            st.last = Some(desired);
+                        }
+                    });
+                    if let Some(cur) = to_emit {
+                        Self::emit_set_state(
+                            cx,
+                            &scope,
+                            key,
+                            "change",
+                            path.as_str(),
+                            Value::Bool(cur),
+                        );
+                    }
+                }
+
+                let sw = fret_ui_shadcn::Switch::new(model).into_element(cx);
+                if children.is_empty() {
+                    Ok(sw)
+                } else {
+                    Ok(fret_ui_kit::ui::v_flex(cx, move |_cx| {
+                        let mut out = Vec::with_capacity(children.len().saturating_add(1));
+                        out.push(sw);
+                        out.extend(children);
+                        out
+                    })
+                    .gap(fret_ui_kit::Space::N2)
+                    .items_start()
+                    .into_element(cx))
+                }
             }
             "Badge" => {
                 let label = Self::json_to_label(resolved_props.get("label"));

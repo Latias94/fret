@@ -20,6 +20,12 @@ use crate::spec::{ElementKey, ElementV1, OnBindingV1, SpecV1};
 use crate::validate::{SpecIssue, ValidateSpecOptions, validate_spec};
 use crate::visibility::{RepeatScope, VisibilityContext};
 
+#[derive(Debug, Clone, Default)]
+pub struct GenUiRenderScope {
+    pub state: Option<Model<Value>>,
+    pub action_queue: Option<Model<GenUiActionQueue>>,
+}
+
 #[derive(Debug, Clone)]
 pub struct RenderLimits {
     pub max_elements: usize,
@@ -287,6 +293,11 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
             repeat_base_path: repeat_base_path.clone(),
             repeat_index,
         };
+
+        cx.with_state(GenUiRenderScope::default, |st| {
+            st.state = Some(runtime.state.clone());
+            st.action_queue = runtime.action_queue.clone();
+        });
 
         let children = render_children(
             cx,

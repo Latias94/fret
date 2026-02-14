@@ -29,16 +29,44 @@ const SPEC_JSON: &str = r#"
     "root": {
       "type": "VStack",
       "props": { "gap": "N3" },
-      "children": ["header", "controls", "card"]
+      "children": ["header", "counter_row", "card"]
     },
     "header": { "type": "Text", "props": { "text": "GenUI Demo (json-render-inspired)" }, "children": [] },
-    "controls": {
+    "counter_row": {
       "type": "HStack",
       "props": { "gap": "N2" },
-      "children": ["counter_label", "counter_value", "enabled_badge", "disabled_badge", "inc_button", "toggle_button"]
+      "children": ["counter_label", "counter_value", "inc_button"]
     },
     "counter_label": { "type": "Text", "props": { "text": "Counter:" }, "children": [] },
     "counter_value": { "type": "Text", "props": { "text": { "$state": "/counter" } }, "children": [] },
+    "inc_button": {
+      "type": "Button",
+      "props": { "label": "Increment" },
+      "on": { "press": { "action": "incrementCounter" } },
+      "children": []
+    },
+    "card": {
+      "type": "Card",
+      "props": {},
+      "children": ["card_stack"]
+    },
+    "card_stack": {
+      "type": "VStack",
+      "props": { "gap": "N2" },
+      "children": ["bind_title", "enabled_row", "name_row", "todos_title", "todos_list"]
+    },
+    "bind_title": { "type": "Text", "props": { "text": "Bindings ($bindState demo)" }, "children": [] },
+    "enabled_row": {
+      "type": "HStack",
+      "props": { "gap": "N2" },
+      "children": ["enabled_label", "enabled_switch", "enabled_badge", "disabled_badge"]
+    },
+    "enabled_label": { "type": "Text", "props": { "text": "Enabled:" }, "children": [] },
+    "enabled_switch": {
+      "type": "Switch",
+      "props": { "checked": { "$bindState": "/enabled" } },
+      "children": []
+    },
     "enabled_badge": {
       "type": "Badge",
       "props": { "label": "Enabled", "variant": "secondary" },
@@ -51,28 +79,18 @@ const SPEC_JSON: &str = r#"
       "visible": { "$state": "/enabled", "not": true },
       "children": []
     },
-    "inc_button": {
-      "type": "Button",
-      "props": { "label": "Increment" },
-      "on": { "press": { "action": "incrementCounter" } },
-      "children": []
-    },
-    "toggle_button": {
-      "type": "Button",
-      "props": { "label": "Toggle enabled" },
-      "on": { "press": { "action": "toggleEnabled" } },
-      "children": []
-    },
-    "card": {
-      "type": "Card",
-      "props": {},
-      "children": ["card_stack"]
-    },
-    "card_stack": {
-      "type": "VStack",
+    "name_row": {
+      "type": "HStack",
       "props": { "gap": "N2" },
-      "children": ["todos_title", "todos_list"]
+      "children": ["name_label", "name_input", "name_value"]
     },
+    "name_label": { "type": "Text", "props": { "text": "Name:" }, "children": [] },
+    "name_input": {
+      "type": "Input",
+      "props": { "placeholder": "Type your name…", "value": { "$bindState": "/name" } },
+      "children": []
+    },
+    "name_value": { "type": "Text", "props": { "text": { "$state": "/name" } }, "children": [] },
     "todos_title": { "type": "Text", "props": { "text": "Todos (repeat demo)" }, "children": [] },
     "todos_list": {
       "type": "VStack",
@@ -84,6 +102,7 @@ const SPEC_JSON: &str = r#"
   },
   "state": {
     "counter": 0,
+    "name": "Ada",
     "enabled": true,
     "todos": [
       { "id": "a", "label": "Keep runtime mechanism-only (ADR 0066)" },
