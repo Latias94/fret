@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
+};
 use fret_icons::IconId;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -216,6 +218,7 @@ impl AgentHeader {
             color: Some(theme.color_required("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         });
 
         let model_badge = model.map(|m| {
@@ -369,6 +372,7 @@ impl AgentInstructions {
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         });
 
         let body_text = cx.text_props(TextProps {
@@ -378,6 +382,7 @@ impl AgentInstructions {
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         });
 
         let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
@@ -450,6 +455,7 @@ impl AgentTools {
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         });
 
         let accordion = self.accordion.into_element(cx);
@@ -611,6 +617,7 @@ impl AgentOutput {
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         });
 
         let code = CodeBlock::new(self.schema)
