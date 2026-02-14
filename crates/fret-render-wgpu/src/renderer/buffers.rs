@@ -107,6 +107,7 @@ impl Renderer {
             .next_power_of_two()
             .max(self.uniform_capacity.saturating_mul(2).max(1));
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
 
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret uniforms buffer (resized)"),
@@ -168,6 +169,14 @@ impl Renderer {
                 wgpu::BindGroupEntry {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.render_space_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
+                    }),
                 },
             ],
         });
@@ -266,6 +275,19 @@ impl Renderer {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.render_space_buffer,
+                        offset: 0,
+                        size: Some(
+                            std::num::NonZeroU64::new(
+                                std::mem::size_of::<RenderSpaceUniform>() as u64
+                            )
+                            .unwrap(),
+                        ),
+                    }),
+                },
             ],
         });
 
@@ -344,6 +366,19 @@ impl Renderer {
                 wgpu::BindGroupEntry {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.render_space_buffer,
+                        offset: 0,
+                        size: Some(
+                            std::num::NonZeroU64::new(
+                                std::mem::size_of::<RenderSpaceUniform>() as u64
+                            )
+                            .unwrap(),
+                        ),
+                    }),
                 },
             ],
         });
