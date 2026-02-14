@@ -96,3 +96,16 @@ Exit criteria:
 
 - `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
 - `cargo nextest run -p fret-ui` is green.
+
+## M7 — Defensive panic hardening (fret-app follow-ups)
+
+Deliverables:
+
+- `fret-app` globals leasing restores invariants even under unexpected internal corruption (non-strict mode recovers with diagnostics; strict mode panics).
+- Targeted regression tests cover the recovery behavior.
+
+Exit criteria:
+
+- `cargo clippy -p fret-app --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-app` is green.
+- `python3 tools/check_layering.py` is green.

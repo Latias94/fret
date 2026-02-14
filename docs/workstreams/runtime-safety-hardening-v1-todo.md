@@ -120,3 +120,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`assume_init_slice_ref`, `Small{Node,Copy}List::as_slice`)
 - [x] RSH-clippy-002 Fix clippy `items_after_test_module` in `fret-ui`.
   - Evidence: `crates/fret-ui/src/declarative/host_widget/paint.rs` (tests moved to file end)
+
+## M7 — Defensive panic hardening (fret-app follow-ups)
+
+- [x] RSH-global-003 Make `with_global_mut` resilient to corrupted globals state (non-strict mode recovers; strict mode panics).
+  - Evidence: `crates/fret-app/src/app.rs` (`with_global_mut_impl`: downcast/marker validation no longer panics by default)
+  - Evidence: `crates/fret-app/src/app.rs` (tests: `with_global_mut_recovers_from_corrupt_existing_global_value_in_non_strict_mode`, `with_global_mut_recovers_when_lease_marker_is_removed_in_non_strict_mode`)
+  - Gates:
+    - `cargo clippy -p fret-app --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-app`: PASS
+    - `python3 tools/check_layering.py`: PASS
