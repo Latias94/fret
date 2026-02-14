@@ -161,6 +161,8 @@ Unit tests:
 Optional diag scripts:
 
 - type, delete, IME compose, and ensure caret/selection geometry stays aligned.
+- `tools/diag-scripts/ui-gallery-web-ime-harness-ime-cursor-area.json`: focuses the harness region
+  and asserts `WindowTextInputSnapshot.ime_cursor_area` is present and within window bounds.
 
 ## Milestones (High-Level)
 
