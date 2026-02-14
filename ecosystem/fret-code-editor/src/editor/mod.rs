@@ -1178,6 +1178,7 @@ impl CodeEditor {
                 a11y_value,
                 a11y_text_selection,
                 a11y_text_composition,
+                ime_cursor_area,
             ) = {
                 handle.set_soft_wrap_cols(soft_wrap_cols);
                 if let Some(interaction) = interaction {
@@ -1200,12 +1201,23 @@ impl CodeEditor {
                 let boundary_override = st.text_boundary_mode_override;
                 let (value, selection, composition) =
                     a11y_composed_text_window(&mut st, text_cache_max_entries);
+
+                let cell_w = cell_w.get();
+                let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+                let ime_cursor_area = geom::caret_rect_for_selection(
+                    &mut st,
+                    row_h,
+                    cell_w,
+                    cx.bounds,
+                    &scroll_handle,
+                );
                 (
                     content_len,
                     boundary_override,
                     Some(Arc::<str>::from(value)),
                     selection,
                     composition,
+                    ime_cursor_area,
                 )
             };
 
@@ -1218,6 +1230,7 @@ impl CodeEditor {
                 layout: region_layout,
                 enabled: active_interaction.enabled && active_interaction.focusable,
                 text_boundary_mode_override: boundary_mode,
+                ime_cursor_area,
                 a11y_label: Some(Arc::clone(&a11y_label)),
                 a11y_value,
                 a11y_text_selection,
