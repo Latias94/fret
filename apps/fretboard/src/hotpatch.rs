@@ -301,12 +301,3 @@ pub(crate) fn parse_hotpatch_build_id(raw: &str) -> Result<HotpatchBuildIdArg, S
         )),
     }
 }
-
-pub(crate) fn generate_hotpatch_build_id() -> u64 {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    let nanos = now.as_nanos();
-    let pid = std::process::id() as u64;
-    (nanos as u64) ^ (pid.rotate_left(17)) ^ 0x6a09e667f3bcc909u64
-}

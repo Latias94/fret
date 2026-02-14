@@ -7,9 +7,70 @@ use crate::demos::{
     validate_web_demo, web_demos_as_vec,
 };
 use crate::hotpatch::{
-    HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, generate_hotpatch_build_id,
-    parse_hotpatch_build_id, resolve_workspace_relative,
+    HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, parse_hotpatch_build_id,
+    resolve_workspace_relative,
 };
+
+fn append_subsecond_main_export_rustflags(cmd: &mut Command) {
+    // Subsecond uses `main` as an ASLR anchor on native platforms. Some toolchains don't export
+    // `main` by default, which makes `subsecond::aslr_reference()` return 0 and disables hotpatch.
+    //
+    // Dioxus's `dx serve --hotpatch` injects equivalent linker args; in "devserver-only" mode we
+    // set them explicitly so connecting to a Dioxus-style devserver can work.
+    let extra: &'static str = {
+        #[cfg(all(windows, not(target_arch = "wasm32")))]
+        {
+            "-C link-arg=/HIGHENTROPYVA:NO -C link-arg=/EXPORT:main"
+        }
+
+        #[cfg(all(target_os = "macos", not(target_arch = "wasm32"), not(windows)))]
+        {
+            "-C link-arg=-Wl,-exported_symbol,_main"
+        }
+
+        #[cfg(all(
+            any(target_os = "linux", target_os = "android", target_os = "freebsd"),
+            not(target_arch = "wasm32"),
+            not(windows)
+        ))]
+        {
+            "-C link-arg=-Wl,--export-dynamic-symbol,main"
+        }
+
+        #[cfg(any(target_arch = "wasm32", target_family = "wasm"))]
+        {
+            ""
+        }
+
+        #[cfg(all(
+            not(windows),
+            not(target_os = "macos"),
+            not(any(target_os = "linux", target_os = "android", target_os = "freebsd")),
+            not(any(target_arch = "wasm32", target_family = "wasm"))
+        ))]
+        {
+            ""
+        }
+    };
+
+    if extra.is_empty() {
+        return;
+    }
+
+    let mut rustflags = std::env::var("RUSTFLAGS").unwrap_or_default();
+    if rustflags.contains("/EXPORT:main")
+        || rustflags.contains("--export-dynamic-symbol,main")
+        || rustflags.contains("-exported_symbol,_main")
+    {
+        return;
+    }
+
+    if !rustflags.trim().is_empty() {
+        rustflags.push(' ');
+    }
+    rustflags.push_str(extra);
+    cmd.env("RUSTFLAGS", rustflags);
+}
 
 pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let root = workspace_root()?;
@@ -161,12 +222,29 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
 
         let build_id = match hotpatch_build_id.unwrap_or(HotpatchBuildIdArg::Auto) {
             HotpatchBuildIdArg::None => None,
-            HotpatchBuildIdArg::Auto => Some(generate_hotpatch_build_id()),
+            // Default to not forcing a build id. Dioxus devservers often assign their own build id,
+            // and filtering can accidentally ignore valid patches ("no ASLR reference"/no match).
+            HotpatchBuildIdArg::Auto => None,
             HotpatchBuildIdArg::Value(v) => Some(v),
         };
         if let Some(build_id) = build_id {
             eprintln!("  build_id: {build_id}");
             cmd.env("FRET_HOTPATCH_BUILD_ID", build_id.to_string());
+        } else {
+            eprintln!("  build_id: <none>");
+        }
+
+        // Ensure `main` is exported so `subsecond::aslr_reference()` can succeed.
+        append_subsecond_main_export_rustflags(&mut cmd);
+
+        #[cfg(windows)]
+        {
+            eprintln!(
+                "  windows note: view-level hotpatch may crash on the first patched view call; see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
+            );
+            eprintln!(
+                "    workaround: set FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (disables view-level hotpatching)"
+            );
         }
     }
     cmd.args(["--bin", &bin]);
@@ -277,6 +355,16 @@ fn dev_native_hotpatch_dx(
         let (addr, port) = parse_ws_endpoint_addr(ws)?;
         cmd.args(["--addr", &addr, "--port", &port.to_string()]);
         cmd.env("FRET_HOTPATCH_DEVSERVER_WS", ws);
+    }
+
+    #[cfg(windows)]
+    {
+        eprintln!(
+            "Hotpatch(dx): windows note: view-level hotpatch may crash on the first patched view call; see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
+        );
+        eprintln!(
+            "  workaround: set FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (disables view-level hotpatching)"
+        );
     }
 
     let resolved_build_id = match hotpatch_build_id.unwrap_or(HotpatchBuildIdArg::Auto) {

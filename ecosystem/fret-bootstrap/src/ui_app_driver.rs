@@ -1041,6 +1041,24 @@ fn hotpatch_trace_log(line: &str) {
     }
 }
 
+#[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+fn hotpatch_view_call_direct_enabled() -> bool {
+    let enabled = std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
+    if !enabled {
+        return false;
+    }
+
+    // This environment variable is a dev-only escape hatch. Make it explicit when it's on because
+    // it disables view-level hotpatching (patched code won't be executed for the view call).
+    static WARNED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    WARNED.get_or_init(|| {
+        hotpatch_trace_log("warning: FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (view call bypasses Subsecond HotFn; view-level hotpatching disabled)");
+        eprintln!("warning: FRET_HOTPATCH_VIEW_CALL_DIRECT=1 (view call bypasses Subsecond HotFn; view-level hotpatching disabled)");
+    });
+
+    true
+}
+
 #[cfg(all(windows, feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
 fn hotpatch_module_path_for_address(addr: usize) -> Option<std::path::PathBuf> {
     if addr == 0 {
@@ -1800,8 +1818,7 @@ fn ui_app_render<S>(
                     }
                 }
 
-                let use_direct = std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT")
-                    .is_some_and(|v| !v.is_empty());
+                let use_direct = hotpatch_view_call_direct_enabled();
                 hotpatch_trace_log(&format!(
                     "ui_app_render: view call strategy={}",
                     if use_direct { "direct" } else { "hotfn" }
