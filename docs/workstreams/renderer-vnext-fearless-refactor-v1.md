@@ -318,6 +318,16 @@ This appendix is a living inventory for M4 (`Paint/Material evolution`). It answ
 - `SceneOp::Text` paint expansion is deferred until text pipeline constraints are settled; keep the
   v1 contract simple and predictable.
 
+Decision (v1 for this workstream):
+
+- Keep `SceneOp::Path` **solid `Color` only** for now.
+  - Rationale: the current path pipeline bakes transforms on CPU and does not carry local-space
+    coordinates into the shader, so “painted paths” would either (a) require a new per-draw paint
+    binding surface (state explosion risk) or (b) force an offscreen mask+fullscreen paint path
+    (budget pressure). We defer this until we have:
+    - stronger path conformance gates (fill rules / self-intersection / bounds),
+    - and a clear, bounded shader binding shape for per-path paints/materials.
+
 ---
 
 ## Appendix C — Material capability notes (wgpu today)
