@@ -89,6 +89,8 @@ pub(crate) fn content_view(
             .items([
                 shadcn::SelectItem::new("theme", "Theme (baseline)")
                     .test_id("ui-gallery-motion-preset-item-theme"),
+                shadcn::SelectItem::new("reduced", "Reduced motion (0)")
+                    .test_id("ui-gallery-motion-preset-item-reduced"),
                 shadcn::SelectItem::new("snappy", "Snappy")
                     .test_id("ui-gallery-motion-preset-item-snappy"),
                 shadcn::SelectItem::new("bouncy", "Bouncy")

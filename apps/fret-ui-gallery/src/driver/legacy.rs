@@ -1987,17 +1987,22 @@ impl UiGalleryDriver {
     fn motion_preset_theme_patch(preset: &str) -> fret_ui::ThemeConfig {
         let mut cfg = fret_ui::ThemeConfig::default();
 
-        let shadcn_ease = fret_ui::theme::CubicBezier {
-            x1: 0.22,
-            y1: 1.0,
-            x2: 0.36,
-            y2: 1.0,
-        };
         let linear = fret_ui::theme::CubicBezier {
             x1: 0.0,
             y1: 0.0,
             x2: 1.0,
             y2: 1.0,
+        };
+        let shadcn_ease_default = fret_ui::theme::CubicBezier {
+            x1: 0.22,
+            y1: 1.0,
+            x2: 0.36,
+            y2: 1.0,
+        };
+        let shadcn_ease = if preset == "reduced" {
+            linear
+        } else {
+            shadcn_ease_default
         };
 
         let (
@@ -2011,6 +2016,7 @@ impl UiGalleryDriver {
             toast_enter,
             toast_exit,
         ) = match preset {
+            "reduced" => (0, 0, 0, 0, 0, 0, 0, 0, 0),
             "snappy" => (80, 160, 240, 320, 160, 140, 160, 140, 110),
             "bouncy" => (100, 200, 300, 500, 200, 200, 200, 160, 120),
             "gentle" => (120, 220, 320, 560, 220, 200, 220, 180, 140),
@@ -2019,6 +2025,7 @@ impl UiGalleryDriver {
 
         let toast_stack_shift = toast_enter;
         let toast_stack_shift_stagger = match preset {
+            "reduced" => 0,
             "snappy" => 16,
             "bouncy" => 20,
             "gentle" => 24,
@@ -2081,6 +2088,7 @@ impl UiGalleryDriver {
         );
 
         let (drawer_settle_duration, drawer_settle_bounce, inertia_bounce_bounce) = match preset {
+            "reduced" => (0, 0.0, 0.0),
             "snappy" => (210, 0.0, 0.2),
             "bouncy" => (260, 0.35, 0.4),
             "gentle" => (280, 0.1, 0.25),
