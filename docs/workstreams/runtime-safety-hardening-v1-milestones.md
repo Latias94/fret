@@ -123,3 +123,16 @@ Exit criteria:
 - `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
 - `cargo nextest run -p fret-ui` is green.
 - `python3 tools/check_layering.py` is green.
+
+## M9 — Panic surface audit (fret-ui follow-ups)
+
+Deliverables:
+
+- Remove "checked above" `expect(...)` and redundant `Option` unwrapping in input/dispatch hot paths.
+- Avoid `expect(...)` on `taffy` layout engine operations; strict mode may panic, default mode warns once and enables widget fallback.
+
+Exit criteria:
+
+- `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-ui` is green.
+- `python3 tools/check_layering.py` is green.
