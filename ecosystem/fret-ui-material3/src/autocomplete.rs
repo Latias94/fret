@@ -1207,6 +1207,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
                                     overflow: TextOverflow::Ellipsis,
                                     style: Some(label_style),
                                     color: Some(label_color),
+                                    align: fret_core::TextAlign::Start,
                                 })
                             } else {
                                 cx.text_props(TextProps {
@@ -1216,6 +1217,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
                                     overflow: TextOverflow::Ellipsis,
                                     style: Some(label_style),
                                     color: Some(label_color),
+                                    align: fret_core::TextAlign::Start,
                                 })
                             };
 

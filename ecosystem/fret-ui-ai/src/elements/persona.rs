@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
+};
 use fret_icons::IconId;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -225,6 +227,7 @@ impl Persona {
                 color: Some(muted),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
+                align: TextAlign::Start,
             }))
         } else {
             None

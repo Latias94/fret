@@ -1,5 +1,9 @@
 use super::super::*;
 
+use std::time::Duration;
+
+use fret_ui::element::LayoutStyle;
+
 fn fmt_bezier(b: fret_ui::theme::CubicBezier) -> String {
     format!("{:.2}, {:.2}, {:.2}, {:.2}", b.x1, b.y1, b.x2, b.y2)
 }
@@ -11,6 +15,25 @@ pub(super) fn preview_motion_presets(
     motion_preset_open: Model<bool>,
     dialog_open: Model<bool>,
 ) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct MotionPresetDemoModels {
+        stagger_open: Option<Model<bool>>,
+    }
+
+    let stagger_open = cx.with_state(MotionPresetDemoModels::default, |st| {
+        st.stagger_open.clone()
+    });
+    let stagger_open = match stagger_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(MotionPresetDemoModels::default, |st| {
+                st.stagger_open = Some(model.clone());
+            });
+            model
+        }
+    };
+
     let preset = cx
         .watch_model(&motion_preset)
         .paint()
@@ -256,5 +279,116 @@ pub(super) fn preview_motion_presets(
         .test_id("ui-gallery-motion-presets-overlay-demo")
     };
 
-    vec![preset_select, token_snapshot, overlay_demo]
+    let stagger_demo = {
+        let is_open = cx
+            .watch_model(&stagger_open)
+            .paint()
+            .copied()
+            .unwrap_or(false);
+
+        let duration_ms = theme.duration_ms_token("duration.motion.presence.enter");
+        let duration = Duration::from_millis(duration_ms as u64);
+        let easing = theme.easing_token("easing.motion.standard");
+
+        let global = fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+            cx,
+            is_open,
+            duration,
+            duration,
+            easing,
+            false,
+        );
+
+        // Keep this intentionally small and semantic-first. Component ecosystems should be able
+        // to share this "sequence feel" without depending on DOM/Framer Motion implementation
+        // details.
+        let each_delay = Duration::from_millis(24);
+        let count = 6usize;
+        let from = if is_open {
+            fret_ui_headless::motion::stagger::StaggerFrom::First
+        } else {
+            fret_ui_headless::motion::stagger::StaggerFrom::Last
+        };
+
+        let row = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .items_center(),
+            move |cx| {
+                (0..count)
+                    .map(|i| {
+                        let local =
+                            fret_ui_headless::motion::stagger::staggered_progress_for_duration(
+                                global.progress,
+                                i,
+                                count,
+                                each_delay,
+                                duration,
+                                from,
+                            );
+                        let dy_px = (1.0 - local) * 10.0;
+                        let transform = fret_core::Transform2D::translation(fret_core::Point::new(
+                            Px(0.0),
+                            Px(dy_px),
+                        ));
+
+                        cx.opacity_props(
+                            fret_ui::element::OpacityProps {
+                                layout: LayoutStyle::default(),
+                                opacity: local,
+                            },
+                            move |cx| {
+                                let badge = shadcn::Badge::new(format!("Item {}", i + 1))
+                                    .variant(shadcn::BadgeVariant::Secondary)
+                                    .into_element(cx)
+                                    .test_id(format!("ui-gallery-motion-presets-stagger-item-{i}"));
+
+                                vec![cx.visual_transform_props(
+                                    fret_ui::element::VisualTransformProps {
+                                        layout: LayoutStyle::default(),
+                                        transform,
+                                    },
+                                    |_cx| vec![badge],
+                                )]
+                            },
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            },
+        );
+
+        let toggle = shadcn::Button::new("Toggle sequence")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .toggle_model(stagger_open.clone())
+            .test_id("ui-gallery-motion-presets-stagger-toggle")
+            .into_element(cx);
+
+        let content = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N3)
+                .items_start(),
+            move |_cx| vec![toggle, row],
+        );
+
+        shadcn::Card::new([
+            shadcn::CardHeader::new([
+                shadcn::CardTitle::new("Stagger / sequence demo").into_element(cx),
+                shadcn::CardDescription::new(
+                    "One shared timeline mapped into per-item progress via a small headless stagger helper.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new([content]).into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)).min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-motion-presets-stagger-demo")
+    };
+
+    vec![preset_select, token_snapshot, overlay_demo, stagger_demo]
 }

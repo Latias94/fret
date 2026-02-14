@@ -98,3 +98,9 @@ Evidence pointers:
 - [x] Make tooling generate and pass the config file when launching.
 - [ ] Deprecate ambiguous env vars by introducing explicit replacements (keep old names supported).
   - [x] Add explicit screenshot env aliases: `FRET_DIAG_GPU_SCREENSHOTS` and `FRET_DIAG_BUNDLE_SCREENSHOT` (keep old names supported).
+
+## Phase 7: Implementation split (reduce monolith risk)
+
+- [x] Extract script/pick runtime helpers from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/script_runtime.rs`.
+- [x] Move `json_pointer_set` helper out of `crates/fret-diag/src/stats.rs` (share via `crates/fret-diag/src/util.rs`).
+- [x] Extract pick subcommand handlers into `crates/fret-diag/src/commands/pick.rs` (reduce `lib.rs` churn surface).

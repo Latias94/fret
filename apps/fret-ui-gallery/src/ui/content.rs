@@ -38,6 +38,7 @@ pub(crate) fn content_view(
                             color: None,
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
+                            align: fret_core::TextAlign::Start,
                         }),
                         cx.text_props(TextProps {
                             layout: {
@@ -50,6 +51,7 @@ pub(crate) fn content_view(
                             color: Some(theme.color_token("muted-foreground")),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
+                            align: fret_core::TextAlign::Start,
                         }),
                     ]
                 },
@@ -145,6 +147,7 @@ pub(crate) fn content_view(
         models.view_cache_counter.clone(),
         models.popover_open.clone(),
         models.dialog_open.clone(),
+        models.dialog_glass_open.clone(),
         models.alert_dialog_open.clone(),
         models.sheet_open.clone(),
         models.portal_geometry_popover_open.clone(),
@@ -336,6 +339,7 @@ fn page_preview(
     view_cache_counter: Model<u64>,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
+    dialog_glass_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
     portal_geometry_popover_open: Model<bool>,
@@ -464,6 +468,7 @@ fn page_preview(
             theme,
             popover_open,
             dialog_open,
+            dialog_glass_open,
             alert_dialog_open,
             sheet_open,
             portal_geometry_popover_open,
@@ -528,6 +533,7 @@ fn page_preview(
             cx,
             popover_open,
             dialog_open,
+            dialog_glass_open,
             alert_dialog_open,
             sheet_open,
             portal_geometry_popover_open,

@@ -67,6 +67,7 @@ pub(super) fn maybe_push_debug_hud(
                                 color: Some(theme.color_token("foreground")),
                                 wrap: TextWrap::Word,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             })
                         })
                         .collect::<Vec<_>>()

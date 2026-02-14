@@ -975,6 +975,7 @@ impl AudioPlayerElement {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let Some(test_id) = self.test_id else {

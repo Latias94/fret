@@ -209,6 +209,7 @@ pub(super) fn preview_checkbox(
             color: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         stack::vstack(

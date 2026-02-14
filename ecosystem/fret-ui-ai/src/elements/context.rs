@@ -293,6 +293,7 @@ impl ContextContent {
             color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let header_row = stack::hstack(
@@ -348,6 +349,7 @@ impl ContextContent {
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })
                 .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Text)),
             );
@@ -375,6 +377,7 @@ impl ContextContent {
                 color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }));
         }
 

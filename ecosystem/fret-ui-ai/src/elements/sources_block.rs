@@ -246,6 +246,7 @@ impl SourcesBlock {
                             color: excerpt_color,
                             wrap: TextWrap::Word,
                             overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
                         })
                     });
 

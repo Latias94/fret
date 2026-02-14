@@ -9,7 +9,9 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, FontId, FontWeight, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, SemanticsDecoration, TextProps};
@@ -520,6 +522,7 @@ impl VoiceSelectorList {
                     color: None,
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
+                    align: TextAlign::Start,
                 });
                 let desc_el = desc.map(|d| {
                     cx.text_props(TextProps {
@@ -529,6 +532,7 @@ impl VoiceSelectorList {
                         color: Some(muted_fg(&theme)),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
+                        align: TextAlign::Start,
                     })
                 });
 
@@ -631,6 +635,7 @@ impl VoiceSelectorValue {
             color: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
         });
 
         if let Some(test_id) = self.test_id {

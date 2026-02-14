@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{FontId, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -98,6 +98,7 @@ pub fn text_truncate<H: UiHost>(
         color: None,
         wrap: TextWrap::None,
         overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
     })
 }
 
@@ -113,6 +114,7 @@ pub fn text_nowrap<H: UiHost>(
         color: None,
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }
 
@@ -135,6 +137,7 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }
 
@@ -156,6 +159,7 @@ pub fn text_xs<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }
 
@@ -179,6 +183,7 @@ pub fn text_base<H: UiHost>(
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }
 
@@ -201,6 +206,7 @@ pub fn text_prose<H: UiHost>(
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }
 
@@ -222,6 +228,7 @@ pub fn text_prose_bold<H: UiHost>(
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }
 
@@ -265,6 +272,7 @@ pub fn text_prose_nowrap<H: UiHost>(
         color: None,
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }
 
@@ -286,5 +294,6 @@ pub fn text_prose_bold_nowrap<H: UiHost>(
         color: None,
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
+use fret_core::{FontId, FontWeight, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, Length, SizeStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -61,5 +61,6 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
         color: Some(fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     })
 }

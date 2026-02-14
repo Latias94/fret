@@ -1427,17 +1427,31 @@ fn first_grapheme_end(text: &str) -> usize {
 }
 
 fn is_word_char(c: char) -> bool {
-    c.is_ascii_alphanumeric()
-        || matches!(c, '\u{00C0}'..='\u{00FF}')
-        || matches!(c, '\u{0100}'..='\u{017F}')
-        || matches!(c, '\u{0180}'..='\u{024F}')
-        || matches!(c, '\u{0400}'..='\u{04FF}')
-        || matches!(c, '\u{1E00}'..='\u{1EFF}')
+    if is_cjk_char(c) {
+        return false;
+    }
+
+    c.is_alphanumeric()
         || matches!(c, '\u{0300}'..='\u{036F}')
         || matches!(
             c,
             '-' | '_' | '.' | '\'' | '$' | '%' | '@' | '#' | '^' | '~' | ',' | '=' | ':' | '?'
         )
+}
+
+fn is_cjk_char(c: char) -> bool {
+    matches!(
+        c,
+        '\u{2E80}'..='\u{2EFF}'
+            | '\u{2F00}'..='\u{2FDF}'
+            | '\u{3000}'..='\u{303F}'
+            | '\u{3040}'..='\u{30FF}'
+            | '\u{31F0}'..='\u{31FF}'
+            | '\u{3400}'..='\u{4DBF}'
+            | '\u{4E00}'..='\u{9FFF}'
+            | '\u{AC00}'..='\u{D7AF}'
+            | '\u{F900}'..='\u{FAFF}'
+    )
 }
 
 fn cut_end_for_available(text: &str, clusters: &[ShapedCluster], available: f32) -> usize {
@@ -1551,6 +1565,18 @@ mod tests {
     use fret_core::{FontId, Px, TextPaintStyle, TextShapingStyle, TextStyle};
 
     #[test]
+    fn is_word_char_includes_arabic_and_hebrew() {
+        assert!(is_word_char('ت'));
+        assert!(is_word_char('א'));
+    }
+
+    #[test]
+    fn is_word_char_excludes_cjk() {
+        assert!(!is_word_char('你'));
+        assert!(!is_word_char('あ'));
+    }
+
+    #[test]
     fn none_ellipsis_adds_zero_len_cluster_at_cut_end() {
         let mut shaper = ParleyShaper::new();
         let base = TextStyle {
@@ -1570,6 +1596,7 @@ mod tests {
             max_width: Some(Px(80.0)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1616,6 +1643,7 @@ mod tests {
             max_width: Some(Px(800.0)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1665,6 +1693,7 @@ mod tests {
             max_width: Some(Px(60.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1706,6 +1735,7 @@ mod tests {
             max_width: Some(Px(40.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1750,6 +1780,7 @@ mod tests {
             max_width: Some(Px(40.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1782,6 +1813,7 @@ mod tests {
             max_width: Some(Px(60.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1827,6 +1859,7 @@ mod tests {
             max_width: Some(Px(40.0)),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1854,6 +1887,7 @@ mod tests {
             max_width: Some(Px(40.0)),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -1882,6 +1916,7 @@ mod tests {
             max_width: Some(Px(60.0)),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 

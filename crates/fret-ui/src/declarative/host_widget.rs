@@ -33,6 +33,7 @@ struct TextCache {
     last_style: Option<TextStyle>,
     last_wrap: Option<fret_core::TextWrap>,
     last_overflow: Option<TextOverflow>,
+    last_align: Option<fret_core::TextAlign>,
     last_width: Option<Px>,
     last_measure_width: Option<Px>,
     last_font_stack_key: Option<u64>,

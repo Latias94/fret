@@ -10,7 +10,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextSlant, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Px, TextAlign, TextOverflow, TextSlant, TextStyle,
+    TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, TextProps,
@@ -32,6 +33,7 @@ fn text_props(
         color,
         wrap,
         overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
     }
 }
 

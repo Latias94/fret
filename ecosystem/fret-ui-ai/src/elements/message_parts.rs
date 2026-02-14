@@ -146,6 +146,7 @@ impl MessageParts {
                                 color: Some(fg),
                                 wrap: TextWrap::Word,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             });
 
                             let Some(test_id) = part_id else {

@@ -70,6 +70,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     max_width: Some(Px(max_w)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor: cx.scale_factor * zoom,
                 };
                 let (blob, metrics) = self.paint_cache.text_blob(

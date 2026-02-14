@@ -44,7 +44,7 @@ Defaults if unclear:
 ## Quick start
 
 - Run a script and launch the target app (recommended for reproducibility):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG_GPU_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
 
 - Web runner (WASM): export bundles via DevTools WS (no filesystem access in-browser):
   - Start the loopback WS hub (prints the token): `cargo run -p fret-devtools-ws`
@@ -76,7 +76,7 @@ Defaults if unclear:
 3. Ensure diagnostics are enabled in the running app.
    - If you run via `fretboard diag run ... --launch -- <cmd...>`, the launcher injects `FRET_DIAG=1` for you.
    - Otherwise, set `FRET_DIAG=1` in the target environment.
-   - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.
+   - If the script uses `capture_screenshot`: also enable GPU screenshots (`FRET_DIAG_GPU_SCREENSHOTS=1`, alias: `FRET_DIAG_SCREENSHOTS=1`).
    - If you want a best-effort BMP screenshot alongside bundle dumps (manual `diag poke` / auto-dumps): set `FRET_DIAG_SCREENSHOT=1`.
    - While authoring scripts, consider disabling text redaction: `FRET_DIAG_REDACT_TEXT=0`.
    - Full env reference: `docs/ui-diagnostics-and-scripted-tests.md`
@@ -153,7 +153,7 @@ Good in-tree examples to copy from:
 If you add `capture_screenshot`, require screenshot capability and enable screenshots:
 
 - Script: add `diag.screenshot_png` to `meta.required_capabilities`
-- Native/filesystem: set `FRET_DIAG_SCREENSHOTS=1`
+- Native/filesystem: set `FRET_DIAG_GPU_SCREENSHOTS=1` (alias: `FRET_DIAG_SCREENSHOTS=1`)
 
 ## Capabilities & fail-fast gating
 
@@ -223,7 +223,7 @@ Where the code lives:
 
 ## Common pitfalls
 
-- Scripts that call `capture_screenshot` without `FRET_DIAG_SCREENSHOTS=1`.
+- Scripts that call `capture_screenshot` without `FRET_DIAG_GPU_SCREENSHOTS=1` (or the legacy alias).
 - Targeting pixels/coordinates instead of `test_id`/semantics selectors (scripts become brittle).
 - Running the “wrong” binary that isn’t wired through the diagnostics driver (no bundle/script execution).
 - Debugging an interaction bug with only geometry snapshots: add scripted steps + focused assertions.
