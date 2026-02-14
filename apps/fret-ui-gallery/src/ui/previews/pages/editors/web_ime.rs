@@ -123,7 +123,8 @@ pub(in crate::ui) fn preview_web_ime_harness(
     region_props.a11y_text_composition = a11y_text_composition;
     region_props.ime_cursor_area = desired_ime_cursor_area;
 
-    let region = cx.text_input_region(region_props, |cx| {
+    let region = cx
+        .text_input_region(region_props, |cx| {
         let state_for_text_input = state.clone();
         cx.text_input_region_on_text_input(std::sync::Arc::new(
             move |host: &mut dyn fret_ui::action::UiActionHost,
@@ -427,7 +428,8 @@ pub(in crate::ui) fn preview_web_ime_harness(
         );
 
         vec![panel]
-    });
+    })
+        .test_id("ui-gallery-web-ime-region");
 
     vec![header, inputs, region]
 }
