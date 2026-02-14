@@ -755,7 +755,7 @@ impl Sidebar {
             children,
             collapsed: false,
             side: SidebarSide::Left,
-            collapsible: SidebarCollapsible::Offcanvas,
+            collapsible: SidebarCollapsible::Icon,
             variant: SidebarVariant::Sidebar,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -3758,7 +3758,10 @@ mod tests {
             "shadcn-sidebar-motion",
             |cx| {
                 let child = cx.container(ContainerProps::default(), |_cx| Vec::new());
-                let sidebar = Sidebar::new([child]).collapsed(collapsed).into_element(cx);
+                let sidebar = Sidebar::new([child])
+                    .collapsible(SidebarCollapsible::Icon)
+                    .collapsed(collapsed)
+                    .into_element(cx);
                 vec![sidebar]
             },
         );

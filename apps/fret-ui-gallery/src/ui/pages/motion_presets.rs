@@ -120,6 +120,8 @@ pub(super) fn preview_motion_presets(
             .items([
                 shadcn::SelectItem::new("theme", "Theme (baseline)")
                     .test_id("ui-gallery-motion-preset-item-theme"),
+                shadcn::SelectItem::new("reduced", "Reduced motion (0)")
+                    .test_id("ui-gallery-motion-preset-item-reduced"),
                 shadcn::SelectItem::new("snappy", "Snappy")
                     .test_id("ui-gallery-motion-preset-item-snappy"),
                 shadcn::SelectItem::new("bouncy", "Bouncy")
@@ -202,8 +204,18 @@ pub(super) fn preview_motion_presets(
                     .to_string(),
             ),
             (
+                "duration.shadcn.motion.collapsible.toggle",
+                theme
+                    .duration_ms_token("duration.shadcn.motion.collapsible.toggle")
+                    .to_string(),
+            ),
+            (
                 "easing.shadcn.motion.overlay",
                 fmt_bezier(theme.easing_token("easing.shadcn.motion.overlay")),
+            ),
+            (
+                "easing.shadcn.motion.collapsible.toggle",
+                fmt_bezier(theme.easing_token("easing.shadcn.motion.collapsible.toggle")),
             ),
             (
                 "duration.shadcn.motion.toast.enter",
@@ -253,10 +265,24 @@ pub(super) fn preview_motion_presets(
                     .to_string(),
             ),
             (
+                "duration.motion.collapsible.toggle",
+                theme
+                    .duration_ms_token("duration.motion.collapsible.toggle")
+                    .to_string(),
+            ),
+            (
+                "easing.motion.collapsible.toggle",
+                fmt_bezier(theme.easing_token("easing.motion.collapsible.toggle")),
+            ),
+            (
                 "duration.motion.layout.expand",
                 theme
                     .duration_ms_token("duration.motion.layout.expand")
                     .to_string(),
+            ),
+            (
+                "easing.motion.layout.expand",
+                fmt_bezier(theme.easing_token("easing.motion.layout.expand")),
             ),
             (
                 "duration.motion.stack.shift",

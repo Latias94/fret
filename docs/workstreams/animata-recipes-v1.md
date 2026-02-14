@@ -92,6 +92,8 @@ Recommended semantic keys (ecosystem-level; optional):
 - Easing:
   - `easing.motion.standard`, `easing.motion.emphasized`
   - `easing.motion.stack.shift`
+  - `easing.motion.collapsible.toggle`
+  - `easing.motion.layout.expand`
 - Spring (authoring-friendly):
   - `duration.motion.spring.shared_indicator` + `number.motion.spring.shared_indicator.bounce`
   - `duration.motion.spring.drag_release_settle` + `number.motion.spring.drag_release_settle.bounce`
@@ -113,7 +115,7 @@ component API yet; we only commit to the semantic intent + gate.
 | ID | Recipe | Animata source(s) | Fret target(s) | Semantic intent | Gate (deterministic) | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | AR-OVERLAY-001 | Modal presence (blur + spring) | `repo-ref/animata/animata/overlay/modal.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs`, `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | `presence.enter/exit` (+ optional `hover_micro`) | `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json` + `tools/diag-scripts/ui-gallery-overlay-dialog-glass-backdrop-open-close-fixed-frame-delta.json` | Landed (baseline + glass backdrop; rotate variant TODO) |
-| AR-ACCORDION-001 | FAQ accordion (height:auto + fade) | `repo-ref/animata/animata/accordion/faq.tsx` | UI Gallery shadcn accordion demo | `collapsible.toggle` | `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-accordion-demo-returns-item`) | Landed (gate script) |
+| AR-ACCORDION-001 | FAQ accordion (height:auto + fade) | `repo-ref/animata/animata/accordion/faq.tsx` | UI Gallery shadcn accordion demo | `collapsible.toggle` | `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json` (run with `--check-pixels-changed ui-gallery-accordion-demo-returns-item`) | Landed (token-driven duration/easing + gate) |
 | AR-TABS-001 | Nav tabs shared indicator | `repo-ref/animata/animata/container/nav-tabs.tsx` | `ecosystem/fret-ui-material3/src/tabs.rs` + shadcn tabs recipes | `shared_indicator.move` | Landed (M3): `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json` | Landed (M3) / Planned (shadcn) |
 | AR-TABS-002 | Fluid tabs (indicator + content switch) | `repo-ref/animata/animata/card/fluid-tabs.tsx` | shadcn tabs + content presence | `shared_indicator.move` + `presence.enter/exit` | Add a fixed-delta script after shadcn tabs MVP | Planned |
 | AR-NAV-001 | Navigation active pill (bar/rail) | (Animata: reuse `shared_indicator.move` intent) | `ecosystem/fret-ui-material3/src/navigation_bar.rs`, `ecosystem/fret-ui-material3/src/navigation_rail.rs` | `shared_indicator.move` | `tools/diag-scripts/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json` + `tools/diag-scripts/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json` | Landed |

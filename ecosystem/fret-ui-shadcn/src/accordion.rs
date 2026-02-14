@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{Color, Edges, FontId, FontWeight, Point, Px, TextStyle, Transform2D};
 use fret_icons::ids;
@@ -11,6 +12,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 use fret_ui_kit::primitives::accordion as radix_accordion;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::primitives::direction::LayoutDirection;
@@ -783,14 +785,44 @@ pub mod composable {
 
                                     let motion =
                                         cx.keyed(("accordion-motion", value.clone()), |cx| {
-                                            radix_collapsible::measured_height_motion_for_root(
+                                            let toggle_duration = theme
+                                                .duration_ms_by_key(
+                                                    "duration.shadcn.motion.collapsible.toggle",
+                                                )
+                                                .or_else(|| {
+                                                    theme.duration_ms_by_key(
+                                                        "duration.motion.collapsible.toggle",
+                                                    )
+                                                })
+                                                .or_else(|| {
+                                                    theme.duration_ms_by_key(
+                                                        "duration.shadcn.motion.200",
+                                                    )
+                                                })
+                                                .map(|ms| Duration::from_millis(ms as u64))
+                                                .unwrap_or(Duration::from_millis(200));
+                                            let toggle_ticks =
+                                                ticks_60hz_for_duration(toggle_duration);
+                                            let toggle_easing = theme
+                                                .easing_by_key(
+                                                    "easing.shadcn.motion.collapsible.toggle",
+                                                )
+                                                .or_else(|| {
+                                                    theme.easing_by_key(
+                                                        "easing.motion.collapsible.toggle",
+                                                    )
+                                                })
+                                                .unwrap_or_else(|| {
+                                                    overlay_motion::shadcn_motion_ease_bezier(cx)
+                                                });
+                                            radix_collapsible::measured_height_motion_for_root_with_cubic_bezier(
                                                 cx,
                                                 is_open,
                                                 false,
                                                 true,
-                                                8,
-                                                8,
-                                                overlay_motion::shadcn_ease,
+                                                toggle_ticks,
+                                                toggle_ticks,
+                                                toggle_easing,
                                             )
                                         });
 
@@ -1553,20 +1585,47 @@ impl Accordion {
                                 props.border.bottom = Px(0.0);
                             }
 
-                            let item_el = cx.container(props, move |cx| {
-                                let mut children = Vec::new();
+                                let item_el = cx.container(props, move |cx| {
+                                    let mut children = Vec::new();
 
-                                let motion = cx.keyed(("accordion-motion", value.clone()), |cx| {
-                                    radix_collapsible::measured_height_motion_for_root(
-                                        cx,
-                                        is_open,
-                                        false,
-                                        true,
-                                        8,
-                                        8,
-                                        overlay_motion::shadcn_ease,
-                                    )
-                                });
+                                    let motion = cx.keyed(("accordion-motion", value.clone()), |cx| {
+                                        let toggle_duration = theme
+                                            .duration_ms_by_key(
+                                                "duration.shadcn.motion.collapsible.toggle",
+                                            )
+                                            .or_else(|| {
+                                                theme.duration_ms_by_key(
+                                                    "duration.motion.collapsible.toggle",
+                                                )
+                                            })
+                                            .or_else(|| {
+                                                theme.duration_ms_by_key("duration.shadcn.motion.200")
+                                            })
+                                            .map(|ms| Duration::from_millis(ms as u64))
+                                            .unwrap_or(Duration::from_millis(200));
+                                        let toggle_ticks = ticks_60hz_for_duration(toggle_duration);
+                                        let toggle_easing = theme
+                                            .easing_by_key(
+                                                "easing.shadcn.motion.collapsible.toggle",
+                                            )
+                                            .or_else(|| {
+                                                theme.easing_by_key(
+                                                    "easing.motion.collapsible.toggle",
+                                                )
+                                            })
+                                            .unwrap_or_else(|| {
+                                                overlay_motion::shadcn_motion_ease_bezier(cx)
+                                            });
+                                        radix_collapsible::measured_height_motion_for_root_with_cubic_bezier(
+                                            cx,
+                                            is_open,
+                                            false,
+                                            true,
+                                            toggle_ticks,
+                                            toggle_ticks,
+                                            toggle_easing,
+                                        )
+                                    });
 
                                 let motion_for_wrapper = motion.clone();
                                 let motion_for_update = motion.clone();

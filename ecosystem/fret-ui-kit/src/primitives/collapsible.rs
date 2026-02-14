@@ -12,6 +12,7 @@ use fret_core::{Px, SemanticsRole, Size};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, PressableA11y, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
+use fret_ui::theme::CubicBezier;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
@@ -216,6 +217,28 @@ pub fn measured_height_motion_for_root<H: UiHost>(
         open_ticks,
         close_ticks,
         ease,
+    )
+}
+
+/// Like [`measured_height_motion_for_root`], but uses a cubic-bezier easing curve.
+#[allow(clippy::too_many_arguments)]
+pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    force_mount: bool,
+    require_measurement_for_close: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    bezier: CubicBezier,
+) -> MeasuredHeightMotionOutput {
+    crate::declarative::collapsible_motion::measured_height_motion_for_root_with_cubic_bezier(
+        cx,
+        open,
+        force_mount,
+        require_measurement_for_close,
+        open_ticks,
+        close_ticks,
+        bezier,
     )
 }
 

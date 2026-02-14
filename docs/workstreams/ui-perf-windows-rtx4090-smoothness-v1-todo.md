@@ -1,32 +1,29 @@
-# UI Perf (Windows RTX4090) — Smoothness v1 (TODO)
+# UI perf: Windows RTX 4090 smoothness v1 — TODO
 
-## P0 — Gates (must stay green)
+## P0 (gates / evidence)
 
-- [x] Run `ui-resize-probes` attempts=3 and capture the out-dir summary + worst bundles.
-- [x] Run `ui-code-editor-resize-probes` attempts=3 and confirm no regression.
-- [x] Run `ui-gallery-steady` repeat=3 against the Windows baseline and record failures (if any).
+- [ ] Run `ui-gallery-steady` with `--repeat 7` (tail stability check) and archive worst bundles.
+- [ ] Run `ui-resize-probes` with `--repeat 7` (resize jitter stability check).
+- [ ] Run `ui-code-editor-resize-probes` with `--repeat 7` (editor-class guardrail).
+- [ ] For any remaining outliers: capture one bundle with `--trace` and one with `FRET_LAYOUT_NODE_PROFILE=1`.
 
-## P0 — Hitch Classes (make each explainable)
+## Attribution loop (make spikes explainable)
 
-- [ ] Font rescan: confirm worst bundles do not include `TextFontStackKey` bumps inside measured windows.
-- [ ] Resize tails: if failures persist, classify top frames by `layout_time_us` vs `paint_time_us`.
-- [ ] `ui-gallery-steady`: investigate baseline failures after merging recent `main`:
-  - [ ] `ui-gallery-view-cache-toggle-perf-steady` outlier dominated by `layout_time_us`
-  - [ ] minor deltas in `material3-tabs-switch-perf-steady` and `virtual-list-torture-steady`
+- [ ] Add a “standard diff recipe” section to this workstream (commands + expected outputs).
+- [ ] Identify 2–3 most common failing metrics on Windows (from `check.perf_thresholds.json`) and document “first place to look”.
+- [ ] Track one exemplar failure from each category:
+  - [ ] layout-root build spikes
+  - [ ] layout-engine solve spikes
+  - [ ] paint spikes
 
-## P0 — Profiling / Attribution
+## Instrumentation gaps (candidate fearless refactor items)
 
-- [x] Add TRACE spans to split `request_build_roots` vs `roots` layout phases (Tracy timeline).
-- [x] Fix `wgpu` validation crash on resize (uniform bind group layout mismatch: missing `RenderSpace` binding).
-- [ ] Re-run `ui-gallery-steady --repeat 3` against baseline and confirm if view-cache toggle still flakes.
+- [ ] Inventory “hot scratch structures” that can reallocate in spikes; add cheap grow counters (opt-in or always-on).
+- [ ] Add optional percentiles (p50/p95/p99) for `diag stats` bundle summaries (typical perf review).
+- [ ] Make trace artifact naming stable and searchable (“phase timeline” + “top hotspots” linkage).
 
-## P1 — Tooling / Protocol
+## Windows-specific
 
-- [x] Add a perf log entry (commit-addressable): command lines + out dirs + worst bundle anchors.
-- [x] Lock UI gallery perf env defaults (cache+shell, VirtualList known heights) so `diag perf ui-gallery(-steady)` matches the baseline without manual flags.
-- [ ] If needed, add a dedicated `ui-gallery-*` script that isolates a single failing steady workload.
+- [ ] Document PIX capture steps for `fret-ui-gallery.exe` (GPU-side sanity when CPU looks good).
+- [ ] Document ETW/WPR profile preset to correlate spikes with OS scheduling/IO.
 
-## P1 — Hardening
-
-- [ ] Ensure script changes do not rely on semantics capture (keep `FRET_DIAG_SEMANTICS=0` viable).
-- [ ] Keep runner mitigations bounded (avoid deferring font rescan forever; avoid unbounded caches).

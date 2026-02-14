@@ -157,6 +157,7 @@ Add a first-class convention for motion keys (ecosystem policy):
 
 - `md.sys.motion.duration.*` / `md.sys.motion.easing.*` / `md.sys.motion.spring.*` (M3-aligned)
 - `duration.shadcn.motion.*` / `easing.shadcn.motion.*` / `number.shadcn.motion.*` (shadcn-aligned)
+- `duration.motion.*` / `easing.motion.*` / `number.motion.spring.*` (cross-ecosystem semantic)
 
 Component ecosystems should request motion by **semantic key**, not hard-coded numbers.
 
@@ -169,12 +170,14 @@ Token taxonomy (v1; conventions we can keep stable):
     - `duration.shadcn.motion.toast.enter`
     - `duration.shadcn.motion.toast.exit`
     - `duration.shadcn.motion.sidebar.toggle`
+    - `duration.shadcn.motion.collapsible.toggle`
   - Keep the existing numeric scale as leaf-level defaults and for quick authoring:
     - `duration.shadcn.motion.{100|200|300|500}`
 - Easing keys:
   - Use semantic keys where a component needs a specific curve (don’t assume 1 curve fits all):
     - `easing.shadcn.motion.overlay`
     - `easing.shadcn.motion.toast`
+    - `easing.shadcn.motion.collapsible.toggle`
   - Keep `easing.shadcn.motion` as a simple global default.
 - Spring keys:
   - For duration+bounce (shadcn-style):
@@ -342,6 +345,7 @@ land deterministic gates before polishing implementation details.
 | Pilot | Recipe | Spec sources | Fret target | Motion channels & primitives | Tokens & gates | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | P1 | Sidebar collapse/expand | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/sidebar.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` (`sidebar_collapse_motion`) | width / rail reveal (+ optional opacity)<br>tween timeline<br>optional: layout-aware choreography (future) | tokens (current): `duration.shadcn.motion.sidebar.toggle`, `easing.shadcn.motion.sidebar` (default: linear)<br>gate: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json` | Landed (baseline) |
+| P1 | Accordion / Collapsible (height:auto) | Animata FAQ: `repo-ref/animata/animata/accordion/faq.tsx`<br>shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/accordion.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/accordion.tsx` | `ecosystem/fret-ui-shadcn/src/{accordion,collapsible}.rs`<br>`ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs` | measured-height reveal + opacity<br>Duration tween timeline + cubic-bezier easing | tokens: `duration.shadcn.motion.collapsible.toggle` → `duration.motion.collapsible.toggle` (fallback: `duration.shadcn.motion.200`)<br>`easing.shadcn.motion.collapsible.toggle` → `easing.motion.collapsible.toggle` (fallback: `easing.shadcn.motion`)<br>gate: `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json` | Landed (token-driven) |
 | P1 | Drawer / Sheet settle | shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`, `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/drawer.rs`<br>`ecosystem/fret-ui-shadcn/src/sheet.rs` | translate + scrim opacity<br>drag velocity projection -> inertia -> spring settle<br>retarget mid-flight (no restart stutter) | tokens (current): `duration.shadcn.motion.spring.drawer.settle`, `number.shadcn.motion.spring.drawer.settle.bounce`<br>`duration.shadcn.motion.spring.drawer.inertia_bounce`, `number.shadcn.motion.spring.drawer.inertia_bounce.bounce`<br>gates: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`, `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json` | Landed (baseline) |
 | P1 | Dialog / Modal presence | Animata modal: `repo-ref/animata/animata/overlay/modal.tsx`<br>shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`, `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`<br>shadcn impl: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs`<br>`ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | opacity + scale (and optional blur)<br>barrier fade + focus/dismiss choreography<br>optional: spring-based settle for native-like feel | tokens (current): shadcn overlay motion tokens (duration/easing)<br>gates: `tools/diag-scripts/ui-gallery-overlay-dialog-open-motion-snapshots.json`, `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json` | Landed (baseline) |
 | P2 | Tabs indicator | Material motion tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss`<br>Material3 impl: `ecosystem/fret-ui-material3/src/tabs.rs` | `ecosystem/fret-ui-material3/src/tabs.rs` (`primary_tab_list_indicator`) | indicator x + width<br>measurement-driven target bounds<br>Duration-based spring (refresh-rate stable) | gate: `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json` (with `--check-pixels-changed ui-gallery-material3-tabs-active-indicator`) | Landed (pilot) |
@@ -381,7 +385,7 @@ Definition of done for a layout-motion pilot:
 - Motion tokens can be sourced from theme config (M3 keys and/or shadcn aliases).
 - At least 2 diag scripts gate motion behavior under fixed `delta` (native runner).
 
-## Implementation status (as of 2026-02-13)
+## Implementation status (as of 2026-02-14)
 
 Already landed (evidence anchors):
 
@@ -409,8 +413,14 @@ Already landed (evidence anchors):
 - Presence supports duration + cubic-bezier (theme-friendly) drivers:
   - `ecosystem/fret-ui-kit/src/declarative/presence.rs`
   - `ecosystem/fret-ui-kit/src/primitives/presence.rs`
+- Measured-height collapsible motion supports duration + cubic-bezier easing (height:auto-style choreography):
+  - `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
+  - `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
 - Shadcn overlays that use Presence now read durations/easing from theme tokens (refresh-rate stable):
   - `ecosystem/fret-ui-shadcn/src/{context_menu,dropdown_menu,hover_card,menubar,popover,select,tooltip}.rs`
+- Shadcn accordion/collapsible now read duration/easing from theme tokens (semantic-first; refresh-rate stable):
+  - `ecosystem/fret-ui-shadcn/src/accordion.rs`
+  - `ecosystem/fret-ui-shadcn/src/collapsible.rs`
 - Hover intent (tooltip/hover-card delays) scales 60Hz ticks to frame ticks for refresh-rate stability:
   - `ecosystem/fret-ui-kit/src/declarative/hover_intent.rs`
 
@@ -418,6 +428,7 @@ Diag gates:
 
 - Sidebar toggle under fixed frame delta: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
 - Dropdown menu open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-dropdown-open-fixed-frame-delta.json`
+- Accordion FAQ toggle under fixed frame delta: `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json`
 - Drawer snap points drag + settle: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`
 - Drawer snap points retarget + settle under fixed frame delta: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json`
 - Overlay dialog open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
