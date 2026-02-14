@@ -133,3 +133,42 @@ pub(in super::super) fn encode_path(
         }));
     }
 }
+
+pub(in super::super) fn encode_clip_path_mask(
+    renderer: &Renderer,
+    state: &mut EncodeState<'_>,
+    origin: Point,
+    path: fret_core::PathId,
+) -> Option<(u32, u32)> {
+    state.flush_quad_batch();
+
+    let Some(prepared) = renderer.paths.get(path) else {
+        return None;
+    };
+    if prepared.triangles.is_empty() {
+        return None;
+    }
+
+    let t_px = state.current_transform_px();
+
+    let first_vertex = state.path_vertices.len() as u32;
+    let ox = origin.x.0 * state.scale_factor;
+    let oy = origin.y.0 * state.scale_factor;
+
+    for p in &prepared.triangles {
+        let lx = ox + p[0] * state.scale_factor;
+        let ly = oy + p[1] * state.scale_factor;
+        let (wx, wy) = apply_transform_px(t_px, lx, ly);
+        state.path_vertices.push(PathVertex {
+            pos_px: [wx, wy],
+            color: [0.0; 4],
+        });
+    }
+
+    let vertex_count = (state.path_vertices.len() as u32).saturating_sub(first_vertex);
+    if vertex_count == 0 {
+        return None;
+    }
+
+    Some((first_vertex, vertex_count))
+}

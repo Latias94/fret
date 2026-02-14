@@ -24,6 +24,14 @@ pub struct CompositeGroupDesc {
     pub bounds: Rect,
     pub mode: BlendMode,
     pub quality: EffectQuality,
+    /// Group-level opacity multiplier applied when the group is composited back to its parent.
+    ///
+    /// This enables CSS-like isolated opacity semantics (e.g. `saveLayerAlpha`): overlapping
+    /// children inside the group blend with each other normally, then the final group result is
+    /// multiplied by this opacity.
+    ///
+    /// Default: `1.0`.
+    pub opacity: f32,
 }
 
 impl CompositeGroupDesc {
@@ -32,6 +40,12 @@ impl CompositeGroupDesc {
             bounds,
             mode,
             quality,
+            opacity: 1.0,
         }
+    }
+
+    pub fn with_opacity(mut self, opacity: f32) -> Self {
+        self.opacity = opacity;
+        self
     }
 }

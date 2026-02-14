@@ -3,11 +3,11 @@ use super::shaders::{
     BLUR_H_SHADER, BLUR_V_MASK_SHADER, BLUR_V_SHADER, COLOR_ADJUST_MASK_SHADER,
     COLOR_ADJUST_SHADER, COLOR_MATRIX_MASK_SHADER, COLOR_MATRIX_SHADER,
     COMPOSITE_PREMUL_MASK_SHADER, COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, MASK_SHADER,
-    PATH_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER, UPSCALE_NEAREST_MASK_SHADER,
-    UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER, alpha_threshold_masked_shader_source,
-    blur_h_masked_shader_source, blur_v_masked_shader_source, clip_mask_shader_source,
-    color_adjust_masked_shader_source, color_matrix_masked_shader_source, quad_shader_source,
-    upscale_nearest_masked_shader_source,
+    PATH_CLIP_MASK_SHADER, PATH_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER,
+    UPSCALE_NEAREST_MASK_SHADER, UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER,
+    alpha_threshold_masked_shader_source, blur_h_masked_shader_source, blur_v_masked_shader_source,
+    clip_mask_shader_source, color_adjust_masked_shader_source, color_matrix_masked_shader_source,
+    quad_shader_source, upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::geometry::{Point, Px, Transform2D};
@@ -67,6 +67,7 @@ fn shaders_parse_as_wgsl() {
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
         ("composite_premul_mask", COMPOSITE_PREMUL_MASK_SHADER),
         ("clip_mask", clip_mask_src.as_str()),
+        ("path_clip_mask", PATH_CLIP_MASK_SHADER),
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
         ("text_color", TEXT_COLOR_SHADER),
@@ -119,6 +120,7 @@ fn shaders_validate_for_webgpu() {
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
         ("composite_premul_mask", COMPOSITE_PREMUL_MASK_SHADER),
         ("clip_mask", clip_mask_src.as_str()),
+        ("path_clip_mask", PATH_CLIP_MASK_SHADER),
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
         ("text_color", TEXT_COLOR_SHADER),

@@ -120,12 +120,15 @@ Record perf snapshots using the deterministic SVG atlas stress harness (prints `
 `headless_renderer_perf:` lines). Suggested baseline capture:
 
 ```bash
-set FRET_RENDERER_PERF_PIPELINES=1
 cargo run -p fret-svg-atlas-stress -- --headless --frames 600
 ```
 
 Notes:
 
+- PowerShell:
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- bash/zsh:
+  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
 - Keep the run duration and flags stable (e.g. 600 frames) so future diffs are meaningful.
 - Capture both `renderer_perf:` and `renderer_perf_pipelines:` lines if enabled.
 

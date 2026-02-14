@@ -32,16 +32,21 @@ This ADR defines a bounded, portable isolated-opacity mechanism that:
 
 ### D1 — Isolated opacity is expressed as a compositing group alpha (preferred)
 
-Extend the existing compositing group descriptor to carry an optional alpha multiplier:
+Extend the existing compositing group descriptor to carry an optional opacity multiplier:
 
-- `CompositeGroupDesc { bounds, mode, quality, alpha }`
+- `CompositeGroupDesc { bounds, mode, quality, opacity }`
 
 Semantics:
 
 - The renderer renders the group’s children into an offscreen intermediate.
 - On `PopCompositeGroup`, the renderer composites the intermediate into the parent using:
   - the requested `mode`, and
-  - an additional premultiplied alpha multiplier `alpha` applied to the intermediate output.
+  - an additional premultiplied alpha multiplier `opacity` applied to the intermediate output.
+
+API notes:
+
+- `opacity` defaults to `1.0`.
+- Builders should prefer fluent construction (e.g. `CompositeGroupDesc::new(...).with_opacity(...)`).
 
 This reuses the existing “bounded intermediates + deterministic degradation” machinery and avoids
 introducing a new stack/op surface.
@@ -56,19 +61,19 @@ introducing a new stack/op surface.
 
 ## Semantics (normative)
 
-### Alpha
+### Opacity
 
-- `alpha` is a finite `f32`.
-- Renderers clamp `alpha` to `[0, 1]`.
-- `alpha == 1` is the identity (no additional change).
+- `opacity` is a finite `f32`.
+- Renderers clamp `opacity` to `[0, 1]`.
+- `opacity == 1` is the identity (no additional change).
 
 ### Order and stacks
 
 - Scene operation order remains authoritative.
 - Compositing groups are **sequence points**: renderers must not reorder ops across group
   boundaries.
-- Clip/mask/opacity stacks apply normally inside the group; the group alpha is applied only at the
-  group composite boundary.
+- Clip/mask/opacity stacks apply normally inside the group; the group opacity is applied only at
+  the group composite boundary.
 
 ### Budgets and deterministic degradation
 
@@ -79,10 +84,9 @@ When a group cannot be allocated within budgets:
 2. If no intermediate tier fits, the renderer MUST degrade deterministically:
    - behave as if the group was not isolated,
    - and treat `mode` as `Over`.
-   - Best-effort approximation for `alpha`:
-     - if `mode` was `Over`, apply `PushOpacity { opacity: alpha }` behavior to children as an
-       approximation (not equivalent for overlapping children, but deterministic and bounded),
-     - otherwise ignore `alpha` (equivalent to `alpha = 1`).
+   - v1 approximation for `opacity` (deterministic):
+     - renderers MAY ignore `opacity` when the group is not isolated (equivalent to
+       `opacity = 1.0`).
 
 This degradation is visual-only and must not affect layout or hit-testing.
 
@@ -104,4 +108,3 @@ This degradation is visual-only and must not affect layout or hit-testing.
 - Compositing groups and blend modes: `docs/adr/0247-compositing-groups-and-blend-modes-v1.md`
 - Renderer budgets and deterministic degradation: `docs/adr/0118-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Scene ordering and batching: `docs/adr/0009-renderer-ordering-and-batching.md`
-

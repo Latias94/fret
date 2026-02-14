@@ -69,6 +69,15 @@ pub(super) struct ViewportUniform {
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct RenderSpaceUniform {
+    /// Absolute (root-scene) pixel origin that maps to framebuffer (0,0) for the current pass.
+    pub(super) origin_px: [f32; 2],
+    /// Framebuffer size in pixels for the current pass.
+    pub(super) size_px: [f32; 2],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct ScaleParamsUniform {
     pub(super) scale: u32,
     pub(super) _pad0: u32,
@@ -524,6 +533,14 @@ pub(super) struct PathDraw {
     pub(super) vertex_count: u32,
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct ClipPathMaskDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+}
+
 pub(super) struct PathIntermediate {
     pub(super) size: (u32, u32),
     pub(super) format: wgpu::TextureFormat,
@@ -554,11 +571,18 @@ pub(super) enum EffectMarkerKind {
         quality: fret_core::EffectQuality,
     },
     Pop,
+    ClipPathPush {
+        scissor: ScissorRect,
+        uniform_index: u32,
+        mask_draw_index: u32,
+    },
+    ClipPathPop,
     CompositeGroupPush {
         scissor: ScissorRect,
         uniform_index: u32,
         mode: fret_core::BlendMode,
         quality: fret_core::EffectQuality,
+        opacity: f32,
     },
     CompositeGroupPop,
 }
@@ -575,6 +599,7 @@ pub(super) struct SceneEncoding {
     pub(super) viewport_vertices: Vec<ViewportVertex>,
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
+    pub(super) clip_path_masks: Vec<ClipPathMaskDraw>,
     pub(super) clips: Vec<ClipRRectUniform>,
     pub(super) masks: Vec<MaskGradientUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
@@ -594,6 +619,7 @@ impl SceneEncoding {
         self.viewport_vertices.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();
+        self.clip_path_masks.clear();
         self.clips.clear();
         self.masks.clear();
         self.uniforms.clear();

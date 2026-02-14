@@ -219,6 +219,16 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_rect(state, rect);
             mix_corners(state, corner_radii)
         }
+        SceneOp::PushClipPath {
+            bounds,
+            origin,
+            path,
+        } => {
+            let mut state = mix_u64(state, 14);
+            state = mix_rect(state, bounds);
+            state = mix_point(state, origin);
+            mix_u64(state, path.data().as_ffi())
+        }
         SceneOp::PopClip => mix_u64(state, 2),
         SceneOp::PushMask { bounds, mask } => {
             let mut state = mix_u64(state, 108);

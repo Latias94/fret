@@ -226,11 +226,16 @@ impl SceneRecording {
                     }
                     layer_depth = layer_depth.saturating_sub(1);
                 }
-                SceneOp::PushClipRect { .. } | SceneOp::PushClipRRect { .. } => {
+                SceneOp::PushClipRect { .. }
+                | SceneOp::PushClipRRect { .. }
+                | SceneOp::PushClipPath { .. } => {
                     let ok = match op {
                         SceneOp::PushClipRect { rect } => rect_is_finite(rect),
                         SceneOp::PushClipRRect { rect, corner_radii } => {
                             rect_is_finite(rect) && corners_is_finite(corner_radii)
+                        }
+                        SceneOp::PushClipPath { bounds, origin, .. } => {
+                            rect_is_finite(bounds) && point_is_finite(origin)
                         }
                         _ => unreachable!(),
                     };

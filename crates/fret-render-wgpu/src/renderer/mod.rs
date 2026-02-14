@@ -59,6 +59,7 @@ pub struct Renderer {
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
+    render_space_buffer: wgpu::Buffer,
     uniform_stride: u64,
     uniform_capacity: usize,
     clip_buffer: wgpu::Buffer,
@@ -109,6 +110,8 @@ pub struct Renderer {
     path_msaa_pipeline_format: Option<wgpu::TextureFormat>,
     path_msaa_pipeline: Option<wgpu::RenderPipeline>,
     path_msaa_pipeline_sample_count: Option<u32>,
+
+    path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
     composite_pipelines: [Option<wgpu::RenderPipeline>; 4],

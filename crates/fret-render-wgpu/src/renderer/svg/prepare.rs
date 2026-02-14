@@ -75,6 +75,7 @@ impl Renderer {
                 | SceneOp::PopLayer
                 | SceneOp::PushClipRect { .. }
                 | SceneOp::PushClipRRect { .. }
+                | SceneOp::PushClipPath { .. }
                 | SceneOp::PopClip
                 | SceneOp::PushEffect { .. }
                 | SceneOp::PopEffect

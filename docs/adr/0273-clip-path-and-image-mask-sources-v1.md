@@ -1,7 +1,7 @@
 ---
 title: ClipPath and Image Mask Sources v1
 status: Draft
-date: 2026-02-13
+date: 2026-02-14
 ---
 
 # ADR 0273: ClipPath and Image Mask Sources v1
@@ -37,7 +37,7 @@ If these are not standardized, ecosystems will either:
 
 Extend the scene clip stack with a path-based clip:
 
-- `SceneOp::PushClipPath { bounds: Rect, path: PathId }`
+- `SceneOp::PushClipPath { bounds: Rect, origin: Point, path: PathId }`
 - `SceneOp::PopClip`
 
 Notes:
@@ -46,6 +46,8 @@ Notes:
   implementation and enables budgeting.
 - The clip geometry comes from a prepared path handle (`PathId`), produced by the existing path
   service. The path is interpreted as a filled shape (v1; stroke-based clips are deferred).
+- `origin` is the local-space placement of the path clip, consistent with `SceneOp::Path`:
+  renderers apply the current transform stack to the path vertices after translating by `origin`.
 
 ### D2 — Extend mask sources with an image mask (v1)
 
@@ -117,4 +119,3 @@ Degradation must be visual-only and must not affect layout.
 - Scene transform and clip composition: `docs/adr/0078-scene-transform-and-clip-composition.md`
 - Mask layers and alpha masks: `docs/adr/0239-mask-layers-and-alpha-masks-v1.md`
 - Renderer budgets and deterministic degradation: `docs/adr/0118-renderer-intermediate-budgets-and-effect-degradation-v1.md`
-

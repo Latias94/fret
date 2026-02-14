@@ -278,6 +278,23 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_clip_path<T>(
+        &mut self,
+        bounds: Rect,
+        origin: Point,
+        path: PathId,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushClipPath {
+            bounds,
+            origin,
+            path,
+        });
+        let out = f(self);
+        self.push(SceneOp::PopClip);
+        out
+    }
+
     pub fn with_mask<T>(&mut self, bounds: Rect, mask: Mask, f: impl FnOnce(&mut Self) -> T) -> T {
         self.push(SceneOp::PushMask { bounds, mask });
         let out = f(self);
@@ -377,6 +394,17 @@ pub enum SceneOp {
     PushClipRRect {
         rect: Rect,
         corner_radii: Corners,
+    },
+    /// Push a path-based clip entry (clip-path).
+    ///
+    /// `bounds` is a computation bound (not an implicit clip) used to bound GPU work and enable
+    /// deterministic budgeting/degradation. The clip geometry is given by a prepared path handle.
+    ///
+    /// v1 note: renderers may implement this via an offscreen intermediate + mask composite.
+    PushClipPath {
+        bounds: Rect,
+        origin: Point,
+        path: PathId,
     },
     PopClip,
 

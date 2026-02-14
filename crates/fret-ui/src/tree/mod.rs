@@ -283,6 +283,9 @@ impl<H: UiHost> Node<H> {
 #[inline]
 unsafe fn assume_init_slice_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
     // SAFETY: `MaybeUninit<T>` has the same layout as `T`, and the caller guarantees initialization.
+    //
+    // Note: our pinned toolchain does not expose a standard-library helper for assuming init on
+    // `&[MaybeUninit<T>]`, so we use the conventional `from_raw_parts` cast.
     unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<T>(), slice.len()) }
 }
 
@@ -322,6 +325,7 @@ impl<const N: usize> SmallNodeList<N> {
         if !self.spill.is_empty() {
             return self.spill.as_slice();
         }
+        debug_assert!(self.len <= N);
         // SAFETY: when `spill` is empty, indices `0..len` are initialized via `set()`.
         unsafe { assume_init_slice_ref(&self.inline[..self.len]) }
     }
@@ -349,10 +353,12 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
         if self.spill.is_empty() && self.len < N {
             self.inline[self.len].write(value);
             self.len += 1;
+            debug_assert!(self.len <= N);
             return;
         }
 
         if self.spill.is_empty() {
+            debug_assert!(self.len <= N);
             self.spill.reserve(self.len.saturating_add(1));
             // SAFETY: indices `0..len` are initialized while `spill` is empty.
             let inline = unsafe { assume_init_slice_ref(&self.inline[..self.len]) };
@@ -367,6 +373,7 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
         if !self.spill.is_empty() {
             return self.spill.as_slice();
         }
+        debug_assert!(self.len <= N);
         // SAFETY: indices `0..len` are initialized until we spill.
         unsafe { assume_init_slice_ref(&self.inline[..self.len]) }
     }
