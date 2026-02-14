@@ -1877,6 +1877,7 @@ dependencies = [
  "fret-dnd",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "slotmap",
  "tracing",
 ]

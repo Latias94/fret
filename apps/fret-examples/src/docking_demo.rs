@@ -26,6 +26,8 @@ use std::sync::Arc;
 const DOCKING_DEMO_TAB_BAR_H: Px = Px(28.0);
 const DOCKING_DEMO_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 
+const CMD_DOCK_DEMO_SPLIT_TOGGLE: &str = "dock_demo.split.toggle";
+
 struct DockingDemoDragAnchor {
     test_id: &'static str,
 }
@@ -149,6 +151,14 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
                                         .layout(LayoutRefinement::default().w_full()),
                                     |cx| {
                                         vec![
+                                            shadcn::Button::new(
+                                                "Toggle collapse (layout.expand motion)",
+                                            )
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .size(shadcn::ButtonSize::Sm)
+                                            .on_click(CMD_DOCK_DEMO_SPLIT_TOGGLE)
+                                            .test_id("dock-demo-split-toggle")
+                                            .into_element(cx),
                                             cx.text("Scene"),
                                             cx.text("  • Camera"),
                                             cx.text("  • Directional Light"),
@@ -402,6 +412,33 @@ impl WinitAppDriver for DockingDemoDriver {
         } = context;
 
         if state.ui.dispatch_command(app, services, &command) {
+            return;
+        }
+        if command.as_str() == CMD_DOCK_DEMO_SPLIT_TOGGLE {
+            let Some(rt) = self.docking_runtime else {
+                return;
+            };
+
+            let Some((split, first_fraction)) = app.global::<DockManager>().and_then(|dock| {
+                let split = dock.graph.window_root(window)?;
+                match dock.graph.node(split)? {
+                    fret_core::DockNode::Split { fractions, .. } if fractions.len() == 2 => {
+                        Some((split, *fractions.first().unwrap_or(&0.5)))
+                    }
+                    _ => None,
+                }
+            }) else {
+                return;
+            };
+
+            let target = if first_fraction < 0.2 { 0.5 } else { 0.12 };
+            let _ = rt.on_dock_op(
+                app,
+                fret_core::DockOp::SetSplitFractionTwo {
+                    split,
+                    first_fraction: target,
+                },
+            );
             return;
         }
         if command.as_str() == "dock_demo.close" {
