@@ -279,6 +279,10 @@ pub(super) fn preview_motion_presets(
                     .to_string(),
             ),
             (
+                "easing.motion.layout.expand",
+                fmt_bezier(theme.easing_token("easing.motion.layout.expand")),
+            ),
+            (
                 "duration.motion.stack.shift",
                 theme
                     .duration_ms_token("duration.motion.stack.shift")

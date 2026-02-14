@@ -274,7 +274,9 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let theme = Theme::global(&*cx.app).clone();
         let duration_ms = theme.duration_ms_token("duration.motion.layout.expand");
         let duration = Duration::from_millis(duration_ms as u64);
-        let easing = theme.easing_token("easing.motion.emphasized");
+        let easing = theme
+            .easing_by_key("easing.motion.layout.expand")
+            .unwrap_or_else(|| theme.easing_token("easing.motion.emphasized"));
 
         let row = stack::hstack(
             cx,

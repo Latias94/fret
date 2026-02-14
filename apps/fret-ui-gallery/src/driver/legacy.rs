@@ -2137,6 +2137,8 @@ impl UiGalleryDriver {
             shadcn_ease,
         );
         cfg.easings
+            .insert("easing.motion.layout.expand".to_string(), shadcn_ease);
+        cfg.easings
             .insert("easing.motion.stack.shift".to_string(), shadcn_ease);
 
         cfg
