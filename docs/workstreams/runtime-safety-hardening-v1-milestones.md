@@ -109,3 +109,17 @@ Exit criteria:
 - `cargo clippy -p fret-app --all-targets -- -D warnings` is green.
 - `cargo nextest run -p fret-app` is green.
 - `python3 tools/check_layering.py` is green.
+
+## M8 — Defensive panic hardening (fret-ui follow-ups)
+
+Deliverables:
+
+- `fret-ui` element state access is resilient to corrupted state storage (type mismatches) by default.
+- Element state storage invariants are restored on unwind (no state poisoning).
+- Declarative host widgets avoid `expect(...)` for text input/area caches (defensive fallbacks; strict mode remains available via `FRET_STRICT_RUNTIME`).
+
+Exit criteria:
+
+- `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-ui` is green.
+- `python3 tools/check_layering.py` is green.

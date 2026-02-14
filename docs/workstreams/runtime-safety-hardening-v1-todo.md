@@ -130,3 +130,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo clippy -p fret-app --all-targets -- -D warnings`: PASS
     - `cargo nextest run -p fret-app`: PASS
     - `python3 tools/check_layering.py`: PASS
+
+## M8 — Defensive panic hardening (fret-ui follow-ups)
+
+- [x] RSH-ui-004 Make element state access resilient to corruption (type mismatches) and unwind-safe by default (strict mode panics).
+  - Evidence: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementState::{with_state_mut, try_with_state_mut}`)
+  - Evidence: `crates/fret-ui/src/elements/access.rs` (tests: `with_element_state_recovers_from_type_mismatch_in_non_strict_mode`, `with_element_state_restores_state_on_panic`)
+- [x] RSH-ui-005 Remove `expect("text input/text area")` from declarative host widgets (defensive debug assertions + stable fallbacks).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout.rs`
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui`: PASS
+    - `python3 tools/check_layering.py`: PASS
