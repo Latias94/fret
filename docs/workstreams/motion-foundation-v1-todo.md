@@ -169,3 +169,16 @@ Per-recipe tracking (pilot follow-ups):
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
     - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+
+## P2 — Ecosystem adoption seed (layout.expand beyond UI gallery)
+
+- [x] MF-MOTION-adopt-001 Docking split fractions animate with semantic duration/easing and have a deterministic re-target gate.
+  - Goal:
+    - Prove that layout-affecting motion can be shared outside shadcn/material3 components without pushing DOM assumptions
+      into `crates/fret-ui`.
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/space.rs` (`split_fraction_motion_*`)
+    - `ecosystem/fret-docking/src/dock/layout.rs` (`compute_layout_map_with_split_fractions_overrides`)
+    - `apps/fret-examples/src/docking_demo.rs` (`dock_demo.split.toggle`)
+    - `tools/diag-scripts/docking-demo-split-toggle-retarget-fixed-frame-delta.json`
+    - `crates/fret-diag/src/lib.rs` (builtin suite: `docking-motion-pilot`)

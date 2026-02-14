@@ -434,6 +434,8 @@ Diag gates:
 - Overlay dialog open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json`
 - Sonner open/close under fixed frame delta: `tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json`
 - Sonner interrupt under fixed frame delta: `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`
+- Docking split fraction re-target mid-flight (layout.expand) under fixed frame delta:
+  - `tools/diag-scripts/docking-demo-split-toggle-retarget-fixed-frame-delta.json`
 - Material3 tabs indicator moves (pixels changed under fixed delta): `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json`
 - Material3 navigation bar active indicator moves (pixels changed under fixed delta): `tools/diag-scripts/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json`
 - Material3 navigation rail active indicator moves (pixels changed under fixed delta): `tools/diag-scripts/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json`
