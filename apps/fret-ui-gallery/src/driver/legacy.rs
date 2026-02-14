@@ -3119,6 +3119,17 @@ impl WinitAppDriver for UiGalleryDriver {
                 state.ui.dispatch_event(app, services, event);
             }
         }
+
+        let should_drive_ui_assets = match event {
+            Event::ImageRegistered { token, .. } | Event::ImageRegisterFailed { token, .. } => {
+                use fret_ui_assets::image_asset_cache::ImageAssetCacheHostExt as _;
+                app.with_image_asset_cache(|cache, _app| cache.key_for_token(*token).is_some())
+            }
+            _ => false,
+        };
+        if should_drive_ui_assets {
+            let _ = fret_ui_assets::UiAssets::handle_event(app, window, event);
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {

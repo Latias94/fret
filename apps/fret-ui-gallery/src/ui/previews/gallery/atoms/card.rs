@@ -217,8 +217,15 @@ pub(in crate::ui) fn preview_card(
                 };
 
                 #[cfg(target_arch = "wasm32")]
-                let (event_cover, event_cover_state, event_cover_path_exists) =
-                    (event_cover_fallback, None, false);
+                let (event_cover, event_cover_state, event_cover_path_exists) = {
+                    static EVENT_COVER_TEST_JPG: OnceLock<ui_assets::ImageSource> = OnceLock::new();
+                    let source = EVENT_COVER_TEST_JPG.get_or_init(|| {
+                        ui_assets::ImageSource::from_url(Arc::<str>::from("textures/test.jpg"))
+                    });
+                    let state = cx.use_image_source_state(source);
+                    let image = state.image;
+                    (image.or(event_cover_fallback), Some(state), true)
+                };
 
                 let image = shadcn::MediaImage::maybe(event_cover)
                     .loading(true)
