@@ -9871,90 +9871,6 @@ impl SemanticsIndex {
     }
 }
 
-pub(super) fn json_pointer_set(
-    root: &mut serde_json::Value,
-    pointer: &str,
-    value: serde_json::Value,
-) -> Result<(), String> {
-    if pointer.is_empty() {
-        *root = value;
-        return Ok(());
-    }
-    if !pointer.starts_with('/') {
-        return Err(format!(
-            "invalid JSON pointer (must start with '/'): {pointer}"
-        ));
-    }
-
-    let mut tokens: Vec<String> = pointer[1..]
-        .split('/')
-        .map(unescape_json_pointer_token)
-        .collect();
-    if tokens.is_empty() {
-        *root = value;
-        return Ok(());
-    }
-
-    let last = tokens
-        .pop()
-        .ok_or_else(|| "invalid JSON pointer".to_string())?;
-
-    let mut cur: &mut serde_json::Value = root;
-    for t in tokens {
-        match cur {
-            serde_json::Value::Object(map) => {
-                let Some(next) = map.get_mut(&t) else {
-                    return Err(format!("JSON pointer path does not exist: {pointer}"));
-                };
-                cur = next;
-            }
-            serde_json::Value::Array(arr) => {
-                let idx = t
-                    .parse::<usize>()
-                    .map_err(|_| format!("JSON pointer expected array index, got: {t}"))?;
-                let Some(next) = arr.get_mut(idx) else {
-                    return Err(format!("JSON pointer array index out of bounds: {pointer}"));
-                };
-                cur = next;
-            }
-            _ => {
-                return Err(format!(
-                    "JSON pointer path does not resolve to a container: {pointer}"
-                ));
-            }
-        }
-    }
-
-    match cur {
-        serde_json::Value::Object(map) => {
-            map.insert(last, value);
-            Ok(())
-        }
-        serde_json::Value::Array(arr) => {
-            if last == "-" {
-                arr.push(value);
-                return Ok(());
-            }
-
-            let idx = last
-                .parse::<usize>()
-                .map_err(|_| format!("JSON pointer expected array index, got: {last}"))?;
-            if idx < arr.len() {
-                arr[idx] = value;
-                return Ok(());
-            }
-            if idx == arr.len() {
-                arr.push(value);
-                return Ok(());
-            }
-            Err(format!("JSON pointer array index out of bounds: {pointer}"))
-        }
-        _ => Err(format!(
-            "JSON pointer path does not resolve to a container: {pointer}"
-        )),
-    }
-}
-
 pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
     bundle_path: &Path,
     min_keep_alive_reuse_frames: u64,
@@ -20035,25 +19951,4 @@ fn parse_redacted_len_bytes(value: &str) -> Option<u64> {
         return None;
     }
     digits.parse::<u64>().ok()
-}
-
-fn unescape_json_pointer_token(raw: &str) -> String {
-    let mut out = String::with_capacity(raw.len());
-    let mut it = raw.chars();
-    while let Some(c) = it.next() {
-        if c == '~' {
-            match it.next() {
-                Some('0') => out.push('~'),
-                Some('1') => out.push('/'),
-                Some(other) => {
-                    out.push('~');
-                    out.push(other);
-                }
-                None => out.push('~'),
-            }
-        } else {
-            out.push(c);
-        }
-    }
-    out
 }

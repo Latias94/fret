@@ -102,3 +102,5 @@ Evidence pointers:
 ## Phase 7: Implementation split (reduce monolith risk)
 
 - [x] Extract script/pick runtime helpers from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/script_runtime.rs`.
+- [x] Move `json_pointer_set` helper out of `crates/fret-diag/src/stats.rs` (share via `crates/fret-diag/src/util.rs`).
+- [x] Extract pick subcommand handlers into `crates/fret-diag/src/commands/pick.rs` (reduce `lib.rs` churn surface).

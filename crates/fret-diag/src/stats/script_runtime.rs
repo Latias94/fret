@@ -370,7 +370,7 @@ pub(crate) fn apply_pick_to_script(
     let bytes = std::fs::read(src).map_err(|e| e.to_string())?;
     let mut script: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
 
-    super::json_pointer_set(&mut script, json_pointer, selector)?;
+    crate::util::json_pointer_set(&mut script, json_pointer, selector)?;
 
     let bytes = serde_json::to_vec_pretty(&script).map_err(|e| e.to_string())?;
     if let Some(parent) = dst.parent() {
