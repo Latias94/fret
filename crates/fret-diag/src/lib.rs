@@ -26,6 +26,7 @@ mod shrink;
 mod stats;
 mod suite_summary;
 mod tooling_failures;
+mod trace;
 pub mod transport;
 mod util;
 
@@ -45,8 +46,8 @@ use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
 use run_artifacts::{
     materialize_bundle_json_from_manifest_chunks_if_missing,
-    materialize_run_id_bundle_json_from_chunks_if_missing, run_id_artifact_dir,
-    write_run_id_bundle_json, write_run_id_script_result,
+    materialize_run_id_bundle_json_from_chunks_if_missing, refresh_run_id_manifest_file_index,
+    run_id_artifact_dir, write_run_id_bundle_json, write_run_id_script_result,
 };
 use script_tooling::{
     NormalizedScript, ScriptLintReport, ScriptSchemaReport, lint_scripts,
@@ -178,6 +179,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
     let mut stats_diff: Option<(PathBuf, PathBuf)> = None;
+    let mut trace_chrome: bool = false;
+    let mut trace_out: Option<PathBuf> = None;
     let mut warmup_frames: u64 = 0;
     let mut lint_all_test_ids_bounds: bool = false;
     let mut lint_eps_px: f32 = 0.5;
@@ -660,6 +663,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --sort".to_string());
                 };
                 sort_override = Some(BundleStatsSort::parse(&v)?);
+                i += 1;
+            }
+            "--trace" => {
+                trace_chrome = true;
+                i += 1;
+            }
+            "--trace-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --trace-out".to_string());
+                };
+                trace_out = Some(PathBuf::from(v));
                 i += 1;
             }
             "--diff" => {
@@ -1945,6 +1960,30 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 resolved_out_dir.display()
             ))
         }
+        "trace" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
+            let Some(src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle path (try: fretboard diag trace ./target/fret-diag/1234/bundle.json)".to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let bundle_path = resolve_bundle_json_path(&src);
+            let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+            let out = trace_out
+                .take()
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| bundle_dir.join("trace.chrome.json"));
+            crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &out)?;
+            println!("{}", out.display());
+            Ok(())
+        }
         "pack" => {
             if rest.len() > 1 {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
@@ -2777,6 +2816,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &connected,
                     script_json,
                     wants_post_run_checks || wants_pack,
+                    trace_chrome,
                     Some("diag-run"),
                     None,
                     timeout_ms,
@@ -3058,6 +3098,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &connected,
                 script_json,
                 wants_pack,
+                trace_chrome,
                 Some("diag-run"),
                 None,
                 timeout_ms,
@@ -4235,6 +4276,7 @@ See: `docs/tracy.md`.\n";
                     &connected,
                     script_json,
                     false,
+                    trace_chrome,
                     None,
                     None,
                     timeout_ms,
@@ -6261,6 +6303,7 @@ See: `docs/tracy.md`.\n";
                         connected,
                         script_json,
                         true,
+                        trace_chrome,
                         Some(dump_label.as_str()),
                         None,
                         timeout_ms,
@@ -13070,6 +13113,7 @@ fn run_script_over_transport(
     connected: &ConnectedToolingTransport,
     script_json: serde_json::Value,
     dump_bundle: bool,
+    trace_chrome: bool,
     bundle_label: Option<&str>,
     dump_max_snapshots: Option<u32>,
     timeout_ms: u64,
@@ -13268,6 +13312,21 @@ fn run_script_over_transport(
             }
         };
         write_run_id_bundle_json(out_dir, result.run_id, &bundle_path);
+        if trace_chrome {
+            let run_dir = run_id_artifact_dir(out_dir, result.run_id);
+            let stable_bundle_path = run_dir.join("bundle.json");
+            let src = if stable_bundle_path.is_file() {
+                stable_bundle_path
+            } else {
+                bundle_path.clone()
+            };
+            let trace_path = run_dir.join("trace.chrome.json");
+            if let Err(err) = crate::trace::write_chrome_trace_from_bundle_path(&src, &trace_path) {
+                push_tooling_event_log_entry(&mut result, "tooling_trace_chrome_failed", Some(err));
+            } else {
+                refresh_run_id_manifest_file_index(out_dir, result.run_id);
+            }
+        }
         result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));
         result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(&bundle_path));
         Some(bundle_path)
@@ -15073,6 +15132,7 @@ mod tests {
                 &connected,
                 script_json,
                 false,
+                false,
                 None,
                 None,
                 5_000,
@@ -15167,6 +15227,7 @@ mod tests {
             &root,
             &connected,
             script_json,
+            false,
             false,
             None,
             None,
@@ -15347,6 +15408,7 @@ mod tests {
             &connected,
             script_json,
             false,
+            false,
             None,
             None,
             5_000,
@@ -15515,6 +15577,7 @@ mod tests {
             &connected,
             script_json,
             true,
+            false,
             Some("dump"),
             None,
             5_000,
@@ -15532,6 +15595,133 @@ mod tests {
 
         let run_id_bundle = root.join("1").join("bundle.json");
         assert!(run_id_bundle.is_file(), "expected run_id bundle.json alias");
+    }
+
+    #[test]
+    fn run_script_over_transport_dump_bundle_with_trace_writes_run_id_trace_chrome_json() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-run-dump-trace-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["script_v2".to_string()],
+        };
+        crate::util::write_json_value(
+            &root.join("capabilities.json"),
+            &serde_json::to_value(caps).expect("capabilities json"),
+        )
+        .expect("write capabilities.json");
+
+        let cfg = crate::transport::FsDiagTransportConfig::from_out_dir(&root);
+
+        let runtime_cfg = cfg.clone();
+        std::thread::spawn(move || {
+            fn read_stamp(path: &Path) -> Option<u64> {
+                let s = std::fs::read_to_string(path).ok()?;
+                s.lines().last()?.trim().parse::<u64>().ok()
+            }
+
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while Instant::now() < deadline {
+                if read_stamp(&runtime_cfg.script_trigger_path).is_some() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+
+            let passed = fret_diag_protocol::UiScriptResultV1 {
+                schema_version: 1,
+                run_id: 1,
+                updated_unix_ms: crate::util::now_unix_ms(),
+                window: None,
+                stage: fret_diag_protocol::UiScriptStageV1::Passed,
+                step_index: Some(0),
+                reason_code: None,
+                reason: None,
+                evidence: None,
+                last_bundle_dir: None,
+                last_bundle_artifact: None,
+            };
+            let _ = crate::util::write_json_value(
+                &runtime_cfg.script_result_path,
+                &serde_json::to_value(passed).unwrap_or_else(|_| serde_json::json!({})),
+            );
+            let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while Instant::now() < deadline {
+                if read_stamp(&runtime_cfg.trigger_path).is_some() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+
+            let export_dir = runtime_cfg.out_dir.join("777-bundle");
+            let _ = std::fs::create_dir_all(&export_dir);
+            let _ = crate::util::write_json_value(
+                &export_dir.join("bundle.json"),
+                &serde_json::json!({
+                    "schema_version": 1,
+                    "windows": [],
+                }),
+            );
+            let _ = std::fs::write(runtime_cfg.out_dir.join("latest.txt"), b"777-bundle");
+        });
+
+        let connected =
+            connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 5_000, 5)
+                .expect("connect fs tooling");
+
+        let tool_script_result_path = root.join("tool.script.result.json");
+        let capabilities_check_path = root.join("check.capabilities.json");
+        let script_json = serde_json::json!({
+            "schema_version": 2,
+            "steps": [],
+        });
+
+        let (result, bundle_path) = run_script_over_transport(
+            &root,
+            &connected,
+            script_json,
+            true,
+            true,
+            Some("dump"),
+            None,
+            5_000,
+            5,
+            &tool_script_result_path,
+            &capabilities_check_path,
+        )
+        .expect("run_script_over_transport");
+
+        assert!(matches!(
+            result.stage,
+            fret_diag_protocol::UiScriptStageV1::Passed
+        ));
+        assert!(bundle_path.is_some());
+
+        let trace_path = root.join("1").join("trace.chrome.json");
+        assert!(trace_path.is_file(), "expected run_id trace.chrome.json");
+
+        let manifest_path = root.join("1").join("manifest.json");
+        let bytes = std::fs::read(&manifest_path).expect("read manifest.json");
+        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse manifest");
+        let ids = parsed
+            .get("files")
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(|f| f.get("id").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+        assert!(ids.contains(&"trace_chrome_json"));
     }
 
     #[test]

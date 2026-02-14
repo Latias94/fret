@@ -287,6 +287,11 @@ The command prints the export directory path, and writes:
    - `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 20`
    - JSON: `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
 
+5. Optional: emit a Chrome trace JSON derived from the bundle:
+
+   - During perf runs: `cargo run -p fretboard -- diag perf ui-gallery --trace --launch -- cargo run -p fret-ui-gallery --release`
+   - For an existing bundle: `cargo run -p fretboard -- diag trace <bundle_dir|bundle.json>`
+
 Notes:
 
 - When view caching is active, bundles include cache-root stats (replay ops, reuse reasons) to help

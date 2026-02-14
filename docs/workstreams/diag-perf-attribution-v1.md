@@ -165,6 +165,23 @@ Phase 2 (M2): opt-in trace workflow
   - export a trace artifact,
   - attach it to the run output directory/bundle.
 
+## Runbook (M2): generate a Chrome trace from a bundle
+
+This produces a Chrome trace JSON derived from `bundle.json` stats (a synthetic, phase-based
+timeline; low overhead).
+
+- During perf runs:
+  - `fretboard diag perf ... --trace`
+  - The trace is written under `<out_dir>/<run_id>/trace.chrome.json` and indexed in
+    `<out_dir>/<run_id>/manifest.json`.
+
+- For an existing bundle:
+  - `fretboard diag trace <bundle_dir|bundle.json>`
+  - Optional output override: `--trace-out <path>`
+
+Open the resulting JSON in Chrome tracing UI (or compatible viewers) to correlate phases with
+`tick_id` / `frame_id`.
+
 ## Validation / gates
 
 - Run existing Windows perf gates:

@@ -35,11 +35,11 @@ Acceptance:
 Deliverables:
 
 - A canonical “trace capture” switch for `diag perf` runs.
-- A local trace artifact attached to the run out-dir (and referenced by a manifest).
+- A local Chrome trace JSON attached to the run out-dir (and referenced by a manifest).
 
 Acceptance:
 
 - A single run can be triaged by:
   1) perf summary,
   2) stats budget view,
-  3) opening the exported trace in Chrome tracing UI.
+  3) opening the exported `trace.chrome.json` in Chrome tracing UI.

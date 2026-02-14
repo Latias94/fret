@@ -29,11 +29,12 @@
 
 ## P2 (M2): opt-in trace workflow
 
-- [ ] Define a trace artifact format and location under the run out-dir.
-- [ ] Add a `--trace` toggle to `diag perf` (or an env knob) that:
-  - [ ] enables tracing spans,
-  - [ ] exports a Chrome trace JSON,
-  - [ ] records the artifact in a run manifest.
+- [x] Define a trace artifact format and location under the run out-dir:
+  - [x] `trace.chrome.json` next to per-run `bundle.json` alias (`<out_dir>/<run_id>/`).
+- [x] Add a `--trace` toggle to `diag perf` that:
+  - [x] exports a Chrome trace JSON (bundle-derived synthetic timeline),
+  - [x] records the artifact in a run manifest (`manifest.json` file index).
+- [ ] Future: enable tracing spans (not just bundle-derived phases) when explicitly requested.
 
 ## Maintenance / hygiene
 
