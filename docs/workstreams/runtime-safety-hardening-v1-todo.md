@@ -156,6 +156,15 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
     - `cargo nextest run -p fret-ui`: PASS
     - `python3 tools/check_layering.py`: PASS
-- [ ] RSH-ui-007 Decide policy for `taffy` error handling (avoid `expect(...)` on layout engine operations).
-  - Evidence: `crates/fret-ui/src/declarative/host_widget/measure.rs` (e.g. `taffy.new_leaf`, `taffy.compute_layout`, `taffy.layout`)
-  - Evidence: `crates/fret-ui/src/layout/engine.rs` (`expect("taffy new_leaf")`)
+- [~] RSH-ui-007 Decide policy for `taffy` error handling (avoid `expect(...)` on layout engine operations).
+  - Policy (v1):
+    - Strict mode (`FRET_STRICT_RUNTIME`): panic on `taffy` errors.
+    - Default (non-strict): warn once + fall back to naive measurement/layout (no process termination).
+  - Evidence (implemented for host-widget measurement):
+    - `crates/fret-ui/src/declarative/host_widget/measure.rs` (`warn_taffy_error_once`, `fallback_measure_{flex,grid}`)
+  - Evidence (still pending for layout engine):
+    - `crates/fret-ui/src/layout/engine.rs` (`expect("taffy new_leaf")`)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui`: PASS
+    - `python3 tools/check_layering.py`: PASS
