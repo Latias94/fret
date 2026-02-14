@@ -205,6 +205,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_pointer_move_global_changes: Option<u64> = None;
     let mut min_run_paint_cache_hit_test_only_replay_allowed_max: Option<u64> = None;
     let mut max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64> = None;
+    let mut check_perf_hints: bool = false;
+    let mut check_perf_hints_deny: Vec<String> = Vec::new();
+    let mut check_perf_hints_min_severity: Option<String> = None;
     let mut max_working_set_bytes: Option<u64> = None;
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
@@ -813,6 +816,28 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "invalid value for --max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max"
                             .to_string()
                     })?);
+                i += 1;
+            }
+            "--check-perf-hints" => {
+                check_perf_hints = true;
+                i += 1;
+            }
+            "--check-perf-hints-deny" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-perf-hints-deny".to_string());
+                };
+                check_perf_hints_deny.push(v);
+                check_perf_hints = true;
+                i += 1;
+            }
+            "--check-perf-hints-min-severity" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-perf-hints-min-severity".to_string());
+                };
+                check_perf_hints_min_severity = Some(v);
+                check_perf_hints = true;
                 i += 1;
             }
             "--max-working-set-bytes" => {
@@ -7547,6 +7572,12 @@ See: `docs/tracy.md`.\n";
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
             let reuse_process = launch.is_none() || reuse_launch;
+            let perf_hint_gate_opts = parse_perf_hint_gate_options(
+                check_perf_hints,
+                &check_perf_hints_deny,
+                check_perf_hints_min_severity.as_deref(),
+            )?;
+            let wants_perf_hints = perf_hint_gate_opts.enabled;
             let cli_thresholds = PerfThresholds {
                 max_top_total_us,
                 max_top_layout_us,
@@ -7613,6 +7644,8 @@ See: `docs/tracy.md`.\n";
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_failures: Vec<serde_json::Value> = Vec::new();
+            let mut perf_hint_rows: Vec<serde_json::Value> = Vec::new();
+            let mut perf_hint_failures: Vec<serde_json::Value> = Vec::new();
             let mut perf_baseline_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
             let stats_opts = BundleStatsOptions { warmup_frames };
@@ -7757,6 +7790,53 @@ See: `docs/tracy.md`.\n";
                                 BundleStatsOptions::default(),
                             )?;
                             report_warmup_frames = 0;
+                        }
+                        if wants_perf_hints {
+                            let triage = triage_json_from_stats(
+                                &bundle_path,
+                                &report,
+                                sort,
+                                report_warmup_frames,
+                            );
+                            let failures = perf_hint_gate_failures_for_triage_json(
+                                script_key.as_str(),
+                                &bundle_path,
+                                Some(0),
+                                &triage,
+                                &perf_hint_gate_opts,
+                            );
+                            let hints = triage
+                                .get("hints")
+                                .cloned()
+                                .unwrap_or(serde_json::json!([]));
+                            let unit_costs = triage
+                                .get("unit_costs")
+                                .cloned()
+                                .unwrap_or(serde_json::json!({}));
+                            let worst = triage
+                                .get("worst")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null);
+                            let trace_chrome_json_path = triage
+                                .get("bundle")
+                                .and_then(|b| b.get("trace_chrome_json_path"))
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null);
+
+                            perf_hint_failures.extend(failures.clone());
+                            perf_hint_rows.push(serde_json::json!({
+                                "script": script_key.clone(),
+                                "sort": sort.as_str(),
+                                "repeat": repeat,
+                                "run_index": 0,
+                                "bundle": bundle_path.display().to_string(),
+                                "warmup_frames": report_warmup_frames,
+                                "hints": hints,
+                                "unit_costs": unit_costs,
+                                "worst": worst,
+                                "trace_chrome_json_path": trace_chrome_json_path,
+                                "failures": failures,
+                            }));
                         }
                         let top = report.top.first();
                         let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
@@ -8443,6 +8523,56 @@ See: `docs/tracy.md`.\n";
                         )?;
                         report_warmup_frames = 0;
                     }
+
+                    let script_key = normalize_repo_relative_path(&workspace_root, &src);
+                    if wants_perf_hints {
+                        let triage = triage_json_from_stats(
+                            &bundle_path,
+                            &report,
+                            sort,
+                            report_warmup_frames,
+                        );
+                        let failures = perf_hint_gate_failures_for_triage_json(
+                            &script_key,
+                            &bundle_path,
+                            Some(run_index as u64),
+                            &triage,
+                            &perf_hint_gate_opts,
+                        );
+                        let hints = triage
+                            .get("hints")
+                            .cloned()
+                            .unwrap_or(serde_json::json!([]));
+                        let unit_costs = triage
+                            .get("unit_costs")
+                            .cloned()
+                            .unwrap_or(serde_json::json!({}));
+                        let worst = triage
+                            .get("worst")
+                            .cloned()
+                            .unwrap_or(serde_json::Value::Null);
+                        let trace_chrome_json_path = triage
+                            .get("bundle")
+                            .and_then(|b| b.get("trace_chrome_json_path"))
+                            .cloned()
+                            .unwrap_or(serde_json::Value::Null);
+
+                        perf_hint_failures.extend(failures.clone());
+                        perf_hint_rows.push(serde_json::json!({
+                            "script": script_key.clone(),
+                            "sort": sort.as_str(),
+                            "repeat": repeat,
+                            "run_index": run_index,
+                            "bundle": bundle_path.display().to_string(),
+                            "warmup_frames": report_warmup_frames,
+                            "hints": hints,
+                            "unit_costs": unit_costs,
+                            "worst": worst,
+                            "trace_chrome_json_path": trace_chrome_json_path,
+                            "failures": failures,
+                        }));
+                    }
+
                     let top = report.top.first();
                     let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
                     let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
@@ -9434,6 +9564,26 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
+            let mut perf_hint_failure: Option<(usize, PathBuf)> = None;
+            if wants_perf_hints {
+                let out_path = resolved_out_dir.join("check.perf_hints.json");
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "generated_unix_ms": now_unix_ms(),
+                    "kind": "perf_hints",
+                    "out_dir": resolved_out_dir.display().to_string(),
+                    "warmup_frames": warmup_frames,
+                    "min_severity": perf_hint_gate_opts.min_severity.as_str(),
+                    "deny": perf_hint_gate_opts.deny_codes.iter().cloned().collect::<Vec<_>>(),
+                    "rows": perf_hint_rows,
+                    "failures": perf_hint_failures,
+                });
+                let _ = write_json_value(&out_path, &payload);
+                if !perf_hint_failures.is_empty() {
+                    perf_hint_failure = Some((perf_hint_failures.len(), out_path.clone()));
+                }
+            }
+
             if launched_by_fretboard {
                 stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             }
@@ -9469,6 +9619,14 @@ See: `docs/tracy.md`.\n";
             if let Some((failures, evidence)) = perf_threshold_failure {
                 eprintln!(
                     "PERF threshold gate failed (failures={}, evidence={})",
+                    failures,
+                    evidence.display()
+                );
+                std::process::exit(1);
+            }
+            if let Some((failures, evidence)) = perf_hint_failure {
+                eprintln!(
+                    "PERF hints gate failed (failures={}, evidence={})",
                     failures,
                     evidence.display()
                 );
@@ -10490,6 +10648,123 @@ fn triage_json_from_stats(
     })
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum PerfHintSeverity {
+    Info,
+    Warn,
+    Error,
+}
+
+impl PerfHintSeverity {
+    fn parse(s: &str) -> Result<Self, String> {
+        match s.trim() {
+            "info" => Ok(Self::Info),
+            "warn" => Ok(Self::Warn),
+            "error" => Ok(Self::Error),
+            other => Err(format!(
+                "invalid perf hint severity: {other} (expected: info|warn|error)"
+            )),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Error => "error",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PerfHintGateOptions {
+    enabled: bool,
+    min_severity: PerfHintSeverity,
+    deny_codes: BTreeSet<String>,
+}
+
+fn parse_perf_hint_gate_options(
+    enabled: bool,
+    deny_specs: &[String],
+    min_severity_spec: Option<&str>,
+) -> Result<PerfHintGateOptions, String> {
+    let min_severity = match min_severity_spec {
+        Some(v) => PerfHintSeverity::parse(v)?,
+        None => PerfHintSeverity::Warn,
+    };
+    let mut deny_codes: BTreeSet<String> = BTreeSet::new();
+    for spec in deny_specs {
+        for raw in spec.split(',') {
+            let code = raw.trim();
+            if code.is_empty() {
+                continue;
+            }
+            deny_codes.insert(code.to_string());
+        }
+    }
+    Ok(PerfHintGateOptions {
+        enabled,
+        min_severity,
+        deny_codes,
+    })
+}
+
+fn perf_hint_gate_failures_for_triage_json(
+    script_key: &str,
+    bundle_path: &Path,
+    run_index: Option<u64>,
+    triage: &serde_json::Value,
+    opts: &PerfHintGateOptions,
+) -> Vec<serde_json::Value> {
+    if !opts.enabled {
+        return Vec::new();
+    }
+
+    let hints = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    if hints.is_empty() {
+        return Vec::new();
+    }
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    for hint in hints {
+        let code = hint.get("code").and_then(|v| v.as_str()).unwrap_or("");
+        if code.is_empty() {
+            continue;
+        }
+        let sev_str = hint
+            .get("severity")
+            .and_then(|v| v.as_str())
+            .unwrap_or("info");
+        let sev = PerfHintSeverity::parse(sev_str).unwrap_or(PerfHintSeverity::Info);
+
+        let is_denied = if opts.deny_codes.is_empty() {
+            true
+        } else {
+            opts.deny_codes.contains(code)
+        };
+        if !is_denied {
+            continue;
+        }
+        if sev < opts.min_severity {
+            continue;
+        }
+
+        failures.push(serde_json::json!({
+            "script": script_key,
+            "bundle": bundle_path.display().to_string(),
+            "run_index": run_index,
+            "code": code,
+            "severity": sev.as_str(),
+            "hint": hint,
+        }));
+    }
+    failures
+}
+
 fn zip_add_root_artifacts(
     zip: &mut zip::ZipWriter<std::fs::File>,
     artifacts_root: &Path,
@@ -10508,6 +10783,7 @@ fn zip_add_root_artifacts(
         "check.pixels_changed.json",
         "check.idle_no_paint.json",
         "check.perf_thresholds.json",
+        "check.perf_hints.json",
         "check.redraw_hitches.json",
         "check.resource_footprint.json",
         "check.view_cache_reuse_stable.json",
@@ -10650,6 +10926,7 @@ fn write_evidence_index(
     add_file("check.idle_no_paint", "check.idle_no_paint.json");
     add_file("check.pixels_changed", "check.pixels_changed.json");
     add_file("check.perf_thresholds", "check.perf_thresholds.json");
+    add_file("check.perf_hints", "check.perf_hints.json");
     add_file("check.redraw_hitches", "check.redraw_hitches.json");
     add_file("check.resource_footprint", "check.resource_footprint.json");
     add_file(
@@ -15970,6 +16247,97 @@ mod tests {
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0),
             7_000
+        );
+    }
+
+    #[test]
+    fn perf_hints_gate_reports_failures_for_denied_warn_hints() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-perf-hints-gate-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "events": [],
+                "snapshots": [{
+                    "schema_version": 1,
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "window": 1,
+                    "timestamp_unix_ms": 123,
+                    "debug": { "stats": {
+                        "layout_time_us": 10_000,
+                        "prepaint_time_us": 0,
+                        "paint_time_us": 0,
+                        "layout_engine_solves": 1,
+                        "layout_engine_solve_time_us": 7_000,
+                        "layout_observation_record_time_us": 3_000,
+                        "layout_observation_record_models_items": 100,
+                        "layout_observation_record_globals_items": 0,
+                        "paint_text_prepare_time_us": 2_500,
+                        "paint_text_prepare_calls": 10,
+                        "paint_text_prepare_reason_text_changed": 10,
+                        "renderer_text_atlas_upload_bytes": 2_000_000,
+                    } }
+                }]
+            }]
+        });
+
+        let bundle_path = root.join("bundle.json");
+        crate::util::write_json_value(&bundle_path, &bundle).expect("write bundle.json");
+
+        let report = crate::stats::bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Time,
+            crate::stats::BundleStatsOptions::default(),
+        )
+        .expect("bundle stats");
+
+        let triage = triage_json_from_stats(&bundle_path, &report, BundleStatsSort::Time, 0);
+
+        let deny_specs: Vec<String> = Vec::new();
+        let opts =
+            parse_perf_hint_gate_options(true, &deny_specs, None).expect("parse hint gate opts");
+        let failures = perf_hint_gate_failures_for_triage_json(
+            "script.json",
+            &bundle_path,
+            Some(0),
+            &triage,
+            &opts,
+        );
+        let codes = failures
+            .iter()
+            .filter_map(|f| f.get("code").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+        assert!(codes.contains(&"layout.observation_heavy"));
+        assert!(codes.contains(&"layout.solve_heavy"));
+        assert!(codes.contains(&"paint.text_prepare_churn"));
+        assert!(!codes.contains(&"renderer.upload_churn"));
+
+        let deny_specs = vec!["renderer.upload_churn".to_string()];
+        let opts = parse_perf_hint_gate_options(true, &deny_specs, Some("info"))
+            .expect("parse hint gate opts");
+        let failures = perf_hint_gate_failures_for_triage_json(
+            "script.json",
+            &bundle_path,
+            Some(0),
+            &triage,
+            &opts,
+        );
+        assert_eq!(failures.len(), 1);
+        assert_eq!(
+            failures[0].get("code").and_then(|v| v.as_str()),
+            Some("renderer.upload_churn")
         );
     }
 
