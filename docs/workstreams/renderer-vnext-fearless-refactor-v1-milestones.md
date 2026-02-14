@@ -169,6 +169,7 @@ Progress record (Image masks v1):
   - `crates/fret-render-wgpu/src/renderer/resources.rs` + `crates/fret-render-wgpu/src/renderer/buffers.rs` (uniform bind group layout: mask image bindings)
   - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval` kind=3 image sampling)
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+  - `crates/fret-ui/src/declarative/tests/core.rs` (`mask_layer_is_paint_only_for_hit_testing_by_default`)
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
 
