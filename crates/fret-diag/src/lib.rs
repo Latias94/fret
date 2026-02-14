@@ -15,6 +15,7 @@ use zip::write::FileOptions;
 pub mod api;
 pub mod artifacts;
 mod cli;
+mod commands;
 mod compare;
 pub mod devtools;
 mod gates;
@@ -54,7 +55,7 @@ use script_tooling::{
 };
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    apply_pick_to_script, bundle_stats_from_path,
+    bundle_stats_from_path,
     check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
     check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
@@ -126,8 +127,7 @@ use stats::{
     check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
     check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
     check_report_for_hover_layout_invalidations, clear_script_result_files,
-    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
-    wait_for_failure_dump_bundle, write_pick_script,
+    report_result_and_exit, run_script_and_wait, wait_for_failure_dump_bundle,
 };
 use tooling_failures::{
     mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
@@ -9882,79 +9882,41 @@ See: `docs/tracy.md`.\n";
             }
         }
         "pick-arm" => {
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            touch(&resolved_pick_trigger_path)?;
-            println!("{}", resolved_pick_trigger_path.display());
-            Ok(())
+            commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path)
         }
         "pick" => {
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            let result = run_pick_and_wait(
+            commands::pick::cmd_pick(
+                &rest,
                 &resolved_pick_trigger_path,
                 &resolved_pick_result_path,
                 &resolved_pick_result_trigger_path,
                 timeout_ms,
                 poll_ms,
-            )?;
-            report_pick_result_and_exit(&result)
+            )
         }
         "pick-script" => {
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            let result = run_pick_and_wait(
+            commands::pick::cmd_pick_script(
+                &rest,
                 &resolved_pick_trigger_path,
                 &resolved_pick_result_path,
                 &resolved_pick_result_trigger_path,
+                &resolved_pick_script_out,
                 timeout_ms,
                 poll_ms,
-            )?;
-
-            let Some(selector) = result.selector.clone() else {
-                return Err("pick succeeded but no selector was returned".to_string());
-            };
-
-            write_pick_script(&selector, &resolved_pick_script_out)?;
-            println!("{}", resolved_pick_script_out.display());
-            Ok(())
+            )
         }
         "pick-apply" => {
-            let Some(script) = rest.first().cloned() else {
-                return Err(
-                    "missing script path (try: fretboard diag pick-apply ./script.json --ptr /steps/0/target)".to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-            let Some(ptr) = pick_apply_pointer.as_deref() else {
-                return Err("missing --ptr (example: --ptr /steps/0/target)".to_string());
-            };
-
-            let result = run_pick_and_wait(
+            commands::pick::cmd_pick_apply(
+                &rest,
+                &workspace_root,
                 &resolved_pick_trigger_path,
                 &resolved_pick_result_path,
                 &resolved_pick_result_trigger_path,
+                pick_apply_pointer.as_deref(),
+                pick_apply_out,
                 timeout_ms,
                 poll_ms,
-            )?;
-
-            let Some(selector) = result.selector.clone() else {
-                return Err("pick succeeded but no selector was returned".to_string());
-            };
-
-            let script_path = resolve_path(&workspace_root, PathBuf::from(script));
-            let out_path = pick_apply_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| script_path.clone());
-
-            apply_pick_to_script(&script_path, &out_path, ptr, selector)?;
-            println!("{}", out_path.display());
-            Ok(())
+            )
         }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
