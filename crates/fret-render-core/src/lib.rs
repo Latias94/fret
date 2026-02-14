@@ -12,32 +12,22 @@ pub enum RenderTargetColorSpace {
     Linear,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RenderTargetAlphaMode {
+    #[default]
     Premultiplied,
     Straight,
 }
 
-impl Default for RenderTargetAlphaMode {
-    fn default() -> Self {
-        Self::Premultiplied
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RenderTargetRotation {
+    #[default]
     R0,
     R90,
     R180,
     R270,
-}
-
-impl Default for RenderTargetRotation {
-    fn default() -> Self {
-        Self::R0
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

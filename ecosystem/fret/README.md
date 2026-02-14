@@ -20,7 +20,14 @@ With defaults (desktop + diagnostics + ui-assets + lucide icons):
 
 ```toml
 [dependencies]
-fret = { path = "../fret" }
+fret = { path = "../fret" } # path is relative to your Cargo.toml
+```
+
+If your crate lives under `apps/` in this repository:
+
+```toml
+[dependencies]
+fret = { path = "../../ecosystem/fret" }
 ```
 
 Or explicitly opt into a smaller surface:
@@ -35,11 +42,10 @@ fret = { path = "../fret", default-features = false, features = ["desktop"] }
 ```rust,ignore
 use fret::prelude::*;
 
-fn main() -> anyhow::Result<()> {
+fn main() -> fret::Result<()> {
     fret::run("hello", |_app, _window| (), |cx, _st| {
         shadcn::Label::new("Hello from Fret!").into_element(cx).into()
-    })?;
-    Ok(())
+    })
 }
 ```
 

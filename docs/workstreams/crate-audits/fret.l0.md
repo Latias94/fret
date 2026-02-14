@@ -3,7 +3,7 @@
 ## Crate
 
 - Name: `fret`
-- Path: `crates/fret`
+- Path: `crates/fret-framework`
 - Owners / adjacent crates: all kernel crates + launch/platform/runner crates (as optional deps)
 - Current “layer”: user-facing facade (manual/advanced assembly)
 
@@ -15,8 +15,8 @@
 
 Evidence anchors:
 
-- `crates/fret/src/lib.rs`
-- `crates/fret/Cargo.toml`
+- `crates/fret-framework/src/lib.rs`
+- `crates/fret-framework/Cargo.toml`
 - ADR 0109: `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
 
 ## 2) Public contract surface
@@ -31,8 +31,8 @@ Evidence anchors:
 
 Evidence anchors:
 
-- `crates/fret/src/lib.rs`
-- `crates/fret/Cargo.toml`
+- `crates/fret-framework/src/lib.rs`
+- `crates/fret-framework/Cargo.toml`
 
 ## 3) Dependency posture
 
@@ -44,15 +44,15 @@ Evidence anchors:
 
 Evidence anchors:
 
-- `crates/fret/Cargo.toml`
+- `crates/fret-framework/Cargo.toml`
 - `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret`
 
 ## 4) Module ownership map (internal seams)
 
 - Namespaced re-export modules: `core`, `app`, `ui`, `runtime`, `render`, `fonts`, `platform*`, `runner*`, `launch`
-  - Files: `crates/fret/src/lib.rs` only
+  - Files: `crates/fret-framework/src/lib.rs` only
 - Ergonomic imports: `prelude`
-  - Files: `crates/fret/src/lib.rs`
+  - Files: `crates/fret-framework/src/lib.rs`
 
 ## 5) Refactor hazards (what can regress easily)
 
@@ -72,7 +72,7 @@ Evidence anchors:
 
 Evidence anchors:
 
-- `crates/fret/src/lib.rs`
+- `crates/fret-framework/src/lib.rs`
 
 ## 7) Recommended refactor steps (small, gated)
 

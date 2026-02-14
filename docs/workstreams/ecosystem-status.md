@@ -34,7 +34,7 @@ Non-goals for the core runtime:
 - `crates/fret-platform*`: platform I/O contracts + native/web implementations.
 - `crates/fret-runner-*`: adapters for `winit` / web.
 - `crates/fret-launch`: launcher glue.
-- `crates/fret`: facade crate (re-exports).
+- `crates/fret-framework`: facade crate (re-exports).
 
 ### Ecosystem (`ecosystem/`)
 

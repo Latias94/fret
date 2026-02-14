@@ -15524,9 +15524,9 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
         ));
     };
 
-    if max_pointer_fallbacks_observed <= MAX_POINTER_FALLBACKS
-        && max_caret_rect_fallbacks_observed <= MAX_CARET_RECT_FALLBACKS
-        && max_vertical_move_fallbacks_observed <= MAX_VERTICAL_MOVE_FALLBACKS
+    if max_pointer_fallbacks_observed == MAX_POINTER_FALLBACKS
+        && max_caret_rect_fallbacks_observed == MAX_CARET_RECT_FALLBACKS
+        && max_vertical_move_fallbacks_observed == MAX_VERTICAL_MOVE_FALLBACKS
     {
         return Ok(());
     }

@@ -187,7 +187,7 @@ Follow-up suggestion:
 
 ## 4) Open questions worth auditing next
 
-1. **Facade policy (`crates/fret`)**
+1. **Facade policy (`crates/fret-framework`)**
    - Re-audit default features and bundles to ensure the crate stays “portable by default” while
      still offering clear golden-path bundles (`desktop`/`wasm` aliases).
 2. **UI layer clarity in ecosystem**
