@@ -149,6 +149,26 @@ Evidence:
 - `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` became consistently under the
   `ui-gallery-steady.windows-rtx4090.v1` thresholds in repeated local runs.
 
+## Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)
+
+Observed:
+
+- `ui-gallery-steady --repeat 7` can fail the baseline on:
+  - `ui-gallery-material3-tabs-switch-perf-steady` (`top_layout_time_us`, sometimes `top_layout_engine_solve_time_us`).
+
+Attribution (worst bundle example):
+
+- Bundle: `target/fret-diag/1771077490429-ui-gallery-material3-tabs-switch-perf-steady/bundle.json`
+- Summary: `fretboard diag stats <bundle.json> --sort time`
+  - In the worst frame, `layout_request_build_roots_time_us` dominates `layout_time_us` (solve is small).
+- Trace: `target/fret-diag/1771077490429-ui-gallery-material3-tabs-switch-perf-steady/trace.chrome.json`
+  - Inspect `layout.request_build_roots` events for the slow frames.
+
+Next action:
+
+- Decide whether this is primarily **real CPU work** (optimize `build_viewport_flow_subtree`) or **schedule noise**
+  (needs ETW/WPR or an in-app CPU-time signal).
+
 ## Next steps
 
 ### 1) Reduce remaining tail spikes (Windows-specific)
