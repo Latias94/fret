@@ -39,6 +39,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             max_width: Some(Px(inner_w)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: effective_scale_factor(cx.scale_factor, zoom),
         };
 

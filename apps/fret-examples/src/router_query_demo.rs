@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_kit::prelude::*;
+use fret::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryError, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_router::{
@@ -48,7 +48,7 @@ enum RouterQueryDemoMsg {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::mvu::app::<RouterQueryDemoProgram>("router-query-demo")?
+    fret::mvu::app::<RouterQueryDemoProgram>("router-query-demo")?
         .with_main_window("router_query_demo", (680.0, 420.0))
         .init_app(|app| {
             fret_router_ui::register_router_commands(app.commands_mut());

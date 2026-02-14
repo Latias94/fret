@@ -856,6 +856,7 @@ impl ElementHostWidget {
                     max_width: Some(measure_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
+                    align: props.align,
                     scale_factor: cx.scale_factor,
                 };
 
@@ -865,12 +866,14 @@ impl ElementHostWidget {
                     && self.text_cache.last_style.as_ref() == Some(&style)
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
+                    && self.text_cache.last_align == Some(props.align)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let prepared_matches = self.text_cache.blob.is_some()
                     && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_align == Some(props.align)
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
@@ -913,6 +916,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
@@ -958,6 +962,7 @@ impl ElementHostWidget {
                     max_width: Some(measure_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
+                    align: props.align,
                     scale_factor: cx.scale_factor,
                 };
 
@@ -971,12 +976,14 @@ impl ElementHostWidget {
                     && self.text_cache.last_style.as_ref() == Some(&style)
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
+                    && self.text_cache.last_align == Some(props.align)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let prepared_matches = self.text_cache.blob.is_some()
                     && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_align == Some(props.align)
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
@@ -1027,6 +1034,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
@@ -1072,6 +1080,7 @@ impl ElementHostWidget {
                     max_width: Some(measure_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
+                    align: props.align,
                     scale_factor: cx.scale_factor,
                 };
 
@@ -1085,12 +1094,14 @@ impl ElementHostWidget {
                     && self.text_cache.last_style.as_ref() == Some(&style)
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
+                    && self.text_cache.last_align == Some(props.align)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
                 let prepared_matches = self.text_cache.blob.is_some()
                     && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_align == Some(props.align)
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
@@ -1141,6 +1152,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);

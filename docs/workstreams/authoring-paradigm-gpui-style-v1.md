@@ -31,7 +31,7 @@ Related ADR:
 
 - Use `Model<T>` + `watch_model(...)` to render state.
 - Use typed messages for dynamic per-item actions (no string parsing).
-- Get a working app with minimal boilerplate via `fret-kit` or the `fretboard` templates.
+- Get a working app with minimal boilerplate via `fret` or the `fretboard` templates.
 
 ### Day 7 (real app)
 
@@ -42,7 +42,7 @@ Related ADR:
 
 ## Building blocks (first-party ecosystem)
 
-- `fret-kit::mvu::MessageRouter<M>`: typed routing for dynamic commands.
+- `fret::mvu::MessageRouter<M>`: typed routing for dynamic commands.
 - `ecosystem/fret-selector`: derived state memoization (+ optional `use_selector` UI sugar).
 - `ecosystem/fret-query`: query-style async resource state.
 - `ecosystem/fret-executor`: portable execution helpers (inboxes, cancellation, task spawning).

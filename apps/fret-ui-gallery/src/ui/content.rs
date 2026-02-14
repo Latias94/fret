@@ -38,6 +38,7 @@ pub(crate) fn content_view(
                             color: None,
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
+                            align: fret_core::TextAlign::Start,
                         }),
                         cx.text_props(TextProps {
                             layout: {
@@ -50,6 +51,7 @@ pub(crate) fn content_view(
                             color: Some(theme.color_token("muted-foreground")),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
+                            align: fret_core::TextAlign::Start,
                         }),
                     ]
                 },
@@ -60,13 +62,39 @@ pub(crate) fn content_view(
                 models.theme_preset_open.clone(),
             )
             .placeholder("Theme preset")
+            .trigger_test_id("ui-gallery-theme-preset-trigger")
             .items([
-                shadcn::SelectItem::new("zinc/light", "Zinc (light)"),
-                shadcn::SelectItem::new("zinc/dark", "Zinc (dark)"),
-                shadcn::SelectItem::new("slate/light", "Slate (light)"),
-                shadcn::SelectItem::new("slate/dark", "Slate (dark)"),
-                shadcn::SelectItem::new("neutral/light", "Neutral (light)"),
-                shadcn::SelectItem::new("neutral/dark", "Neutral (dark)"),
+                shadcn::SelectItem::new("zinc/light", "Zinc (light)")
+                    .test_id("ui-gallery-theme-preset-item-zinc-light"),
+                shadcn::SelectItem::new("zinc/dark", "Zinc (dark)")
+                    .test_id("ui-gallery-theme-preset-item-zinc-dark"),
+                shadcn::SelectItem::new("slate/light", "Slate (light)")
+                    .test_id("ui-gallery-theme-preset-item-slate-light"),
+                shadcn::SelectItem::new("slate/dark", "Slate (dark)")
+                    .test_id("ui-gallery-theme-preset-item-slate-dark"),
+                shadcn::SelectItem::new("neutral/light", "Neutral (light)")
+                    .test_id("ui-gallery-theme-preset-item-neutral-light"),
+                shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
+                    .test_id("ui-gallery-theme-preset-item-neutral-dark"),
+            ])
+            .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+            .into_element(cx);
+
+            let motion_select = shadcn::Select::new(
+                models.motion_preset.clone(),
+                models.motion_preset_open.clone(),
+            )
+            .placeholder("Motion preset")
+            .trigger_test_id("ui-gallery-motion-preset-trigger")
+            .items([
+                shadcn::SelectItem::new("theme", "Theme (baseline)")
+                    .test_id("ui-gallery-motion-preset-item-theme"),
+                shadcn::SelectItem::new("snappy", "Snappy")
+                    .test_id("ui-gallery-motion-preset-item-snappy"),
+                shadcn::SelectItem::new("bouncy", "Bouncy")
+                    .test_id("ui-gallery-motion-preset-item-bouncy"),
+                shadcn::SelectItem::new("gentle", "Gentle")
+                    .test_id("ui-gallery-motion-preset-item-gentle"),
             ])
             .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
             .into_element(cx);
@@ -98,7 +126,7 @@ pub(crate) fn content_view(
             let right = stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N3).items_center(),
-                |_cx| [theme_select, copy_actions],
+                |_cx| [theme_select, motion_select, copy_actions],
             );
 
             [left, right]
@@ -109,6 +137,8 @@ pub(crate) fn content_view(
         cx,
         theme,
         selected,
+        models.motion_preset.clone(),
+        models.motion_preset_open.clone(),
         models.view_cache_enabled.clone(),
         models.view_cache_cache_shell.clone(),
         models.view_cache_inner_enabled.clone(),
@@ -117,6 +147,7 @@ pub(crate) fn content_view(
         models.view_cache_counter.clone(),
         models.popover_open.clone(),
         models.dialog_open.clone(),
+        models.dialog_glass_open.clone(),
         models.alert_dialog_open.clone(),
         models.sheet_open.clone(),
         models.portal_geometry_popover_open.clone(),
@@ -248,7 +279,8 @@ pub(crate) fn content_view(
     let content_inner = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         body
     } else {
-        cx.keyed("ui_gallery.content_scroll_area", |cx| {
+        // Key the scroll area by the selected page so navigation resets scroll position.
+        cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), |cx| {
             let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .viewport_test_id("ui-gallery-content-viewport")
@@ -297,6 +329,8 @@ fn page_preview(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     selected: &str,
+    motion_preset: Model<Option<Arc<str>>>,
+    motion_preset_open: Model<bool>,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
     view_cache_inner_enabled: Model<bool>,
@@ -305,6 +339,7 @@ fn page_preview(
     view_cache_counter: Model<u64>,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
+    dialog_glass_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
     portal_geometry_popover_open: Model<bool>,
@@ -371,6 +406,9 @@ fn page_preview(
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
+        PAGE_MOTION_PRESETS => {
+            preview_motion_presets(cx, theme, motion_preset, motion_preset_open, dialog_open)
+        }
         PAGE_VIEW_CACHE => preview_view_cache(
             cx,
             theme,
@@ -430,6 +468,7 @@ fn page_preview(
             theme,
             popover_open,
             dialog_open,
+            dialog_glass_open,
             alert_dialog_open,
             sheet_open,
             portal_geometry_popover_open,
@@ -453,6 +492,15 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
+        PAGE_AI_MIC_SELECTOR_DEMO => preview_ai_mic_selector_demo(cx, theme),
+        PAGE_AI_SPEECH_INPUT_DEMO => preview_ai_speech_input_demo(cx, theme),
+        PAGE_AI_VOICE_SELECTOR_DEMO => preview_ai_voice_selector_demo(cx, theme),
+        PAGE_AI_AGENT_DEMO => preview_ai_agent_demo(cx, theme),
+        PAGE_AI_SANDBOX_DEMO => preview_ai_sandbox_demo(cx, theme),
+        PAGE_AI_PERSONA_DEMO => preview_ai_persona_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CHROME_DEMO => preview_ai_workflow_chrome_demo(cx, theme),
+        PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO => preview_ai_workflow_node_graph_demo(cx, theme),
+        PAGE_AI_CANVAS_WORLD_LAYER_SPIKE => preview_ai_canvas_world_layer_spike(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -485,6 +533,7 @@ fn page_preview(
             cx,
             popover_open,
             dialog_open,
+            dialog_glass_open,
             alert_dialog_open,
             sheet_open,
             portal_geometry_popover_open,
@@ -713,6 +762,7 @@ fn page_preview(
         PAGE_MATERIAL3_TOOLTIP => {
             material3_scoped_page(cx, material3_expressive.clone(), preview_material3_tooltip)
         }
+        other if other.starts_with("ai_") => preview_ai_unwired(cx, theme, other),
         _ => preview_intro(cx, theme),
     };
 
@@ -727,4 +777,23 @@ fn page_preview(
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
+}
+
+fn preview_ai_unwired(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+    id: &str,
+) -> Vec<AnyElement> {
+    vec![
+        shadcn::Alert::new(vec![
+            shadcn::AlertTitle::new("AI demo not wired").into_element(cx),
+            shadcn::AlertDescription::new(format!(
+                "Page `{id}` exists in the nav spec, but does not have a preview implementation yet. See `docs/workstreams/ai-elements-port-todo.md`."
+            ))
+            .into_element(cx),
+        ])
+        .variant(shadcn::AlertVariant::Default)
+        .into_element(cx)
+        .test_id(format!("ui-gallery-ai-unwired-{}", id.replace('_', "-"))),
+    ]
 }

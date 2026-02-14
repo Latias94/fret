@@ -774,6 +774,7 @@ impl AttachmentInfo {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
         });
 
         let media_type_row = self
@@ -797,6 +798,7 @@ impl AttachmentInfo {
                     color: Some(muted_fg),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
+                    align: fret_core::TextAlign::Start,
                 })
             });
 
@@ -994,6 +996,7 @@ impl AttachmentEmpty {
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
+                align: fret_core::TextAlign::Start,
             })]
         } else {
             self.children

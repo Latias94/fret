@@ -2160,6 +2160,6 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    fret_kit::run_native_demo(config, app, ComponentsGalleryDriver)
+    fret::run_native_demo(config, app, ComponentsGalleryDriver)
         .context("run components_gallery app")
 }

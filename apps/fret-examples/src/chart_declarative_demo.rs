@@ -1,4 +1,4 @@
-use fret_kit::prelude::*;
+use fret::prelude::*;
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId};
@@ -15,7 +15,7 @@ struct ChartDeclarativeState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app("chart-declarative-demo", init_window, view)?
+    fret::app("chart-declarative-demo", init_window, view)?
         .with_main_window("chart_declarative_demo", (960.0, 720.0))
         .run()?;
     Ok(())
@@ -197,10 +197,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {
     ChartDeclarativeState { engine, spec }
 }
 
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut ChartDeclarativeState,
-) -> fret_kit::ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartDeclarativeState) -> fret::ViewElements {
     cx.observe_model(&st.engine, Invalidation::Paint);
 
     let mut props = ChartCanvasPanelProps::new(st.spec.clone());

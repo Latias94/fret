@@ -10,6 +10,7 @@
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -22,6 +23,8 @@ use fret_runtime::{
 };
 #[cfg(feature = "ui")]
 use fret_runtime::{Model, ModelHost, ModelId};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast as _;
 
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache};
@@ -41,6 +44,10 @@ impl ImageSourceId {
 enum ImageSourceKind {
     Bytes {
         bytes: Arc<[u8]>,
+    },
+    #[cfg(target_arch = "wasm32")]
+    Url {
+        url: Arc<str>,
     },
     Rgba8 {
         width: u32,
@@ -77,6 +84,8 @@ impl ImageSource {
                 color_space,
             } => Some((*width, *height, rgba.clone(), *color_space)),
             ImageSourceKind::Bytes { .. } => None,
+            #[cfg(target_arch = "wasm32")]
+            ImageSourceKind::Url { .. } => None,
             #[cfg(not(target_arch = "wasm32"))]
             ImageSourceKind::Path { .. } => None,
         }
@@ -88,6 +97,16 @@ impl ImageSource {
         Self {
             id,
             kind: ImageSourceKind::Bytes { bytes },
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn from_url(url: impl Into<Arc<str>>) -> Self {
+        let url: Arc<str> = url.into();
+        let id = ImageSourceId(stable_hash(&(b"url.v1", url.as_bytes())));
+        Self {
+            id,
+            kind: ImageSourceKind::Url { url },
         }
     }
 
@@ -369,6 +388,25 @@ impl ImageSourceLoader {
             frame = frame,
             "image_source: start decode"
         );
+
+        #[cfg(target_arch = "wasm32")]
+        if let ImageSourceKind::Url { url } = &source.kind {
+            let url: Arc<str> = url.clone();
+            let sender = self.runtime.inbox.sender();
+            let wake_dispatcher = self.runtime.dispatcher.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let result = fetch_and_decode_rgba8(url.as_ref()).await;
+                let _ = sender.send(ImageSourceMsg {
+                    request,
+                    window,
+                    inflight_id,
+                    attempt_frame: frame,
+                    result,
+                });
+                wake_dispatcher.wake(Some(window));
+            });
+            return;
+        }
 
         let sender = self.runtime.inbox.sender();
         let dispatcher = self.runtime.dispatcher.clone();
@@ -977,6 +1015,10 @@ enum ImageSourceEntrySnapshot {
 fn decode_rgba8(source: &ImageSource) -> Result<DecodedRgba8, String> {
     match &source.kind {
         ImageSourceKind::Bytes { bytes } => decode_bytes_rgba8(bytes.as_ref()),
+        #[cfg(target_arch = "wasm32")]
+        ImageSourceKind::Url { .. } => {
+            Err("url image sources must be decoded via fetch".to_string())
+        }
         ImageSourceKind::Rgba8 {
             width,
             height,
@@ -1005,6 +1047,44 @@ fn decode_rgba8(source: &ImageSource) -> Result<DecodedRgba8, String> {
             decode_bytes_rgba8(&bytes)
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_and_decode_rgba8(url: &str) -> Result<DecodedRgba8, String> {
+    let bytes = fetch_url_bytes(url).await?;
+    decode_bytes_rgba8(&bytes)
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_url_bytes(url: &str) -> Result<Vec<u8>, String> {
+    use wasm_bindgen_futures::JsFuture;
+
+    let Some(window) = web_sys::window() else {
+        return Err("missing web_sys::window".to_string());
+    };
+
+    let resp_value = JsFuture::from(window.fetch_with_str(url))
+        .await
+        .map_err(|e| format!("fetch failed: {e:?}"))?;
+    let resp: web_sys::Response = resp_value
+        .dyn_into()
+        .map_err(|_| "fetch did not return a Response".to_string())?;
+    if !resp.ok() {
+        return Err(format!(
+            "fetch returned HTTP {} {}",
+            resp.status(),
+            resp.status_text()
+        ));
+    }
+
+    let buf = JsFuture::from(
+        resp.array_buffer()
+            .map_err(|e| format!("array_buffer() failed: {e:?}"))?,
+    )
+    .await
+    .map_err(|e| format!("await array_buffer failed: {e:?}"))?;
+    let array = js_sys::Uint8Array::new(&buf);
+    Ok(array.to_vec())
 }
 
 fn decode_bytes_rgba8(bytes: &[u8]) -> Result<DecodedRgba8, String> {

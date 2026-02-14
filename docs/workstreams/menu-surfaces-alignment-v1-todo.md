@@ -48,17 +48,17 @@ Exit criteria:
 - Keyboard-open initial focus is sane and consistent (first item for keyboard, content container for pointer).
 
 - [x] MENU-MVP0-gating-001 Use `WindowCommandGatingSnapshot` for in-window menu enable/disable.
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`command_item`, `menubar_from_runtime_with_focus_handle`)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (`command_item`, `menubar_from_runtime_with_focus_handle`)
 - [x] MENU-MVP0-sanitize-002 Sanitize in-window menu entries (drop duplicate/leading/trailing separators; drop empty submenus).
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`sanitize_entries` + unit tests)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (`sanitize_entries` + unit tests)
 - [x] MENU-MVP0-parity-003 Make in-window menubar overlay modal by default (prevent click-through).
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`dismissible_menu_request_with_modal_and_dismiss_handler(..., modal=true)`)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (`dismissible_menu_request_with_modal_and_dismiss_handler(..., modal=true)`)
 - [x] MENU-MVP0-kbd-004 Keyboard-open initial focus prefers first enabled item, otherwise content root.
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (first-item focus tracking)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (first-item focus tracking)
 
 - [x] MENU-MVP0-sanitize-010 Centralize menu normalization so OS and in-window share the same sanitize rules.
   - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuBar::normalize`, `normalize_menu_items`)
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (normalizes before building in-window entries)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (normalizes before building in-window entries)
 - [x] MENU-MVP0-parity-011 Ensure Windows/macOS OS menubar mapping also applies sanitize consistently (no trailing separators, no empty submenus).
   - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` (normalizes before building `HMENU`)
   - Evidence: `crates/fret-launch/src/runner/desktop/macos_menu.rs` (normalizes before building `NSMenu`)
@@ -93,17 +93,17 @@ Exit criteria:
   - Evidence: `crates/fret-runtime/src/menu.rs` (`Menu.mnemonic`, `MenuFileV2.mnemonic`, patch ops v2)
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`open_on_alt_mnemonic`)
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`open_on_mnemonic_when_active`)
-  - Evidence: `ecosystem/fret-kit/src/workspace_shell.rs` (installs Alt+mnemonic key handler)
+  - Evidence: `ecosystem/fret/src/workspace_shell.rs` (installs Alt+mnemonic key handler)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (installs Alt+mnemonic key handler; adds Gallery mnemonic)
   - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` (maps mnemonics to Win32 `&` labels for OS menubar)
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-alt-mnemonic.json`
 - [x] MENU-MVP1-kbd-026 Render mnemonic underlines for in-window menubar triggers (presentation).
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`attributed_title_with_mnemonic_underline`, trigger label rendering)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (`attributed_title_with_mnemonic_underline`, trigger label rendering)
 - [x] MENU-MVP1-kbd-027 Escape exits "active menubar" state when no menu is open (restore focus).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`exit_active_on_escape_when_closed`)
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-escape-exits-active.json`
 - [x] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (test `escape_unwinds_submenu_then_menu_and_restores_focus`)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (test `escape_unwinds_submenu_then_menu_and_restores_focus`)
 - [x] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/trigger.rs` (`wire_open_on_shift_f10`)
   - Evidence: `ecosystem/fret-ui-shadcn/src/context_menu.rs` (wires Shift+F10)
@@ -113,7 +113,7 @@ Exit criteria:
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-hover-switch.json`
 - [x] MENU-MVP1-parity-025 Implement submenu “grace intent” (diagonal pointer travel tolerance); cover via `MENU-MVP4-test-052`.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/sub.rs` (pointer grace intent + close-delay timers)
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (installs submenu pointer-move handler for menubar overlays)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (installs submenu pointer-move handler for menubar overlays)
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-pointer-submenu-grace-intent.json`
 
 ---
@@ -133,7 +133,7 @@ Exit criteria:
   - Implemented: `MenuItemToggleKind` + `MenuItemToggle` + `MenuItem::Command.toggle`
   - Evidence: `crates/fret-runtime/src/menu.rs`
 - [x] MENU-MVP2-sem-032 Add a minimal in-window rendering for checked/radio indicators (no OS mapping required at first).
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (checkbox/radio semantics roles + checkmark indicator)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (checkbox/radio semantics roles + checkmark indicator)
 
 ---
 
@@ -163,7 +163,7 @@ Exit criteria:
       rows display user-facing labels (`Recent N`, `Window N`) instead of raw IDs.
   - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuItem::Label`)
   - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuItemFileV2::Label`, `ItemSelectorTyped::Label`)
-  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (in-window bridge for `Label`)
+  - Evidence: `ecosystem/fret/src/workspace_menu.rs` (in-window bridge for `Label`)
   - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` + `crates/fret-launch/src/runner/desktop/macos_menu.rs` (OS mapping for `Label`)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`menu_bar_seq` keyed refresh + dynamic command prefixes/metadata sync)
 - [x] MENU-MVP3-dyn-041 Implement `Recent` menu MVP (placeholder list + disabled state + later wiring).

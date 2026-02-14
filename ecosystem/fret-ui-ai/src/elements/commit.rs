@@ -350,6 +350,7 @@ impl CommitHash {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         stack::hstack(
@@ -392,6 +393,7 @@ impl CommitMessage {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -463,6 +465,7 @@ impl CommitSeparator {
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -570,6 +573,7 @@ impl CommitTimestamp {
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -829,6 +833,7 @@ impl CommitCopyButton {
                         color: None,
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     })
                     .attach_semantics(
                         SemanticsDecoration::default()
@@ -1017,6 +1022,7 @@ impl CommitFileStatus {
             color: Some(status_color(self.status).resolve(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -1096,6 +1102,7 @@ impl CommitFilePath {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
         };
 
         let Some(on_click) = self.on_click else {
@@ -1194,6 +1201,7 @@ impl CommitFileAdditions {
             color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         stack::hstack(
@@ -1238,6 +1246,7 @@ impl CommitFileDeletions {
             color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         stack::hstack(

@@ -437,6 +437,7 @@ impl ElementHostWidget {
                     max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
+                    align: props.align,
                     scale_factor: cx.scale_factor,
                 };
                 cx.tree
@@ -460,6 +461,7 @@ impl ElementHostWidget {
                 let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
                 let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
                 let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let align_changed = self.text_cache.last_align != Some(props.align);
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
@@ -468,6 +470,7 @@ impl ElementHostWidget {
                     || style_changed
                     || wrap_changed
                     || overflow_changed
+                    || align_changed
                     || font_stack_changed;
                 if signature_changed {
                     self.text_cache.release_prepared_by_width(cx.services);
@@ -478,6 +481,7 @@ impl ElementHostWidget {
                     || style_changed
                     || wrap_changed
                     || overflow_changed
+                    || align_changed
                     || width_changed
                     || font_stack_changed;
                 let reasons_mask = (blob_missing as u16)
@@ -576,6 +580,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style.clone());
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
@@ -625,6 +630,7 @@ impl ElementHostWidget {
                     max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
+                    align: props.align,
                     scale_factor: cx.scale_factor,
                 };
                 cx.tree
@@ -648,6 +654,7 @@ impl ElementHostWidget {
                 let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
                 let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
                 let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let align_changed = self.text_cache.last_align != Some(props.align);
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
@@ -656,6 +663,7 @@ impl ElementHostWidget {
                     || style_changed
                     || wrap_changed
                     || overflow_changed
+                    || align_changed
                     || font_stack_changed;
                 if signature_changed {
                     self.text_cache.release_prepared_by_width(cx.services);
@@ -666,6 +674,7 @@ impl ElementHostWidget {
                     || style_changed
                     || wrap_changed
                     || overflow_changed
+                    || align_changed
                     || width_changed
                     || font_stack_changed;
                 let reasons_mask = (blob_missing as u16)
@@ -765,6 +774,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style.clone());
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
@@ -814,6 +824,7 @@ impl ElementHostWidget {
                     max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
+                    align: props.align,
                     scale_factor: cx.scale_factor,
                 };
                 cx.tree
@@ -837,6 +848,7 @@ impl ElementHostWidget {
                 let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
                 let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
                 let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let align_changed = self.text_cache.last_align != Some(props.align);
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
@@ -845,6 +857,7 @@ impl ElementHostWidget {
                     || style_changed
                     || wrap_changed
                     || overflow_changed
+                    || align_changed
                     || font_stack_changed;
                 if signature_changed {
                     self.text_cache.release_prepared_by_width(cx.services);
@@ -855,6 +868,7 @@ impl ElementHostWidget {
                     || style_changed
                     || wrap_changed
                     || overflow_changed
+                    || align_changed
                     || width_changed
                     || font_stack_changed;
                 let reasons_mask = (blob_missing as u16)
@@ -954,6 +968,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style.clone());
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }

@@ -915,6 +915,7 @@ impl CanvasCache {
                 max_width: constraints.max_width,
                 wrap: constraints.wrap,
                 overflow: constraints.overflow,
+                align: fret_core::TextAlign::Start,
                 scale_factor: raster_scale_factor,
             };
 
@@ -957,6 +958,7 @@ impl CanvasCache {
             max_width: constraints.max_width,
             wrap: constraints.wrap,
             overflow: constraints.overflow,
+            align: fret_core::TextAlign::Start,
             scale_factor: raster_scale_factor,
         };
 
@@ -1032,6 +1034,7 @@ impl CanvasCache {
                 max_width: fingerprint_constraints.max_width,
                 wrap: fingerprint_constraints.wrap,
                 overflow: fingerprint_constraints.overflow,
+                align: fret_core::TextAlign::Start,
                 scale_factor: raster_scale_factor,
             };
 

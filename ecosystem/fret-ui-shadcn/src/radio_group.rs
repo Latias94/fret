@@ -367,7 +367,13 @@ impl RadioGroup {
             let list = radix_root.list(values_arc.clone(), disabled_arc.clone());
 
             let container_props = decl_style::container_props(&theme, chrome, layout);
-            let list_layout =
+            let fit_width = matches!(container_props.layout.size.width, Length::Auto);
+            let list_layout = if fit_width {
+                LayoutStyle::default()
+            } else {
+                decl_style::layout_style(&theme, fret_ui_kit::LayoutRefinement::default().w_full())
+            };
+            let pressable_layout_full =
                 decl_style::layout_style(&theme, fret_ui_kit::LayoutRefinement::default().w_full());
 
             let list_element = list.into_element(
@@ -386,7 +392,13 @@ impl RadioGroup {
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
                         align: match orientation {
-                            RadioGroupOrientation::Vertical => CrossAlign::Stretch,
+                            RadioGroupOrientation::Vertical => {
+                                if is_rtl {
+                                    CrossAlign::End
+                                } else {
+                                    CrossAlign::Stretch
+                                }
+                            }
                             RadioGroupOrientation::Horizontal => CrossAlign::Center,
                         },
                         wrap: false,
@@ -416,11 +428,6 @@ impl RadioGroup {
                                 .or_else(|| theme.color_by_key("destructive/20"))
                                 .unwrap_or_else(|| theme.color_token("destructive"));
                         }
-                        let pressable_layout = decl_style::layout_style(
-                            &theme,
-                            fret_ui_kit::LayoutRefinement::default().w_full(),
-                        );
-
                         let a11y_label = item.label.clone();
                         let value = item.value.clone();
                         let item_children = item.children.clone();
@@ -441,7 +448,17 @@ impl RadioGroup {
                                     cx,
                                     &root_for_item,
                                     PressableProps {
-                                        layout: pressable_layout,
+                                        layout: if !fit_width
+                                            || (item_children.is_some()
+                                                && orientation == RadioGroupOrientation::Vertical
+                                                && matches!(
+                                                    item_variant,
+                                                    RadioGroupItemVariant::Default
+                                                )) {
+                                            pressable_layout_full
+                                        } else {
+                                            LayoutStyle::default()
+                                        },
                                         enabled: item_enabled,
                                         focusable: tab_stop,
                                         focus_ring: Some(ring_style),
@@ -491,11 +508,19 @@ impl RadioGroup {
                                         )
                                         .resolve(&theme);
 
+                                        let has_custom_children = item_children.is_some();
                                         let icon_layout = decl_style::layout_style(
                                             &theme,
-                                            fret_ui_kit::LayoutRefinement::default()
-                                                .w_px(icon)
-                                                .h_px(icon),
+                                            if has_custom_children {
+                                                fret_ui_kit::LayoutRefinement::default()
+                                                    .w_px(icon)
+                                                    .h_px(icon)
+                                                    .mt_px(Px(1.0))
+                                            } else {
+                                                fret_ui_kit::LayoutRefinement::default()
+                                                    .w_px(icon)
+                                                    .h_px(icon)
+                                            },
                                         );
                                         let icon_props = ContainerProps {
                                             layout: icon_layout,
@@ -508,9 +533,19 @@ impl RadioGroup {
                                             ..Default::default()
                                         };
 
+                                        let force_full_row = is_rtl
+                                            && orientation == RadioGroupOrientation::Vertical
+                                            && matches!(
+                                                item_variant,
+                                                RadioGroupItemVariant::Default
+                                            );
                                         let row_layout = LayoutStyle {
                                             size: SizeStyle {
-                                                width: Length::Fill,
+                                                width: if fit_width && !force_full_row {
+                                                    Length::Auto
+                                                } else {
+                                                    Length::Fill
+                                                },
                                                 height: Length::Auto,
                                                 ..Default::default()
                                             },
@@ -544,6 +579,7 @@ impl RadioGroup {
                                             color: Some(fg),
                                             wrap: TextWrap::Word,
                                             overflow: TextOverflow::Clip,
+                                            align: fret_core::TextAlign::Start,
                                         };
 
                                         let icon_element =
@@ -585,6 +621,11 @@ impl RadioGroup {
                                             MainAlign::Start
                                         };
 
+                                        let align = if has_custom_children {
+                                            CrossAlign::Start
+                                        } else {
+                                            CrossAlign::Center
+                                        };
                                         let item_content = cx.flex(
                                             FlexProps {
                                                 layout: row_layout,
@@ -592,7 +633,7 @@ impl RadioGroup {
                                                 gap: gap_x,
                                                 padding: Edges::all(Px(0.0)),
                                                 justify,
-                                                align: CrossAlign::Center,
+                                                align,
                                                 wrap: false,
                                             },
                                             move |cx| {

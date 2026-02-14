@@ -68,7 +68,7 @@ the seam: viewports are app/UI details; the OS menubar is a window-level integra
 - Shortcut gating: `crates/fret-ui/src/tree/shortcuts.rs`
 - Windows OS menubar gating: `crates/fret-launch/src/runner/desktop/windows_menu.rs`
 - macOS OS menubar gating: `crates/fret-launch/src/runner/desktop/macos_menu.rs`
-- In-window menubar gating: `ecosystem/fret-kit/src/workspace_menu.rs`
+- In-window menubar gating: `ecosystem/fret/src/workspace_menu.rs`
 - Command palette gating: `ecosystem/fret-ui-shadcn/src/command.rs`
 - Tests: `crates/fret-ui/src/tree/tests/command_enabled_service.rs`
 

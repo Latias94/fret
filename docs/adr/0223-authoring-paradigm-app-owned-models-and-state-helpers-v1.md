@@ -56,7 +56,7 @@ but replaceable by third-party alternatives):
 - `ecosystem/fret-executor` — portable background work + inbox helpers.
 - `ecosystem/fret-query` — async resource state (TanStack Query-like) adapted to ADR 0175.
 - `ecosystem/fret-selector` — memoized derived state helpers.
-- `fret-kit::mvu::MessageRouter<M>` — typed routing for dynamic per-item actions.
+- `fret::mvu::MessageRouter<M>` — typed routing for dynamic per-item actions.
 - `ecosystem/fret-imui` — immediate-mode authoring facade that compiles to the declarative element tree
   (optional frontend; uses the same state helpers via `UiWriter` escape hatches and adapters).
 

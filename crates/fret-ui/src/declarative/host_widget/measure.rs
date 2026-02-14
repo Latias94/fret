@@ -527,6 +527,7 @@ impl ElementHostWidget {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
+            align: props.align,
             scale_factor: cx.scale_factor,
         };
         cx.tree
@@ -551,6 +552,7 @@ impl ElementHostWidget {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
+            align: props.align,
             scale_factor: cx.scale_factor,
         };
         cx.tree
@@ -575,6 +577,7 @@ impl ElementHostWidget {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
+            align: props.align,
             scale_factor: cx.scale_factor,
         };
         cx.tree
@@ -597,6 +600,7 @@ impl ElementHostWidget {
             max_width,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx
@@ -630,6 +634,7 @@ impl ElementHostWidget {
             max_width,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, FontWeight, Px, TextOverflow, TextWrap};
+use fret_core::{Axis, Edges, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, LayoutStyle, Length, Overflow,
     PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
@@ -844,6 +844,7 @@ pub struct TextBox {
     pub(crate) color_override: Option<crate::ColorRef>,
     pub(crate) wrap: TextWrap,
     pub(crate) overflow: TextOverflow,
+    pub(crate) align: TextAlign,
 }
 
 impl TextBox {
@@ -866,6 +867,7 @@ impl TextBox {
             color_override: None,
             wrap,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         }
     }
 }
@@ -892,6 +894,7 @@ impl UiIntoElement for TextBox {
             color_override,
             wrap,
             overflow,
+            align,
         } = self;
 
         let (mut style, mut layout, default_label_line_height, resolved_color) = {
@@ -957,6 +960,7 @@ impl UiIntoElement for TextBox {
             color: resolved_color,
             wrap,
             overflow,
+            align,
         })
     }
 }
@@ -999,6 +1003,7 @@ pub struct RawTextBox {
     pub(crate) color_override: Option<crate::ColorRef>,
     pub(crate) wrap: TextWrap,
     pub(crate) overflow: TextOverflow,
+    pub(crate) align: TextAlign,
 }
 
 impl RawTextBox {
@@ -1009,6 +1014,7 @@ impl RawTextBox {
             color_override: None,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         }
     }
 }
@@ -1030,6 +1036,7 @@ impl UiIntoElement for RawTextBox {
             color_override,
             wrap,
             overflow,
+            align,
         } = self;
 
         let (layout, color) = {
@@ -1046,6 +1053,7 @@ impl UiIntoElement for RawTextBox {
             color,
             wrap,
             overflow,
+            align,
         })
     }
 }

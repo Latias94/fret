@@ -127,6 +127,167 @@ pub fn normal_from_tangent(tangent: Point) -> Point {
     Point::new(Px(nx), Px(ny))
 }
 
+/// Compute a simple arrowhead triangle at `end`, oriented by `tangent`.
+///
+/// Returns points in winding order `[tip, left, right]` so callers can fill a closed path:
+/// `MoveTo(tip) -> LineTo(left) -> LineTo(right) -> Close`.
+///
+/// Inputs:
+/// - `tangent`: direction at the end of the curve (does not need to be normalized)
+/// - `length`: tip-to-base distance in the same units as `Point` (typically logical px)
+/// - `width`: base width (left-to-right) in the same units as `Point`
+pub fn arrowhead_triangle(end: Point, tangent: Point, length: f32, width: f32) -> [Point; 3] {
+    let length = if length.is_finite() {
+        length.max(0.0)
+    } else {
+        0.0
+    };
+    let width = if width.is_finite() {
+        width.max(0.0)
+    } else {
+        0.0
+    };
+
+    let dx = tangent.x.0;
+    let dy = tangent.y.0;
+    let dlen = (dx * dx + dy * dy).sqrt();
+    let (ux, uy) = if dlen.is_finite() && dlen > 1.0e-6 {
+        (dx / dlen, dy / dlen)
+    } else {
+        (1.0, 0.0)
+    };
+
+    // Unit normal (perp to direction).
+    let nx = -uy;
+    let ny = ux;
+    let half_w = width * 0.5;
+
+    let base = Point::new(Px(end.x.0 - ux * length), Px(end.y.0 - uy * length));
+    let left = Point::new(Px(base.x.0 + nx * half_w), Px(base.y.0 + ny * half_w));
+    let right = Point::new(Px(base.x.0 - nx * half_w), Px(base.y.0 - ny * half_w));
+
+    [end, left, right]
+}
+
+/// Sample a cubic Bezier curve into a polyline point list.
+///
+/// The output always includes `p0` and `p3` and is cleared before writing.
+pub fn cubic_bezier_polyline_points(
+    p0: Point,
+    p1: Point,
+    p2: Point,
+    p3: Point,
+    steps: usize,
+    out: &mut Vec<Point>,
+) {
+    out.clear();
+    out.push(p0);
+
+    let steps = steps.max(1);
+    for i in 1..=steps {
+        let t = i as f32 / steps as f32;
+        out.push(cubic_bezier(p0, p1, p2, p3, t));
+    }
+}
+
+/// Convert a polyline into dashed line segments.
+///
+/// This is a stroke-level helper for implementing SVG-like `strokeDasharray` behavior without
+/// extending the renderer's path primitive. Callers can draw each returned segment as an
+/// independent stroked path.
+///
+/// Conventions:
+/// - `pattern` alternates ON/OFF lengths starting with ON (`pattern[0]`).
+/// - Units are the same as the input points (typically logical px in screen space).
+/// - `offset` advances the pattern start along the polyline (wraps by the pattern cycle length).
+pub fn dash_polyline_segments(
+    points: &[Point],
+    pattern: &[f32],
+    offset: f32,
+    out: &mut Vec<(Point, Point)>,
+) {
+    out.clear();
+    if points.len() < 2 {
+        return;
+    }
+
+    let mut cycle = 0.0_f32;
+    for &v in pattern {
+        if !v.is_finite() || v <= 0.0 {
+            return;
+        }
+        cycle += v;
+    }
+    if !cycle.is_finite() || cycle <= 1.0e-6 {
+        return;
+    }
+
+    let mut phase_ix = 0usize;
+    let mut phase_pos = if offset.is_finite() {
+        offset.rem_euclid(cycle)
+    } else {
+        0.0
+    };
+    while phase_pos > 0.0 {
+        let seg = pattern[phase_ix];
+        if phase_pos < seg {
+            break;
+        }
+        phase_pos -= seg;
+        phase_ix = (phase_ix + 1) % pattern.len();
+    }
+
+    let mut on = (phase_ix % 2) == 0;
+    let mut phase_len = pattern[phase_ix];
+
+    for w in points.windows(2) {
+        let a = w[0];
+        let b = w[1];
+
+        let dx = b.x.0 - a.x.0;
+        let dy = b.y.0 - a.y.0;
+        let seg_len = (dx * dx + dy * dy).sqrt();
+        if !seg_len.is_finite() || seg_len <= 1.0e-6 {
+            continue;
+        }
+
+        let ux = dx / seg_len;
+        let uy = dy / seg_len;
+
+        let mut dist = 0.0_f32;
+        while dist + 1.0e-6 < seg_len {
+            let remaining_in_seg = seg_len - dist;
+            let remaining_in_phase = (phase_len - phase_pos).max(0.0);
+            if remaining_in_phase <= 1.0e-6 {
+                phase_ix = (phase_ix + 1) % pattern.len();
+                phase_len = pattern[phase_ix];
+                phase_pos = 0.0;
+                on = (phase_ix % 2) == 0;
+                continue;
+            }
+
+            let step = remaining_in_seg.min(remaining_in_phase);
+            if on {
+                let p0 = Point::new(Px(a.x.0 + ux * dist), Px(a.y.0 + uy * dist));
+                let p1 = Point::new(
+                    Px(a.x.0 + ux * (dist + step)),
+                    Px(a.y.0 + uy * (dist + step)),
+                );
+                out.push((p0, p1));
+            }
+
+            dist += step;
+            phase_pos += step;
+            if phase_pos + 1.0e-6 >= phase_len {
+                phase_ix = (phase_ix + 1) % pattern.len();
+                phase_len = pattern[phase_ix];
+                phase_pos = 0.0;
+                on = (phase_ix % 2) == 0;
+            }
+        }
+    }
+}
+
 fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
     let apx = p.x.0 - a.x.0;
     let apy = p.y.0 - a.y.0;
@@ -505,6 +666,50 @@ mod tests {
 
         let q = closest_point_on_bezier_wire_polyline_adaptive(p, from, to, 1.0, 2.0);
         assert!(q.x.0.is_finite() && q.y.0.is_finite());
+    }
+
+    #[test]
+    fn dash_polyline_segments_respects_pattern() {
+        let a = Point::new(Px(0.0), Px(0.0));
+        let b = Point::new(Px(20.0), Px(0.0));
+        let mut out = Vec::new();
+        dash_polyline_segments(&[a, b], &[5.0, 5.0], 0.0, &mut out);
+        assert_eq!(out.len(), 2);
+        assert!((out[0].0.x.0 - 0.0).abs() <= 1.0e-6);
+        assert!((out[0].1.x.0 - 5.0).abs() <= 1.0e-6);
+        assert!((out[1].0.x.0 - 10.0).abs() <= 1.0e-6);
+        assert!((out[1].1.x.0 - 15.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn dash_polyline_segments_supports_offset() {
+        let a = Point::new(Px(0.0), Px(0.0));
+        let b = Point::new(Px(20.0), Px(0.0));
+        let mut out = Vec::new();
+        // Offset by 2px: ON covers [0..3], then [8..13], etc.
+        dash_polyline_segments(&[a, b], &[5.0, 5.0], 2.0, &mut out);
+        assert!(!out.is_empty());
+        assert!((out[0].0.x.0 - 0.0).abs() <= 1.0e-6);
+        assert!((out[0].1.x.0 - 3.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn arrowhead_triangle_is_finite() {
+        let end = Point::new(Px(10.0), Px(5.0));
+        let tangent = Point::new(Px(2.0), Px(0.0));
+        let tri = arrowhead_triangle(end, tangent, 10.0, 6.0);
+
+        for p in tri {
+            assert!(p.x.0.is_finite() && p.y.0.is_finite());
+        }
+
+        // Base center should be behind the tip along the tangent direction.
+        let base = Point::new(
+            Px((tri[1].x.0 + tri[2].x.0) * 0.5),
+            Px((tri[1].y.0 + tri[2].y.0) * 0.5),
+        );
+        assert!(base.x.0 < end.x.0);
+        assert!((base.y.0 - end.y.0).abs() <= 1.0e-4);
     }
 
     #[test]

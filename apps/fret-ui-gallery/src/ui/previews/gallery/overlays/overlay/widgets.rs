@@ -1,6 +1,7 @@
 use super::super::super::super::super::*;
 
 use super::OverlayModels;
+use fret_core::Color;
 
 pub(super) struct OverlayWidgets {
     pub(super) overlay_reset: AnyElement,
@@ -12,6 +13,7 @@ pub(super) struct OverlayWidgets {
     pub(super) hover_card: AnyElement,
     pub(super) popover: AnyElement,
     pub(super) dialog: AnyElement,
+    pub(super) dialog_glass: AnyElement,
     pub(super) alert_dialog: AnyElement,
     pub(super) sheet: AnyElement,
     pub(super) portal_geometry: AnyElement,
@@ -28,6 +30,7 @@ pub(super) fn build(cx: &mut ElementContext<'_, App>, models: &OverlayModels) ->
         hover_card: hover_card(cx),
         popover: popover(cx, models),
         dialog: dialog(cx, models),
+        dialog_glass: dialog_glass(cx, models),
         alert_dialog: alert_dialog(cx, models),
         sheet: sheet(cx, models),
         portal_geometry: portal_geometry(cx, models),
@@ -42,6 +45,7 @@ fn overlay_reset(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> An
     let context_menu_edge_open = models.context_menu_edge_open.clone();
     let popover_open = models.popover_open.clone();
     let dialog_open = models.dialog_open.clone();
+    let dialog_glass_open = models.dialog_glass_open.clone();
     let alert_dialog_open = models.alert_dialog_open.clone();
     let sheet_open = models.sheet_open.clone();
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
@@ -55,6 +59,7 @@ fn overlay_reset(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> An
             .update(&context_menu_edge_open, |v| *v = false);
         let _ = host.models_mut().update(&popover_open, |v| *v = false);
         let _ = host.models_mut().update(&dialog_open, |v| *v = false);
+        let _ = host.models_mut().update(&dialog_glass_open, |v| *v = false);
         let _ = host.models_mut().update(&alert_dialog_open, |v| *v = false);
         let _ = host.models_mut().update(&sheet_open, |v| *v = false);
         let _ = host
@@ -355,6 +360,82 @@ fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElemen
             .test_id("ui-gallery-dialog-content")
         },
     )
+}
+
+fn dialog_glass(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+    let dialog_open = models.dialog_glass_open.clone();
+
+    let overlay_tint = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 0.25,
+    };
+
+    shadcn::Dialog::new(dialog_open.clone())
+        .overlay_color(overlay_tint)
+        .overlay_glass_backdrop(true)
+        .into_element(
+            cx,
+            |cx| {
+                shadcn::Button::new("Dialog (Glass)")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dialog-glass-trigger")
+                    .toggle_model(dialog_open.clone())
+                    .into_element(cx)
+            },
+            |cx| {
+                shadcn::DialogContent::new(vec![
+                    shadcn::DialogClose::new(dialog_open.clone()).into_element(cx),
+                    shadcn::DialogHeader::new(vec![
+                        shadcn::DialogTitle::new("Dialog (Glass)").into_element(cx),
+                        shadcn::DialogDescription::new(
+                            "Backdrop blur variant (reduced-transparency aware).",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    {
+                        let body = stack::vstack(
+                            cx,
+                            stack::VStackProps::default()
+                                .gap(Space::N2)
+                                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
+                            |cx| {
+                                (0..64)
+                                    .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
+                                    .collect::<Vec<_>>()
+                            },
+                        );
+
+                        shadcn::ScrollArea::new([body])
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_full()
+                                    .h_px(Px(240.0))
+                                    .min_w_0()
+                                    .min_h_0(),
+                            )
+                            .viewport_test_id("ui-gallery-dialog-glass-scroll-viewport")
+                            .into_element(cx)
+                    },
+                    shadcn::DialogFooter::new(vec![
+                        shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .test_id("ui-gallery-dialog-glass-close")
+                            .toggle_model(dialog_open.clone())
+                            .into_element(cx),
+                        shadcn::Button::new("Confirm")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-dialog-glass-confirm")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-dialog-glass-content")
+            },
+        )
 }
 
 fn alert_dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {

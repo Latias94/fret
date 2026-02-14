@@ -1,7 +1,7 @@
 use anyhow::Context as _;
+use fret::prelude::MessageRouter;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, UiServices};
-use fret_kit::prelude::MessageRouter;
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
@@ -610,6 +610,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
                 text: text.clone(),
                 style: None,
                 color: Some(theme.color_token("muted-foreground")),
+                align: fret_core::TextAlign::Start,
                 wrap: fret_core::TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
             })]
@@ -621,6 +622,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
         text,
         style: None,
         color: Some(theme.color_token("muted-foreground")),
+        align: fret_core::TextAlign::Start,
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
     })

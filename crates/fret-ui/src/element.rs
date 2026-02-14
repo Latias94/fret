@@ -4,8 +4,8 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
-    TextStyle, TextWrap, UvRect, ViewportFit,
+    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextAlign,
+    TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -1229,6 +1229,7 @@ pub struct TextProps {
     pub color: Option<Color>,
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
+    pub align: TextAlign,
 }
 
 #[derive(Debug, Clone)]
@@ -1240,6 +1241,7 @@ pub struct StyledTextProps {
     pub color: Option<Color>,
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
+    pub align: TextAlign,
 }
 
 #[derive(Debug, Clone)]
@@ -1251,6 +1253,7 @@ pub struct SelectableTextProps {
     pub color: Option<Color>,
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
+    pub align: TextAlign,
 }
 
 #[derive(Debug, Clone)]
@@ -1652,6 +1655,7 @@ impl TextProps {
             color: None,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         }
     }
 
@@ -1677,6 +1681,7 @@ impl StyledTextProps {
             color: None,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         }
     }
 
@@ -1702,6 +1707,7 @@ impl SelectableTextProps {
             color: None,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         }
     }
 

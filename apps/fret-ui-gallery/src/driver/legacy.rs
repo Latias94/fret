@@ -144,6 +144,10 @@ struct UiGalleryWindowState {
     theme_preset: Model<Option<Arc<str>>>,
     theme_preset_open: Model<bool>,
     applied_theme_preset: Option<Arc<str>>,
+    motion_preset: Model<Option<Arc<str>>>,
+    motion_preset_open: Model<bool>,
+    applied_motion_preset: Option<Arc<str>>,
+    applied_motion_preset_theme_preset: Option<Arc<str>>,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
     view_cache_inner_enabled: Model<bool>,
@@ -154,6 +158,7 @@ struct UiGalleryWindowState {
     inspector_last_pointer: Model<Option<fret_core::Point>>,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
+    dialog_glass_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
     portal_geometry_popover_open: Model<bool>,
@@ -244,6 +249,8 @@ impl UiGalleryWindowState {
             content_tab: self.content_tab.clone(),
             theme_preset: self.theme_preset.clone(),
             theme_preset_open: self.theme_preset_open.clone(),
+            motion_preset: self.motion_preset.clone(),
+            motion_preset_open: self.motion_preset_open.clone(),
             view_cache_enabled: self.view_cache_enabled.clone(),
             view_cache_cache_shell: self.view_cache_cache_shell.clone(),
             view_cache_inner_enabled: self.view_cache_inner_enabled.clone(),
@@ -252,6 +259,7 @@ impl UiGalleryWindowState {
             view_cache_counter: self.view_cache_counter.clone(),
             popover_open: self.popover_open.clone(),
             dialog_open: self.dialog_open.clone(),
+            dialog_glass_open: self.dialog_glass_open.clone(),
             alert_dialog_open: self.alert_dialog_open.clone(),
             sheet_open: self.sheet_open.clone(),
             portal_geometry_popover_open: self.portal_geometry_popover_open.clone(),
@@ -909,8 +917,13 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("zinc/light")));
         let theme_preset_open = app.models_mut().insert(false);
+        let motion_preset = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("theme")));
+        let motion_preset_open = app.models_mut().insert(false);
         let popover_open = app.models_mut().insert(false);
         let dialog_open = app.models_mut().insert(false);
+        let dialog_glass_open = app.models_mut().insert(false);
         let alert_dialog_open = app.models_mut().insert(false);
         let sheet_open = app.models_mut().insert(false);
         let portal_geometry_popover_open = app.models_mut().insert(false);
@@ -1101,6 +1114,10 @@ impl UiGalleryDriver {
             theme_preset,
             theme_preset_open,
             applied_theme_preset: None,
+            motion_preset,
+            motion_preset_open,
+            applied_motion_preset: None,
+            applied_motion_preset_theme_preset: None,
             view_cache_enabled,
             view_cache_cache_shell,
             view_cache_inner_enabled,
@@ -1111,6 +1128,7 @@ impl UiGalleryDriver {
             inspector_last_pointer,
             popover_open,
             dialog_open,
+            dialog_glass_open,
             alert_dialog_open,
             sheet_open,
             portal_geometry_popover_open,
@@ -1966,6 +1984,124 @@ impl UiGalleryDriver {
         Ok(())
     }
 
+    fn motion_preset_theme_patch(preset: &str) -> fret_ui::ThemeConfig {
+        let mut cfg = fret_ui::ThemeConfig::default();
+
+        let shadcn_ease = fret_ui::theme::CubicBezier {
+            x1: 0.22,
+            y1: 1.0,
+            x2: 0.36,
+            y2: 1.0,
+        };
+        let linear = fret_ui::theme::CubicBezier {
+            x1: 0.0,
+            y1: 0.0,
+            x2: 1.0,
+            y2: 1.0,
+        };
+
+        let (
+            scale_100,
+            scale_200,
+            scale_300,
+            scale_500,
+            overlay_open,
+            overlay_close,
+            sidebar_toggle,
+            toast_enter,
+            toast_exit,
+        ) = match preset {
+            "snappy" => (80, 160, 240, 320, 160, 140, 160, 140, 110),
+            "bouncy" => (100, 200, 300, 500, 200, 200, 200, 160, 120),
+            "gentle" => (120, 220, 320, 560, 220, 200, 220, 180, 140),
+            _ => (100, 200, 300, 500, 200, 200, 200, 160, 120),
+        };
+
+        cfg.durations_ms
+            .insert("duration.shadcn.motion.100".to_string(), scale_100);
+        cfg.durations_ms
+            .insert("duration.shadcn.motion.200".to_string(), scale_200);
+        cfg.durations_ms
+            .insert("duration.shadcn.motion.300".to_string(), scale_300);
+        cfg.durations_ms
+            .insert("duration.shadcn.motion.500".to_string(), scale_500);
+
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.overlay.open".to_string(),
+            overlay_open,
+        );
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.overlay.close".to_string(),
+            overlay_close,
+        );
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.sidebar.toggle".to_string(),
+            sidebar_toggle,
+        );
+        cfg.durations_ms
+            .insert("duration.shadcn.motion.toast.enter".to_string(), toast_enter);
+        cfg.durations_ms
+            .insert("duration.shadcn.motion.toast.exit".to_string(), toast_exit);
+
+        cfg.easings
+            .insert("easing.shadcn.motion".to_string(), shadcn_ease);
+        cfg.easings
+            .insert("easing.shadcn.motion.overlay".to_string(), shadcn_ease);
+        cfg.easings
+            .insert("easing.shadcn.motion.sidebar".to_string(), linear);
+        cfg.easings
+            .insert("easing.shadcn.motion.toast".to_string(), shadcn_ease);
+
+        let (drawer_settle_duration, drawer_settle_bounce, inertia_bounce_bounce) = match preset {
+            "snappy" => (210, 0.0, 0.2),
+            "bouncy" => (260, 0.35, 0.4),
+            "gentle" => (280, 0.1, 0.25),
+            _ => (240, 0.0, 0.25),
+        };
+
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.spring.drawer.settle".to_string(),
+            drawer_settle_duration,
+        );
+        cfg.numbers.insert(
+            "number.shadcn.motion.spring.drawer.settle.bounce".to_string(),
+            drawer_settle_bounce,
+        );
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.spring.drawer.inertia_bounce".to_string(),
+            drawer_settle_duration,
+        );
+        cfg.numbers.insert(
+            "number.shadcn.motion.spring.drawer.inertia_bounce.bounce".to_string(),
+            inertia_bounce_bounce,
+        );
+
+        cfg.durations_ms
+            .insert("duration.motion.presence.enter".to_string(), overlay_open);
+        cfg.durations_ms
+            .insert("duration.motion.presence.exit".to_string(), overlay_close);
+        cfg.durations_ms.insert(
+            "duration.motion.collapsible.toggle".to_string(),
+            sidebar_toggle,
+        );
+        cfg.durations_ms
+            .insert("duration.motion.layout.expand".to_string(), sidebar_toggle);
+        cfg.durations_ms.insert(
+            "duration.motion.spring.drag_release_settle".to_string(),
+            drawer_settle_duration,
+        );
+        cfg.numbers.insert(
+            "number.motion.spring.drag_release_settle.bounce".to_string(),
+            inertia_bounce_bounce,
+        );
+        cfg.easings
+            .insert("easing.motion.standard".to_string(), shadcn_ease);
+        cfg.easings
+            .insert("easing.motion.emphasized".to_string(), shadcn_ease);
+
+        cfg
+    }
+
     fn sync_shadcn_theme(app: &mut App, state: &mut UiGalleryWindowState) {
         let preset = app.models().get_cloned(&state.theme_preset).flatten();
         if preset.as_deref() == state.applied_theme_preset.as_deref() {
@@ -2025,8 +2161,39 @@ impl UiGalleryDriver {
         let _ = app
             .models_mut()
             .update(&state.theme_preset_open, |open| *open = false);
+        let _ = app
+            .models_mut()
+            .update(&state.motion_preset_open, |open| *open = false);
 
         state.applied_theme_preset = Some(preset);
+        state.applied_motion_preset_theme_preset = None;
+    }
+
+    fn sync_motion_preset(app: &mut App, state: &mut UiGalleryWindowState) {
+        let theme_preset = app.models().get_cloned(&state.theme_preset).flatten();
+        let preset = app
+            .models()
+            .get_cloned(&state.motion_preset)
+            .flatten()
+            .unwrap_or_else(|| Arc::from("theme"));
+
+        let already_applied = Some(preset.as_ref()) == state.applied_motion_preset.as_deref()
+            && theme_preset.as_deref() == state.applied_motion_preset_theme_preset.as_deref();
+        if already_applied {
+            return;
+        }
+
+        let patch = Self::motion_preset_theme_patch(preset.as_ref());
+        fret_ui::Theme::with_global_mut(app, |theme| {
+            theme.apply_config_patch(&patch);
+        });
+
+        let _ = app
+            .models_mut()
+            .update(&state.motion_preset_open, |open| *open = false);
+
+        state.applied_motion_preset = Some(preset);
+        state.applied_motion_preset_theme_preset = theme_preset;
     }
 
     fn render_ui(
@@ -3118,6 +3285,17 @@ impl WinitAppDriver for UiGalleryDriver {
             _ => {
                 state.ui.dispatch_event(app, services, event);
             }
+        }
+
+        let should_drive_ui_assets = match event {
+            Event::ImageRegistered { token, .. } | Event::ImageRegisterFailed { token, .. } => {
+                use fret_ui_assets::image_asset_cache::ImageAssetCacheHostExt as _;
+                app.with_image_asset_cache(|cache, _app| cache.key_for_token(*token).is_some())
+            }
+            _ => false,
+        };
+        if should_drive_ui_assets {
+            let _ = fret_ui_assets::UiAssets::handle_event(app, window, event);
         }
     }
 

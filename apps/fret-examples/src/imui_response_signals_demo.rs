@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use fret::prelude::*;
 use fret_core::{Point, Px, Rect};
-use fret_kit::prelude::*;
 
 struct ImUiResponseSignalsState {
     left_clicks: Model<u32>,
@@ -19,7 +19,7 @@ struct ImUiResponseSignalsState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app("imui-response-signals-demo", init_window, view)?
+    fret::app("imui-response-signals-demo", init_window, view)?
         .with_main_window("imui_response_signals_demo", (720.0, 520.0))
         .run()?;
     Ok(())

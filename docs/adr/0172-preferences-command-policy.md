@@ -36,7 +36,7 @@ Semantics:
 
 Note:
 
-- `fret-kit` enables a small default Preferences overlay by default (built with `fret-ui-kit`
+- `fret` enables a small default Preferences overlay by default (built with `fret-ui-kit`
   primitives) that surfaces layered config file locations and clipboard copy actions. Apps can
   override this by installing their own `on_preferences` hook.
 

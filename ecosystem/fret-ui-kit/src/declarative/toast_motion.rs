@@ -1,7 +1,8 @@
 //! Motion token helpers for toast / Sonner-style surfaces.
 //!
-//! These keys are ecosystem-level (shadcn-aligned) and are intentionally optional. When absent,
-//! callers should fall back to existing legacy values.
+//! These keys are ecosystem-level and intentionally optional. shadcn-scoped keys remain the
+//! preferred knobs for shadcn recipes, but the helpers also support canonical cross-ecosystem
+//! semantic keys (e.g. `duration.motion.presence.*`) as a fallback.
 
 use std::time::Duration;
 
@@ -13,6 +14,10 @@ const THEME_DURATION_SHADCN_MOTION_TOAST_EXIT: &str = "duration.shadcn.motion.to
 const THEME_EASING_SHADCN_MOTION_TOAST: &str = "easing.shadcn.motion.toast";
 
 const THEME_EASING_SHADCN_MOTION: &str = "easing.shadcn.motion";
+
+const THEME_DURATION_MOTION_PRESENCE_ENTER: &str = "duration.motion.presence.enter";
+const THEME_DURATION_MOTION_PRESENCE_EXIT: &str = "duration.motion.presence.exit";
+const THEME_EASING_MOTION_STANDARD: &str = "easing.motion.standard";
 
 pub const DEFAULT_SHADCN_TOAST_ENTER_DURATION: Duration = Duration::from_millis(200);
 pub const DEFAULT_SHADCN_TOAST_EXIT_DURATION: Duration = Duration::from_millis(200);
@@ -27,11 +32,13 @@ fn theme_duration_ms_by_key<H: UiHost>(cx: &ElementContext<'_, H>, key: &str) ->
 /// shadcn semantic toast enter duration (`duration.shadcn.motion.toast.enter`).
 pub fn shadcn_toast_enter_duration_opt<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Duration> {
     theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_TOAST_ENTER)
+        .or_else(|| theme_duration_ms_by_key(cx, THEME_DURATION_MOTION_PRESENCE_ENTER))
 }
 
 /// shadcn semantic toast exit duration (`duration.shadcn.motion.toast.exit`).
 pub fn shadcn_toast_exit_duration_opt<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Duration> {
     theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_TOAST_EXIT)
+        .or_else(|| theme_duration_ms_by_key(cx, THEME_DURATION_MOTION_PRESENCE_EXIT))
 }
 
 /// shadcn semantic toast easing curve (`easing.shadcn.motion.toast`, falling back to
@@ -41,6 +48,7 @@ pub fn shadcn_toast_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicB
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION_TOAST)
         .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
         .unwrap_or(CubicBezier {
             x1: crate::headless::easing::SHADCN_EASE.x1,
             y1: crate::headless::easing::SHADCN_EASE.y1,

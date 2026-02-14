@@ -252,7 +252,7 @@ Notes:
 | `fret-icons-lucide` | `N` | Data-only icon pack. |
 | `fret-icons-radix` | `N` | Data-only icon pack. |
 | `fret-imui` | `N` (host-side `S+Q`) | Core immediate facade remains agnostic; host app computes selector/query snapshots. |
-| `fret-kit` | `S+Q` | Golden-path app layer benefits from the full state stack. |
+| `fret` | `S+Q` | Golden-path app layer benefits from the full state stack. |
 | `fret-markdown` | `S+Q+Stream` | Derived document projections + async asset/query + stream-like updates. |
 | `fret-node` | `S` (optional `Q`) | Graph derivations are primary; remote metadata can be query-fed. |
 | `fret-plot` | `S+Q` | Plot transforms/aggregation + async data loading are common. |

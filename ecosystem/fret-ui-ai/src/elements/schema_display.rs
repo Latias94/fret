@@ -553,6 +553,7 @@ impl SchemaDisplayMethod {
                 color: Some(accent),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })]
         })
     }
@@ -1271,6 +1272,7 @@ impl SchemaDisplayExample {
                 color: Some(theme.color_token("foreground")),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })]
         });
 
@@ -1341,6 +1343,7 @@ fn monospace_text<H: UiHost>(
         color: Some(theme.color_token("foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     })
 }
 

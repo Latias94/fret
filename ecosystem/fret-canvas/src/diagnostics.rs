@@ -122,6 +122,7 @@ impl CanvasCacheStatsRegistry {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn record_scene_op_tile_cache_with_budget(
         &mut self,
         key: CanvasCacheKey,

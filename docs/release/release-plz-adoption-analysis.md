@@ -73,11 +73,11 @@ Special note for `v0.1`:
 
 Current recommendation for v0.1:
 
-- Keep `fret-kit` out of the first publish wave.
+- Keep `fret` (ecosystem batteries-included entry points) out of the first publish wave.
 
 Reason:
 
-- `fret-kit` currently depends on `fret-bootstrap` and related integration crates (`fret-ui-assets`, icon packs),
+- `fret` currently depends on `fret-bootstrap` and related integration crates (`fret-ui-assets`, icon packs),
   which are intentionally excluded from the narrow 0.1 release footprint.
 
 Note: some crates in this list are technically publishable, but excluded intentionally for a narrow and stable 0.1 release footprint.
@@ -88,7 +88,7 @@ Current manifests rely on path-only workspace dependencies (no explicit version 
 
 This causes `cargo publish --dry-run` to fail before release:
 
-- Example: `fret` currently fails with
+- Example: `fret-framework` currently fails with
   - `all dependencies must have a version requirement specified when publishing`
 
 Therefore, before enabling the release pipeline, all crates in the release set need publishable dependency declarations (path + version strategy compatible with crates.io).
@@ -130,7 +130,9 @@ Current workflow already includes:
 2. Mark all non-release crates explicitly as `publish = false` to avoid accidental publish attempts.
 3. Run a full local dry run:
    - `release-plz update --config release-plz.toml --repo-url https://github.com/Latias94/fret`
-4. Decide whether `fret-kit` is in wave-1 or wave-2:
+4. Decide whether `fret` is in wave-1 or wave-2:
    - wave-1 => include `fret-bootstrap`/assets/icon crates in release scope;
-   - wave-2 => keep `fret-kit` private until integration crates are ready.
+   - wave-2 => keep `fret` private until integration crates are ready.
+
+Note: this repo currently does not require publishing compatibility aliases.
 4. After dry-run is clean, enable the workflow on `main` and test with `workflow_dispatch` first.

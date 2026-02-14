@@ -54,16 +54,17 @@ Hard rules remain:
 
 For a typical *native* UI app, the recommended set is:
 
-- `fret` (facade; portable re-exports)
-- one component surface (e.g. `fret-ui-kit`, `fret-ui-shadcn`)
-- `fret-bootstrap` (optional, recommended): settings + icons + budgets + dev toggles
-- `fret-ui-assets` (optional, recommended if you show images/icons): UI render-asset caches and helpers
+- `fret` (ecosystem meta crate; batteries-included entry points)
+  - wraps `fret-bootstrap` + the default component surface (`fret-ui-shadcn`)
+- Optional ecosystem helpers (recommended defaults):
+  - `fret-selector` (memoized derived state)
+  - `fret-query` (async resource state + caching)
 
 The user should not need to understand `winit`, `wgpu`, effects draining, or cache budgets to get their first app running.
 
 Advanced users may choose the “manual assembly” route:
 
-- depend on `fret-launch` directly (or backend crates directly) and configure everything themselves,
+- depend on `fret-framework` + `fret-bootstrap` (or depend on `fret-launch` / backend crates directly) and configure everything themselves,
 - still respect ADR 0004’s resource ownership and handle-based IDs.
 
 ### 3) “Resource system”: we provide UI render assets, not a project asset pipeline
@@ -95,16 +96,15 @@ To keep layering clear and keep portable dependencies explicit, the **kernel** s
 - UI render-asset conveniences live in `fret-ui-assets`.
 - App defaults / "starter semantics" (settings load, icon packs, budgets, dev toggles) live in `fret-bootstrap`.
 
-However, we may provide an **ecosystem-level optional meta crate** (e.g. `fret-kit`) for desktop-first quick starts.
-This must remain optional (not the only entry point) and must not be depended on by `crates/*`.
+We provide an **ecosystem-level meta crate** (`fret`) for desktop-first quick starts.
 
 ## Recommended “User Story” (What we want people to do)
 
 ### A) Native app
 
-- Depend on `fret`, a component crate, plus `fret-bootstrap`.
+- Depend on `fret`.
 - Build your app using `FnDriver` as the primary authoring surface when you care about dev hotpatch (ADR 0105).
-  - Optional quick start: depend on `fret-kit` instead of assembling the set manually.
+  - Manual-assembly escape hatch: depend on `fret-framework` + `fret-bootstrap` instead.
 
 ### B) Web (wasm32)
 
@@ -113,7 +113,7 @@ This must remain optional (not the only entry point) and must not be depended on
 
 ## Alternatives Considered
 
-### A) Put the golden path into `crates/fret` (facade)
+### A) Put the golden path into `crates/fret-framework` (facade)
 
 Rejected.
 
@@ -136,7 +136,7 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
 
 ### Benefits
 
-- Users get a small, consistent dependency story: `fret` + components (+ `fret-bootstrap`).
+- Users get a small, consistent dependency story: `fret` (plus optional `fret-query` / `fret-selector`).
 - “Resources” are clarified as UI render assets, aligned with ADR 0004, without forcing a full asset pipeline.
 - Tooling can iterate quickly without destabilizing core contracts.
 
@@ -146,8 +146,7 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
 
 ## Migration Plan
 
-1. Ensure all examples/demos use `fret-bootstrap` as the default startup path.
-   - Optionally provide a `fret-kit` path for “one dependency” quick starts and templates.
+1. Ensure all examples/demos use `fret` as the default startup path.
 2. Update docs to present:
    - “Golden path” (recommended),
    - “Manual assembly” (advanced).

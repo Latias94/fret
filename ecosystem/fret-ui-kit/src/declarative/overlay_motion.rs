@@ -37,6 +37,13 @@ const THEME_EASING_SHADCN_MOTION_OVERLAY: &str = "easing.shadcn.motion.overlay";
 const THEME_DURATION_SHADCN_MOTION_SIDEBAR_TOGGLE: &str = "duration.shadcn.motion.sidebar.toggle";
 const THEME_EASING_SHADCN_MOTION_SIDEBAR: &str = "easing.shadcn.motion.sidebar";
 
+const THEME_DURATION_MOTION_PRESENCE_ENTER: &str = "duration.motion.presence.enter";
+const THEME_DURATION_MOTION_PRESENCE_EXIT: &str = "duration.motion.presence.exit";
+const THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE: &str = "duration.motion.collapsible.toggle";
+
+const THEME_EASING_MOTION_STANDARD: &str = "easing.motion.standard";
+const THEME_EASING_MOTION_EMPHASIZED: &str = "easing.motion.emphasized";
+
 fn theme_duration_ms_by_key<H: UiHost>(cx: &ElementContext<'_, H>, key: &str) -> Option<Duration> {
     let theme = Theme::global(&*cx.app);
     theme
@@ -87,6 +94,7 @@ pub fn shadcn_overlay_open_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> Du
         &[
             THEME_DURATION_SHADCN_MOTION_OVERLAY_OPEN,
             THEME_DURATION_SHADCN_MOTION_200,
+            THEME_DURATION_MOTION_PRESENCE_ENTER,
         ],
     )
     .unwrap_or(SHADCN_MOTION_DURATION_200)
@@ -99,6 +107,7 @@ pub fn shadcn_overlay_close_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> D
         &[
             THEME_DURATION_SHADCN_MOTION_OVERLAY_CLOSE,
             THEME_DURATION_SHADCN_MOTION_200,
+            THEME_DURATION_MOTION_PRESENCE_EXIT,
         ],
     )
     .unwrap_or(SHADCN_MOTION_DURATION_200)
@@ -109,6 +118,7 @@ pub fn shadcn_motion_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> Cubic
     let theme = Theme::global(&*cx.app);
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION)
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
         .unwrap_or(CubicBezier {
             x1: crate::headless::easing::SHADCN_EASE.x1,
             y1: crate::headless::easing::SHADCN_EASE.y1,
@@ -123,6 +133,8 @@ pub fn shadcn_overlay_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> Cubi
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION_OVERLAY)
         .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_EMPHASIZED))
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
         .unwrap_or(CubicBezier {
             x1: crate::headless::easing::SHADCN_EASE.x1,
             y1: crate::headless::easing::SHADCN_EASE.y1,
@@ -138,6 +150,7 @@ pub fn shadcn_sidebar_toggle_duration<H: UiHost>(cx: &ElementContext<'_, H>) -> 
         &[
             THEME_DURATION_SHADCN_MOTION_SIDEBAR_TOGGLE,
             THEME_DURATION_SHADCN_MOTION_200,
+            THEME_DURATION_MOTION_COLLAPSIBLE_TOGGLE,
         ],
     )
     .unwrap_or(SHADCN_MOTION_DURATION_200)
@@ -149,6 +162,7 @@ pub fn shadcn_sidebar_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> Cubi
     theme
         .easing_by_key(THEME_EASING_SHADCN_MOTION_SIDEBAR)
         .or_else(|| theme.easing_by_key(THEME_EASING_SHADCN_MOTION))
+        .or_else(|| theme.easing_by_key(THEME_EASING_MOTION_STANDARD))
         // shadcn/ui v4 Sidebar uses `ease-linear` for width/position transitions.
         .unwrap_or(CubicBezier {
             x1: 0.0,

@@ -41,8 +41,26 @@ pub(crate) struct DiagScreenshotCapture {
 }
 
 impl DiagScreenshotCapture {
+    fn read_config_json() -> Option<serde_json::Value> {
+        let path = std::env::var_os("FRET_DIAG_CONFIG_PATH").filter(|v| !v.is_empty());
+        let Some(path) = path else {
+            return None;
+        };
+        let Ok(bytes) = std::fs::read(&path) else {
+            return None;
+        };
+        serde_json::from_slice::<serde_json::Value>(&bytes).ok()
+    }
+
     pub(crate) fn from_env() -> Option<Self> {
-        let enabled = env_flag_default_false("FRET_DIAG_SCREENSHOTS");
+        let config = Self::read_config_json();
+        let enabled = env_flag_default_false("FRET_DIAG_GPU_SCREENSHOTS")
+            || env_flag_default_false("FRET_DIAG_SCREENSHOTS")
+            || config
+                .as_ref()
+                .and_then(|v| v.get("screenshots_enabled"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
         if !enabled {
             return None;
         }
@@ -50,26 +68,50 @@ impl DiagScreenshotCapture {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
         let out_dir = out_dir_env
             .map(PathBuf::from)
+            .or_else(|| {
+                config
+                    .as_ref()
+                    .and_then(|v| v.get("out_dir"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.trim())
+                    .filter(|s| !s.is_empty())
+                    .map(PathBuf::from)
+            })
             .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
+
+        let config_paths = config.as_ref().and_then(|v| v.get("paths"));
+        let resolve_config_path = |key: &str| -> Option<PathBuf> {
+            let raw = config_paths
+                .and_then(|p| p.get(key))
+                .and_then(|v| v.as_str())
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())?;
+            let p = PathBuf::from(raw);
+            Some(if p.is_absolute() { p } else { out_dir.join(p) })
+        };
 
         let request_path = std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| resolve_config_path("screenshot_request_path"))
             .unwrap_or_else(|| out_dir.join("screenshots.request.json"));
 
         let trigger_path = std::env::var_os("FRET_DIAG_SCREENSHOT_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| resolve_config_path("screenshot_trigger_path"))
             .unwrap_or_else(|| out_dir.join("screenshots.touch"));
 
         let result_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| resolve_config_path("screenshot_result_path"))
             .unwrap_or_else(|| out_dir.join("screenshots.result.json"));
 
         let result_trigger_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
+            .or_else(|| resolve_config_path("screenshot_result_trigger_path"))
             .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
 
         Some(Self {

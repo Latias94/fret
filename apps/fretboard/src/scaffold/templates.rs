@@ -47,7 +47,7 @@ pub(super) fn todo_template_cargo_toml(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let fret_kit_path = join_workspace_path(workspace_prefix, "ecosystem/fret-kit");
+    let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
     let fret_query_path = join_workspace_path(workspace_prefix, "ecosystem/fret-query");
     let fret_selector_path = join_workspace_path(workspace_prefix, "ecosystem/fret-selector");
 
@@ -59,7 +59,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret-kit = {{ path = "{fret_kit_path}", default-features = false, features = [{kit_features}] }}
+fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
 fret-query = {{ path = "{fret_query_path}", features = ["ui"] }}
 fret-selector = {{ path = "{fret_selector_path}", features = ["ui"] }}
 [workspace]
@@ -109,7 +109,7 @@ pub(super) fn hello_template_cargo_toml(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let fret_kit_path = join_workspace_path(workspace_prefix, "ecosystem/fret-kit");
+    let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
 
     format!(
         r#"[package]
@@ -119,7 +119,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret-kit = {{ path = "{fret_kit_path}", default-features = false, features = [{kit_features}] }}
+    fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
 
 [workspace]
 "#
@@ -166,7 +166,7 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 use std::time::Duration;
 
-use fret_kit::prelude::*;
+	use fret::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
@@ -240,7 +240,7 @@ impl MvuProgram for TodoProgram {
 }
 
 fn main() -> anyhow::Result<()> {
-    fret_kit::mvu::app::<TodoProgram>("todo")?
+    fret::mvu::app::<TodoProgram>("todo")?
         .with_main_window("todo", (560.0, 520.0))
         .run()?;
     Ok(())
@@ -583,7 +583,7 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
     };
 
     format!(
-        r#"use fret_kit::prelude::*;
+        r#"use fret::prelude::*;
 
 #[derive(Debug, Clone)]
 enum Msg {{
@@ -632,7 +632,7 @@ __PALETTE_BUTTON__
 }}
 
 fn main() -> anyhow::Result<()> {{
-    fret_kit::mvu::app::<HelloProgram>("{package_name}")?
+    fret::mvu::app::<HelloProgram>("{package_name}")?
         .with_main_window("{package_name}", (560.0, 360.0))
         .run()?;
     Ok(())
@@ -652,14 +652,14 @@ pub(super) fn empty_template_main_rs() -> &'static str {
 
 pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
-        "- UI assets: enabled (`fret-kit/ui-assets`)\n"
+        "- UI assets: enabled (`fret/ui-assets`)\n"
     } else {
         "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches)\n"
     };
 
     let icons_line = match opts.icon_pack {
-        IconPack::Lucide => "- Icons: Lucide (`fret-kit/icons-lucide`)\n",
-        IconPack::Radix => "- Icons: Radix (`fret-kit/icons-radix`)\n",
+        IconPack::Lucide => "- Icons: Lucide (`fret/icons-lucide`)\n",
+        IconPack::Radix => "- Icons: Radix (`fret/icons-radix`)\n",
         IconPack::None => "- Icons: disabled\n",
     };
 
@@ -726,7 +726,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::mvu::app::<Program>(...)` golden path (ADR 0105 / 0110).
+- If you want hotpatch later, keep commands/IDs stable and prefer the `fret::mvu::app::<Program>(...)` golden path (ADR 0105 / 0110).
 "#
     )
 }
@@ -756,8 +756,8 @@ cargo run --release
 
 pub(super) fn hello_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let icons_line = match opts.icon_pack {
-        IconPack::Lucide => "- Icons: Lucide (`fret-kit/icons-lucide`)\n",
-        IconPack::Radix => "- Icons: Radix (`fret-kit/icons-radix`)\n",
+        IconPack::Lucide => "- Icons: Lucide (`fret/icons-lucide`)\n",
+        IconPack::Radix => "- Icons: Radix (`fret/icons-radix`)\n",
         IconPack::None => "- Icons: disabled\n",
     };
 

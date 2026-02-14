@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::time::{Duration, Instant};
+
+use fret_diag_protocol::{UiDiagnosticsConfigFileV1, UiDiagnosticsConfigPathsV1};
 
 use super::LaunchedDemo;
 use super::stats::BundleStatsSort;
@@ -594,12 +596,56 @@ pub(super) fn maybe_launch_demo(
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
     cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
+
+    // Config file is the compat-first consolidation path for diagnostics runtime config.
+    // Best-effort: if the file can't be written, fall back to env-only behavior.
+    let config_path = out_dir.join("diag.config.json");
+    let mut cfg = UiDiagnosticsConfigFileV1 {
+        schema_version: 1,
+        enabled: Some(true),
+        out_dir: Some(out_dir.to_string_lossy().to_string()),
+        paths: Some(UiDiagnosticsConfigPathsV1 {
+            ready_path: Some(ready_path.to_string_lossy().to_string()),
+            exit_path: Some(exit_path.to_string_lossy().to_string()),
+            ..Default::default()
+        }),
+        screenshots_enabled: Some(wants_screenshots),
+        ..Default::default()
+    };
+    if let Some((_, v)) = launch_env
+        .iter()
+        .find(|(k, _)| k == "FRET_DIAG_FIXED_FRAME_DELTA_MS")
+    {
+        if let Ok(parsed) = v.trim().parse::<u64>() {
+            cfg.frame_clock_fixed_delta_ms = Some(parsed);
+        }
+    }
+    if let Some((_, v)) = launch_env
+        .iter()
+        .find(|(k, _)| k == "FRET_DIAG_REDACT_TEXT")
+    {
+        let raw = v.trim();
+        if !raw.is_empty() {
+            cfg.redact_text = Some(raw != "0");
+        }
+    }
+    if let Ok(bytes) = serde_json::to_vec_pretty(&cfg) {
+        let _ = std::fs::create_dir_all(out_dir);
+        if std::fs::write(&config_path, bytes).is_ok() {
+            cmd.env("FRET_DIAG_CONFIG_PATH", &config_path);
+        }
+    }
+
     if wants_screenshots {
         cmd.env("FRET_DIAG_SCREENSHOTS", "1");
     }
     for (key, value) in launch_env {
         match key.as_str() {
-            "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" | "FRET_DIAG_EXIT_PATH" => {
+            "FRET_DIAG"
+            | "FRET_DIAG_DIR"
+            | "FRET_DIAG_READY_PATH"
+            | "FRET_DIAG_EXIT_PATH"
+            | "FRET_DIAG_CONFIG_PATH" => {
                 return Err(format!("--env cannot override reserved var: {key}"));
             }
             _ => cmd.env(key, value),
@@ -1471,6 +1517,7 @@ pub(super) fn apply_perf_baseline_floor(value: u64, headroom_pct: u32) -> u64 {
     floored.max(1)
 }
 
+#[cfg(test)]
 pub(super) fn apply_perf_baseline_headroom_with_slack_and_quantum(
     value_us: u64,
     headroom_pct: u32,

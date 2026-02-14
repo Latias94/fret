@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{Edges, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
     MainAlign, PressableA11y, PressableProps, RowProps, SemanticsDecoration,
@@ -8,6 +8,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 fn muted_foreground(theme: &Theme) -> fret_core::Color {
@@ -643,12 +644,18 @@ impl FieldTitle {
             (fg, px, line_height)
         };
 
+        let align = match direction_prim::use_direction_in_scope(cx, None) {
+            direction_prim::LayoutDirection::Rtl => TextAlign::End,
+            direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+        };
         ui::label(cx, self.text)
+            .w_full()
             .text_size_px(px)
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
+            .text_align(align)
             .into_element(cx)
     }
 }
@@ -707,13 +714,19 @@ impl FieldLabel {
         };
 
         let Some(for_control) = self.for_control.clone() else {
+            let align = match direction_prim::use_direction_in_scope(cx, None) {
+                direction_prim::LayoutDirection::Rtl => TextAlign::End,
+                direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+            };
             return ui::label(cx, self.text)
                 .layout(self.layout)
+                .w_full()
                 .text_size_px(px)
                 .line_height_px(line_height)
                 .font_medium()
                 .text_color(ColorRef::Color(fg))
                 .wrap(TextWrap::Word)
+                .text_align(align)
                 .into_element(cx);
         };
 
@@ -795,12 +808,18 @@ impl FieldLabel {
                 ..Default::default()
             };
 
+            let align = match direction_prim::use_direction_in_scope(cx, None) {
+                direction_prim::LayoutDirection::Rtl => TextAlign::End,
+                direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+            };
             let child = ui::label(cx, text.clone())
+                .w_full()
                 .text_size_px(px)
                 .line_height_px(line_height)
                 .font_medium()
                 .text_color(ColorRef::Color(fg))
                 .wrap(TextWrap::Word)
+                .text_align(align)
                 .into_element(cx);
             (props, vec![child])
         })
@@ -833,6 +852,10 @@ impl FieldDescription {
             (fg, px, line_height)
         };
 
+        let align = match direction_prim::use_direction_in_scope(cx, None) {
+            direction_prim::LayoutDirection::Rtl => TextAlign::End,
+            direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+        };
         ui::text(cx, self.text)
             .w_full()
             .text_size_px(px)
@@ -841,6 +864,7 @@ impl FieldDescription {
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
+            .text_align(align)
             .into_element(cx)
     }
 }
@@ -871,6 +895,10 @@ impl FieldError {
             (fg, px, line_height)
         };
 
+        let align = match direction_prim::use_direction_in_scope(cx, None) {
+            direction_prim::LayoutDirection::Rtl => TextAlign::End,
+            direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+        };
         ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
@@ -878,6 +906,7 @@ impl FieldError {
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
+            .text_align(align)
             .into_element(cx)
     }
 }

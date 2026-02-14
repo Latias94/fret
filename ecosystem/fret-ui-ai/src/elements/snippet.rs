@@ -152,6 +152,7 @@ impl SnippetText {
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })]
             },
         )
@@ -447,6 +448,7 @@ impl SnippetCopyButton {
                         color: None,
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     })
                     .attach_semantics(
                         fret_ui::element::SemanticsDecoration::default()

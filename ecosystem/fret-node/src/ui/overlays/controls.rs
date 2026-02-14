@@ -438,6 +438,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
 

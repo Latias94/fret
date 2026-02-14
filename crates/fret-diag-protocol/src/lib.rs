@@ -179,6 +179,97 @@ pub struct FilesystemCapabilitiesV1 {
     pub capabilities: Vec<String>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiDiagnosticsConfigPathsV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ready_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_path: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screenshot_request_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screenshot_trigger_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screenshot_result_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screenshot_result_trigger_path: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_trigger_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_result_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_result_trigger_path: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick_trigger_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick_result_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick_result_trigger_path: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inspect_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inspect_trigger_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiDiagnosticsConfigFileV1 {
+    pub schema_version: u32,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub out_dir: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paths: Option<UiDiagnosticsConfigPathsV1>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_keepalive: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_auto_dump: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick_auto_dump: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_events: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_snapshots: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_dump_max_snapshots: Option<u32>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capture_semantics: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_semantics_nodes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantics_test_ids_only: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screenshots_enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screenshot_on_dump: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub redact_text: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_debug_string_bytes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_gating_trace_entries: Option<u32>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_clock_fixed_delta_ms: Option<u64>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub devtools_embed_bundle: Option<bool>,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct UiPaddingInsetsV1 {
     pub left_px: f32,
@@ -216,18 +307,15 @@ pub enum UiWindowTargetV1 {
     WindowFfi { window: u64 },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiInsetsOverrideV1 {
+    #[default]
     NoChange,
     Clear,
-    Set { insets_px: UiPaddingInsetsV1 },
-}
-
-impl Default for UiInsetsOverrideV1 {
-    fn default() -> Self {
-        Self::NoChange
-    }
+    Set {
+        insets_px: UiPaddingInsetsV1,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1177,7 +1265,7 @@ pub struct DevtoolsBundleDumpedV1 {
     ///
     /// When present, the runtime may send multiple `bundle.dumped` messages (same `exported_unix_ms`
     /// + `dir`) each carrying one chunk. Tooling should reassemble chunks in order to reconstruct
-    /// the full JSON payload.
+    ///   the full JSON payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundle_json_chunk: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
