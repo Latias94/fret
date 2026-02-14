@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::util::{
-    read_pick_result, read_pick_result_run_id, read_script_result, read_script_result_run_id, touch,
-    write_script,
+    read_pick_result, read_pick_result_run_id, read_script_result, read_script_result_run_id,
+    touch, write_script,
 };
 
 #[derive(Debug, Clone)]
@@ -52,7 +52,8 @@ pub(crate) fn run_script_and_wait(
     write_script(src, script_path)?;
     touch(script_trigger_path)?;
 
-    let start_deadline = Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
+    let start_deadline =
+        Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
     let mut next_retouch_at = start_deadline;
     let mut retouch_interval_ms: u64 = 2_000;
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
@@ -139,7 +140,10 @@ pub(crate) fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
             let last_bundle_dir = result.last_bundle_dir.as_deref().unwrap_or("");
             if last_bundle_dir.is_empty() {
                 if let Some(step) = result.step_index {
-                    eprintln!("FAIL (run_id={}) step={} reason={reason}", result.run_id, step);
+                    eprintln!(
+                        "FAIL (run_id={}) step={} reason={reason}",
+                        result.run_id, step
+                    );
                 } else {
                     eprintln!("FAIL (run_id={}) reason={reason}", result.run_id);
                 }
@@ -184,7 +188,8 @@ pub(crate) fn run_pick_and_wait(
 
     touch(pick_trigger_path)?;
 
-    let start_deadline = Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
+    let start_deadline =
+        Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
     loop {
         if Instant::now() >= deadline {
@@ -368,7 +373,8 @@ pub(crate) fn apply_pick_to_script(
     selector: serde_json::Value,
 ) -> Result<(), String> {
     let bytes = std::fs::read(src).map_err(|e| e.to_string())?;
-    let mut script: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let mut script: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
 
     crate::util::json_pointer_set(&mut script, json_pointer, selector)?;
 
