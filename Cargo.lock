@@ -1808,6 +1808,7 @@ dependencies = [
  "fret-diag-ws",
  "glob",
  "image",
+ "serde",
  "serde_json",
  "sysinfo",
  "windows-sys 0.61.2",
