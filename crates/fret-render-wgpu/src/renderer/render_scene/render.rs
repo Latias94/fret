@@ -87,6 +87,7 @@ impl Renderer {
         self.ensure_text_subpixel_pipeline(device, format);
         self.ensure_mask_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
+        self.ensure_path_clip_mask_pipeline(device);
         let path_samples = self.effective_path_msaa_samples(format);
         if path_samples > 1 {
             self.ensure_composite_pipeline(device, format);
@@ -611,6 +612,74 @@ impl Renderer {
 
         for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
             match planned_pass {
+                RenderPlanPass::PathClipMask(mask_pass) => {
+                    let target_origin = mask_pass.dst_origin;
+                    let target_size = mask_pass.dst_size;
+                    queue.write_buffer(
+                        &self.render_space_buffer,
+                        0,
+                        bytemuck::bytes_of(&RenderSpaceUniform {
+                            origin_px: [target_origin.0 as f32, target_origin.1 as f32],
+                            size_px: [target_size.0.max(1) as f32, target_size.1.max(1) as f32],
+                        }),
+                    );
+
+                    let pass_target_view = frame_targets.ensure_target(
+                        &mut self.intermediate_pool,
+                        device,
+                        mask_pass.dst,
+                        target_size,
+                        wgpu::TextureFormat::R8Unorm,
+                        usage,
+                    );
+
+                    let uniform_offset =
+                        (mask_pass.uniform_index as u64).saturating_mul(self.uniform_stride);
+
+                    let vertex_size = std::mem::size_of::<PathVertex>() as u64;
+                    let first = (mask_pass.first_vertex as u64).saturating_mul(vertex_size);
+                    let size = (mask_pass.vertex_count as u64).saturating_mul(vertex_size);
+
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret path clip-mask pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &pass_target_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: mask_pass.load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+
+                    let pipeline = self
+                        .path_clip_mask_pipeline
+                        .as_ref()
+                        .expect("path clip-mask pipeline must exist");
+                    rp.set_pipeline(pipeline);
+                    rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset as u32]);
+
+                    if size != 0 {
+                        rp.set_vertex_buffer(0, path_vertex_buffer.slice(first..first + size));
+                        let _ = set_scissor_rect_absolute(
+                            &mut rp,
+                            mask_pass.scissor,
+                            mask_pass.dst_origin,
+                            mask_pass.dst_size,
+                        );
+                        rp.draw(0..mask_pass.vertex_count, 0..1);
+                    }
+
+                    if perf_enabled {
+                        frame_perf.clip_mask_draw_calls =
+                            frame_perf.clip_mask_draw_calls.saturating_add(1);
+                    }
+                }
                 RenderPlanPass::SceneDrawRange(scene_pass) => {
                     debug_assert_eq!(scene_pass.segment.0, 0);
                     let target_origin = scene_pass.target_origin;

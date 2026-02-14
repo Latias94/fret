@@ -143,6 +143,17 @@ Exit criteria:
 
 - Clip affects hit-testing only where explicitly defined (no accidental “mask affects hit-test” regressions).
 
+Progress record (ClipPath v1):
+
+- Date: 2026-02-14
+- Status: In progress (contract + renderer substrate landed; conformance gates pending)
+- Evidence anchors:
+  - `docs/adr/0273-clip-path-and-image-mask-sources-v1.md`
+  - `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`, `SceneRecording::with_clip_path`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (`SceneOp::PushClipPath` encoding)
+  - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanPass::PathClipMask`, `EffectMarkerKind::{ClipPathPush,ClipPathPop}`)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/path_clip_mask.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_CLIP_MASK_SHADER`)
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

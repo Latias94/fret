@@ -4,6 +4,7 @@ use super::*;
 pub(super) enum ClipPop {
     NoShader,
     Shader { prev_head: u32 },
+    Path,
 }
 
 #[derive(Clone, Copy)]
@@ -24,6 +25,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) viewport_vertices: &'a mut Vec<ViewportVertex>,
     pub(super) text_vertices: &'a mut Vec<TextVertex>,
     pub(super) path_vertices: &'a mut Vec<PathVertex>,
+    pub(super) clip_path_masks: &'a mut Vec<ClipPathMaskDraw>,
     pub(super) clips: &'a mut Vec<ClipRRectUniform>,
     pub(super) masks: &'a mut Vec<MaskGradientUniform>,
     pub(super) uniforms: &'a mut Vec<ViewportUniform>,
@@ -82,6 +84,7 @@ impl<'a> EncodeState<'a> {
         let viewport_vertices = &mut encoding.viewport_vertices;
         let text_vertices = &mut encoding.text_vertices;
         let path_vertices = &mut encoding.path_vertices;
+        let clip_path_masks = &mut encoding.clip_path_masks;
         let clips = &mut encoding.clips;
         let masks = &mut encoding.masks;
         let uniforms = &mut encoding.uniforms;
@@ -108,6 +111,7 @@ impl<'a> EncodeState<'a> {
             viewport_vertices,
             text_vertices,
             path_vertices,
+            clip_path_masks,
             clips,
             masks,
             uniforms,
@@ -237,6 +241,40 @@ impl<'a> EncodeState<'a> {
             mask_count: mask_count.min(Self::MAX_MASK_STACK_DEPTH),
             mask_scope_head: 0,
             mask_scope_count: 0,
+            output_is_srgb: self.output_is_srgb,
+            _pad: 0,
+            mask_viewport_origin: [mask_viewport.x as f32, mask_viewport.y as f32],
+            mask_viewport_size: [w, h],
+            _pad_text_gamma: [0; 2],
+            text_gamma_ratios: self.text_gamma_ratios,
+            text_grayscale_enhanced_contrast: self.text_grayscale_enhanced_contrast,
+            text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
+            _pad_text_quality: [0; 2],
+        });
+        uniform_index
+    }
+
+    pub(super) fn push_mask_viewport_uniform_snapshot(
+        &mut self,
+        mask_viewport: ScissorRect,
+        clip_head: u32,
+        clip_count: u32,
+        mask_head: u32,
+        mask_count: u32,
+        mask_scope_head: u32,
+        mask_scope_count: u32,
+    ) -> u32 {
+        let uniform_index = self.uniforms.len() as u32;
+        let w = mask_viewport.w.max(1) as f32;
+        let h = mask_viewport.h.max(1) as f32;
+        self.uniforms.push(ViewportUniform {
+            viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
+            clip_head,
+            clip_count: clip_count.min(Self::MAX_CLIP_STACK_DEPTH),
+            mask_head,
+            mask_count: mask_count.min(Self::MAX_MASK_STACK_DEPTH),
+            mask_scope_head,
+            mask_scope_count: mask_scope_count.min(Self::MAX_MASK_STACK_DEPTH),
             output_is_srgb: self.output_is_srgb,
             _pad: 0,
             mask_viewport_origin: [mask_viewport.x as f32, mask_viewport.y as f32],

@@ -533,6 +533,14 @@ pub(super) struct PathDraw {
     pub(super) vertex_count: u32,
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct ClipPathMaskDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+}
+
 pub(super) struct PathIntermediate {
     pub(super) size: (u32, u32),
     pub(super) format: wgpu::TextureFormat,
@@ -563,6 +571,12 @@ pub(super) enum EffectMarkerKind {
         quality: fret_core::EffectQuality,
     },
     Pop,
+    ClipPathPush {
+        scissor: ScissorRect,
+        uniform_index: u32,
+        mask_draw_index: u32,
+    },
+    ClipPathPop,
     CompositeGroupPush {
         scissor: ScissorRect,
         uniform_index: u32,
@@ -585,6 +599,7 @@ pub(super) struct SceneEncoding {
     pub(super) viewport_vertices: Vec<ViewportVertex>,
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
+    pub(super) clip_path_masks: Vec<ClipPathMaskDraw>,
     pub(super) clips: Vec<ClipRRectUniform>,
     pub(super) masks: Vec<MaskGradientUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
@@ -604,6 +619,7 @@ impl SceneEncoding {
         self.viewport_vertices.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();
+        self.clip_path_masks.clear();
         self.clips.clear();
         self.masks.clear();
         self.uniforms.clear();

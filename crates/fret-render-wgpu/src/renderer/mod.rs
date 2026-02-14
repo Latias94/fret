@@ -111,6 +111,8 @@ pub struct Renderer {
     path_msaa_pipeline: Option<wgpu::RenderPipeline>,
     path_msaa_pipeline_sample_count: Option<u32>,
 
+    path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
+
     composite_pipeline_format: Option<wgpu::TextureFormat>,
     composite_pipelines: [Option<wgpu::RenderPipeline>; 4],
     composite_mask_pipelines: [Option<wgpu::RenderPipeline>; 4],

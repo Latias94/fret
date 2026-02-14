@@ -415,6 +415,7 @@ impl Renderer {
             path_msaa_pipeline_format: None,
             path_msaa_pipeline: None,
             path_msaa_pipeline_sample_count: None,
+            path_clip_mask_pipeline: None,
             composite_pipeline_format: None,
             composite_pipelines: [None, None, None, None],
             composite_mask_pipelines: [None, None, None, None],

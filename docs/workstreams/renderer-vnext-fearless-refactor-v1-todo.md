@@ -44,7 +44,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ### M3a — ClipPath v1
 
-- [ ] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
+- [x] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
+  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan.rs` (mask pass planning + composite with mask).
 - [ ] REN-VNEXT-clip-003 Add conformance tests:
   - clip-before-transform scrolling cases,
   - clip under rotation (affine),
