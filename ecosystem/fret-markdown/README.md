@@ -65,6 +65,14 @@ By default, `fret-markdown` attaches stable `test_id` anchors to:
 - Headings: `fret-markdown.anchor.<slug>`
 - Footnote definitions: `fret-markdown.anchor.fn-<slug>`
 
+For stable heading anchors that do not change when the title text changes, append an explicit id:
+
+```md
+## Install {#install}
+```
+
+When an explicit id is present, it overrides the text-based slug for that heading.
+
 Hosts can translate in-document links like `#math` / `#fn-note` into those anchors via:
 
 ```rust

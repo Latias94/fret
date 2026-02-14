@@ -665,3 +665,43 @@ fn anchor_test_id_from_fragment_maps_headings_and_footnotes() {
         "fret-markdown.anchor.fn-hello-world"
     );
 }
+
+#[test]
+fn parse_heading_text_extracts_explicit_id() {
+    let (level, title, id) = crate::parse_heading_text("## Install {#install}\n").unwrap();
+    assert_eq!(level, 2);
+    assert_eq!(title.as_ref(), "Install");
+    assert_eq!(id.unwrap().as_ref(), "install");
+
+    let (level, title, id) = crate::parse_heading_text("Install {#install}\n-----\n").unwrap();
+    assert_eq!(level, 2);
+    assert_eq!(title.as_ref(), "Install");
+    assert_eq!(id.unwrap().as_ref(), "install");
+}
+
+#[test]
+fn heading_render_strips_trailing_id_token() {
+    let events = super::parse_events("## Install {#install}\n");
+    let mut pieces = super::inline_pieces_maybe_unwrapped(&events);
+    super::strip_trailing_heading_id_from_inline_pieces(&mut pieces);
+    let joined = pieces
+        .iter()
+        .filter_map(|p| match &p.kind {
+            super::InlinePieceKind::Text(t) => Some(t.as_str()),
+            _ => None,
+        })
+        .collect::<String>();
+    assert_eq!(joined.trim(), "Install");
+}
+
+#[test]
+fn heading_anchor_prefers_explicit_id() {
+    assert_eq!(
+        crate::anchors::heading_anchor_test_id_with_id("Install", Some("setup")).as_ref(),
+        "fret-markdown.anchor.setup"
+    );
+    assert_eq!(
+        crate::anchors::heading_anchor_test_id_with_id("Install", None).as_ref(),
+        "fret-markdown.anchor.install"
+    );
+}

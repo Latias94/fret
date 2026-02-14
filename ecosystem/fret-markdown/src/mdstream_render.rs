@@ -329,25 +329,22 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
 ) -> AnyElement {
     match block.kind {
         mdstream::BlockKind::Heading => {
-            let (level, text) = crate::parse_heading_text(block.display_or_raw()).unwrap_or((
-                1,
-                Arc::<str>::from(block.display_or_raw().trim().to_string()),
-            ));
+            let (level, text, explicit_id) = crate::parse_heading_text(block.display_or_raw())
+                .unwrap_or_else(|| {
+                    let raw = block.display_or_raw().trim();
+                    let (title, id) = crate::parse::split_trailing_heading_id(raw);
+                    (1, title, id)
+                });
             let info = HeadingInfo { level, text };
-            if let Some(render) = &components.heading {
+            let test_id =
+                crate::anchors::heading_anchor_test_id_with_id(&info.text, explicit_id.as_deref());
+
+            let el = if let Some(render) = &components.heading {
                 render(cx, info)
             } else {
-                let test_id = crate::anchors::heading_anchor_test_id(&info.text);
-                let el = crate::render_heading_inline(
-                    cx,
-                    theme,
-                    markdown_theme,
-                    components,
-                    info,
-                    events,
-                );
-                el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
-            }
+                crate::render_heading_inline(cx, theme, markdown_theme, components, info, events)
+            };
+            el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
         }
         mdstream::BlockKind::Paragraph => {
             if crate::is_display_math_block_text(block.display_or_raw()) {

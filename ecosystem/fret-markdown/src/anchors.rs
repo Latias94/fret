@@ -62,7 +62,12 @@ fn decode_percent_fragment(fragment: &str) -> String {
 }
 
 pub(crate) fn heading_anchor_test_id(text: &str) -> Arc<str> {
-    let slug = slugify(text);
+    heading_anchor_test_id_with_id(text, None)
+}
+
+pub(crate) fn heading_anchor_test_id_with_id(text: &str, explicit_id: Option<&str>) -> Arc<str> {
+    let source = explicit_id.unwrap_or(text);
+    let slug = slugify(source);
     Arc::<str>::from(format!("fret-markdown.anchor.{slug}"))
 }
 

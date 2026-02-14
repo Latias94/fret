@@ -156,7 +156,51 @@ fn parse_list_item_start(line: &str) -> Option<(bool, u32, &str)> {
     Some((true, num, s[i + 2..].trim_start()))
 }
 
-pub(crate) fn parse_heading_text(raw: &str) -> Option<(u8, Arc<str>)> {
+pub(crate) fn split_trailing_heading_id(text: &str) -> (Arc<str>, Option<Arc<str>>) {
+    let trimmed = text.trim();
+    if !trimmed.ends_with('}') {
+        return (Arc::<str>::from(trimmed.to_string()), None);
+    }
+
+    let Some(brace_start) = trimmed.rfind('{') else {
+        return (Arc::<str>::from(trimmed.to_string()), None);
+    };
+    if brace_start + 2 >= trimmed.len() {
+        return (Arc::<str>::from(trimmed.to_string()), None);
+    }
+
+    // Require a whitespace separator so we don't treat literal `{#...}` in the title as an id.
+    if brace_start > 0 {
+        let sep = trimmed.as_bytes()[brace_start - 1];
+        if !sep.is_ascii_whitespace() {
+            return (Arc::<str>::from(trimmed.to_string()), None);
+        }
+    }
+
+    let body = &trimmed[brace_start + 1..trimmed.len() - 1];
+    let body = body.trim();
+    let Some(rest) = body.strip_prefix('#') else {
+        return (Arc::<str>::from(trimmed.to_string()), None);
+    };
+
+    let id = rest
+        .trim_start()
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .trim();
+    if id.is_empty() {
+        return (Arc::<str>::from(trimmed.to_string()), None);
+    }
+
+    let title = trimmed[..brace_start].trim_end();
+    (
+        Arc::<str>::from(title.to_string()),
+        Some(Arc::<str>::from(id.to_string())),
+    )
+}
+
+pub(crate) fn parse_heading_text(raw: &str) -> Option<(u8, Arc<str>, Option<Arc<str>>)> {
     let mut lines = raw.lines();
     let first = lines.next()?.trim_end();
     let second = lines.next().map(str::trim_end);
@@ -177,7 +221,8 @@ pub(crate) fn parse_heading_text(raw: &str) -> Option<(u8, Arc<str>)> {
         if text.is_empty() {
             return None;
         }
-        return Some((level, Arc::<str>::from(text.to_string())));
+        let (title, id) = split_trailing_heading_id(text);
+        return Some((level, title, id));
     }
 
     // Setext:
@@ -190,14 +235,16 @@ pub(crate) fn parse_heading_text(raw: &str) -> Option<(u8, Arc<str>)> {
             if text.is_empty() {
                 return None;
             }
-            return Some((1, Arc::<str>::from(text.to_string())));
+            let (title, id) = split_trailing_heading_id(text);
+            return Some((1, title, id));
         }
         if underline_trimmed.chars().all(|c| c == '-') && underline_trimmed.len() >= 2 {
             let text = first.trim();
             if text.is_empty() {
                 return None;
             }
-            return Some((2, Arc::<str>::from(text.to_string())));
+            let (title, id) = split_trailing_heading_id(text);
+            return Some((2, title, id));
         }
     }
 

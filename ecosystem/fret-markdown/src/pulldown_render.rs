@@ -445,11 +445,18 @@ fn render_pulldown_heading<H: UiHost>(
     }
 
     let slice = &events[start..*cursor];
-    let info = HeadingInfo {
-        level,
-        text: plain_text_from_events(slice),
+    let (text, explicit_id) =
+        crate::parse::split_trailing_heading_id(&plain_text_from_events(slice));
+    let info = HeadingInfo { level, text };
+    let test_id =
+        crate::anchors::heading_anchor_test_id_with_id(&info.text, explicit_id.as_deref());
+
+    let el = if let Some(render) = &components.heading {
+        render(cx, info)
+    } else {
+        render_heading_inline(cx, theme, markdown_theme, components, info, slice)
     };
-    render_heading_inline(cx, theme, markdown_theme, components, info, slice)
+    el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
 }
 
 fn render_pulldown_code_block<H: UiHost + 'static>(

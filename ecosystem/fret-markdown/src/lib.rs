@@ -46,7 +46,7 @@ use parse::{
     display_math_only_events, heading_level_to_u8, is_display_math_block_text,
     latex_from_pulldown_math_events, parse_code_fence_body, parse_fenced_code_language,
     parse_heading_text, parse_list_info, parse_math_block_body, raw_block_kind_from_mdstream,
-    strip_blockquote_prefix,
+    split_trailing_heading_id, strip_blockquote_prefix,
 };
 use theme::MarkdownTheme;
 
@@ -200,8 +200,42 @@ fn render_heading_inline<H: UiHost>(
         color: fg,
     };
 
-    let pieces = inline_pieces_maybe_unwrapped(events);
+    let mut pieces = inline_pieces_maybe_unwrapped(events);
+    strip_trailing_heading_id_from_inline_pieces(&mut pieces);
     render_inline_flow_or_rich(cx, theme, markdown_theme, components, base, &pieces)
+}
+
+fn strip_trailing_heading_id_from_inline_pieces(pieces: &mut Vec<InlinePiece>) {
+    while matches!(pieces.last(), Some(InlinePiece { kind: InlinePieceKind::Text(t), .. }) if t.trim().is_empty())
+    {
+        pieces.pop();
+    }
+
+    let Some((last_text, last_style)) = pieces.last().and_then(|last| match &last.kind {
+        InlinePieceKind::Text(t) => Some((t.clone(), last.style.clone())),
+        _ => None,
+    }) else {
+        return;
+    };
+
+    let (title, id) = split_trailing_heading_id(&last_text);
+    if id.is_none() {
+        return;
+    }
+
+    pieces.pop();
+    if !title.trim().is_empty() {
+        pieces.push(InlinePiece {
+            kind: InlinePieceKind::Text(title.to_string()),
+            style: last_style,
+        });
+        return;
+    }
+
+    while matches!(pieces.last(), Some(InlinePiece { kind: InlinePieceKind::Text(t), .. }) if t.trim().is_empty())
+    {
+        pieces.pop();
+    }
 }
 
 fn render_paragraph_inline<H: UiHost>(
