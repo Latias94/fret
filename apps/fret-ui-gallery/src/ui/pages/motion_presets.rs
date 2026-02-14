@@ -116,7 +116,7 @@ pub(super) fn preview_motion_presets(
     let preset_select = {
         let select = shadcn::Select::new(motion_preset, motion_preset_open)
             .placeholder("Motion preset")
-            .trigger_test_id("ui-gallery-motion-preset-trigger")
+            .trigger_test_id("ui-gallery-motion-presets-preset-trigger")
             .items([
                 shadcn::SelectItem::new("theme", "Theme (baseline)")
                     .test_id("ui-gallery-motion-preset-item-theme"),
