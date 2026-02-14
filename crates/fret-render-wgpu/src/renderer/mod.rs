@@ -224,7 +224,6 @@ pub struct Renderer {
     debug_pixelate_scale: u32,
     debug_blur_radius: u32,
     debug_blur_scissor: Option<ScissorRect>,
-    render_plan_compiler_flavor: RenderPlanCompilerFlavor,
     intermediate_budget_bytes: u64,
     intermediate_perf_enabled: bool,
     intermediate_perf: IntermediatePerfStats,
@@ -251,13 +250,6 @@ pub struct Renderer {
     materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
     material_paint_budget_per_frame: u64,
     material_distinct_budget_per_frame: usize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum RenderPlanCompilerFlavor {
-    #[default]
-    Legacy,
-    VNext,
 }
 
 #[derive(Clone, Copy, Debug)]

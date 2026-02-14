@@ -25,7 +25,6 @@ pub use images::{
     upload_rgba8_image, write_rgba8_texture_region,
 };
 pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
-pub use renderer::RenderPlanCompilerFlavor;
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;

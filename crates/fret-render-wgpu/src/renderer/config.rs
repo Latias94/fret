@@ -322,14 +322,6 @@ impl Renderer {
         });
     }
 
-    pub fn render_plan_compiler_flavor(&self) -> RenderPlanCompilerFlavor {
-        self.render_plan_compiler_flavor
-    }
-
-    pub fn set_render_plan_compiler_flavor(&mut self, flavor: RenderPlanCompilerFlavor) {
-        self.render_plan_compiler_flavor = flavor;
-    }
-
     pub fn intermediate_budget_bytes(&self) -> u64 {
         self.intermediate_budget_bytes
     }

@@ -33,8 +33,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-plan-001 Define the internal RenderPlan IR (segments, sequence points, state snapshots).
   - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.1.1–3.1.5).
   - Evidence (partial): `crates/fret-render-wgpu/src/renderer/render_plan_compiler_vnext.rs` (`compile_for_scene_vnext_effects_only`, `EffectMarkerKind::ClipPathPush`/`ClipPathPop`, `EffectMarkerKind::CompositeGroupPush`/`CompositeGroupPop`).
-- [~] REN-VNEXT-plan-005 Remove the legacy plan compiler as the default build path (keep an escape hatch only).
-  - Evidence: `crates/fret-render-wgpu/Cargo.toml` (`render_plan_legacy_compiler`), `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`compile_for_scene` cfg).
+- [x] REN-VNEXT-plan-005 Remove the legacy plan compiler (and temporary switches/tests) after vNext parity is proven.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderPlan compilation has no flavor switch),
+    `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`compile_for_scene` delegates to vNext),
+    `crates/fret-render-wgpu/Cargo.toml` (no legacy compiler feature).
 - [ ] REN-VNEXT-plan-002 Move budget/degradation decisions into plan compilation (deterministic ordering).
   - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.2.1–3.2.4).
 - [ ] REN-VNEXT-plan-003 Add telemetry hooks: per-window intermediate peak bytes and degradations applied.
@@ -44,10 +46,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/config.rs` (perf snapshot output),
     `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (JSON dump: estimated peak bytes + degradations list).
 - [x] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
-  - Evidence: `crates/fret-render-wgpu/src/renderer/mod.rs` (`RenderPlanCompilerFlavor`),
-    `crates/fret-render-wgpu/src/renderer/config.rs` (`set_render_plan_compiler_flavor`),
-    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (compiles RenderPlan via selected flavor),
-    `crates/fret-render-wgpu/tests/render_plan_compiler_compare_conformance.rs`.
+  - Note: This was a temporary safety rail during rollout and has been removed after completing `REN-VNEXT-plan-005`.
 
 ## M2 — Isolated opacity (saveLayerAlpha)
 
@@ -61,7 +60,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ### M3a — ClipPath v1
 
 - [x] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
-  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan.rs` (mask pass planning + composite with mask).
+  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan_compiler_vnext.rs` (`EffectMarkerKind::ClipPathPush`/`ClipPathPop`).
 - [x] REN-VNEXT-clip-003 Add conformance tests:
   - [x] Clip-path clips to shape (not just bounds): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] Clip capture at push time (does not follow later transforms): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`

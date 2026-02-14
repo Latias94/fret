@@ -10,11 +10,6 @@ homepage.workspace = true
 documentation.workspace = true
 description = "WGPU backend implementation for Fret rendering."
 
-[features]
-# This exists only as an escape hatch while the vNext compiler is being rolled out and proven
-# under pixel-compare conformance gates. The default build path uses the vNext compiler.
-render_plan_legacy_compiler = []
-
 [dependencies]
 fret-render-core = { version = "0.1.0", path = "../fret-render-core" }
 
