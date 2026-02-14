@@ -19,6 +19,21 @@ pub(crate) fn cmd_poke(
     Ok(())
 }
 
+pub(crate) fn cmd_path(
+    rest: &[String],
+    pack_after_run: bool,
+    trigger_path: &Path,
+) -> Result<(), String> {
+    if pack_after_run {
+        return Err("--pack is only supported with `diag run`".to_string());
+    }
+    if !rest.is_empty() {
+        return Err(format!("unexpected arguments: {}", rest.join(" ")));
+    }
+    println!("{}", trigger_path.display());
+    Ok(())
+}
+
 pub(crate) fn cmd_latest(
     rest: &[String],
     pack_after_run: bool,
@@ -36,4 +51,3 @@ pub(crate) fn cmd_latest(
     }
     Err(format!("no diagnostics bundle found under {}", out_dir.display()))
 }
-
