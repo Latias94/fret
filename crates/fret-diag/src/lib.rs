@@ -1894,14 +1894,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
     match sub.as_str() {
         "path" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            println!("{}", resolved_trigger_path.display());
-            Ok(())
+            commands::session::cmd_path(&rest, pack_after_run, &resolved_trigger_path)
         }
         "poke" => {
             commands::session::cmd_poke(&rest, pack_after_run, &resolved_trigger_path)
