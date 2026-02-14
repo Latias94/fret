@@ -22,6 +22,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] REN-VNEXT-docs-001 Add a short “invariants checklist” appendix for renderer refactors (what must never change).
 - [ ] REN-VNEXT-adr-001 Draft ADR: isolated opacity / saveLayer(alpha) (group alpha).
 - [ ] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
+- [ ] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).
 - [ ] REN-VNEXT-guard-000 Record the workstream’s baseline gate set and a baseline perf/telemetry snapshot (linkable).
 
 ## M1 — RenderPlan compilation substrate

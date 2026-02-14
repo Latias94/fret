@@ -133,6 +133,11 @@ Each addition must have:
 - at least one conformance gate (GPU readback test when feasible),
 - and evidence anchors (paths + tests + perf snapshot hooks).
 
+Portability closure (paint/material) is tracked as a dedicated ADR so wasm/mobile behavior stays
+explicit and testable:
+
+- `docs/adr/0274-paint-and-material-portability-closure-v1.md`
+
 ## 5) References (contracts and guardrails)
 
 - Ordered display list and batching: `docs/adr/0002-display-list.md`, `docs/adr/0009-renderer-ordering-and-batching.md`
