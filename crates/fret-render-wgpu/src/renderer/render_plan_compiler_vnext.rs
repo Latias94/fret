@@ -35,7 +35,6 @@ struct EffectScope {
 }
 
 #[derive(Clone, Copy, Debug)]
-#[allow(dead_code)]
 struct CompositeGroupScope {
     mode: fret_core::BlendMode,
     quality: fret_core::EffectQuality,
@@ -175,29 +174,6 @@ fn compile_for_scene_vnext_with_markers(
     intermediate_budget_bytes: u64,
     scene_target: super::PlanTarget,
 ) -> super::RenderPlan {
-    // Incremental rollout:
-    //
-    // - Start by compiling only the effect marker subset needed by the current conformance scenes
-    //   (Backdrop + FilterContent + ClipPath).
-    // - Fallback to the legacy compiler for other marker kinds until migrated.
-    let has_unsupported_markers = encoding.effect_markers.iter().any(|m| {
-        matches!(
-            m.kind,
-            EffectMarkerKind::CompositeGroupPush { .. } | EffectMarkerKind::CompositeGroupPop
-        )
-    });
-    if has_unsupported_markers {
-        return super::RenderPlan::compile_for_scene(
-            encoding,
-            viewport_size,
-            format,
-            clear,
-            path_samples,
-            postprocess,
-            intermediate_budget_bytes,
-        );
-    }
-
     compile_for_scene_vnext_effects_only(
         encoding,
         viewport_size,
@@ -237,6 +213,7 @@ fn compile_for_scene_vnext_effects_only(
         clear_color: clear,
     }];
     let mut effect_scopes: Vec<EffectScope> = Vec::new();
+    let mut composite_group_scopes: Vec<CompositeGroupScope> = Vec::new();
     let mut clip_path_scopes: Vec<ClipPathScope> = Vec::new();
     let mut clip_path_mask_in_use_bytes: u64 = 0;
 
@@ -715,9 +692,124 @@ fn compile_for_scene_vnext_effects_only(
                             let _ = scope.mask_draw_index;
                         }
                     }
-                    EffectMarkerKind::CompositeGroupPush { .. }
-                    | EffectMarkerKind::CompositeGroupPop => {
-                        unreachable!("filtered by preflight")
+                    EffectMarkerKind::CompositeGroupPush {
+                        scissor,
+                        uniform_index,
+                        mode,
+                        quality,
+                        opacity,
+                    } => {
+                        let parent_scope = draw_scopes.last().expect("draw scope");
+                        let parent_target = parent_scope.target;
+                        let parent_origin = parent_scope.origin;
+                        let parent_size = parent_scope.size;
+
+                        let (content_origin, content_size) = if scissor_sized_intermediates {
+                            ((scissor.x, scissor.y), (scissor.w, scissor.h))
+                        } else {
+                            ((0, 0), viewport_size)
+                        };
+                        let mut content_target: Option<super::PlanTarget> = None;
+                        let mut had_free_target = false;
+                        if content_size.0 != 0 && content_size.1 != 0 {
+                            for t in [
+                                super::PlanTarget::Intermediate0,
+                                super::PlanTarget::Intermediate1,
+                                super::PlanTarget::Intermediate2,
+                            ] {
+                                if draw_scopes.iter().any(|s| s.target == t) {
+                                    continue;
+                                }
+                                content_target = Some(t);
+                                had_free_target = true;
+                                break;
+                            }
+
+                            if content_target.is_some()
+                                && !can_allocate_intermediate_bytes(
+                                    &draw_scopes,
+                                    estimate_texture_bytes(content_size, format, 1),
+                                    clip_path_mask_in_use_bytes,
+                                )
+                            {
+                                content_target = None;
+                            }
+                        }
+
+                        if let Some(content_target) = content_target {
+                            draw_scopes.push(DrawScope {
+                                target: content_target,
+                                origin: content_origin,
+                                size: content_size,
+                                needs_clear: true,
+                                clear_color: wgpu::Color::TRANSPARENT,
+                            });
+                        } else if mode != fret_core::BlendMode::Over
+                            && content_size.0 != 0
+                            && content_size.1 != 0
+                        {
+                            degradations.push(RenderPlanDegradation {
+                                draw_ix: cursor,
+                                kind: RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver,
+                                reason: if !had_free_target {
+                                    RenderPlanDegradationReason::TargetExhausted
+                                } else if intermediate_budget_bytes == 0 {
+                                    RenderPlanDegradationReason::BudgetZero
+                                } else {
+                                    RenderPlanDegradationReason::BudgetInsufficient
+                                },
+                            });
+                        }
+
+                        composite_group_scopes.push(CompositeGroupScope {
+                            mode,
+                            quality,
+                            scissor,
+                            uniform_index,
+                            opacity,
+                            parent_target,
+                            parent_origin,
+                            parent_size,
+                            content_target,
+                            content_origin,
+                            content_size,
+                        });
+                    }
+                    EffectMarkerKind::CompositeGroupPop => {
+                        let Some(scope) = composite_group_scopes.pop() else {
+                            marker_ix += 1;
+                            continue;
+                        };
+
+                        if let Some(content_target) = scope.content_target {
+                            debug_assert_eq!(
+                                draw_scopes.last().expect("draw scope").target,
+                                content_target
+                            );
+
+                            passes.push(RenderPlanPass::CompositePremul(
+                                super::CompositePremulPass {
+                                    src: content_target,
+                                    src_origin: scope.content_origin,
+                                    dst: scope.parent_target,
+                                    src_size: scope.content_size,
+                                    dst_origin: scope.parent_origin,
+                                    dst_size: scope.parent_size,
+                                    dst_scissor: Some(scope.scissor),
+                                    mask_uniform_index: Some(scope.uniform_index),
+                                    mask: None,
+                                    blend_mode: scope.mode,
+                                    opacity: scope.opacity,
+                                    load: wgpu::LoadOp::Load,
+                                },
+                            ));
+
+                            let _ = draw_scopes.pop();
+                        } else if scope.mode != fret_core::BlendMode::Over {
+                            // Degraded: no free intermediate targets, so behave as if the group
+                            // was not isolated and the blend mode was `Over` (ADR 0247).
+                            let _ = scope.quality;
+                        }
                     }
                 }
 
