@@ -1126,10 +1126,11 @@ impl ElementHostWidget {
                             model.clone(),
                         ));
                 }
-                let group = self
-                    .resizable_panel_group
-                    .as_mut()
-                    .expect("resizable panel group");
+                let Some(group) = self.resizable_panel_group.as_mut() else {
+                    debug_assert!(false, "resizable panel group must be initialized");
+                    let desired = Size::new(Px(0.0), Px(0.0));
+                    return clamp_to_constraints(desired, props.layout, cx.available);
+                };
                 if group.model_id() != model_id {
                     group.set_model(model);
                 }

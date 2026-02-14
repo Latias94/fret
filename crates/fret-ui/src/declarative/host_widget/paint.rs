@@ -1274,7 +1274,10 @@ impl ElementHostWidget {
                 if self.text_input.is_none() {
                     self.text_input = Some(BoundTextInput::new(model.clone()));
                 }
-                let input = self.text_input.as_mut().expect("text input");
+                let Some(input) = self.text_input.as_mut() else {
+                    debug_assert!(false, "text input must be initialized");
+                    return;
+                };
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
@@ -1291,7 +1294,10 @@ impl ElementHostWidget {
                 if self.text_area.is_none() {
                     self.text_area = Some(crate::text_area::BoundTextArea::new(model.clone()));
                 }
-                let area = self.text_area.as_mut().expect("text area");
+                let Some(area) = self.text_area.as_mut() else {
+                    debug_assert!(false, "text area must be initialized");
+                    return;
+                };
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
@@ -1310,10 +1316,10 @@ impl ElementHostWidget {
                             model.clone(),
                         ));
                 }
-                let group = self
-                    .resizable_panel_group
-                    .as_mut()
-                    .expect("resizable panel group");
+                let Some(group) = self.resizable_panel_group.as_mut() else {
+                    debug_assert!(false, "resizable panel group must be initialized");
+                    return;
+                };
                 if group.model_id() != model_id {
                     group.set_model(model);
                 }

@@ -19,7 +19,10 @@ pub(super) fn handle_text_input<H: UiHost>(
             }
         }
     }
-    let input = this.text_input.as_mut().expect("text input");
+    let Some(input) = this.text_input.as_mut() else {
+        debug_assert!(false, "text input must be initialized");
+        return;
+    };
     input.set_enabled(props.enabled);
     input.set_focusable(props.focusable);
     input.set_chrome_style(props.chrome);
@@ -48,7 +51,10 @@ pub(super) fn handle_text_area<H: UiHost>(
             }
         }
     }
-    let area = this.text_area.as_mut().expect("text area");
+    let Some(area) = this.text_area.as_mut() else {
+        debug_assert!(false, "text area must be initialized");
+        return;
+    };
     area.set_enabled(props.enabled);
     area.set_focusable(props.focusable);
     area.set_style(props.chrome);
@@ -79,10 +85,10 @@ pub(super) fn handle_resizable_panel_group<H: UiHost>(
             }
         }
     }
-    let group = this
-        .resizable_panel_group
-        .as_mut()
-        .expect("resizable panel group");
+    let Some(group) = this.resizable_panel_group.as_mut() else {
+        debug_assert!(false, "resizable panel group must be initialized");
+        return;
+    };
     group.set_axis(props.axis);
     group.set_enabled(props.enabled);
     group.set_min_px(props.min_px.clone());

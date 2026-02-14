@@ -1166,7 +1166,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             && self.text.is_empty()
             && self.placeholder.as_ref().is_some_and(|s| !s.is_empty());
         if show_placeholder && self.placeholder_blob.is_none() {
-            let placeholder = self.placeholder.as_ref().expect("checked above").as_ref();
+            let Some(placeholder) = self.placeholder.as_deref() else {
+                debug_assert!(false, "placeholder checked above");
+                return;
+            };
             let (blob, metrics) =
                 cx.services
                     .text()
