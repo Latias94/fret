@@ -57,8 +57,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ### M3b — Image masks v1
 
-- [ ] REN-VNEXT-clip-002 Decide image-mask v1 sampling semantics (minimal enum, deterministic degradation).
-- [ ] REN-VNEXT-mask-001 Add conformance tests for nested masks + groups and paint-only hit-testing invariants.
+- [x] REN-VNEXT-clip-002 Decide image-mask v1 sampling semantics (minimal enum, deterministic degradation).
+  - Evidence: `docs/adr/0273-clip-path-and-image-mask-sources-v1.md` (bounds-as-computation-bound + channel policy), `crates/fret-core/src/scene/mask.rs` (`Mask::Image` sanitize), `crates/fret-render-wgpu/src/renderer/render_scene/encode/mask.rs` (single-active image-mask + deterministic degrade), `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval` kind=3 sampling).
+- [~] REN-VNEXT-mask-001 Add conformance tests for nested masks + groups and paint-only hit-testing invariants.
+  - [x] GPU coverage gates for `Mask::Image`: `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+  - [ ] Paint-only hit-testing invariants (runtime-level; add an integration gate when the hit-test harness is ready).
 
 ## M4 — Paint/Material evolution (controlled extensibility)
 

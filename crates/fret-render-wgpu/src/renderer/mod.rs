@@ -59,6 +59,10 @@ pub struct Renderer {
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
+    mask_image_sampler: wgpu::Sampler,
+    _mask_image_identity_texture: wgpu::Texture,
+    mask_image_identity_view: wgpu::TextureView,
+    mask_image_identity_uploaded: bool,
     render_space_buffer: wgpu::Buffer,
     render_space_stride: u64,
     render_space_capacity: usize,
@@ -234,6 +238,8 @@ pub struct Renderer {
     image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup)>,
     image_revisions: HashMap<fret_core::ImageId, u64>,
     images_generation: u64,
+
+    uniform_mask_image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup)>,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,

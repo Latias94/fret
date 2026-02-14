@@ -10,7 +10,10 @@ pub(super) enum ClipPop {
 #[derive(Clone, Copy)]
 pub(super) enum MaskPop {
     NoShader,
-    Shader { prev_head: u32 },
+    Shader {
+        prev_head: u32,
+        prev_mask_image: Option<fret_core::ImageId>,
+    },
 }
 
 pub(super) struct EncodeState<'a> {
@@ -29,6 +32,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) clips: &'a mut Vec<ClipRRectUniform>,
     pub(super) masks: &'a mut Vec<MaskGradientUniform>,
     pub(super) uniforms: &'a mut Vec<ViewportUniform>,
+    pub(super) uniform_mask_images: &'a mut Vec<Option<fret_core::ImageId>>,
     pub(super) ordered_draws: &'a mut Vec<OrderedDraw>,
     pub(super) effect_markers: &'a mut Vec<EffectMarker>,
 
@@ -42,6 +46,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) mask_pop_stack: Vec<MaskPop>,
     pub(super) mask_head: u32,
     pub(super) mask_count: u32,
+    pub(super) mask_image: Option<fret_core::ImageId>,
 
     pub(super) mask_scope_stack: Vec<(u32, u32)>,
     pub(super) mask_scope_head: u32,
@@ -88,6 +93,7 @@ impl<'a> EncodeState<'a> {
         let clips = &mut encoding.clips;
         let masks = &mut encoding.masks;
         let uniforms = &mut encoding.uniforms;
+        let uniform_mask_images = &mut encoding.uniform_mask_images;
         let ordered_draws = &mut encoding.ordered_draws;
         let effect_markers = &mut encoding.effect_markers;
 
@@ -115,6 +121,7 @@ impl<'a> EncodeState<'a> {
             clips,
             masks,
             uniforms,
+            uniform_mask_images,
             ordered_draws,
             effect_markers,
             scissor_stack: vec![current_scissor],
@@ -125,6 +132,7 @@ impl<'a> EncodeState<'a> {
             mask_pop_stack: Vec::new(),
             mask_head: 0,
             mask_count: 0,
+            mask_image: None,
             mask_scope_stack: vec![(mask_scope_head, mask_scope_count)],
             mask_scope_head,
             mask_scope_count,
@@ -219,6 +227,7 @@ impl<'a> EncodeState<'a> {
             text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
             _pad_text_quality: [0; 2],
         });
+        self.uniform_mask_images.push(self.mask_image);
         uniform_index
     }
 
@@ -251,6 +260,7 @@ impl<'a> EncodeState<'a> {
             text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
             _pad_text_quality: [0; 2],
         });
+        self.uniform_mask_images.push(self.mask_image);
         uniform_index
     }
 
@@ -285,6 +295,7 @@ impl<'a> EncodeState<'a> {
             text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
             _pad_text_quality: [0; 2],
         });
+        self.uniform_mask_images.push(self.mask_image);
         uniform_index
     }
 
