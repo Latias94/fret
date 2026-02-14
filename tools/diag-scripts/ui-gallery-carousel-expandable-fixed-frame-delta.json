@@ -52,10 +52,10 @@
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-3" }
     },
-    { "type": "wait_frames", "n": 20 },
+    { "type": "wait_frames", "n": 30 },
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-5" }
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-4" }
     },
 
     { "type": "wait_frames", "n": 30 },

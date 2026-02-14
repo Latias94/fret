@@ -4505,6 +4505,12 @@ See: `docs/tracy.md`.\n";
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
                                 ),
                             ),
