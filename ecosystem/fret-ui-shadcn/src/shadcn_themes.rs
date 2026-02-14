@@ -101,6 +101,9 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
     cfg.durations_ms
         .entry("duration.motion.collapsible.toggle".to_string())
         .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.motion.layout.expand".to_string())
+        .or_insert(200);
 
     cfg.durations_ms
         .entry("duration.motion.spring.drag_release_settle".to_string())
@@ -760,6 +763,12 @@ mod tests {
         assert_eq!(
             cfg.durations_ms
                 .get("duration.motion.collapsible.toggle")
+                .copied(),
+            Some(200)
+        );
+        assert_eq!(
+            cfg.durations_ms
+                .get("duration.motion.layout.expand")
                 .copied(),
             Some(200)
         );

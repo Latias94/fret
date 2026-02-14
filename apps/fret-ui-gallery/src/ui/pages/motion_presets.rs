@@ -146,6 +146,12 @@ pub(super) fn preview_motion_presets(
                     .to_string(),
             ),
             (
+                "duration.motion.layout.expand",
+                theme
+                    .duration_ms_token("duration.motion.layout.expand")
+                    .to_string(),
+            ),
+            (
                 "easing.motion.standard",
                 fmt_bezier(theme.easing_token("easing.motion.standard")),
             ),

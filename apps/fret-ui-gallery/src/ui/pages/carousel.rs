@@ -1,24 +1,39 @@
 use super::super::*;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_runtime::Model;
-use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
+use fret_ui::element::{CrossAlign, FlexProps, MainAlign, PressableProps, ScrollAxis};
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct CarouselModels {
         demo_inner_clicked: Option<Model<bool>>,
+        animata_expand_selected: Option<Model<u64>>,
     }
 
     let demo_inner_clicked =
         cx.with_state(CarouselModels::default, |st| st.demo_inner_clicked.clone());
+    let animata_expand_selected = cx.with_state(CarouselModels::default, |st| {
+        st.animata_expand_selected.clone()
+    });
     let demo_inner_clicked = match demo_inner_clicked {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
             cx.with_state(CarouselModels::default, |st| {
                 st.demo_inner_clicked = Some(model.clone());
+            });
+            model
+        }
+    };
+    let animata_expand_selected = match animata_expand_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(1u64);
+            cx.with_state(CarouselModels::default, |st| {
+                st.animata_expand_selected = Some(model.clone());
             });
             model
         }
@@ -255,6 +270,153 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     );
     let demo = section_card(cx, "Demo", demo_body);
 
+    let animata_expandable = {
+        let theme = Theme::global(&*cx.app).clone();
+        let duration_ms = theme.duration_ms_token("duration.motion.layout.expand");
+        let duration = Duration::from_millis(duration_ms as u64);
+        let easing = theme.easing_token("easing.motion.emphasized");
+
+        let row = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N4)
+                .items_center(),
+            |cx| {
+                (1u64..=5)
+                    .map(|idx| {
+                        let selected_model = animata_expand_selected.clone();
+                        let is_selected = cx
+                            .watch_model(&selected_model)
+                            .paint()
+                            .copied()
+                            .unwrap_or(1)
+                            == idx;
+
+                        let t = cx.keyed(("ui-gallery-carousel-expandable-transition", idx), |cx| {
+                            fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+                                cx,
+                                is_selected,
+                                duration,
+                                duration,
+                                easing,
+                                false,
+                            )
+                        });
+
+                        let collapsed_w = 140.0;
+                        let expanded_w = 320.0;
+                        let collapsed_h = 160.0;
+                        let expanded_h = 220.0;
+
+                        let w = collapsed_w + (expanded_w - collapsed_w) * t.progress;
+                        let h = collapsed_h + (expanded_h - collapsed_h) * t.progress;
+
+                        let on_activate: fret_ui::action::OnActivate = {
+                            let selected_model = selected_model.clone();
+                            Arc::new(move |host, action_cx, _reason| {
+                                let _ = host.models_mut().update(&selected_model, |v| *v = idx);
+                                host.request_redraw(action_cx.window);
+                            })
+                        };
+
+                        cx.pressable(PressableProps::default(), move |cx, st| {
+                                cx.pressable_on_activate(on_activate.clone());
+
+                                let theme = Theme::global(&*cx.app).clone();
+
+                                let header = stack::hstack(
+                                    cx,
+                                    stack::HStackProps::default()
+                                        .layout(LayoutRefinement::default().w_full())
+                                        .justify_between()
+                                        .items_center(),
+                                    move |cx| {
+                                        vec![
+                                            shadcn::Badge::new(format!("{idx}"))
+                                                .variant(shadcn::BadgeVariant::Secondary)
+                                                .into_element(cx),
+                                            shadcn::Badge::new(if is_selected {
+                                                "Expanded"
+                                            } else {
+                                                "Collapsed"
+                                            })
+                                            .variant(if st.hovered || is_selected {
+                                                shadcn::BadgeVariant::Default
+                                            } else {
+                                                shadcn::BadgeVariant::Outline
+                                            })
+                                            .into_element(cx),
+                                        ]
+                                    },
+                                );
+
+                                let body = cx.flex(
+                                    FlexProps {
+                                        layout: decl_style::layout_style(
+                                            &theme,
+                                            LayoutRefinement::default()
+                                                .w_full()
+                                                .h_full(),
+                                        ),
+                                        direction: fret_core::Axis::Vertical,
+                                        justify: MainAlign::Center,
+                                        align: CrossAlign::Center,
+                                        padding: Edges::all(Px(16.0)),
+                                        ..Default::default()
+                                    },
+                                    move |cx| vec![
+                                        header,
+                                        shadcn::typography::muted(
+                                            cx,
+                                            "Animata recipe: layout.expand (size interpolation; no DOM FLIP).",
+                                        ),
+                                    ],
+                                );
+
+                                let card = shadcn::Card::new([body])
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_px(Px(w)).h_px(Px(h)),
+                                    )
+                                    .into_element(cx)
+                                    .test_id(format!("ui-gallery-carousel-expandable-card-{idx}"));
+
+                                vec![card]
+                            })
+                        .test_id(format!("ui-gallery-carousel-expandable-item-{idx}"))
+                    })
+                    .collect::<Vec<_>>()
+            },
+        )
+        .test_id("ui-gallery-carousel-expandable-row");
+
+        let scroll = shadcn::ScrollArea::new([row])
+            .axis(ScrollAxis::X)
+            .show_scrollbar(true)
+            .viewport_test_id("ui-gallery-carousel-expandable-viewport")
+            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(260.0)))
+            .into_element(cx);
+
+        let content = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            |cx| {
+                vec![
+                    shadcn::typography::muted(
+                        cx,
+                        "Animata alignment pilot: expandable carousel that interpolates size via a deterministic transition driver (no DOM-based FLIP).",
+                    ),
+                    scroll,
+                ]
+            },
+        )
+        .test_id("ui-gallery-carousel-expandable");
+
+        section_card(cx, "Animata: Expandable", content)
+    };
+
     let sizes_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -446,6 +608,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             vec![
                 preview_hint,
                 demo,
+                animata_expandable,
                 sizes,
                 spacing,
                 orientation,

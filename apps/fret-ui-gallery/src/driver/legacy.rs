@@ -2080,6 +2080,8 @@ impl UiGalleryDriver {
             "duration.motion.collapsible.toggle".to_string(),
             sidebar_toggle,
         );
+        cfg.durations_ms
+            .insert("duration.motion.layout.expand".to_string(), sidebar_toggle);
         cfg.durations_ms.insert(
             "duration.motion.spring.drag_release_settle".to_string(),
             drawer_settle_duration,
