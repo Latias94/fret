@@ -297,6 +297,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                 with_icon,
                 docs,
             ]))
+            .viewport_test_id("ui-gallery-navigation-menu-demo-viewport")
             .into_element(cx);
         let body = centered(cx, menu);
         section(cx, "Demo", body)
@@ -481,6 +482,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                         with_icon,
                         docs,
                     ]))
+                    .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
                     .into_element(cx)
             },
         );

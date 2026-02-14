@@ -11,6 +11,8 @@ pub(crate) struct UiGalleryModels {
 
     pub(crate) theme_preset: Model<Option<Arc<str>>>,
     pub(crate) theme_preset_open: Model<bool>,
+    pub(crate) motion_preset: Model<Option<Arc<str>>>,
+    pub(crate) motion_preset_open: Model<bool>,
 
     pub(crate) view_cache_enabled: Model<bool>,
     pub(crate) view_cache_cache_shell: Model<bool>,

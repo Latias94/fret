@@ -85,6 +85,7 @@ pub(crate) const DATA_GRID_ROWS: usize = 200;
 
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
+pub(crate) const PAGE_MOTION_PRESETS: &str = "motion_presets";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
 pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
@@ -267,6 +268,7 @@ pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
+pub(crate) const CMD_NAV_MOTION_PRESETS: &str = "ui_gallery.nav.select.motion_presets";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
 pub(crate) const CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str =
@@ -599,6 +601,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["layout", "flex", "stack"],
                 docs::DOC_LAYOUT,
                 docs::USAGE_LAYOUT,
+            ),
+            PageSpec::new(
+                PAGE_MOTION_PRESETS,
+                "Motion Presets",
+                "Motion Presets / Theme Token Overrides",
+                "Theme tokens (motion)",
+                CMD_NAV_MOTION_PRESETS,
+                &["motion", "tokens", "theme", "animation"],
+                docs::DOC_MOTION_PRESETS,
+                docs::USAGE_MOTION_PRESETS,
             ),
             PageSpec::new(
                 PAGE_VIEW_CACHE,
