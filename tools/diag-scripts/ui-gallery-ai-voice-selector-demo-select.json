@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai voice selector" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-voice-selector-demo" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-voice-selector-demo" }
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-none" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-content" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-item-alloy" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-selected" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-open-false" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-ai-voice-selector-demo-select" }
+  ]
+}
+

@@ -790,9 +790,7 @@ impl AttachmentInfo {
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
                         line_height: Some(
-                            theme.metric_token(
-                                theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT,
-                            ),
+                            theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
                         ),
                         letter_spacing_em: None,
                     }),

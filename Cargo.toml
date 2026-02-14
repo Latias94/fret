@@ -30,7 +30,7 @@ objc = "0.2"
 pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-image = { version = "0.25", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 slotmap = "1"
 smallvec = "1"
 stacksafe = "1"
@@ -117,6 +117,7 @@ tree-sitter-zig = "1.1.2"
 material-colors = "0.4.2"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 sysinfo = "0.33"
+blake3 = "1"
 
 # Speed up debug builds: Taffy is layout-hot and also expensive to compile unoptimized.
 # GPUI applies a similar per-package opt-level override for Taffy.

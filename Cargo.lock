@@ -354,6 +354,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "blake3"
+version = "1.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2468ef7d57b3fb7e16b576e8377cdbde2320c60e1491e961d11da40fc4f02a2d"
+dependencies = [
+ "arrayref",
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq",
+ "cpufeatures",
+]
+
+[[package]]
 name = "block"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -682,6 +696,12 @@ dependencies = [
  "cfg-if",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "constant_time_eq"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "convert_case"
@@ -1575,6 +1595,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "slotmap",
+ "tracing",
 ]
 
 [[package]]
@@ -1782,6 +1803,7 @@ dependencies = [
 name = "fret-diag"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "fret-diag-protocol",
  "fret-diag-ws",
  "glob",
@@ -2384,6 +2406,7 @@ name = "fret-ui-ai"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-canvas",
  "fret-code-view",
  "fret-core",
  "fret-icons",
@@ -2414,10 +2437,17 @@ dependencies = [
  "fret-asset-cache",
  "fret-core",
  "fret-executor",
+ "fret-query",
  "fret-runtime",
+ "fret-ui",
  "fret-ui-kit",
  "image",
+ "js-sys",
  "slotmap",
+ "tracing",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

@@ -54,6 +54,13 @@ pub struct EventCx<'a, H: UiHost> {
     /// When the current event is not a wheel event, this is `None`.
     pub event_window_wheel_delta: Option<Point>,
     pub input_ctx: InputContext,
+    /// `true` when the pointer hit-test target is (or is inside) a text input element subtree
+    /// (`TextInput`, `TextArea`, or `TextInputRegion`).
+    ///
+    /// This is computed by the UI runtime during dispatch and is available to mechanism widgets
+    /// (e.g. `PointerRegion`) so action payloads can carry enough information for policy-level
+    /// gesture arbitration without exposing widget internals.
+    pub pointer_hit_is_text_input: bool,
     pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,

@@ -5,7 +5,9 @@ use fret_core::{
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{
-    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1,
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
+    DevtoolsScreenshotRequestV1, DevtoolsScreenshotResultV1, DiagTransportMessageV1,
+    UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
@@ -116,6 +118,11 @@ pub struct UiDiagnosticsConfig {
     pub trigger_path: PathBuf,
     pub ready_path: PathBuf,
     pub exit_path: PathBuf,
+    /// When enabled, keep requesting redraws even when no script is running.
+    ///
+    /// This is intended for scripted diagnostics runs where the external driver triggers scripts
+    /// via filesystem touch stamps, but the app might otherwise go idle between frames.
+    pub script_keepalive: bool,
     pub max_events: usize,
     pub max_snapshots: usize,
     /// Maximum number of snapshots to include in script-driven bundle dumps (auto-dump and
@@ -222,6 +229,7 @@ impl Default for UiDiagnosticsConfig {
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("exit.touch"));
 
+        let script_keepalive = enabled && env_flag_default_true("FRET_DIAG_SCRIPT_KEEPALIVE");
         if enabled
             || raw_diag.as_ref().is_some_and(|v| !v.is_empty())
             || raw_out_dir.as_ref().is_some_and(|v| !v.is_empty())
@@ -349,6 +357,7 @@ impl Default for UiDiagnosticsConfig {
             trigger_path,
             ready_path,
             exit_path,
+            script_keepalive,
             max_events,
             max_snapshots,
             script_dump_max_snapshots,
@@ -428,6 +437,10 @@ pub struct UiDiagnosticsService {
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     #[cfg(feature = "diagnostics-ws")]
+    pending_devtools_screenshot: Option<PendingDevtoolsScreenshotRequest>,
+    #[cfg(feature = "diagnostics-ws")]
+    pending_devtools_semantics_node_get: Option<PendingDevtoolsSemanticsNodeGetRequest>,
+    #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
 }
 
@@ -437,6 +450,29 @@ struct PendingForceDumpRequest {
     dump_max_snapshots: Option<usize>,
     script_run_id: Option<u64>,
     script_step_index: Option<u32>,
+    request_id: Option<u64>,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+struct PendingDevtoolsScreenshotRequest {
+    request_id: Option<u64>,
+    request_id_str: String,
+    label: Option<String>,
+    timeout_frames: u32,
+    window_ffi: u64,
+    bundle_dir_name: Option<String>,
+    remaining_frames: u32,
+    last_result_trigger_stamp: Option<u64>,
+    started: bool,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+struct PendingDevtoolsSemanticsNodeGetRequest {
+    request_id: Option<u64>,
+    window_ffi: u64,
+    node_id: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -966,6 +1002,12 @@ impl UiDiagnosticsService {
         self.ensure_ready_file();
         self.poll_script_trigger();
 
+        #[cfg(feature = "diagnostics-ws")]
+        let devtools_request_redraw =
+            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+        #[cfg(not(feature = "diagnostics-ws"))]
+        let devtools_request_redraw = false;
+
         if !self.active_scripts.contains_key(&window)
             && let Some(script) = self.pending_script.clone()
         {
@@ -1029,11 +1071,17 @@ impl UiDiagnosticsService {
         }
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: self.cfg.script_keepalive || devtools_request_redraw,
+                ..UiScriptFrameOutput::default()
+            };
         };
 
         if active.next_step >= active.steps.len() {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: devtools_request_redraw,
+                ..UiScriptFrameOutput::default()
+            };
         }
 
         if active.last_reported_step != Some(active.next_step) {
@@ -1069,7 +1117,10 @@ impl UiDiagnosticsService {
         let step_index = active.next_step;
         let step = active.steps.get(step_index).cloned();
         let Some(step) = step else {
-            return UiScriptFrameOutput::default();
+            return UiScriptFrameOutput {
+                request_redraw: devtools_request_redraw,
+                ..UiScriptFrameOutput::default()
+            };
         };
 
         // Keep evidence scoped to the active step so failures remain focused.
@@ -1112,6 +1163,7 @@ impl UiDiagnosticsService {
             .retain(|e| e.step_index == step_index_u32);
 
         let mut output = UiScriptFrameOutput::default();
+        output.request_redraw |= devtools_request_redraw;
         let mut force_dump_label: Option<String> = None;
         let mut force_dump_max_snapshots: Option<usize> = None;
         let mut stop_script = false;
@@ -4302,10 +4354,22 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let Some(container_node) = container_node {
-                            let pos = center_of_rect_clamped_to_rect(
-                                container_node.bounds,
-                                window_bounds,
-                            );
+                            let pos = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        container_node,
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                });
                             if let Some(ui) = ui {
                                 let note =
                                     format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
@@ -4940,9 +5004,32 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
-                            let start =
-                                center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
-                            let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
+                            let start = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        from_node,
+                                        from_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(from_node.bounds, window_bounds)
+                                });
+                            let end = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        to_node,
+                                        to_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
+                                });
                             if let Some(ui) = ui {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
@@ -5348,6 +5435,7 @@ impl UiDiagnosticsService {
                     force_dump_max_snapshots,
                     Some(active.run_id),
                     Some(step_index as u32),
+                    None,
                 );
             }
 
@@ -5390,6 +5478,7 @@ impl UiDiagnosticsService {
                     force_dump_max_snapshots,
                     Some(active.run_id),
                     Some(step_index as u32),
+                    None,
                 );
             }
 
@@ -5426,6 +5515,7 @@ impl UiDiagnosticsService {
                 self.active_scripts.insert(window, active);
             }
         }
+
         output
     }
 
@@ -6265,8 +6355,11 @@ impl UiDiagnosticsService {
         self.poll_ws_inbox();
 
         if let Some(pending) = self.pending_force_dump.take() {
-            let dumped =
-                self.dump_bundle_with_options(Some(&pending.label), pending.dump_max_snapshots);
+            let dumped = self.dump_bundle_with_options(
+                Some(&pending.label),
+                pending.dump_max_snapshots,
+                pending.request_id,
+            );
             if let (Some(script_run_id), Some(dir)) = (pending.script_run_id, dumped.as_ref()) {
                 let bundle_dir = display_path(&self.cfg.out_dir, dir);
                 for active in self
@@ -6325,12 +6418,14 @@ impl UiDiagnosticsService {
         dump_max_snapshots: Option<usize>,
         script_run_id: Option<u64>,
         script_step_index: Option<u32>,
+        request_id: Option<u64>,
     ) {
         self.pending_force_dump = Some(PendingForceDumpRequest {
             label: sanitize_label(&label),
             dump_max_snapshots,
             script_run_id,
             script_step_index,
+            request_id,
         });
     }
 
@@ -6367,7 +6462,12 @@ impl UiDiagnosticsService {
     fn poll_ws_inbox(&mut self) {}
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+    fn ws_send_with_request_id(
+        &mut self,
+        ty: impl Into<String>,
+        request_id: Option<u64>,
+        payload: serde_json::Value,
+    ) {
         if !self.ws_is_configured() {
             return;
         }
@@ -6379,10 +6479,233 @@ impl UiDiagnosticsService {
                 schema_version: 1,
                 r#type: ty.into(),
                 session_id: None,
-                request_id: None,
+                request_id,
                 payload,
             },
         );
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+        self.ws_send_with_request_id(ty, None, payload);
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_requests_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        let mut request_redraw = false;
+        request_redraw |= self.drive_devtools_ws_semantics_node_get(window, ui);
+        request_redraw |= self.drive_devtools_ws_screenshot_request(app, window, scale_factor);
+        request_redraw
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_semantics_node_get(
+        &mut self,
+        window: AppWindowId,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        let Some(pending) = self.pending_devtools_semantics_node_get.clone() else {
+            return false;
+        };
+        if pending.window_ffi != window.data().as_ffi() {
+            return false;
+        }
+        let pending = self
+            .pending_devtools_semantics_node_get
+            .take()
+            .unwrap_or(pending);
+
+        let raw = ui.and_then(|ui| ui.semantics_snapshot());
+        let ack = build_semantics_node_get_ack_v1(
+            raw,
+            pending.window_ffi,
+            pending.node_id,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
+        );
+        let payload = serde_json::to_value(ack).unwrap_or(serde_json::Value::Null);
+        self.ws_send_with_request_id("semantics.node.get_ack", pending.request_id, payload);
+        false
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_screenshot_request(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+    ) -> bool {
+        let Some(mut pending) = self.pending_devtools_screenshot.take() else {
+            return false;
+        };
+        if pending.window_ffi != window.data().as_ffi() {
+            self.pending_devtools_screenshot = Some(pending);
+            return false;
+        }
+
+        // Keep the app ticking while waiting for the runner-owned screenshot to complete.
+        let request_redraw = true;
+
+        if !pending.started {
+            if self
+                .active_scripts
+                .values()
+                .any(|active| active.screenshot_wait.is_some())
+            {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("busy".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name: "".to_string(),
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            let needs_fresh_bundle = pending.label.is_some();
+            if needs_fresh_bundle || self.last_dump_dir.is_none() {
+                let dump_label = pending
+                    .label
+                    .clone()
+                    .unwrap_or_else(|| "devtools-screenshot".to_string());
+                let _ = self.dump_bundle(Some(&dump_label));
+            }
+
+            let bundle_dir_name = self
+                .last_dump_dir
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+                .unwrap_or_default();
+            if bundle_dir_name.is_empty() {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("no_bundle_dir".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name,
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            let req = serde_json::json!({
+                "schema_version": 1,
+                "out_dir": self.cfg.out_dir.to_string_lossy(),
+                "bundle_dir_name": bundle_dir_name.clone(),
+                "request_id": pending.request_id_str.clone(),
+                "windows": [{
+                    "window": pending.window_ffi,
+                    "tick_id": app.tick_id().0,
+                    "frame_id": app.frame_id().0,
+                    "scale_factor": scale_factor as f64,
+                }]
+            });
+
+            let write_ok = serde_json::to_vec_pretty(&req).ok().is_some_and(|bytes| {
+                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
+                    && touch_file(&self.cfg.screenshot_trigger_path).is_ok()
+            });
+
+            if !write_ok {
+                let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                    schema_version: 1,
+                    status: "failed".to_string(),
+                    reason: Some("screenshot_request_write_failed".to_string()),
+                    request_id: pending.request_id_str.clone(),
+                    window: pending.window_ffi,
+                    bundle_dir_name: "".to_string(),
+                    screenshots_dir: None,
+                    entry: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+                return false;
+            }
+
+            pending.bundle_dir_name = Some(bundle_dir_name);
+            pending.started = true;
+            pending.remaining_frames = pending.timeout_frames;
+            pending.last_result_trigger_stamp = None;
+            self.pending_devtools_screenshot = Some(pending);
+            return request_redraw;
+        }
+
+        let trigger_stamp = read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
+        let completed = trigger_stamp.is_some()
+            && trigger_stamp != pending.last_result_trigger_stamp
+            && screenshot_request_completed(
+                &self.cfg.screenshot_result_path,
+                &pending.request_id_str,
+                pending.window_ffi,
+            );
+
+        if completed {
+            let entry = read_screenshot_result_entry(
+                &self.cfg.screenshot_result_path,
+                &pending.request_id_str,
+                pending.window_ffi,
+            );
+            let screenshots_dir = entry
+                .as_ref()
+                .and_then(|e| e.get("screenshots_dir").and_then(|v| v.as_str()))
+                .map(|s| s.to_string());
+            let bundle_dir_name = pending.bundle_dir_name.clone().unwrap_or_default();
+            let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                schema_version: 1,
+                status: "completed".to_string(),
+                reason: None,
+                request_id: pending.request_id_str.clone(),
+                window: pending.window_ffi,
+                bundle_dir_name,
+                screenshots_dir,
+                entry,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+            return false;
+        }
+
+        pending.last_result_trigger_stamp = trigger_stamp;
+        if pending.remaining_frames == 0 {
+            let bundle_dir_name = pending.bundle_dir_name.clone().unwrap_or_default();
+            let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                schema_version: 1,
+                status: "timeout".to_string(),
+                reason: Some("timeout_frames_exhausted".to_string()),
+                request_id: pending.request_id_str.clone(),
+                window: pending.window_ffi,
+                bundle_dir_name,
+                screenshots_dir: None,
+                entry: None,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send_with_request_id("screenshot.result", pending.request_id, payload);
+            return false;
+        }
+
+        pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
+        self.pending_devtools_screenshot = Some(pending);
+        request_redraw
     }
 
     #[cfg(feature = "diagnostics-ws")]
@@ -6412,7 +6735,144 @@ impl UiDiagnosticsService {
                     } else {
                         ("bundle".to_string(), None)
                     };
-                self.request_force_dump(label, dump_max_snapshots, None, None);
+                self.request_force_dump(label, dump_max_snapshots, None, None, msg.request_id);
+            }
+            "screenshot.request" => {
+                let Ok(req) = serde_json::from_value::<DevtoolsScreenshotRequestV1>(msg.payload)
+                else {
+                    return;
+                };
+
+                let request_id_str = msg
+                    .request_id
+                    .map(|id| format!("devtools-screenshot-{id}"))
+                    .unwrap_or_else(|| format!("devtools-screenshot-{}", unix_ms_now()));
+
+                if cfg!(target_arch = "wasm32") {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "unsupported".to_string(),
+                        reason: Some("screenshots_not_supported_wasm".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                if !self.cfg.screenshots_enabled {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "disabled".to_string(),
+                        reason: Some("screenshots_disabled".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                if self.pending_devtools_screenshot.is_some() {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "failed".to_string(),
+                        reason: Some("busy".to_string()),
+                        request_id: request_id_str,
+                        window: req.window.unwrap_or(0),
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                }
+
+                let window_ffi = if let Some(window) = req.window {
+                    let want = AppWindowId::from(KeyData::from_ffi(window));
+                    if !self.known_windows.contains(&want) {
+                        let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                            schema_version: 1,
+                            status: "failed".to_string(),
+                            reason: Some("unknown_window".to_string()),
+                            request_id: request_id_str,
+                            window,
+                            bundle_dir_name: "".to_string(),
+                            screenshots_dir: None,
+                            entry: None,
+                        })
+                        .unwrap_or(serde_json::Value::Null);
+                        self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                        return;
+                    }
+                    window
+                } else if let Some(first) = self.known_windows.first().copied() {
+                    first.data().as_ffi()
+                } else {
+                    let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
+                        schema_version: 1,
+                        status: "failed".to_string(),
+                        reason: Some("no_window".to_string()),
+                        request_id: request_id_str,
+                        window: 0,
+                        bundle_dir_name: "".to_string(),
+                        screenshots_dir: None,
+                        entry: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("screenshot.result", msg.request_id, payload);
+                    return;
+                };
+
+                self.pending_devtools_screenshot = Some(PendingDevtoolsScreenshotRequest {
+                    request_id: msg.request_id,
+                    request_id_str,
+                    label: req.label.map(|s| sanitize_label(&s)),
+                    timeout_frames: req.timeout_frames,
+                    window_ffi,
+                    bundle_dir_name: None,
+                    remaining_frames: req.timeout_frames,
+                    last_result_trigger_stamp: None,
+                    started: false,
+                });
+            }
+            "semantics.node.get" => {
+                let Ok(req) = serde_json::from_value::<UiSemanticsNodeGetV1>(msg.payload) else {
+                    return;
+                };
+
+                let want = AppWindowId::from(KeyData::from_ffi(req.window));
+                if !self.known_windows.contains(&want) {
+                    let payload = serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                        schema_version: 1,
+                        status: "no_semantics".to_string(),
+                        reason: Some("unknown_window".to_string()),
+                        window: req.window,
+                        node_id: req.node_id,
+                        semantics_fingerprint: None,
+                        node: None,
+                        children: Vec::new(),
+                        captured_unix_ms: Some(unix_ms_now()),
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("semantics.node.get_ack", msg.request_id, payload);
+                    return;
+                }
+
+                self.pending_devtools_semantics_node_get =
+                    Some(PendingDevtoolsSemanticsNodeGetRequest {
+                        request_id: msg.request_id,
+                        window_ffi: req.window,
+                        node_id: req.node_id,
+                    });
             }
             "app.exit.request" => {
                 let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
@@ -6482,39 +6942,7 @@ impl UiDiagnosticsService {
         }
         self.last_script_trigger_stamp = Some(stamp);
 
-        let bytes = std::fs::read(&self.cfg.script_path).ok();
-        let Some(bytes) = bytes else {
-            return;
-        };
-        let schema_version: u32 = serde_json::from_slice::<serde_json::Value>(&bytes)
-            .ok()
-            .and_then(|v| v.get("schema_version").and_then(|v| v.as_u64()))
-            .unwrap_or(0)
-            .min(u32::MAX as u64) as u32;
-
-        let script = match schema_version {
-            1 => {
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
-                    return;
-                };
-                let Some(script) = PendingScript::from_v1(script) else {
-                    return;
-                };
-                script
-            }
-            2 => {
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV2>(&bytes) else {
-                    return;
-                };
-                let Some(script) = PendingScript::from_v2(script) else {
-                    return;
-                };
-                script
-            }
-            _ => return,
-        };
         let run_id = self.next_script_run_id();
-        self.pending_script = Some(script);
         self.pending_script_run_id = Some(run_id);
         self.write_script_result(UiScriptResultV1 {
             schema_version: 1,
@@ -6532,16 +6960,159 @@ impl UiDiagnosticsService {
                 .map(|p| display_path(&self.cfg.out_dir, p)),
             last_bundle_artifact: self.last_dump_artifact_stats.clone(),
         });
+
+        let bytes = match std::fs::read(&self.cfg.script_path) {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                self.pending_script_run_id = None;
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Failed,
+                    step_index: None,
+                    reason_code: Some("script.read_failed".to_string()),
+                    reason: Some("failed to read script.json".to_string()),
+                    evidence: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                });
+                return;
+            }
+        };
+        let schema_version: u32 = serde_json::from_slice::<serde_json::Value>(&bytes)
+            .ok()
+            .and_then(|v| v.get("schema_version").and_then(|v| v.as_u64()))
+            .unwrap_or(0)
+            .min(u32::MAX as u64) as u32;
+
+        let script = match schema_version {
+            1 => {
+                let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.parse_failed".to_string()),
+                        reason: Some("failed to parse script as schema v1".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                let Some(script) = PendingScript::from_v1(script) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.invalid".to_string()),
+                        reason: Some("invalid schema v1 script".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                script
+            }
+            2 => {
+                let Ok(script) = serde_json::from_slice::<UiActionScriptV2>(&bytes) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.parse_failed".to_string()),
+                        reason: Some("failed to parse script as schema v2".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                let Some(script) = PendingScript::from_v2(script) else {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.invalid".to_string()),
+                        reason: Some("invalid schema v2 script".to_string()),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                };
+                script
+            }
+            _ => {
+                self.pending_script_run_id = None;
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Failed,
+                    step_index: None,
+                    reason_code: Some("script.schema_unsupported".to_string()),
+                    reason: Some(format!(
+                        "unsupported script schema_version={schema_version}"
+                    )),
+                    evidence: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                });
+                return;
+            }
+        };
+        self.pending_script = Some(script);
+        self.pending_script_run_id = Some(run_id);
     }
 
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
-        self.dump_bundle_with_options(label, None)
+        self.dump_bundle_with_options(label, None, None)
     }
 
     fn dump_bundle_with_options(
         &mut self,
         label: Option<&str>,
         dump_max_snapshots_override: Option<usize>,
+        request_id: Option<u64>,
     ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -6619,16 +7190,97 @@ impl UiDiagnosticsService {
         #[cfg(feature = "diagnostics-ws")]
         {
             let embed = self.cfg.devtools_embed_bundle || cfg!(target_arch = "wasm32");
-            let bundle_value = embed.then(|| serde_json::to_value(&bundle).ok()).flatten();
-            let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
-                schema_version: 1,
-                exported_unix_ms: ts,
-                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
-                dir: display_path(&self.cfg.out_dir, &dir),
-                bundle: bundle_value,
-            })
-            .unwrap_or(serde_json::Value::Null);
-            self.ws_send("bundle.dumped", payload);
+            const DEVTOOLS_BUNDLE_CHUNK_THRESHOLD_BYTES: usize = 512 * 1024;
+            const DEVTOOLS_BUNDLE_CHUNK_BYTES: usize = 256 * 1024;
+
+            fn chunk_utf8_string(s: &str, max_bytes: usize) -> Vec<String> {
+                let max_bytes = max_bytes.max(1);
+                let mut chunks = Vec::<String>::new();
+                let mut start = 0usize;
+                while start < s.len() {
+                    let mut end = (start + max_bytes).min(s.len());
+                    while end > start && !s.is_char_boundary(end) {
+                        end -= 1;
+                    }
+                    if end == start {
+                        // This should be unreachable for valid UTF-8 strings, but avoid infinite
+                        // loops in case of unexpected invariants.
+                        end = (start + 1).min(s.len());
+                        while end < s.len() && !s.is_char_boundary(end) {
+                            end += 1;
+                        }
+                    }
+                    chunks.push(s[start..end].to_string());
+                    start = end;
+                }
+                chunks
+            }
+
+            if embed {
+                // Prefer the existing JSON Value embedding for small bundles. For larger bundles,
+                // stream a chunked JSON string to avoid oversized WS messages.
+                let bundle_json = serde_json::to_string(&bundle).ok();
+                if let Some(bundle_json) = bundle_json {
+                    if bundle_json.len() >= DEVTOOLS_BUNDLE_CHUNK_THRESHOLD_BYTES {
+                        let chunks = chunk_utf8_string(&bundle_json, DEVTOOLS_BUNDLE_CHUNK_BYTES);
+                        let chunk_count = chunks.len().min(u32::MAX as usize) as u32;
+                        for (idx, chunk) in chunks.into_iter().enumerate() {
+                            let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                                schema_version: 1,
+                                exported_unix_ms: ts,
+                                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                                dir: display_path(&self.cfg.out_dir, &dir),
+                                bundle: None,
+                                bundle_json_chunk: Some(chunk),
+                                bundle_json_chunk_index: Some(idx as u32),
+                                bundle_json_chunk_count: Some(chunk_count),
+                            })
+                            .unwrap_or(serde_json::Value::Null);
+                            self.ws_send_with_request_id("bundle.dumped", request_id, payload);
+                        }
+                    } else {
+                        let bundle_value = serde_json::to_value(&bundle).ok();
+                        let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                            schema_version: 1,
+                            exported_unix_ms: ts,
+                            out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                            dir: display_path(&self.cfg.out_dir, &dir),
+                            bundle: bundle_value,
+                            bundle_json_chunk: None,
+                            bundle_json_chunk_index: None,
+                            bundle_json_chunk_count: None,
+                        })
+                        .unwrap_or(serde_json::Value::Null);
+                        self.ws_send_with_request_id("bundle.dumped", request_id, payload);
+                    }
+                } else {
+                    let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                        schema_version: 1,
+                        exported_unix_ms: ts,
+                        out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                        dir: display_path(&self.cfg.out_dir, &dir),
+                        bundle: None,
+                        bundle_json_chunk: None,
+                        bundle_json_chunk_index: None,
+                        bundle_json_chunk_count: None,
+                    })
+                    .unwrap_or(serde_json::Value::Null);
+                    self.ws_send_with_request_id("bundle.dumped", request_id, payload);
+                }
+            } else {
+                let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                    schema_version: 1,
+                    exported_unix_ms: ts,
+                    out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                    dir: display_path(&self.cfg.out_dir, &dir),
+                    bundle: None,
+                    bundle_json_chunk: None,
+                    bundle_json_chunk_index: None,
+                    bundle_json_chunk_count: None,
+                })
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id("bundle.dumped", request_id, payload);
+            }
         }
 
         Some(dir)
@@ -6863,8 +7515,23 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         return true;
     }
 
-    if active.v2_step_state.is_some() {
-        return false;
+    if let Some(state) = active.v2_step_state.as_ref() {
+        // Multi-frame script steps may still need fresh semantics snapshots to make progress.
+        // In particular, scroll/visibility + "stable" gates must observe updated bounds as the
+        // UI reacts to injected events.
+        return matches!(
+            state,
+            V2StepState::ClickStable(_)
+                | V2StepState::WaitBoundsStable(_)
+                | V2StepState::EnsureVisible(_)
+                | V2StepState::ScrollIntoView(_)
+                | V2StepState::TypeTextInto(_)
+                | V2StepState::MenuSelect(_)
+                | V2StepState::MenuSelectPath(_)
+                | V2StepState::DragPointerUntil(_)
+                | V2StepState::DragTo(_)
+                | V2StepState::SetSliderValue(_)
+        );
     }
 
     let Some(step) = active.steps.get(active.next_step) else {
@@ -15809,6 +16476,63 @@ fn center_of_rect_clamped_to_rect(rect: Rect, clamp: Rect) -> Point {
     )
 }
 
+fn wheel_position_prefer_intended_hit(
+    snapshot: &fret_core::SemanticsSnapshot,
+    ui: &UiTree<App>,
+    intended: &fret_core::SemanticsNode,
+    container_bounds: Rect,
+    window_bounds: Rect,
+) -> Point {
+    let cx0 = window_bounds.origin.x.0;
+    let cy0 = window_bounds.origin.y.0;
+    let cx1 = cx0 + window_bounds.size.width.0.max(0.0);
+    let cy1 = cy0 + window_bounds.size.height.0.max(0.0);
+
+    let bx0 = container_bounds.origin.x.0;
+    let by0 = container_bounds.origin.y.0;
+    let bx1 = bx0 + container_bounds.size.width.0.max(0.0);
+    let by1 = by0 + container_bounds.size.height.0.max(0.0);
+
+    let ix0 = bx0.max(cx0);
+    let iy0 = by0.max(cy0);
+    let ix1 = bx1.min(cx1);
+    let iy1 = by1.min(cy1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return center_of_rect(container_bounds);
+    }
+
+    let w = (ix1 - ix0).max(0.0);
+    let h = (iy1 - iy0).max(0.0);
+    let pad_x = 8.0f32.min(w * 0.5);
+    let pad_y = 8.0f32.min(h * 0.5);
+
+    let x_mid = (ix0 + ix1) * 0.5;
+    let y_mid = (iy0 + iy1) * 0.5;
+
+    let candidates = [
+        Point::new(fret_core::Px(x_mid), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy1 - pad_y)),
+    ];
+
+    for pos in candidates {
+        if let Some(hit) = pick_semantics_node_at(snapshot, ui, pos)
+            && hit.id.data().as_ffi() == intended.id.data().as_ffi()
+        {
+            return pos;
+        }
+    }
+
+    candidates[0]
+}
+
 fn pick_semantics_node_at<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     ui: &UiTree<App>,
@@ -16625,6 +17349,73 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+#[cfg(feature = "diagnostics-ws")]
+fn build_semantics_node_get_ack_v1(
+    snapshot: Option<&fret_core::SemanticsSnapshot>,
+    window_ffi: u64,
+    node_id: u64,
+    redact_text: bool,
+    max_string_bytes: usize,
+) -> UiSemanticsNodeGetAckV1 {
+    let captured_unix_ms = Some(unix_ms_now());
+
+    let Some(snapshot) = snapshot else {
+        return UiSemanticsNodeGetAckV1 {
+            schema_version: 1,
+            status: "no_semantics".to_string(),
+            reason: Some("no_semantics_snapshot".to_string()),
+            window: window_ffi,
+            node_id,
+            semantics_fingerprint: None,
+            node: None,
+            children: Vec::new(),
+            captured_unix_ms,
+        };
+    };
+
+    let semantics_fingerprint = Some(semantics_fingerprint_v1(
+        snapshot,
+        redact_text,
+        max_string_bytes,
+    ));
+    let want = NodeId::from(KeyData::from_ffi(node_id));
+
+    let Some(node) = snapshot.nodes.iter().find(|n| n.id == want) else {
+        return UiSemanticsNodeGetAckV1 {
+            schema_version: 1,
+            status: "not_found".to_string(),
+            reason: None,
+            window: window_ffi,
+            node_id,
+            semantics_fingerprint,
+            node: None,
+            children: Vec::new(),
+            captured_unix_ms,
+        };
+    };
+
+    let exported = UiSemanticsNodeV1::from_node(node, redact_text, max_string_bytes);
+    let node = serde_json::to_value(exported).ok();
+    let children = snapshot
+        .nodes
+        .iter()
+        .filter(|n| n.parent == Some(want))
+        .map(|n| key_to_u64(n.id))
+        .collect::<Vec<_>>();
+
+    UiSemanticsNodeGetAckV1 {
+        schema_version: 1,
+        status: "ok".to_string(),
+        reason: None,
+        window: window_ffi,
+        node_id,
+        semantics_fingerprint,
+        node,
+        children,
+        captured_unix_ms,
+    }
+}
+
 fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) -> bool {
     let Ok(bytes) = std::fs::read(path) else {
         return false;
@@ -16639,6 +17430,24 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
         entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
             && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
     })
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn read_screenshot_result_entry(
+    path: &Path,
+    request_id: &str,
+    window_ffi: u64,
+) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
+    let completed = root.get("completed").and_then(|v| v.as_array())?;
+    completed
+        .iter()
+        .find(|entry| {
+            entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+                && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+        })
+        .cloned()
 }
 
 fn display_path(base_dir: &Path, path: &Path) -> String {
@@ -16782,6 +17591,72 @@ mod tests {
             described_by: Vec::new(),
             controls: Vec::new(),
         }
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    #[test]
+    fn devtools_semantics_node_get_ack_includes_node_and_children() {
+        let window = window_id(1);
+        let root_id = 10;
+        let child_id = 11;
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(root_id),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    root_id,
+                    None,
+                    SemanticsRole::Group,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node(
+                    child_id,
+                    Some(root_id),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 10.0, 10.0),
+                    "child",
+                ),
+            ],
+        };
+
+        let ack = build_semantics_node_get_ack_v1(
+            Some(&snapshot),
+            window.data().as_ffi(),
+            root_id,
+            false,
+            4096,
+        );
+        assert_eq!(ack.status, "ok");
+        assert_eq!(ack.window, window.data().as_ffi());
+        assert_eq!(ack.node_id, root_id);
+        assert_eq!(ack.children, vec![key_to_u64(node_id(child_id))]);
+        assert!(ack.node.is_some());
+        assert!(ack.semantics_fingerprint.is_some());
+
+        let ack = build_semantics_node_get_ack_v1(
+            Some(&snapshot),
+            window.data().as_ffi(),
+            999,
+            false,
+            4096,
+        );
+        assert_eq!(ack.status, "not_found");
+
+        let ack =
+            build_semantics_node_get_ack_v1(None, window.data().as_ffi(), root_id, false, 4096);
+        assert_eq!(ack.status, "no_semantics");
     }
 
     fn semantics_node_with_test_id(
@@ -17736,6 +18611,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "collapsed node should fail the min-size gate"
@@ -17805,6 +18683,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to fail"
@@ -17830,6 +18711,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to tolerate a small overlap"
@@ -17877,6 +18761,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected missing test id to satisfy NotExists"
@@ -17946,6 +18833,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to pass"
@@ -17971,6 +18861,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more overlap than available"
@@ -18040,6 +18933,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected x overlap to pass even when y does not overlap"
@@ -18065,6 +18961,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more x overlap than available"
@@ -18134,6 +19033,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected y overlap to pass even when x does not overlap"
@@ -18159,6 +19061,9 @@ mod tests {
                 None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more y overlap than available"
@@ -18319,8 +19224,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
@@ -18339,8 +19248,12 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 &[],
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected require_equal=true to fail when the roots differ"

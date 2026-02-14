@@ -437,6 +437,8 @@ pub struct ContainerProps {
     ///
     /// When set, this takes precedence over `border_color`.
     pub border_paint: Option<Paint>,
+    /// Optional dashed border pattern (v1).
+    pub border_dash: Option<fret_core::scene::DashPatternV1>,
     /// Optional focus-visible ring decoration.
     pub focus_ring: Option<RingStyle>,
     /// Optional border-color override applied when focus-visible is active.
@@ -462,6 +464,7 @@ impl Default for ContainerProps {
             border: Edges::all(Px(0.0)),
             border_color: None,
             border_paint: None,
+            border_dash: None,
             focus_ring: None,
             focus_border_color: None,
             focus_within: false,

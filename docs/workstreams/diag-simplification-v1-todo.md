@@ -52,6 +52,10 @@ Evidence pointers:
 - [x] Make `--pack` work in WS mode by operating on the materialized local artifact.
 - [x] Add artifact size reporting:
   - [x] include bytes on disk and clipped counts in `script.result` evidence (bounded)
+- [x] Correlate WS request/response commands via envelope `request_id` (avoid cross-talk when requests overlap):
+  - `bundle.dump` ↔ `bundle.dumped`
+  - `screenshot.request` ↔ `screenshot.result`
+  - `semantics.node.get` ↔ `semantics.node.get_ack`
 
 ## Phase 3: Exit request parity
 
@@ -73,14 +77,19 @@ Evidence pointers:
 - [x] Add a "capabilities missing" failure mode that is explicit and immediate.
 - [x] Ensure tooling-side failures/timeouts write a local `script.result.json` with stable `reason_code` (avoid "no artifact + timeout").
 - [x] Ensure suite setup/driver errors write `suite.summary.json` with `error_reason_code` + a local `script.result.json`.
+- [x] Ensure repro setup/driver errors write `repro.summary.json` with `error_reason_code` + a local `script.result.json`.
+- [x] Ensure repeat setup/driver errors write `repeat.summary.json` with `error_reason_code` + a local `script.result.json`.
 
 ## Phase 5: Artifact format v2 (manifest + chunks)
 
-- [ ] Define `manifest.json` + chunk directory layout (v2 artifact format).
-- [ ] Keep `bundle.json` as a compatibility artifact (either generated or optional).
-- [ ] Update pack/triage/lint to accept both v1 and v2 artifact layouts.
+- [x] Tooling writes a minimal per-run `manifest.json` (index + size stats) alongside v1 artifacts.
+- [x] Define an initial v2 chunk layout for bundle payloads: `<run_id>/chunks/bundle_json/*` with `manifest.json` recording chunk list + sizes + hashes.
+- [x] Validate chunk integrity (per-chunk + total hash) and fail fast with a stable `reason_code` when corruption is detected.
+- [ ] Define `manifest.json` + chunk directory layout (v2 artifact format; beyond bundle payload).
+- [x] Keep `bundle.json` as a compatibility artifact (can be materialized on-demand from v2 chunks).
+- [x] Update pack/triage/lint to accept both v1 and v2 artifact layouts.
 - [ ] Introduce chunking policy for WS:
-  - [ ] avoid giant single messages
+  - [x] avoid giant single messages (chunked `bundle.dumped` payloads)
   - [ ] support content-addressing or chunk ids (future)
 
 ## Phase 6: Config consolidation (compat-first)

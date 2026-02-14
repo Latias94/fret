@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai workflow node graph" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-workflow-node-graph-demo" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-workflow-node-graph-demo" }
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-workflow-node-graph-demo-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-workflow-node-graph-demo-zoom-in" }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-workflow-node-graph-demo-zoom-out" }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-workflow-node-graph-demo-fit-view" }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-workflow-node-graph-demo-reset-view" }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-ai-workflow-node-graph-demo" }
+  ]
+}
+

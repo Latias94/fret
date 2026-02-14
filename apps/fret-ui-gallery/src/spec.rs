@@ -125,6 +125,15 @@ pub(crate) const PAGE_AI_OPEN_IN_CHAT_DEMO: &str = "ai_open_in_chat_demo";
 pub(crate) const PAGE_AI_TASK_DEMO: &str = "ai_task_demo";
 pub(crate) const PAGE_AI_AUDIO_PLAYER_DEMO: &str = "ai_audio_player_demo";
 pub(crate) const PAGE_AI_TRANSCRIPTION_DEMO: &str = "ai_transcription_demo";
+pub(crate) const PAGE_AI_SPEECH_INPUT_DEMO: &str = "ai_speech_input_demo";
+pub(crate) const PAGE_AI_MIC_SELECTOR_DEMO: &str = "ai_mic_selector_demo";
+pub(crate) const PAGE_AI_VOICE_SELECTOR_DEMO: &str = "ai_voice_selector_demo";
+pub(crate) const PAGE_AI_AGENT_DEMO: &str = "ai_agent_demo";
+pub(crate) const PAGE_AI_SANDBOX_DEMO: &str = "ai_sandbox_demo";
+pub(crate) const PAGE_AI_PERSONA_DEMO: &str = "ai_persona_demo";
+pub(crate) const PAGE_AI_WORKFLOW_CHROME_DEMO: &str = "ai_workflow_chrome_demo";
+pub(crate) const PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = "ai_workflow_node_graph_demo";
+pub(crate) const PAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = "ai_canvas_world_layer_spike";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -302,6 +311,19 @@ pub(crate) const CMD_NAV_AI_TASK_DEMO: &str = "ui_gallery.nav.select.ai_task_dem
 pub(crate) const CMD_NAV_AI_AUDIO_PLAYER_DEMO: &str = "ui_gallery.nav.select.ai_audio_player_demo";
 pub(crate) const CMD_NAV_AI_TRANSCRIPTION_DEMO: &str =
     "ui_gallery.nav.select.ai_transcription_demo";
+pub(crate) const CMD_NAV_AI_SPEECH_INPUT_DEMO: &str = "ui_gallery.nav.select.ai_speech_input_demo";
+pub(crate) const CMD_NAV_AI_MIC_SELECTOR_DEMO: &str = "ui_gallery.nav.select.ai_mic_selector_demo";
+pub(crate) const CMD_NAV_AI_VOICE_SELECTOR_DEMO: &str =
+    "ui_gallery.nav.select.ai_voice_selector_demo";
+pub(crate) const CMD_NAV_AI_AGENT_DEMO: &str = "ui_gallery.nav.select.ai_agent_demo";
+pub(crate) const CMD_NAV_AI_SANDBOX_DEMO: &str = "ui_gallery.nav.select.ai_sandbox_demo";
+pub(crate) const CMD_NAV_AI_PERSONA_DEMO: &str = "ui_gallery.nav.select.ai_persona_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_CHROME_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_chrome_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_GRAPH_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_node_graph_demo";
+pub(crate) const CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE: &str =
+    "ui_gallery.nav.select.ai_canvas_world_layer_spike";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
@@ -1019,6 +1041,108 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "transcription", "segments", "seek", "voice", "demo"],
                 docs::DOC_AI_TRANSCRIPTION_DEMO,
                 docs::USAGE_AI_TRANSCRIPTION_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SPEECH_INPUT_DEMO,
+                "AI Speech Input (Demo)",
+                "AI Elements SpeechInput / Record Button Chrome Demo",
+                "fret-ui-ai (speech input)",
+                CMD_NAV_AI_SPEECH_INPUT_DEMO,
+                &["ai", "speech", "voice", "input", "record", "demo"],
+                docs::DOC_AI_SPEECH_INPUT_DEMO,
+                docs::USAGE_AI_SPEECH_INPUT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_MIC_SELECTOR_DEMO,
+                "AI Mic Selector (Demo)",
+                "AI Elements MicSelector / Popover + Search Demo",
+                "fret-ui-ai (voice input chrome)",
+                CMD_NAV_AI_MIC_SELECTOR_DEMO,
+                &[
+                    "ai",
+                    "mic",
+                    "microphone",
+                    "selector",
+                    "popover",
+                    "search",
+                    "demo",
+                ],
+                docs::DOC_AI_MIC_SELECTOR_DEMO,
+                docs::USAGE_AI_MIC_SELECTOR_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_VOICE_SELECTOR_DEMO,
+                "AI Voice Selector (Demo)",
+                "AI Elements VoiceSelector / Dialog + Search Demo",
+                "fret-ui-ai (voice input chrome)",
+                CMD_NAV_AI_VOICE_SELECTOR_DEMO,
+                &["ai", "voice", "selector", "dialog", "search", "demo"],
+                docs::DOC_AI_VOICE_SELECTOR_DEMO,
+                docs::USAGE_AI_VOICE_SELECTOR_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_AGENT_DEMO,
+                "AI Agent (Demo)",
+                "AI Elements Agent / Instructions + Tools + Output Schema Demo",
+                "fret-ui-ai (agent chrome)",
+                CMD_NAV_AI_AGENT_DEMO,
+                &["ai", "agent", "tools", "schema", "accordion", "demo"],
+                docs::DOC_AI_AGENT_DEMO,
+                docs::USAGE_AI_AGENT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SANDBOX_DEMO,
+                "AI Sandbox (Demo)",
+                "AI Elements Sandbox / Collapsible + Tabs Demo",
+                "fret-ui-ai (sandbox chrome)",
+                CMD_NAV_AI_SANDBOX_DEMO,
+                &["ai", "sandbox", "collapsible", "tabs", "demo"],
+                docs::DOC_AI_SANDBOX_DEMO,
+                docs::USAGE_AI_SANDBOX_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PERSONA_DEMO,
+                "AI Persona (Demo)",
+                "AI Elements Persona / Visual Placeholder Demo",
+                "fret-ui-ai (persona placeholder)",
+                CMD_NAV_AI_PERSONA_DEMO,
+                &["ai", "persona", "visual", "placeholder", "demo"],
+                docs::DOC_AI_PERSONA_DEMO,
+                docs::USAGE_AI_PERSONA_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_CHROME_DEMO,
+                "AI Workflow Chrome (Demo)",
+                "AI Elements workflow wrappers / Panel + Toolbar Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_CHROME_DEMO,
+                &["ai", "workflow", "panel", "toolbar", "chrome", "demo"],
+                docs::DOC_AI_WORKFLOW_CHROME_DEMO,
+                docs::USAGE_AI_WORKFLOW_CHROME_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO,
+                "AI Workflow Node Graph (Demo)",
+                "Workflow editor surface / fret-node engine + fret-ui-ai chrome Demo",
+                "fret-node + fret-ui-ai",
+                CMD_NAV_AI_WORKFLOW_NODE_GRAPH_DEMO,
+                &[
+                    "ai", "workflow", "node", "graph", "canvas", "controls", "engine", "demo",
+                ],
+                docs::DOC_AI_WORKFLOW_NODE_GRAPH_DEMO,
+                docs::USAGE_AI_WORKFLOW_NODE_GRAPH_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CANVAS_WORLD_LAYER_SPIKE,
+                "AI Canvas World Layer (Spike)",
+                "Canvas world layer / nodes as element subtrees (pan/zoom)",
+                "fret-canvas/ui (world layer helper)",
+                CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE,
+                &[
+                    "ai", "workflow", "canvas", "pan", "zoom", "world", "nodes", "spike", "demo",
+                ],
+                docs::DOC_AI_CANVAS_WORLD_LAYER_SPIKE,
+                docs::USAGE_AI_CANVAS_WORLD_LAYER_SPIKE,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,

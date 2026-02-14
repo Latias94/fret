@@ -937,7 +937,13 @@ impl UiIntoElement for TextBox {
             style.letter_spacing_em = Some(letter_spacing_em);
         }
 
-        if preset == TextPreset::Label && matches!(layout.size.height, Length::Auto) {
+        // `TextPreset::Label` defaults to single-line text (Tailwind/shadcn `leading-none` label),
+        // so we fix the line box height by default. If the caller explicitly enables wrapping,
+        // keep the height auto so multi-line labels can expand without overlap.
+        if preset == TextPreset::Label
+            && wrap == TextWrap::None
+            && matches!(layout.size.height, Length::Auto)
+        {
             let line_height = line_height_override
                 .or(default_label_line_height)
                 .unwrap_or(Px(0.0));

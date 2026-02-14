@@ -43,7 +43,7 @@ def _die(msg: str, code: int = 1) -> "NoReturn":
 
 def _run_json(cmd: list[str]) -> object:
     try:
-        out = subprocess.check_output(cmd, text=True)
+        out = subprocess.check_output(cmd, text=True, encoding="utf-8", errors="replace")
     except FileNotFoundError:
         _die(f"Missing executable: {cmd[0]}")
     except subprocess.CalledProcessError as e:

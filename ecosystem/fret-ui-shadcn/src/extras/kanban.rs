@@ -1228,9 +1228,7 @@ impl Kanban {
                                 .rounded(Radius::Md)
                                 .bg(ColorRef::Color(theme.color_token("card")))
                                 .border_color(ColorRef::Color(card_border_color))
-                                .text_color(ColorRef::Color(
-                                    theme.color_token("card-foreground"),
-                                ))
+                                .text_color(ColorRef::Color(theme.color_token("card-foreground")))
                                 .p(Space::N3);
                             let card_layout = LayoutRefinement::default().size_full();
 

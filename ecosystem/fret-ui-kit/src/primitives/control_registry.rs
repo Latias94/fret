@@ -1,0 +1,155 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use fret_core::AppWindowId;
+use fret_runtime::{FrameId, Model};
+use fret_ui::action::UiActionHost;
+use fret_ui::{ElementContext, GlobalElementId, UiHost};
+
+use crate::headless::checked_state::CheckedState;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ControlId(Arc<str>);
+
+impl ControlId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl From<Arc<str>> for ControlId {
+    fn from(value: Arc<str>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<String> for ControlId {
+    fn from(value: String) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+impl From<&str> for ControlId {
+    fn from(value: &str) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ControlAction {
+    ToggleBool(Model<bool>),
+    ToggleOptionalBool(Model<Option<bool>>),
+    ToggleCheckedState(Model<CheckedState>),
+}
+
+impl ControlAction {
+    pub fn invoke(&self, host: &mut dyn UiActionHost) {
+        match self {
+            ControlAction::ToggleBool(model) => {
+                let _ = host.models_mut().update(model, |v: &mut bool| *v = !*v);
+            }
+            ControlAction::ToggleOptionalBool(model) => {
+                let _ = host.models_mut().update(model, |v: &mut Option<bool>| {
+                    *v = match *v {
+                        None => Some(true),
+                        Some(true) => Some(false),
+                        Some(false) => Some(true),
+                    };
+                });
+            }
+            ControlAction::ToggleCheckedState(model) => {
+                let _ = host
+                    .models_mut()
+                    .update(model, |v: &mut CheckedState| *v = v.toggle());
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ControlEntry {
+    pub element: GlobalElementId,
+    pub enabled: bool,
+    pub action: ControlAction,
+}
+
+#[derive(Debug, Clone)]
+pub struct LabelEntry {
+    pub element: GlobalElementId,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ControlRegistry {
+    windows: HashMap<AppWindowId, WindowControlRegistry>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct WindowControlRegistry {
+    frame_id: Option<FrameId>,
+    controls: HashMap<ControlId, ControlEntry>,
+    labels: HashMap<ControlId, LabelEntry>,
+}
+
+impl ControlRegistry {
+    fn begin_frame(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+    ) -> &mut WindowControlRegistry {
+        let entry = self.windows.entry(window).or_default();
+        if entry.frame_id != Some(frame_id) {
+            entry.frame_id = Some(frame_id);
+            entry.controls.clear();
+            entry.labels.clear();
+        }
+        entry
+    }
+
+    pub fn register_control(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        id: ControlId,
+        control: ControlEntry,
+    ) {
+        let st = self.begin_frame(window, frame_id);
+        st.controls.insert(id, control);
+    }
+
+    pub fn register_label(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        id: ControlId,
+        label: LabelEntry,
+    ) {
+        let st = self.begin_frame(window, frame_id);
+        st.labels.insert(id, label);
+    }
+
+    pub fn control_for(&self, window: AppWindowId, id: &ControlId) -> Option<&ControlEntry> {
+        self.windows.get(&window)?.controls.get(id)
+    }
+
+    pub fn label_for(&self, window: AppWindowId, id: &ControlId) -> Option<&LabelEntry> {
+        self.windows.get(&window)?.labels.get(id)
+    }
+}
+
+#[derive(Default)]
+struct ControlRegistryService {
+    model: Option<Model<ControlRegistry>>,
+}
+
+pub fn control_registry_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<ControlRegistry> {
+    cx.app
+        .with_global_mut(ControlRegistryService::default, |svc, app| {
+            svc.model
+                .get_or_insert_with(|| app.models_mut().insert(ControlRegistry::default()))
+                .clone()
+        })
+}

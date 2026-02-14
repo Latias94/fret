@@ -276,7 +276,8 @@ pub(crate) fn content_view(
     let content_inner = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         body
     } else {
-        cx.keyed("ui_gallery.content_scroll_area", |cx| {
+        // Key the scroll area by the selected page so navigation resets scroll position.
+        cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), |cx| {
             let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .viewport_test_id("ui-gallery-content-viewport")
@@ -486,10 +487,19 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
+        PAGE_AI_MIC_SELECTOR_DEMO => preview_ai_mic_selector_demo(cx, theme),
+        PAGE_AI_SPEECH_INPUT_DEMO => preview_ai_speech_input_demo(cx, theme),
+        PAGE_AI_VOICE_SELECTOR_DEMO => preview_ai_voice_selector_demo(cx, theme),
+        PAGE_AI_AGENT_DEMO => preview_ai_agent_demo(cx, theme),
+        PAGE_AI_SANDBOX_DEMO => preview_ai_sandbox_demo(cx, theme),
+        PAGE_AI_PERSONA_DEMO => preview_ai_persona_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CHROME_DEMO => preview_ai_workflow_chrome_demo(cx, theme),
+        PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO => preview_ai_workflow_node_graph_demo(cx, theme),
+        PAGE_AI_CANVAS_WORLD_LAYER_SPIKE => preview_ai_canvas_world_layer_spike(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
-        PAGE_CARD => preview_card(cx),
+        PAGE_CARD => preview_card(cx, image_fit_demo_wide_image),
         PAGE_BADGE => preview_badge(cx),
         PAGE_AVATAR => preview_avatar(cx, avatar_demo_image),
         PAGE_IMAGE_OBJECT_FIT => preview_image_object_fit(
@@ -746,6 +756,7 @@ fn page_preview(
         PAGE_MATERIAL3_TOOLTIP => {
             material3_scoped_page(cx, material3_expressive.clone(), preview_material3_tooltip)
         }
+        other if other.starts_with("ai_") => preview_ai_unwired(cx, theme, other),
         _ => preview_intro(cx, theme),
     };
 
@@ -760,4 +771,23 @@ fn page_preview(
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
+}
+
+fn preview_ai_unwired(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+    id: &str,
+) -> Vec<AnyElement> {
+    vec![
+        shadcn::Alert::new(vec![
+            shadcn::AlertTitle::new("AI demo not wired").into_element(cx),
+            shadcn::AlertDescription::new(format!(
+                "Page `{id}` exists in the nav spec, but does not have a preview implementation yet. See `docs/workstreams/ai-elements-port-todo.md`."
+            ))
+            .into_element(cx),
+        ])
+        .variant(shadcn::AlertVariant::Default)
+        .into_element(cx)
+        .test_id(format!("ui-gallery-ai-unwired-{}", id.replace('_', "-"))),
+    ]
 }

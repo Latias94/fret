@@ -73,6 +73,11 @@ impl Empty {
                     .p(padding)
                     .rounded(Radius::Lg)
                     .border_1()
+                    .border_dash(fret_core::scene::DashPatternV1::new(
+                        Px(4.0),
+                        Px(4.0),
+                        Px(0.0),
+                    ))
                     .border_color(ColorRef::Color(border))
                     .text_color(ColorRef::Color(fg))
                     .merge(chrome_override);

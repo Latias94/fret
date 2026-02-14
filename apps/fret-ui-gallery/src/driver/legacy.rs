@@ -2318,6 +2318,7 @@ pub fn run() -> anyhow::Result<()> {
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
@@ -2348,6 +2349,7 @@ pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .into_inner()
@@ -3280,6 +3282,17 @@ impl WinitAppDriver for UiGalleryDriver {
                 state.ui.dispatch_event(app, services, event);
             }
         }
+
+        let should_drive_ui_assets = match event {
+            Event::ImageRegistered { token, .. } | Event::ImageRegisterFailed { token, .. } => {
+                use fret_ui_assets::image_asset_cache::ImageAssetCacheHostExt as _;
+                app.with_image_asset_cache(|cache, _app| cache.key_for_token(*token).is_some())
+            }
+            _ => false,
+        };
+        if should_drive_ui_assets {
+            let _ = fret_ui_assets::UiAssets::handle_event(app, window, event);
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -3415,11 +3428,12 @@ impl WinitAppDriver for UiGalleryDriver {
         // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
         // VirtualList) have their realized item subtrees available for hit-testing.
         let semantics_snapshot = state.ui.semantics_snapshot();
-        let drive = app.with_global_mut_untracked(
+        let (drive, wants_quit) = app.with_global_mut_untracked(
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
+                let wants_quit = svc.poll_exit_trigger();
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                svc.drive_script_for_window(
+                let drive = svc.drive_script_for_window(
                     &*app,
                     window,
                     bounds,
@@ -3427,9 +3441,15 @@ impl WinitAppDriver for UiGalleryDriver {
                     Some(&state.ui),
                     semantics_snapshot,
                     element_runtime,
-                )
+                );
+                (drive, wants_quit)
             },
         );
+
+        if wants_quit {
+            app.push_effect(Effect::QuitApp);
+            return;
+        }
 
         for effect in drive.effects {
             app.push_effect(effect);

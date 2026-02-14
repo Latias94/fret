@@ -47,8 +47,7 @@ impl MarkdownTheme {
         }
 
         let link = color(theme, "link").unwrap_or_else(|| theme.color_token("primary"));
-        let muted =
-            color(theme, "muted").unwrap_or_else(|| theme.color_token("muted-foreground"));
+        let muted = color(theme, "muted").unwrap_or_else(|| theme.color_token("muted-foreground"));
         let hr = color(theme, "hr").unwrap_or_else(|| theme.color_token("border"));
 
         let blockquote_border =
@@ -66,8 +65,8 @@ impl MarkdownTheme {
 
         let task_checked =
             color(theme, "task.checked").unwrap_or_else(|| theme.color_token("primary"));
-        let task_unchecked = color(theme, "task.unchecked")
-            .unwrap_or_else(|| theme.color_token("muted-foreground"));
+        let task_unchecked =
+            color(theme, "task.unchecked").unwrap_or_else(|| theme.color_token("muted-foreground"));
 
         let table_border =
             color(theme, "table.border").unwrap_or_else(|| theme.color_token("border"));

@@ -8,6 +8,9 @@ pub mod image_source;
 pub mod svg_asset_state;
 pub mod ui_assets;
 
+#[cfg(feature = "ui")]
+pub mod ui;
+
 pub use fret_asset_cache::*;
 pub use image_source::*;
 pub use ui_assets::*;

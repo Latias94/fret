@@ -10,6 +10,7 @@
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -20,9 +21,15 @@ use fret_runtime::{
     DispatchPriority, DispatcherHandle, EffectSink, GlobalsHost, InboxDrainHost,
     InboxDrainRegistry, TimeHost,
 };
+#[cfg(feature = "ui")]
+use fret_runtime::{Model, ModelHost, ModelId};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast as _;
 
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache};
+
+static WARNED_MISSING_DISPATCHER: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ImageSourceId(u64);
@@ -37,6 +44,10 @@ impl ImageSourceId {
 enum ImageSourceKind {
     Bytes {
         bytes: Arc<[u8]>,
+    },
+    #[cfg(target_arch = "wasm32")]
+    Url {
+        url: Arc<str>,
     },
     Rgba8 {
         width: u32,
@@ -63,12 +74,39 @@ impl ImageSource {
         self.id
     }
 
+    #[cfg(feature = "ui")]
+    pub(crate) fn rgba8_meta(&self) -> Option<(u32, u32, Arc<[u8]>, ImageColorSpace)> {
+        match &self.kind {
+            ImageSourceKind::Rgba8 {
+                width,
+                height,
+                rgba,
+                color_space,
+            } => Some((*width, *height, rgba.clone(), *color_space)),
+            ImageSourceKind::Bytes { .. } => None,
+            #[cfg(target_arch = "wasm32")]
+            ImageSourceKind::Url { .. } => None,
+            #[cfg(not(target_arch = "wasm32"))]
+            ImageSourceKind::Path { .. } => None,
+        }
+    }
+
     pub fn from_bytes(bytes: impl Into<Arc<[u8]>>) -> Self {
         let bytes: Arc<[u8]> = bytes.into();
         let id = ImageSourceId(stable_hash(&(b"bytes.v1", bytes.as_ref())));
         Self {
             id,
             kind: ImageSourceKind::Bytes { bytes },
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn from_url(url: impl Into<Arc<str>>) -> Self {
+        let url: Arc<str> = url.into();
+        let id = ImageSourceId(stable_hash(&(b"url.v1", url.as_bytes())));
+        Self {
+            id,
+            kind: ImageSourceKind::Url { url },
         }
     }
 
@@ -156,6 +194,21 @@ impl Default for ImageSourceOptions {
     }
 }
 
+#[cfg(feature = "ui")]
+fn request_key_for_source(
+    source: &ImageSource,
+    options: ImageSourceOptions,
+) -> ImageSourceRequestKey {
+    let color_space = source
+        .rgba8_meta()
+        .map(|(_, _, _, cs)| cs)
+        .unwrap_or(options.color_space);
+    ImageSourceRequestKey {
+        source: source.id,
+        color_space,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ImageSourceState {
     pub image: Option<ImageId>,
@@ -194,8 +247,8 @@ enum ImageSourceEntryState {
 
 #[derive(Debug)]
 struct ImageSourceEntry {
-    source: ImageSource,
     state: ImageSourceEntryState,
+    last_used_frame: u64,
 }
 
 #[derive(Debug)]
@@ -207,15 +260,78 @@ struct ImageSourceMsg {
     result: Result<DecodedRgba8, String>,
 }
 
+/// A tiny per-request signal model used to make async decode completions observable by view-cached
+/// subtrees.
+///
+/// The actual image data/state machine lives in `ImageSourceRuntime`; the UI only needs an observed
+/// dependency that changes when decode finishes so `ViewCache` knows it must re-render.
+#[cfg(feature = "ui")]
+#[derive(Debug, Default)]
+pub(crate) struct ImageSourceUiSignal {
+    epoch: u64,
+}
+
+#[cfg(feature = "ui")]
+#[derive(Debug, Clone)]
+struct ImageSourceSignalHandle {
+    model: Model<ImageSourceUiSignal>,
+    last_used_frame: u64,
+}
+
 pub struct ImageSourceLoader {
     runtime: Arc<ImageSourceRuntime>,
+    last_entries_gc_frame: Option<u64>,
+    #[cfg(feature = "ui")]
+    signal_handles: HashMap<ImageSourceRequestKey, ImageSourceSignalHandle>,
+    #[cfg(feature = "ui")]
+    last_signal_gc_frame: Option<u64>,
 }
 
 impl ImageSourceLoader {
     fn new(dispatcher: DispatcherHandle) -> Self {
         Self {
             runtime: Arc::new(ImageSourceRuntime::new(dispatcher)),
+            last_entries_gc_frame: None,
+            #[cfg(feature = "ui")]
+            signal_handles: HashMap::new(),
+            #[cfg(feature = "ui")]
+            last_signal_gc_frame: None,
         }
+    }
+
+    fn gc_entries_if_needed(&mut self, frame: u64) {
+        const GC_PERIOD_FRAMES: u64 = 300;
+        const TTL_FRAMES: u64 = 1800;
+
+        let should_gc = match self.last_entries_gc_frame {
+            None => true,
+            Some(last) => frame.saturating_sub(last) >= GC_PERIOD_FRAMES,
+        };
+        if !should_gc {
+            return;
+        }
+
+        self.last_entries_gc_frame = Some(frame);
+
+        let mut entries = self
+            .runtime
+            .entries
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex");
+        entries.retain(|_key, entry| {
+            // Never drop in-flight entries: if we do, we can lose the async completion and stall
+            // without a new signal to re-render under ViewCache.
+            match &entry.state {
+                ImageSourceEntryState::Loading { .. } | ImageSourceEntryState::Decoded { .. } => {
+                    true
+                }
+                ImageSourceEntryState::Idle
+                | ImageSourceEntryState::Ready { .. }
+                | ImageSourceEntryState::Failed { .. } => {
+                    frame.saturating_sub(entry.last_used_frame) < TTL_FRAMES
+                }
+            }
+        });
     }
 
     fn ensure_registered<H: GlobalsHost>(&mut self, host: &mut H) {
@@ -241,12 +357,10 @@ impl ImageSourceLoader {
             .lock()
             .expect("poisoned ImageSourceRuntime mutex");
         let entry = entries.entry(request).or_insert_with(|| ImageSourceEntry {
-            source: source.clone(),
             state: ImageSourceEntryState::Idle,
+            last_used_frame: frame,
         });
-
-        // Keep the latest source clone around (cheap; `Arc`-backed).
-        entry.source = source.clone();
+        entry.last_used_frame = frame;
 
         let should_start = match &entry.state {
             ImageSourceEntryState::Idle => true,
@@ -268,6 +382,32 @@ impl ImageSourceLoader {
             .fetch_add(1, Ordering::Relaxed);
         entry.state = ImageSourceEntryState::Loading { inflight_id };
 
+        tracing::debug!(
+            source = ?request.source,
+            window = ?window,
+            frame = frame,
+            "image_source: start decode"
+        );
+
+        #[cfg(target_arch = "wasm32")]
+        if let ImageSourceKind::Url { url } = &source.kind {
+            let url: Arc<str> = url.clone();
+            let sender = self.runtime.inbox.sender();
+            let wake_dispatcher = self.runtime.dispatcher.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let result = fetch_and_decode_rgba8(url.as_ref()).await;
+                let _ = sender.send(ImageSourceMsg {
+                    request,
+                    window,
+                    inflight_id,
+                    attempt_frame: frame,
+                    result,
+                });
+                wake_dispatcher.wake(Some(window));
+            });
+            return;
+        }
+
         let sender = self.runtime.inbox.sender();
         let dispatcher = self.runtime.dispatcher.clone();
         let wake_dispatcher = dispatcher.clone();
@@ -287,50 +427,72 @@ impl ImageSourceLoader {
         );
     }
 
-    fn apply_msg(&self, host: &mut dyn InboxDrainHost, msg: ImageSourceMsg) {
-        let mut entries = self
-            .runtime
-            .entries
-            .lock()
-            .expect("poisoned ImageSourceRuntime mutex");
-        let Some(entry) = entries.get_mut(&msg.request) else {
-            return;
-        };
+    #[cfg(feature = "ui")]
+    pub(crate) fn use_signal_model<H: ModelHost + TimeHost>(
+        &mut self,
+        app: &mut H,
+        source: &ImageSource,
+        options: ImageSourceOptions,
+    ) -> Model<ImageSourceUiSignal> {
+        const GC_PERIOD_FRAMES: u64 = 300;
+        const TTL_FRAMES: u64 = 600;
 
-        let inflight_matches = match &entry.state {
-            ImageSourceEntryState::Loading { inflight_id, .. } => *inflight_id == msg.inflight_id,
-            ImageSourceEntryState::Decoded { inflight_id, .. } => *inflight_id == msg.inflight_id,
-            ImageSourceEntryState::Idle
-            | ImageSourceEntryState::Ready { .. }
-            | ImageSourceEntryState::Failed { .. } => false,
+        let frame = app.frame_id().0;
+        let should_gc = match self.last_signal_gc_frame {
+            None => true,
+            Some(last) => frame.saturating_sub(last) >= GC_PERIOD_FRAMES,
         };
-        if !inflight_matches {
-            return;
+        if should_gc {
+            self.last_signal_gc_frame = Some(frame);
+            let mut expired = Vec::new();
+            for (key, handle) in &self.signal_handles {
+                if frame.saturating_sub(handle.last_used_frame) >= TTL_FRAMES {
+                    expired.push(*key);
+                }
+            }
+            if !expired.is_empty() {
+                let mut signal_models = self
+                    .runtime
+                    .signal_models
+                    .lock()
+                    .expect("poisoned ImageSourceRuntime mutex");
+                for key in expired {
+                    self.signal_handles.remove(&key);
+                    signal_models.remove(&key);
+                }
+
+                let live: std::collections::HashSet<ModelId> =
+                    signal_models.values().copied().collect();
+                drop(signal_models);
+
+                let mut map = self
+                    .runtime
+                    .asset_key_to_signal_models
+                    .lock()
+                    .expect("poisoned ImageSourceRuntime mutex");
+                map.retain(|_key, ids| {
+                    ids.retain(|id| live.contains(id));
+                    !ids.is_empty()
+                });
+            }
         }
 
-        match msg.result {
-            Ok(decoded) => {
-                let asset_key = ImageAssetKey::from_rgba8(
-                    decoded.width,
-                    decoded.height,
-                    msg.request.color_space,
-                    decoded.rgba.as_ref(),
-                );
-                entry.state = ImageSourceEntryState::Decoded {
-                    inflight_id: msg.inflight_id,
-                    decoded,
-                    asset_key,
-                };
-            }
-            Err(err) => {
-                entry.state = ImageSourceEntryState::Failed {
-                    message: Arc::<str>::from(err),
-                    last_attempt_frame: msg.attempt_frame,
-                };
-            }
-        }
+        let request = request_key_for_source(source, options);
 
-        host.request_redraw(msg.window);
+        let entry = self.signal_handles.entry(request).or_insert_with(|| {
+            let model = app.models_mut().insert(ImageSourceUiSignal::default());
+            self.runtime
+                .signal_models
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .insert(request, model.id());
+            ImageSourceSignalHandle {
+                model,
+                last_used_frame: frame,
+            }
+        });
+        entry.last_used_frame = frame;
+        entry.model.clone()
     }
 }
 
@@ -340,6 +502,10 @@ struct ImageSourceRuntime {
     registered: AtomicBool,
     next_inflight_id: AtomicU64,
     entries: Mutex<HashMap<ImageSourceRequestKey, ImageSourceEntry>>,
+    #[cfg(feature = "ui")]
+    signal_models: Mutex<HashMap<ImageSourceRequestKey, ModelId>>,
+    #[cfg(feature = "ui")]
+    asset_key_to_signal_models: Mutex<HashMap<ImageAssetKey, Vec<ModelId>>>,
     retry_cooldown_frames: u64,
 }
 
@@ -354,27 +520,217 @@ impl ImageSourceRuntime {
             registered: AtomicBool::new(false),
             next_inflight_id: AtomicU64::new(1),
             entries: Mutex::new(HashMap::new()),
+            #[cfg(feature = "ui")]
+            signal_models: Mutex::new(HashMap::new()),
+            #[cfg(feature = "ui")]
+            asset_key_to_signal_models: Mutex::new(HashMap::new()),
             retry_cooldown_frames: 60,
+        }
+    }
+
+    fn apply_msg(&self, host: &mut dyn InboxDrainHost, msg: ImageSourceMsg) {
+        {
+            let mut entries = self
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex");
+            let Some(entry) = entries.get_mut(&msg.request) else {
+                return;
+            };
+
+            let inflight_matches = match &entry.state {
+                ImageSourceEntryState::Loading { inflight_id, .. } => {
+                    *inflight_id == msg.inflight_id
+                }
+                ImageSourceEntryState::Decoded { inflight_id, .. } => {
+                    *inflight_id == msg.inflight_id
+                }
+                ImageSourceEntryState::Idle
+                | ImageSourceEntryState::Ready { .. }
+                | ImageSourceEntryState::Failed { .. } => false,
+            };
+            if !inflight_matches {
+                return;
+            }
+
+            match msg.result {
+                Ok(decoded) => {
+                    tracing::debug!(
+                        source = ?msg.request.source,
+                        window = ?msg.window,
+                        width = decoded.width,
+                        height = decoded.height,
+                        "image_source: decode ok"
+                    );
+                    let asset_key = ImageAssetKey::from_rgba8(
+                        decoded.width,
+                        decoded.height,
+                        msg.request.color_space,
+                        decoded.rgba.as_ref(),
+                    );
+                    entry.state = ImageSourceEntryState::Decoded {
+                        inflight_id: msg.inflight_id,
+                        decoded,
+                        asset_key,
+                    };
+
+                    #[cfg(feature = "ui")]
+                    self.register_asset_key_signal_mapping(msg.request, asset_key);
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        source = ?msg.request.source,
+                        window = ?msg.window,
+                        error = %err,
+                        "image_source: decode failed"
+                    );
+                    entry.state = ImageSourceEntryState::Failed {
+                        message: Arc::<str>::from(err),
+                        last_attempt_frame: msg.attempt_frame,
+                    };
+                }
+            }
+        }
+
+        #[cfg(feature = "ui")]
+        {
+            // ViewCache-safe: bump the per-request signal model (if one is registered) so cached
+            // subtrees re-render when decode finishes.
+            if let Some(signal_model_id) = self
+                .signal_models
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .get(&msg.request)
+                .copied()
+            {
+                let updated = host
+                    .models_mut()
+                    .update_any(signal_model_id, |state_any| {
+                        let state = state_any
+                            .downcast_mut::<ImageSourceUiSignal>()
+                            .expect("ImageSourceUiSignal model type mismatch");
+                        state.epoch = state.epoch.wrapping_add(1);
+                    })
+                    .is_ok();
+                if !updated {
+                    let _ = self
+                        .signal_models
+                        .lock()
+                        .expect("poisoned ImageSourceRuntime mutex")
+                        .remove(&msg.request);
+                }
+            }
+        }
+
+        host.request_redraw(msg.window);
+    }
+
+    #[cfg(feature = "ui")]
+    pub(crate) fn register_asset_key_signal_mapping(
+        &self,
+        request: ImageSourceRequestKey,
+        asset_key: ImageAssetKey,
+    ) {
+        let Some(model_id) = self
+            .signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex")
+            .get(&request)
+            .copied()
+        else {
+            return;
+        };
+
+        let mut map = self
+            .asset_key_to_signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex");
+        let list = map.entry(asset_key).or_default();
+        if !list.contains(&model_id) {
+            list.push(model_id);
         }
     }
 }
 
+#[cfg(feature = "ui")]
+pub(crate) fn notify_image_asset_key<H: GlobalsHost + ModelHost>(app: &mut H, key: ImageAssetKey) {
+    let Some(model_ids) = with_image_source_loader(app, |loader, _app| {
+        loader
+            .runtime
+            .asset_key_to_signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex")
+            .get(&key)
+            .cloned()
+            .unwrap_or_default()
+    }) else {
+        return;
+    };
+
+    if model_ids.is_empty() {
+        return;
+    }
+
+    let original_len = model_ids.len();
+    let mut alive = Vec::with_capacity(model_ids.len());
+    for model_id in model_ids {
+        if app
+            .models_mut()
+            .update_any(model_id, |state_any| {
+                let state = state_any
+                    .downcast_mut::<ImageSourceUiSignal>()
+                    .expect("ImageSourceUiSignal model type mismatch");
+                state.epoch = state.epoch.wrapping_add(1);
+            })
+            .is_err()
+        {
+            continue;
+        }
+        alive.push(model_id);
+    }
+
+    if alive.len() == original_len {
+        return;
+    }
+
+    let _ = with_image_source_loader(app, |loader, _app| {
+        let mut map = loader
+            .runtime
+            .asset_key_to_signal_models
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex");
+        if alive.is_empty() {
+            map.remove(&key);
+        } else {
+            map.insert(key, alive);
+        }
+    });
+}
+
+#[cfg(feature = "ui")]
+pub(crate) fn register_asset_key_for_source<H: GlobalsHost>(
+    app: &mut H,
+    source: &ImageSource,
+    options: ImageSourceOptions,
+    asset_key: ImageAssetKey,
+) {
+    let _ = with_image_source_loader(app, |loader, _app| {
+        let request = request_key_for_source(source, options);
+        loader
+            .runtime
+            .register_asset_key_signal_mapping(request, asset_key);
+    });
+}
+
 fn image_source_inbox_drainer(runtime: Arc<ImageSourceRuntime>) -> InboxDrainer<ImageSourceMsg> {
     InboxDrainer::new(runtime.inbox.clone(), move |host, _window, msg| {
-        // Apply via the global loader to keep all mutation main-thread-only.
-        //
-        // The loader itself is stored as a global, but the runtime is an `Arc` that we can mutate
-        // safely from this drain boundary without needing `GlobalsHost`.
-        let loader = ImageSourceLoader {
-            runtime: runtime.clone(),
-        };
-        loader.apply_msg(host, msg);
+        runtime.apply_msg(host, msg);
     })
 }
 
 /// Access the global [`ImageSourceLoader`], returning `None` when the runner did not install a
 /// `DispatcherHandle` global.
-fn with_image_source_loader<H: GlobalsHost, R>(
+pub(crate) fn with_image_source_loader<H: GlobalsHost, R>(
     host: &mut H,
     f: impl FnOnce(&mut ImageSourceLoader, &mut H) -> R,
 ) -> Option<R> {
@@ -439,6 +795,7 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
 
     let Some(state) = with_image_source_loader(host, |loader, host| {
         loader.ensure_registered(host);
+        loader.gc_entries_if_needed(frame);
 
         // Take a snapshot of the current entry state.
         let snapshot = {
@@ -468,6 +825,18 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
                 }
             })
         };
+
+        // Touch last-used for GC after snapshot to avoid holding a mutable borrow across clones.
+        if snapshot.is_some() {
+            let mut entries = loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex");
+            if let Some(entry) = entries.get_mut(&request) {
+                entry.last_used_frame = frame;
+            }
+        }
 
         match snapshot {
             None | Some(ImageSourceEntrySnapshot::Idle) => {
@@ -516,6 +885,14 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
                 }
             }
             Some(ImageSourceEntrySnapshot::Decoded { decoded, asset_key }) => {
+                tracing::debug!(
+                    source = ?request.source,
+                    window = ?window,
+                    width = decoded.width,
+                    height = decoded.height,
+                    asset_key = ?asset_key,
+                    "image_source: feed decoded bytes into ImageAssetCache"
+                );
                 // Feed the decoded bytes into the `ImageAssetCache` state machine.
                 host.with_image_asset_cache(|cache, host| {
                     let _image = cache.use_rgba8_keyed(
@@ -606,6 +983,9 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
             }
         }
     }) else {
+        if !WARNED_MISSING_DISPATCHER.swap(true, Ordering::Relaxed) {
+            tracing::warn!("image_source: missing DispatcherHandle global (decoding disabled)");
+        }
         return ImageSourceState {
             image: None,
             status: ImageLoadingStatus::Error,
@@ -635,6 +1015,10 @@ enum ImageSourceEntrySnapshot {
 fn decode_rgba8(source: &ImageSource) -> Result<DecodedRgba8, String> {
     match &source.kind {
         ImageSourceKind::Bytes { bytes } => decode_bytes_rgba8(bytes.as_ref()),
+        #[cfg(target_arch = "wasm32")]
+        ImageSourceKind::Url { .. } => {
+            Err("url image sources must be decoded via fetch".to_string())
+        }
         ImageSourceKind::Rgba8 {
             width,
             height,
@@ -663,6 +1047,44 @@ fn decode_rgba8(source: &ImageSource) -> Result<DecodedRgba8, String> {
             decode_bytes_rgba8(&bytes)
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_and_decode_rgba8(url: &str) -> Result<DecodedRgba8, String> {
+    let bytes = fetch_url_bytes(url).await?;
+    decode_bytes_rgba8(&bytes)
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_url_bytes(url: &str) -> Result<Vec<u8>, String> {
+    use wasm_bindgen_futures::JsFuture;
+
+    let Some(window) = web_sys::window() else {
+        return Err("missing web_sys::window".to_string());
+    };
+
+    let resp_value = JsFuture::from(window.fetch_with_str(url))
+        .await
+        .map_err(|e| format!("fetch failed: {e:?}"))?;
+    let resp: web_sys::Response = resp_value
+        .dyn_into()
+        .map_err(|_| "fetch did not return a Response".to_string())?;
+    if !resp.ok() {
+        return Err(format!(
+            "fetch returned HTTP {} {}",
+            resp.status(),
+            resp.status_text()
+        ));
+    }
+
+    let buf = JsFuture::from(
+        resp.array_buffer()
+            .map_err(|e| format!("array_buffer() failed: {e:?}"))?,
+    )
+    .await
+    .map_err(|e| format!("await array_buffer failed: {e:?}"))?;
+    let array = js_sys::Uint8Array::new(&buf);
+    Ok(array.to_vec())
 }
 
 fn decode_bytes_rgba8(bytes: &[u8]) -> Result<DecodedRgba8, String> {
@@ -727,18 +1149,63 @@ fn record_intrinsic_metadata<H: GlobalsHost>(
 mod tests {
     use std::any::{Any, TypeId};
     use std::collections::{HashMap, HashSet};
+    use std::sync::Mutex;
+    use std::time::Duration;
 
     use fret_core::{
         AppWindowId, ClipboardToken, Event, FrameId, ImageColorSpace, ImageId, ImageUploadToken,
         TimerToken,
     };
-    use fret_runtime::{Effect, GlobalsHost, TickId, TimeHost};
+    use fret_runtime::{
+        DispatchPriority, Dispatcher, DispatcherHandle, Effect, ExecCapabilities, GlobalsHost,
+        InboxDrainHost, ModelHost, ModelStore, Runnable, TickId, TimeHost,
+    };
 
     use super::*;
 
     #[derive(Default)]
+    struct QueuedDispatcher {
+        background: Mutex<Vec<Runnable>>,
+    }
+
+    impl QueuedDispatcher {
+        fn run_background_tasks(&self) {
+            let tasks = {
+                let mut tasks = self.background.lock().expect("poisoned background queue");
+                std::mem::take(&mut *tasks)
+            };
+            for task in tasks {
+                task();
+            }
+        }
+
+        fn drop_background_tasks(&self) {
+            let mut tasks = self.background.lock().expect("poisoned background queue");
+            tasks.clear();
+        }
+    }
+
+    impl Dispatcher for QueuedDispatcher {
+        fn dispatch_on_main_thread(&self, _task: Runnable) {}
+
+        fn dispatch_background(&self, task: Runnable, _priority: DispatchPriority) {
+            let mut tasks = self.background.lock().expect("poisoned background queue");
+            tasks.push(task);
+        }
+
+        fn dispatch_after(&self, _delay: Duration, _task: Runnable) {}
+
+        fn wake(&self, _window: Option<AppWindowId>) {}
+
+        fn exec_capabilities(&self) -> ExecCapabilities {
+            ExecCapabilities::default()
+        }
+    }
+
+    #[derive(Default)]
     struct TestHost {
         globals: HashMap<TypeId, Box<dyn Any>>,
+        models: ModelStore,
         effects: Vec<Effect>,
         redraws: HashSet<AppWindowId>,
         tick_id: TickId,
@@ -782,6 +1249,10 @@ mod tests {
             self.frame_id
         }
 
+        fn next_share_sheet_token(&mut self) -> fret_core::ShareSheetToken {
+            fret_core::ShareSheetToken(0)
+        }
+
         fn next_timer_token(&mut self) -> TimerToken {
             let token = TimerToken(self.next_timer_token);
             self.next_timer_token += 1;
@@ -808,6 +1279,36 @@ mod tests {
 
         fn push_effect(&mut self, effect: Effect) {
             self.effects.push(effect);
+        }
+    }
+
+    impl ModelHost for TestHost {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl InboxDrainHost for TestHost {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            <Self as EffectSink>::request_redraw(self, window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            <Self as EffectSink>::push_effect(self, effect);
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl TestHost {
+        fn set_frame(&mut self, frame: u64) {
+            self.frame_id = FrameId(frame);
         }
     }
 
@@ -852,5 +1353,206 @@ mod tests {
         let state2 = use_image_source_state(&mut host, window, &src);
         assert_eq!(state2.status, ImageLoadingStatus::Loaded);
         assert_eq!(state2.image, Some(image));
+    }
+
+    #[cfg(all(feature = "ui", feature = "image-decode", not(target_arch = "wasm32")))]
+    #[test]
+    fn image_source_test_jpg_drives_decode_and_gpu_ready_bumps_signal_model() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+        let window = AppWindowId::default();
+
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../assets/textures/test.jpg");
+        let bytes: Arc<[u8]> = std::fs::read(path)
+            .expect("expected assets/textures/test.jpg to exist")
+            .into();
+        let src = ImageSource::from_bytes(bytes);
+
+        let model = with_image_source_loader(&mut host, |loader, host| {
+            loader.use_signal_model(host, &src, ImageSourceOptions::default())
+        })
+        .expect("dispatcher installed");
+        let rev0 = host.models().revision(&model).unwrap_or(0);
+
+        // Schedule decode (background) for the bytes source.
+        let _ = use_image_source_state(&mut host, window, &src);
+        dispatcher.run_background_tasks();
+
+        // Drain + apply decode completion on the main thread.
+        let runtime = with_image_source_loader(&mut host, |loader, _host| loader.runtime.clone())
+            .expect("dispatcher installed");
+        for msg in runtime.inbox.drain() {
+            runtime.apply_msg(&mut host, msg);
+        }
+        let rev1 = host.models().revision(&model).unwrap_or(0);
+        assert!(
+            rev1 > rev0,
+            "expected decode completion to bump signal model"
+        );
+
+        let request = ImageSourceRequestKey {
+            source: src.id,
+            color_space: ImageColorSpace::Srgb,
+        };
+        let (decoded_width, decoded_height) =
+            with_image_source_loader(&mut host, |loader, _host| {
+                let entries = loader
+                    .runtime
+                    .entries
+                    .lock()
+                    .expect("poisoned ImageSourceRuntime mutex");
+                let entry = entries.get(&request).expect("expected entry after decode");
+                match &entry.state {
+                    ImageSourceEntryState::Decoded { decoded, .. } => {
+                        (decoded.width, decoded.height)
+                    }
+                    ImageSourceEntryState::Failed { message, .. } => {
+                        panic!("decode failed: {message}");
+                    }
+                    other => panic!("expected Decoded state after inbox apply, got {other:?}"),
+                }
+            })
+            .expect("dispatcher installed");
+
+        // Now that we're decoded, the next use should schedule a GPU upload.
+        let state = use_image_source_state(&mut host, window, &src);
+        let (width, height) = state
+            .intrinsic_size_px
+            .unwrap_or((decoded_width, decoded_height));
+        let token = host
+            .effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::ImageRegisterRgba8 { token, .. } => Some(*token),
+                _ => None,
+            })
+            .expect("expected ImageRegisterRgba8 after decode");
+
+        // GPU-ready event should bump the same signal model (per-key).
+        let image = ImageId::default();
+        let event = Event::ImageRegistered {
+            token,
+            image,
+            width,
+            height,
+        };
+        let _ = crate::UiAssets::handle_event(&mut host, window, &event);
+        let rev2 = host.models().revision(&model).unwrap_or(0);
+        assert!(rev2 > rev1, "expected GPU-ready to bump signal model");
+    }
+
+    #[test]
+    fn image_source_entries_gc_removes_stale_ready_entries() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+
+        let window = AppWindowId::default();
+
+        let src1: ImageSource = {
+            let bytes: Arc<[u8]> = vec![0u8; 16].into();
+            ImageSource::from_bytes(bytes)
+        };
+        let _ = use_image_source_state(&mut host, window, &src1);
+
+        let request1 = ImageSourceRequestKey {
+            source: src1.id,
+            color_space: ImageColorSpace::Srgb,
+        };
+
+        // Make entry1 eligible for GC by forcing it into a stable state.
+        with_image_source_loader(&mut host, |loader, _host| {
+            let mut entries = loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex");
+            let entry = entries.get_mut(&request1).expect("expected entry for src1");
+            entry.state = ImageSourceEntryState::Ready {
+                asset_key: ImageAssetKey::from_rgba8(1, 1, ImageColorSpace::Srgb, &[0, 0, 0, 0]),
+                intrinsic_size_px: (1, 1),
+            };
+        })
+        .expect("dispatcher installed");
+
+        let len1 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .len()
+        })
+        .unwrap();
+        assert_eq!(len1, 1);
+
+        // Advance far enough that the entry becomes stale, then create a new request to trigger GC.
+        host.set_frame(2200);
+        let src2: ImageSource = {
+            let bytes: Arc<[u8]> = vec![1u8; 16].into();
+            ImageSource::from_bytes(bytes)
+        };
+        let _ = use_image_source_state(&mut host, window, &src2);
+
+        let len2 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .len()
+        })
+        .unwrap();
+        assert_eq!(len2, 1);
+
+        let has_src1 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .contains_key(&request1)
+        })
+        .unwrap();
+        assert!(!has_src1);
+    }
+
+    #[test]
+    fn image_source_does_not_retain_source_bytes_after_background_tasks_are_dropped() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+
+        let window = AppWindowId::default();
+
+        let bytes: Arc<[u8]> = vec![0u8; 1024].into();
+        let weak = Arc::downgrade(&bytes);
+        let src = ImageSource::from_bytes(bytes.clone());
+
+        let _ = use_image_source_state(&mut host, window, &src);
+        drop(src);
+        drop(bytes);
+
+        assert!(
+            weak.upgrade().is_some(),
+            "expected queued task to retain bytes"
+        );
+
+        dispatcher.drop_background_tasks();
+        assert!(
+            weak.upgrade().is_none(),
+            "expected bytes to be released after dropping queued background tasks"
+        );
     }
 }

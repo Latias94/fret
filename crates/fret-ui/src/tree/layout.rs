@@ -7,10 +7,6 @@ use crate::layout_engine::TaffyLayoutEngine;
 use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
-fn layout_profile_enabled() -> bool {
-    std::env::var_os("FRET_LAYOUT_PROFILE").is_some_and(|v| !v.is_empty() && v != "0")
-}
-
 impl<H: UiHost> UiTree<H> {
     fn virtual_list_scroll_handle_requires_layout(
         app: &mut H,
@@ -1106,13 +1102,10 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn repair_view_cache_root_bounds_from_engine_if_needed(&mut self, app: &mut H) {
+    fn repair_view_cache_root_bounds_from_engine_if_needed(&mut self, _app: &mut H) {
         if !self.view_cache_active() {
             return;
         }
-        let Some(window) = self.window else {
-            return;
-        };
 
         let mut targets: Vec<(NodeId, Rect, Point)> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
@@ -1149,9 +1142,6 @@ impl<H: UiHost> UiTree<H> {
             if let Some(node) = self.nodes.get_mut(root) {
                 node.bounds = new_bounds;
             }
-            if let Some(element) = self.nodes.get(root).and_then(|n| n.element) {
-                crate::elements::record_bounds_for_element(app, window, element, new_bounds);
-            }
 
             if delta.x.0 == 0.0 && delta.y.0 == 0.0 {
                 continue;
@@ -1170,9 +1160,6 @@ impl<H: UiHost> UiTree<H> {
                     Px(n.bounds.origin.x.0 + delta.x.0),
                     Px(n.bounds.origin.y.0 + delta.y.0),
                 );
-                if let Some(element) = n.element {
-                    crate::elements::record_bounds_for_element(app, window, element, n.bounds);
-                }
                 stack.extend(n.children.iter().copied());
             }
         }
@@ -1388,19 +1375,18 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let element_nodes =
-            crate::elements::with_window_state(app, window, |st| st.element_nodes());
-
-        let bounds: Vec<(GlobalElementId, Rect)> = element_nodes
-            .into_iter()
-            .filter_map(|(element, node)| self.node_bounds(node).map(|rect| (element, rect)))
-            .collect();
+        let nodes = &self.nodes;
+        let scratch_element_nodes = &mut self.scratch_element_nodes;
 
         crate::elements::with_window_state(app, window, |st| {
-            for (element, rect) in bounds {
+            st.element_nodes_copy_into(scratch_element_nodes);
+            for &(element, node) in scratch_element_nodes.iter() {
+                let Some(rect) = nodes.get(node).map(|n| n.bounds) else {
+                    continue;
+                };
                 st.record_bounds(element, rect);
             }
-        })
+        });
     }
 
     pub fn measure_in(
@@ -1953,8 +1939,9 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(window) = window
             {
                 let mut engine = self.take_layout_engine();
-                engine
-                    .set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+                engine.set_measure_profiling_enabled(
+                    self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
+                );
 
                 let reuse_cached_flow = self.interactive_resize_active();
 
@@ -2174,7 +2161,9 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+        engine.set_measure_profiling_enabled(
+            self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
+        );
         crate::layout_engine::build_viewport_flow_subtree(
             &mut engine,
             app,
@@ -2335,7 +2324,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut engine = self.take_layout_engine();
-        engine.set_measure_profiling_enabled(self.debug_enabled && layout_profile_enabled());
+        engine.set_measure_profiling_enabled(
+            self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
+        );
         for &(root, root_bounds) in &batch {
             crate::layout_engine::build_viewport_flow_subtree(
                 &mut engine,
@@ -2483,7 +2474,6 @@ impl<H: UiHost> UiTree<H> {
             if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
                 self.layout_engine.mark_seen_if_present(node);
 
-                let window = self.window;
                 let mut stack: Vec<NodeId> = Vec::new();
                 let mut i = 0usize;
                 loop {
@@ -2507,19 +2497,10 @@ impl<H: UiHost> UiTree<H> {
                     };
                     n.bounds.origin =
                         Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
-                    if !is_probe && let (Some(window), Some(element)) = (window, n.element) {
-                        crate::elements::record_bounds_for_element(app, window, element, n.bounds);
-                    }
                     for &child in &n.children {
                         stack.push(child);
                     }
                 }
-            }
-            if !is_probe
-                && let (Some(window), Some(element)) =
-                    (self.window, self.nodes.get(node).and_then(|n| n.element))
-            {
-                crate::elements::record_bounds_for_element(app, window, element, bounds);
             }
             return measured;
         }
@@ -2534,25 +2515,45 @@ impl<H: UiHost> UiTree<H> {
         }
         let sf = scale_factor;
 
+        let skip_observation_recording =
+            !is_probe && self.interactive_resize_active() && !invalidated_for_pass;
+
         let mut observations = SmallCopyList::<(ModelId, Invalidation), 8>::default();
-        let mut observe_model = |model: ModelId, inv: Invalidation| {
+        let mut global_observations = SmallCopyList::<(TypeId, Invalidation), 8>::default();
+
+        let mut record_model_observation = |model: ModelId, inv: Invalidation| {
             observations.push((model, inv));
         };
-
-        let mut global_observations = SmallCopyList::<(TypeId, Invalidation), 8>::default();
-        let mut observe_global = |id: TypeId, inv: Invalidation| {
+        let mut record_global_observation = |id: TypeId, inv: Invalidation| {
             global_observations.push((id, inv));
         };
-        // Theme changes can affect layout metrics across most of the tree; treat it as a default
-        // dependency to ensure layout re-runs when the global theme is updated.
-        observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
-        // Text shaping/metrics depend on the effective font stack. Track a single stable key so
-        // changing font configuration or loading new fonts forces a relayout without directly
-        // depending on backend configuration globals.
-        observe_global(
-            TypeId::of::<fret_runtime::TextFontStackKey>(),
-            Invalidation::Layout,
-        );
+
+        let mut discard_model_observation = |_model: ModelId, _inv: Invalidation| {};
+        let mut discard_global_observation = |_id: TypeId, _inv: Invalidation| {};
+
+        let observe_model: &mut dyn FnMut(ModelId, Invalidation) = if skip_observation_recording {
+            &mut discard_model_observation
+        } else {
+            &mut record_model_observation
+        };
+        let observe_global: &mut dyn FnMut(TypeId, Invalidation) = if skip_observation_recording {
+            &mut discard_global_observation
+        } else {
+            &mut record_global_observation
+        };
+
+        if !skip_observation_recording {
+            // Theme changes can affect layout metrics across most of the tree; treat it as a default
+            // dependency to ensure layout re-runs when the global theme is updated.
+            observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
+            // Text shaping/metrics depend on the effective font stack. Track a single stable key so
+            // changing font configuration or loading new fonts forces a relayout without directly
+            // depending on backend configuration globals.
+            observe_global(
+                TypeId::of::<fret_runtime::TextFontStackKey>(),
+                Invalidation::Layout,
+            );
+        }
 
         if let Some(profile) = self.layout_node_profile.as_mut() {
             profile.enter(node, pass_kind, bounds);
@@ -2583,8 +2584,8 @@ impl<H: UiHost> UiTree<H> {
                 pass_kind,
                 scale_factor: sf,
                 services: &mut *services,
-                observe_model: &mut observe_model,
-                observe_global: &mut observe_global,
+                observe_model,
+                observe_global,
                 tree,
             };
             widget.layout(&mut cx)
@@ -2659,10 +2660,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if !is_probe {
-            self.observed_in_layout
-                .record(node, observations.as_slice());
-            self.observed_globals_in_layout
-                .record(node, global_observations.as_slice());
+            if !skip_observation_recording {
+                self.observed_in_layout
+                    .record(node, observations.as_slice());
+                self.observed_globals_in_layout
+                    .record(node, global_observations.as_slice());
+            }
             if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                 n.measured_size = size;
                 let prev = n.invalidation;
@@ -2739,20 +2742,40 @@ impl<H: UiHost> UiTree<H> {
 
         let sf = scale_factor;
 
+        let skip_observation_recording = self.interactive_resize_active()
+            && self.nodes.get(node).is_some_and(|n| !n.invalidation.layout);
+
         let mut observations = SmallCopyList::<(ModelId, Invalidation), 8>::default();
-        let mut observe_model = |model: ModelId, inv: Invalidation| {
+        let mut global_observations = SmallCopyList::<(TypeId, Invalidation), 8>::default();
+
+        let mut record_model_observation = |model: ModelId, inv: Invalidation| {
             observations.push((model, inv));
         };
-
-        let mut global_observations = SmallCopyList::<(TypeId, Invalidation), 8>::default();
-        let mut observe_global = |id: TypeId, inv: Invalidation| {
+        let mut record_global_observation = |id: TypeId, inv: Invalidation| {
             global_observations.push((id, inv));
         };
-        observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
-        observe_global(
-            TypeId::of::<fret_runtime::TextFontStackKey>(),
-            Invalidation::Layout,
-        );
+
+        let mut discard_model_observation = |_model: ModelId, _inv: Invalidation| {};
+        let mut discard_global_observation = |_id: TypeId, _inv: Invalidation| {};
+
+        let observe_model: &mut dyn FnMut(ModelId, Invalidation) = if skip_observation_recording {
+            &mut discard_model_observation
+        } else {
+            &mut record_model_observation
+        };
+        let observe_global: &mut dyn FnMut(TypeId, Invalidation) = if skip_observation_recording {
+            &mut discard_global_observation
+        } else {
+            &mut record_global_observation
+        };
+
+        if !skip_observation_recording {
+            observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
+            observe_global(
+                TypeId::of::<fret_runtime::TextFontStackKey>(),
+                Invalidation::Layout,
+            );
+        }
 
         if let Some(profile) = self.measure_node_profile.as_mut() {
             profile.enter(node, constraints);
@@ -2783,8 +2806,8 @@ impl<H: UiHost> UiTree<H> {
                 constraints,
                 scale_factor: sf,
                 services: &mut *services,
-                observe_model: &mut observe_model,
-                observe_global: &mut observe_global,
+                observe_model,
+                observe_global,
                 tree,
             };
             widget.measure(&mut cx)
@@ -2834,10 +2857,12 @@ impl<H: UiHost> UiTree<H> {
             });
         }
 
-        self.observed_in_layout
-            .record(node, observations.as_slice());
-        self.observed_globals_in_layout
-            .record(node, global_observations.as_slice());
+        if !skip_observation_recording {
+            self.observed_in_layout
+                .record(node, observations.as_slice());
+            self.observed_globals_in_layout
+                .record(node, global_observations.as_slice());
+        }
 
         let popped = self.measure_stack.pop();
         debug_assert_eq!(popped, Some(key));

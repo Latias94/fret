@@ -238,6 +238,7 @@ pub fn container_props(
         border: Edges::all(border_width),
         border_color,
         border_paint: None,
+        border_dash: chrome.border_dash,
         focus_ring: None,
         focus_border_color: None,
         focus_within: false,
