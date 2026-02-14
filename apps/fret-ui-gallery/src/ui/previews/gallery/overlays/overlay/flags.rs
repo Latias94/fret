@@ -44,6 +44,20 @@ pub(super) fn status_flags(
         }
     };
 
+    let dialog_glass_open_flag = {
+        let open = cx
+            .get_model_copied(&models.dialog_glass_open, Invalidation::Layout)
+            .unwrap_or(false);
+        if open {
+            Some(
+                cx.text("Dialog (Glass) open")
+                    .test_id("ui-gallery-dialog-glass-open"),
+            )
+        } else {
+            None
+        }
+    };
+
     let alert_dialog_open_flag = {
         let open = cx
             .get_model_copied(&models.alert_dialog_open, Invalidation::Layout)
@@ -63,6 +77,9 @@ pub(super) fn status_flags(
         out.push(flag);
     }
     if let Some(flag) = dialog_open_flag {
+        out.push(flag);
+    }
+    if let Some(flag) = dialog_glass_open_flag {
         out.push(flag);
     }
     if let Some(flag) = alert_dialog_open_flag {

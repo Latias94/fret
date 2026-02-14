@@ -8,6 +8,7 @@ mod widgets;
 struct OverlayModels {
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
+    dialog_glass_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
     portal_geometry_popover_open: Model<bool>,
@@ -21,6 +22,7 @@ pub(in crate::ui) fn preview_overlay(
     cx: &mut ElementContext<'_, App>,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
+    dialog_glass_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
     portal_geometry_popover_open: Model<bool>,
@@ -32,6 +34,7 @@ pub(in crate::ui) fn preview_overlay(
     let models = OverlayModels {
         popover_open,
         dialog_open,
+        dialog_glass_open,
         alert_dialog_open,
         sheet_open,
         portal_geometry_popover_open,
