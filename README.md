@@ -25,12 +25,14 @@ Long-term, ecosystem crates may move to a separate components repository.
 
 ## Why Fret (high-signal features)
 
-- **Modular, backend-friendly architecture**: portable core + pluggable platform/runner/render backends to integrate with other ecosystems and GPU stacks.
-- **Ecosystem included**: shadcn-aligned UI surface, icons, docking UI, markdown, tables, code editor, node graph, charts, and more.
-- **Fast onboarding**: templates + a consistent demo runner (`fretboard`) for native and web.
-- **Editor-grade foundations (in progress)**: docking/multi-window workflows, viewport embedding, and predictable overlays.
-- **Desktop-first + wasm in mind**: Windows/macOS/Linux now, with an explicit path to WebGPU in the browser.
-- **Debuggability as a feature**: scripted interaction repros + portable diagnostics bundles to make UI bugs shareable and CI-friendly.
+- **Editor-grade interaction substrate (not just widgets)**: docking + tear-off windows, multi-root overlays, focus/capture arbitration, and viewport embedding as first-class contracts. *(docking, multi-window, overlays, focus/capture, viewports)*
+- **Web-native ergonomics, Rust-native architecture**: declarative element tree authoring with typed state (`Model<T>`) and typed messages/routing. *(declarative elements, state, routing)*
+- **Ecosystem included (batteries, but modular)**: shadcn/ui v4-aligned component taxonomy + recipes, icons, docking UI, markdown, tables, node graph, charts, and more. *(fret-ui-kit, fret-ui-shadcn, icons, docking)*
+- **Mechanism vs policy separation**: the core runtime stays mechanism-only; interaction policies and defaults live in ecosystem crates so apps can stay opinionated without locking the engine. *(runtime contracts, policy in components)*
+- **Rendering semantics you can rely on**: ordered scene ops, clipping/rounded corners/shadows as stable semantics (implementation can evolve without breaking UI behavior). *(scene ops, clip/round/shadow semantics)*
+- **Debuggable by design**: semantics-first inspection + shareable diagnostics artifacts so UI bugs are explainable, not “works on my machine”. *(semantics tree, inspector, shareable bundles)*
+- **Performance is observable**: built-in perf attribution surfaces worst-frame regressions and layout/measure hot spots without ad-hoc instrumentation. *(worst-frame triage, attribution, layout/measure)*
+- **Modular backends & integration-friendly**: portable core + pluggable platform/runner/render backends to fit both engine-hosted and editor-hosted GPU contexts; desktop-first with an explicit WebGPU/wasm path. *(pluggable backends, engine-hosted GPU, WebGPU/wasm)*
 
 ## Project Direction
 
