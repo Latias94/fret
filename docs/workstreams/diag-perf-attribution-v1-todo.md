@@ -19,13 +19,13 @@
 - [x] Add “budget view” to `diag stats` JSON output:
   - [x] `avg.*` fields
   - [x] `budget_pct.*` percent breakdown
-- [ ] Extend “budget view” into triage output (optional):
-  - [ ] unit costs (e.g. `solve_us / solves`, `text_prepare_us / calls`).
-- [ ] Add heuristic hints (bounded, rule-based; no ML):
-  - [ ] `layout.observation_heavy`
-  - [ ] `layout.solve_heavy`
-  - [ ] `renderer.upload_churn`
-  - [ ] `paint.text_prepare_churn`
+- [x] Extend “budget view” into triage output (optional):
+  - [x] unit costs (e.g. `solve_us / solves`, `text_prepare_us / calls`).
+- [x] Add heuristic hints (bounded, rule-based; no ML):
+  - [x] `layout.observation_heavy`
+  - [x] `layout.solve_heavy`
+  - [x] `renderer.upload_churn`
+  - [x] `paint.text_prepare_churn`
 
 ## P2 (M2): opt-in trace workflow
 
@@ -35,6 +35,15 @@
   - [x] exports a Chrome trace JSON (bundle-derived synthetic timeline),
   - [x] records the artifact in a run manifest (`manifest.json` file index).
 - [ ] Future: enable tracing spans (not just bundle-derived phases) when explicitly requested.
+
+## P3 (M3): optional perf hints gate
+
+- [x] Add a `diag perf` hints gate output (`check.perf_hints.json`) and non-zero exit on failure.
+- [x] Add allow/deny + severity controls:
+  - [x] `--check-perf-hints-deny <code,...>`
+  - [x] `--check-perf-hints-min-severity <info|warn|error>`
+- [x] Wire evidence indexing + repro root artifact inclusion.
+- [x] Document usage (`docs/ui-diagnostics-and-scripted-tests.md`) and CLI help.
 
 ## Maintenance / hygiene
 

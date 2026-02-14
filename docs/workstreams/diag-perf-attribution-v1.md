@@ -41,18 +41,26 @@ This workstream proposes a **fearless refactor** of the perf diagnostics surface
 - Record/Replay GPU command streams.
 - Add a brand-new script format (we remain compatible with existing JSON scripts).
 
-## Current gaps (summary)
+## Progress (2026-02-14)
 
-1. **Asymmetry in observation metrics**:
-   - Paint has `paint_observation_record_time_us`, but layout does not have the equivalent.
-2. **No “bundle diff” workflow**:
-   - Comparing runs is largely manual (open two JSONs, eyeball).
-3. **No “budget view”**:
-   - Stats exist, but there is no standard “% of frame” breakdown view.
-4. **Typical vs tail are not unified**:
-   - “p95 total” and “worst frame breakdown” live in different tools and formats.
-5. **Trace is not on-ramp’d**:
-   - We have `tracing` in code, but no canonical “capture trace for this run and attach it to the bundle” workflow.
+Shipped in this workstream (commit-addressable, additive changes):
+
+1. **M0**: layout observation visibility
+   - Layout observation recording stats (time + item counts) flow into bundle snapshots and `diag stats`.
+2. **M1**: diff + budget view
+   - `fretboard diag stats --diff <a> <b>` and a standard JSON budget view (`avg.*`, `budget_pct.*`).
+3. **M2**: opt-in trace artifacts
+   - `fretboard diag perf ... --trace` writes `<out_dir>/<run_id>/trace.chrome.json` and indexes it in `manifest.json`.
+   - `fretboard diag trace <bundle>` produces a bundle-derived Chrome trace artifact.
+4. **M3**: explainability + optional gate
+   - `triage.json` includes rule-based hints and unit-cost estimates.
+   - `fretboard diag perf ... --check-perf-hints` can turn selected hints into an explicit CI-style gate (`check.perf_hints.json`).
+
+Remaining gaps / follow-ups:
+
+- Perf schema versioning for perf stats outputs (bundle + triage + perf checks).
+- Opt-in “real spans” tracing (beyond synthetic phase timelines), with a stable artifact story.
+- A field inventory doc (keys + meaning + where measured) to reduce tribal knowledge.
 
 ## Proposed architecture (v1)
 

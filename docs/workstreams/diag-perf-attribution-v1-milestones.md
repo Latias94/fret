@@ -43,3 +43,23 @@ Acceptance:
   1) perf summary,
   2) stats budget view,
   3) opening the exported `trace.chrome.json` in Chrome tracing UI.
+
+## M3: explainability hints + optional gate
+
+Deliverables:
+
+- `triage.json` includes:
+  - bounded, rule-based hints (`hints[]`) with severity and evidence,
+  - unit-cost estimates (`unit_costs`) derived from the worst frame.
+- `diag perf` can optionally treat selected hints as a gate:
+  - `--check-perf-hints`
+  - evidence: `check.perf_hints.json`
+
+Acceptance:
+
+- A run with known hint triggers produces `triage.json` with stable hint codes.
+- Running `fretboard diag perf ... --check-perf-hints`:
+  - exits non-zero when denied hints meet the configured minimum severity,
+  - writes `check.perf_hints.json` with a non-empty `failures[]` array,
+  - supports narrowing via `--check-perf-hints-deny <code,...>` and severity via
+    `--check-perf-hints-min-severity <info|warn|error>`.
