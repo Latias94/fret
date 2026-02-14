@@ -10227,6 +10227,161 @@ fn triage_json_from_stats(
 ) -> serde_json::Value {
     use serde_json::json;
 
+    fn ratio_pct(numer: u64, denom: u64) -> f64 {
+        if denom == 0 {
+            return 0.0;
+        }
+        (numer as f64) * 100.0 / (denom as f64)
+    }
+
+    fn triage_hints(
+        stats_json: &serde_json::Value,
+        worst: Option<&crate::stats::BundleStatsSnapshotRow>,
+    ) -> Vec<serde_json::Value> {
+        let mut out: Vec<serde_json::Value> = Vec::new();
+
+        let Some(worst) = worst else {
+            return out;
+        };
+
+        let sum_layout_observation_record_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_observation_record_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_layout_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        // Heuristics are intentionally simple, bounded, and explainable.
+        // Keep thresholds conservative; they are hints, not gates.
+
+        // layout.observation_heavy
+        if worst.layout_observation_record_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(
+                worst.layout_observation_record_time_us,
+                worst.layout_time_us,
+            );
+            if worst.layout_observation_record_time_us >= 2_000 || pct >= 20.0 {
+                out.push(json!({
+                    "code": "layout.observation_heavy",
+                    "severity": "warn",
+                    "message": "Layout observation recording is a significant slice of layout time in the worst frame.",
+                    "evidence": {
+                        "layout_observation_record_time_us": worst.layout_observation_record_time_us,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_observation_record_pct_of_layout": pct,
+                        "sum_layout_observation_record_time_us": sum_layout_observation_record_time_us,
+                        "sum_layout_time_us": sum_layout_time_us,
+                        "sum_layout_observation_record_pct_of_layout": ratio_pct(sum_layout_observation_record_time_us, sum_layout_time_us),
+                    }
+                }));
+            }
+        }
+
+        // layout.solve_heavy
+        if worst.layout_engine_solve_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(worst.layout_engine_solve_time_us, worst.layout_time_us);
+            let per_solve = if worst.layout_engine_solves == 0 {
+                None
+            } else {
+                Some(worst.layout_engine_solve_time_us / worst.layout_engine_solves)
+            };
+            if worst.layout_engine_solve_time_us >= 5_000 || pct >= 50.0 {
+                out.push(json!({
+                    "code": "layout.solve_heavy",
+                    "severity": "warn",
+                    "message": "Layout engine solve dominates layout time in the worst frame.",
+                    "evidence": {
+                        "layout_engine_solve_time_us": worst.layout_engine_solve_time_us,
+                        "layout_engine_solves": worst.layout_engine_solves,
+                        "layout_engine_solve_us_per_solve": per_solve,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_engine_solve_pct_of_layout": pct,
+                    }
+                }));
+            }
+        }
+
+        // paint.text_prepare_churn
+        if worst.paint_text_prepare_time_us > 0 || worst.paint_text_prepare_calls > 0 {
+            let per_call = if worst.paint_text_prepare_calls == 0 {
+                None
+            } else {
+                Some(worst.paint_text_prepare_time_us / (worst.paint_text_prepare_calls as u64))
+            };
+            if worst.paint_text_prepare_time_us >= 2_000
+                || (per_call.is_some_and(|v| v >= 200) && worst.paint_text_prepare_calls >= 5)
+            {
+                out.push(json!({
+                    "code": "paint.text_prepare_churn",
+                    "severity": "warn",
+                    "message": "Text prepare work is non-trivial in the worst frame (may indicate cache churn).",
+                    "evidence": {
+                        "paint_text_prepare_time_us": worst.paint_text_prepare_time_us,
+                        "paint_text_prepare_calls": worst.paint_text_prepare_calls,
+                        "paint_text_prepare_us_per_call": per_call,
+                        "reasons": {
+                            "blob_missing": worst.paint_text_prepare_reason_blob_missing,
+                            "scale_changed": worst.paint_text_prepare_reason_scale_changed,
+                            "text_changed": worst.paint_text_prepare_reason_text_changed,
+                            "rich_changed": worst.paint_text_prepare_reason_rich_changed,
+                            "style_changed": worst.paint_text_prepare_reason_style_changed,
+                            "wrap_changed": worst.paint_text_prepare_reason_wrap_changed,
+                            "overflow_changed": worst.paint_text_prepare_reason_overflow_changed,
+                            "width_changed": worst.paint_text_prepare_reason_width_changed,
+                            "font_stack_changed": worst.paint_text_prepare_reason_font_stack_changed,
+                        },
+                    }
+                }));
+            }
+        }
+
+        // renderer.upload_churn
+        let upload_bytes = worst
+            .renderer_text_atlas_upload_bytes
+            .saturating_add(worst.renderer_svg_upload_bytes)
+            .saturating_add(worst.renderer_image_upload_bytes);
+        if upload_bytes >= 1_000_000
+            || worst.renderer_text_atlas_evicted_pages > 0
+            || worst.renderer_svg_raster_budget_evictions > 0
+            || worst.renderer_intermediate_pool_evictions > 0
+        {
+            out.push(json!({
+                "code": "renderer.upload_churn",
+                "severity": "info",
+                "message": "Renderer uploads/evictions are present in the worst frame (may indicate cache pressure or invalidation churn).",
+                "evidence": {
+                    "upload_bytes_total": upload_bytes,
+                    "renderer_text_atlas_upload_bytes": worst.renderer_text_atlas_upload_bytes,
+                    "renderer_svg_upload_bytes": worst.renderer_svg_upload_bytes,
+                    "renderer_image_upload_bytes": worst.renderer_image_upload_bytes,
+                    "renderer_text_atlas_evicted_pages": worst.renderer_text_atlas_evicted_pages,
+                    "renderer_svg_raster_budget_evictions": worst.renderer_svg_raster_budget_evictions,
+                    "renderer_intermediate_pool_evictions": worst.renderer_intermediate_pool_evictions,
+                }
+            }));
+        }
+
+        out
+    }
+
+    fn triage_unit_costs(
+        worst: Option<&crate::stats::BundleStatsSnapshotRow>,
+    ) -> serde_json::Value {
+        let Some(worst) = worst else {
+            return json!({});
+        };
+        json!({
+            "layout_engine_solve_us_per_solve": if worst.layout_engine_solves == 0 { None } else { Some(worst.layout_engine_solve_time_us / worst.layout_engine_solves) },
+            "paint_text_prepare_us_per_call": if worst.paint_text_prepare_calls == 0 { None } else { Some(worst.paint_text_prepare_time_us / (worst.paint_text_prepare_calls as u64)) },
+            "layout_obs_record_us_per_model_item": if worst.layout_observation_record_models_items == 0 { None } else { Some(worst.layout_observation_record_time_us / (worst.layout_observation_record_models_items as u64)) },
+            "layout_obs_record_us_per_global_item": if worst.layout_observation_record_globals_items == 0 { None } else { Some(worst.layout_observation_record_time_us / (worst.layout_observation_record_globals_items as u64)) },
+        })
+    }
+
     let generated_unix_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .ok()
@@ -10234,7 +10389,8 @@ fn triage_json_from_stats(
 
     let file_size_bytes = std::fs::metadata(bundle_path).ok().map(|m| m.len());
 
-    let worst = report.top.first().map(|row| {
+    let worst_row = report.top.first();
+    let worst = worst_row.map(|row| {
         json!({
             "window": row.window,
             "tick_id": row.tick_id,
@@ -10244,6 +10400,12 @@ fn triage_json_from_stats(
             "layout_time_us": row.layout_time_us,
             "prepaint_time_us": row.prepaint_time_us,
             "paint_time_us": row.paint_time_us,
+            "layout_observation_record_time_us": row.layout_observation_record_time_us,
+            "layout_observation_record_models_items": row.layout_observation_record_models_items,
+            "layout_observation_record_globals_items": row.layout_observation_record_globals_items,
+            "paint_observation_record_time_us": row.paint_observation_record_time_us,
+            "paint_text_prepare_time_us": row.paint_text_prepare_time_us,
+            "paint_text_prepare_calls": row.paint_text_prepare_calls,
             "invalidation_walk_calls": row.invalidation_walk_calls,
             "invalidation_walk_nodes": row.invalidation_walk_nodes,
             "cache_roots": row.cache_roots,
@@ -10300,6 +10462,13 @@ fn triage_json_from_stats(
         })
     });
 
+    let trace_chrome_path = bundle_path
+        .parent()
+        .map(|p| p.join("trace.chrome.json"))
+        .filter(|p| p.is_file())
+        .map(|p| p.display().to_string());
+
+    let stats_json = report.to_json();
     json!({
         "schema_version": 1,
         "generated_unix_ms": generated_unix_ms,
@@ -10307,13 +10476,16 @@ fn triage_json_from_stats(
             "bundle_path": bundle_path.display().to_string(),
             "bundle_dir": bundle_path.parent().map(|p| p.display().to_string()),
             "bundle_file_size_bytes": file_size_bytes,
+            "trace_chrome_json_path": trace_chrome_path,
         },
         "params": {
             "sort": sort.as_str(),
             "top": report.top.len(),
             "warmup_frames": warmup_frames,
         },
-        "stats": report.to_json(),
+        "stats": stats_json.clone(),
+        "unit_costs": triage_unit_costs(worst_row),
+        "hints": triage_hints(&stats_json, worst_row),
         "worst": worst,
     })
 }
@@ -15722,6 +15894,83 @@ mod tests {
             .filter_map(|f| f.get("id").and_then(|v| v.as_str()))
             .collect::<Vec<_>>();
         assert!(ids.contains(&"trace_chrome_json"));
+    }
+
+    #[test]
+    fn triage_includes_hints_and_unit_costs_for_worst_frame() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-triage-hints-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "events": [],
+                "snapshots": [{
+                    "schema_version": 1,
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "window": 1,
+                    "timestamp_unix_ms": 123,
+                    "debug": { "stats": {
+                        "layout_time_us": 10_000,
+                        "prepaint_time_us": 0,
+                        "paint_time_us": 0,
+                        "layout_engine_solves": 1,
+                        "layout_engine_solve_time_us": 7_000,
+                        "layout_observation_record_time_us": 3_000,
+                        "layout_observation_record_models_items": 100,
+                        "layout_observation_record_globals_items": 0,
+                        "paint_text_prepare_time_us": 2_500,
+                        "paint_text_prepare_calls": 10,
+                        "paint_text_prepare_reason_text_changed": 10,
+                        "renderer_text_atlas_upload_bytes": 2_000_000,
+                    } }
+                }]
+            }]
+        });
+
+        let bundle_path = root.join("bundle.json");
+        crate::util::write_json_value(&bundle_path, &bundle).expect("write bundle.json");
+
+        let report = crate::stats::bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Time,
+            crate::stats::BundleStatsOptions::default(),
+        )
+        .expect("bundle stats");
+
+        let triage = triage_json_from_stats(&bundle_path, &report, BundleStatsSort::Time, 0);
+        let codes = triage
+            .get("hints")
+            .and_then(|v| v.as_array())
+            .unwrap()
+            .iter()
+            .filter_map(|h| h.get("code").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+
+        assert!(codes.contains(&"layout.observation_heavy"));
+        assert!(codes.contains(&"layout.solve_heavy"));
+        assert!(codes.contains(&"paint.text_prepare_churn"));
+        assert!(codes.contains(&"renderer.upload_churn"));
+
+        assert_eq!(
+            triage
+                .get("unit_costs")
+                .and_then(|v| v.get("layout_engine_solve_us_per_solve"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            7_000
+        );
     }
 
     #[test]
