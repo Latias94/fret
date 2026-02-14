@@ -280,6 +280,76 @@ fn gpu_clip_path_is_captured_at_push_time_and_does_not_follow_later_transforms()
 }
 
 #[test]
+fn gpu_clip_path_clip_before_transform_partial_overlap_is_clipped() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    let size = (64u32, 64u32);
+
+    let square = [
+        PathCommand::MoveTo(Point::new(Px(0.0), Px(0.0))),
+        PathCommand::LineTo(Point::new(Px(0.0), Px(16.0))),
+        PathCommand::LineTo(Point::new(Px(16.0), Px(16.0))),
+        PathCommand::LineTo(Point::new(Px(16.0), Px(0.0))),
+        PathCommand::Close,
+    ];
+    let path = prepare_fill_path(&mut renderer, &square);
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushClipPath {
+        bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(32.0))),
+        origin: Point::new(Px(0.0), Px(0.0)),
+        path,
+    });
+
+    scene.push(SceneOp::PushTransform {
+        transform: Transform2D::translation(Point::new(Px(8.0), Px(0.0))),
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(16.0), Px(16.0))),
+        background: Paint::Solid(Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        }),
+        border: Default::default(),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PopTransform);
+
+    scene.push(SceneOp::PopClip);
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    let left = pixel_rgba(&pixels, size.0, 4, 8);
+    assert_eq!(
+        left,
+        [0, 0, 0, 0],
+        "quad portion fully outside the clip-path should remain clear"
+    );
+
+    let overlap = pixel_rgba(&pixels, size.0, 12, 8);
+    assert_eq!(
+        overlap,
+        [0, 0, 255, 255],
+        "quad portion overlapping captured clip-path should be visible"
+    );
+
+    let right = pixel_rgba(&pixels, size.0, 20, 8);
+    assert_eq!(
+        right,
+        [0, 0, 0, 0],
+        "quad portion outside the clip-path on the far side should remain clear"
+    );
+}
+
+#[test]
 fn gpu_clip_path_under_affine_rotation_clips_in_rotated_space() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,

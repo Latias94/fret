@@ -8,6 +8,12 @@ impl Renderer {
         // wgpu requires uniform dynamic offsets to be aligned to 256 bytes.
         let uniform_stride = uniform_size.div_ceil(256) * 256;
         let uniform_capacity = 256usize;
+
+        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
+        let render_space_stride = render_space_size.div_ceil(256) * 256;
+        // RenderSpace is dynamic (per pass) and must not be overwritten within a frame.
+        // Allocate enough slots for typical worst-case RenderPlan pass counts.
+        let render_space_capacity = 2048usize;
         let clip_capacity = 1024usize;
         let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
         let mask_capacity = 1024usize;
@@ -74,8 +80,10 @@ impl Renderer {
                         visibility: wgpu::ShaderStages::VERTEX,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                            has_dynamic_offset: true,
+                            min_binding_size: Some(
+                                std::num::NonZeroU64::new(render_space_size).unwrap(),
+                            ),
                         },
                         count: None,
                     },
@@ -91,7 +99,7 @@ impl Renderer {
 
         let render_space_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret render-space uniform buffer"),
-            size: 16,
+            size: render_space_stride * render_space_capacity as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -182,7 +190,7 @@ impl Renderer {
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: &render_space_buffer,
                         offset: 0,
-                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
                     }),
                 },
             ],
@@ -377,6 +385,8 @@ impl Renderer {
             uniform_bind_group,
             uniform_bind_group_layout,
             render_space_buffer,
+            render_space_stride,
+            render_space_capacity,
             uniform_stride,
             uniform_capacity,
             clip_buffer,

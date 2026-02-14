@@ -24,6 +24,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
 - [x] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).
 - [x] REN-VNEXT-adr-004 Draft ADR: RenderSpace + scissor-sized intermediates (renderer-internal coordinate contract).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/resources.rs` (RenderSpace dynamic offsets), `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (per-pass RenderSpace writes + bind-group offsets).
 - [x] REN-VNEXT-guard-000 Record the workstream’s baseline gate set and a baseline perf/telemetry snapshot (linkable).
 
 ## M1 — RenderPlan compilation substrate
@@ -46,11 +47,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
   - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan.rs` (mask pass planning + composite with mask).
-- [~] REN-VNEXT-clip-003 Add conformance tests:
+- [x] REN-VNEXT-clip-003 Add conformance tests:
   - [x] Clip-path clips to shape (not just bounds): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] Clip capture at push time (does not follow later transforms): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] Budget degradation is deterministic (scissor-only fallback): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
-  - [ ] clip-before-transform scrolling cases (partial-overlap cases)
+  - [x] clip-before-transform scrolling cases (partial-overlap cases): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] clip under rotation (affine): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] nested clips + clips + groups: `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
 
