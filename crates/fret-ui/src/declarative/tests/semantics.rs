@@ -40,6 +40,120 @@ fn declarative_text_sets_semantics_label() {
 }
 
 #[test]
+fn declarative_text_input_region_answers_platform_text_input_queries_in_utf16() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-text-input-region",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("a😀b".into());
+            // Select just the emoji (UTF-8 bytes [1,5)).
+            props.a11y_text_selection = Some((1, 1 + "😀".len() as u32));
+            // Mark the same range as a composition span.
+            props.a11y_text_composition = Some((1, 1 + "😀".len() as u32));
+
+            let region = cx.text_input_region(props, |_cx| Vec::<AnyElement>::new());
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    let selected = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::SelectedTextRange,
+    );
+    assert_eq!(
+        selected,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            1, 3
+        )))
+    );
+
+    let marked = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::MarkedTextRange,
+    );
+    assert_eq!(
+        marked,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            1, 3
+        )))
+    );
+
+    let text_for = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::TextForRange {
+            range: fret_runtime::Utf16Range::new(1, 3),
+        },
+    );
+    assert_eq!(
+        text_for,
+        fret_runtime::PlatformTextInputQueryResult::Text(Some("😀".to_string()))
+    );
+
+    let text_for_reversed = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::TextForRange {
+            range: fret_runtime::Utf16Range::new(3, 1),
+        },
+    );
+    assert_eq!(
+        text_for_reversed,
+        fret_runtime::PlatformTextInputQueryResult::Text(Some("😀".to_string()))
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert_eq!(snapshot.text_len_utf16, 4, "a(1) 😀(2) b(1)");
+    assert_eq!(snapshot.selection_utf16, Some((1, 3)));
+    assert_eq!(snapshot.marked_utf16, Some((1, 3)));
+}
+
+#[test]
 fn declarative_attach_semantics_overrides_role_label_and_sets_test_id() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
