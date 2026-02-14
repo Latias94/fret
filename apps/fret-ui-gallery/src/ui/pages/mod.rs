@@ -241,15 +241,20 @@ pub(super) fn render_component_page_tabs(
     code_panel: AnyElement,
     notes_panel: AnyElement,
 ) -> Vec<AnyElement> {
+    let tabs_test_id = format!("{test_id_prefix}-tabs");
     let tabs = shadcn::Tabs::uncontrolled(Some("component"))
         .refine_layout(LayoutRefinement::default().w_full())
+        .shared_indicator_motion(true)
+        .test_id(tabs_test_id.clone())
         .items([
-            shadcn::TabsItem::new("component", "Component", [component_panel]),
-            shadcn::TabsItem::new("code", "Code", [code_panel]),
-            shadcn::TabsItem::new("notes", "Notes", [notes_panel]),
+            shadcn::TabsItem::new("component", "Component", [component_panel])
+                .trigger_test_id(format!("{tabs_test_id}-trigger-component")),
+            shadcn::TabsItem::new("code", "Code", [code_panel])
+                .trigger_test_id(format!("{tabs_test_id}-trigger-code")),
+            shadcn::TabsItem::new("notes", "Notes", [notes_panel])
+                .trigger_test_id(format!("{tabs_test_id}-trigger-notes")),
         ])
-        .into_element(cx)
-        .test_id(format!("{test_id_prefix}-tabs"));
+        .into_element(cx);
 
     vec![tabs]
 }
