@@ -377,7 +377,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         }
                     }
                 }
-                let input = self.text_input.as_mut().expect("text input");
+                let Some(input) = self.text_input.as_mut() else {
+                    debug_assert!(false, "text input must be initialized");
+                    return false;
+                };
                 input.set_enabled(props.enabled);
                 input.set_focusable(props.focusable);
                 input.set_chrome_style(props.chrome);
@@ -400,7 +403,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         }
                     }
                 }
-                let area = self.text_area.as_mut().expect("text area");
+                let Some(area) = self.text_area.as_mut() else {
+                    debug_assert!(false, "text area must be initialized");
+                    return false;
+                };
                 area.set_enabled(props.enabled);
                 area.set_focusable(props.focusable);
                 area.set_style(props.chrome);

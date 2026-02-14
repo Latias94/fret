@@ -1,6 +1,6 @@
 # Runtime Safety Hardening v1 (Core + Mechanism Crates)
 
-Status: Complete (landed on main; ADRs remain the source of truth)
+Status: Complete (landed on main). Follow-up hardening tasks may still land independently; track them in the TODO.
 
 Tracking files:
 

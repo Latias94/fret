@@ -167,6 +167,7 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
                                 color: None,
                                 wrap: fret_core::TextWrap::None,
                                 overflow: fret_core::TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             })]
                         },
                     )]
@@ -989,6 +990,7 @@ fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
                     color: None,
                     wrap: fret_core::TextWrap::None,
                     overflow: fret_core::TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }),
             ]
         },

@@ -83,3 +83,57 @@ Deliverables:
 Exit criteria:
 
 - Clippy can be used as a regression gate for the workstream crates without surfacing new warnings.
+
+## M6 — Local `unsafe` tightening (fret-ui follow-ups)
+
+Deliverables:
+
+- `fret-ui` local helpers avoid unnecessary raw pointer casts in hot data structures.
+- `TestHost` no longer relies on avoidable `unsafe` for globals leasing.
+- Small inline list invariants are covered by targeted tests.
+
+Exit criteria:
+
+- `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-ui` is green.
+
+## M7 — Defensive panic hardening (fret-app follow-ups)
+
+Deliverables:
+
+- `fret-app` globals leasing restores invariants even under unexpected internal corruption (non-strict mode recovers with diagnostics; strict mode panics).
+- Targeted regression tests cover the recovery behavior.
+
+Exit criteria:
+
+- `cargo clippy -p fret-app --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-app` is green.
+- `python3 tools/check_layering.py` is green.
+
+## M8 — Defensive panic hardening (fret-ui follow-ups)
+
+Deliverables:
+
+- `fret-ui` element state access is resilient to corrupted state storage (type mismatches) by default.
+- Element state storage invariants are restored on unwind (no state poisoning).
+- Declarative host widgets avoid `expect(...)` for text input/area caches (defensive fallbacks; strict mode remains available via `FRET_STRICT_RUNTIME`).
+
+Exit criteria:
+
+- `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-ui` is green.
+- `python3 tools/check_layering.py` is green.
+
+## M9 — Panic surface audit (fret-ui follow-ups)
+
+Deliverables:
+
+- Remove "checked above" `expect(...)` and redundant `Option` unwrapping in input/dispatch hot paths.
+- Avoid `expect(...)` on `taffy` layout engine operations; strict mode may panic, default mode warns once and enables widget fallback.
+- Remove `.unwrap()` from default theme color parsing; strict mode may panic, default mode warns and uses fallback colors.
+
+Exit criteria:
+
+- `cargo clippy -p fret-ui --all-targets -- -D warnings` is green.
+- `cargo nextest run -p fret-ui` is green.
+- `python3 tools/check_layering.py` is green.

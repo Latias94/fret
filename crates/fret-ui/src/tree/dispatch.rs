@@ -316,10 +316,7 @@ impl<H: UiHost> UiTree<H> {
 
         let hovered_pressable_raw_below_barrier = if hit_for_raw_below_barrier.is_some() {
             self.pressable_element_for_hit(app, window, hit_for_raw_below_barrier)
-        } else if barrier_root.is_some()
-            && let Some(position) = position
-        {
-            let barrier_root = barrier_root.expect("checked above");
+        } else if let (Some(barrier_root), Some(position)) = (barrier_root, position) {
             let mut roots: Vec<NodeId> = Vec::new();
             let mut hit_barrier = false;
             for &layer_id in self.layer_order.iter().rev() {

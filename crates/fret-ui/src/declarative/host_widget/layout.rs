@@ -877,7 +877,30 @@ impl ElementHostWidget {
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
-                    self.text_cache.metrics.expect("cached metrics")
+                    self.text_cache.metrics.unwrap_or_else(|| {
+                        debug_assert!(
+                            false,
+                            "text cache metrics missing while reuse conditions are satisfied"
+                        );
+                        let input = fret_core::TextInput::plain(props.text.clone(), style.clone());
+                        if let Some(blob) = self.text_cache.blob.take() {
+                            cx.services.text().release(blob);
+                        }
+                        let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                        self.text_cache.blob = Some(blob);
+                        self.text_cache.metrics = Some(metrics);
+                        self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.last_text = Some(props.text.clone());
+                        self.text_cache.last_rich = None;
+                        self.text_cache.last_style = Some(style);
+                        self.text_cache.last_wrap = Some(props.wrap);
+                        self.text_cache.last_overflow = Some(props.overflow);
+                        self.text_cache.last_width = Some(measure_width);
+                        self.text_cache.last_measure_width = Some(measure_width);
+                        self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        metrics
+                    })
                 } else {
                     let input = fret_core::TextInput::plain(props.text.clone(), style.clone());
                     if let Some(blob) = self.text_cache.blob.take() {
@@ -964,7 +987,34 @@ impl ElementHostWidget {
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
-                    self.text_cache.metrics.expect("cached metrics")
+                    self.text_cache.metrics.unwrap_or_else(|| {
+                        debug_assert!(
+                            false,
+                            "text cache metrics missing while reuse conditions are satisfied"
+                        );
+                        let input = fret_core::TextInput::attributed(
+                            props.rich.text.clone(),
+                            style.clone(),
+                            props.rich.spans.clone(),
+                        );
+                        if let Some(blob) = self.text_cache.blob.take() {
+                            cx.services.text().release(blob);
+                        }
+                        let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                        self.text_cache.blob = Some(blob);
+                        self.text_cache.metrics = Some(metrics);
+                        self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.last_text = None;
+                        self.text_cache.last_rich = Some(props.rich.clone());
+                        self.text_cache.last_style = Some(style);
+                        self.text_cache.last_wrap = Some(props.wrap);
+                        self.text_cache.last_overflow = Some(props.overflow);
+                        self.text_cache.last_width = Some(measure_width);
+                        self.text_cache.last_measure_width = Some(measure_width);
+                        self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        metrics
+                    })
                 } else {
                     let input = fret_core::TextInput::attributed(
                         props.rich.text.clone(),
@@ -1055,7 +1105,34 @@ impl ElementHostWidget {
                     && self.text_cache.last_width == Some(measure_width);
 
                 let metrics = if can_reuse_metrics && prepared_matches {
-                    self.text_cache.metrics.expect("cached metrics")
+                    self.text_cache.metrics.unwrap_or_else(|| {
+                        debug_assert!(
+                            false,
+                            "text cache metrics missing while reuse conditions are satisfied"
+                        );
+                        let input = fret_core::TextInput::attributed(
+                            props.rich.text.clone(),
+                            style.clone(),
+                            props.rich.spans.clone(),
+                        );
+                        if let Some(blob) = self.text_cache.blob.take() {
+                            cx.services.text().release(blob);
+                        }
+                        let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                        self.text_cache.blob = Some(blob);
+                        self.text_cache.metrics = Some(metrics);
+                        self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                        self.text_cache.last_text = None;
+                        self.text_cache.last_rich = Some(props.rich.clone());
+                        self.text_cache.last_style = Some(style);
+                        self.text_cache.last_wrap = Some(props.wrap);
+                        self.text_cache.last_overflow = Some(props.overflow);
+                        self.text_cache.last_width = Some(measure_width);
+                        self.text_cache.last_measure_width = Some(measure_width);
+                        self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        metrics
+                    })
                 } else {
                     let input = fret_core::TextInput::attributed(
                         props.rich.text.clone(),
@@ -1090,7 +1167,11 @@ impl ElementHostWidget {
                 if self.text_input.is_none() {
                     self.text_input = Some(BoundTextInput::new(model.clone()));
                 }
-                let input = self.text_input.as_mut().expect("text input");
+                let Some(input) = self.text_input.as_mut() else {
+                    debug_assert!(false, "text input must be initialized");
+                    let desired = Size::new(Px(0.0), Px(0.0));
+                    return clamp_to_constraints(desired, props.layout, cx.available);
+                };
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
@@ -1109,7 +1190,11 @@ impl ElementHostWidget {
                 if self.text_area.is_none() {
                     self.text_area = Some(crate::text_area::BoundTextArea::new(model.clone()));
                 }
-                let area = self.text_area.as_mut().expect("text area");
+                let Some(area) = self.text_area.as_mut() else {
+                    debug_assert!(false, "text area must be initialized");
+                    let desired = Size::new(Px(0.0), Px(0.0));
+                    return clamp_to_constraints(desired, props.layout, cx.available);
+                };
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
@@ -1130,10 +1215,11 @@ impl ElementHostWidget {
                             model.clone(),
                         ));
                 }
-                let group = self
-                    .resizable_panel_group
-                    .as_mut()
-                    .expect("resizable panel group");
+                let Some(group) = self.resizable_panel_group.as_mut() else {
+                    debug_assert!(false, "resizable panel group must be initialized");
+                    let desired = Size::new(Px(0.0), Px(0.0));
+                    return clamp_to_constraints(desired, props.layout, cx.available);
+                };
                 if group.model_id() != model_id {
                     group.set_model(model);
                 }

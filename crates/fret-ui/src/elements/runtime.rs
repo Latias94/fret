@@ -799,19 +799,72 @@ impl WindowElementState {
         init: impl FnOnce() -> S,
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
+        struct StateBoxGuard<'a> {
+            window_state: &'a mut WindowElementState,
+            key: (GlobalElementId, TypeId),
+            value: Option<Box<dyn Any>>,
+        }
+
+        impl Drop for StateBoxGuard<'_> {
+            fn drop(&mut self) {
+                let Some(value) = self.value.take() else {
+                    return;
+                };
+                self.window_state.insert_state_box(self.key, value);
+            }
+        }
+
         let key = (element, TypeId::of::<S>());
         self.record_state_key_access(key);
-        let mut value = self
-            .take_state_box(&key)
-            .unwrap_or_else(|| Box::new(init()));
-        let out = {
-            let state = value
-                .downcast_mut::<S>()
-                .expect("element state type mismatch");
-            f(state)
+
+        let mut init = Some(init);
+        let value = self.take_state_box(&key).unwrap_or_else(|| {
+            let init = init.take().expect("init is available");
+            Box::new(init())
+        });
+        let mut guard = StateBoxGuard {
+            window_state: self,
+            key,
+            value: Some(value),
         };
-        self.insert_state_box(key, value);
-        out
+
+        let state = match guard
+            .value
+            .as_deref_mut()
+            .expect("guard has a value")
+            .downcast_mut::<S>()
+        {
+            Some(state) => state,
+            None => {
+                if crate::strict_runtime::strict_runtime_enabled() {
+                    panic!(
+                        "element state type mismatch: element={:?}, expected={}",
+                        element,
+                        std::any::type_name::<S>()
+                    );
+                }
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!(
+                        "element state type mismatch: element={:?}, expected={}; dropping corrupt state and re-initializing",
+                        element,
+                        std::any::type_name::<S>()
+                    );
+                }
+
+                let init = init.take().expect("init is available");
+                guard.value = Some(Box::new(init()));
+                guard
+                    .value
+                    .as_deref_mut()
+                    .expect("guard has a value")
+                    .downcast_mut::<S>()
+                    .expect("re-initialized state has the expected type")
+            }
+        };
+
+        f(state)
     }
 
     pub(crate) fn try_with_state_mut<S: Any, R>(
@@ -819,17 +872,62 @@ impl WindowElementState {
         element: GlobalElementId,
         f: impl FnOnce(&mut S) -> R,
     ) -> Option<R> {
+        struct StateBoxGuard<'a> {
+            window_state: &'a mut WindowElementState,
+            key: (GlobalElementId, TypeId),
+            value: Option<Box<dyn Any>>,
+        }
+
+        impl Drop for StateBoxGuard<'_> {
+            fn drop(&mut self) {
+                let Some(value) = self.value.take() else {
+                    return;
+                };
+                self.window_state.insert_state_box(self.key, value);
+            }
+        }
+
         let key = (element, TypeId::of::<S>());
         self.record_state_key_access(key);
-        let mut value = self.take_state_box(&key)?;
-        let out = {
-            let state = value
-                .downcast_mut::<S>()
-                .expect("element state type mismatch");
-            f(state)
+
+        let value = self.take_state_box(&key)?;
+        let mut guard = StateBoxGuard {
+            window_state: self,
+            key,
+            value: Some(value),
         };
-        self.insert_state_box(key, value);
-        Some(out)
+
+        let state = match guard
+            .value
+            .as_deref_mut()
+            .expect("guard has a value")
+            .downcast_mut::<S>()
+        {
+            Some(state) => state,
+            None => {
+                if crate::strict_runtime::strict_runtime_enabled() {
+                    panic!(
+                        "element state type mismatch: element={:?}, expected={}",
+                        element,
+                        std::any::type_name::<S>()
+                    );
+                }
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!(
+                        "element state type mismatch: element={:?}, expected={}; dropping corrupt state",
+                        element,
+                        std::any::type_name::<S>()
+                    );
+                }
+
+                guard.value = None;
+                return None;
+            }
+        };
+
+        Some(f(state))
     }
 
     pub(crate) fn mark_retained_virtual_list_needs_reconcile(
