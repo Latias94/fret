@@ -1,7 +1,7 @@
 ---
 title: AI Elements Port (`fret-ui-ai`) — Milestones
 status: active
-date: 2026-02-06
+date: 2026-02-12
 scope: ecosystem/fret-ui-ai, diag gates, upstream parity tracking
 ---
 
@@ -171,7 +171,29 @@ Acceptance criteria:
 
 - No “new engines” in `fret-ui-ai`; only composition/policy wrappers.
 
-Status: Defer until a concrete consumer exists.
+Status: Done (chrome-only wrappers landed; engines remain app-owned).
+
+Progress:
+
+- `WorkflowPanel` / `WorkflowToolbar` / `WorkflowControls` chrome are ported and demoed on
+  `PAGE_AI_WORKFLOW_CHROME_DEMO` with gates:
+  - `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
+  - `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
+- `WorkflowNode` chrome is ported and demoed on the same page with gate:
+  - `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
+- `WorkflowConnection` / `WorkflowEdgeTemporary` / `WorkflowEdgeAnimated` chrome are ported and
+  demoed on the same page with gate:
+  - `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
+- Temporary edge dash outcome (`strokeDasharray: "5, 5"`) is implemented via polyline dashing
+  helpers in `ecosystem/fret-canvas/src/wires.rs` and applied in `WorkflowEdgeTemporary`.
+- Animated edge `markerEnd` (arrowhead) outcome is implemented via `arrowhead_triangle` in
+  `ecosystem/fret-canvas/src/wires.rs` and applied in `WorkflowEdgeAnimated`.
+- `WorkflowCanvas` chrome host is ported and demoed on the same page with gate:
+  - `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
+- Optional: an engine-backed reference integration exists (reuse `fret-node` for interaction + `fret-ui-ai` chrome)
+  and is gated:
+  - UI Gallery page: `ai_workflow_node_graph_demo`
+  - `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
 
 ### M5 — Voice surfaces (defer until there is a concrete consumer)
 
@@ -179,13 +201,29 @@ Scope:
 
 - `audio-player` (UI-only chrome is ported; playback backend is app-owned).
 - `transcription` (segment surface is ported; playback timing remains app-owned).
-- `mic-selector`, `speech-input`, `voice-selector` (defer until there is a concrete consumer).
+- `mic-selector`, `speech-input`, `voice-selector` (UI-only chrome is ported; capture/ASR/preview are app-owned).
 
 Acceptance criteria:
 
 - Backends/policies are explicit; UI remains intent-driven (apps own side effects).
 
-Status: Partial (UI-only `audio-player` + `transcription` surfaces; UI Gallery demos + diag gates exist; backends + remaining voice surfaces deferred).
+Status: Done (UI-only voice chrome ported; UI Gallery demos + diag gates exist; backends are app-owned).
+
+### M6 — Upstream coverage closure (all files accounted for)
+
+Scope:
+
+- Port workflow wrapper surfaces as chrome-only wrappers (no new engines inside `fret-ui-ai`).
+- Explicitly mark upstream-only web surfaces as `N/A` where appropriate (e.g. `jsx-preview.tsx`), with rationale.
+
+Acceptance criteria:
+
+- Every upstream `.tsx` has a corresponding Rust module (or is explicitly marked `N/A` with rationale).
+- Each newly ported surface has stable selectors (`test_id`) and at least one regression gate
+  (diag script preferred for interactive surfaces).
+- Heavy dependencies and backends are feature-gated; UI surfaces remain intent-driven.
+
+Status: Done (all upstream `.tsx` files are either ported or explicitly marked `N/A`).
 
 ## Next-step checklist (recommended weekly cadence)
 

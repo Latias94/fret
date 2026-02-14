@@ -2407,6 +2407,7 @@ name = "fret-ui-ai"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-canvas",
  "fret-code-view",
  "fret-core",
  "fret-icons",
@@ -2442,8 +2443,12 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "image",
+ "js-sys",
  "slotmap",
  "tracing",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

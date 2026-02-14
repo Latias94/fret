@@ -5,8 +5,9 @@ use fret_core::{
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{
-    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DevtoolsScreenshotRequestV1,
-    DevtoolsScreenshotResultV1, DiagTransportMessageV1, UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
+    DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
+    DevtoolsScreenshotRequestV1, DevtoolsScreenshotResultV1, DiagTransportMessageV1,
+    UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
@@ -4580,10 +4581,22 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let Some(container_node) = container_node {
-                            let pos = center_of_rect_clamped_to_rect(
-                                container_node.bounds,
-                                window_bounds,
-                            );
+                            let pos = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        container_node,
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(
+                                        container_node.bounds,
+                                        window_bounds,
+                                    )
+                                });
                             if let Some(ui) = ui {
                                 let note =
                                     format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
@@ -5218,9 +5231,32 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
-                            let start =
-                                center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
-                            let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
+                            let start = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        from_node,
+                                        from_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(from_node.bounds, window_bounds)
+                                });
+                            let end = ui
+                                .map(|ui| {
+                                    wheel_position_prefer_intended_hit(
+                                        snapshot,
+                                        ui,
+                                        to_node,
+                                        to_node.bounds,
+                                        window_bounds,
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
+                                });
                             if let Some(ui) = ui {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
@@ -6720,8 +6756,7 @@ impl UiDiagnosticsService {
             self.cfg.redact_text,
             self.cfg.max_debug_string_bytes,
         );
-        let payload = serde_json::to_value(ack)
-        .unwrap_or(serde_json::Value::Null);
+        let payload = serde_json::to_value(ack).unwrap_or(serde_json::Value::Null);
         self.ws_send_with_request_id("semantics.node.get_ack", pending.request_id, payload);
         false
     }
@@ -6810,15 +6845,13 @@ impl UiDiagnosticsService {
                 }]
             });
 
-            let write_ok = serde_json::to_vec_pretty(&req)
-                .ok()
-                .is_some_and(|bytes| {
-                    if let Some(parent) = self.cfg.screenshot_request_path.parent() {
-                        let _ = std::fs::create_dir_all(parent);
-                    }
-                    std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
-                        && touch_file(&self.cfg.screenshot_trigger_path).is_ok()
-                });
+            let write_ok = serde_json::to_vec_pretty(&req).ok().is_some_and(|bytes| {
+                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
+                    && touch_file(&self.cfg.screenshot_trigger_path).is_ok()
+            });
 
             if !write_ok {
                 let payload = serde_json::to_value(DevtoolsScreenshotResultV1 {
@@ -6929,13 +6962,7 @@ impl UiDiagnosticsService {
                     } else {
                         ("bundle".to_string(), None)
                     };
-                self.request_force_dump(
-                    label,
-                    dump_max_snapshots,
-                    None,
-                    None,
-                    msg.request_id,
-                );
+                self.request_force_dump(label, dump_max_snapshots, None, None, msg.request_id);
             }
             "screenshot.request" => {
                 let Ok(req) = serde_json::from_value::<DevtoolsScreenshotRequestV1>(msg.payload)
@@ -7067,11 +7094,12 @@ impl UiDiagnosticsService {
                     return;
                 }
 
-                self.pending_devtools_semantics_node_get = Some(PendingDevtoolsSemanticsNodeGetRequest {
-                    request_id: msg.request_id,
-                    window_ffi: req.window,
-                    node_id: req.node_id,
-                });
+                self.pending_devtools_semantics_node_get =
+                    Some(PendingDevtoolsSemanticsNodeGetRequest {
+                        request_id: msg.request_id,
+                        window_ffi: req.window,
+                        node_id: req.node_id,
+                    });
             }
             "app.exit.request" => {
                 let delay_ms = serde_json::from_value::<DevtoolsAppExitRequestV1>(msg.payload)
@@ -16675,6 +16703,63 @@ fn center_of_rect_clamped_to_rect(rect: Rect, clamp: Rect) -> Point {
     )
 }
 
+fn wheel_position_prefer_intended_hit(
+    snapshot: &fret_core::SemanticsSnapshot,
+    ui: &UiTree<App>,
+    intended: &fret_core::SemanticsNode,
+    container_bounds: Rect,
+    window_bounds: Rect,
+) -> Point {
+    let cx0 = window_bounds.origin.x.0;
+    let cy0 = window_bounds.origin.y.0;
+    let cx1 = cx0 + window_bounds.size.width.0.max(0.0);
+    let cy1 = cy0 + window_bounds.size.height.0.max(0.0);
+
+    let bx0 = container_bounds.origin.x.0;
+    let by0 = container_bounds.origin.y.0;
+    let bx1 = bx0 + container_bounds.size.width.0.max(0.0);
+    let by1 = by0 + container_bounds.size.height.0.max(0.0);
+
+    let ix0 = bx0.max(cx0);
+    let iy0 = by0.max(cy0);
+    let ix1 = bx1.min(cx1);
+    let iy1 = by1.min(cy1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return center_of_rect(container_bounds);
+    }
+
+    let w = (ix1 - ix0).max(0.0);
+    let h = (iy1 - iy0).max(0.0);
+    let pad_x = 8.0f32.min(w * 0.5);
+    let pad_y = 8.0f32.min(h * 0.5);
+
+    let x_mid = (ix0 + ix1) * 0.5;
+    let y_mid = (iy0 + iy1) * 0.5;
+
+    let candidates = [
+        Point::new(fret_core::Px(x_mid), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(y_mid)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy0 + pad_y)),
+        Point::new(fret_core::Px(x_mid), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy1 - pad_y)),
+        Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy1 - pad_y)),
+    ];
+
+    for pos in candidates {
+        if let Some(hit) = pick_semantics_node_at(snapshot, ui, pos)
+            && hit.id.data().as_ffi() == intended.id.data().as_ffi()
+        {
+            return pos;
+        }
+    }
+
+    candidates[0]
+}
+
 fn pick_semantics_node_at<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     ui: &UiTree<App>,
@@ -17515,7 +17600,11 @@ fn build_semantics_node_get_ack_v1(
         };
     };
 
-    let semantics_fingerprint = Some(semantics_fingerprint_v1(snapshot, redact_text, max_string_bytes));
+    let semantics_fingerprint = Some(semantics_fingerprint_v1(
+        snapshot,
+        redact_text,
+        max_string_bytes,
+    ));
     let want = NodeId::from(KeyData::from_ffi(node_id));
 
     let Some(node) = snapshot.nodes.iter().find(|n| n.id == want) else {
@@ -17571,7 +17660,11 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
 }
 
 #[cfg(feature = "diagnostics-ws")]
-fn read_screenshot_result_entry(path: &Path, request_id: &str, window_ffi: u64) -> Option<serde_json::Value> {
+fn read_screenshot_result_entry(
+    path: &Path,
+    request_id: &str,
+    window_ffi: u64,
+) -> Option<serde_json::Value> {
     let bytes = std::fs::read(path).ok()?;
     let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
     let completed = root.get("completed").and_then(|v| v.as_array())?;
@@ -17788,7 +17881,8 @@ mod tests {
         );
         assert_eq!(ack.status, "not_found");
 
-        let ack = build_semantics_node_get_ack_v1(None, window.data().as_ffi(), root_id, false, 4096);
+        let ack =
+            build_semantics_node_get_ack_v1(None, window.data().as_ffi(), root_id, false, 4096);
         assert_eq!(ack.status, "no_semantics");
     }
 
