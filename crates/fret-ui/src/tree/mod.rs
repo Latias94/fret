@@ -20,7 +20,9 @@ use slotmap::{Key, SecondaryMap, SlotMap};
 use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
+use std::panic::{AssertUnwindSafe, Location, catch_unwind, resume_unwind};
 use std::sync::Arc;
+use std::sync::{Mutex, OnceLock};
 
 mod bounds_tree;
 mod commands;
@@ -4884,25 +4886,84 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn with_widget_mut<R>(
+    #[track_caller]
+    fn with_widget_mut<R: Default>(
         &mut self,
         node: NodeId,
         f: impl FnOnce(&mut dyn Widget<H>, &mut UiTree<H>) -> R,
     ) -> R {
+        fn warn_with_widget_mut_failure_once(node: NodeId, reason: &'static str) {
+            static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+            let caller = Location::caller();
+            let key = format!(
+                "{reason}:{node:?}:{}:{}:{}",
+                caller.file(),
+                caller.line(),
+                caller.column()
+            );
+
+            let seen = SEEN.get_or_init(|| Mutex::new(HashSet::new()));
+            let first = match seen.lock() {
+                Ok(mut guard) => guard.insert(key),
+                Err(_) => true,
+            };
+
+            if first {
+                tracing::error!(
+                    ?node,
+                    reason,
+                    file = caller.file(),
+                    line = caller.line(),
+                    column = caller.column(),
+                    "UiTree widget access failed; returning default"
+                );
+            }
+        }
+
         let Some(n) = self.nodes.get_mut(node) else {
-            panic!("node must exist: {node:?}");
+            if crate::strict_runtime::strict_runtime_enabled() {
+                let caller = Location::caller();
+                panic!(
+                    "UiTree::with_widget_mut: node missing: {node:?} at {}:{}:{}",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+
+            warn_with_widget_mut_failure_once(node, "node_missing");
+            return R::default();
         };
+
         let Some(widget) = n.widget.take() else {
-            panic!("node widget must exist: {node:?}");
+            if crate::strict_runtime::strict_runtime_enabled() {
+                let caller = Location::caller();
+                panic!(
+                    "UiTree::with_widget_mut: widget missing (re-entrant borrow?): {node:?} at {}:{}:{}",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+
+            warn_with_widget_mut_failure_once(node, "widget_missing");
+            return R::default();
         };
+
         let mut widget = widget;
-        let result = f(widget.as_mut(), self);
+        let result = catch_unwind(AssertUnwindSafe(|| f(widget.as_mut(), self)));
+
         if let Some(n) = self.nodes.get_mut(node) {
             n.widget = Some(widget);
         } else {
             self.deferred_cleanup.push(widget);
         }
-        result
+
+        match result {
+            Ok(result) => result,
+            Err(payload) => resume_unwind(payload),
+        }
     }
 
     fn node_render_transform(&self, node: NodeId) -> Option<Transform2D> {

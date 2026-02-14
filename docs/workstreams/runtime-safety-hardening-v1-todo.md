@@ -186,3 +186,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-ui/src/retained_bridge.rs` (`RetainedSubtreeFactory::build`)
   - Gates:
     - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+
+- [x] RSH-ui-011 Make `UiTree::with_widget_mut` non-panicking by default and unwind-safe (restores widget slot before resuming unwind).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`UiTree::with_widget_mut`)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui tree::`: PASS
