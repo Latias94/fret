@@ -12,11 +12,12 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 
 ## M1 — Row text caching
 
-- [ ] Add a row text cache (visible rows as `Arc<str>`).
-- [ ] Key the cache by:
-  - [ ] buffer revision,
-  - [ ] display row index,
-  - [ ] wrap policy / width bucket (if applicable).
+- [x] Add a row text cache (visible rows as `Arc<str>`).
+- [x] Key the cache by:
+  - [x] buffer revision,
+  - [x] display row index,
+  - [x] wrap cols / width bucket (best-effort),
+  - [x] fold/inlay epochs (to keep decorated display rows stable).
 - [ ] Add a regression test that guards against whole-buffer `to_string()` on paint.
 
 ## M2 — Syntax spans per row
@@ -31,4 +32,3 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 - [ ] Ensure the policy matches cursor movement and selection semantics.
 - [ ] Coordinate with `docs/workstreams/text-line-breaking-v1.md` so UI wrap improves without
   breaking editor expectations.
-

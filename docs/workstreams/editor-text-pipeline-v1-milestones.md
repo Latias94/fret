@@ -21,8 +21,15 @@ Exit criteria:
 - Row cache keyed by:
   - buffer revision,
   - display row index,
-  - wrap policy.
+  - wrap cols / width bucket (best-effort),
+  - fold/inlay epochs (decorations participate in display rows).
 - Large documents do not require `to_string()` of the whole buffer per frame.
+
+Status (code exists; tests pending):
+
+- Row text cache + LRU exists in the editor paint path:
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range`)
+- Remaining: add a regression gate that fails if paint materializes the whole buffer per frame.
 
 Evidence checklist:
 
@@ -46,4 +53,3 @@ Exit criteria:
 - Editor view model drives wrap segmentation for code.
 - Renderer wrapper is not relied on for editor row segmentation.
 - Cursor movement / selection semantics match the display-row segmentation (no drift).
-

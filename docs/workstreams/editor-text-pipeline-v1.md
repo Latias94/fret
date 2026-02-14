@@ -65,6 +65,14 @@ Without a careful integration, the editor will regress into:
   - `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - Code editor uses it:
   - `ecosystem/fret-code-editor/src/editor/mod.rs`
+- Display rows + row-local text materialization exists:
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayMap`, `materialize_display_row_text`)
+- Editor paint path already caches visible row text as `Arc<str>` (LRU) keyed by:
+  - buffer revision,
+  - display row index,
+  - wrap cols,
+  - fold/inlay epochs:
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range`)
 - Renderer text system expects prepared blobs per string:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::prepare`, `prepare_attributed`)
 - Current UI text wrap is renderer-owned and heuristic:
@@ -84,6 +92,14 @@ The renderer should remain responsible for:
 
 - shaping + metrics for a provided string + spans + constraints,
 - caret/selection/hit-test geometry for the prepared blob.
+
+### Current call chain (evidence)
+
+- `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_row`)
+  - `cached_row_text_with_range` → `DisplayMap::materialize_display_row_text`
+  - `CanvasPainter::text_with_blob` / `CanvasPainter::rich_text_with_blob`
+- Renderer entry points:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::prepare`, `prepare_attributed`)
 
 ### 2) Row text cache: `Arc<str>` per visible row
 
@@ -146,7 +162,7 @@ Optional diag scripts:
 ## Milestones (High-Level)
 
 - M0: Document the boundary + add row text cache plan (no behavior changes).
-- M1: Implement row text caching and eliminate large per-frame allocations.
+- M1: Harden row text caching and lock allocation regressions behind tests.
 - M2: Integrate per-row attributed spans for syntax highlighting without reshaping on paint-only changes.
 - M3: Wrap policy separation (code wrap driven by editor view model).
 
@@ -154,4 +170,3 @@ For detailed milestone checklists and task breakdown:
 
 - `docs/workstreams/editor-text-pipeline-v1-milestones.md`
 - `docs/workstreams/editor-text-pipeline-v1-todo.md`
-
