@@ -64,10 +64,29 @@
       },
       "timeout_frames": 240
     },
+    { "type": "type_text", "text": "a" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "ime_cursor_area_is_some", "is_some": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "ime_cursor_area_within_window",
+        "padding_px": 0.0,
+        "eps_px": 2.0
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-web-ime-harness-ime-cursor-area"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-web-ime-harness-ime-cursor-area-after-type"
     }
   ]
 }
-
