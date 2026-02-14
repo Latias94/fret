@@ -318,9 +318,19 @@ pub(super) fn preview_motion_presets(
             .copied()
             .unwrap_or(false);
 
-        let duration_ms = theme.duration_ms_token("duration.motion.presence.enter");
+        let duration_ms = theme
+            .duration_ms_by_key("duration.motion.stack.shift")
+            .unwrap_or_else(|| theme.duration_ms_token("duration.motion.presence.enter"));
         let duration = Duration::from_millis(duration_ms as u64);
-        let easing = theme.easing_token("easing.motion.standard");
+        let each_delay_ms = theme
+            .duration_ms_by_key("duration.motion.stack.shift.stagger")
+            .unwrap_or(24);
+        let each_delay = Duration::from_millis(each_delay_ms as u64);
+        let easing = theme
+            .easing_by_key("easing.motion.stack.shift")
+            .unwrap_or_else(|| theme.easing_token("easing.motion.standard"));
+        let easing_headless =
+            fret_ui_headless::easing::CubicBezier::new(easing.x1, easing.y1, easing.x2, easing.y2);
 
         let global = fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
             cx,
@@ -334,7 +344,6 @@ pub(super) fn preview_motion_presets(
         // Keep this intentionally small and semantic-first. Component ecosystems should be able
         // to share this "sequence feel" without depending on DOM/Framer Motion implementation
         // details.
-        let each_delay = Duration::from_millis(24);
         let count = 6usize;
         let from = if is_open {
             fret_ui_headless::motion::stagger::StaggerFrom::First
@@ -351,15 +360,16 @@ pub(super) fn preview_motion_presets(
             move |cx| {
                 (0..count)
                     .map(|i| {
-                        let local =
+                        let local_linear =
                             fret_ui_headless::motion::stagger::staggered_progress_for_duration(
-                                global.progress,
+                                global.linear,
                                 i,
                                 count,
                                 each_delay,
                                 duration,
                                 from,
                             );
+                        let local = easing_headless.sample(local_linear);
                         let dy_px = (1.0 - local) * 10.0;
                         let transform = fret_core::Transform2D::translation(fret_core::Point::new(
                             Px(0.0),
