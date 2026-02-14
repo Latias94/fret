@@ -106,6 +106,19 @@ Progress record:
   - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=22.85ms prepare_text=0.73ms draws=27000 ... cache_hits=596 cache_misses=4`
   - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
 
+- Date: 2026-02-14
+- Commit: 5f055744
+- Summary:
+  - Scissor-sized intermediates for `EffectMode::FilterContent` and `CompositeGroup` (budget-gated and deterministic).
+  - Disabled when the scene contains any `EffectMode::Backdrop` (fallback to full-viewport intermediates).
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (scissor-sized intermediate planning; budget estimation; Backdrop guard)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderSpace uniform + absolute→local scissor mapping)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (RenderSpace binding `@group(0) @binding(5)`)
+  - `crates/fret-render-wgpu/tests/composite_group_conformance.rs` (regression coverage for scissored additive + isolated opacity)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance`
+
 ## M3 — ClipPath + image masks v1 (bounded + cacheable)
 
 Deliverables:
