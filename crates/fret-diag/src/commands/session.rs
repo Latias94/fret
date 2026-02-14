@@ -49,5 +49,8 @@ pub(crate) fn cmd_latest(
         println!("{}", path.display());
         return Ok(());
     }
-    Err(format!("no diagnostics bundle found under {}", out_dir.display()))
+    Err(format!(
+        "no diagnostics bundle found under {}",
+        out_dir.display()
+    ))
 }

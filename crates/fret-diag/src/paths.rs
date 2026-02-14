@@ -45,7 +45,9 @@ pub(crate) fn expand_script_inputs(
                 any = true;
             }
             if !any {
-                return Err(format!("script input matched no files: {input} ({pattern})"));
+                return Err(format!(
+                    "script input matched no files: {input} ({pattern})"
+                ));
             }
             continue;
         }
@@ -62,7 +64,9 @@ pub(crate) fn expand_script_inputs(
                 any = true;
             }
             if !any {
-                return Err(format!("script input matched no files: {input} ({pattern})"));
+                return Err(format!(
+                    "script input matched no files: {input} ({pattern})"
+                ));
             }
             continue;
         }
@@ -72,4 +76,3 @@ pub(crate) fn expand_script_inputs(
 
     Ok(set.into_iter().collect())
 }
-

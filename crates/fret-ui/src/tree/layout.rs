@@ -569,6 +569,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_repair_view_cache_bounds_time = Duration::default();
             self.debug_stats.layout_contained_view_cache_roots_time = Duration::default();
             self.debug_stats.layout_collapse_layout_observations_time = Duration::default();
+            self.debug_stats.layout_observation_record_time = Duration::default();
+            self.debug_stats.layout_observation_record_models_items = 0;
+            self.debug_stats.layout_observation_record_globals_items = 0;
             self.debug_stats.layout_prepaint_after_layout_time = Duration::default();
             self.debug_stats.layout_skipped_engine_frame = false;
             self.debug_stats.layout_fast_path_taken = false;
@@ -2661,10 +2664,30 @@ impl<H: UiHost> UiTree<H> {
 
         if !is_probe {
             if !skip_observation_recording {
+                let obs_started = self.debug_enabled.then(Instant::now);
+                let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
+                let global_items =
+                    global_observations.as_slice().len().min(u32::MAX as usize) as u32;
                 self.observed_in_layout
                     .record(node, observations.as_slice());
                 self.observed_globals_in_layout
                     .record(node, global_observations.as_slice());
+                if let Some(obs_started) = obs_started {
+                    self.debug_stats.layout_observation_record_time = self
+                        .debug_stats
+                        .layout_observation_record_time
+                        .saturating_add(obs_started.elapsed());
+                }
+                if self.debug_enabled {
+                    self.debug_stats.layout_observation_record_models_items = self
+                        .debug_stats
+                        .layout_observation_record_models_items
+                        .saturating_add(model_items);
+                    self.debug_stats.layout_observation_record_globals_items = self
+                        .debug_stats
+                        .layout_observation_record_globals_items
+                        .saturating_add(global_items);
+                }
             }
             if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                 n.measured_size = size;
@@ -2858,10 +2881,29 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if !skip_observation_recording {
+            let obs_started = self.debug_enabled.then(Instant::now);
+            let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
+            let global_items = global_observations.as_slice().len().min(u32::MAX as usize) as u32;
             self.observed_in_layout
                 .record(node, observations.as_slice());
             self.observed_globals_in_layout
                 .record(node, global_observations.as_slice());
+            if let Some(obs_started) = obs_started {
+                self.debug_stats.layout_observation_record_time = self
+                    .debug_stats
+                    .layout_observation_record_time
+                    .saturating_add(obs_started.elapsed());
+            }
+            if self.debug_enabled {
+                self.debug_stats.layout_observation_record_models_items = self
+                    .debug_stats
+                    .layout_observation_record_models_items
+                    .saturating_add(model_items);
+                self.debug_stats.layout_observation_record_globals_items = self
+                    .debug_stats
+                    .layout_observation_record_globals_items
+                    .saturating_add(global_items);
+            }
         }
 
         let popped = self.measure_stack.pop();

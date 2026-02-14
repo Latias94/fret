@@ -12065,6 +12065,12 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_collapse_layout_observations_time_us: u64,
     #[serde(default)]
+    pub layout_observation_record_time_us: u64,
+    #[serde(default)]
+    pub layout_observation_record_models_items: u32,
+    #[serde(default)]
+    pub layout_observation_record_globals_items: u32,
+    #[serde(default)]
     pub layout_prepaint_after_layout_time_us: u64,
     #[serde(default)]
     pub layout_skipped_engine_frame: bool,
@@ -12495,6 +12501,10 @@ impl UiFrameStatsV1 {
             layout_collapse_layout_observations_time_us: stats
                 .layout_collapse_layout_observations_time
                 .as_micros() as u64,
+            layout_observation_record_time_us: stats.layout_observation_record_time.as_micros()
+                as u64,
+            layout_observation_record_models_items: stats.layout_observation_record_models_items,
+            layout_observation_record_globals_items: stats.layout_observation_record_globals_items,
             layout_prepaint_after_layout_time_us: stats
                 .layout_prepaint_after_layout_time
                 .as_micros() as u64,
