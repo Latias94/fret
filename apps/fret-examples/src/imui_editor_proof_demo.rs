@@ -4,15 +4,21 @@ use std::sync::Arc;
 use fret::interop::embedded_viewport as embedded;
 use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::Color;
+use fret_core::{Axis, Color, Edges, Px};
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
     runtime as dock_runtime,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
-    ActivationPolicy, FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
+    ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
+};
+use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle};
+use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset};
+use fret_ui_editor::controls::{
+    Checkbox, DragValue, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
+    NumericParseFn, NumericValidateFn,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -145,6 +151,14 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let tab_drag_anchor_test_id = (diag_enabled() && logical_window_id.as_deref() == Some("main"))
         .then_some("imui-editor-proof.main.tab-drag-anchor");
 
+    let editor_value_model = editor_demo_value_model(cx);
+    let editor_roughness_model = editor_demo_roughness_model(cx);
+    let editor_metallic_model = editor_demo_metallic_model(cx);
+    let editor_alpha_clip_model = editor_demo_alpha_clip_model(cx);
+    let editor_cast_shadows_model = editor_demo_cast_shadows_model(cx);
+    let editor_iterations_model = editor_demo_iterations_model(cx);
+    let editor_search_model = editor_demo_search_model(cx);
+
     fret_imui::imui(cx, |ui| {
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
@@ -203,6 +217,417 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 ui.add_ui(last_input_line);
                 ui.separator();
 
+                let editor_label =
+                    fret_ui_kit::ui::text(ui.cx_mut(), "fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
+                        .text_xs();
+                ui.add_ui(editor_label);
+                ui.mount(|cx| {
+                    let fmt: NumericFormatFn<f64> =
+                        Arc::new(|v| Arc::from(format!("{v:.3}")));
+                    let parse: NumericParseFn<f64> = Arc::new(|s| s.trim().parse::<f64>().ok());
+                    let validate: NumericValidateFn<f64> = Arc::new(|v| {
+                        if (0.0..=1.0).contains(&v) {
+                            None
+                        } else {
+                            Some(Arc::from("Expected 0.0..=1.0"))
+                        }
+                    });
+
+                    let query = cx
+                        .get_model_cloned(&editor_search_model, fret_ui::Invalidation::Layout)
+                        .unwrap_or_default();
+                    let q = query.trim().to_lowercase();
+                    let matches = |s: &str| q.is_empty() || s.to_lowercase().contains(&q);
+
+                    let material_show_all = q.is_empty() || matches("material");
+                    let show_opacity = material_show_all || matches("opacity");
+                    let show_roughness = material_show_all || matches("roughness");
+                    let show_metallic = material_show_all || matches("metallic");
+                    let show_alpha_clip =
+                        material_show_all || matches("alpha") || matches("clip");
+                    let show_cast_shadows =
+                        material_show_all || matches("shadow") || matches("shadows");
+
+                    let advanced_show_all = q.is_empty() || matches("advanced");
+                    let show_iterations = advanced_show_all || matches("iterations");
+
+                    let any_match =
+                        show_opacity
+                            || show_roughness
+                            || show_metallic
+                            || show_alpha_clip
+                            || show_cast_shadows
+                            || show_iterations;
+
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: Axis::Vertical,
+                            gap: Px(8.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            let mut out = Vec::new();
+
+                            out.push(
+                                MiniSearchBox::new(editor_search_model.clone())
+                                    .options(fret_ui_editor::controls::MiniSearchBoxOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.search",
+                                        )),
+                                        clear_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.search.clear",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(cx),
+                            );
+
+                            out.push(
+                                PropertyGroup::new("Material")
+                                    .options(fret_ui_editor::composites::PropertyGroupOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.material",
+                                        )),
+                                        header_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.material.header",
+                                        )),
+                                        content_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.material.content",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(
+                                        cx,
+                                        |_cx| None,
+                                        move |cx| {
+                                            let fmt = fmt.clone();
+                                            let parse = parse.clone();
+                                            let validate = validate.clone();
+                                            vec![PropertyGrid::new().into_element(
+                                                cx,
+                                                move |cx, row_cx| {
+                                                    let mut rows = Vec::new();
+
+                                                    if show_opacity {
+                                                        let model_for_reset =
+                                                            editor_value_model.clone();
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host.models_mut().update(
+                                                                    &model_for_reset,
+                                                                    |v| *v = 1.0,
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().reset(Some(
+                                                                PropertyRowReset::new(on_reset)
+                                                                    .options(
+                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.drag-value-reset")),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ),
+                                                            )),
+                                                            |cx| cx.text("Opacity"),
+                                                            |cx| {
+                                                                DragValue::new(
+                                                                    editor_value_model.clone(),
+                                                                    fmt.clone(),
+                                                                    parse.clone(),
+                                                                )
+                                                                .validate(Some(validate.clone()))
+                                                                .into_element(cx)
+                                                                .test_id("imui-editor-proof.editor.drag-value-demo")
+                                                            },
+                                                            |cx| {
+                                                                Some(
+                                                                    FieldStatusBadge::new(
+                                                                        FieldStatus::Dirty,
+                                                                    )
+                                                                    .into_element(cx),
+                                                                )
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if show_roughness {
+                                                        let model_for_reset =
+                                                            editor_roughness_model.clone();
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host.models_mut().update(
+                                                                    &model_for_reset,
+                                                                    |v| *v = 0.5,
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().reset(Some(
+                                                                PropertyRowReset::new(on_reset)
+                                                                    .options(
+                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.material.roughness.reset")),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ),
+                                                            )),
+                                                            |cx| cx.text("Roughness"),
+                                                            |cx| {
+                                                                DragValue::new(
+                                                                    editor_roughness_model.clone(),
+                                                                    fmt.clone(),
+                                                                    parse.clone(),
+                                                                )
+                                                                .validate(Some(validate.clone()))
+                                                                .into_element(cx)
+                                                                .test_id("imui-editor-proof.editor.material.roughness")
+                                                            },
+                                                            |cx| {
+                                                                Some(
+                                                                    FieldStatusBadge::new(
+                                                                        FieldStatus::Mixed,
+                                                                    )
+                                                                    .into_element(cx),
+                                                                )
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if show_metallic {
+                                                        let model_for_reset =
+                                                            editor_metallic_model.clone();
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host.models_mut().update(
+                                                                    &model_for_reset,
+                                                                    |v| *v = 0.0,
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().reset(Some(
+                                                                PropertyRowReset::new(on_reset)
+                                                                    .options(
+                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.material.metallic.reset")),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ),
+                                                            )),
+                                                            |cx| cx.text("Metallic"),
+                                                            |cx| {
+                                                                DragValue::new(
+                                                                    editor_metallic_model.clone(),
+                                                                    fmt.clone(),
+                                                                    parse.clone(),
+                                                                )
+                                                                .validate(Some(validate.clone()))
+                                                                .into_element(cx)
+                                                                .test_id("imui-editor-proof.editor.material.metallic")
+                                                            },
+                                                            |cx| {
+                                                                Some(
+                                                                    FieldStatusBadge::new(
+                                                                        FieldStatus::Loading,
+                                                                    )
+                                                                    .into_element(cx),
+                                                                )
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if show_alpha_clip {
+                                                        rows.push(row_cx.row(
+                                                            cx,
+                                                            |cx| cx.text("Alpha clip"),
+                                                            |cx| {
+                                                                Checkbox::new(
+                                                                    editor_alpha_clip_model.clone(),
+                                                                )
+                                                                .options(
+                                                                    fret_ui_editor::controls::CheckboxOptions {
+                                                                        a11y_label: Some(
+                                                                            Arc::from("Alpha clip"),
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    },
+                                                                )
+                                                                .into_element(cx)
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.material.alpha-clip",
+                                                                )
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if show_cast_shadows {
+                                                        rows.push(row_cx.row(
+                                                            cx,
+                                                            |cx| cx.text("Cast shadows"),
+                                                            |cx| {
+                                                                Checkbox::new_optional(
+                                                                    editor_cast_shadows_model.clone(),
+                                                                )
+                                                                .options(
+                                                                    fret_ui_editor::controls::CheckboxOptions {
+                                                                        a11y_label: Some(Arc::from(
+                                                                            "Cast shadows",
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    },
+                                                                )
+                                                                .into_element(cx)
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.material.cast-shadows",
+                                                                )
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if rows.is_empty() {
+                                                        rows.push(
+                                                            cx.text("No matches").test_id(
+                                                                "imui-editor-proof.editor.material.no-matches",
+                                                            ),
+                                                        );
+                                                    }
+
+                                                    rows
+                                                },
+                                            )]
+                                        },
+                                    ),
+                            );
+
+                            out.push(
+                                PropertyGroup::new("Advanced")
+                                    .options(fret_ui_editor::composites::PropertyGroupOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.advanced",
+                                        )),
+                                        header_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.advanced.header",
+                                        )),
+                                        content_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.advanced.content",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(
+                                        cx,
+                                        |_cx| None,
+                                        move |cx| {
+                                            let fmt_i32: fret_ui_editor::controls::NumericFormatFn<i32> =
+                                                Arc::new(|v| Arc::from(format!("{v}")));
+                                            let parse_i32: fret_ui_editor::controls::NumericParseFn<i32> =
+                                                Arc::new(|s| s.trim().parse::<i32>().ok());
+
+                                            vec![PropertyGrid::new().into_element(
+                                                cx,
+                                                move |cx, row_cx| {
+                                                    let mut rows = Vec::new();
+
+                                                    if show_iterations {
+                                                        let model_for_reset =
+                                                            editor_iterations_model.clone();
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host.models_mut().update(
+                                                                    &model_for_reset,
+                                                                    |v| *v = 8,
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(
+                                                            PropertyRow::new()
+                                                                .options(row_cx.row_options.clone())
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(on_reset).options(
+                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.advanced.iterations.reset")),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ),
+                                                                ))
+                                                                .into_element(
+                                                                    cx,
+                                                                    |cx| cx.text("Iterations"),
+                                                                    |cx| {
+                                                                        DragValue::new(
+                                                                            editor_iterations_model.clone(),
+                                                                            fmt_i32.clone(),
+                                                                            parse_i32.clone(),
+                                                                        )
+                                                                        .into_element(cx)
+                                                                        .test_id("imui-editor-proof.editor.advanced.iterations")
+                                                                    },
+                                                                    |cx| {
+                                                                        Some(
+                                                                            FieldStatusBadge::new(FieldStatus::Error(
+                                                                                Arc::from("stub"),
+                                                                            ))
+                                                                            .into_element(cx),
+                                                                        )
+                                                                    },
+                                                                ),
+                                                        );
+                                                    }
+
+                                                    if rows.is_empty() {
+                                                        rows.push(
+                                                            cx.text("No matches").test_id(
+                                                                "imui-editor-proof.editor.advanced.no-matches",
+                                                            ),
+                                                        );
+                                                    }
+
+                                                    rows
+                                                },
+                                            )]
+                                        },
+                                    ),
+                            );
+
+                            if !q.is_empty() && !any_match {
+                                out.push(
+                                    cx.text("No matches")
+                                        .test_id("imui-editor-proof.editor.no-matches"),
+                                );
+                            }
+
+                            out
+                        },
+                    )]
+                });
+                ui.separator();
+
                 fret_docking::imui::dock_space_with(
                     ui,
                     fret_docking::imui::DockSpaceImUiOptions {
@@ -217,6 +642,142 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
         .size_full();
         ui.add_ui(root);
     })
+}
+
+fn editor_demo_value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    let model = cx.with_state(|| None::<Model<f64>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0.8_f64);
+            cx.with_state(
+                || None::<Model<f64>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_roughness_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    let model = cx.with_state(|| None::<Model<f64>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0.35_f64);
+            cx.with_state(
+                || None::<Model<f64>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_metallic_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    let model = cx.with_state(|| None::<Model<f64>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0.1_f64);
+            cx.with_state(
+                || None::<Model<f64>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_alpha_clip_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    let model = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(
+                || None::<Model<bool>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_cast_shadows_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Option<bool>> {
+    let model = cx.with_state(|| None::<Model<Option<bool>>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            // Start in "mixed/indeterminate" to exercise tri-state checkbox rendering.
+            let model = cx.app.models_mut().insert(None::<bool>);
+            cx.with_state(
+                || None::<Model<Option<bool>>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_iterations_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<i32> {
+    let model = cx.with_state(|| None::<Model<i32>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(16_i32);
+            cx.with_state(
+                || None::<Model<i32>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_search_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    let model = cx.with_state(|| None::<Model<String>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(
+                || None::<Model<String>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
 }
 
 fn install_dock_panel_registry(app: &mut App) {

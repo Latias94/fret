@@ -25,6 +25,7 @@ fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
 fret-docking = { path = "../../ecosystem/fret-docking", features = ["imui"] }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", features = ["state-query"] }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["imui"] }
+fret-ui-editor = { path = "../../ecosystem/fret-ui-editor" }
 fret-imui = { path = "../../ecosystem/fret-imui" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-plot = { path = "../../ecosystem/fret-plot" }
