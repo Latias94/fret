@@ -254,3 +254,34 @@ Legend:
 | `Paint::Material` (params-only) | Must | May | May | Capability-gated registration (ADR 0235/0122). |
 | Sampled materials (catalog textures) | May | May | May | Fixed binding shapes; registration fails deterministically if unsupported (ADR 0242). |
 | Telemetry / degradations reporting | Must | Must | Must | Budgets + degradations must be observable (ADR 0118/0036). |
+
+---
+
+## Appendix A — Invariants checklist (preflight)
+
+Use this checklist before starting any renderer-internal refactor step.
+
+### A1) Semantic invariants (never break)
+
+- [ ] Scene op order remains authoritative (no cross-kind reordering; no reordering across sequence points).
+- [ ] All stacks preserve capture semantics (clip entries captured at push; later transforms do not retroactively affect clips).
+- [ ] Computation `bounds` never act as implicit clips (outside bounds coverage is identity; ADR 0273).
+- [ ] Masks remain paint-only by default (no accidental “mask affects hit-test” regression; ADR 0239/0273).
+- [ ] Degradation remains deterministic under budget/capability pressure (no backend-specific “best effort” divergence).
+
+### A2) Performance invariants (keep budgets honest)
+
+- [ ] Any offscreen/intermediate allocation is bounded by explicit computation `bounds` and participates in budgets.
+- [ ] Any new state surface is bounded (few enums, no unbounded sampler/material combinations).
+- [ ] Any new slow path has a fast path preserved (e.g. rect clip stays scissor; avoid per-pixel eval for common cases).
+
+### A3) Portability invariants (wasm/mobile first-class)
+
+- [ ] Capability gating and fallback behavior are documented (ADR + workstream capability matrix update when decided).
+- [ ] Missing resources degrade deterministically (e.g. missing images/materials → no-op/solid fallback), not per-backend.
+
+### A4) Guardrails (always run)
+
+- [ ] `python3 tools/check_layering.py` passes.
+- [ ] Renderer conformance anchors still pass (workstream fixed scene set).
+- [ ] Record any new degradations/telemetry counters in the milestone log (peak bytes, pass counts, degradations applied).

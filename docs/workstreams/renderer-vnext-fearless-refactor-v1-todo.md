@@ -19,7 +19,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M0 — Design baseline
 
-- [ ] REN-VNEXT-docs-001 Add a short “invariants checklist” appendix for renderer refactors (what must never change).
+- [x] REN-VNEXT-docs-001 Add a short “invariants checklist” appendix for renderer refactors (what must never change).
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix A).
 - [x] REN-VNEXT-adr-001 Draft ADR: isolated opacity / saveLayer(alpha) (group alpha).
 - [x] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
 - [x] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).

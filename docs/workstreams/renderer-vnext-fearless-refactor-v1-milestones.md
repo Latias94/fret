@@ -28,6 +28,7 @@ Exit criteria:
 
 - The “invariants list” is explicit and reviewed (no hidden assumptions).
 - The baseline gate set and baseline snapshot are reproducible by another contributor.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix A — invariants checklist).
 
 Baseline record (fill in; keep this section short):
 
