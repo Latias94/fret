@@ -47,7 +47,9 @@ pub(crate) fn cmd_inspect(
     inspect_consume_clicks: Option<bool>,
 ) -> Result<(), String> {
     let Some(action) = rest.first().cloned() else {
-        return Err("missing inspect action (try: fretboard diag inspect on|off|toggle|status)".to_string());
+        return Err(
+            "missing inspect action (try: fretboard diag inspect on|off|toggle|status)".to_string(),
+        );
     };
     if rest.len() != 1 {
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
@@ -67,7 +69,10 @@ pub(crate) fn cmd_inspect(
                 "inspect_path": inspect_path.display().to_string(),
                 "inspect_trigger_path": inspect_trigger_path.display().to_string(),
             });
-            println!("{}", serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string()));
+            println!(
+                "{}",
+                serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string())
+            );
             Ok(())
         }
         "on" | "off" | "toggle" => {
