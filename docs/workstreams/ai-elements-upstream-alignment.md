@@ -1,7 +1,7 @@
 ---
 title: AI Elements upstream alignment (inventory + mapping)
 status: active
-date: 2026-02-11
+date: 2026-02-12
 scope: ecosystem/fret-ui-ai, repo-ref/ai-elements
 ---
 
@@ -83,17 +83,25 @@ Legend:
 | `task.tsx` | `fret-ui-ai` | `task.rs` | Ported (prototype) | Collapsible task surface (trigger + indented content) for “search/plan step” UI. |
 | `audio-player.tsx` | `fret-ui-ai` | `audio_player.rs` | Ported (prototype) | UI-only chrome port (controls + time/volume sliders). Playback remains app-owned. |
 | `transcription.tsx` | `fret-ui-ai` | `transcription.rs` | Ported (prototype) | Segment surface + optional seek seam (`on_seek`). Playback timing remains app-owned. |
+| `jsx-preview.tsx` | n/a | n/a | N/A | Upstream is web-only (JSX render preview). In Fret, prefer app-owned webview previews if needed. |
+| `agent.tsx` | `fret-ui-ai` | `agent.rs` | Ported (prototype) | UI-only chrome (instructions/tools/output schema). Add gates: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
+| `persona.tsx` | `fret-ui-ai` | `persona.rs` | Ported (prototype) | UI-only placeholder (upstream uses Rive/webgl2). Add gates: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
+| `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Ported (prototype) | UI-only chrome (collapsible + tabs). Add gates: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
+| `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
+| `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
+| `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
+| `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` | Ported (prototype) | UI-only canvas host (editor-like wheel pan + ctrl/cmd wheel zoom via `fret-canvas/ui`). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`. |
+| `node.tsx` | `fret-ui-ai` (chrome) | `workflow/node.rs` | Ported (prototype) | UI-only node chrome + handle indicators. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
+| `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` | Ported (prototype) | UI-only edge chrome (temporary + animated). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
+| `panel.tsx` | `fret-ui-ai` (chrome) | `workflow/panel.rs` | Ported (prototype) | UI-only panel chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
+| `toolbar.tsx` | `fret-ui-ai` (chrome) | `workflow/toolbar.rs` | Ported (prototype) | UI-only toolbar chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
+| `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` | Ported (prototype) | UI-only controls chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
+| `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` | Ported (prototype) | UI-only connection line chrome. Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 
 ## Known upstream files not yet ported
 
-As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` ports yet:
-
-- `agent.tsx`
-- `jsx-preview.tsx` (likely out of scope for Rust)
-- `persona.tsx`
-- `sandbox.tsx`
-- Workflow wrappers: `canvas.tsx`, `node.tsx`, `edge.tsx`, `panel.tsx`, `toolbar.tsx`, `controls.tsx`, `connection.tsx`
-- Voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `voice-selector.tsx`
+As of the snapshot above, **all** upstream `.tsx` surfaces are accounted for in `fret-ui-ai`.
+ 
 
 ## Regenerating this diff (developer note)
 

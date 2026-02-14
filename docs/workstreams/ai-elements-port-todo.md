@@ -22,6 +22,58 @@ Each TODO is labeled:
 
 ## Milestones (make progress measurable)
 
+## Next up (recommended priority)
+
+- [x] AIEL-MVP6-closure-001 Port `agent` / `persona` / `sandbox` as UI-first shells (seams only; effects app-owned).
+- [x] AIEL-MVP6-closure-002 Port `mic-selector` / `speech-input` / `voice-selector` as UI-only chrome + explicit seams.
+- [x] AIEL-MVP6-closure-003 Port workflow wrappers as chrome-only wrappers over existing crates (no new engines).
+  - Done: `panel.tsx` → `workflow/panel.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
+  - Done: `toolbar.tsx` → `workflow/toolbar.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
+  - Done: `controls.tsx` → `workflow/controls.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
+  - Done: `node.tsx` → `workflow/node.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
+  - Done: `edge.tsx` → `workflow/edge.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
+  - Done: `connection.tsx` → `workflow/connection.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
+  - Done: `canvas.tsx` → `workflow/canvas.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
+- [x] AIEL-MVP6-closure-004 Add UI Gallery demos + at least one diag gate per new surface family.
+- [x] AIEL-MVP7-workflow-001 Add an engine-backed workflow demo (reuse `fret-node`) gated via diag.
+  - Demo: `apps/fret-ui-gallery` page `ai_workflow_node_graph_demo`
+  - Gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
+
+## Post-port (optional): XYFlow parity gaps
+
+AI Elements is now fully accounted for. If we want an XYFlow/ReactFlow-like workflow editor
+experience (nodes as element subtrees, marquee selection, input filtering), track it separately:
+
+- [x] AIEL-FLOW-001 Land a declarative “world layer” substrate for canvas-space element subtrees.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
+  - Status: done for v1 substrate (pan/zoom + nodes as element subtrees + basic wiring).
+  - Known gaps: interaction glue remains app-owned (node drag/connect-drag/selection model updates). See
+    `docs/workstreams/xyflow-gap-analysis.md`.
+  - Workstream: `docs/workstreams/canvas-world-layer-v1.md`
+  - TODO tracker: `docs/workstreams/canvas-world-layer-v1-todo.md`
+- [x] AIEL-FLOW-002 Add `fret-canvas/ui` recipes for selection-on-drag + filter exemptions (noWheel/noPan equivalents).
+  - Input exemptions: `ecosystem/fret-canvas/src/ui/input_exempt.rs` (`canvas_input_exempt_region`)
+  - Marquee recipe: `ecosystem/fret-canvas/src/ui/pan_zoom.rs` (`editor_pan_zoom_canvas_surface_panel_with_marquee_selection`)
+- [x] AIEL-FLOW-003 Add dash-pattern support for stroked paths (temporary edges).
+  - Geometry helper: `ecosystem/fret-canvas/src/wires.rs` (`dash_polyline_segments`)
+  - Applied to AI Elements workflow temporary edge: `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs`
+- [x] AIEL-FLOW-004 Add marker end caps (arrowheads) helpers for workflow edges.
+  - Geometry helper: `ecosystem/fret-canvas/src/wires.rs` (`arrowhead_triangle`)
+  - Applied to `WorkflowEdgeAnimated`: `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs`
+- [x] AIEL-FLOW-005 Add a bounds reporting seam for world-layer nodes (fit view + selection queries).
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
+  - Anchor: `docs/workstreams/xyflow-gap-analysis.md` (Gap F)
+  - Workstream: `docs/workstreams/canvas-world-layer-v1.md` (M2)
+- [x] AIEL-FLOW-006 Decide/implement selection-on-drag integration for world-layer nodes.
+  - Decision: provide a world-layer wrapper so marquee chrome renders above node element subtrees.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`OnCanvasMarqueeCommit`)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (`drag_pointer`)
+  - Note: selection model updates remain app-owned; the wrapper exposes the canonical canvas-space rect.
+  - Workstream: `docs/workstreams/canvas-world-layer-v1.md` (M2)
+
 ### M0 — Foundations (composition + gates)
 
 - [x] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (elements + model).
@@ -54,7 +106,7 @@ Status legend:
 | `suggestion` | Prototype | `fret-ui-ai` | `Suggestions` + `Suggestion` surfaces exist; UI Gallery demo + diag gate exist. |
 | `queue` | Prototype | `fret-ui-ai` | Queue surfaces + UI Gallery demo + diag gate exist; keep iterating on styling parity. |
 | `model-selector` | Prototype | `fret-ui-ai` | Thin wrappers + demo exist (`apps/fret-ui-gallery` `ai_model_selector_demo`) and gated via `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`. Provider logos are placeholders (no remote fetch). |
-| `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
+| `persona` | Prototype | `fret-ui-ai` | UI-only placeholder (upstream uses Rive/webgl2). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
 | `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
@@ -77,10 +129,10 @@ Status legend:
 | `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
 | `terminal` | Prototype | `fret-ui-ai` | Viewer-only v1 (`Terminal`): output text + copy/clear + auto-scroll; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`. ANSI formatting is a future enhancement (keep deps feature-gated). |
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
-| `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
+| `jsx-preview` | N/A | n/a | Upstream is web-only (JSX render preview). Apps can use a webview-based preview instead. |
 | `web-preview` | Prototype | `fret-ui-ai` | Chrome port exists (`WebPreview*`) with UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded native webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry` (see `docs/workstreams/webview-wry-v1.md`), with additional gates: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-nav.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console-clear.json`. |
-| `agent` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
-| `sandbox` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `agent` | Prototype | `fret-ui-ai` | UI-only chrome (instructions/tools/output schema). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
+| `sandbox` | Prototype | `fret-ui-ai` | UI-only chrome (collapsible + tabs). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
 | `package-info` | Prototype | `fret-ui-ai` | `PackageInfo*` surfaces + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`. |
 | `environment-variables` | Prototype | `fret-ui-ai` | Ported as `EnvironmentVariables*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`). |
 
@@ -95,7 +147,7 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Not started | `fret-ui-ai` (wrappers) | Prefer “styling recipes” over new engines; reuse `fret-node`/`fret-canvas`. |
+| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Prototype | `fret-ui-ai` (wrappers) | Chrome-only wrappers are ported + gated on `PAGE_AI_WORKFLOW_CHROME_DEMO`. An engine-backed reference integration exists in UI Gallery (`ai_workflow_node_graph_demo`) to validate the recommended layering (`fret-node` engine + `fret-ui-ai` chrome). |
 
 ### Voice
 
@@ -103,7 +155,9 @@ Status legend:
 | --- | --- | --- | --- |
 | `audio-player` | Prototype | `fret-ui-ai` | UI-only chrome port (`AudioPlayer*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`. Playback remains app-owned. |
 | `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
-| `mic-selector` / `speech-input` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
+| `mic-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`MicSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-mic-selector-demo-select.json`. Device enumeration remains app-owned. |
+| `speech-input` | Prototype | `fret-ui-ai` | UI-only chrome port (`SpeechInput`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-speech-input-demo-toggle.json`. Capture + ASR backends remain app-owned. |
+| `voice-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`VoiceSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-voice-selector-demo-select.json`. Voice inventory + preview playback remain app-owned. |
 
 ### M1 — Chat surfaces (usable app kit)
 
@@ -172,6 +226,15 @@ Existing gates (UI Gallery `ai_stack_trace_demo`):
 Existing gates (UI Gallery `ai_stack_trace_large_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+
+Existing gates (UI Gallery workflow):
+
+- `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
 
 Existing gates (UI Gallery `ai_test_results_demo`):
 
