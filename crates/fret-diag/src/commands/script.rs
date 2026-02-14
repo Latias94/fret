@@ -85,7 +85,10 @@ pub(crate) fn cmd_script(
 
             let mut any_changed = false;
             for src in scripts {
-                let NormalizedScript { normalized, changed } = normalize_script_from_path(&src)?;
+                let NormalizedScript {
+                    normalized,
+                    changed,
+                } = normalize_script_from_path(&src)?;
 
                 if script_tool_check {
                     if changed {
@@ -116,7 +119,9 @@ pub(crate) fn cmd_script(
         }
         "validate" => {
             if script_tool_check || script_tool_write {
-                return Err("--check/--write are not supported with `diag script validate`".to_string());
+                return Err(
+                    "--check/--write are not supported with `diag script validate`".to_string(),
+                );
             }
 
             let inputs: Vec<String> = rest[1..].iter().cloned().collect();
@@ -139,7 +144,8 @@ pub(crate) fn cmd_script(
             if let Some(parent) = out.parent() {
                 std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
             }
-            let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
             std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
 
             if stats_json {
@@ -178,7 +184,8 @@ pub(crate) fn cmd_script(
             if let Some(parent) = out.parent() {
                 std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
             }
-            let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
             std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
 
             if stats_json {
@@ -194,11 +201,17 @@ pub(crate) fn cmd_script(
         }
         "shrink" => {
             if script_tool_check || script_tool_write || script_tool_check_out.is_some() {
-                return Err("--check/--write/--check-out are not supported with `diag script shrink`".to_string());
+                return Err(
+                    "--check/--write/--check-out are not supported with `diag script shrink`"
+                        .to_string(),
+                );
             }
             let inputs: Vec<String> = rest[1..].iter().cloned().collect();
             if inputs.is_empty() {
-                return Err("missing script path (try: fretboard diag script shrink ./script.json)".to_string());
+                return Err(
+                    "missing script path (try: fretboard diag script shrink ./script.json)"
+                        .to_string(),
+                );
             }
 
             #[derive(Debug, Clone)]
@@ -355,7 +368,9 @@ pub(crate) fn cmd_script(
             let desired_reason_code = shrink_match_reason_code
                 .as_deref()
                 .or(baseline.reason_code.as_deref());
-            let desired_reason = shrink_match_reason.as_deref().or(baseline.reason.as_deref());
+            let desired_reason = shrink_match_reason
+                .as_deref()
+                .or(baseline.reason.as_deref());
 
             let mut attempts_total: u64 = 0;
             let mut attempts_errors: u64 = 0;
@@ -364,11 +379,8 @@ pub(crate) fn cmd_script(
             let min_steps = usize::try_from(shrink_min_steps)
                 .unwrap_or(usize::MAX)
                 .min(total_steps);
-            let (keep, reductions, iters) = shrink::ddmin_keep_indices(
-                total_steps,
-                min_steps,
-                shrink_max_iters,
-                |keep| {
+            let (keep, reductions, iters) =
+                shrink::ddmin_keep_indices(total_steps, min_steps, shrink_max_iters, |keep| {
                     attempts_total += 1;
                     let candidate = script.keep_steps(keep);
                     let pretty = match candidate.to_pretty_json() {
@@ -394,15 +406,19 @@ pub(crate) fn cmd_script(
                         timeout_ms,
                         poll_ms,
                     ) {
-                        Ok(s) => matches_failure(&s, shrink_any_fail, desired_reason_code, desired_reason),
+                        Ok(s) => matches_failure(
+                            &s,
+                            shrink_any_fail,
+                            desired_reason_code,
+                            desired_reason,
+                        ),
                         Err(err) => {
                             attempts_errors += 1;
                             last_error = Some(err);
                             false
                         }
                     }
-                },
-            );
+                });
 
             let candidate = script.keep_steps(&keep);
             let pretty = candidate.to_pretty_json()?;
@@ -423,7 +439,12 @@ pub(crate) fn cmd_script(
 
             stop_launched_demo(&mut child, exit_path, poll_ms);
 
-            let ok = matches_failure(&final_result, shrink_any_fail, desired_reason_code, desired_reason);
+            let ok = matches_failure(
+                &final_result,
+                shrink_any_fail,
+                desired_reason_code,
+                desired_reason,
+            );
             if !ok {
                 return Err(format!(
                     "minimized script does not reproduce baseline failure (stage={:?} reason_code={:?} reason={:?})",
@@ -490,7 +511,8 @@ pub(crate) fn cmd_script(
             if let Some(parent) = summary_path.parent() {
                 std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
             }
-            let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
             std::fs::write(&summary_path, pretty.as_bytes()).map_err(|e| e.to_string())?;
 
             if stats_json {
@@ -502,7 +524,9 @@ pub(crate) fn cmd_script(
         }
         _ => {
             let Some(src) = rest.first().cloned() else {
-                return Err("missing script path (try: fretboard diag script ./script.json)".to_string());
+                return Err(
+                    "missing script path (try: fretboard diag script ./script.json)".to_string(),
+                );
             };
             if rest.len() != 1 {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
@@ -516,4 +540,3 @@ pub(crate) fn cmd_script(
         }
     }
 }
-

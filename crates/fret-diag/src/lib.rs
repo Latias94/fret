@@ -1892,15 +1892,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
-        "path" => {
-            commands::session::cmd_path(&rest, pack_after_run, &resolved_trigger_path)
-        }
-        "poke" => {
-            commands::session::cmd_poke(&rest, pack_after_run, &resolved_trigger_path)
-        }
-        "latest" => {
-            commands::session::cmd_latest(&rest, pack_after_run, &resolved_out_dir)
-        }
+        "path" => commands::session::cmd_path(&rest, pack_after_run, &resolved_trigger_path),
+        "poke" => commands::session::cmd_poke(&rest, pack_after_run, &resolved_trigger_path),
+        "latest" => commands::session::cmd_latest(&rest, pack_after_run, &resolved_out_dir),
         "pack" => commands::artifacts::cmd_pack(
             &rest,
             &workspace_root,
@@ -4500,6 +4494,12 @@ See: `docs/tracy.md`.\n";
                                 &workspace_root,
                                 PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
                                 ),
                             ),
                             resolve_path(
