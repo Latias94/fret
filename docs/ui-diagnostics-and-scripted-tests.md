@@ -409,6 +409,8 @@ Core:
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
+  - When an env var is set, it overrides the config file (compat-first manual escape hatch).
+  - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
     (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
