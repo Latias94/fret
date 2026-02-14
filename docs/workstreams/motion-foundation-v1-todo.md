@@ -96,6 +96,12 @@ Per-recipe tracking (pilot follow-ups):
       overflow clipping (CSS-like), rather than FLIP.
   - Evidence:
     - `ecosystem/fret-ui-shadcn/src/sidebar.rs` (menu button label opacity; no branch pop)
+- [x] MF-MOTION-pilot-035 Accordion/collapsible: token-driven measured-height toggle (duration + easing) with a fixed-delta gate.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/accordion.rs`
+    - `ecosystem/fret-ui-shadcn/src/collapsible.rs`
+    - `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
+    - `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json`
 - [x] MF-MOTION-pilot-020 Toast fixed-delta interrupt coverage.
   - Evidence:
     - `tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json`

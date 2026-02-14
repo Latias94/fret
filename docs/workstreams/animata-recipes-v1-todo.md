@@ -43,6 +43,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json`
   - Evidence:
     - `tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json`
+    - `ecosystem/fret-ui-shadcn/src/accordion.rs`
+    - `ecosystem/fret-ui-shadcn/src/collapsible.rs`
+    - `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
 
 - [x] AR-GATE-002 Add a fixed-delta diag gate for NavigationMenu viewport motion (size interpolation + placement stability).
   - Upstream references:
