@@ -72,6 +72,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (section "Animata: Expandable")
 
+- [x] AR-GATE-005 Add a fixed-delta diag gate for Sonner `stack.shift` staggered reflow (non-expanded).
+  - Goal:
+    - When a new toast enters, existing stack items shift with a small stagger (closer to Sonner/web feel).
+    - Scale changes should not “jump” when indices change.
+  - Output:
+    - `tools/diag-scripts/ui-gallery-sonner-stack-shift-stagger-fixed-frame-delta.json`
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`toast_stack_shift_output`)
+    - `tools/diag-scripts/ui-gallery-sonner-stack-shift-stagger-fixed-frame-delta.json`
+
 ## P1 — Optional: bring Animata “blurred backdrop” into a reusable recipe
 
 - [x] AR-OVERLAY-010 Add a dialog variant or a separate recipe that uses backdrop blur (reduce-transparency aware).
