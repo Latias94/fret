@@ -169,6 +169,14 @@ impl Renderer {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.render_space_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                    }),
+                },
             ],
         });
 
@@ -266,6 +274,14 @@ impl Renderer {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.render_space_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                    }),
+                },
             ],
         });
 
@@ -344,6 +360,14 @@ impl Renderer {
                 wgpu::BindGroupEntry {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.render_space_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                    }),
                 },
             ],
         });
