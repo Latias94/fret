@@ -82,7 +82,7 @@ Usage:
   fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--repeat <n>] [--warmup-frames <n>] [--trace] [--check-perf-hints] [--check-perf-hints-min-severity <info|warn|error>] [--check-perf-hints-deny <codes>] [--max-top-total-us <n>] [--max-top-layout-us <n>] [--max-top-solve-us <n>] [--max-pointer-move-dispatch-us <n>] [--max-pointer-move-hit-test-us <n>] [--max-pointer-move-global-changes <n>] [--min-run-paint-cache-hit-test-only-replay-allowed-max <n>] [--max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max <n>] [--perf-baseline <path>] [--perf-baseline-out <path>] [--perf-baseline-headroom-pct <n>] [--perf-baseline-seed-preset <path>...] [--perf-baseline-seed <scope@metric=max|p90|p95>...] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>] [--check-stale-scene <test_id>] [--check-stale-scene-eps <px>] [--check-pixels-changed <test_id>] [--check-wheel-scroll <test_id>] [--check-prepaint-actions-min <n>] [--check-chart-sampling-window-shifts-min <n>] [--check-node-graph-cull-window-shifts-min <n>] [--check-node-graph-cull-window-shifts-max <n>] [--check-vlist-visible-range-refreshes-min <n>] [--check-vlist-visible-range-refreshes-max <n>] [--check-vlist-window-shifts-explainable] [--check-vlist-window-shifts-non-retained-max <n>] [--check-vlist-window-shifts-prefetch-max <n>] [--check-vlist-window-shifts-escape-max <n>] [--check-drag-cache-root-paint-only <test_id>] [--check-hover-layout] [--check-hover-layout-max <n>] [--check-gc-sweep-liveness] [--check-view-cache-reuse-min <n>] [--check-view-cache-reuse-stable-min <n>] [--check-overlay-synthesis-min <n>] [--check-viewport-input-min <n>] [--check-dock-drag-min <n>] [--check-viewport-capture-min <n>] [--check-retained-vlist-reconcile-no-notify <n>] [--check-retained-vlist-attach-detach-max <n>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard list native-demos
   fretboard list web-demos
-  fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
+  fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-reload] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev web [--port <port>] [--demo <demo> | --choose]
@@ -100,7 +100,8 @@ Examples:
   fretboard dev native --bin hotpatch_smoke_demo
   fretboard dev native --choose
   fretboard dev native --bin image_upload_demo -- --help
-  fretboard dev native --hotpatch --choose   # file-triggered runner reload (default: `.fret/hotpatch.touch`)
+  fretboard dev native --hotpatch --choose   # hotpatch (prefers `dx serve --hotpatch` when `dx` is available; otherwise falls back to reload-boundary mode)
+  fretboard dev native --hotpatch-reload --choose   # file-triggered runner reload boundary (default: `.fret/hotpatch.touch`)
   fretboard hotpatch poke                   # updates `.fret/hotpatch.touch` (triggers a reload)
   fretboard hotpatch watch                  # polls workspace sources and auto-pokes on change
   fretboard diag poke                      # touches `target/fret-diag/trigger.touch` (dumps diagnostics when enabled)
@@ -140,6 +141,7 @@ Examples:
   fretboard diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
+  fretboard dev native --bin hotpatch_smoke_demo --hotpatch
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx
   fretboard dev web --demo plot_demo
 "#

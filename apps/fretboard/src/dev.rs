@@ -79,6 +79,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let mut bin: Option<String> = None;
     let mut choose = false;
     let mut hotpatch = false;
+    let mut hotpatch_reload_only = false;
     let mut hotpatch_trigger_path: Option<String> = None;
     let mut hotpatch_poll_ms: Option<u64> = None;
     let mut hotpatch_devserver_ws: Option<String> = None;
@@ -98,6 +99,10 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             }
             "--choose" => choose = true,
             "--hotpatch" => hotpatch = true,
+            "--hotpatch-reload" => {
+                hotpatch = true;
+                hotpatch_reload_only = true;
+            }
             "--hotpatch-trigger-path" => {
                 hotpatch_trigger_path = Some(
                     it.next()
@@ -161,13 +166,25 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         (None, false) => "todo_demo".to_string(),
     };
 
+    let dx_available = dx_available();
+    let hotpatch_auto_uses_dx = hotpatch
+        && !hotpatch_reload_only
+        && hotpatch_devserver_ws.is_none()
+        && dx_available
+        && is_hotpatch_ready_native_demo(&bin);
+
     if (hotpatch || hotpatch_devserver_ws.is_some()) && !is_hotpatch_ready_native_demo(&bin) {
         eprintln!(
             "warning: `{bin}` is not a hotpatch-ready demo. Hotpatch will only trigger a safe runner reload boundary.\n  try: `--bin todo_demo` or `--bin assets_demo` for the FnDriver/UiAppDriver hotpatch path"
         );
     }
 
-    if hotpatch_dx {
+    if hotpatch_dx || hotpatch_auto_uses_dx {
+        if hotpatch_auto_uses_dx {
+            eprintln!("Hotpatch: mode=dx (auto)");
+        } else {
+            eprintln!("Hotpatch: mode=dx");
+        }
         return dev_native_hotpatch_dx(
             &root,
             &bin,
@@ -192,6 +209,18 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         cmd.args(["--features", &cargo_features]);
     }
     if hotpatch {
+        eprintln!("Hotpatch: mode=reload-boundary");
+        if hotpatch_reload_only {
+            eprintln!("  note: forced reload-boundary mode (--hotpatch-reload)");
+        } else if dx_available {
+            eprintln!(
+                "  note: dx (dioxus-cli) is available, but this run is using reload-boundary mode"
+            );
+            eprintln!(
+                "    tip: omit --hotpatch-reload or use --hotpatch to run in dx hotpatch mode"
+            );
+        }
+
         let trigger_path = hotpatch_trigger_path
             .as_deref()
             .unwrap_or(".fret/hotpatch.touch");
@@ -213,6 +242,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         }
     }
     if let Some(ws) = hotpatch_devserver_ws.as_deref() {
+        eprintln!("Hotpatch: mode=devserver");
         eprintln!("Hotpatch(devserver): enabled");
         eprintln!("  ws: {}", ws);
         eprintln!(
@@ -257,6 +287,15 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         return Err(format!("cargo exited with status: {status}"));
     }
     Ok(())
+}
+
+fn dx_available() -> bool {
+    let out = Command::new("dx")
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+    out.is_ok_and(|s| s.success())
 }
 
 fn is_hotpatch_ready_native_demo(name: &str) -> bool {

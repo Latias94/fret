@@ -230,12 +230,16 @@ This repository ships a small dev helper CLI (`apps/fretboard`) that can run dem
   - Auto trigger: `fretboard hotpatch watch` (polls workspace sources and pokes on change)
 - Devserver websocket (Dioxus-style):
   - Start: `fretboard dev native --bin todo_demo --hotpatch-devserver ws://127.0.0.1:8080/_dioxus`
-  - Start (end-to-end patches via dioxus-cli): `fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx`
+  - Start (recommended, end-to-end patches via dioxus-cli): `fretboard dev native --bin hotpatch_smoke_demo --hotpatch`
+  - Start (explicit dioxus-cli wrapper): `fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx`
 
 Important:
 
-- `--hotpatch` (file-trigger) only triggers a **safe hot-reload boundary** in the runner. It does not compile or
-  deliver Subsecond patches by itself.
+- `--hotpatch` is the recommended dev-loop flag:
+  - If `dx` (dioxus-cli) is available, it runs `dx serve --hotpatch` and enables end-to-end Subsecond patch delivery.
+  - Otherwise, it falls back to a **safe hot-reload boundary** in the runner (file-trigger) and does not compile or
+    deliver Subsecond patches by itself.
+- `--hotpatch-reload` forces file-triggered **runner reload boundary** mode (never runs `dx`).
 - Subsecond patches take effect only for **function-pointer based entry points** that are called through the Subsecond
   jump table (ADR 0105). In this workspace, the recommended hotpatch-ready path is the `FnDriver`/`UiAppDriver` based
   demos (e.g. `todo_demo`, `assets_demo`). Older demos that implement `WinitAppDriver` directly are not guaranteed to
