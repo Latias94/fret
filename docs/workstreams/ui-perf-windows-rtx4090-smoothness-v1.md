@@ -39,9 +39,9 @@ Recommended env (avoid extra I/O + keep cached rendering on):
 
 P0 commands:
 
-- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 
 ## Failure triage (when a gate fails)
 
