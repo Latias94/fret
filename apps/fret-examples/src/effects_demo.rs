@@ -693,6 +693,7 @@ impl WinitAppDriver for EffectsDemoDriver {
                     max_width: Some(Px(w - pad * 2.0)),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor,
                 };
 

@@ -332,30 +332,35 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let constraints_y = TextConstraints {
             max_width: Some(layout.y_axis_left.size.width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let constraints_y2 = TextConstraints {
             max_width: Some(layout.y_axis_right.size.width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let constraints_y3 = TextConstraints {
             max_width: Some(layout.y_axis_right2.size.width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let constraints_y4 = TextConstraints {
             max_width: Some(layout.y_axis_right3.size.width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
 
@@ -735,6 +740,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
 

@@ -511,6 +511,7 @@ fn todo_row(
         } else {
             "foreground"
         })),
+        align: fret_core::TextAlign::Start,
         wrap: TextWrap::None,
         overflow: TextOverflow::Ellipsis,
     });
