@@ -76,6 +76,10 @@ impl Renderer {
             intermediate_pool_evictions: self.perf.intermediate_pool_evictions,
             intermediate_pool_free_bytes: self.perf.intermediate_pool_free_bytes,
             intermediate_pool_free_textures: self.perf.intermediate_pool_free_textures,
+            render_plan_estimated_peak_intermediate_bytes: self
+                .perf
+                .render_plan_estimated_peak_intermediate_bytes,
+            render_plan_degradations: self.perf.render_plan_degradations,
             draw_calls: self.perf.draw_calls,
             quad_draw_calls: self.perf.quad_draw_calls,
             viewport_draw_calls: self.perf.viewport_draw_calls,

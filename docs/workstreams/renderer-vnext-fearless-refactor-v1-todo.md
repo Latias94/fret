@@ -35,6 +35,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] REN-VNEXT-plan-002 Move budget/degradation decisions into plan compilation (deterministic ordering).
   - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.2.1–3.2.4).
 - [ ] REN-VNEXT-plan-003 Add telemetry hooks: per-window intermediate peak bytes and degradations applied.
+  - Evidence (partial): `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanCompileStats`, `RenderPlanDegradation`),
+    `crates/fret-render-wgpu/src/renderer/types.rs` (`RenderPerfSnapshot` fields),
+    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (plumbs plan stats into perf),
+    `crates/fret-render-wgpu/src/renderer/config.rs` (perf snapshot output).
 - [ ] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
 
 ## M2 — Isolated opacity (saveLayerAlpha)

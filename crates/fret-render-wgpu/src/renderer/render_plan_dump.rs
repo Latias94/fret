@@ -1,5 +1,6 @@
 use super::render_plan::{
-    BlurAxis, DebugPostprocess, MaskRef, PlanTarget, RenderPlan, RenderPlanPass, ScaleMode,
+    BlurAxis, DebugPostprocess, MaskRef, PlanTarget, RenderPlan, RenderPlanDegradation,
+    RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass, ScaleMode,
 };
 use super::{EffectMarker, EffectMarkerKind, ScissorRect};
 
@@ -488,7 +489,36 @@ struct RenderPlanJsonDump {
     ordered_draws_len: usize,
     effect_markers: Vec<JsonDumpEffectMarker>,
     pass_counts: JsonDumpCounts,
+    estimated_peak_intermediate_bytes: u64,
+    degradations: Vec<JsonDumpDegradation>,
     passes: Vec<JsonDumpPass>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpDegradation {
+    draw_ix: usize,
+    kind: String,
+    reason: String,
+}
+
+fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
+    let kind = match d.kind {
+        RenderPlanDegradationKind::BackdropEffectNoOp => "BackdropEffectNoOp",
+        RenderPlanDegradationKind::FilterContentDisabled => "FilterContentDisabled",
+        RenderPlanDegradationKind::ClipPathDisabled => "ClipPathDisabled",
+        RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver => {
+            "CompositeGroupBlendDegradedToOver"
+        }
+    };
+    let reason = match d.reason {
+        RenderPlanDegradationReason::Budget => "Budget",
+        RenderPlanDegradationReason::TargetExhausted => "TargetExhausted",
+    };
+    JsonDumpDegradation {
+        draw_ix: d.draw_ix,
+        kind: kind.to_string(),
+        reason: reason.to_string(),
+    }
 }
 
 fn parse_env_u64(name: &str) -> Option<u64> {
@@ -548,7 +578,7 @@ pub(super) fn maybe_dump_render_plan_json(
     let _ = std::fs::create_dir_all(&dir);
 
     let dump = RenderPlanJsonDump {
-        schema_version: 2,
+        schema_version: 3,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),
@@ -560,6 +590,13 @@ pub(super) fn maybe_dump_render_plan_json(
             .map(encode_effect_marker)
             .collect(),
         pass_counts: pass_counts(plan),
+        estimated_peak_intermediate_bytes: plan.compile_stats.estimated_peak_intermediate_bytes,
+        degradations: plan
+            .degradations
+            .iter()
+            .copied()
+            .map(encode_degradation)
+            .collect(),
         passes: plan.passes.iter().map(encode_pass).collect(),
     };
 

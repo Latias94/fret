@@ -262,6 +262,11 @@ impl Renderer {
             postprocess,
             self.intermediate_budget_bytes,
         );
+        if perf_enabled {
+            frame_perf.render_plan_estimated_peak_intermediate_bytes =
+                plan.compile_stats.estimated_peak_intermediate_bytes;
+            frame_perf.render_plan_degradations = plan.degradations.len() as u64;
+        }
         render_plan_dump::maybe_dump_render_plan_json(
             &plan,
             viewport_size,
@@ -3750,6 +3755,14 @@ impl Renderer {
                 .saturating_add(frame_perf.intermediate_pool_evictions);
             self.perf.intermediate_pool_free_bytes = pool_perf.free_bytes;
             self.perf.intermediate_pool_free_textures = pool_perf.free_textures;
+            self.perf.render_plan_estimated_peak_intermediate_bytes = self
+                .perf
+                .render_plan_estimated_peak_intermediate_bytes
+                .max(frame_perf.render_plan_estimated_peak_intermediate_bytes);
+            self.perf.render_plan_degradations = self
+                .perf
+                .render_plan_degradations
+                .saturating_add(frame_perf.render_plan_degradations);
 
             self.perf.draw_calls = self.perf.draw_calls.saturating_add(frame_perf.draw_calls);
             self.perf.quad_draw_calls = self
@@ -3927,6 +3940,9 @@ impl Renderer {
                 intermediate_pool_evictions: frame_perf.intermediate_pool_evictions,
                 intermediate_pool_free_bytes: frame_perf.intermediate_pool_free_bytes,
                 intermediate_pool_free_textures: frame_perf.intermediate_pool_free_textures,
+                render_plan_estimated_peak_intermediate_bytes: frame_perf
+                    .render_plan_estimated_peak_intermediate_bytes,
+                render_plan_degradations: frame_perf.render_plan_degradations,
                 draw_calls: frame_perf.draw_calls,
                 quad_draw_calls: frame_perf.quad_draw_calls,
                 viewport_draw_calls: frame_perf.viewport_draw_calls,

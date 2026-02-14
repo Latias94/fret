@@ -9,6 +9,33 @@ use std::ops::Range;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct SceneSegmentId(pub(super) usize);
 
+#[derive(Debug, Default, Clone, Copy)]
+pub(super) struct RenderPlanCompileStats {
+    pub(super) estimated_peak_intermediate_bytes: u64,
+    pub(super) degradation_count: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum RenderPlanDegradationReason {
+    Budget,
+    TargetExhausted,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum RenderPlanDegradationKind {
+    BackdropEffectNoOp,
+    FilterContentDisabled,
+    ClipPathDisabled,
+    CompositeGroupBlendDegradedToOver,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct RenderPlanDegradation {
+    pub(super) draw_ix: usize,
+    pub(super) kind: RenderPlanDegradationKind,
+    pub(super) reason: RenderPlanDegradationReason,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum PlanTarget {
     Output,
@@ -217,9 +244,35 @@ pub(super) struct PathMsaaBatchPass {
 #[derive(Debug)]
 pub(super) struct RenderPlan {
     pub(super) passes: Vec<RenderPlanPass>,
+    pub(super) compile_stats: RenderPlanCompileStats,
+    pub(super) degradations: Vec<RenderPlanDegradation>,
 }
 
 impl RenderPlan {
+    fn finalize(
+        passes: Vec<RenderPlanPass>,
+        viewport_size: (u32, u32),
+        postprocess: DebugPostprocess,
+        clear: wgpu::Color,
+        format: wgpu::TextureFormat,
+        degradations: Vec<RenderPlanDegradation>,
+    ) -> Self {
+        let mut plan = Self {
+            passes,
+            compile_stats: RenderPlanCompileStats {
+                estimated_peak_intermediate_bytes: 0,
+                degradation_count: degradations.len() as u64,
+            },
+            degradations,
+        };
+        append_postprocess(&mut plan, viewport_size, postprocess, clear);
+        insert_early_releases(&mut plan.passes);
+        plan.compile_stats.estimated_peak_intermediate_bytes =
+            estimate_plan_peak_intermediate_bytes(&plan.passes, format);
+        plan.compile_stats.degradation_count = plan.degradations.len() as u64;
+        plan
+    }
+
     pub(super) fn compile_for_scene(
         encoding: &SceneEncoding,
         viewport_size: (u32, u32),
@@ -298,19 +351,22 @@ impl RenderPlan {
 
         if encoding.effect_markers.is_empty() {
             if path_samples <= 1 {
-                let mut plan = Self {
-                    passes: vec![RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                        segment: SceneSegmentId(0),
-                        target: scene_target,
-                        target_origin: (0, 0),
-                        target_size: viewport_size,
-                        load: wgpu::LoadOp::Clear(clear),
-                        draw_range: 0..draws.len(),
-                    })],
-                };
-                append_postprocess(&mut plan, viewport_size, postprocess, clear);
-                insert_early_releases(&mut plan.passes);
-                return plan;
+                let passes = vec![RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                    segment: SceneSegmentId(0),
+                    target: scene_target,
+                    target_origin: (0, 0),
+                    target_size: viewport_size,
+                    load: wgpu::LoadOp::Clear(clear),
+                    draw_range: 0..draws.len(),
+                })];
+                return Self::finalize(
+                    passes,
+                    viewport_size,
+                    postprocess,
+                    clear,
+                    format,
+                    Vec::new(),
+                );
             }
 
             let mut passes: Vec<RenderPlanPass> = Vec::new();
@@ -392,10 +448,14 @@ impl RenderPlan {
                 }));
             }
 
-            let mut plan = Self { passes };
-            append_postprocess(&mut plan, viewport_size, postprocess, clear);
-            insert_early_releases(&mut plan.passes);
-            return plan;
+            return Self::finalize(
+                passes,
+                viewport_size,
+                postprocess,
+                clear,
+                format,
+                Vec::new(),
+            );
         }
 
         #[derive(Clone, Copy, Debug)]
@@ -453,6 +513,7 @@ impl RenderPlan {
         }
 
         let mut passes: Vec<RenderPlanPass> = Vec::new();
+        let mut degradations: Vec<RenderPlanDegradation> = Vec::new();
         let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
             target: scene_target,
             origin: (0, 0),
@@ -582,6 +643,7 @@ impl RenderPlan {
                             let parent_size = parent_scope.size;
                             match mode {
                                 fret_core::EffectMode::Backdrop => {
+                                    let before = passes.len();
                                     apply_chain_in_place(
                                         &mut passes,
                                         &draw_scopes,
@@ -592,6 +654,22 @@ impl RenderPlan {
                                         scissor,
                                         Some(uniform_index),
                                     );
+                                    if before == passes.len()
+                                        && !chain.is_empty()
+                                        && parent_target != PlanTarget::Output
+                                        && scissor.w != 0
+                                        && scissor.h != 0
+                                    {
+                                        degradations.push(RenderPlanDegradation {
+                                            draw_ix: cursor,
+                                            kind: RenderPlanDegradationKind::BackdropEffectNoOp,
+                                            reason: if intermediate_budget_bytes == 0 {
+                                                RenderPlanDegradationReason::Budget
+                                            } else {
+                                                RenderPlanDegradationReason::TargetExhausted
+                                            },
+                                        });
+                                    }
                                     effect_scopes.push(EffectScope {
                                         mode,
                                         chain,
@@ -614,14 +692,8 @@ impl RenderPlan {
                                     // scissored to `bounds`).
                                     let (content_origin, content_size) = ((0, 0), viewport_size);
                                     let mut content_target: Option<PlanTarget> = None;
-                                    if content_size.0 != 0
-                                        && content_size.1 != 0
-                                        && can_allocate_intermediate_bytes(
-                                            &draw_scopes,
-                                            estimate_texture_bytes(content_size, format, 1),
-                                            clip_path_mask_in_use_bytes,
-                                        )
-                                    {
+                                    let mut had_free_target = false;
+                                    if content_size.0 != 0 && content_size.1 != 0 {
                                         for t in [
                                             PlanTarget::Intermediate0,
                                             PlanTarget::Intermediate1,
@@ -631,7 +703,18 @@ impl RenderPlan {
                                                 continue;
                                             }
                                             content_target = Some(t);
+                                            had_free_target = true;
                                             break;
+                                        }
+
+                                        if content_target.is_some()
+                                            && !can_allocate_intermediate_bytes(
+                                                &draw_scopes,
+                                                estimate_texture_bytes(content_size, format, 1),
+                                                clip_path_mask_in_use_bytes,
+                                            )
+                                        {
+                                            content_target = None;
                                         }
                                     }
 
@@ -642,6 +725,16 @@ impl RenderPlan {
                                             size: content_size,
                                             needs_clear: true,
                                             clear_color: wgpu::Color::TRANSPARENT,
+                                        });
+                                    } else if content_size.0 != 0 && content_size.1 != 0 {
+                                        degradations.push(RenderPlanDegradation {
+                                            draw_ix: cursor,
+                                            kind: RenderPlanDegradationKind::FilterContentDisabled,
+                                            reason: if !had_free_target {
+                                                RenderPlanDegradationReason::TargetExhausted
+                                            } else {
+                                                RenderPlanDegradationReason::Budget
+                                            },
                                         });
                                     }
 
@@ -868,6 +961,17 @@ impl RenderPlan {
                                         1,
                                     ));
                             } else {
+                                if scope.scissor.w != 0 && scope.scissor.h != 0 {
+                                    degradations.push(RenderPlanDegradation {
+                                        draw_ix: cursor,
+                                        kind: RenderPlanDegradationKind::ClipPathDisabled,
+                                        reason: if intermediate_budget_bytes == 0 {
+                                            RenderPlanDegradationReason::Budget
+                                        } else {
+                                            RenderPlanDegradationReason::TargetExhausted
+                                        },
+                                    });
+                                }
                                 let _ = scope.mask_draw_index;
                             }
                         }
@@ -889,14 +993,8 @@ impl RenderPlan {
                                 ((0, 0), viewport_size)
                             };
                             let mut content_target: Option<PlanTarget> = None;
-                            if content_size.0 != 0
-                                && content_size.1 != 0
-                                && can_allocate_intermediate_bytes(
-                                    &draw_scopes,
-                                    estimate_texture_bytes(content_size, format, 1),
-                                    clip_path_mask_in_use_bytes,
-                                )
-                            {
+                            let mut had_free_target = false;
+                            if content_size.0 != 0 && content_size.1 != 0 {
                                 for t in [
                                     PlanTarget::Intermediate0,
                                     PlanTarget::Intermediate1,
@@ -906,7 +1004,18 @@ impl RenderPlan {
                                         continue;
                                     }
                                     content_target = Some(t);
+                                    had_free_target = true;
                                     break;
+                                }
+
+                                if content_target.is_some()
+                                    && !can_allocate_intermediate_bytes(
+                                        &draw_scopes,
+                                        estimate_texture_bytes(content_size, format, 1),
+                                        clip_path_mask_in_use_bytes,
+                                    )
+                                {
+                                    content_target = None;
                                 }
                             }
 
@@ -917,6 +1026,19 @@ impl RenderPlan {
                                     size: content_size,
                                     needs_clear: true,
                                     clear_color: wgpu::Color::TRANSPARENT,
+                                });
+                            } else if mode != fret_core::BlendMode::Over
+                                && content_size.0 != 0
+                                && content_size.1 != 0
+                            {
+                                degradations.push(RenderPlanDegradation {
+                                    draw_ix: cursor,
+                                    kind: RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver,
+                                    reason: if !had_free_target {
+                                        RenderPlanDegradationReason::TargetExhausted
+                                    } else {
+                                        RenderPlanDegradationReason::Budget
+                                    },
                                 });
                             }
 
@@ -1023,11 +1145,132 @@ impl RenderPlan {
             cursor += 1;
         }
 
-        let mut plan = Self { passes };
-        append_postprocess(&mut plan, viewport_size, postprocess, clear);
-        insert_early_releases(&mut plan.passes);
-        plan
+        Self::finalize(
+            passes,
+            viewport_size,
+            postprocess,
+            clear,
+            format,
+            degradations,
+        )
     }
+}
+
+fn estimate_plan_peak_intermediate_bytes(
+    passes: &[RenderPlanPass],
+    scene_format: wgpu::TextureFormat,
+) -> u64 {
+    fn idx(t: PlanTarget) -> usize {
+        match t {
+            PlanTarget::Output => 0,
+            PlanTarget::Intermediate0 => 1,
+            PlanTarget::Intermediate1 => 2,
+            PlanTarget::Intermediate2 => 3,
+            PlanTarget::Mask0 => 4,
+            PlanTarget::Mask1 => 5,
+            PlanTarget::Mask2 => 6,
+        }
+    }
+
+    fn target_format(t: PlanTarget, scene_format: wgpu::TextureFormat) -> wgpu::TextureFormat {
+        match t {
+            PlanTarget::Output
+            | PlanTarget::Intermediate0
+            | PlanTarget::Intermediate1
+            | PlanTarget::Intermediate2 => scene_format,
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                wgpu::TextureFormat::R8Unorm
+            }
+        }
+    }
+
+    let mut live: [bool; 7] = [false; 7];
+    let mut sizes: [(u32, u32); 7] = [(0, 0); 7];
+    let mut peak: u64 = 0;
+
+    fn mark_live(
+        live: &mut [bool; 7],
+        sizes: &mut [(u32, u32); 7],
+        t: PlanTarget,
+        size: (u32, u32),
+    ) {
+        if t == PlanTarget::Output || size.0 == 0 || size.1 == 0 {
+            return;
+        }
+        live[idx(t)] = true;
+        sizes[idx(t)] = size;
+    }
+
+    for p in passes {
+        match *p {
+            RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                target,
+                target_size,
+                ..
+            }) => {
+                mark_live(&mut live, &mut sizes, target, target_size);
+            }
+            RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+                target,
+                target_size,
+                ..
+            }) => {
+                mark_live(&mut live, &mut sizes, target, target_size);
+            }
+            RenderPlanPass::PathClipMask(PathClipMaskPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::ClipMask(ClipMaskPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::FullscreenBlit(FullscreenBlitPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::CompositePremul(CompositePremulPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::ScaleNearest(ScaleNearestPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::Blur(BlurPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::ColorAdjust(ColorAdjustPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::ColorMatrix(ColorMatrixPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::ReleaseTarget(t) => {
+                live[idx(t)] = false;
+            }
+        }
+
+        let mut cur: u64 = 0;
+        for t in [
+            PlanTarget::Intermediate0,
+            PlanTarget::Intermediate1,
+            PlanTarget::Intermediate2,
+            PlanTarget::Mask0,
+            PlanTarget::Mask1,
+            PlanTarget::Mask2,
+        ] {
+            if !live[idx(t)] {
+                continue;
+            }
+            cur = cur.saturating_add(estimate_texture_bytes(
+                sizes[idx(t)],
+                target_format(t, scene_format),
+                1,
+            ));
+        }
+        peak = peak.max(cur);
+    }
+
+    peak
 }
 
 #[allow(dead_code)]
@@ -2273,6 +2516,13 @@ mod tests {
                     composite.is_none(),
                     "zero intermediate budget must deterministically degrade FilterContent to no-op"
                 );
+                assert!(
+                    plan.degradations.iter().any(|d| {
+                        d.kind == RenderPlanDegradationKind::FilterContentDisabled
+                            && d.reason == RenderPlanDegradationReason::Budget
+                    }),
+                    "expected a deterministic degradation record for FilterContent under budget pressure"
+                );
                 continue;
             }
 
@@ -2358,7 +2608,11 @@ mod tests {
 
     #[test]
     fn downsample_half_quarter_helper_emits_two_passes() {
-        let mut plan = RenderPlan { passes: Vec::new() };
+        let mut plan = RenderPlan {
+            passes: Vec::new(),
+            compile_stats: RenderPlanCompileStats::default(),
+            degradations: Vec::new(),
+        };
         let info = append_downsample_half_quarter(
             &mut plan,
             PlanTarget::Intermediate0,

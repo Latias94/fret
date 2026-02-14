@@ -220,6 +220,8 @@ pub struct RenderPerfSnapshot {
     pub intermediate_pool_evictions: u64,
     pub intermediate_pool_free_bytes: u64,
     pub intermediate_pool_free_textures: u64,
+    pub render_plan_estimated_peak_intermediate_bytes: u64,
+    pub render_plan_degradations: u64,
 
     pub draw_calls: u64,
     pub quad_draw_calls: u64,
@@ -307,6 +309,8 @@ pub(super) struct RenderPerfStats {
     pub(super) intermediate_pool_evictions: u64,
     pub(super) intermediate_pool_free_bytes: u64,
     pub(super) intermediate_pool_free_textures: u64,
+    pub(super) render_plan_estimated_peak_intermediate_bytes: u64,
+    pub(super) render_plan_degradations: u64,
 
     pub(super) draw_calls: u64,
     pub(super) quad_draw_calls: u64,
