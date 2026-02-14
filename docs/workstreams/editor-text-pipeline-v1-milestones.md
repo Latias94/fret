@@ -64,6 +64,7 @@ Exit criteria:
   - in UTF-16 code units over `TextInputRegionProps.a11y_value`.
 - `WindowTextInputSnapshot` is published for focused `TextInputRegion` with:
   - `text_len_utf16`, `selection_utf16`, `marked_utf16` derived from the composed view.
+  - `ime_cursor_area` forwarded from data-only props when provided (editor-owned geometry).
 - Non-goals for the mechanism layer (stage later):
   - `BoundsForRange`, `CharacterIndexForPoint`, and `replace_*` are left unimplemented.
 

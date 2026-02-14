@@ -267,7 +267,7 @@ pub(in crate::tree) fn text_input_region_platform_text_input_snapshot(
         text_len_utf16: len_utf16,
         selection_utf16,
         marked_utf16,
-        ime_cursor_area: None,
+        ime_cursor_area: props.ime_cursor_area,
     }
 }
 

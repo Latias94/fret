@@ -72,6 +72,10 @@ fn declarative_text_input_region_answers_platform_text_input_queries_in_utf16() 
             props.a11y_text_selection = Some((1, 1 + "😀".len() as u32));
             // Mark the same range as a composition span.
             props.a11y_text_composition = Some((1, 1 + "😀".len() as u32));
+            props.ime_cursor_area = Some(Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(1.0), Px(12.0)),
+            ));
 
             let region = cx.text_input_region(props, |_cx| Vec::<AnyElement>::new());
             *region_id.borrow_mut() = Some(region.id);
@@ -151,6 +155,13 @@ fn declarative_text_input_region_answers_platform_text_input_queries_in_utf16() 
     assert_eq!(snapshot.text_len_utf16, 4, "a(1) 😀(2) b(1)");
     assert_eq!(snapshot.selection_utf16, Some((1, 3)));
     assert_eq!(snapshot.marked_utf16, Some((1, 3)));
+    assert_eq!(
+        snapshot.ime_cursor_area,
+        Some(Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(1.0), Px(12.0)),
+        ))
+    );
 }
 
 #[test]
