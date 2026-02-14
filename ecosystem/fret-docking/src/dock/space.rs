@@ -679,6 +679,7 @@ impl DockSpace {
             max_width: Some(inner_max_w),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
 
@@ -689,6 +690,7 @@ impl DockSpace {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor,
             },
         );
@@ -705,6 +707,7 @@ impl DockSpace {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor,
             },
         );
@@ -735,6 +738,7 @@ impl DockSpace {
                         max_width: None,
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                         scale_factor,
                     },
                 );
@@ -922,6 +926,7 @@ impl DockSpace {
             max_width: Some(max_width),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
         let (blob, metrics) = services.text().prepare_str(
@@ -959,6 +964,7 @@ impl DockSpace {
             max_width: Some(Px(64.0)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
         let (blob, metrics) = services
@@ -1007,6 +1013,7 @@ impl DockSpace {
             max_width: Some(Px(280.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
         let (blob, metrics) =

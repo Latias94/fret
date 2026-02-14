@@ -50,10 +50,7 @@ use run_artifacts::{
     materialize_run_id_bundle_json_from_chunks_if_missing, refresh_run_id_manifest_file_index,
     run_id_artifact_dir, write_run_id_bundle_json, write_run_id_script_result,
 };
-use script_tooling::{
-    NormalizedScript, ScriptLintReport, ScriptSchemaReport, lint_scripts,
-    normalize_script_from_path, validate_scripts,
-};
+
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     bundle_stats_diff_from_paths, bundle_stats_from_path,
@@ -1946,52 +1943,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
-        "path" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            println!("{}", resolved_trigger_path.display());
-            Ok(())
-        }
-        "poke" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            touch(&resolved_trigger_path)?;
-            println!("{}", resolved_trigger_path.display());
-            Ok(())
-        }
-        "latest" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            if let Some(path) = read_latest_pointer(&resolved_out_dir)
-                .or_else(|| find_latest_export_dir(&resolved_out_dir))
-            {
-                println!("{}", path.display());
-                return Ok(());
-            }
-            Err(format!(
-                "no diagnostics bundle found under {}",
-                resolved_out_dir.display()
-            ))
-        }
+        "path" => commands::session::cmd_path(&rest, pack_after_run, &resolved_trigger_path),
+        "poke" => commands::session::cmd_poke(&rest, pack_after_run, &resolved_trigger_path),
+        "latest" => commands::session::cmd_latest(&rest, pack_after_run, &resolved_out_dir),
         "trace" => {
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
             }
             let Some(src) = rest.first().cloned() else {
                 return Err(
-                    "missing bundle path (try: fretboard diag trace ./target/fret-diag/1234/bundle.json)".to_string(),
+                    "missing bundle path (try: fretboard diag trace ./target/fret-diag/1234/bundle.json)"
+                        .to_string(),
                 );
             };
             if rest.len() != 1 {
@@ -2009,664 +1971,64 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             println!("{}", out.display());
             Ok(())
         }
-        "pack" => {
-            if rest.len() > 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let bundle_dir = match rest.first() {
-                Some(src) => {
-                    let src = resolve_path(&workspace_root, PathBuf::from(src));
-                    resolve_bundle_root_dir(&src)?
-                }
-                None => read_latest_pointer(&resolved_out_dir)
-                    .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                    .ok_or_else(|| {
-                        format!(
-                            "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
-                            resolved_out_dir.display()
-                        )
-                    })?,
-            };
-
-            let bundle_dir = resolve_bundle_root_dir(&bundle_dir)?;
-            let out = pack_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
-
-            let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                resolved_out_dir.clone()
-            } else {
-                bundle_dir
-                    .parent()
-                    .unwrap_or(&resolved_out_dir)
-                    .to_path_buf()
-            };
-
-            pack_bundle_dir_to_zip(
-                &bundle_dir,
-                &out,
-                pack_include_root_artifacts,
-                pack_include_triage,
-                pack_include_screenshots,
-                false,
-                false,
-                &artifacts_root,
-                stats_top,
-                sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                warmup_frames,
-            )?;
-            println!("{}", out.display());
-            Ok(())
-        }
-        "triage" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let bundle_path = resolve_bundle_json_path(&src);
-            let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
-
-            let report = bundle_stats_from_path(
-                &bundle_path,
-                stats_top,
-                sort,
-                BundleStatsOptions { warmup_frames },
-            )?;
-            let payload = triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
-
-            let out = triage_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_triage_out_path(&bundle_path));
-
-            if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-            }
-            let pretty =
-                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-            if stats_json {
-                println!("{pretty}");
-            } else {
-                println!("{}", out.display());
-            }
-            Ok(())
-        }
-        "lint" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing bundle path (try: fretboard diag lint ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let bundle_path = resolve_bundle_json_path(&src);
-
-            let report = lint_bundle_from_path(
-                &bundle_path,
-                warmup_frames,
-                LintOptions {
-                    all_test_ids_bounds: lint_all_test_ids_bounds,
-                    eps_px: lint_eps_px,
-                },
-            )?;
-
-            let out = lint_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_lint_out_path(&bundle_path));
-
-            if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-            }
-            let pretty =
-                serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
-            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-            if stats_json {
-                println!("{pretty}");
-            } else {
-                println!("{}", out.display());
-            }
-
-            if report.error_issues > 0 {
-                std::process::exit(1);
-            }
-            Ok(())
-        }
-        "script" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(op) = rest.first().map(|s| s.as_str()) else {
-                return Err("missing script subcommand or script path (try: fretboard diag script ./script.json | fretboard diag script normalize ./script.json)".to_string());
-            };
-
-            let shrink_flags_used = shrink_out.is_some()
-                || shrink_any_fail
-                || shrink_match_reason_code.is_some()
-                || shrink_match_reason.is_some()
-                || shrink_min_steps != 1
-                || shrink_max_iters != 200;
-            if shrink_flags_used && op != "shrink" {
-                return Err(
-                    "--shrink-* flags are only supported with `diag script shrink`".to_string(),
-                );
-            }
-
-            match op {
-                "normalize" => {
-                    if script_tool_check && script_tool_write {
-                        return Err("--check cannot be combined with --write".to_string());
-                    }
-                    if script_tool_check_out.is_some() {
-                        return Err(
-                            "--check-out is not supported with `diag script normalize`".to_string()
-                        );
-                    }
-
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err("missing script path (try: fretboard diag script normalize ./script.json)".to_string());
-                    }
-                    if inputs.len() != 1 && !script_tool_check && !script_tool_write {
-                        return Err("normalize expects exactly one script unless --check or --write is used".to_string());
-                    }
-
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-                    if scripts.len() != 1 && !script_tool_check && !script_tool_write {
-                        return Err("normalize expects exactly one script unless --check or --write is used".to_string());
-                    }
-
-                    let mut any_changed = false;
-                    for src in scripts {
-                        let NormalizedScript {
-                            normalized,
-                            changed,
-                        } = normalize_script_from_path(&src)?;
-
-                        if script_tool_check {
-                            if changed {
-                                any_changed = true;
-                                eprintln!("not normalized: {}", src.display());
-                            } else {
-                                println!("{}", src.display());
-                            }
-                            continue;
-                        }
-
-                        if script_tool_write {
-                            if changed {
-                                any_changed = true;
-                                std::fs::write(&src, normalized.as_bytes())
-                                    .map_err(|e| e.to_string())?;
-                            }
-                            println!("{}", src.display());
-                            continue;
-                        }
-
-                        print!("{normalized}");
-                    }
-
-                    if script_tool_check && any_changed {
-                        std::process::exit(1);
-                    }
-                    Ok(())
-                }
-                "validate" => {
-                    if script_tool_check || script_tool_write {
-                        return Err(
-                            "--check/--write are not supported with `diag script validate`"
-                                .to_string(),
-                        );
-                    }
-
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err("missing script path (try: fretboard diag script validate ./script.json)".to_string());
-                    }
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-
-                    let ScriptSchemaReport {
-                        payload,
-                        error_scripts,
-                    } = validate_scripts(&scripts);
-
-                    let out = script_tool_check_out
-                        .map(|p| resolve_path(&workspace_root, p))
-                        .unwrap_or_else(|| resolved_out_dir.join("check.script_schema.json"));
-                    if let Some(parent) = out.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                    }
-                    let pretty =
-                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                    if stats_json {
-                        println!("{pretty}");
-                    } else {
-                        println!("{}", out.display());
-                    }
-
-                    if error_scripts > 0 {
-                        std::process::exit(1);
-                    }
-                    Ok(())
-                }
-                "lint" => {
-                    if script_tool_check || script_tool_write {
-                        return Err(
-                            "--check/--write are not supported with `diag script lint`".to_string()
-                        );
-                    }
-
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err(
-                            "missing script path (try: fretboard diag script lint ./script.json)"
-                                .to_string(),
-                        );
-                    }
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-
-                    let ScriptLintReport {
-                        payload,
-                        error_scripts,
-                    } = lint_scripts(&scripts);
-
-                    let out = script_tool_check_out
-                        .map(|p| resolve_path(&workspace_root, p))
-                        .unwrap_or_else(|| resolved_out_dir.join("check.script_lint.json"));
-                    if let Some(parent) = out.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                    }
-                    let pretty =
-                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                    if stats_json {
-                        println!("{pretty}");
-                    } else {
-                        println!("{}", out.display());
-                    }
-
-                    if error_scripts > 0 {
-                        std::process::exit(1);
-                    }
-                    Ok(())
-                }
-                "shrink" => {
-                    if script_tool_check || script_tool_write || script_tool_check_out.is_some() {
-                        return Err("--check/--write/--check-out are not supported with `diag script shrink`".to_string());
-                    }
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err(
-                            "missing script path (try: fretboard diag script shrink ./script.json)"
-                                .to_string(),
-                        );
-                    }
-                    if inputs.len() != 1 {
-                        return Err(format!("unexpected arguments: {}", inputs[1..].join(" ")));
-                    }
-                    if launch.is_some() && !reuse_launch {
-                        return Err("`diag script shrink` requires --reuse-launch when using --launch (to avoid restarting for every attempt)".to_string());
-                    }
-
-                    #[derive(Debug, Clone)]
-                    enum ActionScript {
-                        V1(fret_diag_protocol::UiActionScriptV1),
-                        V2(fret_diag_protocol::UiActionScriptV2),
-                    }
-
-                    impl ActionScript {
-                        fn steps_len(&self) -> usize {
-                            match self {
-                                Self::V1(s) => s.steps.len(),
-                                Self::V2(s) => s.steps.len(),
-                            }
-                        }
-
-                        fn keep_steps(&self, keep: &[usize]) -> Self {
-                            match self {
-                                Self::V1(s) => {
-                                    let steps = keep
-                                        .iter()
-                                        .filter_map(|&i| s.steps.get(i).cloned())
-                                        .collect();
-                                    Self::V1(fret_diag_protocol::UiActionScriptV1 {
-                                        schema_version: 1,
-                                        meta: s.meta.clone(),
-                                        steps,
-                                    })
-                                }
-                                Self::V2(s) => {
-                                    let steps = keep
-                                        .iter()
-                                        .filter_map(|&i| s.steps.get(i).cloned())
-                                        .collect();
-                                    Self::V2(fret_diag_protocol::UiActionScriptV2 {
-                                        schema_version: 2,
-                                        meta: s.meta.clone(),
-                                        steps,
-                                    })
-                                }
-                            }
-                        }
-
-                        fn to_pretty_json(&self) -> Result<String, String> {
-                            let mut value = match self {
-                                Self::V1(s) => {
-                                    serde_json::to_value(s).map_err(|e| e.to_string())?
-                                }
-                                Self::V2(s) => {
-                                    serde_json::to_value(s).map_err(|e| e.to_string())?
-                                }
-                            };
-                            script_tooling::canonicalize_json_value(&mut value);
-                            let mut s =
-                                serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
-                            s.push('\n');
-                            Ok(s)
-                        }
-                    }
-
-                    fn read_action_script(path: &Path) -> Result<ActionScript, String> {
-                        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-                        let value: serde_json::Value =
-                            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-                        let schema_version = value
-                            .get("schema_version")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0)
-                            .min(u32::MAX as u64)
-                            as u32;
-                        match schema_version {
-                            1 => Ok(ActionScript::V1(
-                                serde_json::from_value(value).map_err(|e| e.to_string())?,
-                            )),
-                            2 => Ok(ActionScript::V2(
-                                serde_json::from_value(value).map_err(|e| e.to_string())?,
-                            )),
-                            _ => Err(format!(
-                                "unknown script schema_version (expected 1 or 2): {}",
-                                schema_version
-                            )),
-                        }
-                    }
-
-                    fn matches_failure(
-                        s: &ScriptResultSummary,
-                        any_fail: bool,
-                        reason_code: Option<&str>,
-                        reason: Option<&str>,
-                    ) -> bool {
-                        if s.stage.as_deref() != Some("failed") {
-                            return false;
-                        }
-                        if any_fail {
-                            return true;
-                        }
-                        if let Some(code) = reason_code {
-                            return s.reason_code.as_deref() == Some(code);
-                        }
-                        if let Some(r) = reason {
-                            return s.reason.as_deref() == Some(r);
-                        }
-                        true
-                    }
-
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-                    if scripts.len() != 1 {
-                        return Err("shrink expects exactly one script input".to_string());
-                    }
-                    let src = scripts.into_iter().next().unwrap();
-
-                    let shrink_dir = resolved_out_dir.join("shrink");
-                    std::fs::create_dir_all(&shrink_dir).map_err(|e| e.to_string())?;
-
-                    let out_path = shrink_out
-                        .clone()
-                        .map(|p| resolve_path(&workspace_root, p))
-                        .unwrap_or_else(|| shrink_dir.join("script.min.json"));
-                    let summary_path = shrink_dir.join("shrink.summary.json");
-                    let candidate_path = shrink_dir.join("script.candidate.json");
-
-                    let script = read_action_script(&src)?;
-                    let total_steps = script.steps_len();
-                    if total_steps == 0 && shrink_min_steps > 0 {
-                        return Err("script has no steps; nothing to shrink".to_string());
-                    }
-
-                    let wants_screenshots = script_requests_screenshots(&src);
-                    let shrink_launch_env = launch_env.clone();
-                    let mut child = maybe_launch_demo(
-                        &launch,
-                        &shrink_launch_env,
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &resolved_ready_path,
-                        &resolved_exit_path,
-                        wants_screenshots,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-
-                    let baseline = run_script_and_wait(
-                        &src,
-                        &resolved_script_path,
-                        &resolved_script_trigger_path,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-
-                    if baseline.stage.as_deref() != Some("failed") {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        return Err(format!(
-                            "baseline script did not fail (stage={:?}); shrink expects a failing script",
-                            baseline.stage
-                        ));
-                    }
-
-                    let desired_reason_code = shrink_match_reason_code
-                        .as_deref()
-                        .or(baseline.reason_code.as_deref());
-                    let desired_reason = shrink_match_reason
-                        .as_deref()
-                        .or(baseline.reason.as_deref());
-
-                    let mut attempts_total: u64 = 0;
-                    let mut attempts_errors: u64 = 0;
-                    let mut last_error: Option<String> = None;
-
-                    let min_steps = usize::try_from(shrink_min_steps)
-                        .unwrap_or(usize::MAX)
-                        .min(total_steps);
-                    let (keep, reductions, iters) = shrink::ddmin_keep_indices(
-                        total_steps,
-                        min_steps,
-                        shrink_max_iters,
-                        |keep| {
-                            attempts_total += 1;
-                            let candidate = script.keep_steps(keep);
-                            let pretty = match candidate.to_pretty_json() {
-                                Ok(s) => s,
-                                Err(err) => {
-                                    attempts_errors += 1;
-                                    last_error = Some(err);
-                                    return false;
-                                }
-                            };
-                            if let Err(err) = std::fs::write(&candidate_path, pretty.as_bytes()) {
-                                attempts_errors += 1;
-                                last_error = Some(err.to_string());
-                                return false;
-                            }
-
-                            match run_script_and_wait(
-                                &candidate_path,
-                                &resolved_script_path,
-                                &resolved_script_trigger_path,
-                                &resolved_script_result_path,
-                                &resolved_script_result_trigger_path,
-                                timeout_ms,
-                                poll_ms,
-                            ) {
-                                Ok(s) => matches_failure(
-                                    &s,
-                                    shrink_any_fail,
-                                    desired_reason_code,
-                                    desired_reason,
-                                ),
-                                Err(err) => {
-                                    attempts_errors += 1;
-                                    last_error = Some(err);
-                                    false
-                                }
-                            }
-                        },
-                    );
-
-                    let minimized = script.keep_steps(&keep);
-                    let minimized_pretty = minimized.to_pretty_json()?;
-                    std::fs::write(&out_path, minimized_pretty.as_bytes())
-                        .map_err(|e| e.to_string())?;
-
-                    let final_result = run_script_and_wait(
-                        &out_path,
-                        &resolved_script_path,
-                        &resolved_script_trigger_path,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-
-                    let ok = matches_failure(
-                        &final_result,
-                        shrink_any_fail,
-                        desired_reason_code,
-                        desired_reason,
-                    );
-                    if !ok {
-                        return Err(format!(
-                            "minimized script does not reproduce baseline failure (stage={:?} reason_code={:?} reason={:?})",
-                            final_result.stage, final_result.reason_code, final_result.reason
-                        ));
-                    }
-
-                    let keep_set: std::collections::BTreeSet<usize> =
-                        keep.iter().copied().collect();
-                    let removed: Vec<usize> =
-                        (0..total_steps).filter(|i| !keep_set.contains(i)).collect();
-                    let reductions_json: Vec<serde_json::Value> = reductions
-                        .into_iter()
-                        .map(|r| {
-                            serde_json::json!({
-                                "granularity": r.granularity,
-                                "kept_len": r.kept_len,
-                                "removed": r.removed,
-                            })
-                        })
-                        .collect();
-
-                    let payload = serde_json::json!({
-                        "schema_version": 1,
-                        "status": "passed",
-                        "script": src.display().to_string(),
-                        "out": out_path.display().to_string(),
-                        "params": {
-                            "min_steps": shrink_min_steps,
-                            "max_iters": shrink_max_iters,
-                            "any_fail": shrink_any_fail,
-                            "match_reason_code": desired_reason_code,
-                            "match_reason": desired_reason,
-                        },
-                        "baseline": {
-                            "run_id": baseline.run_id,
-                            "stage": baseline.stage,
-                            "step_index": baseline.step_index,
-                            "reason_code": baseline.reason_code,
-                            "reason": baseline.reason,
-                            "last_bundle_dir": baseline.last_bundle_dir,
-                        },
-                        "final": {
-                            "run_id": final_result.run_id,
-                            "stage": final_result.stage,
-                            "step_index": final_result.step_index,
-                            "reason_code": final_result.reason_code,
-                            "reason": final_result.reason,
-                            "last_bundle_dir": final_result.last_bundle_dir,
-                        },
-                        "steps": {
-                            "original": total_steps,
-                            "kept": keep.len(),
-                            "removed": removed.len(),
-                            "removed_indices": removed,
-                        },
-                        "search": {
-                            "iters": iters,
-                            "attempts_total": attempts_total,
-                            "attempts_errors": attempts_errors,
-                            "last_error": last_error,
-                            "reductions": reductions_json,
-                        },
-                    });
-
-                    if let Some(parent) = summary_path.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                    }
-                    let pretty =
-                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-                    std::fs::write(&summary_path, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                    if stats_json {
-                        println!("{pretty}");
-                    } else {
-                        println!("{}", out_path.display());
-                    }
-                    Ok(())
-                }
-                _ => {
-                    let Some(src) = rest.first().cloned() else {
-                        return Err(
-                            "missing script path (try: fretboard diag script ./script.json)"
-                                .to_string(),
-                        );
-                    };
-                    if rest.len() != 1 {
-                        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-                    }
-
-                    let src = resolve_path(&workspace_root, PathBuf::from(src));
-                    write_script(&src, &resolved_script_path)?;
-                    touch(&resolved_script_trigger_path)?;
-                    println!("{}", resolved_script_trigger_path.display());
-                    Ok(())
-                }
-            }
-        }
+        "pack" => commands::artifacts::cmd_pack(
+            &rest,
+            &workspace_root,
+            &resolved_out_dir,
+            pack_out,
+            pack_include_root_artifacts,
+            pack_include_triage,
+            pack_include_screenshots,
+            stats_top,
+            sort_override,
+            warmup_frames,
+        ),
+        "triage" => commands::artifacts::cmd_triage(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            triage_out,
+            stats_top,
+            sort_override,
+            warmup_frames,
+            stats_json,
+        ),
+        "lint" => commands::artifacts::cmd_lint(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            lint_out,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            warmup_frames,
+            stats_json,
+        ),
+        "script" => commands::script::cmd_script(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            &resolved_script_path,
+            &resolved_script_trigger_path,
+            &resolved_script_result_path,
+            &resolved_script_result_trigger_path,
+            &resolved_ready_path,
+            &resolved_exit_path,
+            script_tool_check,
+            script_tool_write,
+            script_tool_check_out,
+            shrink_out,
+            shrink_any_fail,
+            shrink_match_reason_code,
+            shrink_match_reason,
+            shrink_min_steps,
+            shrink_max_iters,
+            &launch,
+            &launch_env,
+            timeout_ms,
+            poll_ms,
+            stats_json,
+        ),
         "run" => {
             let Some(src) = rest.first().cloned() else {
                 return Err(
@@ -10102,7 +9464,7 @@ See: `docs/tracy.md`.\n";
     }
 }
 
-fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
+pub(crate) fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
     if path.is_dir() {
         return Ok(path.to_path_buf());
     }
@@ -10112,7 +9474,7 @@ fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
     Ok(parent.to_path_buf())
 }
 
-fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
+pub(crate) fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     let name = bundle_dir
         .file_name()
         .and_then(|s| s.to_str())
@@ -10125,17 +9487,17 @@ fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     }
 }
 
-fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
+pub(crate) fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("triage.json")
 }
 
-fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
+pub(crate) fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("check.lint.json")
 }
 
-fn pack_bundle_dir_to_zip(
+pub(crate) fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,
     out_path: &Path,
     include_root_artifacts: bool,
@@ -10277,7 +9639,7 @@ fn pack_bundle_dir_to_zip(
     Ok(())
 }
 
-fn triage_json_from_stats(
+pub(crate) fn triage_json_from_stats(
     bundle_path: &Path,
     report: &BundleStatsReport,
     sort: BundleStatsSort,
@@ -11327,7 +10689,10 @@ fn normalize_host_path_separators(path: PathBuf) -> PathBuf {
     }
 }
 
-fn expand_script_inputs(workspace_root: &Path, inputs: &[String]) -> Result<Vec<PathBuf>, String> {
+pub(crate) fn expand_script_inputs(
+    workspace_root: &Path,
+    inputs: &[String],
+) -> Result<Vec<PathBuf>, String> {
     let mut set: BTreeSet<PathBuf> = BTreeSet::new();
 
     for input in inputs {
@@ -11431,7 +10796,7 @@ fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
     );
 }
 
-fn resolve_bundle_json_path(path: &Path) -> PathBuf {
+pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     if !path.is_dir() {
         return path.to_path_buf();
     }
@@ -12558,7 +11923,7 @@ fn ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(script: &Pa
     )
 }
 
-fn script_requests_screenshots(script: &Path) -> bool {
+pub(crate) fn script_requests_screenshots(script: &Path) -> bool {
     let Ok(bytes) = std::fs::read(script) else {
         return false;
     };

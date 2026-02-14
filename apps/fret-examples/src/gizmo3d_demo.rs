@@ -187,6 +187,7 @@ impl ViewGizmoLabelCache {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
 
@@ -4247,6 +4248,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     max_width: Some(Px(bounds.size.width.0 - 24.0)),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor,
                 };
 
@@ -4430,6 +4432,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     max_width: Some(Px(340.0)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor,
                 };
 

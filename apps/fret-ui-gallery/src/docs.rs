@@ -64,6 +64,7 @@ active theme preset:
 
 - shadcn-scoped keys (`duration.shadcn.motion.*`, `easing.shadcn.motion.*`)
 - canonical cross-ecosystem keys (`duration.motion.*`, `easing.motion.*`, `number.motion.spring.*`)
+- stack reflow tokens (Sonner-style toasts): `duration.motion.stack.shift`, `duration.motion.stack.shift.stagger`
 
 Notes:
 

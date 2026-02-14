@@ -204,6 +204,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret::ViewElements {
                 text: Arc::from(line),
                 style: None,
                 color: Some(theme.color_token("muted-foreground")),
+                align: fret_core::TextAlign::Start,
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
             })

@@ -2017,6 +2017,14 @@ impl UiGalleryDriver {
             _ => (100, 200, 300, 500, 200, 200, 200, 160, 120),
         };
 
+        let toast_stack_shift = toast_enter;
+        let toast_stack_shift_stagger = match preset {
+            "snappy" => 16,
+            "bouncy" => 20,
+            "gentle" => 24,
+            _ => 20,
+        };
+
         cfg.durations_ms
             .insert("duration.shadcn.motion.100".to_string(), scale_100);
         cfg.durations_ms
@@ -2042,6 +2050,14 @@ impl UiGalleryDriver {
             .insert("duration.shadcn.motion.toast.enter".to_string(), toast_enter);
         cfg.durations_ms
             .insert("duration.shadcn.motion.toast.exit".to_string(), toast_exit);
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.toast.stack.shift".to_string(),
+            toast_stack_shift,
+        );
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.toast.stack.shift.stagger".to_string(),
+            toast_stack_shift_stagger,
+        );
 
         cfg.easings
             .insert("easing.shadcn.motion".to_string(), shadcn_ease);
@@ -2051,6 +2067,10 @@ impl UiGalleryDriver {
             .insert("easing.shadcn.motion.sidebar".to_string(), linear);
         cfg.easings
             .insert("easing.shadcn.motion.toast".to_string(), shadcn_ease);
+        cfg.easings.insert(
+            "easing.shadcn.motion.toast.stack.shift".to_string(),
+            shadcn_ease,
+        );
 
         let (drawer_settle_duration, drawer_settle_bounce, inertia_bounce_bounce) = match preset {
             "snappy" => (210, 0.0, 0.2),
@@ -2086,6 +2106,12 @@ impl UiGalleryDriver {
         );
         cfg.durations_ms
             .insert("duration.motion.layout.expand".to_string(), sidebar_toggle);
+        cfg.durations_ms
+            .insert("duration.motion.stack.shift".to_string(), toast_stack_shift);
+        cfg.durations_ms.insert(
+            "duration.motion.stack.shift.stagger".to_string(),
+            toast_stack_shift_stagger,
+        );
         cfg.durations_ms.insert(
             "duration.motion.spring.drag_release_settle".to_string(),
             drawer_settle_duration,
@@ -2098,6 +2124,8 @@ impl UiGalleryDriver {
             .insert("easing.motion.standard".to_string(), shadcn_ease);
         cfg.easings
             .insert("easing.motion.emphasized".to_string(), shadcn_ease);
+        cfg.easings
+            .insert("easing.motion.stack.shift".to_string(), shadcn_ease);
 
         cfg
     }

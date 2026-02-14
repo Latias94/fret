@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{
     AppWindowId, Color, FontId, FontWeight, NodeId, Point, Px, Rect, SemanticsRole, TextStyle,
@@ -25,7 +26,7 @@ use super::state::{
     NonModalDismissibleLayerPolicy, OVERLAY_CACHE_TTL_FRAMES, OverlayLayer, WindowOverlays,
     apply_hover_layer, apply_modal_layer, apply_non_modal_dismissible_layer, apply_tooltip_layer,
 };
-use super::toast::{ToastEntry, ToastTimerOutcome};
+use super::toast::{ToastEntry, ToastId, ToastTimerOutcome};
 use super::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, ToastPosition,
     ToastVariant, TooltipRequest, dismiss_toast_action,
@@ -110,6 +111,218 @@ impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusActionHostAdapter<'a, H> {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn toast_position_key(position: ToastPosition) -> u8 {
+    match position {
+        ToastPosition::TopLeft => 0,
+        ToastPosition::TopCenter => 1,
+        ToastPosition::TopRight => 2,
+        ToastPosition::BottomLeft => 3,
+        ToastPosition::BottomCenter => 4,
+        ToastPosition::BottomRight => 5,
+    }
+}
+
+#[derive(Default)]
+struct ToastStackShiftState {
+    generation: u64,
+    active: bool,
+    last_targets_y: HashMap<ToastId, Px>,
+    last_targets_scale: HashMap<ToastId, f32>,
+    last_visual_y: HashMap<ToastId, Px>,
+    last_visual_scale: HashMap<ToastId, f32>,
+    deltas_y: HashMap<ToastId, Px>,
+    deltas_scale: HashMap<ToastId, f32>,
+}
+
+#[derive(Clone)]
+struct ToastStackShiftSnapshot {
+    generation: u64,
+    active: bool,
+    deltas_y: HashMap<ToastId, Px>,
+    deltas_scale: HashMap<ToastId, f32>,
+}
+
+struct ToastStackShiftOutput {
+    stack_offset_y: Vec<Px>,
+    stack_scale: Vec<f32>,
+}
+
+fn toast_stack_shift_output<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    toaster_key: GlobalElementId,
+    stack_position: ToastPosition,
+    stack_toasts: &[ToastEntry],
+    target_stack_offset_y: &[Px],
+    target_stack_scale: &[f32],
+    expanded: bool,
+    duration: Duration,
+    each_delay: Duration,
+    bezier: fret_ui::theme::CubicBezier,
+) -> ToastStackShiftOutput {
+    debug_assert_eq!(stack_toasts.len(), target_stack_offset_y.len());
+    debug_assert_eq!(stack_toasts.len(), target_stack_scale.len());
+
+    let count = stack_toasts.len();
+    if count == 0 {
+        return ToastStackShiftOutput {
+            stack_offset_y: Vec::new(),
+            stack_scale: Vec::new(),
+        };
+    }
+
+    let stack_key = (
+        "toast_stack_shift",
+        toaster_key,
+        toast_position_key(stack_position),
+    );
+    cx.keyed(stack_key, |cx| {
+        let mut current_targets_y: HashMap<ToastId, Px> = HashMap::with_capacity(count);
+        let mut current_targets_scale: HashMap<ToastId, f32> = HashMap::with_capacity(count);
+        for (idx, toast) in stack_toasts.iter().enumerate() {
+            current_targets_y.insert(toast.id, target_stack_offset_y[idx]);
+            current_targets_scale.insert(toast.id, target_stack_scale[idx]);
+        }
+
+        let snapshot: ToastStackShiftSnapshot =
+            cx.with_state(ToastStackShiftState::default, |st| {
+                if expanded {
+                    st.active = false;
+                    st.deltas_y.clear();
+                    st.deltas_scale.clear();
+                    st.last_targets_y.clone_from(&current_targets_y);
+                    st.last_targets_scale.clone_from(&current_targets_scale);
+                    st.last_visual_y.clone_from(&current_targets_y);
+                    st.last_visual_scale.clone_from(&current_targets_scale);
+                    return ToastStackShiftSnapshot {
+                        generation: st.generation,
+                        active: false,
+                        deltas_y: HashMap::new(),
+                        deltas_scale: HashMap::new(),
+                    };
+                }
+
+                let mut changed = st.last_targets_y.len() != current_targets_y.len();
+                if !changed {
+                    for (id, curr) in &current_targets_y {
+                        if let Some(prev) = st.last_targets_y.get(id)
+                            && (prev.0 - curr.0).abs() > 0.5
+                        {
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+
+                if changed {
+                    st.active = true;
+                    st.generation = st.generation.wrapping_add(1);
+                    st.deltas_y.clear();
+                    st.deltas_scale.clear();
+
+                    for (id, curr_y) in &current_targets_y {
+                        let from_y = st
+                            .last_visual_y
+                            .get(id)
+                            .copied()
+                            .or_else(|| st.last_targets_y.get(id).copied())
+                            .unwrap_or(*curr_y);
+                        st.deltas_y.insert(*id, Px(from_y.0 - curr_y.0));
+
+                        let target_scale = current_targets_scale.get(id).copied().unwrap_or(1.0);
+                        let from_scale = st
+                            .last_visual_scale
+                            .get(id)
+                            .copied()
+                            .or_else(|| st.last_targets_scale.get(id).copied())
+                            .unwrap_or(target_scale);
+                        st.deltas_scale.insert(*id, from_scale - target_scale);
+                    }
+                }
+
+                st.last_targets_y.clone_from(&current_targets_y);
+                st.last_targets_scale.clone_from(&current_targets_scale);
+
+                ToastStackShiftSnapshot {
+                    generation: st.generation,
+                    active: st.active,
+                    deltas_y: st.deltas_y.clone(),
+                    deltas_scale: st.deltas_scale.clone(),
+                }
+            });
+
+        let shift = cx.keyed(snapshot.generation, |cx| {
+            crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier_duration(
+                cx,
+                snapshot.active,
+                duration,
+                duration,
+                bezier,
+            )
+        });
+
+        let bezier_headless = crate::headless::easing::CubicBezier::new(
+            bezier.x1, bezier.y1, bezier.x2, bezier.y2,
+        );
+
+        let mut out_y: Vec<Px> = Vec::with_capacity(count);
+        let mut out_scale: Vec<f32> = Vec::with_capacity(count);
+
+        for idx in 0..count {
+            let toast_id = stack_toasts[idx].id;
+            let target_y = target_stack_offset_y[idx];
+            let target_scale = target_stack_scale[idx];
+
+            if !snapshot.active {
+                out_y.push(target_y);
+                out_scale.push(target_scale);
+                continue;
+            }
+
+            let delta_y = snapshot.deltas_y.get(&toast_id).copied().unwrap_or(Px(0.0));
+            let delta_scale = snapshot.deltas_scale.get(&toast_id).copied().unwrap_or(0.0);
+
+            let local_linear = crate::headless::stagger::staggered_progress_for_duration(
+                shift.linear,
+                idx,
+                count,
+                each_delay,
+                duration,
+                crate::headless::stagger::StaggerFrom::First,
+            );
+            let local = bezier_headless.sample(local_linear);
+
+            out_y.push(Px(target_y.0 + delta_y.0 * (1.0 - local)));
+            out_scale.push((target_scale + delta_scale * (1.0 - local)).clamp(0.0, 2.0));
+        }
+
+        cx.with_state(ToastStackShiftState::default, |st| {
+            st.last_visual_y.clear();
+            st.last_visual_scale.clear();
+            for idx in 0..count {
+                let id = stack_toasts[idx].id;
+                st.last_visual_y.insert(id, out_y[idx]);
+                st.last_visual_scale.insert(id, out_scale[idx]);
+            }
+
+            if snapshot.active
+                && !shift.animating
+                && (shift.progress - 1.0).abs() <= f32::EPSILON
+            {
+                st.active = false;
+                st.deltas_y.clear();
+                st.deltas_scale.clear();
+                st.last_visual_y.clone_from(&current_targets_y);
+                st.last_visual_scale.clone_from(&current_targets_scale);
+            }
+        });
+
+        ToastStackShiftOutput {
+            stack_offset_y: out_y,
+            stack_scale: out_scale,
+        }
+    })
 }
 
 fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
@@ -1765,6 +1978,44 @@ pub fn render<H: UiHost + 'static>(
                                             let mut out: Vec<AnyElement> =
                                                 Vec::with_capacity(stack_toasts.len());
 
+                                            let stack_target_offset_y: Vec<Px> = offsets
+                                                .iter()
+                                                .map(|v| Px(lift * v.0))
+                                                .collect();
+                                            let stack_target_scale: Vec<f32> = (0
+                                                ..stack_toasts.len())
+                                                .map(|idx| {
+                                                    if expanded || idx == 0 {
+                                                        1.0
+                                                    } else {
+                                                        (1.0 - 0.05 * (idx as f32)).max(0.85)
+                                                    }
+                                                })
+                                                .collect();
+
+                                            let stack_shift_duration =
+                                                crate::declarative::toast_motion::shadcn_toast_stack_shift_duration_opt(cx)
+                                                    .unwrap_or(crate::declarative::toast_motion::DEFAULT_SHADCN_TOAST_STACK_SHIFT_DURATION);
+                                            let stack_shift_each_delay =
+                                                crate::declarative::toast_motion::shadcn_toast_stack_shift_stagger_opt(cx)
+                                                    .unwrap_or(crate::declarative::toast_motion::DEFAULT_SHADCN_TOAST_STACK_SHIFT_STAGGER);
+                                            let stack_shift_bezier = toast_style.easing.unwrap_or_else(|| {
+                                                crate::declarative::toast_motion::shadcn_toast_stack_shift_ease_bezier(cx)
+                                            });
+
+                                            let stack_shift = toast_stack_shift_output(
+                                                cx,
+                                                toaster_key,
+                                                stack_position,
+                                                &stack_toasts,
+                                                &stack_target_offset_y,
+                                                &stack_target_scale,
+                                                expanded,
+                                                stack_shift_duration,
+                                                stack_shift_each_delay,
+                                                stack_shift_bezier,
+                                            );
+
                                             for idx in (0..stack_toasts.len()).rev() {
                                                 let toast = stack_toasts[idx].clone();
                                                 let toast_id = toast.id;
@@ -1775,13 +2026,8 @@ pub fn render<H: UiHost + 'static>(
                                                 let toast_height_override =
                                                     (!toast_content_visible)
                                                         .then_some(front_height);
-                                                let stack_offset_y =
-                                                    Px(lift * offsets[idx].0);
-                                                let stack_scale = if expanded || idx == 0 {
-                                                    1.0
-                                                } else {
-                                                    1.0 + 0.05 * (idx as f32)
-                                                };
+                                                let stack_offset_y = stack_shift.stack_offset_y[idx];
+                                                let stack_scale = stack_shift.stack_scale[idx];
 
                                                 let store = store_for_toasts.clone();
                                                 let open = toast.open;
