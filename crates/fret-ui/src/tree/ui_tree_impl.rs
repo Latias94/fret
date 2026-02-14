@@ -1,3 +1,5 @@
+use super::*;
+
 impl<H: UiHost> UiTree<H> {
     fn mark_node_invalidation_state(node: &mut Node<H>, inv: Invalidation) {
         match inv {
@@ -13,7 +15,11 @@ impl<H: UiHost> UiTree<H> {
         node.invalidation.mark(inv);
     }
 
-    fn update_invalidation_counters(&mut self, prev: InvalidationFlags, next: InvalidationFlags) {
+    pub(in crate::tree) fn update_invalidation_counters(
+        &mut self,
+        prev: InvalidationFlags,
+        next: InvalidationFlags,
+    ) {
         if prev.layout != next.layout {
             if next.layout {
                 self.invalidated_layout_nodes = self.invalidated_layout_nodes.saturating_add(1);
@@ -53,7 +59,11 @@ impl<H: UiHost> UiTree<H> {
         self.update_invalidation_counters(prev, next);
     }
 
-    fn begin_prepaint_outputs_for_node(&mut self, node: NodeId, key: PaintCacheKey) {
+    pub(in crate::tree) fn begin_prepaint_outputs_for_node(
+        &mut self,
+        node: NodeId,
+        key: PaintCacheKey,
+    ) {
         let Some(n) = self.nodes.get_mut(node) else {
             return;
         };
@@ -630,7 +640,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn debug_take_top_measure_children(
+    pub(in crate::tree) fn debug_take_top_measure_children(
         &mut self,
         parent: NodeId,
         max: usize,
@@ -1317,7 +1327,7 @@ impl<H: UiHost> UiTree<H> {
         &self.viewport_roots
     }
 
-    fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
+    pub(in crate::tree) fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
         if self.ime_allowed == enabled {
             return;
         }
@@ -1328,7 +1338,7 @@ impl<H: UiHost> UiTree<H> {
         app.push_effect(Effect::ImeAllow { window, enabled });
     }
 
-    fn enforce_modal_barrier_scope(&mut self, active_roots: &[NodeId]) {
+    pub(in crate::tree) fn enforce_modal_barrier_scope(&mut self, active_roots: &[NodeId]) {
         let (focus_roots, focus_barrier_root) = self.active_focus_layers();
         if focus_barrier_root.is_some()
             && self
@@ -1347,7 +1357,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn enforce_focus_barrier_scope(&mut self, active_roots: &[NodeId]) {
+    pub(in crate::tree) fn enforce_focus_barrier_scope(&mut self, active_roots: &[NodeId]) {
         if self
             .focus
             .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
@@ -1815,7 +1825,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn view_cache_active(&self) -> bool {
+    pub(in crate::tree) fn view_cache_active(&self) -> bool {
         self.view_cache_enabled && !self.inspection_active
     }
 
@@ -1891,7 +1901,7 @@ impl<H: UiHost> UiTree<H> {
         out
     }
 
-    fn collapse_layout_observations_to_view_cache_roots_if_needed(&mut self) {
+    pub(in crate::tree) fn collapse_layout_observations_to_view_cache_roots_if_needed(&mut self) {
         if !self.view_cache_active() {
             return;
         }
@@ -1904,7 +1914,7 @@ impl<H: UiHost> UiTree<H> {
             self.collapse_global_observation_index_to_view_cache_roots(observed_globals_in_layout);
     }
 
-    fn collapse_paint_observations_to_view_cache_roots_if_needed(&mut self) {
+    pub(in crate::tree) fn collapse_paint_observations_to_view_cache_roots_if_needed(&mut self) {
         if !self.view_cache_active() {
             return;
         }
@@ -1917,7 +1927,7 @@ impl<H: UiHost> UiTree<H> {
             self.collapse_global_observation_index_to_view_cache_roots(observed_globals_in_paint);
     }
 
-    fn expand_view_cache_layout_invalidations_if_needed(&mut self) {
+    pub(in crate::tree) fn expand_view_cache_layout_invalidations_if_needed(&mut self) {
         if !self.view_cache_active() {
             return;
         }
@@ -2295,7 +2305,11 @@ impl<H: UiHost> UiTree<H> {
 
     const TOUCH_POINTER_DOWN_OUTSIDE_SLOP_PX: f32 = 6.0;
 
-    fn update_touch_pointer_down_outside_move(&mut self, pointer_id: PointerId, position: Point) {
+    pub(in crate::tree) fn update_touch_pointer_down_outside_move(
+        &mut self,
+        pointer_id: PointerId,
+        position: Point,
+    ) {
         let Some(candidate) = self
             .touch_pointer_down_outside_candidates
             .get_mut(&pointer_id)
@@ -3150,7 +3164,7 @@ impl<H: UiHost> UiTree<H> {
         removed
     }
 
-    fn remove_subtree_inner(
+    pub(in crate::tree) fn remove_subtree_inner(
         &mut self,
         services: &mut dyn UiServices,
         root: NodeId,
@@ -3474,7 +3488,7 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
-    fn dispatch_pointer_down_outside(
+    pub(in crate::tree) fn dispatch_pointer_down_outside(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -3620,7 +3634,7 @@ impl<H: UiHost> UiTree<H> {
         PointerDownOutsideOutcome::default()
     }
 
-    fn rects_intersect(a: Rect, b: Rect) -> bool {
+    pub(in crate::tree) fn rects_intersect(a: Rect, b: Rect) -> bool {
         let ax0 = a.origin.x.0;
         let ay0 = a.origin.y.0;
         let ax1 = ax0 + a.size.width.0;
@@ -3634,7 +3648,7 @@ impl<H: UiHost> UiTree<H> {
         ax0 < bx1 && ax1 > bx0 && ay0 < by1 && ay1 > by0
     }
 
-    fn collect_focusables(
+    pub(in crate::tree) fn collect_focusables(
         &self,
         node: NodeId,
         active_layers: &[NodeId],
@@ -3727,7 +3741,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn focus_is_text_input(&mut self, app: &mut H) -> bool {
+    pub(in crate::tree) fn focus_is_text_input(&mut self, app: &mut H) -> bool {
         let Some(focus) = self.focus else {
             return false;
         };
@@ -3951,7 +3965,9 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn focus_text_boundary_mode_override(&self) -> Option<fret_runtime::TextBoundaryMode> {
+    pub(in crate::tree) fn focus_text_boundary_mode_override(
+        &self,
+    ) -> Option<fret_runtime::TextBoundaryMode> {
         let focus = self.focus?;
         self.nodes
             .get(focus)
@@ -3971,7 +3987,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[track_caller]
-    fn with_widget_mut<R: Default>(
+    pub(in crate::tree) fn with_widget_mut<R: Default>(
         &mut self,
         node: NodeId,
         f: impl FnOnce(&mut dyn Widget<H>, &mut UiTree<H>) -> R,
@@ -4050,7 +4066,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn node_render_transform(&self, node: NodeId) -> Option<Transform2D> {
+    pub(in crate::tree) fn node_render_transform(&self, node: NodeId) -> Option<Transform2D> {
         let n = self.nodes.get(node)?;
         let w = n.widget.as_ref()?;
         let t = w.render_transform(n.bounds)?;
@@ -4064,7 +4080,7 @@ impl<H: UiHost> UiTree<H> {
         t.inverse().is_some().then_some(t)
     }
 
-    fn apply_vector(t: Transform2D, v: Point) -> Point {
+    pub(in crate::tree) fn apply_vector(t: Transform2D, v: Point) -> Point {
         Point::new(Px(t.a * v.x.0 + t.c * v.y.0), Px(t.b * v.x.0 + t.d * v.y.0))
     }
 
@@ -4159,7 +4175,11 @@ impl<H: UiHost> UiTree<H> {
         Some((mapped_pos, mapped_vec))
     }
 
-    fn point_in_rounded_rect(bounds: Rect, radii: Corners, position: Point) -> bool {
+    pub(in crate::tree) fn point_in_rounded_rect(
+        bounds: Rect,
+        radii: Corners,
+        position: Point,
+    ) -> bool {
         if !bounds.contains(position) {
             return false;
         }
@@ -4220,7 +4240,7 @@ impl<H: UiHost> UiTree<H> {
         true
     }
 
-    fn mark_invalidation(&mut self, node: NodeId, inv: Invalidation) {
+    pub(in crate::tree) fn mark_invalidation(&mut self, node: NodeId, inv: Invalidation) {
         self.mark_invalidation_with_source(node, inv, UiDebugInvalidationSource::Other);
     }
 
@@ -4316,7 +4336,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn mark_invalidation_with_source(
+    pub(in crate::tree) fn mark_invalidation_with_source(
         &mut self,
         node: NodeId,
         inv: Invalidation,
@@ -4463,7 +4483,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn mark_invalidation_dedup_with_source<V: InvalidationVisited>(
+    pub(in crate::tree) fn mark_invalidation_dedup_with_source<V: InvalidationVisited>(
         &mut self,
         node: NodeId,
         inv: Invalidation,
@@ -4474,7 +4494,7 @@ impl<H: UiHost> UiTree<H> {
         self.mark_invalidation_dedup_with_detail(node, inv, visited, source, detail);
     }
 
-    fn mark_invalidation_dedup_with_detail<V: InvalidationVisited>(
+    pub(in crate::tree) fn mark_invalidation_dedup_with_detail<V: InvalidationVisited>(
         &mut self,
         node: NodeId,
         inv: Invalidation,
@@ -5024,7 +5044,7 @@ impl<H: UiHost> UiTree<H> {
         did_invalidate
     }
 
-    fn refresh_semantics_snapshot(&mut self, app: &mut H) {
+    pub(in crate::tree) fn refresh_semantics_snapshot(&mut self, app: &mut H) {
         let Some(window) = self.window else {
             self.semantics = None;
             return;
@@ -5418,14 +5438,14 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn node_in_any_layer(&self, node: NodeId, layer_roots: &[NodeId]) -> bool {
+    pub(in crate::tree) fn node_in_any_layer(&self, node: NodeId, layer_roots: &[NodeId]) -> bool {
         let Some(node_root) = self.node_root(node) else {
             return false;
         };
         layer_roots.contains(&node_root)
     }
 
-    fn node_root(&self, mut node: NodeId) -> Option<NodeId> {
+    pub(in crate::tree) fn node_root(&self, mut node: NodeId) -> Option<NodeId> {
         while let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) {
             node = parent;
         }

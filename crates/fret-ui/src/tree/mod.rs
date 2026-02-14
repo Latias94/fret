@@ -41,6 +41,8 @@ mod prepaint;
 mod propagation_depth;
 mod semantics;
 mod shortcuts;
+mod ui_tree_default;
+mod ui_tree_impl;
 use debug::{
     DebugLayoutStackFrame, DebugPaintStackFrame, DebugViewCacheRootRecord,
     DebugWidgetMeasureStackFrame, UiDebugHoverDeclarativeInvalidationCounts,
@@ -799,9 +801,6 @@ struct TouchPointerDownOutsideCandidate {
     start_pos: Point,
     moved: bool,
 }
-
-include!("ui_tree_default.rs");
-include!("ui_tree_impl.rs");
 
 fn pointer_position(pe: &PointerEvent) -> Point {
     match pe {
