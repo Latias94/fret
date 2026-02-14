@@ -250,7 +250,7 @@ pub(super) struct RenderPlan {
 }
 
 impl RenderPlan {
-    fn finalize(
+    pub(super) fn finalize(
         passes: Vec<RenderPlanPass>,
         viewport_size: (u32, u32),
         postprocess: DebugPostprocess,
@@ -1206,15 +1206,17 @@ impl RenderPlan {
                 postprocess,
                 intermediate_budget_bytes,
             ),
-            super::RenderPlanCompilerFlavor::VNext => Self::compile_for_scene(
-                encoding,
-                viewport_size,
-                format,
-                clear,
-                path_samples,
-                postprocess,
-                intermediate_budget_bytes,
-            ),
+            super::RenderPlanCompilerFlavor::VNext => {
+                super::render_plan_compiler_vnext::compile_for_scene_vnext(
+                    encoding,
+                    viewport_size,
+                    format,
+                    clear,
+                    path_samples,
+                    postprocess,
+                    intermediate_budget_bytes,
+                )
+            }
         }
     }
 }

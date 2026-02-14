@@ -22,6 +22,7 @@ mod fullscreen;
 mod intermediate_pool;
 mod pipelines;
 mod render_plan;
+mod render_plan_compiler_vnext;
 mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
