@@ -69,6 +69,7 @@ active theme preset:
 Notes:
 
 - shadcn recipes typically prefer `*.shadcn.motion.*` keys first; canonical keys act as a fallback.
+- The `Reduced motion (0)` preset forces token durations to zero for quick UX comparisons.
 - Diagnostics gates should use `--fixed-frame-delta-ms 16` for deterministic motion.
 "#;
 
