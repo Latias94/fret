@@ -38,6 +38,7 @@ pub(crate) fn content_view(
                             color: None,
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
+                            align: fret_core::TextAlign::Start,
                         }),
                         cx.text_props(TextProps {
                             layout: {
@@ -50,6 +51,7 @@ pub(crate) fn content_view(
                             color: Some(theme.color_token("muted-foreground")),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
+                            align: fret_core::TextAlign::Start,
                         }),
                     ]
                 },

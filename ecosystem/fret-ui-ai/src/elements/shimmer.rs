@@ -134,6 +134,7 @@ impl Shimmer {
                     color: Some(base_color),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 });
 
                 let canvas_layout = decl_style::layout_style(
@@ -209,6 +210,7 @@ impl Shimmer {
                             max_width: Some(bounds.size.width),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
                             scale_factor: painter.scale_factor(),
                         };
                         let baseline = {

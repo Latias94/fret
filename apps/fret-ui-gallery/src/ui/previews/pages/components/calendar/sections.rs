@@ -44,6 +44,7 @@ pub(super) fn basic(
                             color: Some(theme.color_token("muted-foreground")),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
                         })]
                     },
                 ),
@@ -94,6 +95,7 @@ pub(super) fn range(
                                 color: Some(theme.color_token("muted-foreground")),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             }),
                             cx.text_props(TextProps {
                                 layout: Default::default(),
@@ -102,6 +104,7 @@ pub(super) fn range(
                                 color: Some(theme.color_token("muted-foreground")),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             }),
                         ]
                     },
@@ -290,6 +293,7 @@ pub(super) fn booked_dates(
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }),
             ]
         },

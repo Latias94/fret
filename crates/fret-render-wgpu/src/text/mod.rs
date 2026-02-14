@@ -1,8 +1,8 @@
 use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
-    AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints,
-    TextInputRef, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle, TextWrap,
-    geometry::Px,
+    AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextAlign, TextBlobId,
+    TextConstraints, TextInputRef, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle,
+    TextWrap, geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{
@@ -700,6 +700,7 @@ struct TextBlobKey {
     max_width_bits: Option<u32>,
     wrap: TextWrap,
     overflow: TextOverflow,
+    align: u8,
     scale_bits: u32,
 }
 
@@ -712,8 +713,13 @@ impl TextBlobKey {
     ) -> Self {
         let max_width_bits = match constraints.wrap {
             // `TextWrap::None` does not change shaping results based on width unless we need to
-            // materialize an overflow policy (ellipsis). Callers clip at higher levels.
-            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => None,
+            // materialize an overflow policy (ellipsis) or align within a wider box.
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => match constraints
+                .align
+            {
+                TextAlign::Start => None,
+                TextAlign::Center | TextAlign::End => constraints.max_width.map(|w| w.0.to_bits()),
+            },
             _ => constraints.max_width.map(|w| w.0.to_bits()),
         };
         Self {
@@ -735,6 +741,11 @@ impl TextBlobKey {
             max_width_bits,
             wrap: constraints.wrap,
             overflow: constraints.overflow,
+            align: match constraints.align {
+                TextAlign::Start => 0,
+                TextAlign::Center => 1,
+                TextAlign::End => 2,
+            },
             scale_bits: constraints.scale_factor.to_bits(),
         }
     }
@@ -767,6 +778,7 @@ struct TextShapeKey {
     max_width_bits: Option<u32>,
     wrap: TextWrap,
     overflow: TextOverflow,
+    align: u8,
     scale_bits: u32,
 }
 
@@ -786,6 +798,7 @@ impl TextShapeKey {
             max_width_bits: key.max_width_bits,
             wrap: key.wrap,
             overflow: key.overflow,
+            align: key.align,
             scale_bits: key.scale_bits,
         }
     }
@@ -1820,6 +1833,35 @@ pub(crate) struct TextAtlasPerfSnapshot {
 
 pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
 
+fn shaped_line_visual_x_bounds_px(
+    line: &crate::text::parley_shaper::ShapedLineLayout,
+) -> (f32, f32) {
+    let fallback_max = line.width.max(0.0);
+    if line.clusters.is_empty() {
+        return (0.0, fallback_max);
+    }
+
+    let mut min_x = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    for c in &line.clusters {
+        let a = c.x0;
+        let b = c.x1;
+        min_x = min_x.min(a.min(b));
+        max_x = max_x.max(a.max(b));
+    }
+
+    if !min_x.is_finite() || !max_x.is_finite() || max_x < min_x {
+        return (0.0, fallback_max);
+    }
+
+    (min_x, max_x.max(min_x))
+}
+
+fn shaped_line_visual_width_px(line: &crate::text::parley_shaper::ShapedLineLayout) -> f32 {
+    let (min_x, max_x) = shaped_line_visual_x_bounds_px(line);
+    (max_x - min_x).max(0.0)
+}
+
 fn metrics_from_wrapped_lines(
     lines: &[crate::text::parley_shaper::ShapedLineLayout],
     scale: f32,
@@ -1841,14 +1883,14 @@ fn metrics_from_wrapped_lines(
     if snap_vertical {
         let mut top_px = 0.0_f32;
         for line in lines {
-            max_w_px = max_w_px.max(line.width.max(0.0));
+            max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
             let bottom_px = (top_px + line.line_height.max(0.0)).round().max(top_px);
             top_px = bottom_px;
         }
         total_h_px = top_px;
     } else {
         for line in lines {
-            max_w_px = max_w_px.max(line.width.max(0.0));
+            max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
             total_h_px += line.line_height.max(0.0);
         }
     }
@@ -1902,13 +1944,9 @@ fn metrics_for_uniform_lines(
 }
 
 fn is_word_char_for_wrap(c: char) -> bool {
-    c.is_ascii_alphanumeric()
-        || matches!(c, '\u{00C0}'..='\u{00FF}')
-        || matches!(c, '\u{0100}'..='\u{017F}')
-        || matches!(c, '\u{0180}'..='\u{024F}')
-        || matches!(c, '\u{0400}'..='\u{04FF}')
-        || matches!(c, '\u{1E00}'..='\u{1EFF}')
+    c.is_alphanumeric()
         || matches!(c, '\u{0300}'..='\u{036F}')
+        || matches!(c, '\u{200C}' | '\u{200D}')
         || matches!(
             c,
             '-' | '_' | '.' | '\'' | '$' | '%' | '@' | '#' | '^' | '~' | ',' | '=' | ':' | '?'
@@ -3049,6 +3087,22 @@ impl TextSystem {
                 let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
                 let mut line_top_px = 0.0_f32;
 
+                let align_offset_px_for_line = |line_min_x_px: f32,
+                                                line_visual_width_px: f32|
+                 -> f32 {
+                    let container_width_px = constraints
+                        .max_width
+                        .map(|w| w.0 * scale)
+                        .unwrap_or_else(|| line_visual_width_px.max(0.0));
+                    let slack_px = (container_width_px - line_visual_width_px.max(0.0)).max(0.0);
+                    let target_left_px = match constraints.align {
+                        TextAlign::Start => 0.0,
+                        TextAlign::Center => slack_px * 0.5,
+                        TextAlign::End => slack_px,
+                    };
+                    target_left_px - line_min_x_px
+                };
+
                 let metrics = match wrapped {
                     WrappedForPrepare::Owned(wrapped) => {
                         let kept_end = wrapped.kept_end;
@@ -3103,14 +3157,26 @@ impl TextSystem {
                             let line_offset_px = baseline_pos_px - first_baseline_px;
 
                             let slice = &text[range.clone()];
-                            let caret_stops = caret_stops_for_slice(
+                            let (line_min_x_px, line_max_x_px) =
+                                shaped_line_visual_x_bounds_px(&line);
+                            let line_visual_width_px = (line_max_x_px - line_min_x_px).max(0.0);
+                            let line_align_offset_px =
+                                align_offset_px_for_line(line_min_x_px, line_visual_width_px);
+                            let line_align_offset = Px(line_align_offset_px / scale);
+
+                            let mut caret_stops = caret_stops_for_slice(
                                 slice,
                                 range.start,
                                 &line.clusters,
-                                line.width.max(0.0),
+                                line_visual_width_px.max(0.0),
                                 scale,
                                 kept_end,
                             );
+                            if line_align_offset.0 != 0.0 {
+                                for (_, x) in caret_stops.iter_mut() {
+                                    *x = Px(x.0 + line_align_offset.0);
+                                }
+                            }
                             if i == 0 {
                                 first_line_caret_stops = caret_stops.clone();
                             }
@@ -3118,7 +3184,7 @@ impl TextSystem {
                             lines.push(TextLine {
                                 start: range.start,
                                 end: range.end.min(kept_end),
-                                width: Px((line.width / scale).max(0.0)),
+                                width: Px((line_visual_width_px / scale).max(0.0)),
                                 y_top: Px((line_top_px / scale).max(0.0)),
                                 y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                                 height: Px((line_height_px / scale).max(0.0)),
@@ -3164,7 +3230,7 @@ impl TextSystem {
                                 }
 
                                 let pos_y = g.y + line_offset_px;
-                                let (x, x_bin) = subpixel_bin_q4(g.x);
+                                let (x, x_bin) = subpixel_bin_q4(g.x + line_align_offset_px);
                                 let (y, y_bin) = subpixel_bin_y(pos_y);
 
                                 let text_range = (range.start + g.text_range.start)
@@ -3408,7 +3474,11 @@ impl TextSystem {
                             let line_offset_px = baseline_pos_px - first_baseline_px;
 
                             let slice = &text[s.range.clone()];
-                            let caret_stops = caret_stops_for_slice_from_unwrapped_ltr(
+                            let line_align_offset_px =
+                                align_offset_px_for_line(0.0, s.width_px.max(0.0));
+                            let line_align_offset = Px(line_align_offset_px / scale);
+
+                            let mut caret_stops = caret_stops_for_slice_from_unwrapped_ltr(
                                 slice,
                                 s.range.start,
                                 &unwrapped.clusters,
@@ -3418,6 +3488,11 @@ impl TextSystem {
                                 scale,
                                 kept_end,
                             );
+                            if line_align_offset.0 != 0.0 {
+                                for (_, x) in caret_stops.iter_mut() {
+                                    *x = Px(x.0 + line_align_offset.0);
+                                }
+                            }
                             if i == 0 {
                                 first_line_caret_stops = caret_stops.clone();
                             }
@@ -3471,7 +3546,7 @@ impl TextSystem {
                                 }
 
                                 let pos_y = g.y + line_offset_px;
-                                let x = g.x - s.line_start_x;
+                                let x = g.x - s.line_start_x + line_align_offset_px;
                                 let (x, x_bin) = subpixel_bin_q4(x);
                                 let (y, y_bin) = subpixel_bin_y(pos_y);
 
@@ -5697,6 +5772,7 @@ mod tests {
             max_width: Some(Px(120.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 2.0,
         };
 
@@ -5725,6 +5801,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -5821,12 +5898,14 @@ mod tests {
             max_width: Some(Px(120.0)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
         let b = TextConstraints {
             max_width: Some(Px(320.0)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -5844,12 +5923,14 @@ mod tests {
             max_width: Some(Px(120.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
         let b = TextConstraints {
             max_width: Some(Px(320.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6013,6 +6094,7 @@ mod tests {
             max_width: Some(Px(120.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
         let style = TextStyle {
@@ -6080,6 +6162,7 @@ mod tests {
             max_width: Some(Px(160.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
         let style = TextStyle {
@@ -6137,6 +6220,7 @@ mod tests {
             max_width: Some(Px(180.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
         let style = TextStyle {
@@ -6233,6 +6317,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
         let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
@@ -6252,6 +6337,7 @@ mod tests {
             max_width: Some(max_width),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
         let (blob, _metrics) = text.prepare(content, &style, wrapped_constraints);
@@ -6296,6 +6382,7 @@ mod tests {
             max_width: Some(Px(80.0)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6319,6 +6406,7 @@ mod tests {
             max_width: Some(Px(80.0)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6390,6 +6478,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6465,6 +6554,7 @@ mod tests {
             max_width: Some(Px(360.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6571,6 +6661,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6663,6 +6754,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6739,6 +6831,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6838,6 +6931,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -6920,6 +7014,7 @@ mod tests {
             max_width: Some(Px(200.0)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
         let base = TextStyle::default();
@@ -7028,6 +7123,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -7133,6 +7229,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -7230,6 +7327,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -7451,6 +7549,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 
@@ -7595,6 +7694,7 @@ mod tests {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: 1.0,
         };
 

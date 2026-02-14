@@ -189,6 +189,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                     color: Some(theme.color_token("muted-foreground")),
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
+                                    align: fret_core::TextAlign::Start,
                                 }),
                                 cx.container(
                                     decl_style::container_props(
@@ -356,6 +357,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
                                     scale_factor,
+                                    align: fret_core::TextAlign::Start,
                                 };
 
                                 let (blob, metrics) =

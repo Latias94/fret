@@ -190,6 +190,7 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })]
             } else {
                 header.left

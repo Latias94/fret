@@ -162,6 +162,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             max_width: Some(max_width),
             wrap: self.wrap,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let key = PreparedKey {
@@ -273,6 +274,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             max_width: Some(max_width),
             wrap: self.wrap,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let key = PreparedKey {
@@ -1137,6 +1139,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             max_width: Some(max_width),
             wrap: self.wrap,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let mut metrics =
@@ -1197,6 +1200,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             max_width: Some(max_width),
             wrap: self.wrap,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let key = PreparedKey {

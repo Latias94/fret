@@ -275,6 +275,7 @@ impl DialogAction {
                         color: Some(label_color),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     });
 
                     vec![cx.container(
@@ -699,6 +700,7 @@ impl Dialog {
                                                         color: Some(headline_color),
                                                         wrap: TextWrap::Word,
                                                         overflow: TextOverflow::Clip,
+                                                        align: fret_core::TextAlign::Start,
                                                     }));
                                                 }
                                                 if let Some(text) = self.supporting_text.clone() {
@@ -710,6 +712,7 @@ impl Dialog {
                                                         color: Some(supporting_color),
                                                         wrap: TextWrap::Word,
                                                         overflow: TextOverflow::Clip,
+                                                        align: fret_core::TextAlign::Start,
                                                     }));
                                                 }
 

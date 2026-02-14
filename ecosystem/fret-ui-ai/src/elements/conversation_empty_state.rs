@@ -72,6 +72,7 @@ impl ConversationEmptyState {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let description = self.description.map(|text| {
@@ -82,6 +83,7 @@ impl ConversationEmptyState {
                 color: theme.color_by_key("muted-foreground"),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })
         });
 

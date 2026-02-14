@@ -286,6 +286,7 @@ impl ArtifactTitle {
             color: Some(theme.color_token("foreground")),
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         if let Some(test_id) = self.test_id {
@@ -347,6 +348,7 @@ impl ArtifactDescription {
             color: Some(muted_fg),
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         if let Some(test_id) = self.test_id {

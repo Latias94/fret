@@ -912,6 +912,7 @@ impl WebPreviewBody {
                 color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })
         };
 
@@ -1257,6 +1258,7 @@ impl WebPreviewConsole {
                         color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     });
 
                     let msg = cx.text_props(TextProps {
@@ -1273,6 +1275,7 @@ impl WebPreviewConsole {
                         color: Some(fg),
                         wrap: TextWrap::Word,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     });
 
                     let row = stack::hstack(

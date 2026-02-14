@@ -218,6 +218,7 @@ impl ToolHeader {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let badge = Badge::new(self.status.label())
@@ -494,6 +495,7 @@ impl ToolOutput {
                         .or_else(|| theme.color_by_key("foreground")),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }),
             );
         }
@@ -631,6 +633,7 @@ impl ToolSectionTitle {
             color: theme.color_by_key("muted-foreground"),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }

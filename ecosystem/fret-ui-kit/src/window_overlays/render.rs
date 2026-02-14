@@ -52,6 +52,7 @@ fn toast_icon_from_override<H: UiHost>(
                 color: Some(fg),
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }))
         }
         #[cfg(feature = "icons")]
@@ -1989,6 +1990,7 @@ pub fn render<H: UiHost + 'static>(
                                                                                 wrap: fret_core::TextWrap::None,
                                                                                 overflow:
                                                                                     fret_core::TextOverflow::Clip,
+                                                                                align: fret_core::TextAlign::Start,
                                                                             },
                                                                         )]
                                                                     }
@@ -2072,6 +2074,7 @@ pub fn render<H: UiHost + 'static>(
                                                                             color: Some(bg),
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
+                                                                            align: fret_core::TextAlign::Start,
                                                                         })]
                                                                     },
                                                                 )]
@@ -2150,6 +2153,7 @@ pub fn render<H: UiHost + 'static>(
                                                                             color: Some(fg),
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
+                                                                            align: fret_core::TextAlign::Start,
                                                                         })]
                                                                     },
                                                                 )]
@@ -2224,6 +2228,7 @@ pub fn render<H: UiHost + 'static>(
                                                                             color: Some(fg),
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
+                                                                            align: fret_core::TextAlign::Start,
                                                                         })
                                                                     })
                                                                 })
@@ -2260,6 +2265,7 @@ pub fn render<H: UiHost + 'static>(
                                                         color: Some(fg),
                                                         wrap: fret_core::TextWrap::None,
                                                         overflow: fret_core::TextOverflow::Clip,
+                                                        align: fret_core::TextAlign::Start,
                                                     });
 
                                                     let mut content_children: Vec<AnyElement> = vec![title];
@@ -2271,6 +2277,7 @@ pub fn render<H: UiHost + 'static>(
                                                             color: Some(fg_muted),
                                                             wrap: fret_core::TextWrap::Word,
                                                             overflow: fret_core::TextOverflow::Clip,
+                                                            align: fret_core::TextAlign::Start,
                                                         }));
                                                     }
 

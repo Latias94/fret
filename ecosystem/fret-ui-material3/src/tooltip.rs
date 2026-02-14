@@ -721,6 +721,7 @@ impl PlainTooltip {
                     color: Some(text_fg),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }),
                 PlainTooltipContent::Element(el) => apply_tooltip_inherited_fg(el, text_fg),
             };
@@ -1332,6 +1333,7 @@ impl RichTooltip {
                                 color: Some(subhead_fg),
                                 wrap: TextWrap::Word,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             }));
                         }
                         children.push(cx.text_props(TextProps {
@@ -1341,6 +1343,7 @@ impl RichTooltip {
                             color: Some(supporting_fg),
                             wrap: TextWrap::Word,
                             overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
                         }));
                         children
                     })

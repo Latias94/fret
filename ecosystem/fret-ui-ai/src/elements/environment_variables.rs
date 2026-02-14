@@ -344,6 +344,7 @@ impl EnvironmentVariablesTitle {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let Some(test_id) = self.test_id else {
@@ -647,6 +648,7 @@ impl EnvironmentVariableName {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -703,6 +705,7 @@ impl EnvironmentVariableValue {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -952,6 +955,7 @@ impl EnvironmentVariableCopyButton {
                         color: None,
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     })
                     .attach_semantics(
                         SemanticsDecoration::default()

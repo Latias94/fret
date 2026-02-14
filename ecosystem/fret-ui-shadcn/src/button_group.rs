@@ -179,6 +179,7 @@ impl ButtonGroupText {
                         color: Some(text_color),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     })]
                 },
             );

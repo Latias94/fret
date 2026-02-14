@@ -277,6 +277,7 @@ pub(in crate::ui) fn preview_view_cache(
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }),
             ]
         },

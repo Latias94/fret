@@ -1187,6 +1187,7 @@ impl ChartCanvas {
                     max_width: None,
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor: cx.scale_factor,
                 };
 
@@ -1368,6 +1369,7 @@ impl ChartCanvas {
                     max_width: None,
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
                 };
 
@@ -2796,6 +2798,7 @@ impl ChartCanvas {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
         };
 
@@ -3213,6 +3216,7 @@ impl ChartCanvas {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
         };
 
@@ -5786,6 +5790,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
             };
             let prepared = self
@@ -6010,6 +6015,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             max_width: None,
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
                             scale_factor: cx.scale_factor,
                         };
                         let prepared = self.tooltip_text.prepare(
@@ -6341,6 +6347,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
             };
 

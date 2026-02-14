@@ -93,6 +93,7 @@ pub(super) fn paint_row(
             max_width: Some(stable_max_width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor,
         };
         let started = perf_enabled.then(Instant::now);

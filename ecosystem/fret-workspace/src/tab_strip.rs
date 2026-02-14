@@ -149,6 +149,7 @@ fn centered_row<H: UiHost>(
                 color,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })]
         },
     )
@@ -1095,6 +1096,7 @@ impl WorkspaceTabStrip {
                                                                                 color: Some(tab_fg),
                                                                                 wrap: TextWrap::None,
                                                                                 overflow: TextOverflow::Ellipsis,
+                                                                                align: fret_core::TextAlign::Start,
                                                                             }),
                                                                         ];
 
@@ -1151,6 +1153,7 @@ impl WorkspaceTabStrip {
                                                                                                         color: Some(tab_fg),
                                                                                                         wrap: TextWrap::None,
                                                                                                         overflow: TextOverflow::Clip,
+                                                                                                        align: fret_core::TextAlign::Start,
                                                                                                     })]
                                                                                                 },
                                                                                             )]
@@ -1185,6 +1188,7 @@ impl WorkspaceTabStrip {
                                                                                                     color: Some(dirty_fg),
                                                                                                     wrap: TextWrap::None,
                                                                                                     overflow: TextOverflow::Clip,
+                                                                                                    align: fret_core::TextAlign::Start,
                                                                                                 })]
                                                                                             },
                                                                                         )]

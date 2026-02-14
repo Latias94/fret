@@ -340,6 +340,7 @@ impl TranscriptionSegment {
                 color: Some(base),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             };
             props.layout.size.width = Length::Auto;
             let el = cx.text_props(props);
@@ -383,6 +384,7 @@ impl TranscriptionSegment {
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             };
             text_props.layout.size.width = Length::Auto;
             let content = cx.text_props(text_props);

@@ -1440,6 +1440,7 @@ fn render_math_block_builtin<H: UiHost>(
                 color: Some(markdown_theme.math_block_fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })]
         })]
     })
@@ -1901,6 +1902,7 @@ fn render_inline_token<H: UiHost>(
                 color: Some(markdown_theme.inline_code_fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })]
         });
     }
@@ -1997,6 +1999,7 @@ fn render_inline_text_token<H: UiHost>(
             color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
     }
 
@@ -2023,6 +2026,7 @@ fn render_inline_text_token<H: UiHost>(
             color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let mut line_layout = LayoutStyle::default();
@@ -2111,6 +2115,7 @@ fn render_image_placeholder<H: UiHost>(
                 color: Some(markdown_theme.link),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })]
         });
         return el.attach_semantics(SemanticsDecoration::default().value(href));
@@ -2130,6 +2135,7 @@ fn render_image_placeholder<H: UiHost>(
         color: Some(markdown_theme.muted),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     })
 }
 
@@ -2189,6 +2195,7 @@ fn render_inline_math_builtin<H: UiHost>(
             color: Some(markdown_theme.inline_math_fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })]
     })
 }
