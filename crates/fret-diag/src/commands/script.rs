@@ -345,6 +345,7 @@ pub(crate) fn cmd_script(
                 wants_screenshots,
                 timeout_ms,
                 poll_ms,
+                false,
             )?;
 
             let baseline = run_script_and_wait(

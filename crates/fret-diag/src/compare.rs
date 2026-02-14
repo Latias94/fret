@@ -576,6 +576,7 @@ pub(crate) fn maybe_launch_demo(
     wants_screenshots: bool,
     timeout_ms: u64,
     poll_ms: u64,
+    launch_high_priority: bool,
 ) -> Result<Option<LaunchedDemo>, String> {
     let Some(launch) = launch else {
         return Ok(None);
@@ -684,6 +685,22 @@ pub(crate) fn maybe_launch_demo(
     let child = cmd
         .spawn()
         .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
+
+    #[cfg(windows)]
+    if launch_high_priority {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::System::Threading::{HIGH_PRIORITY_CLASS, SetPriorityClass};
+
+        let handle = child.as_raw_handle();
+        let ok = unsafe { SetPriorityClass(handle, HIGH_PRIORITY_CLASS) } != 0;
+        if !ok {
+            eprintln!(
+                "WARN: failed to set HIGH_PRIORITY_CLASS on launched demo: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+
     let mut demo = LaunchedDemo {
         child,
         launched_unix_ms,
@@ -1589,8 +1606,11 @@ pub(super) fn scan_perf_threshold_failures(
     cli: PerfThresholds,
     baseline: PerfThresholds,
     max_total_time_us: u64,
+    p95_total_time_us: u64,
     max_layout_time_us: u64,
+    p95_layout_time_us: u64,
     max_layout_engine_solve_time_us: u64,
+    p95_layout_engine_solve_time_us: u64,
     pointer_move_frames_present: bool,
     max_pointer_move_dispatch_time_us: u64,
     max_pointer_move_hit_test_time_us: u64,
@@ -1641,6 +1661,8 @@ pub(super) fn scan_perf_threshold_failures(
             "threshold_us": threshold_us,
             "threshold_source": source_total,
             "actual_us": max_total_time_us,
+            "actual_p95_us": p95_total_time_us,
+            "outlier_suspected": p95_total_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
         }));
@@ -1653,6 +1675,8 @@ pub(super) fn scan_perf_threshold_failures(
             "threshold_us": threshold_us,
             "threshold_source": source_layout,
             "actual_us": max_layout_time_us,
+            "actual_p95_us": p95_layout_time_us,
+            "outlier_suspected": p95_layout_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
         }));
@@ -1665,6 +1689,8 @@ pub(super) fn scan_perf_threshold_failures(
             "threshold_us": threshold_us,
             "threshold_source": source_solve,
             "actual_us": max_layout_engine_solve_time_us,
+            "actual_p95_us": p95_layout_engine_solve_time_us,
+            "outlier_suspected": p95_layout_engine_solve_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
         }));

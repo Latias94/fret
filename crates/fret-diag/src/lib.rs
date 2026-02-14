@@ -187,6 +187,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
+    let mut launch_high_priority: bool = false;
     let mut keep_open: bool = false;
     let mut script_tool_write: bool = false;
     let mut script_tool_check: bool = false;
@@ -1676,6 +1677,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 reuse_launch = true;
                 i += 1;
             }
+            "--launch-high-priority" => {
+                launch_high_priority = true;
+                i += 1;
+            }
             "--keep-open" => {
                 keep_open = true;
                 i += 1;
@@ -1709,6 +1714,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         return Err("missing diag subcommand (try: fretboard diag poke)".to_string());
     };
     let rest: Vec<String> = positionals.into_iter().skip(1).collect();
+
+    if launch_high_priority && launch.is_none() {
+        return Err("--launch-high-priority requires --launch".to_string());
+    }
 
     if fixed_frame_delta_ms.is_some() && launch.is_none() && devtools_ws_url.is_some() {
         return Err(
@@ -2432,6 +2441,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || script_wants_screenshots,
                 timeout_ms,
                 poll_ms,
+                launch_high_priority,
             )?;
             let _stop_guard = if keep_open {
                 None
@@ -2814,6 +2824,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     wants_screenshots,
                     timeout_ms,
                     poll_ms,
+                    launch_high_priority,
                 )?
             } else {
                 None
@@ -3045,6 +3056,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         wants_screenshots,
                         timeout_ms,
                         poll_ms,
+                        launch_high_priority,
                     )?;
                 }
 
@@ -3530,6 +3542,7 @@ See: `docs/tracy.md`.\n";
                     || scripts.iter().any(|p| script_requests_screenshots(p)),
                 timeout_ms,
                 poll_ms,
+                launch_high_priority,
             ) {
                 Ok(v) => v,
                 Err(err) => {
@@ -5473,6 +5486,7 @@ See: `docs/tracy.md`.\n";
                     suite_wants_screenshots,
                     timeout_ms,
                     poll_ms,
+                    launch_high_priority,
                 ) {
                     Ok(v) => v,
                     Err(err) => {
@@ -5576,6 +5590,7 @@ See: `docs/tracy.md`.\n";
                         suite_wants_screenshots,
                         timeout_ms,
                         poll_ms,
+                        launch_high_priority,
                     ) {
                         Ok(v) => v,
                         Err(err) => {
@@ -7050,6 +7065,7 @@ See: `docs/tracy.md`.\n";
                     false,
                     timeout_ms,
                     poll_ms,
+                    launch_high_priority,
                 )?;
             }
 
@@ -7066,6 +7082,7 @@ See: `docs/tracy.md`.\n";
                             false,
                             timeout_ms,
                             poll_ms,
+                            launch_high_priority,
                         )?;
                     }
 
@@ -7698,6 +7715,16 @@ See: `docs/tracy.md`.\n";
                                     "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
                                     "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 },
+                                "p50": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                },
+                                "p95": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                },
                                 "thresholds": {
                                     "max_top_total_us": thr_total,
                                     "max_top_layout_us": thr_layout,
@@ -7726,7 +7753,10 @@ See: `docs/tracy.md`.\n";
                                 cli_thresholds,
                                 baseline_thresholds,
                                 top_total,
+                                top_total,
                                 top_layout,
+                                top_layout,
+                                top_solve,
                                 top_solve,
                                 pointer_move_frames_present,
                                 pointer_move_max_dispatch_time_us,
@@ -7792,6 +7822,7 @@ See: `docs/tracy.md`.\n";
                             false,
                             timeout_ms,
                             poll_ms,
+                            launch_high_priority,
                         )?;
                     }
 
@@ -8856,6 +8887,16 @@ See: `docs/tracy.md`.\n";
                                 "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
                                 "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             },
+                            "p50": {
+                                "top_total_time_us": percentile_nearest_rank_sorted(&sorted_total, 0.50),
+                                "top_layout_time_us": percentile_nearest_rank_sorted(&sorted_layout, 0.50),
+                                "top_layout_engine_solve_time_us": percentile_nearest_rank_sorted(&sorted_solve, 0.50),
+                            },
+                            "p95": {
+                                "top_total_time_us": p95_total,
+                                "top_layout_time_us": p95_layout,
+                                "top_layout_engine_solve_time_us": p95_solve,
+                            },
                             "thresholds": {
                                 "max_top_total_us": thr_total,
                                 "max_top_layout_us": thr_layout,
@@ -8884,8 +8925,11 @@ See: `docs/tracy.md`.\n";
                             cli_thresholds,
                             baseline_thresholds,
                             max_total,
+                            p95_total,
                             max_layout,
+                            p95_layout,
                             max_solve,
+                            p95_solve,
                             pointer_move_frames_present,
                             max_pointer_move_dispatch,
                             max_pointer_move_hit_test,
@@ -9300,6 +9344,7 @@ See: `docs/tracy.md`.\n";
                 &uncached_paths,
                 launch,
                 &uncached_env,
+                launch_high_priority,
                 &workspace_root,
                 timeout_ms,
                 poll_ms,
@@ -9319,6 +9364,7 @@ See: `docs/tracy.md`.\n";
                 &cached_paths,
                 launch,
                 &cached_env,
+                launch_high_priority,
                 &workspace_root,
                 timeout_ms,
                 poll_ms,
@@ -13100,6 +13146,7 @@ fn run_script_suite_collect_bundles(
     paths: &ResolvedScriptPaths,
     launch: &[String],
     launch_env: &[(String, String)],
+    launch_high_priority: bool,
     workspace_root: &Path,
     timeout_ms: u64,
     poll_ms: u64,
@@ -13126,6 +13173,7 @@ fn run_script_suite_collect_bundles(
         scripts.iter().any(|src| script_requests_screenshots(src)),
         timeout_ms,
         poll_ms,
+        launch_high_priority,
     )?;
 
     let mut required_caps: Vec<String> = Vec::new();
@@ -18766,7 +18814,10 @@ mod tests {
             },
             PerfThresholds::default(),
             99,
+            99,
             79,
+            79,
+            49,
             49,
             true,
             1999,
@@ -18795,7 +18846,10 @@ mod tests {
             },
             PerfThresholds::default(),
             101,
+            101,
             81,
+            81,
+            51,
             51,
             true,
             2001,

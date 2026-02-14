@@ -48,6 +48,8 @@ P0 commands:
 1) Look at the generated perf check:
 
 - `<out_dir>/check.perf_thresholds.json`
+  - Includes `max` and percentiles (`p50`/`p95`) per script.
+  - When a threshold fails, `failures[]` also includes `actual_p95_us` and `outlier_suspected` for quick triage.
 
 2) Open the worst evidence bundle:
 
