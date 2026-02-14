@@ -1115,7 +1115,9 @@ fn wrap_word_cut_end_from_with_kind(
             let is_heuristic_candidate =
                 (prev_ch == ' ' && ch != ' ') || (!is_word_char(ch) && ch != ' ');
 
-            if is_uax_candidate || is_heuristic_candidate {
+            let allowed = !is_forbidden_line_start_char(ch) && !is_forbidden_line_end_char(prev_ch);
+
+            if allowed && (is_uax_candidate || is_heuristic_candidate) {
                 last_candidate = c.text_range.start;
             }
         }
@@ -1424,7 +1426,9 @@ fn wrap_word_cut_end(text: &str, clusters: &[ShapedCluster], max_width_px: f32) 
             let is_heuristic_candidate =
                 (prev_ch == ' ' && ch != ' ') || (!is_word_char(ch) && ch != ' ');
 
-            if is_uax_candidate || is_heuristic_candidate {
+            let allowed = !is_forbidden_line_start_char(ch) && !is_forbidden_line_end_char(prev_ch);
+
+            if allowed && (is_uax_candidate || is_heuristic_candidate) {
                 last_candidate = c.text_range.start;
             }
         }
@@ -1481,6 +1485,39 @@ fn is_word_char(c: char) -> bool {
             c,
             '-' | '_' | '.' | '\'' | '$' | '%' | '@' | '#' | '^' | '~' | ',' | '=' | ':' | '?'
         )
+}
+
+fn is_forbidden_line_start_char(c: char) -> bool {
+    // Minimal “kinsoku”-style set: avoid starting a line with closing punctuation in CJK text.
+    // Keep this conservative; conformance fixtures can expand it as needed.
+    matches!(
+        c,
+        '，' | '。'
+            | '、'
+            | '：'
+            | '；'
+            | '！'
+            | '？'
+            | '）'
+            | '】'
+            | '》'
+            | '〉'
+            | '」'
+            | '』'
+            | '〕'
+            | '］'
+            | '｝'
+            | '’'
+            | '”'
+    )
+}
+
+fn is_forbidden_line_end_char(c: char) -> bool {
+    // Avoid ending a line with opening punctuation in CJK text.
+    matches!(
+        c,
+        '（' | '【' | '《' | '〈' | '「' | '『' | '〔' | '［' | '｛' | '‘' | '“'
+    )
 }
 
 fn is_cjk_char(c: char) -> bool {
@@ -1632,6 +1669,50 @@ mod tests {
     fn is_word_char_excludes_cjk() {
         assert!(!is_word_char('你'));
         assert!(!is_word_char('あ'));
+    }
+
+    #[test]
+    fn shape_once_word_wrap_handles_long_plain_paragraph_under_resize_jitter() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let mut text = String::new();
+        for i in 0..400 {
+            if i > 0 {
+                text.push(' ');
+            }
+            text.push_str("word");
+            text.push_str(&(i % 97).to_string());
+        }
+        assert!(text.len() >= 256, "expected long paragraph");
+
+        let widths = [60.0, 80.0, 120.0, 90.0, 70.0, 140.0, 60.0];
+        for w in widths {
+            let (ranges, lines) =
+                wrap_word_range_plain_shape_once(&mut shaper, &text, &base, 0..text.len(), w, 1.0)
+                    .unwrap_or_else(|| panic!("expected shape-once path for width={w}"));
+
+            assert_eq!(ranges.len(), lines.len());
+            assert!(!ranges.is_empty());
+            assert_eq!(ranges[0].start, 0);
+            assert_eq!(ranges.last().unwrap().end, text.len());
+
+            for r in &ranges {
+                assert!(text.is_char_boundary(r.start));
+                assert!(text.is_char_boundary(r.end));
+                assert!(r.start < r.end, "expected non-empty line range");
+            }
+            for win in ranges.windows(2) {
+                assert_eq!(
+                    win[0].end, win[1].start,
+                    "expected contiguous coverage for a single-paragraph plain text wrap"
+                );
+            }
+        }
     }
 
     #[test]
@@ -2010,6 +2091,8 @@ mod tests {
         wrap: FixtureWrapMode,
         max_width_px: f32,
         #[serde(default)]
+        assert_no_forbidden_punct: bool,
+        #[serde(default)]
         expected_line_ranges: Option<Vec<[usize; 2]>>,
     }
 
@@ -2098,6 +2181,46 @@ mod tests {
                         "case {}: expected paragraph gaps to contain only newlines (gap={gap:?})",
                         case.id
                     );
+                }
+            }
+
+            if case.assert_no_forbidden_punct {
+                for r in &wrapped.line_ranges {
+                    if r.start < text_len {
+                        let start_ch = case.text[r.start..]
+                            .chars()
+                            .next()
+                            .expect("expected start char");
+                        assert!(
+                            !is_forbidden_line_start_char(start_ch),
+                            "case {}: expected line not to start with forbidden punctuation: start={:?} range={:?}",
+                            case.id,
+                            start_ch,
+                            r
+                        );
+                    }
+
+                    if r.end > r.start {
+                        let line = &case.text[r.start..r.end];
+                        let mut it = line.chars();
+                        let Some(mut end_ch) = it.next_back() else {
+                            continue;
+                        };
+                        while matches!(end_ch, '\n' | ' ') {
+                            let Some(prev) = it.next_back() else {
+                                break;
+                            };
+                            end_ch = prev;
+                        }
+
+                        assert!(
+                            !is_forbidden_line_end_char(end_ch),
+                            "case {}: expected line not to end with forbidden punctuation: end={:?} range={:?}",
+                            case.id,
+                            end_ch,
+                            r
+                        );
+                    }
                 }
             }
 
