@@ -115,8 +115,11 @@ Example heuristic categories:
 
 - `layout.solve_heavy`
 - `layout.observation_heavy`
+- `layout.build_roots_heavy`
+- `layout.roots_heavy`
+- `view_cache.layout_invalidated`
 - `paint.text_prepare_churn`
-- `renderer.atlas_upload_churn`
+- `renderer.upload_churn`
 - `hit_test.bounds_tree_fallback_churn`
 
 ## Rollout plan

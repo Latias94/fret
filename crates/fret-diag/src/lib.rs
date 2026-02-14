@@ -10307,6 +10307,21 @@ fn triage_json_from_stats(
             .and_then(|v| v.get("layout_observation_record_time_us"))
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
+        let sum_layout_request_build_roots_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_request_build_roots_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_layout_roots_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_roots_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_layout_view_cache_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_view_cache_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         let sum_layout_time_us = stats_json
             .get("sum")
             .and_then(|v| v.get("layout_time_us"))
@@ -10361,6 +10376,70 @@ fn triage_json_from_stats(
                     }
                 }));
             }
+        }
+
+        // layout.build_roots_heavy
+        if worst.layout_request_build_roots_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(
+                worst.layout_request_build_roots_time_us,
+                worst.layout_time_us,
+            );
+            if worst.layout_request_build_roots_time_us >= 2_000 || pct >= 20.0 {
+                out.push(json!({
+                    "code": "layout.build_roots_heavy",
+                    "severity": "info",
+                    "message": "Layout root-building work is a significant slice of layout time in the worst frame.",
+                    "evidence": {
+                        "layout_request_build_roots_time_us": worst.layout_request_build_roots_time_us,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_request_build_roots_pct_of_layout": pct,
+                        "sum_layout_request_build_roots_time_us": sum_layout_request_build_roots_time_us,
+                        "sum_layout_time_us": sum_layout_time_us,
+                        "sum_layout_request_build_roots_pct_of_layout": ratio_pct(sum_layout_request_build_roots_time_us, sum_layout_time_us),
+                    }
+                }));
+            }
+        }
+
+        // layout.roots_heavy
+        if worst.layout_roots_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(worst.layout_roots_time_us, worst.layout_time_us);
+            if worst.layout_time_us >= 15_000
+                && (worst.layout_roots_time_us >= 10_000 || pct >= 70.0)
+            {
+                out.push(json!({
+                    "code": "layout.roots_heavy",
+                    "severity": "info",
+                    "message": "Layout root processing dominates layout time in the worst frame.",
+                    "evidence": {
+                        "layout_roots_time_us": worst.layout_roots_time_us,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_roots_pct_of_layout": pct,
+                        "sum_layout_roots_time_us": sum_layout_roots_time_us,
+                        "sum_layout_time_us": sum_layout_time_us,
+                        "sum_layout_roots_pct_of_layout": ratio_pct(sum_layout_roots_time_us, sum_layout_time_us),
+                    }
+                }));
+            }
+        }
+
+        // view_cache.layout_invalidated
+        if worst.view_cache_roots_layout_invalidated > 0 {
+            out.push(json!({
+                "code": "view_cache.layout_invalidated",
+                "severity": "info",
+                "message": "One or more view cache roots were layout-invalidated in the worst frame (may cause cache misses and relayout).",
+                "evidence": {
+                    "view_cache_roots_layout_invalidated": worst.view_cache_roots_layout_invalidated,
+                    "view_cache_roots_total": worst.view_cache_roots_total,
+                    "view_cache_roots_reused": worst.view_cache_roots_reused,
+                    "view_cache_roots_cache_key_mismatch": worst.view_cache_roots_cache_key_mismatch,
+                    "view_cache_roots_not_marked_reuse_root": worst.view_cache_roots_not_marked_reuse_root,
+                    "layout_view_cache_time_us": worst.layout_view_cache_time_us,
+                    "layout_expand_view_cache_invalidations_time_us": worst.layout_expand_view_cache_invalidations_time_us,
+                    "sum_layout_view_cache_time_us": sum_layout_view_cache_time_us,
+                }
+            }));
         }
 
         // paint.text_prepare_churn

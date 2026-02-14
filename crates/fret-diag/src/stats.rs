@@ -1271,6 +1271,23 @@ impl BundleStatsReport {
                     row.layout_observation_record_globals_items
                 );
             }
+            if row.layout_roots_time_us > 0
+                || row.layout_request_build_roots_time_us > 0
+                || row.layout_view_cache_time_us > 0
+                || row.layout_collapse_layout_observations_time_us > 0
+                || row.layout_prepaint_after_layout_time_us > 0
+                || row.layout_expand_view_cache_invalidations_time_us > 0
+            {
+                println!(
+                    "    layout_breakdown.us(roots/request_build_roots/view_cache/collapse_obs/prepaint_after_layout)={}/{}/{}/{}/{} view_cache_inv_us={}",
+                    row.layout_roots_time_us,
+                    row.layout_request_build_roots_time_us,
+                    row.layout_view_cache_time_us,
+                    row.layout_collapse_layout_observations_time_us,
+                    row.layout_prepaint_after_layout_time_us,
+                    row.layout_expand_view_cache_invalidations_time_us,
+                );
+            }
             if row.paint_input_context_time_us > 0
                 || row.paint_scroll_handle_invalidation_time_us > 0
                 || row.paint_collect_roots_time_us > 0
