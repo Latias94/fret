@@ -156,6 +156,7 @@ Progress record (ClipPath v1):
   - `crates/fret-render-wgpu/src/renderer/pipelines/path_clip_mask.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_CLIP_MASK_SHADER`)
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`
 
 ## M4 — Paint/Material evolution (staged)
 
