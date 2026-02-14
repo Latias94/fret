@@ -274,7 +274,7 @@ impl RenderPlan {
         postprocess: DebugPostprocess,
         intermediate_budget_bytes: u64,
     ) -> Self {
-        super::render_plan_compiler_vnext::compile_for_scene_vnext(
+        super::render_plan_compiler::compile_for_scene(
             encoding,
             viewport_size,
             format,

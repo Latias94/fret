@@ -32,7 +32,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [~] REN-VNEXT-plan-001 Define the internal RenderPlan IR (segments, sequence points, state snapshots).
   - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.1.1–3.1.5).
-  - Evidence (partial): `crates/fret-render-wgpu/src/renderer/render_plan_compiler_vnext.rs` (`compile_for_scene_vnext_effects_only`, `EffectMarkerKind::ClipPathPush`/`ClipPathPop`, `EffectMarkerKind::CompositeGroupPush`/`CompositeGroupPop`).
+  - Evidence (partial): `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene_inner`, `EffectMarkerKind::ClipPathPush`/`ClipPathPop`, `EffectMarkerKind::CompositeGroupPush`/`CompositeGroupPop`).
 - [x] REN-VNEXT-plan-005 Remove the legacy plan compiler (and temporary switches/tests) after vNext parity is proven.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderPlan compilation has no flavor switch),
     `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`compile_for_scene` delegates to vNext),
@@ -60,7 +60,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ### M3a — ClipPath v1
 
 - [x] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
-  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan_compiler_vnext.rs` (`EffectMarkerKind::ClipPathPush`/`ClipPathPop`).
+  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`EffectMarkerKind::ClipPathPush`/`ClipPathPop`).
 - [x] REN-VNEXT-clip-003 Add conformance tests:
   - [x] Clip-path clips to shape (not just bounds): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] Clip capture at push time (does not follow later transforms): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`

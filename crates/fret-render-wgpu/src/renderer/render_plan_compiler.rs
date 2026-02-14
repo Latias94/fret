@@ -1,7 +1,7 @@
-// VNext RenderPlan compiler.
+// RenderPlan compiler.
 //
-// This module exists as a refactor seam: it allows us to iteratively rewrite the plan compiler
-// while keeping the legacy compiler available for pixel-compare conformance gates.
+// This module translates a SceneEncoding into a RenderPlan, choosing targets/passes and applying
+// deterministic budget-driven degradations.
 
 use super::render_plan_effects as effects;
 use super::{
@@ -65,7 +65,7 @@ struct ClipPathScope {
     mask_size: (u32, u32),
 }
 
-pub(super) fn compile_for_scene_vnext(
+pub(super) fn compile_for_scene(
     encoding: &SceneEncoding,
     viewport_size: (u32, u32),
     format: wgpu::TextureFormat,
@@ -140,7 +140,7 @@ pub(super) fn compile_for_scene_vnext(
         super::PlanTarget::Output
     };
 
-    compile_for_scene_vnext_effects_only(
+    compile_for_scene_inner(
         encoding,
         viewport_size,
         format,
@@ -152,7 +152,7 @@ pub(super) fn compile_for_scene_vnext(
     )
 }
 
-fn compile_for_scene_vnext_effects_only(
+fn compile_for_scene_inner(
     encoding: &SceneEncoding,
     viewport_size: (u32, u32),
     format: wgpu::TextureFormat,
