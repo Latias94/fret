@@ -288,3 +288,89 @@ fn gpu_composite_group_opacity_is_isolated_for_overlapping_children() {
         "expected isolated overlap alpha to be lower: stack={stack_overlap:?} isolated={isolated_overlap:?}"
     );
 }
+
+#[test]
+fn gpu_composite_group_opacity_degrades_under_tight_intermediate_budget() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(1024);
+
+    let size = (64u32, 64u32);
+    let full = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0)));
+
+    let a = Rect::new(
+        Point::new(Px(16.0), Px(16.0)),
+        Size::new(Px(32.0), Px(32.0)),
+    );
+    let b = Rect::new(
+        Point::new(Px(24.0), Px(24.0)),
+        Size::new(Px(32.0), Px(32.0)),
+    );
+
+    let paint = Paint::Solid(Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 0.5,
+    });
+
+    let mut baseline = Scene::default();
+    baseline.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: a,
+        background: paint,
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    baseline.push(SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: b,
+        background: paint,
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    let mut degraded = Scene::default();
+    degraded.push(SceneOp::PushCompositeGroup {
+        desc: CompositeGroupDesc::new(full, BlendMode::Over, EffectQuality::Auto).with_opacity(0.5),
+    });
+    degraded.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: a,
+        background: paint,
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    degraded.push(SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: b,
+        background: paint,
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    degraded.push(SceneOp::PopCompositeGroup);
+
+    let baseline_pixels = render_and_readback(&ctx, &mut renderer, &baseline, size);
+    let degraded_pixels = render_and_readback(&ctx, &mut renderer, &degraded, size);
+
+    let baseline_overlap = pixel_rgba(&baseline_pixels, size.0, 32, 32);
+    let degraded_overlap = pixel_rgba(&degraded_pixels, size.0, 32, 32);
+
+    for c in 0..4 {
+        let a = baseline_overlap[c] as i16;
+        let b = degraded_overlap[c] as i16;
+        assert!(
+            (a - b).abs() <= 3,
+            "expected deterministic degradation to match baseline draws: baseline={baseline_overlap:?} degraded={degraded_overlap:?}"
+        );
+    }
+}

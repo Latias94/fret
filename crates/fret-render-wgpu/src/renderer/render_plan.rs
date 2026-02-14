@@ -410,6 +410,22 @@ impl RenderPlan {
         let mut marker_ix: usize = 0;
         let markers = &encoding.effect_markers;
 
+        let can_allocate_full_intermediate = |draw_scopes: &[DrawScope]| -> bool {
+            let required = estimate_texture_bytes(viewport_size, format, 1);
+            let in_use = draw_scopes
+                .iter()
+                .filter(|s| {
+                    matches!(
+                        s.target,
+                        PlanTarget::Intermediate0
+                            | PlanTarget::Intermediate1
+                            | PlanTarget::Intermediate2
+                    )
+                })
+                .count() as u64;
+            in_use.saturating_mul(required).saturating_add(required) <= intermediate_budget_bytes
+        };
+
         let flush_scene_range = |end: usize,
                                  passes: &mut Vec<RenderPlanPass>,
                                  draw_scopes: &mut Vec<DrawScope>,
@@ -596,16 +612,18 @@ impl RenderPlan {
                         } => {
                             let parent_target = draw_scopes.last().expect("draw scope").target;
                             let mut content_target: Option<PlanTarget> = None;
-                            for t in [
-                                PlanTarget::Intermediate0,
-                                PlanTarget::Intermediate1,
-                                PlanTarget::Intermediate2,
-                            ] {
-                                if draw_scopes.iter().any(|s| s.target == t) {
-                                    continue;
+                            if can_allocate_full_intermediate(&draw_scopes) {
+                                for t in [
+                                    PlanTarget::Intermediate0,
+                                    PlanTarget::Intermediate1,
+                                    PlanTarget::Intermediate2,
+                                ] {
+                                    if draw_scopes.iter().any(|s| s.target == t) {
+                                        continue;
+                                    }
+                                    content_target = Some(t);
+                                    break;
                                 }
-                                content_target = Some(t);
-                                break;
                             }
 
                             if let Some(content_target) = content_target {
