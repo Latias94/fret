@@ -37,7 +37,7 @@ use std::sync::{Arc, Once};
 use crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
 
 // Split out the DevTools WS wiring to reduce churn in this file.
-#[path = "ui_diagnostics_devtools_ws.rs"]
+#[path = "ui_diagnostics/ui_diagnostics_devtools_ws.rs"]
 mod ui_diagnostics_devtools_ws;
 
 static DIAG_CFG_LOG_ONCE: Once = Once::new();
