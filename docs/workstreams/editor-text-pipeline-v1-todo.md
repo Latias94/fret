@@ -41,6 +41,8 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - surrogate pairs (e.g. 😀) clamp correctly,
   - selection/composition map from UTF-8 (ADR 0071) to UTF-16 (platform bridge).
   - Evidence: `crates/fret-ui/src/declarative/tests/semantics.rs`
+- [x] Wire `TextInputRegionProps.ime_cursor_area` from the editor caret geometry (data-only):
+  - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs`
 - [ ] (Future) Add bounds + replace support at the ecosystem layer (not `fret-ui` mechanism):
   - `BoundsForRange` via cached row geometry,
   - `replace_*` via editor buffer ops + selection mapping.
