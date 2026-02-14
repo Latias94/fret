@@ -33,6 +33,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-plan-001 Define the internal RenderPlan IR (segments, sequence points, state snapshots).
   - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.1.1–3.1.5).
   - Evidence (partial): `crates/fret-render-wgpu/src/renderer/render_plan_compiler_vnext.rs` (`compile_for_scene_vnext_effects_only`, `EffectMarkerKind::ClipPathPush`/`ClipPathPop`, `EffectMarkerKind::CompositeGroupPush`/`CompositeGroupPop`).
+- [~] REN-VNEXT-plan-005 Remove the legacy plan compiler as the default build path (keep an escape hatch only).
+  - Evidence: `crates/fret-render-wgpu/Cargo.toml` (`render_plan_legacy_compiler`), `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`compile_for_scene` cfg).
 - [ ] REN-VNEXT-plan-002 Move budget/degradation decisions into plan compilation (deterministic ordering).
   - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.2.1–3.2.4).
 - [ ] REN-VNEXT-plan-003 Add telemetry hooks: per-window intermediate peak bytes and degradations applied.

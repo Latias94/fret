@@ -140,40 +140,6 @@ pub(super) fn compile_for_scene_vnext(
         super::PlanTarget::Output
     };
 
-    if encoding.effect_markers.is_empty() {
-        return super::RenderPlan::compile_for_scene(
-            encoding,
-            viewport_size,
-            format,
-            clear,
-            path_samples,
-            postprocess,
-            intermediate_budget_bytes,
-        );
-    }
-
-    compile_for_scene_vnext_with_markers(
-        encoding,
-        viewport_size,
-        format,
-        clear,
-        path_samples,
-        postprocess,
-        intermediate_budget_bytes,
-        scene_target,
-    )
-}
-
-fn compile_for_scene_vnext_with_markers(
-    encoding: &SceneEncoding,
-    viewport_size: (u32, u32),
-    format: wgpu::TextureFormat,
-    clear: wgpu::Color,
-    path_samples: u32,
-    postprocess: super::DebugPostprocess,
-    intermediate_budget_bytes: u64,
-    scene_target: super::PlanTarget,
-) -> super::RenderPlan {
     compile_for_scene_vnext_effects_only(
         encoding,
         viewport_size,

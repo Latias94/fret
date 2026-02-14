@@ -1,8 +1,11 @@
 use super::frame_targets::downsampled_size;
 use super::render_plan_effects as effects;
 use super::render_plan_effects::{map_scissor_downsample_nearest, map_scissor_to_size};
+#[cfg(feature = "render_plan_legacy_compiler")]
 use super::util::union_scissor;
-use super::{EffectMarkerKind, OrderedDraw, SceneEncoding, ScissorRect};
+#[cfg(feature = "render_plan_legacy_compiler")]
+use super::{EffectMarkerKind, OrderedDraw};
+use super::{SceneEncoding, ScissorRect};
 use crate::renderer::estimate_texture_bytes;
 use std::ops::Range;
 
@@ -274,6 +277,28 @@ impl RenderPlan {
         plan
     }
 
+    #[cfg(not(feature = "render_plan_legacy_compiler"))]
+    pub(super) fn compile_for_scene(
+        encoding: &SceneEncoding,
+        viewport_size: (u32, u32),
+        format: wgpu::TextureFormat,
+        clear: wgpu::Color,
+        path_samples: u32,
+        postprocess: DebugPostprocess,
+        intermediate_budget_bytes: u64,
+    ) -> Self {
+        super::render_plan_compiler_vnext::compile_for_scene_vnext(
+            encoding,
+            viewport_size,
+            format,
+            clear,
+            path_samples,
+            postprocess,
+            intermediate_budget_bytes,
+        )
+    }
+
+    #[cfg(feature = "render_plan_legacy_compiler")]
     pub(super) fn compile_for_scene(
         encoding: &SceneEncoding,
         viewport_size: (u32, u32),
