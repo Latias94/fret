@@ -64,6 +64,26 @@ This workstream exists to make the renderer implementation **fearlessly evolvabl
    - Capability gating must have deterministic, documented fallbacks.
    - No “best effort” behavior that silently diverges per backend.
 
+## 2.1) Always-run gates (pragmatic)
+
+This workstream is intentionally “fearless but gated”. Before and after each milestone step:
+
+- Crate layering: `python3 tools/check_layering.py`
+- Renderer conformance anchors (GPU readback when available):
+  - `crates/fret-render-wgpu/tests/affine_clip_conformance.rs`
+  - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
+  - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`
+  - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
+  - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
+  - `crates/fret-render-wgpu/tests/materials_conformance.rs`
+  - `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
+
+When a new contract is added, extend this list with the smallest conformance gate that proves:
+
+- ordering is preserved,
+- the fallback path is deterministic,
+- and the wasm/mobile story is explicit.
+
 ## 3) Proposed internal architecture (implementation, not contract)
 
 ## 3.0) Cost model checklist (design-time, not contracts)
@@ -142,6 +162,9 @@ explicit and testable:
 
 - Ordered display list and batching: `docs/adr/0002-display-list.md`, `docs/adr/0009-renderer-ordering-and-batching.md`
 - Transform + clip semantics: `docs/adr/0078-scene-transform-and-clip-composition.md`
+- Renderer plan/compile substrate (internal architecture guidance):
+  - `docs/adr/0116-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
+  - `docs/adr/0088-renderer-architecture-v2-scene-compiler.md`
 - Effects + budgets: `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`,
   `docs/adr/0118-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Mask semantics (paint-only by default): `docs/adr/0239-mask-layers-and-alpha-masks-v1.md`
