@@ -9,6 +9,7 @@ pub(super) struct MarkdownTheme {
     pub(super) blockquote_border: fret_core::Color,
     pub(super) blockquote_border_width: Px,
     pub(super) blockquote_padding: Px,
+    pub(super) list_indent: Px,
     pub(super) inline_code_fg: fret_core::Color,
     pub(super) inline_code_bg: fret_core::Color,
     pub(super) inline_code_padding_x: Px,
@@ -55,6 +56,9 @@ impl MarkdownTheme {
         let blockquote_border_width = metric(theme, "blockquote.border_width").unwrap_or(Px(3.0));
         let blockquote_padding = metric(theme, "blockquote.padding")
             .unwrap_or_else(|| theme.metric_token("metric.padding.sm"));
+
+        let list_indent =
+            metric(theme, "list.indent").unwrap_or_else(|| theme.metric_token("metric.padding.md"));
 
         let inline_code_fg =
             color(theme, "inline_code.fg").unwrap_or_else(|| theme.color_token("foreground"));
@@ -107,6 +111,7 @@ impl MarkdownTheme {
             blockquote_border,
             blockquote_border_width,
             blockquote_padding,
+            list_indent,
             inline_code_fg,
             inline_code_bg,
             inline_code_padding_x,

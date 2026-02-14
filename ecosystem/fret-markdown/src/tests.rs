@@ -5,7 +5,9 @@ use std::{
 };
 
 use crate::mermaid::MermaidDiagramType;
-use fret_core::{AppWindowId, ClipboardToken, ImageUploadToken, Point, PointerId, TimerToken};
+use fret_core::{
+    AppWindowId, ClipboardToken, ImageUploadToken, Point, PointerId, ShareSheetToken, TimerToken,
+};
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
     EffectSink, FrameId, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TickId, TimeHost,
@@ -25,6 +27,7 @@ struct ThemeTestHost {
     frame_id: FrameId,
     next_timer_token: u64,
     next_clipboard_token: u64,
+    next_share_sheet_token: u64,
     next_image_upload_token: u64,
 }
 
@@ -137,18 +140,27 @@ impl TimeHost for ThemeTestHost {
     }
 
     fn next_timer_token(&mut self) -> TimerToken {
+        let token = TimerToken(self.next_timer_token);
         self.next_timer_token = self.next_timer_token.saturating_add(1);
-        TimerToken(self.next_timer_token)
+        token
     }
 
     fn next_clipboard_token(&mut self) -> ClipboardToken {
+        let token = ClipboardToken(self.next_clipboard_token);
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
-        ClipboardToken(self.next_clipboard_token)
+        token
+    }
+
+    fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+        let token = ShareSheetToken(self.next_share_sheet_token);
+        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+        token
     }
 
     fn next_image_upload_token(&mut self) -> ImageUploadToken {
+        let token = ImageUploadToken(self.next_image_upload_token);
         self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
-        ImageUploadToken(self.next_image_upload_token)
+        token
     }
 }
 
@@ -628,4 +640,28 @@ fn code_block_max_height_does_not_override_explicit_option() {
     options.max_height = Some(Px(321.0));
     resolve_code_block_ui(&theme, &mut options);
     assert_eq!(options.max_height, Some(Px(321.0)));
+}
+
+#[test]
+fn anchor_test_id_from_fragment_maps_headings_and_footnotes() {
+    assert_eq!(
+        crate::anchor_test_id_from_fragment("Math").as_ref(),
+        "fret-markdown.anchor.math"
+    );
+    assert_eq!(
+        crate::anchor_test_id_from_fragment("#Math").as_ref(),
+        "fret-markdown.anchor.math"
+    );
+    assert_eq!(
+        crate::anchor_test_id_from_fragment("fn-Note").as_ref(),
+        "fret-markdown.anchor.fn-note"
+    );
+    assert_eq!(
+        crate::anchor_test_id_from_fragment("Hello%20World").as_ref(),
+        "fret-markdown.anchor.hello-world"
+    );
+    assert_eq!(
+        crate::anchor_test_id_from_fragment("fn-Hello%20World").as_ref(),
+        "fret-markdown.anchor.fn-hello-world"
+    );
 }
