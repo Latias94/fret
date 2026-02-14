@@ -5,6 +5,7 @@
 - Measurement protocol documented and repeatable.
 - Perf suites run from release binaries with stable env knobs.
 - UI gallery perf suites make cache+shell + VirtualList known-heights defaults implicit (caller-overridable).
+- Tracy repro path is viable for worst-bundle attribution (no renderer crashes on resize).
 
 ## M1 — Resize Probes Majority-Pass
 

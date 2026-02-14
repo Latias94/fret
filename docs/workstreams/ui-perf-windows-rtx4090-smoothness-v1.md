@@ -40,6 +40,21 @@ Gate triage loop:
 3. Attribute via:
    - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
 
+### Deep Profiling (Tracy)
+
+When a worst bundle is dominated by a single phase (e.g. `layout_time_us`) but is still not explainable,
+use a `diag repro` run with Tracy enabled:
+
+- Build: `cargo build -p fret-ui-gallery --release --features fret-bootstrap/tracy`
+- Run (example): `target/release/fretboard.exe diag repro <script.json> --with tracy --launch -- target/release/fret-ui-gallery.exe`
+
+For layout attribution, the `fret-ui` layout pass emits TRACE spans for:
+
+- `fret.ui.layout.request_build_roots`
+- `fret.ui.layout.roots`
+
+These are intended to make “root-building vs root-layout” costs visually separable in the Tracy timeline.
+
 ## Known Hitch Class: System Font Rescan → `TextFontStackKey` Bump
 
 One common tail-spike class on Windows came from **system font rescan results** being applied during
@@ -122,3 +137,12 @@ Attribution notes:
   (`layout.nodes=1120` in the top frame). This suggests “tree/layout invalidation work” rather than Taffy solve cost.
 - Current triage hints do not trigger for this outlier (no `solve_heavy` / `observation_heavy`), indicating a need for
   additional layout sub-phase metrics (e.g. root-building) and/or new hints for cache-root invalidation churn.
+
+### Profiling sanity (2026-02-14)
+
+- `diag repro` (Tracy enabled): `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - out-dir: `target/fret-diag-repro/tracy.resize-stress.span-split.20260214-144328`
+  - bundle: `target/fret-diag-repro/tracy.resize-stress.span-split.20260214-144328/1771051420202-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Note: a merged `main` snapshot on 2026-02-14 triggered a `wgpu` bind group validation crash during resize; this was fixed
+by ensuring the uniform bind group always includes the `RenderSpace` dynamic uniform binding.
