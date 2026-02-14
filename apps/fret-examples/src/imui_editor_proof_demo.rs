@@ -17,8 +17,8 @@ use fret_runtime::{
 use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle};
 use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset};
 use fret_ui_editor::controls::{
-    Checkbox, DragValue, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
-    NumericParseFn, NumericValidateFn,
+    Checkbox, DragValue, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
+    FieldStatusBadge, MiniSearchBox, NumericFormatFn, NumericParseFn, NumericValidateFn,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -156,6 +156,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_metallic_model = editor_demo_metallic_model(cx);
     let editor_alpha_clip_model = editor_demo_alpha_clip_model(cx);
     let editor_cast_shadows_model = editor_demo_cast_shadows_model(cx);
+    let editor_shading_model = editor_demo_shading_model(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
 
@@ -243,6 +244,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                     let show_opacity = material_show_all || matches("opacity");
                     let show_roughness = material_show_all || matches("roughness");
                     let show_metallic = material_show_all || matches("metallic");
+                    let show_shading_model =
+                        material_show_all || matches("shading") || matches("model");
                     let show_alpha_clip =
                         material_show_all || matches("alpha") || matches("clip");
                     let show_cast_shadows =
@@ -255,6 +258,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                         show_opacity
                             || show_roughness
                             || show_metallic
+                            || show_shading_model
                             || show_alpha_clip
                             || show_cast_shadows
                             || show_iterations;
@@ -456,6 +460,45 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                                     )
                                                                     .into_element(cx),
                                                                 )
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if show_shading_model {
+                                                        let items: Arc<[EnumSelectItem]> = vec![
+                                                            EnumSelectItem::new("lit", "Lit"),
+                                                            EnumSelectItem::new("unlit", "Unlit"),
+                                                            EnumSelectItem::new(
+                                                                "subsurface",
+                                                                "Subsurface",
+                                                            ),
+                                                        ]
+                                                        .into();
+
+                                                        rows.push(row_cx.row(
+                                                            cx,
+                                                            |cx| cx.text("Shading model"),
+                                                            |cx| {
+                                                                EnumSelect::new(
+                                                                    editor_shading_model.clone(),
+                                                                    items,
+                                                                )
+                                                                .options(EnumSelectOptions {
+                                                                    a11y_label: Some(Arc::from(
+                                                                        "Shading model",
+                                                                    )),
+                                                                    test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.material.shading-model",
+                                                                    )),
+                                                                    list_test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.material.shading-model.list",
+                                                                    )),
+                                                                    search_test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.material.shading-model.search",
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
+                                                                .into_element(cx)
                                                             },
                                                         ));
                                                     }
@@ -731,6 +774,28 @@ fn editor_demo_cast_shadows_model<H: UiHost>(
             let model = cx.app.models_mut().insert(None::<bool>);
             cx.with_state(
                 || None::<Model<Option<bool>>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_shading_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
+    let model = cx.with_state(|| None::<Model<Option<Arc<str>>>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(Some::<Arc<str>>(Arc::from("lit")));
+            cx.with_state(
+                || None::<Model<Option<Arc<str>>>>,
                 |st| {
                     if st.is_none() {
                         *st = Some(model.clone());

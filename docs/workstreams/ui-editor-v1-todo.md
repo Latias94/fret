@@ -127,7 +127,8 @@ Exit criteria:
 - [ ] `TransformEdit` (position/rotation/scale composite):
   - [ ] layout variants (row/column)
   - [ ] link scale toggle (optional)
-- [ ] `EnumSelect` (filterable select surface).
+- [~] `EnumSelect` (filterable select surface).
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - [ ] `AssetRefField` (UI shell):
   - [ ] supports async loading states via optional query glue
   - [ ] does not define an asset system; caller supplies data and callbacks

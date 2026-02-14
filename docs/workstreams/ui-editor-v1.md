@@ -134,6 +134,7 @@ Suggested v1 key families:
 - `editor.numeric.*` (scrub speed, slow/fast multipliers, precision defaults)
 - `editor.property.*` (label/value column gap, label width policies, group header height)
 - `editor.checkbox.*` (checkbox sizing/radius; colors should remain theme-driven)
+- `editor.enum_select.*` (dropdown/list sizing; row density comes from `editor.density.*`)
 - `editor.color.*` (swatch size, popup padding)
 
 ### Minimal v1 token table (proposed)
@@ -160,6 +161,7 @@ Notes:
 | `editor.property.group_header_height` | metric | Collapsible group header height | row_height-ish |
 | `editor.checkbox.size` | metric | Checkbox visual square size (inside hit target) | ~16px |
 | `editor.checkbox.radius` | metric | Checkbox corner radius | small |
+| `editor.enum_select.max_list_height` | metric | Max height for enum select list viewport | medium |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
 

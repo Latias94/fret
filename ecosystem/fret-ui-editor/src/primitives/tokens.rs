@@ -25,6 +25,8 @@ impl EditorTokenKeys {
     pub const CHECKBOX_SIZE: &'static str = "editor.checkbox.size";
     pub const CHECKBOX_RADIUS: &'static str = "editor.checkbox.radius";
 
+    pub const ENUM_SELECT_MAX_LIST_HEIGHT: &'static str = "editor.enum_select.max_list_height";
+
     pub const COLOR_SWATCH_SIZE: &'static str = "editor.color.swatch_size";
     pub const COLOR_POPUP_PADDING: &'static str = "editor.color.popup_padding";
 }
