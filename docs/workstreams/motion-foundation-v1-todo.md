@@ -162,3 +162,10 @@ Per-recipe tracking (pilot follow-ups):
   - Evidence:
     - `ecosystem/fret-ui-material3/src/tabs.rs` (`primary_tab_list_indicator`)
     - `tools/diag-scripts/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json`
+
+- [x] MF-MOTION-layout-003 Add a layout.expand retarget gate (interrupt mid-flight; no restart stutter).
+  - Pilot:
+    - Animata expandable carousel (size interpolation; explicit choreography)
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
+    - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`

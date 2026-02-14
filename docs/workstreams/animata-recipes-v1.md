@@ -93,6 +93,7 @@ Recommended semantic keys (ecosystem-level; optional):
   - `easing.motion.standard`, `easing.motion.emphasized`
   - `easing.motion.stack.shift`
   - `easing.motion.collapsible.toggle`
+  - `easing.motion.layout.expand`
 - Spring (authoring-friendly):
   - `duration.motion.spring.shared_indicator` + `number.motion.spring.shared_indicator.bounce`
   - `duration.motion.spring.drag_release_settle` + `number.motion.spring.drag_release_settle.bounce`
