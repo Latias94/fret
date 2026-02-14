@@ -23,6 +23,7 @@ pub(super) fn render_pulldown_events_root<H: UiHost + 'static>(
         events,
         &mut cursor,
         None,
+        0,
     );
     if children.len() == 1 {
         return children.into_iter().next().unwrap();
@@ -58,6 +59,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
     stop: Option<PulldownStop>,
+    list_depth: usize,
 ) -> Vec<AnyElement> {
     use pulldown_cmark::{Event, Tag, TagEnd};
 
@@ -104,6 +106,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
                 events,
                 cursor,
                 *start,
+                list_depth,
             )),
             Event::Start(Tag::BlockQuote(_)) => out.push(render_pulldown_blockquote(
                 cx,
@@ -112,6 +115,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
                 components,
                 events,
                 cursor,
+                list_depth,
             )),
             Event::Start(Tag::FootnoteDefinition(label)) => {
                 out.push(render_pulldown_footnote_definition(
@@ -122,6 +126,7 @@ fn render_pulldown_blocks<H: UiHost + 'static>(
                     events,
                     cursor,
                     Arc::<str>::from(label.to_string()),
+                    list_depth,
                 ))
             }
             Event::Start(Tag::Table(_)) => out.push(render_pulldown_table(
@@ -440,11 +445,18 @@ fn render_pulldown_heading<H: UiHost>(
     }
 
     let slice = &events[start..*cursor];
-    let info = HeadingInfo {
-        level,
-        text: plain_text_from_events(slice),
+    let (text, explicit_id) =
+        crate::parse::split_trailing_heading_id(&plain_text_from_events(slice));
+    let info = HeadingInfo { level, text };
+    let test_id =
+        crate::anchors::heading_anchor_test_id_with_id(&info.text, explicit_id.as_deref());
+
+    let el = if let Some(render) = &components.heading {
+        render(cx, info)
+    } else {
+        render_heading_inline(cx, theme, markdown_theme, components, info, slice)
     };
-    render_heading_inline(cx, theme, markdown_theme, components, info, slice)
+    el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
 }
 
 fn render_pulldown_code_block<H: UiHost + 'static>(
@@ -502,6 +514,7 @@ fn render_pulldown_blockquote<H: UiHost + 'static>(
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
+    list_depth: usize,
 ) -> AnyElement {
     *cursor += 1;
     let children = render_pulldown_blocks(
@@ -512,6 +525,7 @@ fn render_pulldown_blockquote<H: UiHost + 'static>(
         events,
         cursor,
         Some(PulldownStop::BlockQuote),
+        list_depth,
     );
     render_blockquote_container(cx, theme, markdown_theme, children)
 }
@@ -554,11 +568,13 @@ fn render_pulldown_list<H: UiHost + 'static>(
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
     start: Option<u64>,
+    list_depth: usize,
 ) -> AnyElement {
     use pulldown_cmark::{Event, Tag, TagEnd};
 
     struct ListItem {
         task: Option<bool>,
+        label: Arc<str>,
         children: Vec<AnyElement>,
     }
 
@@ -571,6 +587,7 @@ fn render_pulldown_list<H: UiHost + 'static>(
     while *cursor < events.len() {
         match &events[*cursor] {
             Event::Start(Tag::Item) => {
+                let item_start = *cursor;
                 *cursor += 1;
                 let task = match events.get(*cursor) {
                     Some(Event::TaskListMarker(checked)) => {
@@ -587,8 +604,15 @@ fn render_pulldown_list<H: UiHost + 'static>(
                     events,
                     cursor,
                     Some(PulldownStop::Item),
+                    list_depth.saturating_add(1),
                 );
-                items.push(ListItem { task, children });
+                let item_end = *cursor;
+                let label = plain_text_from_events_any(&events[item_start..item_end]);
+                items.push(ListItem {
+                    task,
+                    label,
+                    children,
+                });
             }
             Event::End(TagEnd::List(_)) => {
                 *cursor += 1;
@@ -600,7 +624,11 @@ fn render_pulldown_list<H: UiHost + 'static>(
         }
     }
 
-    stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |cx| {
+    let loose = items.iter().any(|item| item.children.len() != 1);
+    let list_gap = if loose { Space::N2 } else { Space::N1 };
+    let item_body_gap = if loose { Space::N2 } else { Space::N1 };
+
+    let list_el = stack::vstack(cx, stack::VStackProps::default().gap(list_gap), |cx| {
         items
             .into_iter()
             .enumerate()
@@ -608,14 +636,23 @@ fn render_pulldown_list<H: UiHost + 'static>(
                 let body = if item.children.len() == 1 {
                     item.children.into_iter().next().unwrap()
                 } else {
-                    stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |_cx| {
-                        item.children
-                    })
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(item_body_gap),
+                        |_cx| item.children,
+                    )
                 };
 
                 let marker_el = match item.task {
                     Some(checked) => {
-                        let task_el = render_task_list_marker(cx, theme, markdown_theme, checked);
+                        let task_el = render_task_list_marker(
+                            cx,
+                            theme,
+                            markdown_theme,
+                            components,
+                            checked,
+                            item.label.clone(),
+                        );
                         if ordered {
                             let no =
                                 Arc::<str>::from(format!("{}.", start_no.saturating_add(i as u32)));
@@ -641,7 +678,7 @@ fn render_pulldown_list<H: UiHost + 'static>(
                         let marker = if ordered {
                             Arc::<str>::from(format!("{}.", start_no.saturating_add(i as u32)))
                         } else {
-                            Arc::<str>::from("?".to_string())
+                            Arc::<str>::from("•".to_string())
                         };
 
                         cx.text_props(TextProps {
@@ -663,22 +700,37 @@ fn render_pulldown_list<H: UiHost + 'static>(
                 )
             })
             .collect::<Vec<_>>()
-    })
+    });
+
+    if list_depth == 0 {
+        return list_el;
+    }
+
+    let indent = Px(markdown_theme.list_indent.0 * list_depth as f32);
+    let mut props = ContainerProps::default();
+    props.padding = Edges {
+        left: indent,
+        ..Edges::all(Px(0.0))
+    };
+    props.border = Edges::all(Px(0.0));
+    cx.container(props, |_cx| vec![list_el])
 }
 
 fn render_task_list_marker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
     checked: bool,
+    label: Arc<str>,
 ) -> AnyElement {
     let (text, color) = if checked {
-        ("?", markdown_theme.task_checked)
+        ("[x]", markdown_theme.task_checked)
     } else {
-        ("?", markdown_theme.task_unchecked)
+        ("[ ]", markdown_theme.task_unchecked)
     };
 
-    cx.text_props(TextProps {
+    let el = cx.text_props(TextProps {
         layout: Default::default(),
         text: Arc::<str>::from(text.to_string()),
         style: Some(TextStyle {
@@ -693,7 +745,24 @@ fn render_task_list_marker<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
-    })
+    });
+
+    let Some(role) = components.task_list_marker_role else {
+        return el;
+    };
+
+    let label = if label.trim().is_empty() {
+        Arc::<str>::from("task".to_string())
+    } else {
+        label
+    };
+
+    el.attach_semantics(
+        SemanticsDecoration::default()
+            .role(role)
+            .label(label)
+            .checked(Some(checked)),
+    )
 }
 
 fn render_pulldown_footnote_definition<H: UiHost + 'static>(
@@ -704,6 +773,7 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
     label: Arc<str>,
+    list_depth: usize,
 ) -> AnyElement {
     *cursor += 1;
     let children = render_pulldown_blocks(
@@ -714,6 +784,7 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
         events,
         cursor,
         Some(PulldownStop::FootnoteDefinition),
+        list_depth,
     );
 
     let label_el = cx.text_props(TextProps {
@@ -734,11 +805,14 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
         })
     };
 
-    stack::hstack(
+    let el = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_start(),
         |_cx| vec![label_el, body],
-    )
+    );
+
+    let anchor_test_id = crate::anchors::footnote_anchor_test_id(label.as_ref());
+    el.attach_semantics(SemanticsDecoration::default().test_id(anchor_test_id))
 }
 
 fn plain_text_from_events(events: &[pulldown_cmark::Event<'static>]) -> Arc<str> {
@@ -772,5 +846,22 @@ fn plain_text_from_events(events: &[pulldown_cmark::Event<'static>]) -> Arc<str>
         }
     }
 
+    Arc::<str>::from(out.trim().to_string())
+}
+
+fn plain_text_from_events_any(events: &[pulldown_cmark::Event<'static>]) -> Arc<str> {
+    use pulldown_cmark::Event;
+
+    let mut out = String::new();
+    for e in events {
+        match e {
+            Event::Text(t) | Event::Code(t) | Event::InlineMath(t) | Event::DisplayMath(t) => {
+                out.push_str(t.as_ref())
+            }
+            Event::SoftBreak => out.push(' '),
+            Event::HardBreak => out.push('\n'),
+            _ => {}
+        }
+    }
     Arc::<str>::from(out.trim().to_string())
 }

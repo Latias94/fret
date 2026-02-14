@@ -39,6 +39,7 @@ struct MarkdownDemoWindowState {
     wrap_code: Model<bool>,
     cap_code_height: Model<bool>,
     expanded_code_blocks: Model<HashSet<markdown::BlockId>>,
+    pending_anchor: Model<Option<Arc<str>>>,
     router: Rc<RefCell<MessageRouter<Msg>>>,
 }
 
@@ -161,6 +162,7 @@ impl MarkdownDemoDriver {
         let wrap_code = app.models_mut().insert(false);
         let cap_code_height = app.models_mut().insert(true);
         let expanded_code_blocks = app.models_mut().insert(HashSet::new());
+        let pending_anchor = app.models_mut().insert::<Option<Arc<str>>>(None);
         let prefix = format!("markdown-demo.{window:?}.");
         let router = Rc::new(RefCell::new(MessageRouter::new(prefix)));
 
@@ -226,6 +228,9 @@ world
 
 - https://example.com
 - [OpenAI](https://openai.com)
+- [Jump to Math](#math)
+- [Jump to Footnote](#fn-note)
+- [Back to top](#markdown-demo)
 
 ## Images
 
@@ -263,8 +268,37 @@ $$
             wrap_code,
             cap_code_height,
             expanded_code_blocks,
+            pending_anchor,
             router,
         }
+    }
+
+    fn on_link_activate(pending_anchor: Model<Option<Arc<str>>>) -> markdown::OnLinkActivate {
+        Arc::new(move |host, cx, _reason, link| {
+            let href = link.href.trim();
+            if let Some(fragment) = href.strip_prefix('#') {
+                let fragment = fragment.trim();
+                if fragment.is_empty() {
+                    return;
+                }
+                let fragment: Arc<str> = Arc::from(fragment.to_string());
+                let _ = host.models_mut().update(&pending_anchor, |v| {
+                    *v = Some(fragment.clone());
+                });
+                host.request_redraw(cx.window);
+                return;
+            }
+
+            if !markdown::is_safe_open_url(href) {
+                return;
+            }
+
+            host.push_effect(Effect::OpenUrl {
+                url: href.to_string(),
+                target: None,
+                rel: None,
+            });
+        })
     }
 
     fn render(
@@ -277,6 +311,7 @@ $$
         wrap_code: Model<bool>,
         cap_code_height: Model<bool>,
         expanded_code_blocks: Model<HashSet<markdown::BlockId>>,
+        pending_anchor: Model<Option<Arc<str>>>,
         router: Rc<RefCell<MessageRouter<Msg>>>,
     ) {
         router.borrow_mut().clear();
@@ -290,7 +325,8 @@ $$
         let wrap_enabled = app.models().get_copied(&wrap_code).unwrap_or(false);
         let cap_enabled = app.models().get_copied(&cap_code_height).unwrap_or(true);
 
-        let mut components = markdown::MarkdownComponents::<App>::default().with_open_url();
+        let mut components = markdown::MarkdownComponents::<App>::default();
+        components.on_link_activate = Some(Self::on_link_activate(pending_anchor));
         components.code_block_ui.wrap = if wrap_enabled {
             fret_code_view::CodeBlockWrap::Word
         } else {
@@ -742,6 +778,7 @@ impl WinitAppDriver for MarkdownDemoDriver {
             state.wrap_code.clone(),
             state.cap_code_height.clone(),
             state.expanded_code_blocks.clone(),
+            state.pending_anchor.clone(),
             state.router.clone(),
         );
 
@@ -751,6 +788,7 @@ impl WinitAppDriver for MarkdownDemoDriver {
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+        scroll_pending_anchor(&mut frame, window, &state.pending_anchor);
         frame.paint_all(scene);
     }
 
@@ -769,6 +807,47 @@ impl WinitAppDriver for MarkdownDemoDriver {
         _new_window: AppWindowId,
     ) {
     }
+}
+
+fn scroll_pending_anchor(
+    frame: &mut fret_ui::UiFrameCx<'_, App>,
+    window: AppWindowId,
+    pending_anchor: &Model<Option<Arc<str>>>,
+) {
+    let pending = frame
+        .app
+        .models()
+        .read(pending_anchor, |v| v.clone())
+        .ok()
+        .flatten();
+    let Some(fragment) = pending.as_deref() else {
+        return;
+    };
+
+    let Some(snapshot) = frame.ui.semantics_snapshot() else {
+        // Keep the pending fragment and retry once we have a snapshot.
+        frame.app.request_redraw(window);
+        return;
+    };
+
+    let test_id = markdown::anchor_test_id_from_fragment(fragment);
+    let Some(node_id) = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(test_id.as_ref()))
+        .map(|n| n.id)
+    else {
+        // Keep the pending fragment: the content might not be present yet (async diagrams/images),
+        // or the user might change the markdown source. We'll try again on the next redraw.
+        return;
+    };
+
+    // If we did scroll, rerun layout so paint uses the final scroll offsets.
+    if frame.ui.scroll_node_into_view(frame.app, node_id) {
+        frame.layout_all();
+    }
+
+    let _ = frame.app.models_mut().update(pending_anchor, |v| *v = None);
 }
 
 fn apply_markdown_demo_theme_tokens(app: &mut App) {
