@@ -263,9 +263,57 @@ impl Renderer {
             self.intermediate_budget_bytes,
         );
         if perf_enabled {
+            use super::super::render_plan::{
+                RenderPlanDegradationKind as DegradationKind,
+                RenderPlanDegradationReason as DegradationReason,
+            };
+
             frame_perf.render_plan_estimated_peak_intermediate_bytes =
                 plan.compile_stats.estimated_peak_intermediate_bytes;
             frame_perf.render_plan_degradations = plan.degradations.len() as u64;
+            for d in &plan.degradations {
+                match d.reason {
+                    DegradationReason::BudgetZero => {
+                        frame_perf.render_plan_degradations_budget_zero = frame_perf
+                            .render_plan_degradations_budget_zero
+                            .saturating_add(1);
+                    }
+                    DegradationReason::BudgetInsufficient => {
+                        frame_perf.render_plan_degradations_budget_insufficient = frame_perf
+                            .render_plan_degradations_budget_insufficient
+                            .saturating_add(1);
+                    }
+                    DegradationReason::TargetExhausted => {
+                        frame_perf.render_plan_degradations_target_exhausted = frame_perf
+                            .render_plan_degradations_target_exhausted
+                            .saturating_add(1);
+                    }
+                }
+
+                match d.kind {
+                    DegradationKind::BackdropEffectNoOp => {
+                        frame_perf.render_plan_degradations_backdrop_noop = frame_perf
+                            .render_plan_degradations_backdrop_noop
+                            .saturating_add(1);
+                    }
+                    DegradationKind::FilterContentDisabled => {
+                        frame_perf.render_plan_degradations_filter_content_disabled = frame_perf
+                            .render_plan_degradations_filter_content_disabled
+                            .saturating_add(1);
+                    }
+                    DegradationKind::ClipPathDisabled => {
+                        frame_perf.render_plan_degradations_clip_path_disabled = frame_perf
+                            .render_plan_degradations_clip_path_disabled
+                            .saturating_add(1);
+                    }
+                    DegradationKind::CompositeGroupBlendDegradedToOver => {
+                        frame_perf.render_plan_degradations_composite_group_blend_to_over =
+                            frame_perf
+                                .render_plan_degradations_composite_group_blend_to_over
+                                .saturating_add(1);
+                    }
+                }
+            }
         }
         render_plan_dump::maybe_dump_render_plan_json(
             &plan,
@@ -3763,6 +3811,35 @@ impl Renderer {
                 .perf
                 .render_plan_degradations
                 .saturating_add(frame_perf.render_plan_degradations);
+            self.perf.render_plan_degradations_budget_zero = self
+                .perf
+                .render_plan_degradations_budget_zero
+                .saturating_add(frame_perf.render_plan_degradations_budget_zero);
+            self.perf.render_plan_degradations_budget_insufficient = self
+                .perf
+                .render_plan_degradations_budget_insufficient
+                .saturating_add(frame_perf.render_plan_degradations_budget_insufficient);
+            self.perf.render_plan_degradations_target_exhausted = self
+                .perf
+                .render_plan_degradations_target_exhausted
+                .saturating_add(frame_perf.render_plan_degradations_target_exhausted);
+            self.perf.render_plan_degradations_backdrop_noop = self
+                .perf
+                .render_plan_degradations_backdrop_noop
+                .saturating_add(frame_perf.render_plan_degradations_backdrop_noop);
+            self.perf.render_plan_degradations_filter_content_disabled = self
+                .perf
+                .render_plan_degradations_filter_content_disabled
+                .saturating_add(frame_perf.render_plan_degradations_filter_content_disabled);
+            self.perf.render_plan_degradations_clip_path_disabled = self
+                .perf
+                .render_plan_degradations_clip_path_disabled
+                .saturating_add(frame_perf.render_plan_degradations_clip_path_disabled);
+            self.perf
+                .render_plan_degradations_composite_group_blend_to_over = self
+                .perf
+                .render_plan_degradations_composite_group_blend_to_over
+                .saturating_add(frame_perf.render_plan_degradations_composite_group_blend_to_over);
 
             self.perf.draw_calls = self.perf.draw_calls.saturating_add(frame_perf.draw_calls);
             self.perf.quad_draw_calls = self
@@ -3943,6 +4020,20 @@ impl Renderer {
                 render_plan_estimated_peak_intermediate_bytes: frame_perf
                     .render_plan_estimated_peak_intermediate_bytes,
                 render_plan_degradations: frame_perf.render_plan_degradations,
+                render_plan_degradations_budget_zero: frame_perf
+                    .render_plan_degradations_budget_zero,
+                render_plan_degradations_budget_insufficient: frame_perf
+                    .render_plan_degradations_budget_insufficient,
+                render_plan_degradations_target_exhausted: frame_perf
+                    .render_plan_degradations_target_exhausted,
+                render_plan_degradations_backdrop_noop: frame_perf
+                    .render_plan_degradations_backdrop_noop,
+                render_plan_degradations_filter_content_disabled: frame_perf
+                    .render_plan_degradations_filter_content_disabled,
+                render_plan_degradations_clip_path_disabled: frame_perf
+                    .render_plan_degradations_clip_path_disabled,
+                render_plan_degradations_composite_group_blend_to_over: frame_perf
+                    .render_plan_degradations_composite_group_blend_to_over,
                 draw_calls: frame_perf.draw_calls,
                 quad_draw_calls: frame_perf.quad_draw_calls,
                 viewport_draw_calls: frame_perf.viewport_draw_calls,

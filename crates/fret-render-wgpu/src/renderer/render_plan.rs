@@ -17,7 +17,8 @@ pub(super) struct RenderPlanCompileStats {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RenderPlanDegradationReason {
-    Budget,
+    BudgetZero,
+    BudgetInsufficient,
     TargetExhausted,
 }
 
@@ -643,6 +644,16 @@ impl RenderPlan {
                             let parent_size = parent_scope.size;
                             match mode {
                                 fret_core::EffectMode::Backdrop => {
+                                    let had_free_scratch_target = [
+                                        PlanTarget::Intermediate0,
+                                        PlanTarget::Intermediate1,
+                                        PlanTarget::Intermediate2,
+                                    ]
+                                    .into_iter()
+                                    .any(|t| {
+                                        t != parent_target
+                                            && !draw_scopes.iter().any(|s| s.target == t)
+                                    });
                                     let before = passes.len();
                                     apply_chain_in_place(
                                         &mut passes,
@@ -660,14 +671,17 @@ impl RenderPlan {
                                         && scissor.w != 0
                                         && scissor.h != 0
                                     {
+                                        let reason = if intermediate_budget_bytes == 0 {
+                                            RenderPlanDegradationReason::BudgetZero
+                                        } else if !had_free_scratch_target {
+                                            RenderPlanDegradationReason::TargetExhausted
+                                        } else {
+                                            RenderPlanDegradationReason::BudgetInsufficient
+                                        };
                                         degradations.push(RenderPlanDegradation {
                                             draw_ix: cursor,
                                             kind: RenderPlanDegradationKind::BackdropEffectNoOp,
-                                            reason: if intermediate_budget_bytes == 0 {
-                                                RenderPlanDegradationReason::Budget
-                                            } else {
-                                                RenderPlanDegradationReason::TargetExhausted
-                                            },
+                                            reason,
                                         });
                                     }
                                     effect_scopes.push(EffectScope {
@@ -732,8 +746,10 @@ impl RenderPlan {
                                             kind: RenderPlanDegradationKind::FilterContentDisabled,
                                             reason: if !had_free_target {
                                                 RenderPlanDegradationReason::TargetExhausted
+                                            } else if intermediate_budget_bytes == 0 {
+                                                RenderPlanDegradationReason::BudgetZero
                                             } else {
-                                                RenderPlanDegradationReason::Budget
+                                                RenderPlanDegradationReason::BudgetInsufficient
                                             },
                                         });
                                     }
@@ -818,6 +834,8 @@ impl RenderPlan {
 
                             let mut content_target: Option<PlanTarget> = None;
                             let mut mask_target: Option<PlanTarget> = None;
+                            let mut had_free_content_target = false;
+                            let mut had_free_mask_target = false;
 
                             let (content_origin, content_size) = if scissor_sized_intermediates {
                                 ((scissor.x, scissor.y), (scissor.w, scissor.h))
@@ -840,6 +858,7 @@ impl RenderPlan {
                                         continue;
                                     }
                                     content_target = Some(t);
+                                    had_free_content_target = true;
                                     break;
                                 }
 
@@ -848,6 +867,7 @@ impl RenderPlan {
                                         continue;
                                     }
                                     mask_target = Some(t);
+                                    had_free_mask_target = true;
                                     break;
                                 }
 
@@ -870,6 +890,26 @@ impl RenderPlan {
                                         mask_target = None;
                                     }
                                 }
+                            }
+
+                            if (content_target.is_none() || mask_target.is_none())
+                                && content_size.0 != 0
+                                && content_size.1 != 0
+                                && mask_size.0 != 0
+                                && mask_size.1 != 0
+                            {
+                                let reason = if intermediate_budget_bytes == 0 {
+                                    RenderPlanDegradationReason::BudgetZero
+                                } else if !had_free_content_target || !had_free_mask_target {
+                                    RenderPlanDegradationReason::TargetExhausted
+                                } else {
+                                    RenderPlanDegradationReason::BudgetInsufficient
+                                };
+                                degradations.push(RenderPlanDegradation {
+                                    draw_ix: cursor,
+                                    kind: RenderPlanDegradationKind::ClipPathDisabled,
+                                    reason,
+                                });
                             }
 
                             if let (Some(content_target), Some(mask_target)) =
@@ -961,17 +1001,6 @@ impl RenderPlan {
                                         1,
                                     ));
                             } else {
-                                if scope.scissor.w != 0 && scope.scissor.h != 0 {
-                                    degradations.push(RenderPlanDegradation {
-                                        draw_ix: cursor,
-                                        kind: RenderPlanDegradationKind::ClipPathDisabled,
-                                        reason: if intermediate_budget_bytes == 0 {
-                                            RenderPlanDegradationReason::Budget
-                                        } else {
-                                            RenderPlanDegradationReason::TargetExhausted
-                                        },
-                                    });
-                                }
                                 let _ = scope.mask_draw_index;
                             }
                         }
@@ -1036,8 +1065,10 @@ impl RenderPlan {
                                     kind: RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver,
                                     reason: if !had_free_target {
                                         RenderPlanDegradationReason::TargetExhausted
+                                    } else if intermediate_budget_bytes == 0 {
+                                        RenderPlanDegradationReason::BudgetZero
                                     } else {
-                                        RenderPlanDegradationReason::Budget
+                                        RenderPlanDegradationReason::BudgetInsufficient
                                     },
                                 });
                             }
@@ -2519,7 +2550,7 @@ mod tests {
                 assert!(
                     plan.degradations.iter().any(|d| {
                         d.kind == RenderPlanDegradationKind::FilterContentDisabled
-                            && d.reason == RenderPlanDegradationReason::Budget
+                            && d.reason == RenderPlanDegradationReason::BudgetZero
                     }),
                     "expected a deterministic degradation record for FilterContent under budget pressure"
                 );

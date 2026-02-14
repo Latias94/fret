@@ -511,7 +511,8 @@ fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
         }
     };
     let reason = match d.reason {
-        RenderPlanDegradationReason::Budget => "Budget",
+        RenderPlanDegradationReason::BudgetZero => "BudgetZero",
+        RenderPlanDegradationReason::BudgetInsufficient => "BudgetInsufficient",
         RenderPlanDegradationReason::TargetExhausted => "TargetExhausted",
     };
     JsonDumpDegradation {

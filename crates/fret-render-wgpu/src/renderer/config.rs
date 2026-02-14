@@ -80,6 +80,25 @@ impl Renderer {
                 .perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_degradations: self.perf.render_plan_degradations,
+            render_plan_degradations_budget_zero: self.perf.render_plan_degradations_budget_zero,
+            render_plan_degradations_budget_insufficient: self
+                .perf
+                .render_plan_degradations_budget_insufficient,
+            render_plan_degradations_target_exhausted: self
+                .perf
+                .render_plan_degradations_target_exhausted,
+            render_plan_degradations_backdrop_noop: self
+                .perf
+                .render_plan_degradations_backdrop_noop,
+            render_plan_degradations_filter_content_disabled: self
+                .perf
+                .render_plan_degradations_filter_content_disabled,
+            render_plan_degradations_clip_path_disabled: self
+                .perf
+                .render_plan_degradations_clip_path_disabled,
+            render_plan_degradations_composite_group_blend_to_over: self
+                .perf
+                .render_plan_degradations_composite_group_blend_to_over,
             draw_calls: self.perf.draw_calls,
             quad_draw_calls: self.perf.quad_draw_calls,
             viewport_draw_calls: self.perf.viewport_draw_calls,
