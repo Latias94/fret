@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, TextStyle, TextWrap};
+use fret_core::{Color, FontId, FontWeight, TextAlign, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, SemanticsDecoration, TextProps};
@@ -505,6 +505,7 @@ impl MicSelectorValue {
                     color: None,
                     wrap: TextWrap::None,
                     overflow: fret_core::TextOverflow::Ellipsis,
+                    align: TextAlign::Start,
                 })
             }
         } else {
@@ -515,6 +516,7 @@ impl MicSelectorValue {
                 color: Some(muted_fg(&theme)),
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Ellipsis,
+                align: TextAlign::Start,
             })
         };
 
@@ -557,6 +559,7 @@ impl MicSelectorLabel {
                 color: None,
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Ellipsis,
+                align: TextAlign::Start,
             });
             let id_el = cx.text_props(TextProps {
                 layout: Default::default(),
@@ -565,6 +568,7 @@ impl MicSelectorLabel {
                 color: Some(muted_fg(&theme)),
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
+                align: TextAlign::Start,
             });
 
             return fret_ui_kit::declarative::stack::hstack(
@@ -584,6 +588,7 @@ impl MicSelectorLabel {
             color: None,
             wrap: TextWrap::None,
             overflow: fret_core::TextOverflow::Ellipsis,
+            align: TextAlign::Start,
         })
     }
 }

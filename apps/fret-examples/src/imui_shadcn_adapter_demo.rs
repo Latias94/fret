@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_kit::prelude::*;
+use fret::prelude::*;
 use fret_ui_shadcn as shadcn;
 
 struct ImUiShadcnAdapterState {
@@ -12,7 +12,7 @@ struct ImUiShadcnAdapterState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app("imui-shadcn-adapter-demo", init_window, view)?
+    fret::app("imui-shadcn-adapter-demo", init_window, view)?
         .with_main_window("imui_shadcn_adapter_demo", (840.0, 560.0))
         .run()?;
     Ok(())

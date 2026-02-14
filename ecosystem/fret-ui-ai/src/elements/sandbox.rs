@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
+};
 use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -195,6 +197,7 @@ impl SandboxHeader {
             color: Some(theme.color_required("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
         });
 
         let status_badge = tool_status_badge(cx, self.status);

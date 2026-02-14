@@ -35,7 +35,7 @@ This avoids forcing Tokio on small apps while giving large apps an explicit, deb
 When users say “the API feels complex”, it usually comes from these layers bleeding together:
 
 1. **Mechanism runtime** (`crates/fret-ui`): tree, layout, hit-testing, events, effects, IDs.
-2. **Policy / authoring surface** (`ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `fret-kit`):
+2. **Policy / authoring surface** (`ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `fret`):
    default padding/row height, focus policy, dismiss semantics, hover intent, tokens → styles.
 3. **Embedding surfaces** (viewport panels, retained-widget bridge): how to host “foreign” systems.
 
@@ -135,4 +135,3 @@ If we want to evaluate ergonomics concretely, measure:
 
 The current `apps/fret-examples/src/todo_demo.rs` is a good baseline because it already exercises:
 input, buttons, tabs, list rendering, and style tokens.
-

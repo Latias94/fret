@@ -1,5 +1,5 @@
 use fret_app::{App, Model};
-use fret_kit::prelude::{
+use fret::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
 };
 use fret_ui::element::AnyElement;

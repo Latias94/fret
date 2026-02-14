@@ -63,6 +63,7 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
                 color: Some(theme.color_token("foreground")),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })
             .test_id(test_id);
 

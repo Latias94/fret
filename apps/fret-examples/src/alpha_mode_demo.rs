@@ -230,7 +230,7 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
 
 pub fn run() -> anyhow::Result<()> {
     let driver = FnDriver::new((), create_window_state, handle_event, render);
-    fret_kit::run_native_demo(
+    fret::run_native_demo(
         WinitRunnerConfig {
             main_window_title: "alpha_mode_demo".to_string(),
             main_window_size: winit::dpi::LogicalSize::new(920.0, 320.0),

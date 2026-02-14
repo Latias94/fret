@@ -872,6 +872,7 @@ fn render_menu_from_runtime<H: UiHost>(
                     color: Some(text_color),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })
             } else {
                 cx.text_props(TextProps {
@@ -881,6 +882,7 @@ fn render_menu_from_runtime<H: UiHost>(
                     color: Some(text_color),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })
             };
 
@@ -1429,6 +1431,7 @@ fn render_menu_item<H: UiHost>(
             color: Some(text_color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let item_text_for_leading = item_text.clone();
@@ -1473,6 +1476,7 @@ fn render_menu_item<H: UiHost>(
                         color: Some(text_color),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     })]
                 },
             )
@@ -1486,6 +1490,7 @@ fn render_menu_item<H: UiHost>(
                 color: Some(shortcut_color),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }))
         } else if item.has_submenu {
             Some(cx.text_props(TextProps {
@@ -1495,6 +1500,7 @@ fn render_menu_item<H: UiHost>(
                 color: Some(shortcut_color),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }))
         } else {
             None

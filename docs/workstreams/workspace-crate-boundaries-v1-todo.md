@@ -12,7 +12,7 @@ Related plan:
 
 - [x] Add this workstream to `docs/workstreams/README.md`.
 - [x] Add a short entry to `docs/todo-tracker.md` pointing to this workstream (optional).
-- [x] Confirm the intended wasm “golden path” bundles in `crates/fret` (`web` vs `web-winit`).
+- [x] Confirm the intended wasm “golden path” bundles in `crates/fret-framework` (`web` vs `web-winit`).
 
 ### M1 — Render split (`fret-render-core` + `fret-render-wgpu`)
 
@@ -27,7 +27,7 @@ Related plan:
 - [x] Implement DOM/canvas event translation in `crates/fret-runner-web`.
 - [x] Provide RAF scheduling and “wake” hooks for drivers.
 - [x] Move wasm-only DOM glue out of `crates/fret-runner-winit`.
-- [x] Update `crates/fret` feature bundles:
+- [x] Update `crates/fret-framework` feature bundles:
   - [x] `web` uses `fret-runner-web` (default),
   - [x] `web-winit` (optional) remains available if needed.
 
@@ -46,7 +46,7 @@ Related plan:
 
 ### M5 — Follow-up cleanups (optional)
 
-- [x] Re-audit `crates/fret` default features to ensure they stay “portable by default”.
+- [x] Re-audit `crates/fret-framework` default features to ensure they stay “portable by default”.
 - [x] Consider whether `fret-code-editor-view` should remain a standalone crate (keep: buffer/view are reusable seams).
 - [x] Add a short “merge vs split” candidate list to the crate survey notes and revisit quarterly.
 

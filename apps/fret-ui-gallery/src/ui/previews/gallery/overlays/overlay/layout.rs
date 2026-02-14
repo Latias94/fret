@@ -71,6 +71,7 @@ pub(super) fn compose_body(
                         widgets.popover,
                         widgets.underlay,
                         widgets.dialog,
+                        widgets.dialog_glass,
                     ],
                 ),
                 row(cx, gap, vec![widgets.alert_dialog, widgets.sheet]),

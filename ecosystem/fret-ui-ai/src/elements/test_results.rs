@@ -182,6 +182,7 @@ fn status_badge<H: UiHost>(
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         vec![stack::hstack(
@@ -499,6 +500,7 @@ impl TestResultsDuration {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         cx.container(
@@ -637,6 +639,7 @@ impl TestResultsProgress {
                         color: Some(fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     }),
                     cx.text_props(TextProps {
                         layout: LayoutStyle::default(),
@@ -645,6 +648,7 @@ impl TestResultsProgress {
                         color: Some(fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     }),
                 ]
             },
@@ -864,6 +868,7 @@ impl TestSuiteName {
             color: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let stats = {
@@ -876,6 +881,7 @@ impl TestSuiteName {
                     color: Some(TestStatusKind::Passed.color(&theme)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }));
             }
             if self.failed > 0 {
@@ -886,6 +892,7 @@ impl TestSuiteName {
                     color: Some(TestStatusKind::Failed.color(&theme)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }));
             }
             if self.skipped > 0 {
@@ -896,6 +903,7 @@ impl TestSuiteName {
                     color: Some(TestStatusKind::Skipped.color(&theme)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }));
             }
 
@@ -1073,6 +1081,7 @@ impl Test {
                 color: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
+                align: fret_core::TextAlign::Start,
             });
 
             let duration_el = duration.map(|ms| {
@@ -1083,6 +1092,7 @@ impl Test {
                     color: Some(theme_for_content.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })
             });
 
@@ -1238,6 +1248,7 @@ impl TestErrorMessage {
             color: Some(fg),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -1285,6 +1296,7 @@ impl TestErrorStack {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let mut scroll = fret_ui_shadcn::ScrollArea::new([text])

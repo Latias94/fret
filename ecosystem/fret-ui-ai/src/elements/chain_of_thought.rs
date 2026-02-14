@@ -324,6 +324,7 @@ impl ChainOfThoughtHeader {
                         color: Some(fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     })
                 };
 
@@ -576,6 +577,7 @@ impl ChainOfThoughtStep {
             color: Some(fg),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let mut body_children: Vec<AnyElement> = Vec::new();
@@ -589,6 +591,7 @@ impl ChainOfThoughtStep {
                 color: Some(base_fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }));
         }
         body_children.extend(self.children);
@@ -818,6 +821,7 @@ impl ChainOfThoughtImage {
                 color: Some(caption_fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }));
         }
 

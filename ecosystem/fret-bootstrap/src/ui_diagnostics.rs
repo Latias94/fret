@@ -43,6 +43,26 @@ fn load_ui_diagnostics_config_file(path: &Path) -> Result<UiDiagnosticsConfigFil
     serde_json::from_slice(&bytes).map_err(|e| e.to_string())
 }
 
+fn env_flag_override(name: &str) -> Option<bool> {
+    let v = std::env::var_os(name)?;
+    let v = v.to_string_lossy().trim().to_ascii_lowercase();
+    if v.is_empty() {
+        return Some(true);
+    }
+    Some(!matches!(v.as_str(), "0" | "false" | "no" | "off"))
+}
+
+fn env_usize_override(name: &str) -> Option<usize> {
+    let Ok(v) = std::env::var(name) else {
+        return None;
+    };
+    let v = v.trim();
+    if v.is_empty() {
+        return None;
+    }
+    v.parse::<usize>().ok()
+}
+
 fn resolve_config_path(out_dir: &Path, raw: &str) -> Option<PathBuf> {
     let raw = raw.trim();
     if raw.is_empty() {
@@ -262,45 +282,44 @@ impl Default for UiDiagnosticsConfig {
             }
         });
         let out_dir = resolve_ios_diag_out_dir(out_dir);
-        let trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let trigger_path = std::env::var_os("FRET_DIAG_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("trigger.touch"));
-        let ready_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.ready_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let ready_path = std::env::var_os("FRET_DIAG_READY_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_READY_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.ready_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("ready.touch"));
-        let exit_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.exit_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let exit_path = std::env::var_os("FRET_DIAG_EXIT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_EXIT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.exit_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("exit.touch"));
 
         let script_keepalive = enabled
-            && config_file
-                .as_ref()
-                .and_then(|c| c.script_keepalive)
-                .unwrap_or_else(|| env_flag_default_true("FRET_DIAG_SCRIPT_KEEPALIVE"));
+            && env_flag_override("FRET_DIAG_SCRIPT_KEEPALIVE")
+                .or_else(|| config_file.as_ref().and_then(|c| c.script_keepalive))
+                .unwrap_or(true);
         if enabled
             || raw_diag.as_ref().is_some_and(|v| !v.is_empty())
             || raw_out_dir.as_ref().is_some_and(|v| !v.is_empty())
@@ -328,253 +347,237 @@ impl Default for UiDiagnosticsConfig {
             });
         }
 
-        let max_events = config_file
-            .as_ref()
-            .and_then(|c| c.max_events)
-            .map(|v| v as usize)
-            .unwrap_or_else(|| {
-                std::env::var("FRET_DIAG_MAX_EVENTS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(2000)
-            });
-        let max_snapshots = config_file
-            .as_ref()
-            .and_then(|c| c.max_snapshots)
-            .map(|v| v as usize)
-            .unwrap_or_else(|| {
-                std::env::var("FRET_DIAG_MAX_SNAPSHOTS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(300)
-            });
-        let script_dump_max_snapshots = config_file
-            .as_ref()
-            .and_then(|c| c.script_dump_max_snapshots)
-            .map(|v| v as usize)
-            .unwrap_or_else(|| {
-                std::env::var("FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(30)
-            });
+        let max_events = env_usize_override("FRET_DIAG_MAX_EVENTS")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_events)
+                    .map(|v| v as usize)
+            })
+            .unwrap_or(2000);
+        let max_snapshots = env_usize_override("FRET_DIAG_MAX_SNAPSHOTS")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_snapshots)
+                    .map(|v| v as usize)
+            })
+            .unwrap_or(300);
+        let script_dump_max_snapshots = env_usize_override("FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.script_dump_max_snapshots)
+                    .map(|v| v as usize)
+            })
+            .unwrap_or(30);
         let script_dump_max_snapshots = if max_snapshots == 0 {
             0
         } else {
             script_dump_max_snapshots.clamp(1, max_snapshots)
         };
-        let capture_semantics = config_file
-            .as_ref()
-            .and_then(|c| c.capture_semantics)
-            .unwrap_or_else(|| env_flag_default_true("FRET_DIAG_SEMANTICS"));
-        let max_semantics_nodes = config_file
-            .as_ref()
-            .and_then(|c| c.max_semantics_nodes)
-            .map(|v| v as usize)
-            .unwrap_or_else(|| {
-                std::env::var("FRET_DIAG_MAX_SEMANTICS_NODES")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(50_000)
-            })
-            .clamp(0, 500_000);
-        let semantics_test_ids_only = config_file
-            .as_ref()
-            .and_then(|c| c.semantics_test_ids_only)
-            .unwrap_or_else(|| env_flag_default_false("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY"));
-        let screenshots_enabled = config_file
-            .as_ref()
-            .and_then(|c| c.screenshots_enabled)
-            .unwrap_or_else(|| env_flag_default_false("FRET_DIAG_SCREENSHOTS"));
-        let screenshot_request_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.screenshot_request_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let capture_semantics = env_flag_override("FRET_DIAG_SEMANTICS")
+            .or_else(|| config_file.as_ref().and_then(|c| c.capture_semantics))
+            .unwrap_or(true);
+        let max_semantics_nodes = env_usize_override("FRET_DIAG_MAX_SEMANTICS_NODES")
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_semantics_nodes)
+                    .map(|v| v as usize)
+            })
+            .unwrap_or(50_000)
+            .clamp(0, 500_000);
+        let semantics_test_ids_only = env_flag_override("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY")
+            .or_else(|| config_file.as_ref().and_then(|c| c.semantics_test_ids_only))
+            .unwrap_or(false);
+        let screenshots_enabled = env_flag_override("FRET_DIAG_GPU_SCREENSHOTS")
+            .or_else(|| env_flag_override("FRET_DIAG_SCREENSHOTS"))
+            .or_else(|| config_file.as_ref().and_then(|c| c.screenshots_enabled))
+            .unwrap_or(false);
+        let screenshot_request_path = std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.screenshot_request_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("screenshots.request.json"));
-        let screenshot_trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.screenshot_trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let screenshot_trigger_path = std::env::var_os("FRET_DIAG_SCREENSHOT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCREENSHOT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.screenshot_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("screenshots.touch"));
-        let screenshot_result_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.screenshot_result_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let screenshot_result_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.screenshot_result_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("screenshots.result.json"));
-        let screenshot_result_trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.screenshot_result_trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let screenshot_result_trigger_path =
+            std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH")
+                .filter(|v| !v.is_empty())
+                .map(PathBuf::from)
+                .or_else(|| {
+                    config_file
+                        .as_ref()
+                        .and_then(|c| c.paths.as_ref())
+                        .and_then(|p| p.screenshot_result_trigger_path.as_deref())
+                        .and_then(|s| resolve_config_path(&out_dir, s))
+                })
+                .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
+        let script_path = std::env::var_os("FRET_DIAG_SCRIPT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
-        let script_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.script_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("script.json"));
-        let script_trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.script_trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let script_trigger_path = std::env::var_os("FRET_DIAG_SCRIPT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("script.touch"));
-        let script_result_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.script_result_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let script_result_path = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_RESULT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_result_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("script.result.json"));
-        let script_result_trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.script_result_trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let script_result_trigger_path = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.script_result_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("script.result.touch"));
-        let script_auto_dump = config_file
-            .as_ref()
-            .and_then(|c| c.script_auto_dump)
-            .unwrap_or_else(|| env_flag_default_true("FRET_DIAG_SCRIPT_AUTO_DUMP"));
-        let pick_trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.pick_trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let script_auto_dump = env_flag_override("FRET_DIAG_SCRIPT_AUTO_DUMP")
+            .or_else(|| config_file.as_ref().and_then(|c| c.script_auto_dump))
+            .unwrap_or(true);
+        let pick_trigger_path = std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.pick_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("pick.touch"));
-        let pick_result_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.pick_result_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let pick_result_path = std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.pick_result_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("pick.result.json"));
-        let pick_result_trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.pick_result_trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let pick_result_trigger_path = std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.pick_result_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("pick.result.touch"));
-        let pick_auto_dump = config_file
-            .as_ref()
-            .and_then(|c| c.pick_auto_dump)
-            .unwrap_or_else(|| env_flag_default_true("FRET_DIAG_PICK_AUTO_DUMP"));
-        let inspect_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.inspect_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let pick_auto_dump = env_flag_override("FRET_DIAG_PICK_AUTO_DUMP")
+            .or_else(|| config_file.as_ref().and_then(|c| c.pick_auto_dump))
+            .unwrap_or(true);
+        let inspect_path = std::env::var_os("FRET_DIAG_INSPECT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_INSPECT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.inspect_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("inspect.json"));
-        let inspect_trigger_path = config_file
-            .as_ref()
-            .and_then(|c| c.paths.as_ref())
-            .and_then(|p| p.inspect_trigger_path.as_deref())
-            .and_then(|s| resolve_config_path(&out_dir, s))
+        let inspect_trigger_path = std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.paths.as_ref())
+                    .and_then(|p| p.inspect_trigger_path.as_deref())
+                    .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("inspect.touch"));
-        let redact_text = config_file
-            .as_ref()
-            .and_then(|c| c.redact_text)
-            .unwrap_or_else(|| env_flag_default_true("FRET_DIAG_REDACT_TEXT"));
-        let max_debug_string_bytes = config_file
-            .as_ref()
-            .and_then(|c| c.max_debug_string_bytes)
-            .map(|v| v as usize)
-            .unwrap_or_else(|| {
-                std::env::var("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(4096)
-            })
-            .clamp(0, 256 * 1024);
-        let max_gating_trace_entries = config_file
-            .as_ref()
-            .and_then(|c| c.max_gating_trace_entries)
-            .map(|v| v as usize)
-            .unwrap_or_else(|| {
-                std::env::var("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(200)
-            })
-            .clamp(0, 2000);
-        let screenshot_on_dump = config_file
-            .as_ref()
-            .and_then(|c| c.screenshot_on_dump)
-            .unwrap_or_else(|| env_flag_default_false("FRET_DIAG_SCREENSHOT"));
-        let frame_clock_fixed_delta_ms = config_file
-            .as_ref()
-            .and_then(|c| c.frame_clock_fixed_delta_ms)
+        let redact_text = env_flag_override("FRET_DIAG_REDACT_TEXT")
+            .or_else(|| config_file.as_ref().and_then(|c| c.redact_text))
+            .unwrap_or(true);
+        let max_debug_string_bytes = env_usize_override("FRET_DIAG_MAX_DEBUG_STRING_BYTES")
             .or_else(|| {
-                fret_core::WindowFrameClockService::fixed_delta_from_env()
-                    .map(|d| d.as_millis())
-                    .and_then(|ms| u64::try_from(ms).ok())
-                    .filter(|v| *v > 0)
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_debug_string_bytes)
+                    .map(|v| v as usize)
+            })
+            .unwrap_or(4096)
+            .clamp(0, 256 * 1024);
+        let max_gating_trace_entries = env_usize_override("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_gating_trace_entries)
+                    .map(|v| v as usize)
+            })
+            .unwrap_or(200)
+            .clamp(0, 2000);
+        let screenshot_on_dump = env_flag_override("FRET_DIAG_BUNDLE_SCREENSHOT")
+            .or_else(|| env_flag_override("FRET_DIAG_SCREENSHOT"))
+            .or_else(|| config_file.as_ref().and_then(|c| c.screenshot_on_dump))
+            .unwrap_or(false);
+        let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()
+            .map(|d| d.as_millis())
+            .and_then(|ms| u64::try_from(ms).ok())
+            .filter(|v| *v > 0)
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.frame_clock_fixed_delta_ms)
             });
 
         Self {

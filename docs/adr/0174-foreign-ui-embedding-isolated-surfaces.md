@@ -25,7 +25,7 @@ Fret supports **foreign UI integration only via isolated embedding surfaces**:
 - Pointer/keyboard input can be forwarded to the embedded surface using `ViewportInputEvent`, with explicit mapping and capture rules.
 - **Focus/IME/a11y are not shared across runtimes**. The embedded foreign UI is treated as an isolated surface from the perspective of Fret鈥檚 semantics tree and input routing.
 
-Any ergonomics helpers to reduce boilerplate must live in ecosystem crates (e.g. `fret-kit`, `fret-ui-kit`), not in kernel crates.
+Any ergonomics helpers to reduce boilerplate must live in ecosystem crates (e.g. `fret`, `fret-ui-kit`), not in kernel crates.
 
 ## Goals
 
@@ -76,13 +76,13 @@ Use a golden-path driver hook surface and keep the embedding policy centralized:
 - Use `UiAppDriver::viewport_input(...)` to forward viewport input into a single handler.
 - Use `UiAppDriver::record_engine_frame(...)` (ADR 0038) to record the foreign UI鈥檚 GPU pass into the offscreen target.
 - Use `fret-ui-kit`鈥檚 declarative `viewport_surface_panel` to present the target in UI.
-- Prefer `fret-kit` helpers to reduce boilerplate without changing kernel contracts.
+- Prefer `fret` helpers to reduce boilerplate without changing kernel contracts.
 
-### `fret-kit` helper surface
+### `fret` helper surface
 
 The recommended entry point for apps is:
 
-- `ecosystem/fret-kit/src/interop/embedded_viewport.rs`
+- `ecosystem/fret/src/interop/embedded_viewport.rs`
 
 It provides two integration styles (both keep semantics/focus/IME isolated):
 
@@ -139,7 +139,7 @@ Deferred (not a replacement for the core embedding story).
 - Viewport input forwarding: `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0132-viewport-input-forwarding-explicit-units.md`
 - Engine render hook pipeline: `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - Viewport tool capture and overlays: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`, `docs/adr/0153-viewport-tooling-host-helpers-and-arbitration-v1.md`
-- Ecosystem helpers: `ecosystem/fret-kit/src/interop/embedded_viewport.rs`
+- Ecosystem helpers: `ecosystem/fret/src/interop/embedded_viewport.rs`
 - Examples:
   - `apps/fret-examples/src/imui_editor_proof_demo.rs` (host-recorded embedded surface)
-  - `ecosystem/fret-kit/src/interop/embedded_viewport.rs` (`EmbeddedViewportForeignUi`, `set_foreign_ui`, `drive_embedded_viewport_foreign`)
+  - `ecosystem/fret/src/interop/embedded_viewport.rs` (`EmbeddedViewportForeignUi`, `set_foreign_ui`, `drive_embedded_viewport_foreign`)

@@ -1,7 +1,7 @@
 use anyhow::Context as _;
+use fret::prelude::MessageRouter;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, UiServices};
-use fret_kit::prelude::MessageRouter;
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,

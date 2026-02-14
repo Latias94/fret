@@ -25,7 +25,7 @@ but a few high-leverage boundaries are still easy to blur over time:
    needs to be.
 2. **Web runner**: wasm input/event wiring currently lives under the winit runner, while `fret-runner-web` is a
    re-export shim. This weakens the long-term “dedicated DOM adapter for IME/keyboard fidelity” direction.
-3. **Facade bundles**: `crates/fret` feature bundles should express the intended golden paths clearly (desktop vs web),
+3. **Facade bundles**: `crates/fret-framework` feature bundles should express the intended golden paths clearly (desktop vs web),
    without forcing one runner abstraction on all targets.
 
 This workstream defines a staged, measurable refactor plan that improves long-term maintainability without
@@ -37,7 +37,7 @@ In scope:
 
 - Reshape crates to keep contracts portable and implementations replaceable.
 - Make the web direction explicit: a dedicated web adapter (`fret-runner-web`) as the default wasm path.
-- Keep the public facade (`crates/fret`) coherent with ADR 0089/0092.
+- Keep the public facade (`crates/fret-framework`) coherent with ADR 0089/0092.
 - Remove the layout engine feature fork if it is no longer a real decision point (reduce test matrix).
 
 Non-goals:
@@ -74,7 +74,7 @@ Migration strategy:
 1. Introduce the new crates with minimal code movement (re-export first if needed).
 2. Move implementation modules into `fret-render-wgpu` incrementally.
 3. Update `crates/fret-launch` to depend on `fret-render-wgpu` (not the contract crate).
-4. Keep `crates/fret` bundles stable via `fret-render` facade until a planned breaking release.
+4. Keep `crates/fret-framework` bundles stable via `fret-render` facade until a planned breaking release.
 
 ### 4.2 Web: make a real `fret-runner-web` adapter (DOM + RAF + canvas wiring)
 
@@ -89,7 +89,7 @@ Target shape:
 
 Bundle intent:
 
-- `crates/fret`:
+- `crates/fret-framework`:
   - `web` bundle should use `fret-runner-web` (default wasm path).
   - An optional `web-winit` (or `wasm-winit`) bundle can exist for compatibility experiments.
 

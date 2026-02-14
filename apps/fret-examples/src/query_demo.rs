@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_kit::prelude::*;
+use fret::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{
     QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
@@ -28,7 +28,7 @@ enum QueryDemoMsg {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::mvu::app::<QueryDemoProgram>("query-demo")?
+    fret::mvu::app::<QueryDemoProgram>("query-demo")?
         .with_main_window("query_demo", (560.0, 360.0))
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(

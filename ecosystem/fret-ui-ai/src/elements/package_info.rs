@@ -459,6 +459,7 @@ impl PackageInfoName {
             color: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let row = stack::hstack(
@@ -603,6 +604,7 @@ impl PackageInfoVersion {
                 color: Some(muted_fg(&theme)),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }));
         }
         if has_current && has_new {
@@ -625,6 +627,7 @@ impl PackageInfoVersion {
                 color: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }));
         }
 
@@ -700,6 +703,7 @@ impl PackageInfoDescription {
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let chrome = ChromeRefinement::default().merge(self.chrome);
@@ -805,6 +809,7 @@ impl PackageInfoDependencies {
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let list = stack::vstack(
@@ -879,6 +884,7 @@ impl PackageInfoDependency {
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
 
         let mut items = vec![name];
@@ -901,6 +907,7 @@ impl PackageInfoDependency {
                 color: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             }));
         }
 

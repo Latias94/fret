@@ -1,4 +1,4 @@
-# fret-kit
+# fret
 
 Desktop-first, batteries-included entry points for building UI apps with Fret.
 
@@ -20,32 +20,38 @@ With defaults (desktop + diagnostics + ui-assets + lucide icons):
 
 ```toml
 [dependencies]
-fret-kit = { path = "../fret-kit" }
+fret = { path = "../fret" } # path is relative to your Cargo.toml
+```
+
+If your crate lives under `apps/` in this repository:
+
+```toml
+[dependencies]
+fret = { path = "../../ecosystem/fret" }
 ```
 
 Or explicitly opt into a smaller surface:
 
 ```toml
 [dependencies]
-fret-kit = { path = "../fret-kit", default-features = false, features = ["desktop"] }
+fret = { path = "../fret", default-features = false, features = ["desktop"] }
 ```
 
 ## Minimal app skeleton
 
 ```rust,ignore
-use fret_kit::prelude::*;
+use fret::prelude::*;
 
-fn main() -> anyhow::Result<()> {
-    fret_kit::run("hello", |_app, _window| (), |cx, _st| {
+fn main() -> fret::Result<()> {
+    fret::run("hello", |_app, _window| (), |cx, _st| {
         shadcn::Label::new("Hello from Fret!").into_element(cx).into()
-    })?;
-    Ok(())
+    })
 }
 ```
 
 ## Features
 
-- `desktop`: enable the native desktop stack (winit + wgpu) via `fret/native-wgpu`.
+- `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `diagnostics`: enable default diagnostics (tracing + panic hook).
 - `ui-assets`: enable UI render-asset caches (images/SVG) and install default budgets.
 - `icons-lucide` / `icons-radix`: install a built-in icon pack (mutually exclusive).
@@ -54,7 +60,7 @@ fn main() -> anyhow::Result<()> {
 
 ## Web / wasm
 
-`fret-kit` is desktop-first. For web demos in this repository, use tooling:
+`fret` is desktop-first. For web demos in this repository, use tooling:
 
 ```bash
 rustup target add wasm32-unknown-unknown
@@ -64,9 +70,9 @@ cargo run -p fretboard -- dev web --demo ui_gallery
 
 This runs `apps/fret-demo-web` via `trunk serve`.
 
-## When to drop down to `fret` + `fret-bootstrap`
+## When to drop down to `fret-framework` + `fret-bootstrap`
 
-`fret-kit` is designed to keep the “first app” and “small app” story simple. Prefer dropping down
+`fret` is designed to keep the “first app” and “small app” story simple. Prefer dropping down
 to manual assembly when you need:
 
 - a custom runner/event loop integration (`fret-launch`),
@@ -76,9 +82,9 @@ to manual assembly when you need:
 
 Mapping (rough):
 
-- `fret_kit::app_with_hooks(...)` → `fret_bootstrap::ui_app_with_hooks(...)`
-- `fret_kit::UiAppBuilder` → `fret_bootstrap::UiAppBootstrapBuilder`
-- `fret_kit::UiAppDriver` → `fret_bootstrap::ui_app_driver::UiAppDriver`
+- `fret::app_with_hooks(...)` → `fret_bootstrap::ui_app_with_hooks(...)`
+- `fret::UiAppBuilder` → `fret_bootstrap::UiAppBootstrapBuilder`
+- `fret::UiAppDriver` → `fret_bootstrap::ui_app_driver::UiAppDriver`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

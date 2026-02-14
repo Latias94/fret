@@ -327,6 +327,7 @@ impl TextInput {
                 max_width: Some(bounds.size.width),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: cx.scale_factor,
             };
             let pre_metrics =

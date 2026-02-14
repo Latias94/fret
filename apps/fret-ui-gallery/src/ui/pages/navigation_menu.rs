@@ -72,6 +72,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
             color: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         });
         let description_el = cx.text_props(TextProps {
             layout: Default::default(),
@@ -87,6 +88,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
             color: Some(muted_foreground),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
         });
 
         let body = stack::vstack(

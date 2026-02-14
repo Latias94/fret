@@ -1,5 +1,5 @@
 [package]
-name = "fret"
+name = "fret-framework"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,8 +7,8 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation.workspace = true
-description = "The precision fretboard for Rust UI: a GPU-first framework for crisp, fluid application interactions."
+documentation = "https://docs.rs/fret-framework"
+description = "Fret framework facade crate: opt-in re-exports for advanced/manual assembly."
 
 [dependencies]
 fret-core = { version = "0.1.0", path = "../fret-core", optional = true }

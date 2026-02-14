@@ -419,6 +419,7 @@ impl StackTraceCopyButton {
                         color: None,
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     })
                     .attach_semantics(
                         SemanticsDecoration::default()
@@ -546,6 +547,7 @@ impl StackTraceFrames {
                 color: Some(fg_muted),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })]
         } else {
             frames
@@ -570,6 +572,7 @@ impl StackTraceFrames {
                             color: Some(fg_muted),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
                         });
 
                         let mut parts: Vec<AnyElement> = vec![label_at];
@@ -582,6 +585,7 @@ impl StackTraceFrames {
                                 color: Some(fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             }));
                         }
 
@@ -593,6 +597,7 @@ impl StackTraceFrames {
                                 color: Some(fg_muted),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             }));
 
                             let label = {
@@ -648,6 +653,7 @@ impl StackTraceFrames {
                                     color: Some(if enabled { fg_primary } else { fg }),
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
+                                    align: fret_core::TextAlign::Start,
                                 })]
                             });
 
@@ -660,6 +666,7 @@ impl StackTraceFrames {
                                 color: Some(fg_muted),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             }));
                         }
 
@@ -672,6 +679,7 @@ impl StackTraceFrames {
                                 color: Some(fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
                             }));
                         }
 
@@ -964,6 +972,7 @@ impl StackTrace {
                         color: Some(error_fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     });
 
                     let msg = cx.text_props(TextProps {
@@ -981,6 +990,7 @@ impl StackTrace {
                         color: Some(header_fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
+                        align: fret_core::TextAlign::Start,
                     });
 
                     let error_row = stack::hstack(

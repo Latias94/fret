@@ -5,13 +5,13 @@
 //! pulling ecosystem defaults (components, policies, tooling) into `crates/*`.
 //!
 //! For the batteries-included desktop-first experience, prefer:
-//! - `fret-kit` (app entry points)
+//! - `fret` (ecosystem meta crate; app entry points)
 //! - `fretboard` (dev tooling)
 //!
 //! See ADR 0109: `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`.
 //!
 //! Default features are intentionally minimal (`core` only). Enable additional feature bundles
-//! explicitly, or use `fret-kit` for the batteries-included golden path.
+//! explicitly, or use `fret` for the batteries-included golden path.
 
 #[cfg(feature = "core")]
 pub mod core {

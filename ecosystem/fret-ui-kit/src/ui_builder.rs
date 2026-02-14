@@ -191,6 +191,11 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
+    pub fn text_align(mut self, align: fret_core::TextAlign) -> Self {
+        self.inner.align = align;
+        self
+    }
+
     pub fn nowrap(self) -> Self {
         self.wrap(TextWrap::None).overflow(TextOverflow::Clip)
     }
@@ -213,6 +218,11 @@ impl UiBuilder<crate::ui::RawTextBox> {
 
     pub fn overflow(mut self, overflow: TextOverflow) -> Self {
         self.inner.overflow = overflow;
+        self
+    }
+
+    pub fn text_align(mut self, align: fret_core::TextAlign) -> Self {
+        self.inner.align = align;
         self
     }
 

@@ -18,9 +18,9 @@ Related ADRs:
 
 ## Recommended dependencies (native)
 
-- `fret-kit` (desktop-first batteries-included entry point)
+- `fret` (desktop-first batteries-included entry point)
   - wraps `fret-bootstrap` (golden-path wiring) + `fret-ui-shadcn` (default component surface)
-  - enables a practical desktop-first default stack via `fret/native-wgpu`
+  - enables a practical desktop-first default stack via `fret-framework/native-wgpu`
 - Optional ecosystem helpers (recommended defaults):
   - `fret-selector` (memoized derived state)
   - `fret-query` (async resource state + caching, TanStack Query-like)
@@ -42,8 +42,8 @@ fretboard new todo --name my-todo --ui-assets
 
 Notes:
 
-- `fret-kit` defaults to a practical desktop setup (diagnostics + icons + optional caches).
-- Advanced apps can depend on `fret` + `fret-bootstrap` directly for finer-grained control.
+- `fret` defaults to a practical desktop setup (diagnostics + icons + optional caches).
+- Advanced apps can depend on `fret-framework` + `fret-bootstrap` directly for finer-grained control.
 
 ## Minimal `Cargo.toml`
 
@@ -57,7 +57,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret-kit = { path = "../../ecosystem/fret-kit" }
+fret = { path = "../../ecosystem/fret" }
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] } # optional
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # optional
 ```
@@ -66,7 +66,7 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # option
 
 ```rust,ignore
 fn main() -> anyhow::Result<()> {
-    fret_kit::mvu::app::<TodoProgram>("todo")?
+    fret::mvu::app::<TodoProgram>("todo")?
         .with_main_window("todo", (560.0, 520.0))
         .run()?;
 
@@ -77,7 +77,7 @@ fn main() -> anyhow::Result<()> {
 Notes:
 
 - `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0105).
-- `fret-kit::mvu` provides an MVU-shaped authoring surface (typed messages) while keeping the underlying driver hotpatch-friendly.
+- `fret::mvu` provides an MVU-shaped authoring surface (typed messages) while keeping the underlying driver hotpatch-friendly.
 
 ## App state (models)
 
@@ -140,14 +140,14 @@ enum Msg {
     Remove(u64),
 }
 
-impl fret_kit::prelude::MvuProgram for TodoProgram {
+impl fret::prelude::MvuProgram for TodoProgram {
     type State = TodoState;
     type Message = Msg;
 
     fn view(
         cx: &mut fret_ui::ElementContext<'_, fret_app::App>,
         state: &mut Self::State,
-        msg: &mut fret_kit::prelude::MessageRouter<Self::Message>,
+        msg: &mut fret::prelude::MessageRouter<Self::Message>,
     ) -> fret_ui::element::Elements {
         // Allocate command IDs for the current frame.
         let add_cmd = msg.cmd(Msg::Add);
@@ -173,7 +173,7 @@ This removes stringly `"prefix.{id}"` parsing and keeps hot reload resets predic
 This is high-level pseudocode showing the intent; exact component APIs may vary.
 
 ```rust,ignore
-use fret_kit::prelude::*;
+use fret::prelude::*;
 
 fn view(
     cx: &mut ElementContext<'_, fret_app::App>,
@@ -193,7 +193,7 @@ fn view(
 }
 ```
 
-Note: `fret-kit::prelude` includes the shadcn authoring vocabulary (layout/styling + common types) so app code can stay
+Note: `fret::prelude` includes the shadcn authoring vocabulary (layout/styling + common types) so app code can stay
 on a single dependency for the default story.
 
 ## Derived state (selectors)
@@ -289,7 +289,7 @@ When using hotpatch (ADR 0105):
 
 If you want UI render asset conveniences (not an editor/project asset pipeline):
 
-- `fret-kit` enables UI asset caches by default; disable via features if you want a smaller build.
+- `fret` enables UI asset caches by default; disable via features if you want a smaller build.
 - Optionally call `.with_ui_assets_budgets(...)` (on the returned builder) to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.
@@ -300,8 +300,8 @@ See the runnable demo: `apps/fret-demo/src/bin/assets_demo.rs`.
 
 Recommended for apps:
 
-- `fret-kit` enables Lucide by default. To change packs, configure `fret-kit` features:
-  - enable `fret-kit/icons-lucide` (default), or
-  - enable `fret-kit/icons-radix`.
+- `fret` enables Lucide by default. To change packs, configure `fret` features:
+  - enable `fret/icons-lucide` (default), or
+  - enable `fret/icons-radix`.
 
 If you need a custom pack, call `.register_icon_pack(...)` with your own `fn(&mut IconRegistry)` implementation.

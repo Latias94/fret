@@ -1112,6 +1112,7 @@ fn text_field_label<H: UiHost>(
                     color: Some(color),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })]
             })]
         },
@@ -1157,6 +1158,7 @@ fn text_field_supporting_text<H: UiHost>(
         color: Some(color),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     })
 }
 

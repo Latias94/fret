@@ -58,6 +58,16 @@ Optional (upstream schema validation):
 If you want to validate against the upstream Agent Skills reference schema as well, search GitHub for
 `agentskills/agentskills` and run their validator against a single skill folder.
 
+## Skill conventions (Fret)
+
+These conventions keep skills consistent and easy to auto-validate/package:
+
+- Skill directory name: `fret-*`
+- Skill entrypoint: `SKILL.md`
+- Frontmatter: `name` and `description`
+- Recommended headings: `When to use`, `Quick start`, `Workflow`, `Evidence anchors`, `Common pitfalls`, `Related skills`
+- Evidence anchors: prefer stable file paths + symbol names; avoid fragile line-number anchors
+
 Maintainer mode (recommended in the mono-repo; validates anchor paths and a small set of high-signal symbols):
 
 ```bash

@@ -15,6 +15,7 @@ use zip::write::FileOptions;
 pub mod api;
 pub mod artifacts;
 mod cli;
+mod commands;
 mod compare;
 pub mod devtools;
 mod gates;
@@ -127,8 +128,7 @@ use stats::{
     check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
     check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
     check_report_for_hover_layout_invalidations, clear_script_result_files,
-    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
-    wait_for_failure_dump_bundle, write_pick_script,
+    report_result_and_exit, run_script_and_wait, wait_for_failure_dump_bundle,
 };
 use tooling_failures::{
     mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
@@ -10064,139 +10064,49 @@ See: `docs/tracy.md`.\n";
             }
         }
         "inspect" => {
-            let Some(action) = rest.first().cloned() else {
-                return Err(
-                    "missing inspect action (try: fretboard diag inspect on|off|toggle|status)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            match action.as_str() {
-                "status" => {
-                    let cfg = read_inspect_config(&resolved_inspect_path);
-                    let (enabled, consume_clicks) = match cfg {
-                        Some(c) => (c.enabled, c.consume_clicks),
-                        None => (false, true),
-                    };
-                    let payload = serde_json::json!({
-                        "schema_version": 1,
-                        "enabled": enabled,
-                        "consume_clicks": consume_clicks,
-                        "inspect_path": resolved_inspect_path.display().to_string(),
-                        "inspect_trigger_path": resolved_inspect_trigger_path.display().to_string(),
-                    });
-                    println!(
-                        "{}",
-                        serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string())
-                    );
-                    Ok(())
-                }
-                "on" | "off" | "toggle" => {
-                    let prev = read_inspect_config(&resolved_inspect_path);
-                    let prev_enabled = prev.as_ref().map(|c| c.enabled).unwrap_or(false);
-                    let prev_consume_clicks =
-                        prev.as_ref().map(|c| c.consume_clicks).unwrap_or(true);
-
-                    let next_enabled = match action.as_str() {
-                        "on" => true,
-                        "off" => false,
-                        "toggle" => !prev_enabled,
-                        _ => unreachable!(),
-                    };
-                    let next_consume_clicks = inspect_consume_clicks.unwrap_or(prev_consume_clicks);
-
-                    write_inspect_config(
-                        &resolved_inspect_path,
-                        InspectConfigV1 {
-                            schema_version: 1,
-                            enabled: next_enabled,
-                            consume_clicks: next_consume_clicks,
-                        },
-                    )?;
-                    touch(&resolved_inspect_trigger_path)?;
-                    println!("{}", resolved_inspect_trigger_path.display());
-                    Ok(())
-                }
-                other => Err(format!("unknown inspect action: {other}")),
-            }
+            commands::inspect::cmd_inspect(
+                &rest,
+                &resolved_inspect_path,
+                &resolved_inspect_trigger_path,
+                inspect_consume_clicks,
+            )
         }
         "pick-arm" => {
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            touch(&resolved_pick_trigger_path)?;
-            println!("{}", resolved_pick_trigger_path.display());
-            Ok(())
+            commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path)
         }
         "pick" => {
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            let result = run_pick_and_wait(
+            commands::pick::cmd_pick(
+                &rest,
                 &resolved_pick_trigger_path,
                 &resolved_pick_result_path,
                 &resolved_pick_result_trigger_path,
                 timeout_ms,
                 poll_ms,
-            )?;
-            report_pick_result_and_exit(&result)
+            )
         }
         "pick-script" => {
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            let result = run_pick_and_wait(
+            commands::pick::cmd_pick_script(
+                &rest,
                 &resolved_pick_trigger_path,
                 &resolved_pick_result_path,
                 &resolved_pick_result_trigger_path,
+                &resolved_pick_script_out,
                 timeout_ms,
                 poll_ms,
-            )?;
-
-            let Some(selector) = result.selector.clone() else {
-                return Err("pick succeeded but no selector was returned".to_string());
-            };
-
-            write_pick_script(&selector, &resolved_pick_script_out)?;
-            println!("{}", resolved_pick_script_out.display());
-            Ok(())
+            )
         }
         "pick-apply" => {
-            let Some(script) = rest.first().cloned() else {
-                return Err(
-                    "missing script path (try: fretboard diag pick-apply ./script.json --ptr /steps/0/target)".to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-            let Some(ptr) = pick_apply_pointer.as_deref() else {
-                return Err("missing --ptr (example: --ptr /steps/0/target)".to_string());
-            };
-
-            let result = run_pick_and_wait(
+            commands::pick::cmd_pick_apply(
+                &rest,
+                &workspace_root,
                 &resolved_pick_trigger_path,
                 &resolved_pick_result_path,
                 &resolved_pick_result_trigger_path,
+                pick_apply_pointer.as_deref(),
+                pick_apply_out,
                 timeout_ms,
                 poll_ms,
-            )?;
-
-            let Some(selector) = result.selector.clone() else {
-                return Err("pick succeeded but no selector was returned".to_string());
-            };
-
-            let script_path = resolve_path(&workspace_root, PathBuf::from(script));
-            let out_path = pick_apply_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| script_path.clone());
-
-            apply_pick_to_script(&script_path, &out_path, ptr, selector)?;
-            println!("{}", out_path.display());
-            Ok(())
+            )
         }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
@@ -11329,45 +11239,7 @@ fn parse_bool(s: &str) -> Result<bool, ()> {
     }
 }
 
-#[derive(Debug, Clone)]
-struct InspectConfigV1 {
-    schema_version: u32,
-    enabled: bool,
-    consume_clicks: bool,
-}
-
-fn read_inspect_config(path: &Path) -> Option<InspectConfigV1> {
-    let bytes = std::fs::read(path).ok()?;
-    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-    if v.get("schema_version")?.as_u64()? != 1 {
-        return None;
-    }
-    let enabled = v.get("enabled")?.as_bool()?;
-    let consume_clicks = v
-        .get("consume_clicks")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-    Some(InspectConfigV1 {
-        schema_version: 1,
-        enabled,
-        consume_clicks,
-    })
-}
-
-fn write_inspect_config(path: &Path, cfg: InspectConfigV1) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let v = serde_json::json!({
-        "schema_version": cfg.schema_version,
-        "enabled": cfg.enabled,
-        "consume_clicks": cfg.consume_clicks,
-    });
-    let bytes = serde_json::to_vec_pretty(&v).map_err(|e| e.to_string())?;
-    std::fs::write(path, bytes).map_err(|e| e.to_string())
-}
-
-fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
+pub(crate) fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
     if path.is_absolute() {
         path
     } else {
@@ -15242,9 +15114,10 @@ mod tests {
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
         check_bundle_for_wheel_scroll_hit_changes_json,
         check_bundle_for_windowed_rows_offset_changes_min,
-        check_bundle_for_windowed_rows_visible_start_changes_repainted_json, json_pointer_set,
+    check_bundle_for_windowed_rows_visible_start_changes_repainted_json,
         scan_semantics_changed_repainted_json,
-    };
+};
+use util::json_pointer_set;
     use fret_diag_protocol::{DevtoolsSessionDescriptorV1, DevtoolsSessionListV1};
     use serde_json::json;
     use std::path::Path;

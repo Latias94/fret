@@ -34,7 +34,7 @@ Non-goals for the core runtime:
 - `crates/fret-platform*`: platform I/O contracts + native/web implementations.
 - `crates/fret-runner-*`: adapters for `winit` / web.
 - `crates/fret-launch`: launcher glue.
-- `crates/fret`: facade crate (re-exports).
+- `crates/fret-framework`: facade crate (re-exports).
 
 ### Ecosystem (`ecosystem/`)
 
@@ -58,9 +58,9 @@ apps still need ecosystem-level ergonomics to avoid re-inventing patterns.
 
 Current ecosystem surfaces:
 
-- Typed UI → app routing for dynamic per-item actions: `fret-kit::mvu::MessageRouter<M>` (avoids
+- Typed UI → app routing for dynamic per-item actions: `fret::mvu::MessageRouter<M>` (avoids
   `"prefix.{id}"` command parsing in demos/templates).
-- Typed UI → app routing for dynamic actions inside `view_cache(...)` subtrees: `fret-kit::mvu::KeyedMessageRouter<K, M>`
+- Typed UI → app routing for dynamic actions inside `view_cache(...)` subtrees: `fret::mvu::KeyedMessageRouter<K, M>`
   (stable per key; persistent lookup table so cached subtrees can keep routing without relying on per-frame rebuild).
 - Async resource state (loading/error/cache/invalidation): `ecosystem/fret-query` (TanStack Query-like,
   adapted to ADR 0175 and `Dispatcher.exec_capabilities()`).

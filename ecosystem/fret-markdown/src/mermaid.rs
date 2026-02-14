@@ -166,5 +166,6 @@ pub(super) fn render_mermaid_header_label<H: UiHost>(
         color: Some(theme.color_token("muted-foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     })
 }

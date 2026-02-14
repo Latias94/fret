@@ -40,7 +40,7 @@ Fret already has the right architectural split:
 - `crates/fret-runtime::menu` is **data-only**.
 - `crates/fret-runtime::window_command_gating` provides a **cross-surface** gating snapshot.
 - OS menubars are mapped in runners (`crates/fret-launch`).
-- In-window menus are ecosystem-owned overlays (`ecosystem/fret-ui-kit`, `ecosystem/fret-kit`,
+- In-window menus are ecosystem-owned overlays (`ecosystem/fret-ui-kit`, `ecosystem/fret`,
   `ecosystem/fret-ui-shadcn`).
 
 This workstream locks down the “menu surfaces should agree” outcomes without pushing policy into
@@ -84,7 +84,7 @@ Baseline is implemented for Windows + macOS:
 
 The canonical bridge from `fret-runtime::MenuBar` → in-window overlay menubar lives in:
 
-- `ecosystem/fret-kit/src/workspace_menu.rs` (`menubar_from_runtime_with_focus_handle`)
+- `ecosystem/fret/src/workspace_menu.rs` (`menubar_from_runtime_with_focus_handle`)
 
 Focus integration exists:
 
@@ -105,7 +105,7 @@ Recently fixed (correctness + parity):
 
 Evidence:
 
-- `ecosystem/fret-kit/src/workspace_menu.rs` (gating + sanitize)
+- `ecosystem/fret/src/workspace_menu.rs` (gating + sanitize)
 
 ---
 
