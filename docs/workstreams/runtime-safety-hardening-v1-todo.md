@@ -30,6 +30,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Partial re-verification notes:
     - 2026-02-14: `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
     - 2026-02-14: `cargo nextest run -p fret-ui`: PASS
+    - 2026-02-14: `python3 tools/check_layering.py`: PASS
   - Windows note: prefer `cargo fmt -p <crate>` for targeted formatting (workspace-wide `cargo fmt` may fail with `os error 206` on long paths).
 
 ## M1 — `ModelStore v2` (remove public leasing; no panicking reads)
