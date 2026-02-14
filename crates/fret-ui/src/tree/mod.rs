@@ -362,6 +362,65 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
     }
 }
 
+#[cfg(test)]
+mod small_list_tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn node(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn small_node_list_uses_inline_storage_for_small_slices() {
+        let mut list: SmallNodeList<4> = SmallNodeList::default();
+        let nodes = [node(1), node(2), node(3)];
+        list.set(&nodes);
+
+        assert!(list.spill.is_empty());
+        assert_eq!(list.len, nodes.len());
+        assert_eq!(list.as_slice(), nodes.as_slice());
+    }
+
+    #[test]
+    fn small_node_list_spills_for_large_slices_and_can_return_to_inline() {
+        let mut list: SmallNodeList<2> = SmallNodeList::default();
+
+        let spilled = [node(10), node(11), node(12)];
+        list.set(&spilled);
+        assert_eq!(list.len, 0);
+        assert_eq!(list.spill.as_slice(), spilled.as_slice());
+        assert_eq!(list.as_slice(), spilled.as_slice());
+
+        let inline = [node(20)];
+        list.set(&inline);
+        assert!(list.spill.is_empty());
+        assert_eq!(list.len, inline.len());
+        assert_eq!(list.as_slice(), inline.as_slice());
+    }
+
+    #[test]
+    fn small_copy_list_stays_inline_until_full_and_then_spills_in_order() {
+        let mut list: SmallCopyList<u32, 3> = SmallCopyList::default();
+
+        list.push(1);
+        list.push(2);
+        list.push(3);
+        assert!(list.spill.is_empty());
+        assert_eq!(list.len, 3);
+        assert_eq!(list.as_slice(), &[1, 2, 3]);
+
+        list.push(4);
+        assert_eq!(list.len, 0);
+        assert_eq!(list.spill.as_slice(), &[1, 2, 3, 4]);
+        assert_eq!(list.as_slice(), &[1, 2, 3, 4]);
+
+        list.push(5);
+        assert_eq!(list.spill.as_slice(), &[1, 2, 3, 4, 5]);
+        assert_eq!(list.as_slice(), &[1, 2, 3, 4, 5]);
+    }
+}
+
 pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
     layers: SlotMap<UiLayerId, UiLayer>,
