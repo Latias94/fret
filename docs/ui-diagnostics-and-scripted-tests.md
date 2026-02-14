@@ -444,6 +444,7 @@ Screenshot capture:
 - Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
 - `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
   - Alternatively, set `screenshots_enabled=true` in the `FRET_DIAG_CONFIG_PATH` config file.
+- `FRET_DIAG_GPU_SCREENSHOTS=1`: alias for `FRET_DIAG_SCREENSHOTS` (preferred name; old name remains supported).
 - `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
 - `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
 - `FRET_DIAG_SCREENSHOT_RESULT_PATH=...`: screenshot completion log JSON path (default `<dir>/screenshots.result.json`).
@@ -454,6 +455,7 @@ The screenshot completion log is append-only (bounded) and includes a `request_i
 Bundle screenshots (frame dump):
 
 - `FRET_DIAG_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
+- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: alias for `FRET_DIAG_SCREENSHOT` (preferred name; old name remains supported).
 
 Picking:
 

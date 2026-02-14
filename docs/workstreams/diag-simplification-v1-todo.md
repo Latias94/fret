@@ -97,3 +97,4 @@ Evidence pointers:
 - [x] Add `FRET_DIAG_CONFIG_PATH` support and a canonical config file.
 - [x] Make tooling generate and pass the config file when launching.
 - [ ] Deprecate ambiguous env vars by introducing explicit replacements (keep old names supported).
+  - [x] Add explicit screenshot env aliases: `FRET_DIAG_GPU_SCREENSHOTS` and `FRET_DIAG_BUNDLE_SCREENSHOT` (keep old names supported).
