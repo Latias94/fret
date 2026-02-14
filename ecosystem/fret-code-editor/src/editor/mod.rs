@@ -45,10 +45,12 @@ use a11y::{
     a11y_composed_text_window, a11y_text_window_bounds, map_a11y_offset_to_buffer,
     map_a11y_offset_to_buffer_with_preedit, map_a11y_offsets_to_buffer_composed,
 };
+#[cfg(test)]
+use geom::caret_rect_for_selection;
 use geom::{
-    RowGeom, RowPreeditMapping, caret_for_pointer, caret_rect_for_selection,
-    caret_x_for_buffer_byte_in_row, caret_x_for_index, hit_test_index_from_caret_stops,
-    preedit_cursor_offset_bytes, preedit_cursor_offset_cols,
+    RowGeom, RowPreeditMapping, caret_for_pointer, caret_x_for_buffer_byte_in_row,
+    caret_x_for_index, hit_test_index_from_caret_stops, preedit_cursor_offset_bytes,
+    preedit_cursor_offset_cols,
 };
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
@@ -1488,7 +1490,6 @@ impl CodeEditor {
 
                 let cmd_state = editor_state.clone();
                 let cmd_scroll = scroll_handle.clone();
-                let cmd_cell_w = cell_w.clone();
                 cx.command_on_command_for(
                     region_id,
                     Arc::new(
@@ -1581,14 +1582,8 @@ impl CodeEditor {
 
                             if did {
                                 input::scroll_caret_into_view(&st, row_h, &cmd_scroll);
-                                input::push_caret_rect_effect(
-                                    host,
-                                    action_cx,
-                                    &mut st,
-                                    row_h,
-                                    cmd_cell_w.get(),
-                                    &cmd_scroll,
-                                );
+                                // IME cursor positioning is driven by `TextInputRegionProps.ime_cursor_area`
+                                // and the per-frame `WindowTextInputSnapshot` published by the UI tree.
                                 host.notify(action_cx);
                                 host.request_redraw(action_cx.window);
                             }
@@ -1663,20 +1658,6 @@ impl CodeEditor {
                             down.click_count,
                             down.modifiers.shift,
                         );
-
-                        let caret_rect = caret_rect_for_selection(
-                            &mut st,
-                            row_h,
-                            cell_w,
-                            bounds,
-                            &on_pointer_down_scroll,
-                        );
-                        if let Some(rect) = caret_rect {
-                            host.push_effect(Effect::ImeSetCursorArea {
-                                window: action_cx.window,
-                                rect,
-                            });
-                        }
 
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
@@ -1762,20 +1743,6 @@ impl CodeEditor {
                             st.selection.focus = caret;
                             st.caret_preferred_x = None;
                             changed = true;
-                        }
-
-                        let caret_rect = caret_rect_for_selection(
-                            &mut st,
-                            row_h,
-                            cell_w,
-                            bounds,
-                            &on_pointer_move_scroll,
-                        );
-                        if let Some(rect) = caret_rect {
-                            host.push_effect(Effect::ImeSetCursorArea {
-                                window: action_cx.window,
-                                rect,
-                            });
                         }
 
                         if changed {
@@ -1905,20 +1872,6 @@ impl CodeEditor {
                         st.caret_preferred_x = None;
                     }
 
-                    let caret_rect = caret_rect_for_selection(
-                        &mut st,
-                        row_h,
-                        cell_w,
-                        bounds,
-                        &on_timer_scroll,
-                    );
-                    if let Some(rect) = caret_rect {
-                        host.push_effect(Effect::ImeSetCursorArea {
-                            window: action_cx.window,
-                            rect,
-                        });
-                    }
-
                     host.notify(action_cx);
                     host.request_redraw(action_cx.window);
                     true
@@ -1934,7 +1887,6 @@ impl CodeEditor {
 
                 let text_state = editor_state.clone();
                 let text_scroll = scroll_handle.clone();
-                let text_cell_w = cell_w.clone();
                 cx.text_input_region_on_text_input(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, text: &str| {
                         let mut st = text_state.borrow_mut();
@@ -1948,14 +1900,6 @@ impl CodeEditor {
                         st.set_preedit(None);
                         if input::insert_text(&mut st, text).is_some() {
                             input::scroll_caret_into_view(&st, row_h, &text_scroll);
-                            input::push_caret_rect_effect(
-                                host,
-                                action_cx,
-                                &mut st,
-                                row_h,
-                                text_cell_w.get(),
-                                &text_scroll,
-                            );
                             host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
@@ -1966,7 +1910,6 @@ impl CodeEditor {
 
                 let ime_state = editor_state.clone();
                 let ime_scroll = scroll_handle.clone();
-                let ime_cell_w = cell_w.clone();
                 cx.text_input_region_on_ime(Arc::new(
                     move |host: &mut dyn UiActionHost,
                           action_cx: ActionCx,
@@ -2048,14 +1991,6 @@ impl CodeEditor {
                         }
 
                         input::scroll_caret_into_view(&st, row_h, &ime_scroll);
-                        input::push_caret_rect_effect(
-                            host,
-                            action_cx,
-                            &mut st,
-                            row_h,
-                            ime_cell_w.get(),
-                            &ime_scroll,
-                        );
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         true
@@ -2064,7 +1999,6 @@ impl CodeEditor {
 
                 let sel_state = editor_state.clone();
                 let sel_scroll = scroll_handle.clone();
-                let sel_cell_w = cell_w.clone();
                 cx.text_input_region_on_set_selection(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, anchor, focus| {
                         let mut st = sel_state.borrow_mut();
@@ -2118,14 +2052,6 @@ impl CodeEditor {
                         st.undo_group = None;
 
                         input::scroll_caret_into_view(&st, row_h, &sel_scroll);
-                        input::push_caret_rect_effect(
-                            host,
-                            action_cx,
-                            &mut st,
-                            row_h,
-                            sel_cell_w.get(),
-                            &sel_scroll,
-                        );
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         true
@@ -2134,7 +2060,6 @@ impl CodeEditor {
 
                 let clipboard_state = editor_state.clone();
                 let clipboard_scroll = scroll_handle.clone();
-                let clipboard_cell_w = cell_w.clone();
                 cx.text_input_region_on_clipboard_text(Arc::new(
                     move |host: &mut dyn UiActionHost,
                           action_cx: ActionCx,
@@ -2150,14 +2075,6 @@ impl CodeEditor {
                         }
                         let _ = input::insert_text_with_kind(&mut st, text, UndoGroupKind::Paste);
                         input::scroll_caret_into_view(&st, row_h, &clipboard_scroll);
-                        input::push_caret_rect_effect(
-                            host,
-                            action_cx,
-                            &mut st,
-                            row_h,
-                            clipboard_cell_w.get(),
-                            &clipboard_scroll,
-                        );
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         true
