@@ -1,0 +1,20 @@
+[package]
+name = "fret-genui-shadcn"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[dependencies]
+fret-genui-core = { path = "../fret-genui-core" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../fret-ui-kit" }
+fret-ui-shadcn = { path = "../fret-ui-shadcn" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+

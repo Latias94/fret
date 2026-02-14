@@ -48,6 +48,8 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] }
 fret-router = { path = "../../ecosystem/fret-router", features = ["query-integration"] }
 fret-router-ui = { path = "../../ecosystem/fret-router-ui" }
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] }
+fret-genui-core = { path = "../../ecosystem/fret-genui-core" }
+fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn" }
 bytemuck.workspace = true
 glam.workspace = true
 serde_json.workspace = true

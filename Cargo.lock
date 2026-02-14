@@ -1910,6 +1910,8 @@ dependencies = [
  "fret-docking",
  "fret-editor",
  "fret-executor",
+ "fret-genui-core",
+ "fret-genui-shadcn",
  "fret-gizmo",
  "fret-icons",
  "fret-imui",
@@ -1979,6 +1981,31 @@ dependencies = [
  "fret-runner-winit",
  "fret-runtime",
  "fret-ui",
+]
+
+[[package]]
+name = "fret-genui-core"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "fret-genui-shadcn"
+version = "0.1.0"
+dependencies = [
+ "fret-genui-core",
+ "fret-ui",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
