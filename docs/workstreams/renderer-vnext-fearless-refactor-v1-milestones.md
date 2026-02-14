@@ -29,6 +29,18 @@ Exit criteria:
 - The “invariants list” is explicit and reviewed (no hidden assumptions).
 - The baseline gate set and baseline snapshot are reproducible by another contributor.
 
+Baseline record (fill in; keep this section short):
+
+- Date:
+- Commit:
+- Platform/backend (native/wasm/mobile):
+- GPU/adapter (if relevant):
+- Commands run (exact):
+- Outputs (paths or pasted summary lines):
+  - `python3 tools/check_layering.py`
+  - conformance tests (fixed set)
+  - `fret-svg-atlas-stress` `renderer_perf:` / `headless_renderer_perf:` lines
+
 ## M1 — RenderPlan substrate (time-boxed)
 
 Deliverables:
