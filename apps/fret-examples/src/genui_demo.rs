@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_genui_core::actions;
-use fret_genui_core::render::{GenUiActionInvocation, GenUiActionQueue, GenUiRuntime, render_spec};
-use fret_genui_core::{json_pointer, spec::SpecV1};
+use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
+use fret_genui_core::spec::SpecV1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use serde_json::Value;
 
@@ -29,22 +29,9 @@ const SPEC_JSON: &str = r#"
     "root": {
       "type": "VStack",
       "props": { "gap": "N3" },
-      "children": ["header", "counter_row", "card"]
+      "children": ["header", "card"]
     },
     "header": { "type": "Text", "props": { "text": "GenUI Demo (json-render-inspired)" }, "children": [] },
-    "counter_row": {
-      "type": "HStack",
-      "props": { "gap": "N2" },
-      "children": ["counter_label", "counter_value", "inc_button"]
-    },
-    "counter_label": { "type": "Text", "props": { "text": "Counter:" }, "children": [] },
-    "counter_value": { "type": "Text", "props": { "text": { "$state": "/counter" } }, "children": [] },
-    "inc_button": {
-      "type": "Button",
-      "props": { "label": "Increment" },
-      "on": { "press": { "action": "incrementCounter" } },
-      "children": []
-    },
     "card": {
       "type": "Card",
       "props": {},
@@ -53,7 +40,7 @@ const SPEC_JSON: &str = r#"
     "card_stack": {
       "type": "VStack",
       "props": { "gap": "N2" },
-      "children": ["bind_title", "enabled_row", "name_row", "todos_title", "todos_list"]
+      "children": ["bind_title", "enabled_row", "name_row", "name_buttons", "todos_title", "todos_list"]
     },
     "bind_title": { "type": "Text", "props": { "text": "Bindings ($bindState demo)" }, "children": [] },
     "enabled_row": {
@@ -91,6 +78,23 @@ const SPEC_JSON: &str = r#"
       "children": []
     },
     "name_value": { "type": "Text", "props": { "text": { "$state": "/name" } }, "children": [] },
+    "name_buttons": {
+      "type": "HStack",
+      "props": { "gap": "N2" },
+      "children": ["set_name_grace", "clear_name"]
+    },
+    "set_name_grace": {
+      "type": "Button",
+      "props": { "label": "Set name = Grace" },
+      "on": { "press": { "action": "setState", "params": { "statePath": "/name", "value": "Grace" } } },
+      "children": []
+    },
+    "clear_name": {
+      "type": "Button",
+      "props": { "label": "Clear name" },
+      "on": { "press": { "action": "setState", "params": { "statePath": "/name", "value": "" } } },
+      "children": []
+    },
     "todos_title": { "type": "Text", "props": { "text": "Todos (repeat demo)" }, "children": [] },
     "todos_list": {
       "type": "VStack",
@@ -101,7 +105,6 @@ const SPEC_JSON: &str = r#"
     "todo_item": { "type": "Text", "props": { "text": { "$item": "label" } }, "children": [] }
   },
   "state": {
-    "counter": 0,
     "name": "Ada",
     "enabled": true,
     "todos": [
@@ -196,34 +199,12 @@ fn apply_pending_actions(app: &mut App, st: &mut GenUiState) {
 
     let _ = app.models_mut().update(&st.genui_state, |state| {
         for inv in &new_invocations {
-            apply_action(state, inv);
+            let _ = actions::apply_standard_action(state, inv.action.as_ref(), &inv.params);
         }
     });
     let _ = app
         .models_mut()
         .update(&st.applied_upto, |v| *v = queue_len);
-}
-
-fn apply_action(state: &mut Value, inv: &GenUiActionInvocation) {
-    if actions::apply_standard_action(state, inv.action.as_ref(), &inv.params) {
-        return;
-    }
-
-    match inv.action.as_ref() {
-        "incrementCounter" => {
-            let cur = json_pointer::get_opt(state, "/counter")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
-            let _ = json_pointer::set(state, "/counter", Value::from(cur.saturating_add(1)));
-        }
-        "toggleEnabled" => {
-            let cur = json_pointer::get_opt(state, "/enabled")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            let _ = json_pointer::set(state, "/enabled", Value::Bool(!cur));
-        }
-        _ => {}
-    }
 }
 
 fn view(
@@ -260,7 +241,7 @@ fn view(
 
     let toolbar = ui::h_flex(cx, move |cx| {
         vec![
-            shadcn::Badge::new("Actions: auto-applied")
+            shadcn::Badge::new("Actions: auto-apply standard actions only")
                 .variant(shadcn::BadgeVariant::Secondary)
                 .into_element(cx),
             shadcn::Button::new("Clear queue")
