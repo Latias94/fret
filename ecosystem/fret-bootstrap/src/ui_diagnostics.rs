@@ -730,6 +730,15 @@ struct InspectToast {
 }
 
 impl UiDiagnosticsService {
+    fn is_wasm_ws_only(&self) -> bool {
+        cfg!(target_arch = "wasm32") && self.ws_is_configured()
+    }
+
+    fn poll_ws_inbox_and_is_wasm_ws_only(&mut self) -> bool {
+        self.poll_ws_inbox();
+        self.is_wasm_ws_only()
+    }
+
     fn note_window_seen(&mut self, window: AppWindowId) {
         if self.known_windows.contains(&window) {
             return;
@@ -5771,7 +5780,7 @@ impl UiDiagnosticsService {
             return;
         }
 
-        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+        if self.is_wasm_ws_only() {
             // Web runners do not have a stable filesystem surface for the legacy `ready.touch` file.
             self.ready_written = true;
             return;
@@ -5844,7 +5853,7 @@ impl UiDiagnosticsService {
         if !self.cfg.enabled {
             return;
         }
-        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+        if self.is_wasm_ws_only() {
             self.capabilities_written = true;
             return;
         }
@@ -6618,7 +6627,7 @@ impl UiDiagnosticsService {
             return dumped;
         }
 
-        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+        if self.is_wasm_ws_only() {
             return None;
         }
 
@@ -6665,8 +6674,7 @@ impl UiDiagnosticsService {
     }
 
     fn poll_script_trigger(&mut self) {
-        self.poll_ws_inbox();
-        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+        if self.poll_ws_inbox_and_is_wasm_ws_only() {
             return;
         }
 
@@ -6996,8 +7004,7 @@ impl UiDiagnosticsService {
     }
 
     fn poll_pick_trigger(&mut self) {
-        self.poll_ws_inbox();
-        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+        if self.poll_ws_inbox_and_is_wasm_ws_only() {
             return;
         }
 
@@ -7038,8 +7045,7 @@ impl UiDiagnosticsService {
     }
 
     fn poll_inspect_trigger(&mut self) {
-        self.poll_ws_inbox();
-        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+        if self.poll_ws_inbox_and_is_wasm_ws_only() {
             return;
         }
 
