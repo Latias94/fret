@@ -611,8 +611,14 @@ impl TaffyLayoutEngine {
                         if by_node.get(ctx.node).is_none() {
                             by_node.insert(ctx.node, MeasureNodeProfile::default());
                         }
-                        let profile = by_node.get_mut(ctx.node).expect("profile entry inserted");
-                        profile.cache_hits = profile.cache_hits.saturating_add(1);
+                        if let Some(profile) = by_node.get_mut(ctx.node) {
+                            profile.cache_hits = profile.cache_hits.saturating_add(1);
+                        } else {
+                            debug_assert!(
+                                false,
+                                "layout engine profiling: expected node profile to exist after insert"
+                            );
+                        }
                     }
                     return *size;
                 }
@@ -654,9 +660,15 @@ impl TaffyLayoutEngine {
                         if by_node.get(ctx.node).is_none() {
                             by_node.insert(ctx.node, MeasureNodeProfile::default());
                         }
-                        let profile = by_node.get_mut(ctx.node).expect("profile entry inserted");
-                        profile.total_time += elapsed;
-                        profile.calls = profile.calls.saturating_add(1);
+                        if let Some(profile) = by_node.get_mut(ctx.node) {
+                            profile.total_time += elapsed;
+                            profile.calls = profile.calls.saturating_add(1);
+                        } else {
+                            debug_assert!(
+                                false,
+                                "layout engine profiling: expected node profile to exist after insert"
+                            );
+                        }
                     }
                 }
                 let out = taffy::geometry::Size {
@@ -911,7 +923,26 @@ impl TaffyLayoutEngine {
         std::fs::create_dir_all(dir)?;
         let path = dir.join(filename);
         let dump = self.debug_dump_subtree_json(root, label_for_node);
-        let bytes = serde_json::to_vec_pretty(&dump).expect("serialize taffy debug json");
+        let bytes = match serde_json::to_vec_pretty(&dump) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                if crate::strict_runtime::strict_runtime_enabled() {
+                    panic!("serialize taffy debug json failed: {err:?}");
+                }
+
+                tracing::warn!(?err, ?root, "serialize taffy debug json failed");
+
+                let fallback = json!({
+                    "error": "serialize taffy debug json failed",
+                    "detail": err.to_string(),
+                    "root": format!("{root:?}"),
+                });
+
+                serde_json::to_vec_pretty(&fallback).unwrap_or_else(|_| {
+                    b"{\"error\":\"serialize taffy debug json failed\"}\n".to_vec()
+                })
+            }
+        };
         std::fs::write(&path, bytes)?;
         Ok(path)
     }

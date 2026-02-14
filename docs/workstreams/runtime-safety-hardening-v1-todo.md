@@ -175,3 +175,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Gates:
     - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
     - `cargo nextest run -p fret-ui declarative::host_widget`: PASS
+
+- [x] RSH-ui-009 Remove remaining non-test `expect(...)` in layout engine debug/profiling paths.
+  - Evidence: `crates/fret-ui/src/layout/engine.rs` (profiling no longer uses `expect("profile entry inserted")`; debug dump JSON serialization is non-panicking by default)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui layout::engine`: PASS
+
+- [x] RSH-ui-010 Make `unstable-retained-bridge` factory downcast non-panicking by default (strict mode panics).
+  - Evidence: `crates/fret-ui/src/retained_bridge.rs` (`RetainedSubtreeFactory::build`)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
