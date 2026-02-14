@@ -77,7 +77,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C).
 - [x] REN-VNEXT-mat-002 Fill the capability matrix table with concrete “Must/May/Degrade” decisions per target.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C).
-- [ ] REN-VNEXT-mat-003 Add at least one conformance scene for `Paint::Material` fallback behavior (unsupported registration, missing id, and budget pressure).
+- [x] REN-VNEXT-mat-003 Add at least one conformance scene for `Paint::Material` fallback behavior (unsupported registration, missing id, and budget pressure).
+  - Evidence: `crates/fret-render-wgpu/tests/materials_conformance.rs` (unknown id + budget pressure), `crates/fret-render-wgpu/src/renderer/services.rs` (capability-gated registration).
 
 ### M4b — Optional contract expansion
 

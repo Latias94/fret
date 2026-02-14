@@ -214,3 +214,53 @@ fn unknown_material_id_degrades_to_transparent() {
     let mid = pixel_rgba(&pixels, size.0, 16, 16);
     assert!(mid[3] < 5, "expected transparent fallback: mid={mid:?}");
 }
+
+#[test]
+fn material_paint_budget_pressure_degrades_to_base_color() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    renderer.set_material_paint_budget_per_frame(0);
+
+    let id = renderer
+        .register_material(MaterialDescriptor::new(MaterialKind::DotGrid))
+        .expect("dot_grid material must register");
+
+    let params = MaterialParams {
+        vec4s: [
+            // base (red)
+            [1.0, 0.0, 0.0, 1.0],
+            // fg (green)
+            [0.0, 1.0, 0.0, 1.0],
+            // spacing/thickness/seed
+            [8.0, 8.0, 2.0, 1.0],
+            // time/angle/offset
+            [0.0, 0.0, 0.0, 0.0],
+        ],
+    };
+
+    let size = (32u32, 32u32);
+    let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(32.0)));
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect,
+        background: Paint::Material { id, params },
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+    let mid = pixel_rgba(&pixels, size.0, 16, 16);
+
+    assert!(mid[3] > 240, "expected opaque alpha: mid={mid:?}");
+    assert!(
+        mid[0] > 230 && mid[1] < 20 && mid[2] < 20,
+        "expected red base-color fallback: mid={mid:?}"
+    );
+}

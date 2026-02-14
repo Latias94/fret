@@ -187,6 +187,18 @@ Deliverables:
 - Portability closure requirements are captured in an ADR:
   - `docs/adr/0274-paint-and-material-portability-closure-v1.md`
 
+Progress record (Material fallbacks v1):
+
+- Date: 2026-02-14
+- Status: Landed (wgpu default renderer; deterministic fallbacks are conformance-gated)
+- Evidence anchors:
+  - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (`Paint::Material` fallbacks)
+  - `crates/fret-render-wgpu/src/renderer/services.rs` (capability-gated sampled registration)
+  - `crates/fret-render-wgpu/tests/materials_conformance.rs` (unknown id + budget pressure)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test materials_conformance`
+
 ### M4b — Optional contract expansion (only if required)
 
 - Any contract changes (e.g. `Path` accepting `Paint`) are ADR-backed and conformance-gated.

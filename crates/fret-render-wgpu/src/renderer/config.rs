@@ -310,6 +310,24 @@ impl Renderer {
             .enforce_budget(self.intermediate_budget_bytes);
     }
 
+    pub fn material_paint_budget_per_frame(&self) -> u64 {
+        self.material_paint_budget_per_frame
+    }
+
+    pub fn set_material_paint_budget_per_frame(&mut self, budget: u64) {
+        // Allow 0 to force deterministic solid-color fallbacks in conformance tests or low-end modes.
+        self.material_paint_budget_per_frame = budget;
+    }
+
+    pub fn material_distinct_budget_per_frame(&self) -> usize {
+        self.material_distinct_budget_per_frame
+    }
+
+    pub fn set_material_distinct_budget_per_frame(&mut self, budget: usize) {
+        // Allow 0 to force deterministic solid-color fallbacks in conformance tests or low-end modes.
+        self.material_distinct_budget_per_frame = budget;
+    }
+
     pub fn set_intermediate_perf_enabled(&mut self, enabled: bool) {
         self.intermediate_perf_enabled = enabled;
         self.intermediate_perf = IntermediatePerfStats::default();
