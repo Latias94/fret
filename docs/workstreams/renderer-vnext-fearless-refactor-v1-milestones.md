@@ -88,6 +88,16 @@ Exit criteria:
 
 - On wasm/mobile capability/budget limits, behavior is deterministic and documented (no silent divergence).
 
+Progress record:
+
+- Date: 2026-02-14
+- Evidence anchors:
+  - `crates/fret-core/src/scene/composite.rs` (`CompositeGroupDesc.opacity`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`CompositePremulPass.opacity`)
+  - `crates/fret-render-wgpu/tests/composite_group_conformance.rs` (`gpu_composite_group_opacity_is_isolated_for_overlapping_children`)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test composite_group_conformance`
+
 ## M3 — ClipPath + image masks v1 (bounded + cacheable)
 
 Deliverables:

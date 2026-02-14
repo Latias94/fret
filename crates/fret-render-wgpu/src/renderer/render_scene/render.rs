@@ -503,41 +503,42 @@ impl Renderer {
 
                     let base = quad_vertices.len().min(u32::MAX as usize) as u32;
                     quad_vertex_bases[pass_index] = Some(base);
+                    let opacity = pass.opacity.clamp(0.0, 1.0);
                     quad_vertices.extend_from_slice(&[
                         ViewportVertex {
                             pos_px: [x0, y0],
                             uv: [0.0, 0.0],
-                            opacity: 1.0,
+                            opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x1, y0],
                             uv: [1.0, 0.0],
-                            opacity: 1.0,
+                            opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x1, y1],
                             uv: [1.0, 1.0],
-                            opacity: 1.0,
+                            opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x0, y0],
                             uv: [0.0, 0.0],
-                            opacity: 1.0,
+                            opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x1, y1],
                             uv: [1.0, 1.0],
-                            opacity: 1.0,
+                            opacity,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
                             pos_px: [x0, y1],
                             uv: [0.0, 1.0],
-                            opacity: 1.0,
+                            opacity,
                             _pad: [0.0; 3],
                         },
                     ]);

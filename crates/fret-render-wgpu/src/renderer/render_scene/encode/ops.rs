@@ -131,6 +131,7 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                     uniform_index,
                     mode: desc.mode,
                     quality: desc.quality,
+                    opacity: desc.opacity.clamp(0.0, 1.0),
                 },
             });
 

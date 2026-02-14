@@ -102,6 +102,7 @@ enum JsonDumpEffectMarker {
         mode: String,
         quality: String,
         chain: String,
+        opacity: Option<f32>,
     },
     Pop {
         draw_ix: usize,
@@ -123,6 +124,7 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
             mode: format!("{mode:?}"),
             quality: format!("{quality:?}"),
             chain: format!("{chain:?}"),
+            opacity: None,
         },
         EffectMarkerKind::Pop => JsonDumpEffectMarker::Pop { draw_ix: m.draw_ix },
         EffectMarkerKind::CompositeGroupPush {
@@ -130,6 +132,7 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
             uniform_index,
             mode,
             quality,
+            opacity,
         } => JsonDumpEffectMarker::Push {
             draw_ix: m.draw_ix,
             scissor: scissor.into(),
@@ -137,6 +140,7 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
             mode: format!("CompositeGroup({mode:?})"),
             quality: format!("{quality:?}"),
             chain: String::new(),
+            opacity: Some(opacity),
         },
         EffectMarkerKind::CompositeGroupPop => JsonDumpEffectMarker::Pop { draw_ix: m.draw_ix },
     }
@@ -174,6 +178,7 @@ enum JsonDumpPass {
         dst_scissor: Option<JsonDumpScissorRect>,
         mask_uniform_index: Option<u32>,
         mask: Option<JsonDumpMaskRef>,
+        opacity: f32,
         load: JsonDumpLoadOp,
     },
     ScaleNearest {
@@ -291,6 +296,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             dst_scissor: pass.dst_scissor.map(Into::into),
             mask_uniform_index: pass.mask_uniform_index,
             mask: pass.mask.map(Into::into),
+            opacity: pass.opacity,
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::ScaleNearest(pass) => JsonDumpPass::ScaleNearest {

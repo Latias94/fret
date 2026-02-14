@@ -153,6 +153,7 @@ pub(super) struct CompositePremulPass {
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) blend_mode: fret_core::BlendMode,
+    pub(super) opacity: f32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -390,6 +391,7 @@ impl RenderPlan {
             quality: fret_core::EffectQuality,
             scissor: ScissorRect,
             uniform_index: u32,
+            opacity: f32,
             parent_target: PlanTarget,
             content_target: Option<PlanTarget>,
         }
@@ -578,6 +580,7 @@ impl RenderPlan {
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: None,
                                     blend_mode: fret_core::BlendMode::Over,
+                                    opacity: 1.0,
                                     load: wgpu::LoadOp::Load,
                                 }));
 
@@ -589,6 +592,7 @@ impl RenderPlan {
                             uniform_index,
                             mode,
                             quality,
+                            opacity,
                         } => {
                             let parent_target = draw_scopes.last().expect("draw scope").target;
                             let mut content_target: Option<PlanTarget> = None;
@@ -617,6 +621,7 @@ impl RenderPlan {
                                 quality,
                                 scissor,
                                 uniform_index,
+                                opacity,
                                 parent_target,
                                 content_target,
                             });
@@ -642,6 +647,7 @@ impl RenderPlan {
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: None,
                                     blend_mode: scope.mode,
+                                    opacity: scope.opacity,
                                     load: wgpu::LoadOp::Load,
                                 }));
 

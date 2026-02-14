@@ -559,6 +559,7 @@ pub(super) enum EffectMarkerKind {
         uniform_index: u32,
         mode: fret_core::BlendMode,
         quality: fret_core::EffectQuality,
+        opacity: f32,
     },
     CompositeGroupPop,
 }

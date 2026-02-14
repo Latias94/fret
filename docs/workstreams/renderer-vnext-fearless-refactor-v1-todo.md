@@ -20,10 +20,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ## M0 — Design baseline
 
 - [ ] REN-VNEXT-docs-001 Add a short “invariants checklist” appendix for renderer refactors (what must never change).
-- [ ] REN-VNEXT-adr-001 Draft ADR: isolated opacity / saveLayer(alpha) (group alpha).
-- [ ] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
-- [ ] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).
-- [ ] REN-VNEXT-guard-000 Record the workstream’s baseline gate set and a baseline perf/telemetry snapshot (linkable).
+- [x] REN-VNEXT-adr-001 Draft ADR: isolated opacity / saveLayer(alpha) (group alpha).
+- [x] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
+- [x] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).
+- [x] REN-VNEXT-guard-000 Record the workstream’s baseline gate set and a baseline perf/telemetry snapshot (linkable).
 
 ## M1 — RenderPlan compilation substrate
 
@@ -34,8 +34,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M2 — Isolated opacity (saveLayerAlpha)
 
-- [ ] REN-VNEXT-alpha-001 Decide contract shape: extend `CompositeGroupDesc` vs add a dedicated opacity group op.
-- [ ] REN-VNEXT-alpha-002 Add a GPU conformance test for isolated alpha vs non-isolated alpha mismatch cases.
+- [x] REN-VNEXT-alpha-001 Decide contract shape: extend `CompositeGroupDesc` vs add a dedicated opacity group op.
+- [x] REN-VNEXT-alpha-002 Add a GPU conformance test for isolated alpha vs non-isolated alpha mismatch cases.
 
 ## M3 — ClipPath + image masks (bounded + cacheable)
 
