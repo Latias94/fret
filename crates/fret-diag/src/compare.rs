@@ -566,7 +566,7 @@ pub(crate) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     best.map(|(_, p)| p)
 }
 
-pub(super) fn maybe_launch_demo(
+pub(crate) fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
     launch_env: &[(String, String)],
     workspace_root: &Path,
@@ -1071,7 +1071,7 @@ fn kill_launched_demo(child: &mut Option<LaunchedDemo>) {
     }
 }
 
-pub(super) fn stop_launched_demo(
+pub(crate) fn stop_launched_demo(
     child: &mut Option<LaunchedDemo>,
     exit_path: &Path,
     poll_ms: u64,
