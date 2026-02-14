@@ -46,14 +46,11 @@
     { "type": "capture_screenshot", "label": "ui-gallery-motion-presets-fluid-tabs-before" },
 
     {
-      "type": "click_stable",
+      "type": "click",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-motion-presets-fluid-tabs-trigger-deposits"
-      },
-      "stable_frames": 4,
-      "max_move_px": 0.5,
-      "timeout_frames": 240
+      }
     },
     { "type": "wait_frames", "n": 24 },
     { "type": "capture_bundle", "label": "ui-gallery-motion-presets-fluid-tabs-after" },
