@@ -14,6 +14,5 @@ Experimental learning project (not production-ready).
 
 - If you are building a runner/backend integration and need direct access to the wgpu renderer.
 
-Most applications should depend on the higher-level facade crate `fret-render` (or `fret-kit`)
+Most applications should depend on the higher-level facade crate `fret-render` (or `fret`)
 instead of depending on this crate directly.
-

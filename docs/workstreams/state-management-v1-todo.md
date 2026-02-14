@@ -16,7 +16,7 @@ Status legend:
 
 - `[x]` Write the v1 plan document (`docs/workstreams/state-management-v1.md`).
 - `[x]` Add a short section to `docs/workstreams/ecosystem-status.md` summarizing:
-  - typed messages (`fret-kit::mvu::MessageRouter`)
+  - typed messages (`fret::mvu::MessageRouter`)
   - async resources (`ecosystem/fret-query`)
   - derived state (planned selectors)
 - `[x]` Add a 鈥渞ecommended crates鈥?note to `docs/crate-usage-guide.md` for:
@@ -27,8 +27,8 @@ Status legend:
 
 Goal: eliminate dynamic `"prefix.{id}"` parsing from representative code.
 
-- `[x]` Make `fret-kit::mvu::MessageRouter` resolvable in non-MVU code (public take/resolve API).
-  - Evidence anchor: `ecosystem/fret-kit/src/mvu.rs`
+- `[x]` Make `fret::mvu::MessageRouter` resolvable in non-MVU code (public take/resolve API).
+  - Evidence anchor: `ecosystem/fret/src/mvu.rs`
 - `[x]` Migrate scaffold todo template to typed routing for per-item actions.
   - Target: `apps/fretboard/src/scaffold/templates.rs`
 - `[x]` Update golden-path todo doc example to match.
@@ -82,7 +82,7 @@ Goal: provide a memoized derived-state layer with explicit dependency tracking.
 ## Phase 5 鈥?Post-v1 polish
 
 - `[x]` Add a view-cache-safe typed routing helper (`KeyedMessageRouter<K, M>`) for stable dynamic commands.
-  - Evidence anchor: `ecosystem/fret-kit/src/mvu.rs`
+  - Evidence anchor: `ecosystem/fret/src/mvu.rs`
 - `[x]` Document the `view_cache(...)` caveat + recommended keyed router usage.
   - Evidence anchors:
     - `docs/workstreams/state-management-v1.md`

@@ -214,19 +214,21 @@ impl Default for UiDiagnosticsConfig {
         let config_path = std::env::var_os("FRET_DIAG_CONFIG_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from);
-        let config_file = config_path.as_ref().and_then(|p| match load_ui_diagnostics_config_file(p)
-        {
-            Ok(v) => Some(v),
-            Err(err) => {
-                tracing::warn!(
-                    target: "fret",
-                    config_path = ?p,
-                    error = %err,
-                    "failed to load ui diagnostics config file"
-                );
-                None
-            }
-        });
+        let config_file =
+            config_path
+                .as_ref()
+                .and_then(|p| match load_ui_diagnostics_config_file(p) {
+                    Ok(v) => Some(v),
+                    Err(err) => {
+                        tracing::warn!(
+                            target: "fret",
+                            config_path = ?p,
+                            error = %err,
+                            "failed to load ui diagnostics config file"
+                        );
+                        None
+                    }
+                });
         let config_enabled = config_file
             .as_ref()
             .map(|c| c.enabled.unwrap_or(true))
@@ -346,10 +348,20 @@ impl Default for UiDiagnosticsConfig {
         }
 
         let max_events = env_usize_override("FRET_DIAG_MAX_EVENTS")
-            .or_else(|| config_file.as_ref().and_then(|c| c.max_events).map(|v| v as usize))
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_events)
+                    .map(|v| v as usize)
+            })
             .unwrap_or(2000);
         let max_snapshots = env_usize_override("FRET_DIAG_MAX_SNAPSHOTS")
-            .or_else(|| config_file.as_ref().and_then(|c| c.max_snapshots).map(|v| v as usize))
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.max_snapshots)
+                    .map(|v| v as usize)
+            })
             .unwrap_or(300);
         let script_dump_max_snapshots = env_usize_override("FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS")
             .or_else(|| {
@@ -427,7 +439,7 @@ impl Default for UiDiagnosticsConfig {
                         .and_then(|p| p.screenshot_result_trigger_path.as_deref())
                         .and_then(|s| resolve_config_path(&out_dir, s))
                 })
-            .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
+                .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
         let script_path = std::env::var_os("FRET_DIAG_SCRIPT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
@@ -562,7 +574,11 @@ impl Default for UiDiagnosticsConfig {
             .map(|d| d.as_millis())
             .and_then(|ms| u64::try_from(ms).ok())
             .filter(|v| *v > 0)
-            .or_else(|| config_file.as_ref().and_then(|c| c.frame_clock_fixed_delta_ms));
+            .or_else(|| {
+                config_file
+                    .as_ref()
+                    .and_then(|c| c.frame_clock_fixed_delta_ms)
+            });
 
         Self {
             enabled,

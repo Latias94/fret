@@ -1,4 +1,4 @@
-# `fret`
+# `fret-framework`
 
 Fret's kernel facade crate: a small, memorable entry point for **manual/advanced assembly**.
 
@@ -7,7 +7,7 @@ ecosystem defaults (components, policy, tooling).
 
 If you want the batteries-included experience (desktop-first templates, defaults, tooling), prefer:
 
-- `fret-kit` (app entry points)
+- `fret` (ecosystem meta crate; app entry points)
 - `fretboard` (dev tooling)
 
 ## Status
@@ -44,4 +44,3 @@ Or keep it explicit:
 [dependencies]
 fret = { version = "0.1", default-features = false, features = ["core", "ui", "runtime"] }
 ```
-

@@ -1,5 +1,5 @@
 [package]
-name = "fret-kit"
+name = "fret"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -21,8 +21,13 @@ default = [
     "shadcn",
 ]
 
-# Compile the native desktop runner stack (winit + wgpu) via the `fret` facade bundles.
-desktop = ["dep:fret", "dep:wgpu", "fret/native-wgpu", "fret-bootstrap/ui-app-driver"]
+# Compile the native desktop runner stack (winit + wgpu) via the framework facade bundles.
+desktop = [
+    "dep:fret-framework",
+    "dep:wgpu",
+    "fret-framework/native-wgpu",
+    "fret-bootstrap/ui-app-driver",
+]
 
 # Common app/dev conveniences (still optional; users can disable for minimal builds).
 diagnostics = ["fret-bootstrap/diagnostics"]
@@ -41,8 +46,8 @@ router = ["dep:fret-router-ui"]
 [dependencies]
 thiserror.workspace = true
 
-# Re-exported stable surface for core framework types.
-fret = { path = "../../crates/fret", optional = true, default-features = false }
+# Re-exported stable surface for kernel/backends (advanced assembly surface).
+fret-framework = { path = "../../crates/fret", package = "fret-framework", optional = true, default-features = false }
 
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { path = "../fret-bootstrap", default-features = false }

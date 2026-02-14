@@ -11,7 +11,7 @@
 
 - A small, memorable facade crate that re-exports selected workspace crates behind opt-in feature flags.
 - Default feature set is intentionally minimal (`core` only); larger bundles are explicit (`desktop`, `wasm`).
-- Intended as an “advanced assembly” entry point; batteries-included lives elsewhere (e.g. `fret-kit`, `fretboard`).
+- Intended as an “advanced assembly” entry point; batteries-included lives elsewhere (e.g. `fret`, `fretboard`).
 
 Evidence anchors:
 
@@ -60,7 +60,7 @@ Evidence anchors:
   - Failure mode: a feature combo compiles on one platform but not another (wasm32 vs native).
   - Existing gates: none specific.
   - Missing gate to add: `cargo check -p fret --features desktop` and `cargo check -p fret --features wasm --target wasm32-unknown-unknown` in CI.
-- “Golden path” confusion (users pick `fret` when they should pick `fret-kit`)
+- “Golden path” confusion (resolved by renaming: users should pick `fret`, not `fret-framework`)
   - Failure mode: pressure to add policy defaults into this crate, bloating the facade.
   - Existing gates: ADR 0109 documents intent.
   - Missing gate to add: keep `README`/docs pointers current; consider a short crate-level README excerpt in rustdoc.
@@ -82,4 +82,3 @@ Evidence anchors:
 ## 8) Open questions / decisions needed
 
 - Should `fret` keep the current “namespaced modules only” posture, or should it also expose a small set of top-level re-exports for the most common types (risk: API drift)?
-

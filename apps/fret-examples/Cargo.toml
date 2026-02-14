@@ -60,7 +60,7 @@ wgpu.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-fret-kit = { path = "../../ecosystem/fret-kit" }
+fret = { path = "../../ecosystem/fret" }
 ureq = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }

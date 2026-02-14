@@ -123,7 +123,7 @@ ADR anchor:
   app/runner integration boundaries, without pushing theme policy into the runtime.
   - Evidence: `ecosystem/fret-ui-shadcn/src/app_integration.rs` (`sync_theme_from_environment`)
   - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`on_global_changes_middleware`)
-  - Evidence: `ecosystem/fret-kit/src/lib.rs` (golden-path wiring)
+  - Evidence: `ecosystem/fret/src/lib.rs` (golden-path wiring)
 
 ## Sweep / hygiene
 

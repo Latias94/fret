@@ -20,11 +20,11 @@
   - Default integrated runtime: `crates/fret-app`, `crates/fret-ui`, `crates/fret-ui-app`.
   - Backends: `crates/fret-platform`, `crates/fret-platform-native`, `crates/fret-platform-web`, `crates/fret-runner-winit`, `crates/fret-runner-web`, `crates/fret-render`.
   - Integration / wiring: `crates/fret-launch`.
-  - Public facade: `crates/fret`.
+  - Kernel facade: `crates/fret` (published as `fret-framework`).
   - Other core glue: `crates/fret-a11y-accesskit`, `crates/fret-fonts`, `crates/fret-i18n`.
 - `ecosystem/`: In-tree incubation crates (components, icon sets, app kits; may move out-of-tree later).
   - Component/policy layers: `ecosystem/fret-ui-kit`, `ecosystem/fret-docking`, `ecosystem/fret-ui-shadcn`.
-  - App kit / defaults: `ecosystem/fret-kit`, `ecosystem/fret-bootstrap`, `ecosystem/fret-ui-assets`.
+  - App kit / defaults: `ecosystem/fret`, `ecosystem/fret-bootstrap`, `ecosystem/fret-ui-assets`.
   - Icons: `ecosystem/fret-icons`, `ecosystem/fret-icons-lucide`, `ecosystem/fret-icons-radix`.
 - `apps/`: Runnable apps / end-to-end harness shells (in the workspace, excluded from `default-members`).
   - Harness code: `apps/fret-examples`.

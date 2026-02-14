@@ -34,7 +34,7 @@ fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-code-view = { path = "../../ecosystem/fret-code-view" }
 fret-code-editor-view = { path = "../../ecosystem/fret-code-editor-view" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
-fret-kit = { path = "../../ecosystem/fret-kit" }
+fret = { path = "../../ecosystem/fret" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "diagnostics", "ui-app-driver", "ui-assets"] }
 fret-undo = { path = "../../ecosystem/fret-undo" }

@@ -67,8 +67,7 @@ This is the interface style we optimize for: typed state, typed messages, and sh
 
 ```rust
 use std::sync::Arc;
-use fret_kit::prelude::*;
-use fret_ui_shadcn as shadcn;
+use fret::prelude::*;
 
 #[derive(Clone)]
 struct TodoItem {
@@ -91,7 +90,7 @@ struct TodoState {
 }
 
 fn main() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
+    fret::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
         .with_main_window("todo", (560.0, 520.0))
         .run()?;
     Ok(())
