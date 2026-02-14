@@ -9,6 +9,7 @@ struct TestHost {
     models: fret_runtime::ModelStore,
     next_timer: u64,
     next_clipboard: u64,
+    next_share_sheet: u64,
 }
 
 impl fret_ui::action::UiActionHost for TestHost {
@@ -28,6 +29,11 @@ impl fret_ui::action::UiActionHost for TestHost {
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.next_clipboard = self.next_clipboard.saturating_add(1);
         fret_runtime::ClipboardToken(self.next_clipboard)
+    }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.next_share_sheet = self.next_share_sheet.saturating_add(1);
+        fret_runtime::ShareSheetToken(self.next_share_sheet)
     }
 }
 
@@ -98,6 +104,95 @@ fn replace_buffer_resets_state() {
     assert_eq!(st.row_text_cache_queue.len(), 0);
     assert_eq!(st.row_geom_cache.len(), 0);
     assert_eq!(st.row_geom_cache_queue.len(), 0);
+}
+
+#[test]
+fn cached_row_text_hits_and_reuses_arc_for_repeated_calls() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let (a, b, stats) = {
+        let mut st = handle.state.borrow_mut();
+        let (_range_a, a, _folds_a, _preedit_a) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        let (_range_b, b, _folds_b, _preedit_b) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        (a, b, st.cache_stats)
+    };
+
+    assert!(
+        Arc::ptr_eq(&a, &b),
+        "expected row text cache to reuse Arc<str>"
+    );
+    assert_eq!(stats.row_text_misses, 1);
+    assert_eq!(stats.row_text_hits, 1);
+}
+
+#[test]
+fn cached_row_text_invalidates_on_buffer_revision_change() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let (before, after, resets) = {
+        let mut st = handle.state.borrow_mut();
+        let (_range, before, _folds, _preedit) = paint::cached_row_text_with_range(&mut st, 0, 64);
+
+        let mut tx = st.buffer.transaction_begin();
+        st.buffer
+            .transaction_update(
+                &mut tx,
+                Edit::Insert {
+                    at: 0,
+                    text: "!".to_string(),
+                },
+            )
+            .expect("edit");
+        let _ = st.buffer.transaction_commit(tx);
+        st.refresh_display_map();
+
+        let (_range, after, _folds, _preedit) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        (before, after, st.cache_stats.row_text_resets)
+    };
+
+    assert!(
+        !Arc::ptr_eq(&before, &after),
+        "expected row text cache to invalidate when buffer revision changes"
+    );
+    assert!(resets > 0, "expected row text cache resets to be recorded");
+}
+
+#[test]
+fn cached_row_text_lru_eviction_rebuilds_evicted_rows() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let (first0, first1, second0, stats) = {
+        let mut st = handle.state.borrow_mut();
+        let (_range0, first0, _folds0, _preedit0) =
+            paint::cached_row_text_with_range(&mut st, 0, 1);
+        let (_range1, first1, _folds1, _preedit1) =
+            paint::cached_row_text_with_range(&mut st, 1, 1);
+        let (_range0, second0, _folds0, _preedit0) =
+            paint::cached_row_text_with_range(&mut st, 0, 1);
+        (first0, first1, second0, st.cache_stats)
+    };
+
+    assert_eq!(first0.as_ref(), "hello");
+    assert_eq!(first1.as_ref(), "world");
+    assert!(
+        !Arc::ptr_eq(&first0, &second0),
+        "expected row 0 to be rebuilt after eviction under max_entries=1"
+    );
+    assert!(
+        stats.row_text_evictions > 0,
+        "expected at least one eviction"
+    );
+}
+
+#[test]
+fn paint_source_does_not_materialize_whole_buffer_string() {
+    // Regression guard: the editor paint path should never call `TextBuffer::text_string()`.
+    // Materializing the entire rope would scale with document size and defeat row virtualization.
+    const SRC: &str = include_str!("../paint/mod.rs");
+    assert!(
+        !SRC.contains(".text_string("),
+        "paint/mod.rs must not call TextBuffer::text_string()"
+    );
 }
 
 #[test]
