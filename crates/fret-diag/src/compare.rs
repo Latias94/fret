@@ -576,6 +576,7 @@ pub(crate) fn maybe_launch_demo(
     wants_screenshots: bool,
     timeout_ms: u64,
     poll_ms: u64,
+    launch_high_priority: bool,
 ) -> Result<Option<LaunchedDemo>, String> {
     let Some(launch) = launch else {
         return Ok(None);
@@ -684,6 +685,38 @@ pub(crate) fn maybe_launch_demo(
     let child = cmd
         .spawn()
         .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
+    let pid = child.id();
+
+    #[cfg(windows)]
+    if launch_high_priority {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::System::Threading::{HIGH_PRIORITY_CLASS, SetPriorityClass};
+
+        let handle = child.as_raw_handle();
+        let ok = unsafe { SetPriorityClass(handle, HIGH_PRIORITY_CLASS) } != 0;
+        if !ok {
+            eprintln!(
+                "WARN: failed to set HIGH_PRIORITY_CLASS on launched demo: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+
+    // Write the PID for external profilers (ETW/WPA) and post-run triage.
+    //
+    // Best-effort: avoid failing the run due to filesystem issues.
+    let _ = std::fs::write(out_dir.join("launched.pid"), pid.to_string());
+    let _ = std::fs::write(
+        out_dir.join("launched.demo.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "pid": pid,
+            "launched_unix_ms": launched_unix_ms,
+            "launch_cmd": launch,
+        }))
+        .unwrap_or_else(|_| b"{}".to_vec()),
+    );
+
     let mut demo = LaunchedDemo {
         child,
         launched_unix_ms,
@@ -1583,14 +1616,48 @@ mod tests {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PerfThresholdAggregate {
+    Max,
+    P95,
+}
+
+impl PerfThresholdAggregate {
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            PerfThresholdAggregate::Max => "max",
+            PerfThresholdAggregate::P95 => "p95",
+        }
+    }
+}
+
+impl std::str::FromStr for PerfThresholdAggregate {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "max" => Ok(PerfThresholdAggregate::Max),
+            "p95" => Ok(PerfThresholdAggregate::P95),
+            _ => Err(format!("invalid aggregate (expected max|p95): {s:?}")),
+        }
+    }
+}
+
 pub(super) fn scan_perf_threshold_failures(
     script: &str,
     sort: BundleStatsSort,
+    observed_agg: PerfThresholdAggregate,
     cli: PerfThresholds,
     baseline: PerfThresholds,
+    observed_total_time_us: u64,
     max_total_time_us: u64,
+    p95_total_time_us: u64,
+    observed_layout_time_us: u64,
     max_layout_time_us: u64,
+    p95_layout_time_us: u64,
+    observed_layout_engine_solve_time_us: u64,
     max_layout_engine_solve_time_us: u64,
+    p95_layout_engine_solve_time_us: u64,
     pointer_move_frames_present: bool,
     max_pointer_move_dispatch_time_us: u64,
     max_pointer_move_hit_test_time_us: u64,
@@ -1634,37 +1701,49 @@ pub(super) fn scan_perf_threshold_failures(
     );
 
     if let Some(threshold_us) = threshold_total
-        && max_total_time_us > threshold_us
+        && observed_total_time_us > threshold_us
     {
         out.push(serde_json::json!({
             "metric": "top_total_time_us",
             "threshold_us": threshold_us,
             "threshold_source": source_total,
-            "actual_us": max_total_time_us,
+            "actual_us": observed_total_time_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_total_time_us,
+            "actual_p95_us": p95_total_time_us,
+            "outlier_suspected": p95_total_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
         }));
     }
     if let Some(threshold_us) = threshold_layout
-        && max_layout_time_us > threshold_us
+        && observed_layout_time_us > threshold_us
     {
         out.push(serde_json::json!({
             "metric": "top_layout_time_us",
             "threshold_us": threshold_us,
             "threshold_source": source_layout,
-            "actual_us": max_layout_time_us,
+            "actual_us": observed_layout_time_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_layout_time_us,
+            "actual_p95_us": p95_layout_time_us,
+            "outlier_suspected": p95_layout_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
         }));
     }
     if let Some(threshold_us) = threshold_solve
-        && max_layout_engine_solve_time_us > threshold_us
+        && observed_layout_engine_solve_time_us > threshold_us
     {
         out.push(serde_json::json!({
             "metric": "top_layout_engine_solve_time_us",
             "threshold_us": threshold_us,
             "threshold_source": source_solve,
-            "actual_us": max_layout_engine_solve_time_us,
+            "actual_us": observed_layout_engine_solve_time_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_layout_engine_solve_time_us,
+            "actual_p95_us": p95_layout_engine_solve_time_us,
+            "outlier_suspected": p95_layout_engine_solve_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
         }));

@@ -35,11 +35,12 @@ mod util;
 pub(crate) use paths::{expand_script_inputs, resolve_path};
 
 use compare::{
-    CompareOptions, CompareReport, PerfThresholds, RenderdocDumpAttempt, apply_perf_baseline_floor,
-    apply_perf_baseline_headroom, cargo_run_inject_feature, compare_bundles, ensure_env_var,
-    find_latest_export_dir, maybe_launch_demo, normalize_repo_relative_path, read_latest_pointer,
-    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
-    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
+    CompareOptions, CompareReport, PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt,
+    apply_perf_baseline_floor, apply_perf_baseline_headroom, cargo_run_inject_feature,
+    compare_bundles, ensure_env_var, find_latest_export_dir, maybe_launch_demo,
+    normalize_repo_relative_path, read_latest_pointer, read_perf_baseline_file, resolve_threshold,
+    run_fret_renderdoc_dump, scan_perf_threshold_failures, stop_launched_demo,
+    wait_for_files_with_extensions,
 };
 use devtools::DevtoolsOps;
 use gates::{
@@ -187,6 +188,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
+    let mut launch_high_priority: bool = false;
     let mut keep_open: bool = false;
     let mut script_tool_write: bool = false;
     let mut script_tool_check: bool = false;
@@ -208,6 +210,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_perf_hints: bool = false;
     let mut check_perf_hints_deny: Vec<String> = Vec::new();
     let mut check_perf_hints_min_severity: Option<String> = None;
+    let mut perf_threshold_agg: PerfThresholdAggregate = PerfThresholdAggregate::Max;
     let mut max_working_set_bytes: Option<u64> = None;
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
@@ -874,6 +877,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("invalid value for --max-cpu-avg-percent-total-cores".to_string());
                 }
                 max_cpu_avg_percent_total_cores = Some(pct);
+                i += 1;
+            }
+            "--perf-threshold-agg" | "--perf-threshold-aggregate" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-threshold-agg".to_string());
+                };
+                perf_threshold_agg = v
+                    .parse::<PerfThresholdAggregate>()
+                    .map_err(|e| format!("invalid value for --perf-threshold-agg: {e}"))?;
                 i += 1;
             }
             "--perf-baseline" => {
@@ -1676,6 +1689,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 reuse_launch = true;
                 i += 1;
             }
+            "--launch-high-priority" => {
+                launch_high_priority = true;
+                i += 1;
+            }
             "--keep-open" => {
                 keep_open = true;
                 i += 1;
@@ -1709,6 +1726,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         return Err("missing diag subcommand (try: fretboard diag poke)".to_string());
     };
     let rest: Vec<String> = positionals.into_iter().skip(1).collect();
+
+    if launch_high_priority && launch.is_none() {
+        return Err("--launch-high-priority requires --launch".to_string());
+    }
 
     if fixed_frame_delta_ms.is_some() && launch.is_none() && devtools_ws_url.is_some() {
         return Err(
@@ -2432,6 +2453,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || script_wants_screenshots,
                 timeout_ms,
                 poll_ms,
+                launch_high_priority,
             )?;
             let _stop_guard = if keep_open {
                 None
@@ -2814,6 +2836,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     wants_screenshots,
                     timeout_ms,
                     poll_ms,
+                    launch_high_priority,
                 )?
             } else {
                 None
@@ -3045,6 +3068,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         wants_screenshots,
                         timeout_ms,
                         poll_ms,
+                        launch_high_priority,
                     )?;
                 }
 
@@ -3530,6 +3554,7 @@ See: `docs/tracy.md`.\n";
                     || scripts.iter().any(|p| script_requests_screenshots(p)),
                 timeout_ms,
                 poll_ms,
+                launch_high_priority,
             ) {
                 Ok(v) => v,
                 Err(err) => {
@@ -5501,6 +5526,7 @@ See: `docs/tracy.md`.\n";
                     suite_wants_screenshots,
                     timeout_ms,
                     poll_ms,
+                    launch_high_priority,
                 ) {
                     Ok(v) => v,
                     Err(err) => {
@@ -5604,6 +5630,7 @@ See: `docs/tracy.md`.\n";
                         suite_wants_screenshots,
                         timeout_ms,
                         poll_ms,
+                        launch_high_priority,
                     ) {
                         Ok(v) => v,
                         Err(err) => {
@@ -7078,6 +7105,7 @@ See: `docs/tracy.md`.\n";
                     false,
                     timeout_ms,
                     poll_ms,
+                    launch_high_priority,
                 )?;
             }
 
@@ -7094,6 +7122,7 @@ See: `docs/tracy.md`.\n";
                             false,
                             timeout_ms,
                             poll_ms,
+                            launch_high_priority,
                         )?;
                     }
 
@@ -7716,6 +7745,21 @@ See: `docs/tracy.md`.\n";
                                 "sort": sort.as_str(),
                                 "repeat": 1,
                                 "runs": [run],
+                                "observed_aggregate": perf_threshold_agg.as_str(),
+                                "observed": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                },
+                                "worst_run": {
+                                    "top_total_time_us": top_total,
+                                    "bundle": bundle_path.display().to_string(),
+                                    "trace_chrome": bundle_path
+                                        .parent()
+                                        .map(|dir| dir.join("trace.chrome.json"))
+                                        .filter(|p| p.is_file())
+                                        .map(|p| p.display().to_string()),
+                                },
                                 "max": {
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
@@ -7725,6 +7769,16 @@ See: `docs/tracy.md`.\n";
                                     "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                     "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
                                     "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                },
+                                "p50": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                },
+                                "p95": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
                                 },
                                 "thresholds": {
                                     "max_top_total_us": thr_total,
@@ -7751,10 +7805,17 @@ See: `docs/tracy.md`.\n";
                             perf_threshold_failures.extend(scan_perf_threshold_failures(
                                 script_key.as_str(),
                                 sort,
+                                perf_threshold_agg,
                                 cli_thresholds,
                                 baseline_thresholds,
                                 top_total,
+                                top_total,
+                                top_total,
                                 top_layout,
+                                top_layout,
+                                top_layout,
+                                top_solve,
+                                top_solve,
                                 top_solve,
                                 pointer_move_frames_present,
                                 pointer_move_max_dispatch_time_us,
@@ -7820,6 +7881,7 @@ See: `docs/tracy.md`.\n";
                             false,
                             timeout_ms,
                             poll_ms,
+                            launch_high_priority,
                         )?;
                     }
 
@@ -8869,11 +8931,39 @@ See: `docs/tracy.md`.\n";
                             baseline_thresholds
                                 .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         );
+
+                        let observed_total = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_total,
+                            PerfThresholdAggregate::P95 => p95_total,
+                        };
+                        let observed_layout = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_layout,
+                            PerfThresholdAggregate::P95 => p95_layout,
+                        };
+                        let observed_solve = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_solve,
+                            PerfThresholdAggregate::P95 => p95_solve,
+                        };
                         let row = serde_json::json!({
                             "script": script_key.clone(),
                             "sort": sort.as_str(),
                             "repeat": repeat,
                             "runs": runs_json,
+                            "observed_aggregate": perf_threshold_agg.as_str(),
+                            "observed": {
+                                "top_total_time_us": observed_total,
+                                "top_layout_time_us": observed_layout,
+                                "top_layout_engine_solve_time_us": observed_solve,
+                            },
+                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+                                "top_total_time_us": us,
+                                "bundle": bundle.display().to_string(),
+                                "trace_chrome": bundle
+                                    .parent()
+                                    .map(|dir| dir.join("trace.chrome.json"))
+                                    .filter(|p| p.is_file())
+                                    .map(|p| p.display().to_string()),
+                            })),
                             "max": {
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
@@ -8883,6 +8973,16 @@ See: `docs/tracy.md`.\n";
                                 "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
                                 "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
                                 "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            },
+                            "p50": {
+                                "top_total_time_us": percentile_nearest_rank_sorted(&sorted_total, 0.50),
+                                "top_layout_time_us": percentile_nearest_rank_sorted(&sorted_layout, 0.50),
+                                "top_layout_engine_solve_time_us": percentile_nearest_rank_sorted(&sorted_solve, 0.50),
+                            },
+                            "p95": {
+                                "top_total_time_us": p95_total,
+                                "top_layout_time_us": p95_layout,
+                                "top_layout_engine_solve_time_us": p95_solve,
                             },
                             "thresholds": {
                                 "max_top_total_us": thr_total,
@@ -8909,11 +9009,18 @@ See: `docs/tracy.md`.\n";
                         perf_threshold_failures.extend(scan_perf_threshold_failures(
                             script_key.as_str(),
                             sort,
+                            perf_threshold_agg,
                             cli_thresholds,
                             baseline_thresholds,
+                            observed_total,
                             max_total,
+                            p95_total,
+                            observed_layout,
                             max_layout,
+                            p95_layout,
+                            observed_solve,
                             max_solve,
+                            p95_solve,
                             pointer_move_frames_present,
                             max_pointer_move_dispatch,
                             max_pointer_move_hit_test,
@@ -8963,6 +9070,7 @@ See: `docs/tracy.md`.\n";
                     "kind": "perf_thresholds",
                     "out_dir": resolved_out_dir.display().to_string(),
                     "warmup_frames": warmup_frames,
+                    "observed_aggregate": perf_threshold_agg.as_str(),
                     "thresholds": {
                         "max_top_total_us": cli_thresholds.max_top_total_us,
                         "max_top_layout_us": cli_thresholds.max_top_layout_us,
@@ -9328,6 +9436,7 @@ See: `docs/tracy.md`.\n";
                 &uncached_paths,
                 launch,
                 &uncached_env,
+                launch_high_priority,
                 &workspace_root,
                 timeout_ms,
                 poll_ms,
@@ -9347,6 +9456,7 @@ See: `docs/tracy.md`.\n";
                 &cached_paths,
                 launch,
                 &cached_env,
+                launch_high_priority,
                 &workspace_root,
                 timeout_ms,
                 poll_ms,
@@ -13134,6 +13244,7 @@ fn run_script_suite_collect_bundles(
     paths: &ResolvedScriptPaths,
     launch: &[String],
     launch_env: &[(String, String)],
+    launch_high_priority: bool,
     workspace_root: &Path,
     timeout_ms: u64,
     poll_ms: u64,
@@ -13160,6 +13271,7 @@ fn run_script_suite_collect_bundles(
         scripts.iter().any(|src| script_requests_screenshots(src)),
         timeout_ms,
         poll_ms,
+        launch_high_priority,
     )?;
 
     let mut required_caps: Vec<String> = Vec::new();
@@ -18788,6 +18900,7 @@ mod tests {
         let failures = scan_perf_threshold_failures(
             "script.json",
             BundleStatsSort::Time,
+            compare::PerfThresholdAggregate::Max,
             PerfThresholds {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
@@ -18800,7 +18913,13 @@ mod tests {
             },
             PerfThresholds::default(),
             99,
+            99,
+            99,
             79,
+            79,
+            79,
+            49,
+            49,
             49,
             true,
             1999,
@@ -18817,6 +18936,7 @@ mod tests {
         let failures = scan_perf_threshold_failures(
             "script.json",
             BundleStatsSort::Time,
+            compare::PerfThresholdAggregate::Max,
             PerfThresholds {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
@@ -18829,7 +18949,13 @@ mod tests {
             },
             PerfThresholds::default(),
             101,
+            101,
+            101,
             81,
+            81,
+            81,
+            51,
+            51,
             51,
             true,
             2001,

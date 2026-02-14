@@ -15,8 +15,8 @@ Rendering runs in the background and is cached via `fret-query`.
 Note: Mermaid SVG often uses `<foreignObject>` for labels; `fret-markdown` uses a best-effort
 text overlay fallback so diagrams remain readable in headless renderers.
 
-Note: `merman` is currently pulled in as a workspace path dependency (`../merman`). Clone the
-`merman` repo next to `fret` (same parent directory) to build Mermaid support.
+Note: `merman` is pulled in via the workspace dependency (a pinned git revision). Enabling the
+`mermaid` feature will fetch it automatically as part of the build.
 
 - Enable Mermaid explicitly:
 
@@ -58,6 +58,27 @@ let components = fret_markdown::MarkdownComponents {
 markdown::Markdown::new(source).into_element_with(cx, &components);
 ```
 
+## Anchors
+
+By default, `fret-markdown` attaches stable `test_id` anchors to:
+
+- Headings: `fret-markdown.anchor.<slug>`
+- Footnote definitions: `fret-markdown.anchor.fn-<slug>`
+
+For stable heading anchors that do not change when the title text changes, append an explicit id:
+
+```md
+## Install {#install}
+```
+
+When an explicit id is present, it overrides the text-based slug for that heading.
+
+Hosts can translate in-document links like `#math` / `#fn-note` into those anchors via:
+
+```rust
+let test_id = fret_markdown::anchor_test_id_from_fragment("#math");
+```
+
 ## Theme tokens
 
 `fret-markdown` resolves tokens in this order:
@@ -74,6 +95,11 @@ Code blocks:
   set, show a vertical scrollbar for tall code blocks (hover-visible by default, matching shadcn / Radix).
 - `MarkdownComponents.code_block_max_height_from_theme` (default: true): disable this to opt out of
   theme-driven `max_height` resolution.
+
+Lists:
+
+- `fret.markdown.list.indent` / `markdown.list.indent` (default: `metric.padding.md`): per-nesting-level
+  indent applied to nested lists.
 
 See `docs/adr/0102-text-decorations-and-markdown-theme-tokens.md` for the full token list and
 compatibility rules.

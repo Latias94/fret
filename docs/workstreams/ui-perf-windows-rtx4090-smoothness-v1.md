@@ -39,15 +39,17 @@ Recommended env (avoid extra I/O + keep cached rendering on):
 
 P0 commands:
 
-- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 
 ## Failure triage (when a gate fails)
 
 1) Look at the generated perf check:
 
 - `<out_dir>/check.perf_thresholds.json`
+  - Includes `max` and percentiles (`p50`/`p95`) per script.
+  - When a threshold fails, `failures[]` also includes `actual_p95_us` and `outlier_suspected` for quick triage.
 
 2) Open the worst evidence bundle:
 
@@ -69,6 +71,46 @@ P0 commands:
   - `target/release/fretboard.exe diag perf ... --trace`
   - `target/release/fretboard.exe diag trace <bundle.json>`
 
+## Windows ETW/WPR (schedule noise vs real CPU work)
+
+When a perf gate fails due to rare spikes (max) but typical percentiles look fine, verify whether the
+UI thread is actually running CPU work or is being delayed by OS scheduling (Ready time), DPC/ISR,
+or other system noise.
+
+Recommended capture (WPR built-in profiles):
+
+- `GeneralProfile.Verbose` (best first-pass triage: CPU + CSwitch + ReadyThread + DPC/Interrupt).
+- `CPU.Verbose` (lighter: CPU + CSwitch + ReadyThread + SampledProfile stacks).
+
+Runbook:
+
+1) Start WPR (filemode avoids memory pressure during capture):
+
+- `wpr -start GeneralProfile.Verbose -filemode`
+
+2) Run a repro that tends to spike (prefer `--reuse-launch` to reduce relaunch noise; add `--trace`
+   so the worst bundle includes `trace.chrome.json`):
+
+- `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json --repeat 200 --warmup-frames 5 --reuse-launch --trace --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --timeout-ms 900000 --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+3) Stop WPR and write the ETL:
+
+- `wpr -stop ui-perf.etl`
+
+4) Open in Windows Performance Analyzer (WPA) and filter to the app process:
+
+- The diagnostics out dir writes `launched.demo.json` with the launched `pid` (when using `--launch`).
+- In WPA, focus on:
+  - **CPU Usage (Sampled)** for stacks (are we actually executing?)
+  - **Context Switches / ReadyThread** (are we ready-but-not-running?)
+  - **DPC/ISR** (are interrupts/DPC stealing time?)
+
+Interpretation:
+
+- High **ReadyThread** time + low sampled CPU in the spike window ⇒ scheduling contention / priority / background noise.
+- High sampled CPU with stable stacks in Fret code ⇒ real work regression (optimize the hottest phase).
+- DPC/ISR spikes aligned with frame spikes ⇒ driver/OS noise; consider isolating (priority, affinity, power plan, background activity).
+
 ## What “typical perf” means here (not tail)
 
 Tail (spikes) is “max / worst frame”. Typical perf should use **percentiles** (p50/p95) to answer
@@ -78,6 +120,7 @@ Preferred workflow:
 
 - Use `fretboard diag perf ... --json` and review `p50`/`p95` for the top metrics.
 - Use `diag stats` for within-bundle averages and budgets (`avg.*`, `budget_pct.*`).
+- If you want a **typical-perf gate** (ignore rare max spikes), run with `--perf-threshold-agg p95`.
 
 If a change improves p50/p95 but worsens max occasionally, treat it as “needs jitter work” (allocator,
 capacity management, background work scheduling).
