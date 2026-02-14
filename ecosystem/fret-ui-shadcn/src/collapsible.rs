@@ -161,15 +161,19 @@ impl Collapsible {
                 .map(|ms| Duration::from_millis(ms as u64))
                 .unwrap_or(Duration::from_millis(200));
             let toggle_ticks = ticks_60hz_for_duration(toggle_duration);
+            let toggle_easing = theme
+                .easing_by_key("easing.shadcn.motion.collapsible.toggle")
+                .or_else(|| theme.easing_by_key("easing.motion.collapsible.toggle"))
+                .unwrap_or_else(|| overlay_motion::shadcn_motion_ease_bezier(cx));
 
-            let motion = radix_collapsible::measured_height_motion_for_root(
+            let motion = radix_collapsible::measured_height_motion_for_root_with_cubic_bezier(
                 cx,
                 is_open,
                 force_mount_content,
                 true,
                 toggle_ticks,
                 toggle_ticks,
-                overlay_motion::shadcn_ease,
+                toggle_easing,
             );
 
             let content = motion.should_render.then(|| content(cx));

@@ -2046,6 +2046,10 @@ impl UiGalleryDriver {
             "duration.shadcn.motion.sidebar.toggle".to_string(),
             sidebar_toggle,
         );
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.collapsible.toggle".to_string(),
+            sidebar_toggle,
+        );
         cfg.durations_ms
             .insert("duration.shadcn.motion.toast.enter".to_string(), toast_enter);
         cfg.durations_ms
@@ -2065,6 +2069,10 @@ impl UiGalleryDriver {
             .insert("easing.shadcn.motion.overlay".to_string(), shadcn_ease);
         cfg.easings
             .insert("easing.shadcn.motion.sidebar".to_string(), linear);
+        cfg.easings.insert(
+            "easing.shadcn.motion.collapsible.toggle".to_string(),
+            shadcn_ease,
+        );
         cfg.easings
             .insert("easing.shadcn.motion.toast".to_string(), shadcn_ease);
         cfg.easings.insert(
@@ -2124,6 +2132,10 @@ impl UiGalleryDriver {
             .insert("easing.motion.standard".to_string(), shadcn_ease);
         cfg.easings
             .insert("easing.motion.emphasized".to_string(), shadcn_ease);
+        cfg.easings.insert(
+            "easing.motion.collapsible.toggle".to_string(),
+            shadcn_ease,
+        );
         cfg.easings
             .insert("easing.motion.stack.shift".to_string(), shadcn_ease);
 
