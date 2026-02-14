@@ -27,6 +27,7 @@ mod item;
 mod kbd;
 mod label;
 mod menubar;
+mod motion_presets;
 mod native_select;
 mod navigation_menu;
 mod shadcn_extras;
@@ -179,6 +180,22 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
 
 pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     navigation_menu::preview_navigation_menu(cx)
+}
+
+pub(super) fn preview_motion_presets(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    motion_preset: Model<Option<Arc<str>>>,
+    motion_preset_open: Model<bool>,
+    dialog_open: Model<bool>,
+) -> Vec<AnyElement> {
+    motion_presets::preview_motion_presets(
+        cx,
+        theme,
+        motion_preset,
+        motion_preset_open,
+        dialog_open,
+    )
 }
 
 pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

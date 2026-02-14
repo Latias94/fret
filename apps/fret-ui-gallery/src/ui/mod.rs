@@ -57,6 +57,7 @@ mod previews;
 pub(crate) use content::content_view;
 pub(crate) use models::UiGalleryModels;
 pub(crate) use nav::sidebar_view;
+use pages::preview_motion_presets;
 use previews::gallery::*;
 use previews::magic::*;
 use previews::material3::*;
