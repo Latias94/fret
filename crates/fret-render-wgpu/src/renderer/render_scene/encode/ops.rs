@@ -59,6 +59,15 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             state.flush_quad_batch();
 
             let scissor = effect_scissor(state, bounds);
+
+            // Effect bounds are computation bounds (not an implicit clip), but they must bound GPU
+            // work inside the scope for performance and budget determinism.
+            //
+            // The scope scissor composes with the existing clip scissor stack by pushing onto the
+            // same scissor stack and restoring it on `PopEffect`.
+            state.current_scissor = scissor;
+            state.scissor_stack.push(scissor);
+
             let uniform_index = state.push_effect_uniform_snapshot(
                 scissor,
                 state.clip_head,
@@ -100,6 +109,14 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 kind: EffectMarkerKind::Pop,
             });
 
+            if state.scissor_stack.len() > 1 {
+                state.scissor_stack.pop();
+                state.current_scissor = *state
+                    .scissor_stack
+                    .last()
+                    .expect("scissor stack must be non-empty");
+            }
+
             let (head, count) = state.mask_scope_stack.pop().unwrap_or((0, 0));
             state.mask_scope_head = head;
             state.mask_scope_count = count;
@@ -117,6 +134,13 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             state.flush_quad_batch();
 
             let scissor = effect_scissor(state, desc.bounds);
+
+            // Composite group bounds are computation bounds (not an implicit clip), but they must
+            // bound GPU work inside the scope. This keeps isolated opacity/groups wasm/mobile
+            // friendly by avoiding unbounded intermediate fills.
+            state.current_scissor = scissor;
+            state.scissor_stack.push(scissor);
+
             let uniform_index = state.push_effect_uniform_snapshot(
                 scissor,
                 state.clip_head,
@@ -157,6 +181,14 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 draw_ix: state.ordered_draws.len(),
                 kind: EffectMarkerKind::CompositeGroupPop,
             });
+
+            if state.scissor_stack.len() > 1 {
+                state.scissor_stack.pop();
+                state.current_scissor = *state
+                    .scissor_stack
+                    .last()
+                    .expect("scissor stack must be non-empty");
+            }
 
             let (head, count) = state.mask_scope_stack.pop().unwrap_or((0, 0));
             state.mask_scope_head = head;
