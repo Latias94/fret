@@ -23,45 +23,6 @@ fn compute_text_vertical_offset(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use fret_core::{FontId, FontWeight, Px, TextStyle};
-
-    #[test]
-    fn text_vertical_offset_centers_em_box_in_fixed_line_box() {
-        let style = TextStyle {
-            font: FontId::default(),
-            size: Px(12.0),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(Px(16.0)),
-            letter_spacing_em: None,
-        };
-
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(16.0)), Px(16.0), Px(12.0));
-        assert_eq!(offset, Px(2.0));
-    }
-
-    #[test]
-    fn text_vertical_offset_clamps_negative_half_leading_to_zero() {
-        let style = TextStyle {
-            font: FontId::default(),
-            size: Px(14.0),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(Px(12.0)),
-            letter_spacing_em: None,
-        };
-
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(12.0)), Px(12.0), Px(14.0));
-        assert_eq!(offset, Px(0.0));
-    }
-}
-
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
@@ -1328,7 +1289,10 @@ impl ElementHostWidget {
                 if self.text_input.is_none() {
                     self.text_input = Some(BoundTextInput::new(model.clone()));
                 }
-                let input = self.text_input.as_mut().expect("text input");
+                let Some(input) = self.text_input.as_mut() else {
+                    debug_assert!(false, "text input must be initialized");
+                    return;
+                };
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
@@ -1345,7 +1309,10 @@ impl ElementHostWidget {
                 if self.text_area.is_none() {
                     self.text_area = Some(crate::text_area::BoundTextArea::new(model.clone()));
                 }
-                let area = self.text_area.as_mut().expect("text area");
+                let Some(area) = self.text_area.as_mut() else {
+                    debug_assert!(false, "text area must be initialized");
+                    return;
+                };
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
@@ -1364,10 +1331,10 @@ impl ElementHostWidget {
                             model.clone(),
                         ));
                 }
-                let group = self
-                    .resizable_panel_group
-                    .as_mut()
-                    .expect("resizable panel group");
+                let Some(group) = self.resizable_panel_group.as_mut() else {
+                    debug_assert!(false, "resizable panel group must be initialized");
+                    return;
+                };
                 if group.model_id() != model_id {
                     group.set_model(model);
                 }
@@ -1836,5 +1803,44 @@ impl ElementHostWidget {
                 });
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_core::{FontId, FontWeight, Px, TextStyle};
+
+    #[test]
+    fn text_vertical_offset_centers_em_box_in_fixed_line_box() {
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(12.0),
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(Px(16.0)),
+            letter_spacing_em: None,
+        };
+
+        let offset =
+            compute_text_vertical_offset(Some(&style), Length::Px(Px(16.0)), Px(16.0), Px(12.0));
+        assert_eq!(offset, Px(2.0));
+    }
+
+    #[test]
+    fn text_vertical_offset_clamps_negative_half_leading_to_zero() {
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(14.0),
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(Px(12.0)),
+            letter_spacing_em: None,
+        };
+
+        let offset =
+            compute_text_vertical_offset(Some(&style), Length::Px(Px(12.0)), Px(12.0), Px(14.0));
+        assert_eq!(offset, Px(0.0));
     }
 }

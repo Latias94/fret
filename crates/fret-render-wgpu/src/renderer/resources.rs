@@ -8,6 +8,12 @@ impl Renderer {
         // wgpu requires uniform dynamic offsets to be aligned to 256 bytes.
         let uniform_stride = uniform_size.div_ceil(256) * 256;
         let uniform_capacity = 256usize;
+
+        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
+        let render_space_stride = render_space_size.div_ceil(256) * 256;
+        // RenderSpace is dynamic (per pass) and must not be overwritten within a frame.
+        // Allocate enough slots for typical worst-case RenderPlan pass counts.
+        let render_space_capacity = 2048usize;
         let clip_capacity = 1024usize;
         let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
         let mask_capacity = 1024usize;
@@ -69,12 +75,31 @@ impl Renderer {
                         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: true,
+                            min_binding_size: Some(
+                                std::num::NonZeroU64::new(render_space_size).unwrap(),
+                            ),
+                        },
+                        count: None,
+                    },
                 ],
             });
 
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret quad uniforms buffer"),
             size: uniform_stride * uniform_capacity as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let render_space_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret render-space uniform buffer"),
+            size: render_space_stride * render_space_capacity as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -159,6 +184,14 @@ impl Renderer {
                 wgpu::BindGroupEntry {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &render_space_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
+                    }),
                 },
             ],
         });
@@ -351,6 +384,9 @@ impl Renderer {
             uniform_buffer,
             uniform_bind_group,
             uniform_bind_group_layout,
+            render_space_buffer,
+            render_space_stride,
+            render_space_capacity,
             uniform_stride,
             uniform_capacity,
             clip_buffer,
@@ -389,6 +425,7 @@ impl Renderer {
             path_msaa_pipeline_format: None,
             path_msaa_pipeline: None,
             path_msaa_pipeline_sample_count: None,
+            path_clip_mask_pipeline: None,
             composite_pipeline_format: None,
             composite_pipelines: [None, None, None, None],
             composite_mask_pipelines: [None, None, None, None],

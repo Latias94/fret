@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{UiDiagnosticsConfigFileV1, UiDiagnosticsConfigPathsV1};
@@ -524,7 +524,7 @@ fn compare_focus_and_capture_by_test_id(
     }
 }
 
-pub(super) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
+pub(crate) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
     let s = std::fs::read_to_string(out_dir.join("latest.txt")).ok()?;
     let s = s.trim();
     if s.is_empty() {
@@ -538,7 +538,7 @@ pub(super) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
     })
 }
 
-pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
+pub(crate) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     fn parse_leading_ts(name: &str) -> Option<u64> {
         let digits: String = name.chars().take_while(|c| c.is_ascii_digit()).collect();
         if digits.is_empty() {
@@ -566,7 +566,7 @@ pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     best.map(|(_, p)| p)
 }
 
-pub(super) fn maybe_launch_demo(
+pub(crate) fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
     launch_env: &[(String, String)],
     workspace_root: &Path,
@@ -1071,7 +1071,7 @@ fn kill_launched_demo(child: &mut Option<LaunchedDemo>) {
     }
 }
 
-pub(super) fn stop_launched_demo(
+pub(crate) fn stop_launched_demo(
     child: &mut Option<LaunchedDemo>,
     exit_path: &Path,
     poll_ms: u64,

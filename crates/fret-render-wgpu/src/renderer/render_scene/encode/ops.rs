@@ -1,7 +1,7 @@
 use super::clip;
 use super::draw;
 use super::mask;
-use super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
+use super::state::{ClipPop, EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::*;
 use fret_core::Paint;
 
@@ -39,6 +39,54 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         SceneOp::PushClipRRect { rect, corner_radii } => {
             let _ = clip::push_clip_rrect(state, rect, corner_radii);
         }
+        SceneOp::PushClipPath {
+            bounds,
+            origin,
+            path,
+        } => {
+            state.flush_quad_batch();
+
+            let scissor = effect_scissor(state, bounds);
+            state.current_scissor = scissor;
+            state.scissor_stack.push(scissor);
+
+            let mask_uniform_index = state.push_mask_viewport_uniform_snapshot(
+                scissor,
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
+
+            let Some((first_vertex, vertex_count)) =
+                draw::encode_clip_path_mask(renderer, state, origin, path)
+            else {
+                // Degrade to computation-bounds scissor only.
+                state.clip_pop_stack.push(ClipPop::NoShader);
+                return;
+            };
+
+            let mask_draw_index = state.clip_path_masks.len() as u32;
+            state.clip_path_masks.push(ClipPathMaskDraw {
+                scissor,
+                uniform_index: mask_uniform_index,
+                first_vertex,
+                vertex_count,
+            });
+
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::ClipPathPush {
+                    scissor,
+                    uniform_index: mask_uniform_index,
+                    mask_draw_index,
+                },
+            });
+
+            state.clip_pop_stack.push(ClipPop::Path);
+        }
         SceneOp::PopClip => {
             clip::pop_clip(state);
         }
@@ -59,6 +107,7 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             state.flush_quad_batch();
 
             let scissor = effect_scissor(state, bounds);
+
             let uniform_index = state.push_effect_uniform_snapshot(
                 scissor,
                 state.clip_head,
@@ -117,6 +166,13 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             state.flush_quad_batch();
 
             let scissor = effect_scissor(state, desc.bounds);
+
+            // Composite group bounds are computation bounds (not an implicit clip), but they must
+            // bound GPU work inside the scope. This keeps isolated opacity/groups wasm/mobile
+            // friendly by avoiding unbounded intermediate fills.
+            state.current_scissor = scissor;
+            state.scissor_stack.push(scissor);
+
             let uniform_index = state.push_effect_uniform_snapshot(
                 scissor,
                 state.clip_head,
@@ -131,6 +187,7 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                     uniform_index,
                     mode: desc.mode,
                     quality: desc.quality,
+                    opacity: desc.opacity.clamp(0.0, 1.0),
                 },
             });
 
@@ -156,6 +213,14 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 draw_ix: state.ordered_draws.len(),
                 kind: EffectMarkerKind::CompositeGroupPop,
             });
+
+            if state.scissor_stack.len() > 1 {
+                state.scissor_stack.pop();
+                state.current_scissor = *state
+                    .scissor_stack
+                    .last()
+                    .expect("scissor stack must be non-empty");
+            }
 
             let (head, count) = state.mask_scope_stack.pop().unwrap_or((0, 0));
             state.mask_scope_head = head;

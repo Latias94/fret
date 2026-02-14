@@ -20,10 +20,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ## M0 — Design baseline
 
 - [ ] REN-VNEXT-docs-001 Add a short “invariants checklist” appendix for renderer refactors (what must never change).
-- [ ] REN-VNEXT-adr-001 Draft ADR: isolated opacity / saveLayer(alpha) (group alpha).
-- [ ] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
-- [ ] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).
-- [ ] REN-VNEXT-guard-000 Record the workstream’s baseline gate set and a baseline perf/telemetry snapshot (linkable).
+- [x] REN-VNEXT-adr-001 Draft ADR: isolated opacity / saveLayer(alpha) (group alpha).
+- [x] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
+- [x] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).
+- [x] REN-VNEXT-adr-004 Draft ADR: RenderSpace + scissor-sized intermediates (renderer-internal coordinate contract).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/resources.rs` (RenderSpace dynamic offsets), `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (per-pass RenderSpace writes + bind-group offsets).
+- [x] REN-VNEXT-guard-000 Record the workstream’s baseline gate set and a baseline perf/telemetry snapshot (linkable).
 
 ## M1 — RenderPlan compilation substrate
 
@@ -34,18 +36,24 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M2 — Isolated opacity (saveLayerAlpha)
 
-- [ ] REN-VNEXT-alpha-001 Decide contract shape: extend `CompositeGroupDesc` vs add a dedicated opacity group op.
-- [ ] REN-VNEXT-alpha-002 Add a GPU conformance test for isolated alpha vs non-isolated alpha mismatch cases.
+- [x] REN-VNEXT-alpha-001 Decide contract shape: extend `CompositeGroupDesc` vs add a dedicated opacity group op.
+- [x] REN-VNEXT-alpha-002 Add a GPU conformance test for isolated alpha vs non-isolated alpha mismatch cases.
+- [x] REN-VNEXT-alpha-003 Bound group/effect computation by scissor during encoding (before scissor-sized targets).
+- [x] REN-VNEXT-alpha-004 Allocate scissor-sized intermediates for groups/effects (with quality downsample tiers).
 
 ## M3 — ClipPath + image masks (bounded + cacheable)
 
 ### M3a — ClipPath v1
 
-- [ ] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
-- [ ] REN-VNEXT-clip-003 Add conformance tests:
-  - clip-before-transform scrolling cases,
-  - clip under rotation (affine),
-  - nested clips + clips + groups.
+- [x] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
+  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan.rs` (mask pass planning + composite with mask).
+- [x] REN-VNEXT-clip-003 Add conformance tests:
+  - [x] Clip-path clips to shape (not just bounds): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
+  - [x] Clip capture at push time (does not follow later transforms): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
+  - [x] Budget degradation is deterministic (scissor-only fallback): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
+  - [x] clip-before-transform scrolling cases (partial-overlap cases): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
+  - [x] clip under rotation (affine): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
+  - [x] nested clips + clips + groups: `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
 
 ### M3b — Image masks v1
 

@@ -105,3 +105,9 @@ Evidence pointers:
 - [x] Move `json_pointer_set` helper out of `crates/fret-diag/src/stats.rs` (share via `crates/fret-diag/src/util.rs`).
 - [x] Extract pick subcommand handlers into `crates/fret-diag/src/commands/pick.rs` (reduce `lib.rs` churn surface).
 - [x] Extract inspect subcommand handler into `crates/fret-diag/src/commands/inspect.rs` (reduce `lib.rs` churn surface).
+- [x] Extract pack/triage/lint subcommand handlers into `crates/fret-diag/src/commands/artifacts.rs` (reduce `lib.rs` churn surface).
+- [x] Extract path/poke/latest subcommand handlers into `crates/fret-diag/src/commands/session.rs` (reduce `lib.rs` churn surface).
+- [x] Extract script subcommand handler into `crates/fret-diag/src/commands/script.rs` (reduce `lib.rs` churn surface).
+- [x] Extract script path helpers into `crates/fret-diag/src/paths.rs` (reduce `lib.rs` churn surface).
+- [x] Extract runtime DevTools WS handling (inbox/send + per-window request drivers + bundle.dumped export + result pushes) into `ecosystem/fret-bootstrap/src/ui_diagnostics_devtools_ws.rs` (reduce `ui_diagnostics.rs` churn surface).
+- [x] Deduplicate wasm+WS-only filesystem gating in runtime diagnostics triggers (reduce repeated `cfg!(wasm32)` checks).

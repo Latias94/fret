@@ -7,6 +7,7 @@ mod color_matrix;
 mod composite;
 mod mask;
 mod path;
+mod path_clip_mask;
 mod path_intermediate;
 mod quad;
 mod scale_nearest;

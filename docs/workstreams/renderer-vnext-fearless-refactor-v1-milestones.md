@@ -29,6 +29,23 @@ Exit criteria:
 - The “invariants list” is explicit and reviewed (no hidden assumptions).
 - The baseline gate set and baseline snapshot are reproducible by another contributor.
 
+Baseline record (fill in; keep this section short):
+
+- Date: 2026-02-14
+- Commit: 440ee019
+- Platform/backend (native/wasm/mobile): native (Windows + wgpu)
+- GPU/adapter (if relevant): (not recorded; capture when needed)
+- Commands run (exact):
+  - `python3 tools/check_layering.py`
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`
+  - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance`
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- Outputs (summary):
+  - layering: pass
+  - conformance: pass (12/12 tests)
+  - `headless_renderer_perf: frames=600 encode=0.09ms prepare_svg=19.11ms prepare_text=0.46ms draws=27000 ... cache_hits=596 cache_misses=4`
+  - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
+
 ## M1 — RenderPlan substrate (time-boxed)
 
 Deliverables:
@@ -71,6 +88,38 @@ Exit criteria:
 
 - On wasm/mobile capability/budget limits, behavior is deterministic and documented (no silent divergence).
 
+Progress record:
+
+- Date: 2026-02-14
+- Commit: 413bef0d
+- Evidence anchors:
+  - `crates/fret-core/src/scene/composite.rs` (`CompositeGroupDesc.opacity`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`CompositePremulPass.opacity`)
+  - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`:
+    - `gpu_composite_group_opacity_is_isolated_for_overlapping_children`
+    - `gpu_composite_group_opacity_degrades_under_tight_intermediate_budget`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (push/pop: bounds scissor enters scissor stack)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test composite_group_conformance`
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- Perf snapshot (note: this workload does not primarily stress effect/group offscreen fill; keep for reproducibility):
+  - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=22.85ms prepare_text=0.73ms draws=27000 ... cache_hits=596 cache_misses=4`
+  - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
+
+- Date: 2026-02-14
+- Commit: 5f055744
+- Summary:
+  - Scissor-sized intermediates for `EffectMode::FilterContent` and `CompositeGroup` (budget-gated and deterministic).
+  - Disabled when the scene contains any `EffectMode::Backdrop` (fallback to full-viewport intermediates).
+- Evidence anchors:
+  - `docs/adr/0275-render-space-and-scissor-sized-intermediates-v1.md`
+  - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (scissor-sized intermediate planning; budget estimation; Backdrop guard)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderSpace uniform + absolute→local scissor mapping)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (RenderSpace binding `@group(0) @binding(5)`)
+  - `crates/fret-render-wgpu/tests/composite_group_conformance.rs` (regression coverage for scissored additive + isolated opacity)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance`
+
 ## M3 — ClipPath + image masks v1 (bounded + cacheable)
 
 Deliverables:
@@ -93,6 +142,21 @@ Deliverables:
 Exit criteria:
 
 - Clip affects hit-testing only where explicitly defined (no accidental “mask affects hit-test” regressions).
+
+Progress record (ClipPath v1):
+
+- Date: 2026-02-14
+- Commit: 305ff59a
+- Status: Landed (contract + renderer substrate; conformance gates pending)
+- Evidence anchors:
+  - `docs/adr/0273-clip-path-and-image-mask-sources-v1.md`
+  - `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`, `SceneRecording::with_clip_path`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (`SceneOp::PushClipPath` encoding)
+  - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanPass::PathClipMask`, `EffectMarkerKind::{ClipPathPush,ClipPathPop}`)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/path_clip_mask.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_CLIP_MASK_SHADER`)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`
 
 ## M4 — Paint/Material evolution (staged)
 

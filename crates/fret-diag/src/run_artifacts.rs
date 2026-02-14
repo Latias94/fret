@@ -41,6 +41,45 @@ pub(crate) fn write_run_id_bundle_json(out_dir: &Path, run_id: u64, bundle_json_
     }
 }
 
+pub(crate) fn refresh_run_id_manifest_file_index(out_dir: &Path, run_id: u64) {
+    let dir = run_id_artifact_dir(out_dir, run_id);
+    let path = dir.join("manifest.json");
+
+    let mut manifest = if path.is_file() {
+        std::fs::read(&path)
+            .ok()
+            .and_then(|b| serde_json::from_slice::<RunManifestV2>(&b).ok())
+            .unwrap_or_else(|| RunManifestV2::new(run_id))
+    } else {
+        RunManifestV2::new(run_id)
+    };
+
+    manifest.generated_unix_ms = now_unix_ms();
+    manifest.schema_version = 2;
+    manifest.run_id = run_id;
+
+    manifest
+        .files
+        .retain(|f| f.id != "script_result_json" && f.id != "trace_chrome_json");
+    push_file_entry_if_present(
+        &mut manifest,
+        &dir,
+        "script_result_json",
+        "script.result.json",
+    );
+    push_file_entry_if_present(
+        &mut manifest,
+        &dir,
+        "trace_chrome_json",
+        "trace.chrome.json",
+    );
+
+    let _ = write_json_value(
+        &path,
+        &serde_json::to_value(&manifest).unwrap_or_else(|_| serde_json::json!({})),
+    );
+}
+
 fn stage_as_str(stage: &UiScriptStageV1) -> &'static str {
     match stage {
         UiScriptStageV1::Queued => "queued",
@@ -177,6 +216,12 @@ pub(crate) fn write_run_id_manifest_json(out_dir: &Path, run_id: u64, result: &U
         &dir,
         "script_result_json",
         "script.result.json",
+    );
+    push_file_entry_if_present(
+        &mut manifest,
+        &dir,
+        "trace_chrome_json",
+        "trace.chrome.json",
     );
     let _ = write_json_value(
         &path,
@@ -329,12 +374,20 @@ fn update_run_id_manifest_with_bundle_json_chunks(
     });
 
     // Refresh file index (bounded to stable, small files; bundle.json is indexed via chunks).
-    manifest.files.retain(|f| f.id != "script_result_json");
+    manifest
+        .files
+        .retain(|f| f.id != "script_result_json" && f.id != "trace_chrome_json");
     push_file_entry_if_present(
         &mut manifest,
         &dir,
         "script_result_json",
         "script.result.json",
+    );
+    push_file_entry_if_present(
+        &mut manifest,
+        &dir,
+        "trace_chrome_json",
+        "trace.chrome.json",
     );
 
     let _ = write_json_value(

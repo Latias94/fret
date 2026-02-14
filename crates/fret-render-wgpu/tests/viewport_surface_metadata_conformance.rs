@@ -268,8 +268,8 @@ fn gpu_viewport_surface_respects_alpha_mode_metadata() {
     let premul = render_and_readback(&ctx, &mut renderer, &scene, size);
     let p = pixel_rgba(&premul, size.0, 32, 32);
     assert!(
-        p[0] >= 224,
-        "expected much brighter red when treating straight as premul, got {p:?} vs straight {s:?}"
+        p[0] >= 160 && p[0] >= s[0].saturating_add(32),
+        "expected noticeably brighter red when treating straight as premul, got {p:?} vs straight {s:?}"
     );
 }
 

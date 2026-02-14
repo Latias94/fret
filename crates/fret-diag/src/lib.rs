@@ -20,6 +20,7 @@ mod compare;
 pub mod devtools;
 mod gates;
 mod lint;
+mod paths;
 mod perf_seed_policy;
 mod run_artifacts;
 mod script_tooling;
@@ -27,8 +28,11 @@ mod shrink;
 mod stats;
 mod suite_summary;
 mod tooling_failures;
+mod trace;
 pub mod transport;
 mod util;
+
+pub(crate) use paths::{expand_script_inputs, resolve_path};
 
 use compare::{
     CompareOptions, CompareReport, PerfThresholds, RenderdocDumpAttempt, apply_perf_baseline_floor,
@@ -46,19 +50,16 @@ use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
 use run_artifacts::{
     materialize_bundle_json_from_manifest_chunks_if_missing,
-    materialize_run_id_bundle_json_from_chunks_if_missing, run_id_artifact_dir,
-    write_run_id_bundle_json, write_run_id_script_result,
+    materialize_run_id_bundle_json_from_chunks_if_missing, refresh_run_id_manifest_file_index,
+    run_id_artifact_dir, write_run_id_bundle_json, write_run_id_script_result,
 };
-use script_tooling::{
-    NormalizedScript, ScriptLintReport, ScriptSchemaReport, lint_scripts,
-    normalize_script_from_path, validate_scripts,
-};
+
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    bundle_stats_from_path, check_bundle_for_chart_sampling_window_shifts_min,
-    check_bundle_for_dock_drag_min, check_bundle_for_drag_cache_root_paint_only,
-    check_bundle_for_gc_sweep_liveness, check_bundle_for_layout_fast_path_min,
-    check_bundle_for_node_graph_cull_window_shifts_max,
+    bundle_stats_diff_from_paths, bundle_stats_from_path,
+    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
+    check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
+    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
     check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max,
@@ -177,6 +178,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
+    let mut stats_diff: Option<(PathBuf, PathBuf)> = None;
+    let mut trace_chrome: bool = false;
+    let mut trace_out: Option<PathBuf> = None;
     let mut warmup_frames: u64 = 0;
     let mut lint_all_test_ids_bounds: bool = false;
     let mut lint_eps_px: f32 = 0.5;
@@ -201,6 +205,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_pointer_move_global_changes: Option<u64> = None;
     let mut min_run_paint_cache_hit_test_only_replay_allowed_max: Option<u64> = None;
     let mut max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64> = None;
+    let mut check_perf_hints: bool = false;
+    let mut check_perf_hints_deny: Vec<String> = Vec::new();
+    let mut check_perf_hints_min_severity: Option<String> = None;
     let mut max_working_set_bytes: Option<u64> = None;
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
@@ -661,6 +668,30 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 sort_override = Some(BundleStatsSort::parse(&v)?);
                 i += 1;
             }
+            "--trace" => {
+                trace_chrome = true;
+                i += 1;
+            }
+            "--trace-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --trace-out".to_string());
+                };
+                trace_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--diff" => {
+                i += 1;
+                let Some(a) = args.get(i).cloned() else {
+                    return Err("missing bundle path a for --diff".to_string());
+                };
+                i += 1;
+                let Some(b) = args.get(i).cloned() else {
+                    return Err("missing bundle path b for --diff".to_string());
+                };
+                stats_diff = Some((PathBuf::from(a), PathBuf::from(b)));
+                i += 1;
+            }
             "--top" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -785,6 +816,28 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "invalid value for --max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max"
                             .to_string()
                     })?);
+                i += 1;
+            }
+            "--check-perf-hints" => {
+                check_perf_hints = true;
+                i += 1;
+            }
+            "--check-perf-hints-deny" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-perf-hints-deny".to_string());
+                };
+                check_perf_hints_deny.push(v);
+                check_perf_hints = true;
+                i += 1;
+            }
+            "--check-perf-hints-min-severity" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-perf-hints-min-severity".to_string());
+                };
+                check_perf_hints_min_severity = Some(v);
+                check_perf_hints = true;
                 i += 1;
             }
             "--max-working-set-bytes" => {
@@ -1893,703 +1946,92 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
-        "path" => {
+        "path" => commands::session::cmd_path(&rest, pack_after_run, &resolved_trigger_path),
+        "poke" => commands::session::cmd_poke(&rest, pack_after_run, &resolved_trigger_path),
+        "latest" => commands::session::cmd_latest(&rest, pack_after_run, &resolved_out_dir),
+        "trace" => {
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
             }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            println!("{}", resolved_trigger_path.display());
-            Ok(())
-        }
-        "poke" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            touch(&resolved_trigger_path)?;
-            println!("{}", resolved_trigger_path.display());
-            Ok(())
-        }
-        "latest" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            if !rest.is_empty() {
-                return Err(format!("unexpected arguments: {}", rest.join(" ")));
-            }
-            if let Some(path) = read_latest_pointer(&resolved_out_dir)
-                .or_else(|| find_latest_export_dir(&resolved_out_dir))
-            {
-                println!("{}", path.display());
-                return Ok(());
-            }
-            Err(format!(
-                "no diagnostics bundle found under {}",
-                resolved_out_dir.display()
-            ))
-        }
-        "pack" => {
-            if rest.len() > 1 {
+            let Some(src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle path (try: fretboard diag trace ./target/fret-diag/1234/bundle.json)"
+                        .to_string(),
+                );
+            };
+            if rest.len() != 1 {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
             }
 
-            let bundle_dir = match rest.first() {
-                Some(src) => {
-                    let src = resolve_path(&workspace_root, PathBuf::from(src));
-                    resolve_bundle_root_dir(&src)?
-                }
-                None => read_latest_pointer(&resolved_out_dir)
-                    .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                    .ok_or_else(|| {
-                        format!(
-                            "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
-                            resolved_out_dir.display()
-                        )
-                    })?,
-            };
-
-            let bundle_dir = resolve_bundle_root_dir(&bundle_dir)?;
-            let out = pack_out
+            let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let bundle_path = resolve_bundle_json_path(&src);
+            let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+            let out = trace_out
+                .take()
                 .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
-
-            let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                resolved_out_dir.clone()
-            } else {
-                bundle_dir
-                    .parent()
-                    .unwrap_or(&resolved_out_dir)
-                    .to_path_buf()
-            };
-
-            pack_bundle_dir_to_zip(
-                &bundle_dir,
-                &out,
-                pack_include_root_artifacts,
-                pack_include_triage,
-                pack_include_screenshots,
-                false,
-                false,
-                &artifacts_root,
-                stats_top,
-                sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                warmup_frames,
-            )?;
+                .unwrap_or_else(|| bundle_dir.join("trace.chrome.json"));
+            crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &out)?;
             println!("{}", out.display());
             Ok(())
         }
-        "triage" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let bundle_path = resolve_bundle_json_path(&src);
-            let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
-
-            let report = bundle_stats_from_path(
-                &bundle_path,
-                stats_top,
-                sort,
-                BundleStatsOptions { warmup_frames },
-            )?;
-            let payload = triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
-
-            let out = triage_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_triage_out_path(&bundle_path));
-
-            if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-            }
-            let pretty =
-                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-            if stats_json {
-                println!("{pretty}");
-            } else {
-                println!("{}", out.display());
-            }
-            Ok(())
-        }
-        "lint" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing bundle path (try: fretboard diag lint ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let bundle_path = resolve_bundle_json_path(&src);
-
-            let report = lint_bundle_from_path(
-                &bundle_path,
-                warmup_frames,
-                LintOptions {
-                    all_test_ids_bounds: lint_all_test_ids_bounds,
-                    eps_px: lint_eps_px,
-                },
-            )?;
-
-            let out = lint_out
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_lint_out_path(&bundle_path));
-
-            if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-            }
-            let pretty =
-                serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
-            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-            if stats_json {
-                println!("{pretty}");
-            } else {
-                println!("{}", out.display());
-            }
-
-            if report.error_issues > 0 {
-                std::process::exit(1);
-            }
-            Ok(())
-        }
-        "script" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(op) = rest.first().map(|s| s.as_str()) else {
-                return Err("missing script subcommand or script path (try: fretboard diag script ./script.json | fretboard diag script normalize ./script.json)".to_string());
-            };
-
-            let shrink_flags_used = shrink_out.is_some()
-                || shrink_any_fail
-                || shrink_match_reason_code.is_some()
-                || shrink_match_reason.is_some()
-                || shrink_min_steps != 1
-                || shrink_max_iters != 200;
-            if shrink_flags_used && op != "shrink" {
-                return Err(
-                    "--shrink-* flags are only supported with `diag script shrink`".to_string(),
-                );
-            }
-
-            match op {
-                "normalize" => {
-                    if script_tool_check && script_tool_write {
-                        return Err("--check cannot be combined with --write".to_string());
-                    }
-                    if script_tool_check_out.is_some() {
-                        return Err(
-                            "--check-out is not supported with `diag script normalize`".to_string()
-                        );
-                    }
-
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err("missing script path (try: fretboard diag script normalize ./script.json)".to_string());
-                    }
-                    if inputs.len() != 1 && !script_tool_check && !script_tool_write {
-                        return Err("normalize expects exactly one script unless --check or --write is used".to_string());
-                    }
-
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-                    if scripts.len() != 1 && !script_tool_check && !script_tool_write {
-                        return Err("normalize expects exactly one script unless --check or --write is used".to_string());
-                    }
-
-                    let mut any_changed = false;
-                    for src in scripts {
-                        let NormalizedScript {
-                            normalized,
-                            changed,
-                        } = normalize_script_from_path(&src)?;
-
-                        if script_tool_check {
-                            if changed {
-                                any_changed = true;
-                                eprintln!("not normalized: {}", src.display());
-                            } else {
-                                println!("{}", src.display());
-                            }
-                            continue;
-                        }
-
-                        if script_tool_write {
-                            if changed {
-                                any_changed = true;
-                                std::fs::write(&src, normalized.as_bytes())
-                                    .map_err(|e| e.to_string())?;
-                            }
-                            println!("{}", src.display());
-                            continue;
-                        }
-
-                        print!("{normalized}");
-                    }
-
-                    if script_tool_check && any_changed {
-                        std::process::exit(1);
-                    }
-                    Ok(())
-                }
-                "validate" => {
-                    if script_tool_check || script_tool_write {
-                        return Err(
-                            "--check/--write are not supported with `diag script validate`"
-                                .to_string(),
-                        );
-                    }
-
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err("missing script path (try: fretboard diag script validate ./script.json)".to_string());
-                    }
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-
-                    let ScriptSchemaReport {
-                        payload,
-                        error_scripts,
-                    } = validate_scripts(&scripts);
-
-                    let out = script_tool_check_out
-                        .map(|p| resolve_path(&workspace_root, p))
-                        .unwrap_or_else(|| resolved_out_dir.join("check.script_schema.json"));
-                    if let Some(parent) = out.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                    }
-                    let pretty =
-                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                    if stats_json {
-                        println!("{pretty}");
-                    } else {
-                        println!("{}", out.display());
-                    }
-
-                    if error_scripts > 0 {
-                        std::process::exit(1);
-                    }
-                    Ok(())
-                }
-                "lint" => {
-                    if script_tool_check || script_tool_write {
-                        return Err(
-                            "--check/--write are not supported with `diag script lint`".to_string()
-                        );
-                    }
-
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err(
-                            "missing script path (try: fretboard diag script lint ./script.json)"
-                                .to_string(),
-                        );
-                    }
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-
-                    let ScriptLintReport {
-                        payload,
-                        error_scripts,
-                    } = lint_scripts(&scripts);
-
-                    let out = script_tool_check_out
-                        .map(|p| resolve_path(&workspace_root, p))
-                        .unwrap_or_else(|| resolved_out_dir.join("check.script_lint.json"));
-                    if let Some(parent) = out.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                    }
-                    let pretty =
-                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                    if stats_json {
-                        println!("{pretty}");
-                    } else {
-                        println!("{}", out.display());
-                    }
-
-                    if error_scripts > 0 {
-                        std::process::exit(1);
-                    }
-                    Ok(())
-                }
-                "shrink" => {
-                    if script_tool_check || script_tool_write || script_tool_check_out.is_some() {
-                        return Err("--check/--write/--check-out are not supported with `diag script shrink`".to_string());
-                    }
-                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
-                    if inputs.is_empty() {
-                        return Err(
-                            "missing script path (try: fretboard diag script shrink ./script.json)"
-                                .to_string(),
-                        );
-                    }
-                    if inputs.len() != 1 {
-                        return Err(format!("unexpected arguments: {}", inputs[1..].join(" ")));
-                    }
-                    if launch.is_some() && !reuse_launch {
-                        return Err("`diag script shrink` requires --reuse-launch when using --launch (to avoid restarting for every attempt)".to_string());
-                    }
-
-                    #[derive(Debug, Clone)]
-                    enum ActionScript {
-                        V1(fret_diag_protocol::UiActionScriptV1),
-                        V2(fret_diag_protocol::UiActionScriptV2),
-                    }
-
-                    impl ActionScript {
-                        fn steps_len(&self) -> usize {
-                            match self {
-                                Self::V1(s) => s.steps.len(),
-                                Self::V2(s) => s.steps.len(),
-                            }
-                        }
-
-                        fn keep_steps(&self, keep: &[usize]) -> Self {
-                            match self {
-                                Self::V1(s) => {
-                                    let steps = keep
-                                        .iter()
-                                        .filter_map(|&i| s.steps.get(i).cloned())
-                                        .collect();
-                                    Self::V1(fret_diag_protocol::UiActionScriptV1 {
-                                        schema_version: 1,
-                                        meta: s.meta.clone(),
-                                        steps,
-                                    })
-                                }
-                                Self::V2(s) => {
-                                    let steps = keep
-                                        .iter()
-                                        .filter_map(|&i| s.steps.get(i).cloned())
-                                        .collect();
-                                    Self::V2(fret_diag_protocol::UiActionScriptV2 {
-                                        schema_version: 2,
-                                        meta: s.meta.clone(),
-                                        steps,
-                                    })
-                                }
-                            }
-                        }
-
-                        fn to_pretty_json(&self) -> Result<String, String> {
-                            let mut value = match self {
-                                Self::V1(s) => {
-                                    serde_json::to_value(s).map_err(|e| e.to_string())?
-                                }
-                                Self::V2(s) => {
-                                    serde_json::to_value(s).map_err(|e| e.to_string())?
-                                }
-                            };
-                            script_tooling::canonicalize_json_value(&mut value);
-                            let mut s =
-                                serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
-                            s.push('\n');
-                            Ok(s)
-                        }
-                    }
-
-                    fn read_action_script(path: &Path) -> Result<ActionScript, String> {
-                        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-                        let value: serde_json::Value =
-                            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-                        let schema_version = value
-                            .get("schema_version")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0)
-                            .min(u32::MAX as u64)
-                            as u32;
-                        match schema_version {
-                            1 => Ok(ActionScript::V1(
-                                serde_json::from_value(value).map_err(|e| e.to_string())?,
-                            )),
-                            2 => Ok(ActionScript::V2(
-                                serde_json::from_value(value).map_err(|e| e.to_string())?,
-                            )),
-                            _ => Err(format!(
-                                "unknown script schema_version (expected 1 or 2): {}",
-                                schema_version
-                            )),
-                        }
-                    }
-
-                    fn matches_failure(
-                        s: &ScriptResultSummary,
-                        any_fail: bool,
-                        reason_code: Option<&str>,
-                        reason: Option<&str>,
-                    ) -> bool {
-                        if s.stage.as_deref() != Some("failed") {
-                            return false;
-                        }
-                        if any_fail {
-                            return true;
-                        }
-                        if let Some(code) = reason_code {
-                            return s.reason_code.as_deref() == Some(code);
-                        }
-                        if let Some(r) = reason {
-                            return s.reason.as_deref() == Some(r);
-                        }
-                        true
-                    }
-
-                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-                    if scripts.len() != 1 {
-                        return Err("shrink expects exactly one script input".to_string());
-                    }
-                    let src = scripts.into_iter().next().unwrap();
-
-                    let shrink_dir = resolved_out_dir.join("shrink");
-                    std::fs::create_dir_all(&shrink_dir).map_err(|e| e.to_string())?;
-
-                    let out_path = shrink_out
-                        .clone()
-                        .map(|p| resolve_path(&workspace_root, p))
-                        .unwrap_or_else(|| shrink_dir.join("script.min.json"));
-                    let summary_path = shrink_dir.join("shrink.summary.json");
-                    let candidate_path = shrink_dir.join("script.candidate.json");
-
-                    let script = read_action_script(&src)?;
-                    let total_steps = script.steps_len();
-                    if total_steps == 0 && shrink_min_steps > 0 {
-                        return Err("script has no steps; nothing to shrink".to_string());
-                    }
-
-                    let wants_screenshots = script_requests_screenshots(&src);
-                    let shrink_launch_env = launch_env.clone();
-                    let mut child = maybe_launch_demo(
-                        &launch,
-                        &shrink_launch_env,
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &resolved_ready_path,
-                        &resolved_exit_path,
-                        wants_screenshots,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-
-                    let baseline = run_script_and_wait(
-                        &src,
-                        &resolved_script_path,
-                        &resolved_script_trigger_path,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-
-                    if baseline.stage.as_deref() != Some("failed") {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        return Err(format!(
-                            "baseline script did not fail (stage={:?}); shrink expects a failing script",
-                            baseline.stage
-                        ));
-                    }
-
-                    let desired_reason_code = shrink_match_reason_code
-                        .as_deref()
-                        .or(baseline.reason_code.as_deref());
-                    let desired_reason = shrink_match_reason
-                        .as_deref()
-                        .or(baseline.reason.as_deref());
-
-                    let mut attempts_total: u64 = 0;
-                    let mut attempts_errors: u64 = 0;
-                    let mut last_error: Option<String> = None;
-
-                    let min_steps = usize::try_from(shrink_min_steps)
-                        .unwrap_or(usize::MAX)
-                        .min(total_steps);
-                    let (keep, reductions, iters) = shrink::ddmin_keep_indices(
-                        total_steps,
-                        min_steps,
-                        shrink_max_iters,
-                        |keep| {
-                            attempts_total += 1;
-                            let candidate = script.keep_steps(keep);
-                            let pretty = match candidate.to_pretty_json() {
-                                Ok(s) => s,
-                                Err(err) => {
-                                    attempts_errors += 1;
-                                    last_error = Some(err);
-                                    return false;
-                                }
-                            };
-                            if let Err(err) = std::fs::write(&candidate_path, pretty.as_bytes()) {
-                                attempts_errors += 1;
-                                last_error = Some(err.to_string());
-                                return false;
-                            }
-
-                            match run_script_and_wait(
-                                &candidate_path,
-                                &resolved_script_path,
-                                &resolved_script_trigger_path,
-                                &resolved_script_result_path,
-                                &resolved_script_result_trigger_path,
-                                timeout_ms,
-                                poll_ms,
-                            ) {
-                                Ok(s) => matches_failure(
-                                    &s,
-                                    shrink_any_fail,
-                                    desired_reason_code,
-                                    desired_reason,
-                                ),
-                                Err(err) => {
-                                    attempts_errors += 1;
-                                    last_error = Some(err);
-                                    false
-                                }
-                            }
-                        },
-                    );
-
-                    let minimized = script.keep_steps(&keep);
-                    let minimized_pretty = minimized.to_pretty_json()?;
-                    std::fs::write(&out_path, minimized_pretty.as_bytes())
-                        .map_err(|e| e.to_string())?;
-
-                    let final_result = run_script_and_wait(
-                        &out_path,
-                        &resolved_script_path,
-                        &resolved_script_trigger_path,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-
-                    let ok = matches_failure(
-                        &final_result,
-                        shrink_any_fail,
-                        desired_reason_code,
-                        desired_reason,
-                    );
-                    if !ok {
-                        return Err(format!(
-                            "minimized script does not reproduce baseline failure (stage={:?} reason_code={:?} reason={:?})",
-                            final_result.stage, final_result.reason_code, final_result.reason
-                        ));
-                    }
-
-                    let keep_set: std::collections::BTreeSet<usize> =
-                        keep.iter().copied().collect();
-                    let removed: Vec<usize> =
-                        (0..total_steps).filter(|i| !keep_set.contains(i)).collect();
-                    let reductions_json: Vec<serde_json::Value> = reductions
-                        .into_iter()
-                        .map(|r| {
-                            serde_json::json!({
-                                "granularity": r.granularity,
-                                "kept_len": r.kept_len,
-                                "removed": r.removed,
-                            })
-                        })
-                        .collect();
-
-                    let payload = serde_json::json!({
-                        "schema_version": 1,
-                        "status": "passed",
-                        "script": src.display().to_string(),
-                        "out": out_path.display().to_string(),
-                        "params": {
-                            "min_steps": shrink_min_steps,
-                            "max_iters": shrink_max_iters,
-                            "any_fail": shrink_any_fail,
-                            "match_reason_code": desired_reason_code,
-                            "match_reason": desired_reason,
-                        },
-                        "baseline": {
-                            "run_id": baseline.run_id,
-                            "stage": baseline.stage,
-                            "step_index": baseline.step_index,
-                            "reason_code": baseline.reason_code,
-                            "reason": baseline.reason,
-                            "last_bundle_dir": baseline.last_bundle_dir,
-                        },
-                        "final": {
-                            "run_id": final_result.run_id,
-                            "stage": final_result.stage,
-                            "step_index": final_result.step_index,
-                            "reason_code": final_result.reason_code,
-                            "reason": final_result.reason,
-                            "last_bundle_dir": final_result.last_bundle_dir,
-                        },
-                        "steps": {
-                            "original": total_steps,
-                            "kept": keep.len(),
-                            "removed": removed.len(),
-                            "removed_indices": removed,
-                        },
-                        "search": {
-                            "iters": iters,
-                            "attempts_total": attempts_total,
-                            "attempts_errors": attempts_errors,
-                            "last_error": last_error,
-                            "reductions": reductions_json,
-                        },
-                    });
-
-                    if let Some(parent) = summary_path.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                    }
-                    let pretty =
-                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-                    std::fs::write(&summary_path, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                    if stats_json {
-                        println!("{pretty}");
-                    } else {
-                        println!("{}", out_path.display());
-                    }
-                    Ok(())
-                }
-                _ => {
-                    let Some(src) = rest.first().cloned() else {
-                        return Err(
-                            "missing script path (try: fretboard diag script ./script.json)"
-                                .to_string(),
-                        );
-                    };
-                    if rest.len() != 1 {
-                        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-                    }
-
-                    let src = resolve_path(&workspace_root, PathBuf::from(src));
-                    write_script(&src, &resolved_script_path)?;
-                    touch(&resolved_script_trigger_path)?;
-                    println!("{}", resolved_script_trigger_path.display());
-                    Ok(())
-                }
-            }
-        }
+        "pack" => commands::artifacts::cmd_pack(
+            &rest,
+            &workspace_root,
+            &resolved_out_dir,
+            pack_out,
+            pack_include_root_artifacts,
+            pack_include_triage,
+            pack_include_screenshots,
+            stats_top,
+            sort_override,
+            warmup_frames,
+        ),
+        "triage" => commands::artifacts::cmd_triage(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            triage_out,
+            stats_top,
+            sort_override,
+            warmup_frames,
+            stats_json,
+        ),
+        "lint" => commands::artifacts::cmd_lint(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            lint_out,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            warmup_frames,
+            stats_json,
+        ),
+        "script" => commands::script::cmd_script(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            &resolved_script_path,
+            &resolved_script_trigger_path,
+            &resolved_script_result_path,
+            &resolved_script_result_trigger_path,
+            &resolved_ready_path,
+            &resolved_exit_path,
+            script_tool_check,
+            script_tool_write,
+            script_tool_check_out,
+            shrink_out,
+            shrink_any_fail,
+            shrink_match_reason_code,
+            shrink_match_reason,
+            shrink_min_steps,
+            shrink_max_iters,
+            &launch,
+            &launch_env,
+            timeout_ms,
+            poll_ms,
+            stats_json,
+        ),
         "run" => {
             let Some(src) = rest.first().cloned() else {
                 return Err(
@@ -2764,6 +2206,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &connected,
                     script_json,
                     wants_post_run_checks || wants_pack,
+                    trace_chrome,
                     Some("diag-run"),
                     None,
                     timeout_ms,
@@ -3045,6 +2488,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &connected,
                 script_json,
                 wants_pack,
+                trace_chrome,
                 Some("diag-run"),
                 None,
                 timeout_ms,
@@ -4222,6 +3666,7 @@ See: `docs/tracy.md`.\n";
                     &connected,
                     script_json,
                     false,
+                    trace_chrome,
                     None,
                     None,
                     timeout_ms,
@@ -6248,6 +5693,7 @@ See: `docs/tracy.md`.\n";
                         connected,
                         script_json,
                         true,
+                        trace_chrome,
                         Some(dump_label.as_str()),
                         None,
                         timeout_ms,
@@ -7491,6 +6937,12 @@ See: `docs/tracy.md`.\n";
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
             let reuse_process = launch.is_none() || reuse_launch;
+            let perf_hint_gate_opts = parse_perf_hint_gate_options(
+                check_perf_hints,
+                &check_perf_hints_deny,
+                check_perf_hints_min_severity.as_deref(),
+            )?;
+            let wants_perf_hints = perf_hint_gate_opts.enabled;
             let cli_thresholds = PerfThresholds {
                 max_top_total_us,
                 max_top_layout_us,
@@ -7557,6 +7009,8 @@ See: `docs/tracy.md`.\n";
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_failures: Vec<serde_json::Value> = Vec::new();
+            let mut perf_hint_rows: Vec<serde_json::Value> = Vec::new();
+            let mut perf_hint_failures: Vec<serde_json::Value> = Vec::new();
             let mut perf_baseline_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
             let stats_opts = BundleStatsOptions { warmup_frames };
@@ -7701,6 +7155,62 @@ See: `docs/tracy.md`.\n";
                                 BundleStatsOptions::default(),
                             )?;
                             report_warmup_frames = 0;
+                        }
+                        if trace_chrome {
+                            if let Some(dir) = bundle_path.parent() {
+                                let trace_path = dir.join("trace.chrome.json");
+                                let _ = crate::trace::write_chrome_trace_from_bundle_path(
+                                    &bundle_path,
+                                    &trace_path,
+                                );
+                            }
+                        }
+                        if wants_perf_hints {
+                            let triage = triage_json_from_stats(
+                                &bundle_path,
+                                &report,
+                                sort,
+                                report_warmup_frames,
+                            );
+                            let failures = perf_hint_gate_failures_for_triage_json(
+                                script_key.as_str(),
+                                &bundle_path,
+                                Some(0),
+                                &triage,
+                                &perf_hint_gate_opts,
+                            );
+                            let hints = triage
+                                .get("hints")
+                                .cloned()
+                                .unwrap_or(serde_json::json!([]));
+                            let unit_costs = triage
+                                .get("unit_costs")
+                                .cloned()
+                                .unwrap_or(serde_json::json!({}));
+                            let worst = triage
+                                .get("worst")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null);
+                            let trace_chrome_json_path = triage
+                                .get("bundle")
+                                .and_then(|b| b.get("trace_chrome_json_path"))
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null);
+
+                            perf_hint_failures.extend(failures.clone());
+                            perf_hint_rows.push(serde_json::json!({
+                                "script": script_key.clone(),
+                                "sort": sort.as_str(),
+                                "repeat": repeat,
+                                "run_index": 0,
+                                "bundle": bundle_path.display().to_string(),
+                                "warmup_frames": report_warmup_frames,
+                                "hints": hints,
+                                "unit_costs": unit_costs,
+                                "worst": worst,
+                                "trace_chrome_json_path": trace_chrome_json_path,
+                                "failures": failures,
+                            }));
                         }
                         let top = report.top.first();
                         let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
@@ -8387,6 +7897,65 @@ See: `docs/tracy.md`.\n";
                         )?;
                         report_warmup_frames = 0;
                     }
+                    if trace_chrome {
+                        if let Some(dir) = bundle_path.parent() {
+                            let trace_path = dir.join("trace.chrome.json");
+                            let _ = crate::trace::write_chrome_trace_from_bundle_path(
+                                &bundle_path,
+                                &trace_path,
+                            );
+                        }
+                    }
+
+                    let script_key = normalize_repo_relative_path(&workspace_root, &src);
+                    if wants_perf_hints {
+                        let triage = triage_json_from_stats(
+                            &bundle_path,
+                            &report,
+                            sort,
+                            report_warmup_frames,
+                        );
+                        let failures = perf_hint_gate_failures_for_triage_json(
+                            &script_key,
+                            &bundle_path,
+                            Some(run_index as u64),
+                            &triage,
+                            &perf_hint_gate_opts,
+                        );
+                        let hints = triage
+                            .get("hints")
+                            .cloned()
+                            .unwrap_or(serde_json::json!([]));
+                        let unit_costs = triage
+                            .get("unit_costs")
+                            .cloned()
+                            .unwrap_or(serde_json::json!({}));
+                        let worst = triage
+                            .get("worst")
+                            .cloned()
+                            .unwrap_or(serde_json::Value::Null);
+                        let trace_chrome_json_path = triage
+                            .get("bundle")
+                            .and_then(|b| b.get("trace_chrome_json_path"))
+                            .cloned()
+                            .unwrap_or(serde_json::Value::Null);
+
+                        perf_hint_failures.extend(failures.clone());
+                        perf_hint_rows.push(serde_json::json!({
+                            "script": script_key.clone(),
+                            "sort": sort.as_str(),
+                            "repeat": repeat,
+                            "run_index": run_index,
+                            "bundle": bundle_path.display().to_string(),
+                            "warmup_frames": report_warmup_frames,
+                            "hints": hints,
+                            "unit_costs": unit_costs,
+                            "worst": worst,
+                            "trace_chrome_json_path": trace_chrome_json_path,
+                            "failures": failures,
+                        }));
+                    }
+
                     let top = report.top.first();
                     let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
                     let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
@@ -9378,6 +8947,26 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
+            let mut perf_hint_failure: Option<(usize, PathBuf)> = None;
+            if wants_perf_hints {
+                let out_path = resolved_out_dir.join("check.perf_hints.json");
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "generated_unix_ms": now_unix_ms(),
+                    "kind": "perf_hints",
+                    "out_dir": resolved_out_dir.display().to_string(),
+                    "warmup_frames": warmup_frames,
+                    "min_severity": perf_hint_gate_opts.min_severity.as_str(),
+                    "deny": perf_hint_gate_opts.deny_codes.iter().cloned().collect::<Vec<_>>(),
+                    "rows": perf_hint_rows,
+                    "failures": perf_hint_failures,
+                });
+                let _ = write_json_value(&out_path, &payload);
+                if !perf_hint_failures.is_empty() {
+                    perf_hint_failure = Some((perf_hint_failures.len(), out_path.clone()));
+                }
+            }
+
             if launched_by_fretboard {
                 stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             }
@@ -9418,10 +9007,46 @@ See: `docs/tracy.md`.\n";
                 );
                 std::process::exit(1);
             }
+            if let Some((failures, evidence)) = perf_hint_failure {
+                eprintln!(
+                    "PERF hints gate failed (failures={}, evidence={})",
+                    failures,
+                    evidence.display()
+                );
+                std::process::exit(1);
+            }
 
             std::process::exit(0);
         }
         "stats" => {
+            if let Some((a, b)) = stats_diff.take() {
+                if !rest.is_empty() {
+                    return Err(format!("unexpected arguments: {}", rest.join(" ")));
+                }
+                let a = resolve_path(&workspace_root, a);
+                let b = resolve_path(&workspace_root, b);
+                let a_bundle_path = resolve_bundle_json_path(&a);
+                let b_bundle_path = resolve_bundle_json_path(&b);
+                let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+                let report = bundle_stats_diff_from_paths(
+                    &a_bundle_path,
+                    &b_bundle_path,
+                    stats_top,
+                    sort,
+                    BundleStatsOptions { warmup_frames },
+                )?;
+                if stats_json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&report.to_json())
+                            .unwrap_or_else(|_| "{}".to_string())
+                    );
+                } else {
+                    report.print_human();
+                }
+                return Ok(());
+            }
+
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing bundle path (try: fretboard diag stats ./target/fret-diag/1234/bundle.json)".to_string(),
@@ -9821,14 +9446,12 @@ See: `docs/tracy.md`.\n";
                 Err(report.to_human_error())
             }
         }
-        "inspect" => {
-            commands::inspect::cmd_inspect(
-                &rest,
-                &resolved_inspect_path,
-                &resolved_inspect_trigger_path,
-                inspect_consume_clicks,
-            )
-        }
+        "inspect" => commands::inspect::cmd_inspect(
+            &rest,
+            &resolved_inspect_path,
+            &resolved_inspect_trigger_path,
+            inspect_consume_clicks,
+        ),
         "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
         "pick" => commands::pick::cmd_pick(
             &rest,
@@ -9862,7 +9485,7 @@ See: `docs/tracy.md`.\n";
     }
 }
 
-fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
+pub(crate) fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
     if path.is_dir() {
         return Ok(path.to_path_buf());
     }
@@ -9872,7 +9495,7 @@ fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
     Ok(parent.to_path_buf())
 }
 
-fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
+pub(crate) fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     let name = bundle_dir
         .file_name()
         .and_then(|s| s.to_str())
@@ -9885,17 +9508,17 @@ fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     }
 }
 
-fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
+pub(crate) fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("triage.json")
 }
 
-fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
+pub(crate) fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("check.lint.json")
 }
 
-fn pack_bundle_dir_to_zip(
+pub(crate) fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,
     out_path: &Path,
     include_root_artifacts: bool,
@@ -10037,13 +9660,247 @@ fn pack_bundle_dir_to_zip(
     Ok(())
 }
 
-fn triage_json_from_stats(
+pub(crate) fn triage_json_from_stats(
     bundle_path: &Path,
     report: &BundleStatsReport,
     sort: BundleStatsSort,
     warmup_frames: u64,
 ) -> serde_json::Value {
     use serde_json::json;
+
+    fn ratio_pct(numer: u64, denom: u64) -> f64 {
+        if denom == 0 {
+            return 0.0;
+        }
+        (numer as f64) * 100.0 / (denom as f64)
+    }
+
+    fn triage_hints(
+        stats_json: &serde_json::Value,
+        worst: Option<&crate::stats::BundleStatsSnapshotRow>,
+    ) -> Vec<serde_json::Value> {
+        let mut out: Vec<serde_json::Value> = Vec::new();
+
+        let Some(worst) = worst else {
+            return out;
+        };
+
+        let sum_layout_observation_record_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_observation_record_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_layout_request_build_roots_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_request_build_roots_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_layout_roots_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_roots_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_layout_view_cache_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_view_cache_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_layout_time_us = stats_json
+            .get("sum")
+            .and_then(|v| v.get("layout_time_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        // Heuristics are intentionally simple, bounded, and explainable.
+        // Keep thresholds conservative; they are hints, not gates.
+
+        // layout.observation_heavy
+        if worst.layout_observation_record_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(
+                worst.layout_observation_record_time_us,
+                worst.layout_time_us,
+            );
+            if worst.layout_observation_record_time_us >= 2_000 || pct >= 20.0 {
+                out.push(json!({
+                    "code": "layout.observation_heavy",
+                    "severity": "warn",
+                    "message": "Layout observation recording is a significant slice of layout time in the worst frame.",
+                    "evidence": {
+                        "layout_observation_record_time_us": worst.layout_observation_record_time_us,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_observation_record_pct_of_layout": pct,
+                        "sum_layout_observation_record_time_us": sum_layout_observation_record_time_us,
+                        "sum_layout_time_us": sum_layout_time_us,
+                        "sum_layout_observation_record_pct_of_layout": ratio_pct(sum_layout_observation_record_time_us, sum_layout_time_us),
+                    }
+                }));
+            }
+        }
+
+        // layout.solve_heavy
+        if worst.layout_engine_solve_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(worst.layout_engine_solve_time_us, worst.layout_time_us);
+            let per_solve = if worst.layout_engine_solves == 0 {
+                None
+            } else {
+                Some(worst.layout_engine_solve_time_us / worst.layout_engine_solves)
+            };
+            if worst.layout_engine_solve_time_us >= 5_000 || pct >= 50.0 {
+                out.push(json!({
+                    "code": "layout.solve_heavy",
+                    "severity": "warn",
+                    "message": "Layout engine solve dominates layout time in the worst frame.",
+                    "evidence": {
+                        "layout_engine_solve_time_us": worst.layout_engine_solve_time_us,
+                        "layout_engine_solves": worst.layout_engine_solves,
+                        "layout_engine_solve_us_per_solve": per_solve,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_engine_solve_pct_of_layout": pct,
+                    }
+                }));
+            }
+        }
+
+        // layout.build_roots_heavy
+        if worst.layout_request_build_roots_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(
+                worst.layout_request_build_roots_time_us,
+                worst.layout_time_us,
+            );
+            if worst.layout_request_build_roots_time_us >= 2_000 || pct >= 20.0 {
+                out.push(json!({
+                    "code": "layout.build_roots_heavy",
+                    "severity": "info",
+                    "message": "Layout root-building work is a significant slice of layout time in the worst frame.",
+                    "evidence": {
+                        "layout_request_build_roots_time_us": worst.layout_request_build_roots_time_us,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_request_build_roots_pct_of_layout": pct,
+                        "sum_layout_request_build_roots_time_us": sum_layout_request_build_roots_time_us,
+                        "sum_layout_time_us": sum_layout_time_us,
+                        "sum_layout_request_build_roots_pct_of_layout": ratio_pct(sum_layout_request_build_roots_time_us, sum_layout_time_us),
+                    }
+                }));
+            }
+        }
+
+        // layout.roots_heavy
+        if worst.layout_roots_time_us > 0 && worst.layout_time_us > 0 {
+            let pct = ratio_pct(worst.layout_roots_time_us, worst.layout_time_us);
+            if worst.layout_time_us >= 15_000
+                && (worst.layout_roots_time_us >= 10_000 || pct >= 70.0)
+            {
+                out.push(json!({
+                    "code": "layout.roots_heavy",
+                    "severity": "info",
+                    "message": "Layout root processing dominates layout time in the worst frame.",
+                    "evidence": {
+                        "layout_roots_time_us": worst.layout_roots_time_us,
+                        "layout_time_us": worst.layout_time_us,
+                        "layout_roots_pct_of_layout": pct,
+                        "sum_layout_roots_time_us": sum_layout_roots_time_us,
+                        "sum_layout_time_us": sum_layout_time_us,
+                        "sum_layout_roots_pct_of_layout": ratio_pct(sum_layout_roots_time_us, sum_layout_time_us),
+                    }
+                }));
+            }
+        }
+
+        // view_cache.layout_invalidated
+        if worst.view_cache_roots_layout_invalidated > 0 {
+            out.push(json!({
+                "code": "view_cache.layout_invalidated",
+                "severity": "info",
+                "message": "One or more view cache roots were layout-invalidated in the worst frame (may cause cache misses and relayout).",
+                "evidence": {
+                    "view_cache_roots_layout_invalidated": worst.view_cache_roots_layout_invalidated,
+                    "view_cache_roots_total": worst.view_cache_roots_total,
+                    "view_cache_roots_reused": worst.view_cache_roots_reused,
+                    "view_cache_roots_cache_key_mismatch": worst.view_cache_roots_cache_key_mismatch,
+                    "view_cache_roots_not_marked_reuse_root": worst.view_cache_roots_not_marked_reuse_root,
+                    "layout_view_cache_time_us": worst.layout_view_cache_time_us,
+                    "layout_expand_view_cache_invalidations_time_us": worst.layout_expand_view_cache_invalidations_time_us,
+                    "sum_layout_view_cache_time_us": sum_layout_view_cache_time_us,
+                }
+            }));
+        }
+
+        // paint.text_prepare_churn
+        if worst.paint_text_prepare_time_us > 0 || worst.paint_text_prepare_calls > 0 {
+            let per_call = if worst.paint_text_prepare_calls == 0 {
+                None
+            } else {
+                Some(worst.paint_text_prepare_time_us / (worst.paint_text_prepare_calls as u64))
+            };
+            if worst.paint_text_prepare_time_us >= 2_000
+                || (per_call.is_some_and(|v| v >= 200) && worst.paint_text_prepare_calls >= 5)
+            {
+                out.push(json!({
+                    "code": "paint.text_prepare_churn",
+                    "severity": "warn",
+                    "message": "Text prepare work is non-trivial in the worst frame (may indicate cache churn).",
+                    "evidence": {
+                        "paint_text_prepare_time_us": worst.paint_text_prepare_time_us,
+                        "paint_text_prepare_calls": worst.paint_text_prepare_calls,
+                        "paint_text_prepare_us_per_call": per_call,
+                        "reasons": {
+                            "blob_missing": worst.paint_text_prepare_reason_blob_missing,
+                            "scale_changed": worst.paint_text_prepare_reason_scale_changed,
+                            "text_changed": worst.paint_text_prepare_reason_text_changed,
+                            "rich_changed": worst.paint_text_prepare_reason_rich_changed,
+                            "style_changed": worst.paint_text_prepare_reason_style_changed,
+                            "wrap_changed": worst.paint_text_prepare_reason_wrap_changed,
+                            "overflow_changed": worst.paint_text_prepare_reason_overflow_changed,
+                            "width_changed": worst.paint_text_prepare_reason_width_changed,
+                            "font_stack_changed": worst.paint_text_prepare_reason_font_stack_changed,
+                        },
+                    }
+                }));
+            }
+        }
+
+        // renderer.upload_churn
+        let upload_bytes = worst
+            .renderer_text_atlas_upload_bytes
+            .saturating_add(worst.renderer_svg_upload_bytes)
+            .saturating_add(worst.renderer_image_upload_bytes);
+        if upload_bytes >= 1_000_000
+            || worst.renderer_text_atlas_evicted_pages > 0
+            || worst.renderer_svg_raster_budget_evictions > 0
+            || worst.renderer_intermediate_pool_evictions > 0
+        {
+            out.push(json!({
+                "code": "renderer.upload_churn",
+                "severity": "info",
+                "message": "Renderer uploads/evictions are present in the worst frame (may indicate cache pressure or invalidation churn).",
+                "evidence": {
+                    "upload_bytes_total": upload_bytes,
+                    "renderer_text_atlas_upload_bytes": worst.renderer_text_atlas_upload_bytes,
+                    "renderer_svg_upload_bytes": worst.renderer_svg_upload_bytes,
+                    "renderer_image_upload_bytes": worst.renderer_image_upload_bytes,
+                    "renderer_text_atlas_evicted_pages": worst.renderer_text_atlas_evicted_pages,
+                    "renderer_svg_raster_budget_evictions": worst.renderer_svg_raster_budget_evictions,
+                    "renderer_intermediate_pool_evictions": worst.renderer_intermediate_pool_evictions,
+                }
+            }));
+        }
+
+        out
+    }
+
+    fn triage_unit_costs(
+        worst: Option<&crate::stats::BundleStatsSnapshotRow>,
+    ) -> serde_json::Value {
+        let Some(worst) = worst else {
+            return json!({});
+        };
+        json!({
+            "layout_engine_solve_us_per_solve": if worst.layout_engine_solves == 0 { None } else { Some(worst.layout_engine_solve_time_us / worst.layout_engine_solves) },
+            "paint_text_prepare_us_per_call": if worst.paint_text_prepare_calls == 0 { None } else { Some(worst.paint_text_prepare_time_us / (worst.paint_text_prepare_calls as u64)) },
+            "layout_obs_record_us_per_model_item": if worst.layout_observation_record_models_items == 0 { None } else { Some(worst.layout_observation_record_time_us / (worst.layout_observation_record_models_items as u64)) },
+            "layout_obs_record_us_per_global_item": if worst.layout_observation_record_globals_items == 0 { None } else { Some(worst.layout_observation_record_time_us / (worst.layout_observation_record_globals_items as u64)) },
+        })
+    }
 
     let generated_unix_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -10052,7 +9909,8 @@ fn triage_json_from_stats(
 
     let file_size_bytes = std::fs::metadata(bundle_path).ok().map(|m| m.len());
 
-    let worst = report.top.first().map(|row| {
+    let worst_row = report.top.first();
+    let worst = worst_row.map(|row| {
         json!({
             "window": row.window,
             "tick_id": row.tick_id,
@@ -10062,6 +9920,12 @@ fn triage_json_from_stats(
             "layout_time_us": row.layout_time_us,
             "prepaint_time_us": row.prepaint_time_us,
             "paint_time_us": row.paint_time_us,
+            "layout_observation_record_time_us": row.layout_observation_record_time_us,
+            "layout_observation_record_models_items": row.layout_observation_record_models_items,
+            "layout_observation_record_globals_items": row.layout_observation_record_globals_items,
+            "paint_observation_record_time_us": row.paint_observation_record_time_us,
+            "paint_text_prepare_time_us": row.paint_text_prepare_time_us,
+            "paint_text_prepare_calls": row.paint_text_prepare_calls,
             "invalidation_walk_calls": row.invalidation_walk_calls,
             "invalidation_walk_nodes": row.invalidation_walk_nodes,
             "cache_roots": row.cache_roots,
@@ -10118,6 +9982,13 @@ fn triage_json_from_stats(
         })
     });
 
+    let trace_chrome_path = bundle_path
+        .parent()
+        .map(|p| p.join("trace.chrome.json"))
+        .filter(|p| p.is_file())
+        .map(|p| p.display().to_string());
+
+    let stats_json = report.to_json();
     json!({
         "schema_version": 1,
         "generated_unix_ms": generated_unix_ms,
@@ -10125,15 +9996,135 @@ fn triage_json_from_stats(
             "bundle_path": bundle_path.display().to_string(),
             "bundle_dir": bundle_path.parent().map(|p| p.display().to_string()),
             "bundle_file_size_bytes": file_size_bytes,
+            "trace_chrome_json_path": trace_chrome_path,
         },
         "params": {
             "sort": sort.as_str(),
             "top": report.top.len(),
             "warmup_frames": warmup_frames,
         },
-        "stats": report.to_json(),
+        "stats": stats_json.clone(),
+        "unit_costs": triage_unit_costs(worst_row),
+        "hints": triage_hints(&stats_json, worst_row),
         "worst": worst,
     })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum PerfHintSeverity {
+    Info,
+    Warn,
+    Error,
+}
+
+impl PerfHintSeverity {
+    fn parse(s: &str) -> Result<Self, String> {
+        match s.trim() {
+            "info" => Ok(Self::Info),
+            "warn" => Ok(Self::Warn),
+            "error" => Ok(Self::Error),
+            other => Err(format!(
+                "invalid perf hint severity: {other} (expected: info|warn|error)"
+            )),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Error => "error",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PerfHintGateOptions {
+    enabled: bool,
+    min_severity: PerfHintSeverity,
+    deny_codes: BTreeSet<String>,
+}
+
+fn parse_perf_hint_gate_options(
+    enabled: bool,
+    deny_specs: &[String],
+    min_severity_spec: Option<&str>,
+) -> Result<PerfHintGateOptions, String> {
+    let min_severity = match min_severity_spec {
+        Some(v) => PerfHintSeverity::parse(v)?,
+        None => PerfHintSeverity::Warn,
+    };
+    let mut deny_codes: BTreeSet<String> = BTreeSet::new();
+    for spec in deny_specs {
+        for raw in spec.split(',') {
+            let code = raw.trim();
+            if code.is_empty() {
+                continue;
+            }
+            deny_codes.insert(code.to_string());
+        }
+    }
+    Ok(PerfHintGateOptions {
+        enabled,
+        min_severity,
+        deny_codes,
+    })
+}
+
+fn perf_hint_gate_failures_for_triage_json(
+    script_key: &str,
+    bundle_path: &Path,
+    run_index: Option<u64>,
+    triage: &serde_json::Value,
+    opts: &PerfHintGateOptions,
+) -> Vec<serde_json::Value> {
+    if !opts.enabled {
+        return Vec::new();
+    }
+
+    let hints = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    if hints.is_empty() {
+        return Vec::new();
+    }
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    for hint in hints {
+        let code = hint.get("code").and_then(|v| v.as_str()).unwrap_or("");
+        if code.is_empty() {
+            continue;
+        }
+        let sev_str = hint
+            .get("severity")
+            .and_then(|v| v.as_str())
+            .unwrap_or("info");
+        let sev = PerfHintSeverity::parse(sev_str).unwrap_or(PerfHintSeverity::Info);
+
+        let is_denied = if opts.deny_codes.is_empty() {
+            true
+        } else {
+            opts.deny_codes.contains(code)
+        };
+        if !is_denied {
+            continue;
+        }
+        if sev < opts.min_severity {
+            continue;
+        }
+
+        failures.push(serde_json::json!({
+            "script": script_key,
+            "bundle": bundle_path.display().to_string(),
+            "run_index": run_index,
+            "code": code,
+            "severity": sev.as_str(),
+            "hint": hint,
+        }));
+    }
+    failures
 }
 
 fn zip_add_root_artifacts(
@@ -10154,6 +10145,7 @@ fn zip_add_root_artifacts(
         "check.pixels_changed.json",
         "check.idle_no_paint.json",
         "check.perf_thresholds.json",
+        "check.perf_hints.json",
         "check.redraw_hitches.json",
         "check.resource_footprint.json",
         "check.view_cache_reuse_stable.json",
@@ -10296,6 +10288,7 @@ fn write_evidence_index(
     add_file("check.idle_no_paint", "check.idle_no_paint.json");
     add_file("check.pixels_changed", "check.pixels_changed.json");
     add_file("check.perf_thresholds", "check.perf_thresholds.json");
+    add_file("check.perf_hints", "check.perf_hints.json");
     add_file("check.redraw_hitches", "check.redraw_hitches.json");
     add_file("check.resource_footprint", "check.resource_footprint.json");
     add_file(
@@ -10698,79 +10691,6 @@ fn parse_bool(s: &str) -> Result<bool, ()> {
     }
 }
 
-pub(crate) fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
-    if path.is_absolute() {
-        path
-    } else {
-        workspace_root.join(path)
-    }
-}
-
-fn normalize_host_path_separators(path: PathBuf) -> PathBuf {
-    #[cfg(windows)]
-    {
-        return PathBuf::from(path.to_string_lossy().replace('/', "\\"));
-    }
-    #[cfg(not(windows))]
-    {
-        path
-    }
-}
-
-fn expand_script_inputs(workspace_root: &Path, inputs: &[String]) -> Result<Vec<PathBuf>, String> {
-    let mut set: BTreeSet<PathBuf> = BTreeSet::new();
-
-    for input in inputs {
-        let resolved = resolve_path(workspace_root, PathBuf::from(input));
-
-        // Directory input: treat as recursive `**/*.json` to support suite-like workflows.
-        if resolved.is_dir() {
-            let mut pattern = resolved.to_string_lossy().to_string();
-            pattern = pattern.replace('\\', "/");
-            if !pattern.ends_with('/') {
-                pattern.push('/');
-            }
-            pattern.push_str("**/*.json");
-
-            let mut any = false;
-            for entry in glob::glob(&pattern).map_err(|e| e.to_string())? {
-                let path = entry.map_err(|e| e.to_string())?;
-                set.insert(normalize_host_path_separators(path));
-                any = true;
-            }
-            if !any {
-                return Err(format!(
-                    "script input matched no files: {input} ({pattern})"
-                ));
-            }
-            continue;
-        }
-
-        // Wildcard input: expand via glob. (PowerShell doesn't always expand globs for child args.)
-        if input.contains('*') || input.contains('?') || input.contains('[') {
-            let mut pattern = resolved.to_string_lossy().to_string();
-            pattern = pattern.replace('\\', "/");
-
-            let mut any = false;
-            for entry in glob::glob(&pattern).map_err(|e| e.to_string())? {
-                let path = entry.map_err(|e| e.to_string())?;
-                set.insert(normalize_host_path_separators(path));
-                any = true;
-            }
-            if !any {
-                return Err(format!(
-                    "script input matched no files: {input} ({pattern})"
-                ));
-            }
-            continue;
-        }
-
-        set.insert(resolved);
-    }
-
-    Ok(set.into_iter().collect())
-}
-
 fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
     let reason_code = "tooling.artifact.integrity.failed";
     let kind = "tooling_artifact_integrity_failed";
@@ -10821,7 +10741,7 @@ fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
     );
 }
 
-fn resolve_bundle_json_path(path: &Path) -> PathBuf {
+pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     if !path.is_dir() {
         return path.to_path_buf();
     }
@@ -11948,7 +11868,7 @@ fn ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(script: &Pa
     )
 }
 
-fn script_requests_screenshots(script: &Path) -> bool {
+pub(crate) fn script_requests_screenshots(script: &Path) -> bool {
     let Ok(bytes) = std::fs::read(script) else {
         return false;
     };
@@ -12893,6 +12813,7 @@ fn run_script_over_transport(
     connected: &ConnectedToolingTransport,
     script_json: serde_json::Value,
     dump_bundle: bool,
+    trace_chrome: bool,
     bundle_label: Option<&str>,
     dump_max_snapshots: Option<u32>,
     timeout_ms: u64,
@@ -13091,6 +13012,21 @@ fn run_script_over_transport(
             }
         };
         write_run_id_bundle_json(out_dir, result.run_id, &bundle_path);
+        if trace_chrome {
+            let run_dir = run_id_artifact_dir(out_dir, result.run_id);
+            let stable_bundle_path = run_dir.join("bundle.json");
+            let src = if stable_bundle_path.is_file() {
+                stable_bundle_path
+            } else {
+                bundle_path.clone()
+            };
+            let trace_path = run_dir.join("trace.chrome.json");
+            if let Err(err) = crate::trace::write_chrome_trace_from_bundle_path(&src, &trace_path) {
+                push_tooling_event_log_entry(&mut result, "tooling_trace_chrome_failed", Some(err));
+            } else {
+                refresh_run_id_manifest_file_index(out_dir, result.run_id);
+            }
+        }
         result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));
         result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(&bundle_path));
         Some(bundle_path)
@@ -14897,6 +14833,7 @@ mod tests {
                 &connected,
                 script_json,
                 false,
+                false,
                 None,
                 None,
                 5_000,
@@ -14991,6 +14928,7 @@ mod tests {
             &root,
             &connected,
             script_json,
+            false,
             false,
             None,
             None,
@@ -15171,6 +15109,7 @@ mod tests {
             &connected,
             script_json,
             false,
+            false,
             None,
             None,
             5_000,
@@ -15339,6 +15278,7 @@ mod tests {
             &connected,
             script_json,
             true,
+            false,
             Some("dump"),
             None,
             5_000,
@@ -15356,6 +15296,301 @@ mod tests {
 
         let run_id_bundle = root.join("1").join("bundle.json");
         assert!(run_id_bundle.is_file(), "expected run_id bundle.json alias");
+    }
+
+    #[test]
+    fn run_script_over_transport_dump_bundle_with_trace_writes_run_id_trace_chrome_json() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-run-dump-trace-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["script_v2".to_string()],
+        };
+        crate::util::write_json_value(
+            &root.join("capabilities.json"),
+            &serde_json::to_value(caps).expect("capabilities json"),
+        )
+        .expect("write capabilities.json");
+
+        let cfg = crate::transport::FsDiagTransportConfig::from_out_dir(&root);
+
+        let runtime_cfg = cfg.clone();
+        std::thread::spawn(move || {
+            fn read_stamp(path: &Path) -> Option<u64> {
+                let s = std::fs::read_to_string(path).ok()?;
+                s.lines().last()?.trim().parse::<u64>().ok()
+            }
+
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while Instant::now() < deadline {
+                if read_stamp(&runtime_cfg.script_trigger_path).is_some() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+
+            let passed = fret_diag_protocol::UiScriptResultV1 {
+                schema_version: 1,
+                run_id: 1,
+                updated_unix_ms: crate::util::now_unix_ms(),
+                window: None,
+                stage: fret_diag_protocol::UiScriptStageV1::Passed,
+                step_index: Some(0),
+                reason_code: None,
+                reason: None,
+                evidence: None,
+                last_bundle_dir: None,
+                last_bundle_artifact: None,
+            };
+            let _ = crate::util::write_json_value(
+                &runtime_cfg.script_result_path,
+                &serde_json::to_value(passed).unwrap_or_else(|_| serde_json::json!({})),
+            );
+            let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while Instant::now() < deadline {
+                if read_stamp(&runtime_cfg.trigger_path).is_some() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+
+            let export_dir = runtime_cfg.out_dir.join("777-bundle");
+            let _ = std::fs::create_dir_all(&export_dir);
+            let _ = crate::util::write_json_value(
+                &export_dir.join("bundle.json"),
+                &serde_json::json!({
+                    "schema_version": 1,
+                    "windows": [],
+                }),
+            );
+            let _ = std::fs::write(runtime_cfg.out_dir.join("latest.txt"), b"777-bundle");
+        });
+
+        let connected =
+            connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 5_000, 5)
+                .expect("connect fs tooling");
+
+        let tool_script_result_path = root.join("tool.script.result.json");
+        let capabilities_check_path = root.join("check.capabilities.json");
+        let script_json = serde_json::json!({
+            "schema_version": 2,
+            "steps": [],
+        });
+
+        let (result, bundle_path) = run_script_over_transport(
+            &root,
+            &connected,
+            script_json,
+            true,
+            true,
+            Some("dump"),
+            None,
+            5_000,
+            5,
+            &tool_script_result_path,
+            &capabilities_check_path,
+        )
+        .expect("run_script_over_transport");
+
+        assert!(matches!(
+            result.stage,
+            fret_diag_protocol::UiScriptStageV1::Passed
+        ));
+        assert!(bundle_path.is_some());
+
+        let trace_path = root.join("1").join("trace.chrome.json");
+        assert!(trace_path.is_file(), "expected run_id trace.chrome.json");
+
+        let manifest_path = root.join("1").join("manifest.json");
+        let bytes = std::fs::read(&manifest_path).expect("read manifest.json");
+        let parsed: serde_json::Value = serde_json::from_slice(&bytes).expect("parse manifest");
+        let ids = parsed
+            .get("files")
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(|f| f.get("id").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+        assert!(ids.contains(&"trace_chrome_json"));
+    }
+
+    #[test]
+    fn triage_includes_hints_and_unit_costs_for_worst_frame() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-triage-hints-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "events": [],
+                "snapshots": [{
+                    "schema_version": 1,
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "window": 1,
+                    "timestamp_unix_ms": 123,
+                    "debug": { "stats": {
+                        "layout_time_us": 10_000,
+                        "prepaint_time_us": 0,
+                        "paint_time_us": 0,
+                        "layout_engine_solves": 1,
+                        "layout_engine_solve_time_us": 7_000,
+                        "layout_observation_record_time_us": 3_000,
+                        "layout_observation_record_models_items": 100,
+                        "layout_observation_record_globals_items": 0,
+                        "paint_text_prepare_time_us": 2_500,
+                        "paint_text_prepare_calls": 10,
+                        "paint_text_prepare_reason_text_changed": 10,
+                        "renderer_text_atlas_upload_bytes": 2_000_000,
+                    } }
+                }]
+            }]
+        });
+
+        let bundle_path = root.join("bundle.json");
+        crate::util::write_json_value(&bundle_path, &bundle).expect("write bundle.json");
+
+        let report = crate::stats::bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Time,
+            crate::stats::BundleStatsOptions::default(),
+        )
+        .expect("bundle stats");
+
+        let triage = triage_json_from_stats(&bundle_path, &report, BundleStatsSort::Time, 0);
+        let codes = triage
+            .get("hints")
+            .and_then(|v| v.as_array())
+            .unwrap()
+            .iter()
+            .filter_map(|h| h.get("code").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+
+        assert!(codes.contains(&"layout.observation_heavy"));
+        assert!(codes.contains(&"layout.solve_heavy"));
+        assert!(codes.contains(&"paint.text_prepare_churn"));
+        assert!(codes.contains(&"renderer.upload_churn"));
+
+        assert_eq!(
+            triage
+                .get("unit_costs")
+                .and_then(|v| v.get("layout_engine_solve_us_per_solve"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            7_000
+        );
+    }
+
+    #[test]
+    fn perf_hints_gate_reports_failures_for_denied_warn_hints() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-perf-hints-gate-{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "events": [],
+                "snapshots": [{
+                    "schema_version": 1,
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "window": 1,
+                    "timestamp_unix_ms": 123,
+                    "debug": { "stats": {
+                        "layout_time_us": 10_000,
+                        "prepaint_time_us": 0,
+                        "paint_time_us": 0,
+                        "layout_engine_solves": 1,
+                        "layout_engine_solve_time_us": 7_000,
+                        "layout_observation_record_time_us": 3_000,
+                        "layout_observation_record_models_items": 100,
+                        "layout_observation_record_globals_items": 0,
+                        "paint_text_prepare_time_us": 2_500,
+                        "paint_text_prepare_calls": 10,
+                        "paint_text_prepare_reason_text_changed": 10,
+                        "renderer_text_atlas_upload_bytes": 2_000_000,
+                    } }
+                }]
+            }]
+        });
+
+        let bundle_path = root.join("bundle.json");
+        crate::util::write_json_value(&bundle_path, &bundle).expect("write bundle.json");
+
+        let report = crate::stats::bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Time,
+            crate::stats::BundleStatsOptions::default(),
+        )
+        .expect("bundle stats");
+
+        let triage = triage_json_from_stats(&bundle_path, &report, BundleStatsSort::Time, 0);
+
+        let deny_specs: Vec<String> = Vec::new();
+        let opts =
+            parse_perf_hint_gate_options(true, &deny_specs, None).expect("parse hint gate opts");
+        let failures = perf_hint_gate_failures_for_triage_json(
+            "script.json",
+            &bundle_path,
+            Some(0),
+            &triage,
+            &opts,
+        );
+        let codes = failures
+            .iter()
+            .filter_map(|f| f.get("code").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+        assert!(codes.contains(&"layout.observation_heavy"));
+        assert!(codes.contains(&"layout.solve_heavy"));
+        assert!(codes.contains(&"paint.text_prepare_churn"));
+        assert!(!codes.contains(&"renderer.upload_churn"));
+
+        let deny_specs = vec!["renderer.upload_churn".to_string()];
+        let opts = parse_perf_hint_gate_options(true, &deny_specs, Some("info"))
+            .expect("parse hint gate opts");
+        let failures = perf_hint_gate_failures_for_triage_json(
+            "script.json",
+            &bundle_path,
+            Some(0),
+            &triage,
+            &opts,
+        );
+        assert_eq!(failures.len(), 1);
+        assert_eq!(
+            failures[0].get("code").and_then(|v| v.as_str()),
+            Some("renderer.upload_churn")
+        );
     }
 
     #[test]

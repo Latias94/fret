@@ -172,21 +172,31 @@ pub(super) fn pop_clip(state: &mut EncodeState<'_>) {
         }
     }
 
-    if let Some(ClipPop::Shader { prev_head }) = state.clip_pop_stack.pop() {
-        state.flush_quad_batch();
-        state.clip_count = state.clip_count.saturating_sub(1);
-        state.clip_head = if state.clip_count == 0 || prev_head == u32::MAX {
-            0
-        } else {
-            prev_head
-        };
-        state.current_uniform_index = state.push_uniform_snapshot(
-            state.clip_head,
-            state.clip_count,
-            state.mask_head,
-            state.mask_count,
-            state.mask_scope_head,
-            state.mask_scope_count,
-        );
+    match state.clip_pop_stack.pop() {
+        Some(ClipPop::NoShader) | None => {}
+        Some(ClipPop::Path) => {
+            state.flush_quad_batch();
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::ClipPathPop,
+            });
+        }
+        Some(ClipPop::Shader { prev_head }) => {
+            state.flush_quad_batch();
+            state.clip_count = state.clip_count.saturating_sub(1);
+            state.clip_head = if state.clip_count == 0 || prev_head == u32::MAX {
+                0
+            } else {
+                prev_head
+            };
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
+        }
     }
 }

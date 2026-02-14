@@ -24,26 +24,50 @@ fn split_log(_args: std::fmt::Arguments<'_>) {
             return;
         }
 
-        static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
+        static LOG_FILE: OnceLock<Mutex<Option<std::fs::File>>> = OnceLock::new();
         let file = LOG_FILE.get_or_init(|| {
             let _ = std::fs::create_dir_all("target");
             let path = std::path::Path::new("target").join("fret-resizable-split.log");
-            let mut file = std::fs::OpenOptions::new()
+            let file = std::fs::OpenOptions::new()
                 .create(true)
                 .write(true)
                 .truncate(true)
-                .open(path)
-                .expect("open fret-resizable-split.log");
-            let _ = writeln!(
-                file,
-                "[session] pid={} time={:?}",
-                std::process::id(),
-                std::time::SystemTime::now()
-            );
+                .open(&path);
+
+            let file = match file {
+                Ok(mut file) => {
+                    let _ = writeln!(
+                        file,
+                        "[session] pid={} time={:?}",
+                        std::process::id(),
+                        std::time::SystemTime::now()
+                    );
+                    Some(file)
+                }
+                Err(err) => {
+                    if crate::strict_runtime::strict_runtime_enabled() {
+                        panic!(
+                            "open resizable split log failed: path={:?} err={err:?}",
+                            path
+                        );
+                    }
+
+                    tracing::warn!(
+                        ?err,
+                        path = ?path,
+                        "open resizable split log failed; disabling split log output for this process"
+                    );
+                    None
+                }
+            };
+
             Mutex::new(file)
         });
 
         let Ok(mut file) = file.lock() else {
+            return;
+        };
+        let Some(file) = file.as_mut() else {
             return;
         };
         let _ = writeln!(file, "{}", _args);

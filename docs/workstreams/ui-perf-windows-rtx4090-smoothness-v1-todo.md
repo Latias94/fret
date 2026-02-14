@@ -10,6 +10,9 @@
 
 - [ ] Font rescan: confirm worst bundles do not include `TextFontStackKey` bumps inside measured windows.
 - [ ] Resize tails: if failures persist, classify top frames by `layout_time_us` vs `paint_time_us`.
+- [ ] `ui-gallery-steady`: investigate baseline failures after merging recent `main`:
+  - [ ] `ui-gallery-view-cache-toggle-perf-steady` outlier dominated by `layout_time_us`
+  - [ ] minor deltas in `material3-tabs-switch-perf-steady` and `virtual-list-torture-steady`
 
 ## P1 — Tooling / Protocol
 

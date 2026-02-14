@@ -1,6 +1,6 @@
 # Runtime Safety Hardening v1 — TODO Tracker
 
-Status: Draft
+Status: Active (follow-ups)
 
 This document tracks tasks for:
 
@@ -26,12 +26,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - `cargo nextest run -p fret-ui`
   - `cargo nextest run -p fret-app`
   - `python3 tools/check_layering.py`
-  - Last verified: 2026-02-13
-  - Current status (as of this branch):
+  - Full gate set last verified: 2026-02-14
+  - 2026-02-14 verification notes:
     - `cargo nextest run -p fret-runtime`: PASS
     - `cargo nextest run -p fret-ui`: PASS
     - `cargo nextest run -p fret-app`: PASS
     - `python3 tools/check_layering.py`: PASS
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+  - Windows note: prefer `cargo fmt -p <crate>` for targeted formatting (workspace-wide `cargo fmt` may fail with `os error 206` on long paths).
 
 ## M1 — `ModelStore v2` (remove public leasing; no panicking reads)
 
@@ -108,3 +110,98 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] RSH-clippy-001 Make `cargo clippy` pass with `-D warnings` for the workstream crates.
   - Evidence: `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
   - Evidence: `cargo clippy -p fret-app --all-targets -- -D warnings`: PASS
+
+## M6 — Local `unsafe` tightening (fret-ui follow-ups)
+
+- [x] RSH-ui-001 Remove avoidable `unsafe` from `TestHost` globals leasing.
+  - Evidence: `crates/fret-ui/src/test_host.rs` (`TestHost::with_globals` no longer uses pointer writes)
+  - Evidence: `cargo nextest run -p fret-ui`: PASS
+- [x] RSH-ui-002 Add regression gates for small inline list invariants (inline ↔ spill boundaries, stable ordering).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (tests: `small_list_tests::*`)
+- [x] RSH-ui-003 Tighten `unsafe` in `SmallNodeList` / `SmallCopyList` slice views and spill conversion.
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`assume_init_slice_ref`; `Small{Node,Copy}List::as_slice` debug asserts `len <= N`)
+- [x] RSH-clippy-002 Fix clippy `items_after_test_module` in `fret-ui`.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/paint.rs` (tests moved to file end)
+
+## M7 — Defensive panic hardening (fret-app follow-ups)
+
+- [x] RSH-global-003 Make `with_global_mut` resilient to corrupted globals state (non-strict mode recovers; strict mode panics).
+  - Evidence: `crates/fret-app/src/app.rs` (`with_global_mut_impl`: downcast/marker validation no longer panics by default)
+  - Evidence: `crates/fret-app/src/app.rs` (tests: `with_global_mut_recovers_from_corrupt_existing_global_value_in_non_strict_mode`, `with_global_mut_recovers_when_lease_marker_is_removed_in_non_strict_mode`)
+  - Gates:
+    - `cargo clippy -p fret-app --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-app`: PASS
+    - `python3 tools/check_layering.py`: PASS
+
+## M8 — Defensive panic hardening (fret-ui follow-ups)
+
+- [x] RSH-ui-004 Make element state access resilient to corruption (type mismatches) and unwind-safe by default (strict mode panics).
+  - Evidence: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementState::{with_state_mut, try_with_state_mut}`)
+  - Evidence: `crates/fret-ui/src/elements/access.rs` (tests: `with_element_state_recovers_from_type_mismatch_in_non_strict_mode`, `with_element_state_restores_state_on_panic`)
+- [x] RSH-ui-005 Remove `expect("text input/text area")` from declarative host widgets (defensive debug assertions + stable fallbacks).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/paint.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/semantics.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/event/text.rs`
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui`: PASS
+    - `python3 tools/check_layering.py`: PASS
+
+## M9 — Panic surface audit (fret-ui follow-ups)
+
+- [x] RSH-ui-006 Remove "checked above" `expect(...)` and redundant `Option` unwrapping in input/dispatch hot paths.
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs`
+  - Evidence: `crates/fret-ui/src/text/input/widget.rs`
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui`: PASS
+    - `python3 tools/check_layering.py`: PASS
+- [x] RSH-ui-007 Decide policy for `taffy` error handling (avoid `expect(...)` on layout engine operations).
+  - Policy (v1):
+    - Strict mode (`FRET_STRICT_RUNTIME`): panic on `taffy` errors.
+    - Default (non-strict): warn once + fall back to naive measurement/layout (no process termination).
+  - Evidence (implemented for host-widget measurement):
+    - `crates/fret-ui/src/declarative/host_widget/measure.rs` (`warn_taffy_error_once`, `fallback_measure_{flex,grid}`)
+  - Evidence (implemented for layout engine):
+    - `crates/fret-ui/src/layout/engine.rs` (`TaffyLayoutEngine::warn_taffy_error_once`, `request_layout_node -> Option<LayoutId>`)
+    - `crates/fret-ui/src/layout/engine.rs` (layout solve skips `mark_solved_subtree` when `compute_layout_with_measure` fails, enabling widget fallback)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui`: PASS
+    - `python3 tools/check_layering.py`: PASS
+
+- [x] RSH-ui-008 Remove redundant text metrics `expect(...)` in declarative host-widget layout (defensive fallback for cache corruption).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout.rs` (remove `expect("cached metrics")`; re-prepare text when metrics missing)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui declarative::host_widget`: PASS
+
+- [x] RSH-ui-009 Remove remaining non-test `expect(...)` in layout engine debug/profiling paths.
+  - Evidence: `crates/fret-ui/src/layout/engine.rs` (profiling no longer uses `expect("profile entry inserted")`; debug dump JSON serialization is non-panicking by default)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui layout::engine`: PASS
+
+- [x] RSH-ui-010 Make `unstable-retained-bridge` factory downcast non-panicking by default (strict mode panics).
+  - Evidence: `crates/fret-ui/src/retained_bridge.rs` (`RetainedSubtreeFactory::build`)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+
+- [x] RSH-ui-011 Make `UiTree::with_widget_mut` non-panicking by default and unwind-safe (restores widget slot before resuming unwind).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`UiTree::with_widget_mut`)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui tree::`: PASS
+
+- [x] RSH-ui-012 Make debug logging paths non-panicking by default (strict mode panics).
+  - Evidence: `crates/fret-ui/src/resizable_split/widget.rs` (opening `target/fret-resizable-split.log` is non-panicking by default)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+
+- [x] RSH-ui-013 Remove `.unwrap()` from default theme hex color parsing (strict mode panics).
+  - Evidence: `crates/fret-ui/src/theme/mod.rs` (`parse_default_theme_hex_color`, `warn_invalid_default_theme_color_once`)
+  - Gates:
+    - `cargo clippy -p fret-ui --all-targets -- -D warnings`: PASS
+    - `cargo nextest run -p fret-ui theme::`: PASS

@@ -19,6 +19,41 @@ const FALLBACK_COLOR: Color = Color {
     a: 1.0,
 };
 
+fn warn_invalid_default_theme_color_once(name: &str, value: &str) -> bool {
+    static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+    let seen = SEEN.get_or_init(|| Mutex::new(HashSet::new()));
+    let mut seen = match seen.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+
+    let k = format!("{name}:{value}");
+    if !seen.insert(k) {
+        return false;
+    }
+
+    tracing::warn!(
+        color_name = name,
+        color_value = value,
+        "invalid default theme color; using fallback"
+    );
+    true
+}
+
+fn parse_default_theme_hex_color(name: &str, value: &str) -> Color {
+    match parse_hex_srgb_to_linear(value) {
+        Some(color) => color,
+        None => {
+            if strict_theme_enabled() {
+                panic!("invalid default theme color {name}: {value}");
+            }
+            warn_invalid_default_theme_color_once(name, value);
+            FALLBACK_COLOR
+        }
+    }
+}
+
 fn fallback_easing() -> CubicBezier {
     CubicBezier {
         x1: 0.0,
@@ -1773,38 +1808,65 @@ fn default_theme() -> &'static Theme {
             mono_font_line_height: Px(16.0),
         };
         let colors = ThemeColors {
-            surface_background: parse_hex_srgb_to_linear("#24272E").unwrap(),
-            panel_background: parse_hex_srgb_to_linear("#2B3038").unwrap(),
-            panel_border: parse_hex_srgb_to_linear("#3A424D").unwrap(),
-            text_primary: parse_hex_srgb_to_linear("#D7DEE9").unwrap(),
-            text_muted: parse_hex_srgb_to_linear("#AAB3C2").unwrap(),
-            text_disabled: parse_hex_srgb_to_linear("#7D8798").unwrap(),
-            accent: parse_hex_srgb_to_linear("#3D8BFF").unwrap(),
-            selection_background: parse_hex_srgb_to_linear("#3D8BFF66").unwrap(),
-            hover_background: parse_hex_srgb_to_linear("#363C46").unwrap(),
-            focus_ring: parse_hex_srgb_to_linear("#3D8BFFCC").unwrap(),
-            menu_background: parse_hex_srgb_to_linear("#2B3038").unwrap(),
-            menu_border: parse_hex_srgb_to_linear("#3A424D").unwrap(),
-            menu_item_hover: parse_hex_srgb_to_linear("#363C46").unwrap(),
-            menu_item_selected: parse_hex_srgb_to_linear("#3D8BFF66").unwrap(),
-            list_background: parse_hex_srgb_to_linear("#2B3038").unwrap(),
-            list_border: parse_hex_srgb_to_linear("#3A424D").unwrap(),
-            list_row_hover: parse_hex_srgb_to_linear("#363C46").unwrap(),
-            list_row_selected: parse_hex_srgb_to_linear("#3D8BFF66").unwrap(),
-            scrollbar_track: parse_hex_srgb_to_linear("#1C1F25").unwrap(),
-            scrollbar_thumb: parse_hex_srgb_to_linear("#4C5666").unwrap(),
-            scrollbar_thumb_hover: parse_hex_srgb_to_linear("#5A687D").unwrap(),
+            surface_background: parse_default_theme_hex_color("surface_background", "#24272E"),
+            panel_background: parse_default_theme_hex_color("panel_background", "#2B3038"),
+            panel_border: parse_default_theme_hex_color("panel_border", "#3A424D"),
+            text_primary: parse_default_theme_hex_color("text_primary", "#D7DEE9"),
+            text_muted: parse_default_theme_hex_color("text_muted", "#AAB3C2"),
+            text_disabled: parse_default_theme_hex_color("text_disabled", "#7D8798"),
+            accent: parse_default_theme_hex_color("accent", "#3D8BFF"),
+            selection_background: parse_default_theme_hex_color(
+                "selection_background",
+                "#3D8BFF66",
+            ),
+            hover_background: parse_default_theme_hex_color("hover_background", "#363C46"),
+            focus_ring: parse_default_theme_hex_color("focus_ring", "#3D8BFFCC"),
+            menu_background: parse_default_theme_hex_color("menu_background", "#2B3038"),
+            menu_border: parse_default_theme_hex_color("menu_border", "#3A424D"),
+            menu_item_hover: parse_default_theme_hex_color("menu_item_hover", "#363C46"),
+            menu_item_selected: parse_default_theme_hex_color("menu_item_selected", "#3D8BFF66"),
+            list_background: parse_default_theme_hex_color("list_background", "#2B3038"),
+            list_border: parse_default_theme_hex_color("list_border", "#3A424D"),
+            list_row_hover: parse_default_theme_hex_color("list_row_hover", "#363C46"),
+            list_row_selected: parse_default_theme_hex_color("list_row_selected", "#3D8BFF66"),
+            scrollbar_track: parse_default_theme_hex_color("scrollbar_track", "#1C1F25"),
+            scrollbar_thumb: parse_default_theme_hex_color("scrollbar_thumb", "#4C5666"),
+            scrollbar_thumb_hover: parse_default_theme_hex_color(
+                "scrollbar_thumb_hover",
+                "#5A687D",
+            ),
 
-            viewport_selection_fill: parse_hex_srgb_to_linear("#3D8BFF29").unwrap(),
-            viewport_selection_stroke: parse_hex_srgb_to_linear("#3D8BFFCC").unwrap(),
-            viewport_marker: parse_hex_srgb_to_linear("#3D8BFFFF").unwrap(),
-            viewport_drag_line_pan: parse_hex_srgb_to_linear("#33E684D9").unwrap(),
-            viewport_drag_line_orbit: parse_hex_srgb_to_linear("#FFC44AD9").unwrap(),
-            viewport_gizmo_x: parse_hex_srgb_to_linear("#E74C3CFF").unwrap(),
-            viewport_gizmo_y: parse_hex_srgb_to_linear("#2ECC71FF").unwrap(),
-            viewport_gizmo_handle_background: parse_hex_srgb_to_linear("#1E2229FF").unwrap(),
-            viewport_gizmo_handle_border: parse_hex_srgb_to_linear("#D7DEE9FF").unwrap(),
-            viewport_rotate_gizmo: parse_hex_srgb_to_linear("#FFC44AFF").unwrap(),
+            viewport_selection_fill: parse_default_theme_hex_color(
+                "viewport_selection_fill",
+                "#3D8BFF29",
+            ),
+            viewport_selection_stroke: parse_default_theme_hex_color(
+                "viewport_selection_stroke",
+                "#3D8BFFCC",
+            ),
+            viewport_marker: parse_default_theme_hex_color("viewport_marker", "#3D8BFFFF"),
+            viewport_drag_line_pan: parse_default_theme_hex_color(
+                "viewport_drag_line_pan",
+                "#33E684D9",
+            ),
+            viewport_drag_line_orbit: parse_default_theme_hex_color(
+                "viewport_drag_line_orbit",
+                "#FFC44AD9",
+            ),
+            viewport_gizmo_x: parse_default_theme_hex_color("viewport_gizmo_x", "#E74C3CFF"),
+            viewport_gizmo_y: parse_default_theme_hex_color("viewport_gizmo_y", "#2ECC71FF"),
+            viewport_gizmo_handle_background: parse_default_theme_hex_color(
+                "viewport_gizmo_handle_background",
+                "#1E2229FF",
+            ),
+            viewport_gizmo_handle_border: parse_default_theme_hex_color(
+                "viewport_gizmo_handle_border",
+                "#D7DEE9FF",
+            ),
+            viewport_rotate_gizmo: parse_default_theme_hex_color(
+                "viewport_rotate_gizmo",
+                "#FFC44AFF",
+            ),
         };
 
         Theme {
