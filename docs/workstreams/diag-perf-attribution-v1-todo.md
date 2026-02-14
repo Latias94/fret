@@ -48,5 +48,6 @@
 ## Maintenance / hygiene
 
 - [ ] Add schema versioning for perf stats outputs (bundle + triage).
-- [ ] Add a “field inventory” doc section (keys + meaning + where measured).
+- [x] Add a “field inventory” doc section (keys + meaning + where measured):
+  - `docs/workstreams/diag-perf-attribution-v1-field-inventory.md`
 - [ ] Ensure additive-only changes unless a migration plan is documented.

@@ -41,6 +41,28 @@ This workstream proposes a **fearless refactor** of the perf diagnostics surface
 - Record/Replay GPU command streams.
 - Add a brand-new script format (we remain compatible with existing JSON scripts).
 
+## Comparative notes (how other frameworks tend to do this)
+
+Common patterns seen in mature UI stacks:
+
+1. **Three-lane profiling**
+   - Always-on cheap counters + coarse timings (for regression gates).
+   - Opt-in structured spans (for attribution and review).
+   - External sampling profilers (for “unknown unknowns” and OS-level context).
+2. **Stable names matter**
+   - Frameworks that scale treat event names/keys as a contract (renames are migrations).
+3. **Frame boundaries are first-class**
+   - Profilers want an explicit “frame finished” marker; otherwise traces are hard to read.
+
+Concrete reference in `repo-ref/`:
+
+- Zed/GPUI uses the `profiling` crate style (`#[profiling::function]`, `profiling::scope!`,
+  `profiling::finish_frame!()`), which maps well to Tracy-style workflows.
+
+Fret already has a solid base (`tracing` spans in the app driver + optional Tracy wiring via
+`ecosystem/fret-bootstrap`), but we still need a tighter artifact story and a clearer field inventory
+for reviewers.
+
 ## Progress (2026-02-14)
 
 Shipped in this workstream (commit-addressable, additive changes):
@@ -60,7 +82,8 @@ Remaining gaps / follow-ups:
 
 - Perf schema versioning for perf stats outputs (bundle + triage + perf checks).
 - Opt-in “real spans” tracing (beyond synthetic phase timelines), with a stable artifact story.
-- A field inventory doc (keys + meaning + where measured) to reduce tribal knowledge.
+- A field inventory doc (keys + meaning + where measured) to reduce tribal knowledge:
+  - `docs/workstreams/diag-perf-attribution-v1-field-inventory.md`
 
 ## Proposed architecture (v1)
 
