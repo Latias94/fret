@@ -170,6 +170,7 @@ pub struct SceneOpTileWarmupOutcome {
 /// - Callers choose the tile list ordering (e.g. center-first).
 /// - Callers define how replay deltas and tile ops are computed.
 /// - One budget "unit" typically corresponds to building one tile (configurable via `units_per_tile`).
+#[allow(clippy::too_many_arguments)]
 pub fn warm_scene_op_tiles_u64<ReplayDeltaForTile, OpsForTile>(
     cache: &mut SceneOpTileCache<u64>,
     scene: &mut Scene,
@@ -217,6 +218,7 @@ where
 ///
 /// This is useful for replay caches that must keep renderer-owned resources alive (e.g. by touching
 /// `TextBlobId`/`PathId`/`SvgId` caches) before replaying ops.
+#[allow(clippy::too_many_arguments)]
 pub fn warm_scene_op_tiles_u64_with<ReplayDeltaForTile, OnHit, OpsForTile>(
     cache: &mut SceneOpTileCache<u64>,
     scene: &mut Scene,

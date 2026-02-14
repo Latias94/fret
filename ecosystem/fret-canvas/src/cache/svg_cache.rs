@@ -87,6 +87,10 @@ impl SvgCache {
         self.entries.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
     pub fn bytes_ready(&self) -> u64 {
         self.bytes_ready
     }

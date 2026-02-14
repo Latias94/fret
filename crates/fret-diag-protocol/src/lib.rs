@@ -307,18 +307,15 @@ pub enum UiWindowTargetV1 {
     WindowFfi { window: u64 },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiInsetsOverrideV1 {
+    #[default]
     NoChange,
     Clear,
-    Set { insets_px: UiPaddingInsetsV1 },
-}
-
-impl Default for UiInsetsOverrideV1 {
-    fn default() -> Self {
-        Self::NoChange
-    }
+    Set {
+        insets_px: UiPaddingInsetsV1,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1268,7 +1265,7 @@ pub struct DevtoolsBundleDumpedV1 {
     ///
     /// When present, the runtime may send multiple `bundle.dumped` messages (same `exported_unix_ms`
     /// + `dir`) each carrying one chunk. Tooling should reassemble chunks in order to reconstruct
-    /// the full JSON payload.
+    ///   the full JSON payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundle_json_chunk: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

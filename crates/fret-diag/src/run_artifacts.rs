@@ -172,7 +172,12 @@ pub(crate) fn write_run_id_manifest_json(out_dir: &Path, run_id: u64, result: &U
     manifest.last_bundle_dir = result.last_bundle_dir.clone();
     manifest.last_bundle_artifact = result.last_bundle_artifact.clone();
 
-    push_file_entry_if_present(&mut manifest, &dir, "script_result_json", "script.result.json");
+    push_file_entry_if_present(
+        &mut manifest,
+        &dir,
+        "script_result_json",
+        "script.result.json",
+    );
     let _ = write_json_value(
         &path,
         &serde_json::to_value(&manifest).unwrap_or_else(|_| serde_json::json!({})),
@@ -325,7 +330,12 @@ fn update_run_id_manifest_with_bundle_json_chunks(
 
     // Refresh file index (bounded to stable, small files; bundle.json is indexed via chunks).
     manifest.files.retain(|f| f.id != "script_result_json");
-    push_file_entry_if_present(&mut manifest, &dir, "script_result_json", "script.result.json");
+    push_file_entry_if_present(
+        &mut manifest,
+        &dir,
+        "script_result_json",
+        "script.result.json",
+    );
 
     let _ = write_json_value(
         &path,

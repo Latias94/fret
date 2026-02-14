@@ -3,10 +3,10 @@
 //! This crate is intentionally **ecosystem-level**:
 //! - it composes `fret-bootstrap` (golden-path wiring) with a default component surface,
 //! - it enables a practical desktop-first default stack,
-//! - it remains optional: advanced users can depend on `fret` + `fret-bootstrap` directly.
+//! - it remains optional: advanced users can depend on `fret-framework` + `fret-bootstrap` directly.
 
 #[cfg(all(feature = "icons-lucide", feature = "icons-radix"))]
-compile_error!("`fret-kit` features `icons-lucide` and `icons-radix` are mutually exclusive.");
+compile_error!("`fret` features `icons-lucide` and `icons-radix` are mutually exclusive.");
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 use fret_app::App;
@@ -22,7 +22,7 @@ pub use fret_workspace as workspace;
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
 pub use fret_icons::IconRegistry;
 
-/// Re-export `ViewElements` so app code can stay on the `fret-kit` surface.
+/// Re-export `ViewElements` so app code can stay on the `fret` surface.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use fret_bootstrap::ui_app_driver::ViewElements;
 
@@ -43,13 +43,13 @@ pub mod mvu_router;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod interop;
 
-/// Re-export the underlying `fret` facade (desktop builds).
+/// Re-export the kernel facade (desktop builds).
 #[cfg(feature = "desktop")]
-pub use fret;
+pub use fret_framework as kernel;
 
-/// Common imports for application code using `fret-kit`.
+/// Common imports for application code using `fret`.
 ///
-/// Recommended: `use fret_kit::prelude::*;`
+/// Recommended: `use fret::prelude::*;`
 pub mod prelude {
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop::embedded_viewport::{
@@ -125,7 +125,7 @@ pub struct BootstrapError(#[from] fret_bootstrap::BootstrapError);
 #[error(transparent)]
 pub struct RunnerError(#[from] fret_launch::RunnerError);
 
-/// A `UiAppDriver` wrapper used by `fret-kit` to avoid exposing `fret-bootstrap` types in signatures.
+/// A `UiAppDriver` wrapper used by `fret` to avoid exposing `fret-bootstrap` types in signatures.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub struct UiAppDriver<S> {
     inner: fret_bootstrap::ui_app_driver::UiAppDriver<S>,
@@ -279,8 +279,8 @@ impl<S> UiAppDriver<S> {
             fret_core::AppWindowId,
             &mut fret_ui::UiTree<App>,
             &mut S,
-            &crate::fret::render::WgpuContext,
-            &mut crate::fret::render::Renderer,
+            &crate::kernel::render::WgpuContext,
+            &mut crate::kernel::render::Renderer,
             f32,
             fret_runtime::TickId,
             fret_runtime::FrameId,
@@ -302,7 +302,7 @@ impl<S> UiAppDriver<S> {
     }
 }
 
-/// A `BootstrapBuilder` wrapper used by `fret-kit` to avoid exposing `fret-bootstrap` types in signatures.
+/// A `UiAppBuilder` wrapper used by `fret` to avoid exposing `fret-bootstrap` types in signatures.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub struct UiAppBuilder<S> {
     inner: fret_bootstrap::UiAppBootstrapBuilder<S>,
@@ -364,8 +364,11 @@ impl<S: 'static> UiAppBuilder<S> {
 
     pub fn on_gpu_ready(
         self,
-        f: impl FnOnce(&mut App, &crate::fret::render::WgpuContext, &mut crate::fret::render::Renderer)
-        + 'static,
+        f: impl FnOnce(
+            &mut App,
+            &crate::kernel::render::WgpuContext,
+            &mut crate::kernel::render::Renderer,
+        ) + 'static,
     ) -> Self {
         Self {
             inner: self.inner.on_gpu_ready(f),
@@ -381,7 +384,7 @@ impl<S: 'static> UiAppBuilder<S> {
 /// Run a native desktop demo using the `winit + wgpu` stack.
 ///
 /// This is a small convenience wrapper for examples that implement `WinitAppDriver` directly,
-/// keeping "how to boot the app" consistent with the `fret-kit` golden path.
+/// keeping "how to boot the app" consistent with the `fret` golden path.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     config: fret_launch::WinitRunnerConfig,

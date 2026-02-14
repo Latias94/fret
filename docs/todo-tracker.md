@@ -187,12 +187,12 @@ It complements (but does not replace) ADRs:
   - Current:
     - Roles/system menus are modeled (`MenuRole`, `SystemMenuType`) and `menubar.json` v2 can express them.
     - macOS runner honors roles (Window/App/Help) and Services system menu, and uses `OsAction` for standard edit selectors.
-    - Workspace baseline and `fret-kit` default workspace shell can inject an App menu (About/Preferences/Services/Hide/Hide Others/Show All/Quit) via commands.
+    - Workspace baseline and `fret` default workspace shell can inject an App menu (About/Preferences/Services/Hide/Hide Others/Show All/Quit) via commands.
     - `fret-bootstrap` handles `app.quit`/`app.hide*` by emitting platform effects (`QuitApp`/`HideApp`/`HideOtherApps`/`UnhideAllApps`), so these commands work by default in the golden path.
   - Remaining TODO:
     - define the remaining macOS App menu conventions (e.g. Hide Others/Show All wording, and standard “Hide Others” placement vs Services) and decide which are command-driven vs runner-native;
     - decide how the App menu title should be derived by default (bundle/app title vs explicit config).
-      - Current: `fret-bootstrap` seeds `AppDisplayName` from `WinitRunnerConfig.main_window_title`, and `fret-kit`
+      - Current: `fret-bootstrap` seeds `AppDisplayName` from `WinitRunnerConfig.main_window_title`, and `fret`
         uses it as the default `MenuRole::App` title (fallback `"App"`).
 
 - **Define quit semantics for menu + window close** (done)

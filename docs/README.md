@@ -40,13 +40,13 @@ contracts early to avoid large rewrites later.
 We intentionally keep the *user-facing* story to a small set of crate names:
 these are the only crate names we treat as stable entry points; internal crates may be renamed or reshuffled.
 
-- `fret-kit`: desktop-first batteries-included app entry points.
+- `fret`: desktop-first batteries-included app entry points (recommended).
 - `fret-ui-shadcn`: default component surface (shadcn/ui-aligned taxonomy + recipes).
 - `fret-ui-kit`: component authoring glue (policies + headless primitives + declarative helpers).
-- `fret`: framework facade for advanced/manual assembly and integrations.
+- `fret-framework`: framework facade for advanced/manual assembly and integrations.
 - `fretboard`: dev tooling (templates + native/web demo runner).
 
-Web/wasm runs through tooling (not through `fret-kit`):
+Web/wasm runs through tooling (not through `fret`):
 
 - `cargo run -p fretboard -- dev web --demo ui_gallery`
 
@@ -55,9 +55,9 @@ Web/wasm runs through tooling (not through `fret-kit`):
 Fret’s kernel primitives are intentionally small (`Model<T>`, explicit invalidation, driver-boundary inbox draining),
 so the default authoring story lives in ecosystem crates.
 
-- Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
-- Recommended building blocks:
-  - Typed UI → app routing (dynamic per-item actions): `fret-kit::mvu::MessageRouter<M>`
+  - Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
+  - Recommended building blocks:
+  - Typed UI → app routing (dynamic per-item actions): `fret::mvu::MessageRouter<M>`
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
 - Upgrade guidance (app authors): `docs/fearless-refactoring.md`
@@ -98,7 +98,7 @@ so the default authoring story lives in ecosystem crates.
 
 - End-to-end demo wiring (effects → runner → render): `apps/fret-examples/src/components_gallery.rs`
 - Todo app “golden path” (shadcn + bootstrap): `apps/fret-examples/src/todo_demo.rs` (or `fretboard dev native --bin todo_demo`)
-- Starter todo template generator: `fretboard new todo --name my-todo` (uses `fret-kit`; see `docs/examples/todo-app-golden-path.md`)
+- Starter todo template generator: `fretboard new todo --name my-todo` (uses `fret`; see `docs/examples/todo-app-golden-path.md`)
 - shadcn surface smoke test (components + overlays): `apps/fret-examples/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
 - Docking + viewport + overlays conformance harness (ADR 0072): `apps/fret-examples/src/docking_arbitration_demo.rs` (or `cargo run -p fret-demo --bin docking_arbitration_demo`; checklist: `docs/docking-arbitration-checklist.md`)
 - Plot demos (2D): `apps/fret-examples/src/plot_demo.rs` (or `cargo run -p fret-demo --bin plot_demo`; web: `apps/fret-demo-web` + `?demo=plot_demo`)

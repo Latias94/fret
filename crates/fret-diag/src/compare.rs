@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{UiDiagnosticsConfigFileV1, UiDiagnosticsConfigPathsV1};
@@ -620,7 +620,10 @@ pub(super) fn maybe_launch_demo(
             cfg.frame_clock_fixed_delta_ms = Some(parsed);
         }
     }
-    if let Some((_, v)) = launch_env.iter().find(|(k, _)| k == "FRET_DIAG_REDACT_TEXT") {
+    if let Some((_, v)) = launch_env
+        .iter()
+        .find(|(k, _)| k == "FRET_DIAG_REDACT_TEXT")
+    {
         let raw = v.trim();
         if !raw.is_empty() {
             cfg.redact_text = Some(raw != "0");

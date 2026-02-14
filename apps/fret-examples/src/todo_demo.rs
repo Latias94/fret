@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
-use fret_kit::prelude::*;
+use fret::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
@@ -112,7 +112,7 @@ fn tip_policy() -> QueryPolicy {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::mvu::app::<TodoProgram>("todo-demo")?
+    fret::mvu::app::<TodoProgram>("todo-demo")?
         .with_main_window("todo_demo", (560.0, 520.0))
         .run()?;
     Ok(())

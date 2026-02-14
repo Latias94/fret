@@ -9,7 +9,7 @@ project evolves.
 
 ## TL;DR
 
-- Prefer **ecosystem entry points** (`fret-kit`, `fret-ui-shadcn`, `fret-ui-kit`) for app code.
+- Prefer **ecosystem entry points** (`fret`, `fret-ui-shadcn`, `fret-ui-kit`) for app code.
 - Treat `crates/*` runtime internals as **mechanism-only** and subject to reshaping.
 - When a breaking refactor is necessary, expect it to be tracked by a roadmap doc + supported by
   templates/demos so upgrades are “compile-guided”.
@@ -20,10 +20,10 @@ project evolves.
 
 These crate names are intentionally treated as public “front doors”:
 
-- `fret-kit`: batteries-included app entry points (desktop-first).
+- `fret`: batteries-included app entry points (desktop-first).
 - `fret-ui-shadcn`: default component taxonomy + recipes (fast iteration surface).
 - `fret-ui-kit`: component authoring glue (tokens, headless helpers, overlay policy helpers).
-- `fret`: advanced/manual assembly and integrations.
+- `fret-framework`: advanced/manual assembly and integrations.
 - `fretboard`: tooling (templates + demo runner + diagnostics workflows).
 
 ### Mechanism vs policy (why the split matters)
@@ -68,7 +68,7 @@ iterator conversions) so call sites stay compact without paying the generic tax.
 
 If you want MVU-style clarity (like `iced`) while keeping a command system:
 
-- Use `fret-kit::mvu::Program` + `MessageRouter<M>` to build typed commands in `view`.
+- Use `fret::mvu::Program` + `MessageRouter<M>` to build typed commands in `view`.
 - Let the driver clear the router once per frame.
 - Use `Program::on_command(...)` for framework-level `CommandId`s that are not produced by
   `MessageRouter` (e.g. router navigation commands / keybindings).
@@ -78,7 +78,7 @@ Avoid:
 - parsing strings out of `CommandId` in app code.
 - relying on per-frame router state inside a subtree that can be reused via view caching.
   If you need commands inside a cached subtree, prefer a keyed/stable router (see
-  `fret-kit::mvu::KeyedMessageRouter<K, M>`).
+  `fret::mvu::KeyedMessageRouter<K, M>`).
 
 ### 3) Use identity helpers early
 

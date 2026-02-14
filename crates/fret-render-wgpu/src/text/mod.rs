@@ -269,8 +269,7 @@ fn unwrapped_layout_cache_max_text_len_bytes() -> usize {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(4096)
-            .max(64)
-            .min(1_048_576)
+            .clamp(64, 1_048_576)
     })
 }
 
@@ -284,8 +283,7 @@ fn measure_shaping_cache_entries() -> usize {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(4096)
-            .max(64)
-            .min(65_536)
+            .clamp(64, 65_536)
     })
 }
 
@@ -332,8 +330,7 @@ fn font_trace_max_text_bytes() -> usize {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(256)
-            .max(16)
-            .min(16 * 1024)
+            .clamp(16, 16 * 1024)
     })
 }
 
@@ -514,8 +511,7 @@ fn common_fallback_stack_suffix_max_families() -> usize {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(64)
-            .max(1)
-            .min(256)
+            .clamp(1, 256)
     })
 }
 
@@ -2501,10 +2497,10 @@ impl TextSystem {
         let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
         if self.fallback_policy.prefer_common_fallback() {
             for family in &self.fallback_policy.common_fallback_candidates {
-                if let Some(id) = self.parley_shaper.resolve_family_id(family) {
-                    if !fallback_ids.contains(&id) {
-                        fallback_ids.push(id);
-                    }
+                if let Some(id) = self.parley_shaper.resolve_family_id(family)
+                    && !fallback_ids.contains(&id)
+                {
+                    fallback_ids.push(id);
                 }
             }
         }
@@ -4547,10 +4543,10 @@ impl TextSystem {
             return;
         }
 
-        if !self.released_blob_set.insert(id) {
-            if let Some(pos) = self.released_blob_lru.iter().position(|v| *v == id) {
-                self.released_blob_lru.remove(pos);
-            }
+        if !self.released_blob_set.insert(id)
+            && let Some(pos) = self.released_blob_lru.iter().position(|v| *v == id)
+        {
+            self.released_blob_lru.remove(pos);
         }
         self.released_blob_lru.push_back(id);
 
@@ -4699,10 +4695,10 @@ impl TextSystem {
         if max_entries == 0 {
             return;
         }
-        if !self.unwrapped_layout_set.insert(key.clone()) {
-            if let Some(pos) = self.unwrapped_layout_lru.iter().position(|k| k == key) {
-                self.unwrapped_layout_lru.remove(pos);
-            }
+        if !self.unwrapped_layout_set.insert(key.clone())
+            && let Some(pos) = self.unwrapped_layout_lru.iter().position(|k| k == key)
+        {
+            self.unwrapped_layout_lru.remove(pos);
         }
         self.unwrapped_layout_lru.push_back(key.clone());
 

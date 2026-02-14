@@ -530,7 +530,6 @@ impl HoverCard {
                         HOVER_CARD_SAFE_CORRIDOR_BUFFER,
                     )
                 });
-            let trigger_hovered = hovered;
             let hovered =
                 radix_hover_card::hover_card_hovered(hovered, overlay_hovered, keyboard_focused)
                     || pointer_in_corridor;

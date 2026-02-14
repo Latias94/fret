@@ -8,7 +8,7 @@ Fret’s architecture intentionally separates:
 
 - **Mechanisms / contracts** (portable runtime substrate): `crates/fret-ui`, `crates/fret-runtime`, `crates/fret-core`
 - **Policy / components** (Radix/shadcn-style behaviors and defaults): `ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`
-- **Backend wiring / app glue**: `crates/fret-launch`, plus app kits like `ecosystem/fret-kit`
+- **Backend wiring / app glue**: `crates/fret-launch`, plus app kits like `ecosystem/fret`
 
 This workstream targets **Track B**: improve internal modularity **without changing crate boundaries**.
 

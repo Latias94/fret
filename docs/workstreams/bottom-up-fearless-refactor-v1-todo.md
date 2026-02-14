@@ -514,7 +514,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Primary: `docs/workstreams/foundation-closure-p0.md`, `docs/workstreams/foundation-closure-p0-todo.md`
 
 - [ ] BU-FR-ui-022 Decide the minimal “authoring ergonomics” convergence target (v1) across:
-  - `ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `ecosystem/fret-kit`
+  - `ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `ecosystem/fret`
   - Scope: fluent builder conventions, `test_id` conventions, and “cached subtree” guidance.
 
 - [x] BU-FR-ui-023 Reduce crate-root “prefix modules” by regrouping related code under subsystem modules.

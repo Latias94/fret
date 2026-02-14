@@ -50,7 +50,7 @@ Use these rules of thumb when deciding whether to merge/split crates:
 - Policy engines: `fret-ui-headless` (TanStack-style table, typeahead, etc.)
 - Component infrastructure: `fret-ui-kit` (tokens, layout recipes, helpers)
 - Component surfaces: `fret-ui-shadcn`, `fret-ui-material3`, etc.
-- App kits: `fret-kit`, `fret-bootstrap`, `fret-workspace`
+- App kits: `fret`, `fret-bootstrap`, `fret-workspace`
 - Specialized tools/components: code view/editor, docking, node graph, plots, etc.
 
 ## 3) Findings / adjustments made in this workstream
@@ -126,7 +126,7 @@ that do not provide a seam.
 | `fret-undo` | 3 | 1 | 489 | `ecosystem/fret-undo` |
 | `fret-node` | 2 | 342 | 77057 | `ecosystem/fret-node` |
 | `fret-chart` | 2 | 19 | 15013 | `ecosystem/fret-chart` |
-| `fret-kit` | 2 | 7 | 3828 | `ecosystem/fret-kit` |
+| `fret` | 2 | 7 | 3828 | `ecosystem/fret` |
 | `fret-router` | 2 | 12 | 2400 | `ecosystem/fret-router` |
 | `fret-syntax` | 2 | 2 | 1052 | `ecosystem/fret-syntax` |
 | `fret-dnd` | 2 | 9 | 972 | `ecosystem/fret-dnd` |
@@ -187,7 +187,7 @@ Follow-up suggestion:
 
 ## 4) Open questions worth auditing next
 
-1. **Facade policy (`crates/fret`)**
+1. **Facade policy (`crates/fret-framework`)**
    - Re-audit default features and bundles to ensure the crate stays “portable by default” while
      still offering clear golden-path bundles (`desktop`/`wasm` aliases).
 2. **UI layer clarity in ecosystem**

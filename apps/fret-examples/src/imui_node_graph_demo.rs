@@ -1,4 +1,4 @@
-use fret_kit::prelude::*;
+use fret::prelude::*;
 use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -17,7 +17,7 @@ struct ImUiNodeGraphState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app("imui-node-graph-demo", init_window, view)?
+    fret::app("imui-node-graph-demo", init_window, view)?
         .with_main_window("imui_node_graph_demo", (980.0, 720.0))
         .run()?;
     Ok(())
@@ -30,7 +30,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ImUiNodeGraphState {
     ImUiNodeGraphState { graph, view }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiNodeGraphState) -> fret_kit::ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiNodeGraphState) -> fret::ViewElements {
     let graph = st.graph.clone();
     let view = st.view.clone();
 

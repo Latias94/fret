@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::fret::render::{RenderTargetColorSpace, Renderer, WgpuContext};
+use crate::kernel::render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_app::App;
 use fret_core::{AppWindowId, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind};
 use fret_launch::{EngineFrameUpdate, ViewportRenderTarget};
