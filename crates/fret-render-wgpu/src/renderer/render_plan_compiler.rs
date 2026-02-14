@@ -9,6 +9,7 @@ use super::{
     RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
 };
 use crate::renderer::estimate_texture_bytes;
+use slotmap::Key;
 
 #[derive(Clone, Copy, Debug)]
 struct DrawScope {
@@ -217,6 +218,42 @@ fn compile_for_scene_inner(
             OrderedDraw::Path(d) => d.uniform_index,
         });
 
+        fn mix_fnv1a(mut hash: u64, value: u64) -> u64 {
+            hash ^= value;
+            hash = hash.wrapping_mul(1099511628211);
+            hash
+        }
+
+        let start_uniform_fingerprint = if let Some(start_uniform_index) = start_uniform_index
+            && let Some(uniform) = encoding.uniforms.get(start_uniform_index as usize)
+        {
+            let mut hash: u64 = 14695981039346656037;
+            hash = mix_fnv1a(hash, u64::from(uniform.clip_head));
+            hash = mix_fnv1a(hash, u64::from(uniform.clip_count));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_head));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_count));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_scope_head));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_scope_count));
+            hash = mix_fnv1a(hash, u64::from(uniform.output_is_srgb));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_origin[0].to_bits()));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_origin[1].to_bits()));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_size[0].to_bits()));
+            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_size[1].to_bits()));
+
+            let mask_image = encoding
+                .uniform_mask_images
+                .get(start_uniform_index as usize)
+                .copied()
+                .flatten();
+            hash = mix_fnv1a(
+                hash,
+                mask_image.map(|id| id.data().as_ffi() as u64).unwrap_or(0),
+            );
+            hash
+        } else {
+            0
+        };
+
         let mut flags = super::RenderPlanSegmentFlags::default();
         for draw in draws.get(draw_range.start..draw_range.end).unwrap_or(&[]) {
             match draw {
@@ -233,6 +270,7 @@ fn compile_for_scene_inner(
             id,
             draw_range,
             start_uniform_index,
+            start_uniform_fingerprint,
             flags,
         });
 

@@ -22,6 +22,7 @@ pub(super) struct RenderPlanSegment {
     pub(super) id: SceneSegmentId,
     pub(super) draw_range: Range<usize>,
     pub(super) start_uniform_index: Option<u32>,
+    pub(super) start_uniform_fingerprint: u64,
     pub(super) flags: RenderPlanSegmentFlags,
 }
 

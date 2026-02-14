@@ -440,7 +440,15 @@ struct JsonDumpSegment {
     id: usize,
     draw_range: [usize; 2],
     start_uniform_index: Option<u32>,
+    start_uniform_fingerprint: String,
     flags: JsonDumpSegmentFlags,
+    pass_counts: JsonDumpSegmentPassCounts,
+}
+
+#[derive(Debug, serde::Serialize, Clone, Copy)]
+struct JsonDumpSegmentPassCounts {
+    scene_draw_range: usize,
+    path_msaa_batch: usize,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -594,11 +602,34 @@ pub(super) fn maybe_dump_render_plan_json(
         return;
     }
 
+    let mut segment_pass_counts: Vec<JsonDumpSegmentPassCounts> = vec![
+        JsonDumpSegmentPassCounts {
+            scene_draw_range: 0,
+            path_msaa_batch: 0,
+        };
+        plan.segments.len()
+    ];
+    for p in &plan.passes {
+        match p {
+            RenderPlanPass::SceneDrawRange(p) => {
+                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                    c.scene_draw_range += 1;
+                }
+            }
+            RenderPlanPass::PathMsaaBatch(p) => {
+                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                    c.path_msaa_batch += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
     let dir = dump_dir_from_env();
     let _ = std::fs::create_dir_all(&dir);
 
     let dump = RenderPlanJsonDump {
-        schema_version: 4,
+        schema_version: 5,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),
@@ -607,10 +638,12 @@ pub(super) fn maybe_dump_render_plan_json(
         segments: plan
             .segments
             .iter()
-            .map(|s| JsonDumpSegment {
+            .enumerate()
+            .map(|(ix, s)| JsonDumpSegment {
                 id: s.id.0,
                 draw_range: [s.draw_range.start, s.draw_range.end],
                 start_uniform_index: s.start_uniform_index,
+                start_uniform_fingerprint: format!("0x{:016x}", s.start_uniform_fingerprint),
                 flags: JsonDumpSegmentFlags {
                     has_quad: s.flags.has_quad,
                     has_viewport: s.flags.has_viewport,
@@ -619,6 +652,12 @@ pub(super) fn maybe_dump_render_plan_json(
                     has_text: s.flags.has_text,
                     has_path: s.flags.has_path,
                 },
+                pass_counts: segment_pass_counts.get(ix).cloned().unwrap_or(
+                    JsonDumpSegmentPassCounts {
+                        scene_draw_range: 0,
+                        path_msaa_batch: 0,
+                    },
+                ),
             })
             .collect(),
         effect_markers: effect_markers
