@@ -74,10 +74,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## P1 — Optional: bring Animata “blurred backdrop” into a reusable recipe
 
-- [ ] AR-OVERLAY-010 Add a dialog variant or a separate recipe that uses backdrop blur (reduce-transparency aware).
+- [x] AR-OVERLAY-010 Add a dialog variant or a separate recipe that uses backdrop blur (reduce-transparency aware).
   - Evidence anchors:
     - `ecosystem/fret-ui-kit/src/recipes/glass.rs`
     - `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`DialogOverlayBackdrop::Glass`)
+    - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs` (`dialog_glass`)
+    - `tools/diag-scripts/ui-gallery-overlay-dialog-glass-backdrop-open-close-fixed-frame-delta.json`
   - Note:
     - Keep default shadcn dialog baseline conservative; make blur an explicit opt-in recipe.
 
