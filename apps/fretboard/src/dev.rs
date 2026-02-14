@@ -11,6 +11,64 @@ use crate::hotpatch::{
     resolve_workspace_relative,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HotpatchModeSummary {
+    None,
+    DxAuto,
+    DxExplicit,
+    Devserver,
+    ReloadBoundary,
+}
+
+fn print_hotpatch_summary(
+    mode: HotpatchModeSummary,
+    bin: &str,
+    demo_hotpatch_ready: bool,
+    dx_available: bool,
+    ws: Option<&str>,
+    build_id: Option<u64>,
+    trigger_path: Option<&std::path::Path>,
+) {
+    if mode == HotpatchModeSummary::None {
+        return;
+    }
+
+    let mode_str = match mode {
+        HotpatchModeSummary::None => "none",
+        HotpatchModeSummary::DxAuto => "dx (auto)",
+        HotpatchModeSummary::DxExplicit => "dx",
+        HotpatchModeSummary::Devserver => "devserver",
+        HotpatchModeSummary::ReloadBoundary => "reload-boundary",
+    };
+
+    let view_call =
+        if std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty()) {
+            "direct (view hotpatch disabled)"
+        } else {
+            "hotfn"
+        };
+
+    eprintln!("Hotpatch Summary:");
+    eprintln!("  bin: {bin}");
+    eprintln!("  demo_hotpatch_ready: {demo_hotpatch_ready}");
+    eprintln!("  mode: {mode_str}");
+    eprintln!("  dx_available: {dx_available}");
+    eprintln!("  view_call: {view_call}");
+    if let Some(ws) = ws {
+        eprintln!("  ws: {ws}");
+    }
+    if let Some(build_id) = build_id {
+        eprintln!("  build_id: {build_id}");
+    }
+    if let Some(trigger_path) = trigger_path {
+        eprintln!("  trigger: {}", trigger_path.display());
+    }
+    eprintln!("  logs:");
+    eprintln!("    runner: .fret/hotpatch_runner.log");
+    eprintln!("    view:   .fret/hotpatch_bootstrap.log");
+    eprintln!("  status: fretboard hotpatch status --tail 40");
+}
+
 fn append_subsecond_main_export_rustflags(cmd: &mut Command) {
     // Subsecond uses `main` as an ASLR anchor on native platforms. Some toolchains don't export
     // `main` by default, which makes `subsecond::aslr_reference()` return 0 and disables hotpatch.
@@ -173,6 +231,18 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         && dx_available
         && is_hotpatch_ready_native_demo(&bin);
 
+    let mode_summary = if hotpatch_dx {
+        HotpatchModeSummary::DxExplicit
+    } else if hotpatch_auto_uses_dx {
+        HotpatchModeSummary::DxAuto
+    } else if hotpatch_devserver_ws.is_some() {
+        HotpatchModeSummary::Devserver
+    } else if hotpatch {
+        HotpatchModeSummary::ReloadBoundary
+    } else {
+        HotpatchModeSummary::None
+    };
+
     if (hotpatch || hotpatch_devserver_ws.is_some()) && !is_hotpatch_ready_native_demo(&bin) {
         eprintln!(
             "warning: `{bin}` is not a hotpatch-ready demo. Hotpatch will only trigger a safe runner reload boundary.\n  try: `--bin todo_demo` or `--bin assets_demo` for the FnDriver/UiAppDriver hotpatch path"
@@ -180,11 +250,16 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     }
 
     if hotpatch_dx || hotpatch_auto_uses_dx {
-        if hotpatch_auto_uses_dx {
-            eprintln!("Hotpatch: mode=dx (auto)");
-        } else {
-            eprintln!("Hotpatch: mode=dx");
-        }
+        let ws = hotpatch_dx_ws.as_deref().unwrap_or("<dx-managed>");
+        print_hotpatch_summary(
+            mode_summary,
+            &bin,
+            is_hotpatch_ready_native_demo(&bin),
+            dx_available,
+            Some(ws),
+            None,
+            None,
+        );
         return dev_native_hotpatch_dx(
             &root,
             &bin,
@@ -209,7 +284,20 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         cmd.args(["--features", &cargo_features]);
     }
     if hotpatch {
-        eprintln!("Hotpatch: mode=reload-boundary");
+        let trigger_path = hotpatch_trigger_path
+            .as_deref()
+            .unwrap_or(".fret/hotpatch.touch");
+        let trigger_path = resolve_workspace_relative(&root, trigger_path);
+
+        print_hotpatch_summary(
+            mode_summary,
+            &bin,
+            is_hotpatch_ready_native_demo(&bin),
+            dx_available,
+            None,
+            None,
+            Some(&trigger_path),
+        );
         if hotpatch_reload_only {
             eprintln!("  note: forced reload-boundary mode (--hotpatch-reload)");
         } else if dx_available {
@@ -220,11 +308,6 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                 "    tip: omit --hotpatch-reload or use --hotpatch to run in dx hotpatch mode"
             );
         }
-
-        let trigger_path = hotpatch_trigger_path
-            .as_deref()
-            .unwrap_or(".fret/hotpatch.touch");
-        let trigger_path = resolve_workspace_relative(&root, trigger_path);
 
         // Ensure the trigger file exists before the app starts so the runner can capture the
         // initial marker without forcing an immediate hot reload.
@@ -242,12 +325,6 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         }
     }
     if let Some(ws) = hotpatch_devserver_ws.as_deref() {
-        eprintln!("Hotpatch: mode=devserver");
-        eprintln!("Hotpatch(devserver): enabled");
-        eprintln!("  ws: {}", ws);
-        eprintln!(
-            "  note: this expects an external devserver that delivers Subsecond JumpTables (e.g. dioxus-cli)"
-        );
         cmd.env("FRET_HOTPATCH_DEVSERVER_WS", ws);
 
         let build_id = match hotpatch_build_id.unwrap_or(HotpatchBuildIdArg::Auto) {
@@ -257,11 +334,22 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             HotpatchBuildIdArg::Auto => None,
             HotpatchBuildIdArg::Value(v) => Some(v),
         };
+
+        print_hotpatch_summary(
+            mode_summary,
+            &bin,
+            is_hotpatch_ready_native_demo(&bin),
+            dx_available,
+            Some(ws),
+            build_id,
+            None,
+        );
+        eprintln!(
+            "  note: this expects an external devserver that delivers Subsecond JumpTables (e.g. dioxus-cli)"
+        );
+
         if let Some(build_id) = build_id {
-            eprintln!("  build_id: {build_id}");
             cmd.env("FRET_HOTPATCH_BUILD_ID", build_id.to_string());
-        } else {
-            eprintln!("  build_id: <none>");
         }
 
         // Ensure `main` is exported so `subsecond::aslr_reference()` can succeed.

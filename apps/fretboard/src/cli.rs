@@ -57,6 +57,7 @@ Usage:
   fretboard theme import-vscode <theme.json> [--out <path>] [--base <path>] [--all-tags] [--map <path>] [--set <key=value>...] [--report <path>] [--force]
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
+  fretboard hotpatch status [--tail <n>]
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
   fretboard diag path [--trigger-path <path>] [--dir <dir>]
   fretboard diag poke [--trigger-path <path>] [--dir <dir>]
@@ -103,6 +104,7 @@ Examples:
   fretboard dev native --hotpatch --choose   # hotpatch (prefers `dx serve --hotpatch` when `dx` is available; otherwise falls back to reload-boundary mode)
   fretboard dev native --hotpatch-reload --choose   # file-triggered runner reload boundary (default: `.fret/hotpatch.touch`)
   fretboard hotpatch poke                   # updates `.fret/hotpatch.touch` (triggers a reload)
+  fretboard hotpatch status                 # prints hotpatch-related log tails (runner/bootstrap)
   fretboard hotpatch watch                  # polls workspace sources and auto-pokes on change
   fretboard diag poke                      # touches `target/fret-diag/trigger.touch` (dumps diagnostics when enabled)
   fretboard diag latest                    # prints the most recent diagnostics bundle path
