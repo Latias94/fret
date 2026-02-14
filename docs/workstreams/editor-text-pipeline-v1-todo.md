@@ -25,7 +25,8 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 
 - [ ] Produce row-local spans from tree-sitter highlighting events.
 - [ ] Pass `AttributedText` into the renderer (avoid per-span reshaping on paint-only changes).
-- [ ] Add a test that theme-only changes do not affect shaping keys.
+- [x] Add a test that theme-only changes do not affect shaping keys.
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
 
 ## M3 — Wrap policy separation
 
