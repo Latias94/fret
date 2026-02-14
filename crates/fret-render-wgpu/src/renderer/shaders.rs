@@ -129,6 +129,7 @@ struct QuadInstance {
   border_paint: Paint,
   corner_radii: vec4<f32>,
   border: vec4<f32>,
+  dash_params: vec4<f32>,
 };
 
 struct QuadInstances {
@@ -211,6 +212,138 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
   let un = c.rgb / c.a;
   let enc = linear_to_srgb(un);
   return vec4<f32>(enc * c.a, c.a);
+}
+
+fn dist2(a: vec2<f32>, b: vec2<f32>) -> f32 {
+  let d = a - b;
+  return dot(d, d);
+}
+
+fn rrect_perimeter_s(p: vec2<f32>, rect: vec4<f32>, corner_radii: vec4<f32>) -> f32 {
+  let pi = 3.141592653589793;
+  let half_pi = 1.5707963267948966;
+  let two_pi = 6.283185307179586;
+
+  let x0 = rect.x;
+  let y0 = rect.y;
+  let w = rect.z;
+  let h = rect.w;
+  let x1 = x0 + w;
+  let y1 = y0 + h;
+
+  let r_tl = max(corner_radii.x, 0.0);
+  let r_tr = max(corner_radii.y, 0.0);
+  let r_br = max(corner_radii.z, 0.0);
+  let r_bl = max(corner_radii.w, 0.0);
+
+  let l_top = max(0.0, w - r_tl - r_tr);
+  let l_right = max(0.0, h - r_tr - r_br);
+  let l_bottom = max(0.0, w - r_bl - r_br);
+  let l_left = max(0.0, h - r_tl - r_bl);
+
+  let l_tl = half_pi * r_tl;
+  let l_tr = half_pi * r_tr;
+  let l_br = half_pi * r_br;
+  let l_bl = half_pi * r_bl;
+
+  let off_top = 0.0;
+  let off_tr = off_top + l_top;
+  let off_right = off_tr + l_tr;
+  let off_br = off_right + l_right;
+  let off_bottom = off_br + l_br;
+  let off_bl = off_bottom + l_bottom;
+  let off_left = off_bl + l_bl;
+  let off_tl = off_left + l_left;
+
+  // Straight segments (clamped to segment extents).
+  let q_top = vec2<f32>(clamp(p.x, x0 + r_tl, x1 - r_tr), y0);
+  let q_right = vec2<f32>(x1, clamp(p.y, y0 + r_tr, y1 - r_br));
+  let q_bottom = vec2<f32>(clamp(p.x, x0 + r_bl, x1 - r_br), y1);
+  let q_left = vec2<f32>(x0, clamp(p.y, y0 + r_tl, y1 - r_bl));
+
+  let s_top = off_top + (q_top.x - (x0 + r_tl));
+  let s_right = off_right + (q_right.y - (y0 + r_tr));
+  let s_bottom = off_bottom + ((x1 - r_br) - q_bottom.x);
+  let s_left = off_left + ((y1 - r_bl) - q_left.y);
+
+  var best_d = dist2(p, q_top);
+  var best_s = s_top;
+
+  let d_right = dist2(p, q_right);
+  if (d_right < best_d) {
+    best_d = d_right;
+    best_s = s_right;
+  }
+
+  let d_bottom = dist2(p, q_bottom);
+  if (d_bottom < best_d) {
+    best_d = d_bottom;
+    best_s = s_bottom;
+  }
+
+  let d_left = dist2(p, q_left);
+  if (d_left < best_d) {
+    best_d = d_left;
+    best_s = s_left;
+  }
+
+  // Corner arcs (angle-clamped to the quarter arc extents).
+  if (r_tr > 0.0) {
+    let c = vec2<f32>(x1 - r_tr, y0 + r_tr);
+    let a0 = atan2(p.y - c.y, p.x - c.x);
+    let a = clamp(a0, -half_pi, 0.0);
+    let q = c + vec2<f32>(cos(a), sin(a)) * r_tr;
+    let d = dist2(p, q);
+    if (d < best_d) {
+      let t = (a + half_pi) / half_pi;
+      best_d = d;
+      best_s = off_tr + t * l_tr;
+    }
+  }
+
+  if (r_br > 0.0) {
+    let c = vec2<f32>(x1 - r_br, y1 - r_br);
+    let a0 = atan2(p.y - c.y, p.x - c.x);
+    let a = clamp(a0, 0.0, half_pi);
+    let q = c + vec2<f32>(cos(a), sin(a)) * r_br;
+    let d = dist2(p, q);
+    if (d < best_d) {
+      let t = a / half_pi;
+      best_d = d;
+      best_s = off_br + t * l_br;
+    }
+  }
+
+  if (r_bl > 0.0) {
+    let c = vec2<f32>(x0 + r_bl, y1 - r_bl);
+    let a0 = atan2(p.y - c.y, p.x - c.x);
+    let a = clamp(a0, half_pi, pi);
+    let q = c + vec2<f32>(cos(a), sin(a)) * r_bl;
+    let d = dist2(p, q);
+    if (d < best_d) {
+      let t = (a - half_pi) / half_pi;
+      best_d = d;
+      best_s = off_bl + t * l_bl;
+    }
+  }
+
+  if (r_tl > 0.0) {
+    let c = vec2<f32>(x0 + r_tl, y0 + r_tl);
+    var a0 = atan2(p.y - c.y, p.x - c.x);
+    // Wrap TL's left endpoint from `π` to `-π` so the clamp range is monotonic.
+    if (a0 > half_pi) {
+      a0 = a0 - two_pi;
+    }
+    let a = clamp(a0, -pi, -half_pi);
+    let q = c + vec2<f32>(cos(a), sin(a)) * r_tl;
+    let d = dist2(p, q);
+    if (d < best_d) {
+      let t = (a + pi) / half_pi; // [-π..-π/2] -> [0..1]
+      best_s = off_tl + t * l_tl;
+    }
+  }
+
+  return best_s;
 }
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
@@ -596,7 +729,23 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let border_cov = select(0.0, border_cov_raw, border_present);
 
   let fill = paint_eval(inst.fill_paint, input.local_pos) * alpha_fill;
-  let border = paint_eval(inst.border_paint, input.local_pos) * border_cov;
+  var dash_mask = 1.0;
+  if (inst.dash_params.w > 0.5 && border_present) {
+    let dash = inst.dash_params.x;
+    let gap = inst.dash_params.y;
+    let phase = inst.dash_params.z;
+    let period = dash + gap;
+    if (period > 0.0 && dash > 0.0) {
+      let s = rrect_perimeter_s(input.local_pos, input.rect, input.corner_radii);
+      let t = s + phase;
+      let m = t - floor(t / period) * period;
+      let aa = max(fwidth(s), 1e-4);
+      let on_start = smoothstep(0.0, aa, m);
+      let on_end = 1.0 - smoothstep(dash - aa, dash + aa, m);
+      dash_mask = on_start * on_end;
+    }
+  }
+  let border = paint_eval(inst.border_paint, input.local_pos) * border_cov * dash_mask;
 
   let out = (fill + border) * clip * mask;
   return encode_output_premul(out);

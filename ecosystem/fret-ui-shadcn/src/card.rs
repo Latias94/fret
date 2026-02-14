@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{Px, TextWrap};
-use fret_ui::element::{AnyElement, ElementKind};
+use fret_core::{Edges, Px, TextWrap};
+use fret_ui::element::{AnyElement, ElementKind, Overflow};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -11,16 +11,44 @@ use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 use crate::test_id::attach_test_id;
 
-const CARD_ACTION_TEST_ID: &str = "fret-ui-shadcn.card-action";
+const CARD_ACTION_MARKER_PREFIX: &str = "fret-ui-shadcn.card-action";
+const CARD_FOOTER_MARKER_PREFIX: &str = "fret-ui-shadcn.card-footer";
+
+fn matches_marker(test_id: &str, prefix: &str) -> bool {
+    test_id == prefix
+        || (test_id.starts_with(prefix)
+            && test_id
+                .as_bytes()
+                .get(prefix.len())
+                .is_some_and(|b| *b == b':'))
+}
 
 fn is_card_action_marker(element: &AnyElement) -> bool {
     element
         .semantics_decoration
         .as_ref()
         .and_then(|d| d.test_id.as_deref())
-        == Some(CARD_ACTION_TEST_ID)
+        .is_some_and(|id| matches_marker(id, CARD_ACTION_MARKER_PREFIX))
         || match &element.kind {
-            ElementKind::Semantics(props) => props.test_id.as_deref() == Some(CARD_ACTION_TEST_ID),
+            ElementKind::Semantics(props) => props
+                .test_id
+                .as_deref()
+                .is_some_and(|id| matches_marker(id, CARD_ACTION_MARKER_PREFIX)),
+            _ => false,
+        }
+}
+
+fn is_card_footer_marker(element: &AnyElement) -> bool {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.test_id.as_deref())
+        .is_some_and(|id| matches_marker(id, CARD_FOOTER_MARKER_PREFIX))
+        || match &element.kind {
+            ElementKind::Semantics(props) => props
+                .test_id
+                .as_deref()
+                .is_some_and(|id| matches_marker(id, CARD_FOOTER_MARKER_PREFIX)),
             _ => false,
         }
 }
@@ -78,13 +106,13 @@ fn card_chrome(theme: &Theme, size: CardSize) -> ChromeRefinement {
     let rounded_xl = Px(base_radius.0 + 4.0);
 
     let py = match size {
-        CardSize::Default => Space::N6,
-        CardSize::Sm => Space::N4,
+        CardSize::Default => Space::N4,
+        CardSize::Sm => Space::N3,
     };
 
     // shadcn/ui v4 card base:
-    // - `rounded-xl border bg-card text-card-foreground shadow-sm`
-    // - `flex flex-col gap-6 py-6` (gap handled by the inner vstack)
+    // - `overflow-hidden rounded-xl ring-1 ring-foreground/10 bg-card text-card-foreground`
+    // - `flex flex-col gap-4 py-4` (gap handled by the inner vstack)
     ChromeRefinement::default()
         .radius(rounded_xl)
         .border_1()
@@ -131,20 +159,26 @@ impl Card {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = self.size;
         with_card_size_provider(cx, size, |cx| {
+            let children = self.children;
+            let has_footer = children.iter().any(is_card_footer_marker);
+
             let (props, gap) = {
                 let theme = Theme::global(&*cx.app);
-                let chrome = card_chrome(theme, size).merge(self.chrome);
+                let mut chrome = card_chrome(theme, size).merge(self.chrome);
+                if has_footer {
+                    // shadcn/ui v4: `has-data-[slot=card-footer]:pb-0` so the footer's own
+                    // padding becomes the only bottom inset.
+                    chrome = chrome.merge(ChromeRefinement::default().pb(Space::N0));
+                }
                 let mut props = decl_style::container_props(theme, chrome, self.layout);
-                let radius = props.corner_radii.top_left;
-                props.shadow = Some(decl_style::shadow_sm(theme, radius));
+                props.layout.overflow = Overflow::Clip;
 
                 let gap = match size {
-                    CardSize::Default => Space::N6,
-                    CardSize::Sm => Space::N4,
+                    CardSize::Default => Space::N4,
+                    CardSize::Sm => Space::N3,
                 };
                 (props, gap)
             };
-            let children = self.children;
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
@@ -197,14 +231,14 @@ impl CardHeader {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
         let px = match size {
-            CardSize::Default => Space::N6,
-            CardSize::Sm => Space::N4,
+            CardSize::Default => Space::N4,
+            CardSize::Sm => Space::N3,
         };
         let props = {
             let theme = Theme::global(&*cx.app);
             decl_style::container_props(
                 theme,
-                // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+                // shadcn/ui v4: `px-4` (no default y padding; gap comes from the Card root).
                 ChromeRefinement::default().px(px),
                 LayoutRefinement::default().w_full(),
             )
@@ -226,7 +260,7 @@ impl CardHeader {
             let left_col = stack::vstack(
                 cx,
                 stack::VStackProps::default()
-                    .gap(Space::N2)
+                    .gap(Space::N1)
                     .layout(LayoutRefinement::default().flex_1().min_w_0()),
                 move |_cx| left,
             );
@@ -246,7 +280,7 @@ impl CardHeader {
                 cx,
                 props,
                 stack::VStackProps::default()
-                    .gap(Space::N2)
+                    .gap(Space::N1)
                     .layout(LayoutRefinement::default().w_full()),
                 left,
             )
@@ -297,7 +331,8 @@ impl CardAction {
             }
         });
 
-        attach_test_id(el, Arc::<str>::from(CARD_ACTION_TEST_ID))
+        let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_ACTION_MARKER_PREFIX, el.id.0));
+        attach_test_id(el, marker)
     }
 }
 
@@ -305,6 +340,8 @@ impl CardAction {
 mod tests {
     use super::*;
 
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::{ContainerProps, SemanticsProps};
     use fret_ui::elements::GlobalElementId;
 
@@ -315,7 +352,7 @@ mod tests {
             ElementKind::Container(ContainerProps::default()),
             Vec::new(),
         )
-        .test_id(CARD_ACTION_TEST_ID);
+        .test_id(format!("{CARD_ACTION_MARKER_PREFIX}:1"));
 
         assert!(is_card_action_marker(&el));
     }
@@ -325,7 +362,7 @@ mod tests {
         let el = AnyElement::new(
             GlobalElementId(1),
             ElementKind::Semantics(SemanticsProps {
-                test_id: Some(Arc::<str>::from(CARD_ACTION_TEST_ID)),
+                test_id: Some(Arc::<str>::from(format!("{CARD_ACTION_MARKER_PREFIX}:1"))),
                 ..Default::default()
             }),
             Vec::new(),
@@ -345,6 +382,31 @@ mod tests {
 
         assert!(!is_card_action_marker(&el));
     }
+
+    #[test]
+    fn card_root_sets_overflow_clip_and_pb0_when_footer_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let footer = CardFooter::new([cx.text("footer")]).into_element(cx);
+            let el = Card::new([cx.text("body"), footer]).into_element(cx);
+
+            let ElementKind::Container(ContainerProps {
+                layout, padding, ..
+            }) = &el.kind
+            else {
+                panic!("expected Card root to be a container element");
+            };
+
+            assert_eq!(layout.overflow, Overflow::Clip);
+            assert_eq!(padding.bottom, Px(0.0));
+        });
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -362,14 +424,14 @@ impl CardContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
         let px = match size {
-            CardSize::Default => Space::N6,
-            CardSize::Sm => Space::N4,
+            CardSize::Default => Space::N4,
+            CardSize::Sm => Space::N3,
         };
         let props = {
             let theme = Theme::global(&*cx.app);
             decl_style::container_props(
                 theme,
-                // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+                // shadcn/ui v4: `px-4` (no default y padding; gap comes from the Card root).
                 ChromeRefinement::default().px(px),
                 LayoutRefinement::default().w_full(),
             )
@@ -400,28 +462,46 @@ impl CardFooter {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
-        let px = match size {
-            CardSize::Default => Space::N6,
-            CardSize::Sm => Space::N4,
+        let p = match size {
+            CardSize::Default => Space::N4,
+            CardSize::Sm => Space::N3,
         };
-        let props = {
+        let mut props = {
             let theme = Theme::global(&*cx.app);
+            let muted = theme.color_required("muted");
+            let bg = fret_core::Color {
+                a: muted.a * 0.5,
+                ..muted
+            };
+            let border = theme.color_required("border");
             decl_style::container_props(
                 theme,
-                // shadcn/ui v4: `flex items-center px-6` (no default y padding; gap comes from the Card root).
-                ChromeRefinement::default().px(px),
+                // shadcn/ui v4: `bg-muted/50 ... p-4` (and root `pb-0` when footer exists).
+                ChromeRefinement::default()
+                    .p(p)
+                    .bg(ColorRef::Color(bg))
+                    .border_color(ColorRef::Color(border)),
                 LayoutRefinement::default().w_full(),
             )
         };
+        props.border = Edges {
+            top: Px(1.0),
+            right: Px(0.0),
+            bottom: Px(0.0),
+            left: Px(0.0),
+        };
         let children = self.children;
-        shadcn_layout::container_hstack(
+        let el = shadcn_layout::container_hstack(
             cx,
             props,
             stack::HStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .items_center(),
             children,
-        )
+        );
+
+        let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_FOOTER_MARKER_PREFIX, el.id.0));
+        attach_test_id(el, marker)
     }
 }
 

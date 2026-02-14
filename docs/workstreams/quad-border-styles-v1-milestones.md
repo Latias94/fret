@@ -32,7 +32,7 @@ Acceptance criteria:
 - Dash semantics are locked (pattern model, parameterization, phase anchoring, snapping rules).
 - API is future-proofed for extension (prefer `#[non_exhaustive]` on new enums/types).
 
-Status: Not started.
+Status: Completed (2026-02-13).
 
 ### M1 — Renderer implementation (dashed stroke works)
 
@@ -42,7 +42,7 @@ Acceptance criteria:
 - A conformance test reads back pixels and asserts periodicity/stability at multiple scale factors.
 - No performance cliff for typical UI scenes (dash fields are cheap when disabled).
 
-Status: Not started.
+Status: Completed (2026-02-13).
 
 ### M2 — shadcn parity wiring (`border-dashed` is real)
 
@@ -52,7 +52,7 @@ Acceptance criteria:
 - UI Gallery shows at least one “tasks-style” dashed border control.
 - A regression gate exists for parity (scripted or renderer-level).
 
-Status: Not started.
+Status: In progress.
 
 ### M3 — Marching ants (optional, editor UX)
 
@@ -62,4 +62,3 @@ Acceptance criteria:
 - A small invariant gate exists (phase update determinism).
 
 Status: Not started.
-

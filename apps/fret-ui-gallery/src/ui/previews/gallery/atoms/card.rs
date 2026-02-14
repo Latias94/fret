@@ -1,6 +1,11 @@
 use super::super::super::super::*;
+use fret_ui_kit::declarative::style as decl_style;
+use ui_assets::ui::ImageSourceElementContextExt as _;
 
-pub(in crate::ui) fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_card(
+    cx: &mut ElementContext<'_, App>,
+    event_cover_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
     #[derive(Default)]
     struct CardModels {
         email: Option<Model<String>>,
@@ -171,19 +176,130 @@ pub(in crate::ui) fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
     let image = {
         let cover_bg = cx.with_theme(|theme| theme.color_token("muted"));
+        let cover_stack = {
+            let theme = Theme::global(&*cx.app);
+            let props = decl_style::container_props(
+                theme,
+                ChromeRefinement::default().bg(ColorRef::Color(cover_bg)),
+                LayoutRefinement::default().relative().size_full(),
+            );
 
-        let cover = shadcn::AspectRatio::new(
-            16.0 / 9.0,
-            cx.container(
-                fret_ui::element::ContainerProps {
-                    background: Some(cover_bg),
-                    ..Default::default()
-                },
-                |cx| vec![cx.text("Event cover")],
-            ),
-        )
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element(cx);
+            cx.container(props, move |cx| {
+                static DEBUG_IMAGE_LOADING: OnceLock<bool> = OnceLock::new();
+                let debug_image_loading = *DEBUG_IMAGE_LOADING.get_or_init(|| {
+                    std::env::var_os("FRET_UI_GALLERY_DEBUG_IMAGE_LOADING")
+                        .is_some_and(|v| !v.is_empty())
+                });
+
+                let event_cover_fallback = cx.watch_model(&event_cover_image).copied().flatten();
+
+                #[cfg(not(target_arch = "wasm32"))]
+                let (event_cover, event_cover_state, event_cover_path_exists) = {
+                    static EVENT_COVER_TEST_JPG: OnceLock<Option<ui_assets::ImageSource>> =
+                        OnceLock::new();
+                    let source = EVENT_COVER_TEST_JPG.get_or_init(|| {
+                        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                            .join("../../assets/textures/test.jpg");
+                        if path.exists() {
+                            Some(ui_assets::ImageSource::from_path(Arc::new(path)))
+                        } else {
+                            None
+                        }
+                    });
+                    let (state, image) = source.as_ref().map_or((None, None), |source| {
+                        let state = cx.use_image_source_state(source);
+                        let image = state.image;
+                        (Some(state), image)
+                    });
+                    let path_exists = source.is_some();
+
+                    (image.or(event_cover_fallback), state, path_exists)
+                };
+
+                #[cfg(target_arch = "wasm32")]
+                let (event_cover, event_cover_state, event_cover_path_exists) =
+                    (event_cover_fallback, None, false);
+
+                let image = shadcn::MediaImage::maybe(event_cover)
+                    .loading(true)
+                    .refine_layout(LayoutRefinement::default().size_full())
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-image-event-cover-image");
+
+                let overlay_props = {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default().bg(ColorRef::Color(CoreColor {
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 0.35,
+                        })),
+                        LayoutRefinement::default()
+                            .absolute()
+                            .inset(Space::N0)
+                            .size_full(),
+                    )
+                };
+
+                let overlay = cx
+                    .container(overlay_props, |_cx| Vec::new())
+                    .test_id("ui-gallery-card-image-event-cover-overlay");
+
+                let debug_overlay = if debug_image_loading
+                    || event_cover_state.as_ref().and_then(|s| s.error.as_deref()).is_some()
+                {
+                    let status = event_cover_state
+                        .as_ref()
+                        .map(|s| format!("{:?}", s.status))
+                        .unwrap_or_else(|| "<no-state>".to_string());
+                    let intrinsic = event_cover_state
+                        .as_ref()
+                        .and_then(|s| s.intrinsic_size_px)
+                        .map(|(w, h)| format!("{w}x{h}"))
+                        .unwrap_or_else(|| "-".to_string());
+                    let has_image = event_cover_state
+                        .as_ref()
+                        .map(|s| s.image.is_some())
+                        .unwrap_or(false);
+                    let error = event_cover_state
+                        .as_ref()
+                        .and_then(|s| s.error.as_deref())
+                        .unwrap_or("-");
+
+                    let text: Arc<str> = Arc::from(format!(
+                        "event_cover: status={status} image={has_image} intrinsic={intrinsic} path_exists={event_cover_path_exists} err={error}"
+                    ));
+                    Some(
+                        shadcn::Badge::new(text)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .left(Space::N2)
+                                    .bottom(Space::N2),
+                            )
+                            .into_element(cx)
+                            .test_id("ui-gallery-card-image-event-cover-debug"),
+                    )
+                } else {
+                    None
+                };
+
+                let mut out = vec![image, overlay];
+                if let Some(debug_overlay) = debug_overlay {
+                    out.push(debug_overlay);
+                }
+                out
+            })
+            .test_id("ui-gallery-card-image-event-cover-stack")
+        };
+
+        let cover = shadcn::AspectRatio::new(16.0 / 9.0, cover_stack)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-card-image-event-cover");
 
         let card = shadcn::Card::new(vec![
             cover,
@@ -209,8 +325,9 @@ pub(in crate::ui) fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .into_element(cx),
         ])
         .refine_style(ChromeRefinement::default().pt(Space::N0))
-        .refine_layout(max_w_sm.clone())
-        .into_element(cx);
+        .refine_layout(max_w_sm.clone().relative())
+        .into_element(cx)
+        .test_id("ui-gallery-card-image");
 
         centered(cx, card)
     };

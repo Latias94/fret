@@ -2,7 +2,7 @@ use super::super::state::{EncodeState, transform_rows};
 use super::super::*;
 
 use fret_core::geometry::{Corners, Edges};
-use fret_core::scene::{ColorSpace, MAX_STOPS, MaterialParams, Paint, TileMode};
+use fret_core::scene::{ColorSpace, DashPatternV1, MAX_STOPS, MaterialParams, Paint, TileMode};
 
 pub(in super::super) fn encode_quad(
     renderer: &Renderer,
@@ -12,6 +12,7 @@ pub(in super::super) fn encode_quad(
     border: Edges,
     border_paint: Paint,
     corner_radii: Corners,
+    dash: Option<DashPatternV1>,
 ) {
     let opacity = state.current_opacity();
 
@@ -279,6 +280,21 @@ pub(in super::super) fn encode_quad(
     let corner_radii = corners_to_vec4(corner_radii).map(|r| r * state.scale_factor);
     let corner_radii = clamp_corner_radii_for_rect(w, h, corner_radii);
     let border = edges_to_vec4(border).map(|e| e * state.scale_factor);
+
+    let dash_params = dash.map(|d| {
+        let dash_px = (d.dash.0 * state.scale_factor).max(0.0);
+        let gap_px = (d.gap.0 * state.scale_factor).max(0.0);
+        let phase_px = d.phase.0 * state.scale_factor;
+        let enabled = (dash_px > 0.0 && gap_px.is_finite() && phase_px.is_finite()) as u32;
+        [
+            dash_px,
+            gap_px,
+            phase_px,
+            if enabled != 0 { 1.0 } else { 0.0 },
+        ]
+    });
+    let dash_params = dash_params.unwrap_or([0.0, 0.0, 0.0, 0.0]);
+
     let fill_paint_gpu = paint_to_gpu(renderer, state, background, opacity, state.scale_factor);
     let border_paint_gpu = paint_to_gpu(renderer, state, border_paint, opacity, state.scale_factor);
     if fill_paint_gpu.kind == 3 || border_paint_gpu.kind == 3 {
@@ -297,5 +313,6 @@ pub(in super::super) fn encode_quad(
         border_paint: border_paint_gpu,
         corner_radii,
         border,
+        dash_params,
     });
 }

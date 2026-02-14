@@ -88,6 +88,13 @@ Commit-addressable gate results for the `windows-rtx4090` machine profile:
     - out-dir: `target/fret-diag-perf/ui-gallery-steady.hoverstrip.3x.20260213-152340`
   - `ui-gallery-steady --repeat 3` (VirtualList known heights): PASS
     - out-dir: `target/fret-diag-perf/ui-gallery-steady.hoverstrip.3x.20260213-183818.vlist-known`
+  - `ui-resize-probes` P0 attempts=3 (`--repeat 3` each): PASS (3/3)
+    - attempt 1 out-dir: `target/fret-diag-perf/ui-resize-probes.final.r3.20260213-204550`
+      - worst bundle: `target/fret-diag-perf/ui-resize-probes.final.r3.20260213-204550/1770986783548-ui-gallery-window-resize-drag-jitter-steady/bundle.json` (total=29879us, layout=21265us, solve=6355us)
+    - attempt 2 out-dir: `target/fret-diag-perf/ui-resize-probes.p0-attempt-2.r3.20260213-213034`
+      - worst bundle: `target/fret-diag-perf/ui-resize-probes.p0-attempt-2.r3.20260213-213034/1770989476248-ui-gallery-window-resize-drag-jitter-steady/bundle.json` (total=31959us, layout=23231us, solve=6381us)
+    - attempt 3 out-dir: `target/fret-diag-perf/ui-resize-probes.p0-attempt-3.r3.20260213-213137`
+      - worst bundle: `target/fret-diag-perf/ui-resize-probes.p0-attempt-3.r3.20260213-213137/1770989521330-ui-gallery-window-resize-drag-jitter-steady/bundle.json` (total=30718us, layout=21583us, solve=6500us)
 - Commands used (PowerShell, release):
   - `target/release/fretboard.exe diag perf ui-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
   - `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --dir <out> --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`

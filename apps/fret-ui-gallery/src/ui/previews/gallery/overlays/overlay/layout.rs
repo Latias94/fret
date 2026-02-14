@@ -44,7 +44,9 @@ pub(super) fn compose_body(
 ) -> AnyElement {
     stack::vstack(
         cx,
-        stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full()),
         |cx| {
             let gap =
                 cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));

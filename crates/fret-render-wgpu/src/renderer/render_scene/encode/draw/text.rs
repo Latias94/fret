@@ -71,6 +71,7 @@ pub(in super::super) fn encode_text(
                 Edges::all(Px(0.0)),
                 fret_core::Paint::Solid(Color::TRANSPARENT),
                 Corners::all(Px(0.0)),
+                None,
             );
         }
         state.flush_quad_batch();
@@ -212,6 +213,7 @@ pub(in super::super) fn encode_text(
                 Edges::all(Px(0.0)),
                 fret_core::Paint::Solid(Color::TRANSPARENT),
                 Corners::all(Px(0.0)),
+                None,
             );
         }
         state.flush_quad_batch();

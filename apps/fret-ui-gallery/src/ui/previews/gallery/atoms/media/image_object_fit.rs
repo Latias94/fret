@@ -1,4 +1,5 @@
 use super::super::super::super::super::*;
+use ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub(in crate::ui) fn preview_image_object_fit(
     cx: &mut ElementContext<'_, App>,
@@ -138,9 +139,9 @@ pub(in crate::ui) fn preview_image_object_fit(
     let image_source_demo = if let Some(assets) =
         cx.app.global::<UiGalleryImageSourceDemoAssets>().cloned()
     {
-        let wide_state = ui_assets::use_image_source_state(cx.app, cx.window, &assets.wide_png);
-        let tall_state = ui_assets::use_image_source_state(cx.app, cx.window, &assets.tall_png);
-        let square_state = ui_assets::use_image_source_state(cx.app, cx.window, &assets.square_png);
+        let wide_state = cx.use_image_source_state(&assets.wide_png);
+        let tall_state = cx.use_image_source_state(&assets.tall_png);
+        let square_state = cx.use_image_source_state(&assets.square_png);
 
         let status = cx.text(format!(
             "Status — wide: {:?}, tall: {:?}, square: {:?}",
