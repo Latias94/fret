@@ -91,6 +91,7 @@ Exit criteria:
 Progress record:
 
 - Date: 2026-02-14
+- Commit: 413bef0d
 - Evidence anchors:
   - `crates/fret-core/src/scene/composite.rs` (`CompositeGroupDesc.opacity`)
   - `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`CompositePremulPass.opacity`)
@@ -100,6 +101,10 @@ Progress record:
   - `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (push/pop: bounds scissor enters scissor stack)
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test composite_group_conformance`
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- Perf snapshot (note: this workload does not primarily stress effect/group offscreen fill; keep for reproducibility):
+  - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=22.85ms prepare_text=0.73ms draws=27000 ... cache_hits=596 cache_misses=4`
+  - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
 
 ## M3 — ClipPath + image masks v1 (bounded + cacheable)
 
