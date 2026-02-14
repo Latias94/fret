@@ -229,35 +229,65 @@ fn compile_for_scene_inner(
         *scene_range_start = end;
     };
 
-    let apply_chain_in_place = |passes: &mut Vec<RenderPlanPass>,
-                                draw_scopes: &[DrawScope],
-                                srcdst: super::PlanTarget,
-                                chain: fret_core::EffectChain,
-                                quality: fret_core::EffectQuality,
-                                ctx_viewport_size: (u32, u32),
-                                scissor: ScissorRect,
-                                mask_uniform_index: Option<u32>| {
-        if srcdst == super::PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
-            return;
-        }
+    let apply_chain_in_place =
+        |passes: &mut Vec<RenderPlanPass>,
+         draw_scopes: &[DrawScope],
+         srcdst: super::PlanTarget,
+         chain: fret_core::EffectChain,
+         quality: fret_core::EffectQuality,
+         ctx_viewport_size: (u32, u32),
+         scissor: ScissorRect,
+         mask_uniform_index: Option<u32>,
+         extra_in_use_bytes: u64,
+         unavailable_mask_targets: &[super::PlanTarget]| {
+            if srcdst == super::PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
+                return;
+            }
 
-        let in_use_targets: Vec<super::PlanTarget> = draw_scopes.iter().map(|s| s.target).collect();
-        effects::apply_chain_in_place(
-            passes,
-            &in_use_targets,
-            srcdst,
-            chain,
-            quality,
-            scissor,
-            mask_uniform_index,
-            effects::EffectCompileCtx {
-                viewport_size: ctx_viewport_size,
-                format,
-                intermediate_budget_bytes,
-                clear,
-            },
-        );
-    };
+            let in_use_intermediate_bytes: u64 = draw_scopes
+                .iter()
+                .filter(|s| {
+                    matches!(
+                        s.target,
+                        super::PlanTarget::Intermediate0
+                            | super::PlanTarget::Intermediate1
+                            | super::PlanTarget::Intermediate2
+                    )
+                })
+                .map(|s| estimate_texture_bytes(s.size, format, 1))
+                .sum();
+            let srcdst_bytes = matches!(
+                srcdst,
+                super::PlanTarget::Intermediate0
+                    | super::PlanTarget::Intermediate1
+                    | super::PlanTarget::Intermediate2
+            )
+            .then(|| estimate_texture_bytes(ctx_viewport_size, format, 1))
+            .unwrap_or(0);
+            let other_live_bytes = in_use_intermediate_bytes
+                .saturating_sub(srcdst_bytes)
+                .saturating_add(extra_in_use_bytes);
+            let effective_budget_bytes = intermediate_budget_bytes.saturating_sub(other_live_bytes);
+
+            let in_use_targets: Vec<super::PlanTarget> =
+                draw_scopes.iter().map(|s| s.target).collect();
+            effects::apply_chain_in_place(
+                passes,
+                &in_use_targets,
+                srcdst,
+                chain,
+                quality,
+                scissor,
+                mask_uniform_index,
+                unavailable_mask_targets,
+                effects::EffectCompileCtx {
+                    viewport_size: ctx_viewport_size,
+                    format,
+                    intermediate_budget_bytes: effective_budget_bytes,
+                    clear,
+                },
+            );
+        };
 
     let mut scene_range_start: usize = 0;
     let mut cursor: usize = 0;
@@ -304,6 +334,11 @@ fn compile_for_scene_inner(
                                 });
 
                                 let before = passes.len();
+                                let unavailable_mask_targets: Vec<super::PlanTarget> =
+                                    clip_path_scopes
+                                        .iter()
+                                        .filter_map(|s| s.mask_target)
+                                        .collect();
                                 apply_chain_in_place(
                                     &mut passes,
                                     &draw_scopes,
@@ -313,6 +348,8 @@ fn compile_for_scene_inner(
                                     parent_size,
                                     scissor,
                                     Some(uniform_index),
+                                    clip_path_mask_in_use_bytes,
+                                    &unavailable_mask_targets,
                                 );
                                 if before == passes.len()
                                     && !chain.is_empty()
@@ -433,6 +470,23 @@ fn compile_for_scene_inner(
                                 content_target
                             );
 
+                            let had_free_scratch_target = [
+                                super::PlanTarget::Intermediate0,
+                                super::PlanTarget::Intermediate1,
+                                super::PlanTarget::Intermediate2,
+                            ]
+                            .into_iter()
+                            .any(|t| {
+                                t != content_target && !draw_scopes.iter().any(|s| s.target == t)
+                            });
+
+                            let chain_scissor = if scope.content_size == viewport_size {
+                                scope.scissor
+                            } else {
+                                ScissorRect::full(scope.content_size.0, scope.content_size.1)
+                            };
+
+                            let before = passes.len();
                             apply_chain_in_place(
                                 &mut passes,
                                 &draw_scopes,
@@ -440,13 +494,28 @@ fn compile_for_scene_inner(
                                 scope.chain,
                                 scope.quality,
                                 scope.content_size,
-                                if scope.content_size == viewport_size {
-                                    scope.scissor
-                                } else {
-                                    ScissorRect::full(scope.content_size.0, scope.content_size.1)
-                                },
+                                chain_scissor,
                                 None,
+                                clip_path_mask_in_use_bytes,
+                                &[],
                             );
+                            if before == passes.len()
+                                && !scope.chain.is_empty()
+                                && chain_scissor.w != 0
+                                && chain_scissor.h != 0
+                            {
+                                degradations.push(RenderPlanDegradation {
+                                    draw_ix: cursor,
+                                    kind: RenderPlanDegradationKind::FilterContentDisabled,
+                                    reason: if intermediate_budget_bytes == 0 {
+                                        RenderPlanDegradationReason::BudgetZero
+                                    } else if !had_free_scratch_target {
+                                        RenderPlanDegradationReason::TargetExhausted
+                                    } else {
+                                        RenderPlanDegradationReason::BudgetInsufficient
+                                    },
+                                });
+                            }
 
                             let cropped = scope.content_origin != (0, 0)
                                 || scope.content_size != viewport_size;

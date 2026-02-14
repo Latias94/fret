@@ -37,10 +37,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderPlan compilation has no flavor switch),
     `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`compile_for_scene` delegates to vNext),
     `crates/fret-render-wgpu/Cargo.toml` (no legacy compiler feature).
-- [ ] REN-VNEXT-plan-002 Move budget/degradation decisions into plan compilation (deterministic ordering).
-  - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.2.1–3.2.4).
-- [ ] REN-VNEXT-plan-003 Add telemetry hooks: per-window intermediate peak bytes and degradations applied.
-  - Evidence (partial): `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanCompileStats`, `RenderPlanDegradation`),
+- [x] REN-VNEXT-plan-002 Move budget/degradation decisions into plan compilation (deterministic ordering).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (scopes-aware effective budgets for effect chains),
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (clip-mask bytes are budget-accounted; mask tiers respect unavailable targets).
+- [x] REN-VNEXT-plan-003 Add telemetry hooks: per-window intermediate peak bytes and degradations applied.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanCompileStats`, `RenderPlanDegradation`),
     `crates/fret-render-wgpu/src/renderer/types.rs` (`RenderPerfSnapshot` fields),
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (plumbs plan stats into perf),
     `crates/fret-render-wgpu/src/renderer/config.rs` (perf snapshot output),
