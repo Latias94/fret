@@ -4,20 +4,20 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 
 ## M0 — Contracts + plumbing
 
-- [ ] Add `TextFontFeatureSetting` in `crates/fret-core/src/text/mod.rs`.
-- [ ] Extend `TextShapingStyle` with `features: Vec<TextFontFeatureSetting>`.
-- [ ] Define canonicalization:
-  - [ ] tag validation (4 ASCII bytes),
-  - [ ] last-writer-wins for duplicates,
-  - [ ] deterministic ordering for hashing.
-- [ ] Plumb mapping in `crates/fret-render-wgpu/src/text/parley_shaper.rs`:
-  - [ ] emit `StyleProperty::FontFeatures(FontSettings::List(...))`.
-- [ ] Update shaping fingerprint/keying:
-  - [ ] features participate in the shaping key,
-  - [ ] no paint-only fields leak into shaping key.
-- [ ] Add tests:
-  - [ ] canonicalization unit test,
-  - [ ] cache key test: toggling a feature changes the key and prepared output.
+- [x] Add `TextFontFeatureSetting` in `crates/fret-core/src/text/mod.rs`.
+- [x] Extend `TextShapingStyle` with `features: Vec<TextFontFeatureSetting>`.
+- [x] Define canonicalization:
+  - [x] tag validation (4 ASCII bytes),
+  - [x] last-writer-wins for duplicates,
+  - [x] deterministic ordering for hashing.
+- [x] Plumb mapping in `crates/fret-render-wgpu/src/text/parley_shaper.rs`:
+  - [x] emit `StyleProperty::FontFeatures(FontSettings::List(...))`.
+- [x] Update shaping fingerprint/keying:
+  - [x] features participate in the shaping key,
+  - [x] no paint-only fields leak into shaping key.
+- [x] Add tests:
+  - [x] canonicalization unit test,
+  - [x] cache key test: toggling a feature changes the key and prepared output.
 
 ## M1 — Ecosystem adoption
 
@@ -29,6 +29,8 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 
 ## Open questions
 
-- [ ] Which bundled font(s) should we use for feature conformance tests?
+- [ ] Do we need a feature behavior conformance fixture beyond “keying correctness”?
+  - Current tests validate deterministic canonicalization and cache invalidation.
+  - A behavior-visible fixture should likely use bundled fonts (`fret_fonts`) to avoid platform
+    font drift.
 - [ ] Do we want to support a CSS-like `font-feature-settings` parser, or keep the struct-only API?
-

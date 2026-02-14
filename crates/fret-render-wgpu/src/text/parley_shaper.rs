@@ -5,8 +5,8 @@ use parley::Layout;
 use parley::LayoutContext;
 use parley::fontique::{FamilyId, GenericFamily};
 use parley::style::{
-    FontSettings, FontStyle, FontVariation, FontWeight as ParleyFontWeight, StyleProperty,
-    TextStyle as ParleyTextStyle,
+    FontFeature, FontSettings, FontStyle, FontVariation, FontWeight as ParleyFontWeight,
+    StyleProperty, TextStyle as ParleyTextStyle,
 };
 use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
@@ -786,6 +786,7 @@ fn shaping_properties_for_span(
         weight,
         slant,
         letter_spacing_em,
+        features,
         axes,
     } = &span.shaping;
 
@@ -828,6 +829,14 @@ fn shaping_properties_for_span(
             )));
         }
     }
+    if !features.is_empty() {
+        let features = font_features_for_settings(features);
+        if !features.is_empty() {
+            out.push(StyleProperty::FontFeatures(FontSettings::List(Cow::Owned(
+                features.into(),
+            ))));
+        }
+    }
     if let Some(weight) = effective_weight {
         out.push(StyleProperty::FontWeight(ParleyFontWeight::new(
             weight.0 as f32,
@@ -866,6 +875,31 @@ fn font_variations_for_axes(axes: &[fret_core::TextFontAxisSetting]) -> Vec<Font
         tag_bytes.copy_from_slice(bytes);
         let tuple = (tag_bytes, axis.value);
         let setting = FontVariation::from(&tuple);
+        by_tag.insert(setting.tag, setting);
+    }
+
+    by_tag.into_values().collect::<Vec<_>>()
+}
+
+fn font_features_for_settings(features: &[fret_core::TextFontFeatureSetting]) -> Vec<FontFeature> {
+    use std::collections::BTreeMap;
+
+    let mut by_tag: BTreeMap<u32, FontFeature> = BTreeMap::new();
+    for feature in features {
+        let tag = feature.tag.trim();
+        if tag.is_empty() {
+            continue;
+        }
+        let bytes = tag.as_bytes();
+        if bytes.len() != 4 || !bytes.iter().all(u8::is_ascii) {
+            continue;
+        }
+
+        let value = feature.value.min(u32::from(u16::MAX)) as u16;
+        let mut tag_bytes = [0u8; 4];
+        tag_bytes.copy_from_slice(bytes);
+        let tuple = (tag_bytes, value);
+        let setting = FontFeature::from(&tuple);
         by_tag.insert(setting.tag, setting);
     }
 
@@ -937,6 +971,72 @@ mod tests {
                 .any(|p| matches!(p, StyleProperty::FontVariations(_))),
             "expected `wght` axis to be removed from FontVariations"
         );
+    }
+
+    #[test]
+    fn shaping_properties_emit_font_features_when_present() {
+        let base = TextStyle {
+            font: FontId::family("Roboto Flex"),
+            size: Px(16.0),
+            weight: FontWeight(400),
+            ..Default::default()
+        };
+
+        let span = TextSpan {
+            len: 1,
+            shaping: TextShapingStyle::default()
+                .with_feature("liga", 0)
+                .with_feature("liga", 1)
+                .with_feature(" lig ", 42)
+                .with_feature("", 1)
+                .with_feature("calt", 0),
+            paint: Default::default(),
+        };
+
+        let props =
+            shaping_properties_for_span(&base, &span, "").expect("expected shaping properties");
+
+        fn tag_u32(tag: &[u8; 4]) -> u32 {
+            (tag[0] as u32) << 24 | (tag[1] as u32) << 16 | (tag[2] as u32) << 8 | tag[3] as u32
+        }
+
+        let mut features: Vec<FontFeature> = Vec::new();
+        for p in &props {
+            if let StyleProperty::FontFeatures(FontSettings::List(settings)) = p {
+                features.extend(settings.iter().copied());
+            }
+        }
+
+        assert!(!features.is_empty(), "expected FontFeatures to be emitted");
+
+        let liga_tag = tag_u32(b"liga");
+        let calt_tag = tag_u32(b"calt");
+
+        let tags = features
+            .iter()
+            .map(|f| f.tag)
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(
+            tags,
+            std::collections::BTreeSet::from([calt_tag, liga_tag]),
+            "expected invalid tags to be ignored and duplicates to be coalesced"
+        );
+
+        let liga: Vec<FontFeature> = features
+            .iter()
+            .cloned()
+            .filter(|f| f.tag == liga_tag)
+            .collect();
+        assert_eq!(liga.len(), 1, "expected duplicate tags to be coalesced");
+        assert_eq!(liga[0].value, 1, "expected last-writer-wins for `liga`");
+
+        let calt: Vec<FontFeature> = features
+            .iter()
+            .cloned()
+            .filter(|f| f.tag == calt_tag)
+            .collect();
+        assert_eq!(calt.len(), 1);
+        assert_eq!(calt[0].value, 0);
     }
 
     #[test]

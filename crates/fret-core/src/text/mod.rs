@@ -216,6 +216,13 @@ pub struct TextShapingStyle {
     pub slant: Option<TextSlant>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub letter_spacing_em: Option<f32>,
+    /// Explicit OpenType feature overrides (best-effort).
+    ///
+    /// This is intended for editor-grade text surfaces (e.g. ligature policy in code) and
+    /// diagnostics. Callers should treat this as best-effort: if the resolved face does not
+    /// support a requested tag, it will be ignored by shaping backends.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub features: Vec<TextFontFeatureSetting>,
     /// Explicit variable font axis overrides.
     ///
     /// This is an advanced surface intended for code editors and diagnostics. Callers should treat
@@ -223,6 +230,15 @@ pub struct TextShapingStyle {
     /// will be ignored by the shaping backend.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub axes: Vec<TextFontAxisSetting>,
+}
+
+/// A single OpenType font feature setting, identified by a 4-byte OpenType feature tag.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TextFontFeatureSetting {
+    /// 4-byte OpenType feature tag (e.g. "liga", "calt", "ss01").
+    pub tag: String,
+    /// OpenType feature value (best-effort). Conventionally 0=off, 1=on.
+    pub value: u32,
 }
 
 /// A single variable font axis setting, identified by a 4-byte OpenType axis tag.
@@ -287,6 +303,14 @@ impl TextShapingStyle {
 
     pub fn with_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
         self.axes.push(TextFontAxisSetting {
+            tag: tag.into(),
+            value,
+        });
+        self
+    }
+
+    pub fn with_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.features.push(TextFontFeatureSetting {
             tag: tag.into(),
             value,
         });

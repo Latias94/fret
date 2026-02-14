@@ -1,6 +1,6 @@
 # Workstream: Text Shaping Surface v1 (OpenType Features + Cache Semantics)
 
-Status: Draft (design); implementation planned as a fearless refactor follow-up to text-system-v2.
+Status: M0 implemented (contracts + Parley plumbing); M1 planned (ecosystem policy adoption).
 
 This document is **non-normative**. Normative contracts live in ADRs (notably the v2 Parley text
 system ADRs) and in the `fret-core` public API.
@@ -55,11 +55,12 @@ supports `StyleProperty::FontFeatures`.
   - `crates/fret-core/src/text/mod.rs` (`TextShapingStyle`, `TextFontAxisSetting`)
 - Parley plumbing:
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`shaping_properties_for_span`)
-  - currently sets: `FontStack`, `FontVariations`, `FontWeight`, `FontStyle`, `LetterSpacing`
-  - does **not** set: `FontFeatures`
+  - sets: `FontStack`, `FontVariations`, `FontWeight`, `FontStyle`, `LetterSpacing`, `FontFeatures`
 - Wrapper + cache keys:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextBlobKey`, `TextShapeKey`, measure caches)
   - spans participate in shaping key via a “shaping-only fingerprint” (do not regress this).
+  - features participate in the shaping fingerprint and blob keys:
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)
 
 ## Proposed API Surface (fret-core)
 
@@ -173,3 +174,13 @@ For a detailed, checklist-driven plan, see:
 - `docs/workstreams/text-shaping-surface-v1-milestones.md`
 - `docs/workstreams/text-shaping-surface-v1-todo.md`
 
+## Implementation notes (M0)
+
+Evidence anchors:
+
+- `TextFontFeatureSetting` + `TextShapingStyle.features`:
+  - `crates/fret-core/src/text/mod.rs`
+- Parley mapping and canonicalization:
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`font_features_for_settings`)
+- Shaping key participation:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)

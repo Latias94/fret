@@ -1634,9 +1634,48 @@ fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
             .letter_spacing_em
             .map(|v| v.to_bits())
             .hash(&mut hasher);
+        features_shaping_fingerprint(&mut hasher, &s.shaping.features);
         axes_shaping_fingerprint(&mut hasher, &s.shaping.axes);
     }
     hasher.finish()
+}
+
+fn features_shaping_fingerprint(
+    hasher: &mut std::collections::hash_map::DefaultHasher,
+    features: &[fret_core::TextFontFeatureSetting],
+) {
+    use std::collections::BTreeMap;
+
+    if features.is_empty() {
+        0u8.hash(hasher);
+        return;
+    }
+    1u8.hash(hasher);
+
+    let mut by_tag: BTreeMap<u32, u16> = BTreeMap::new();
+    for feature in features {
+        let tag = feature.tag.trim();
+        if tag.is_empty() {
+            continue;
+        }
+        let bytes = tag.as_bytes();
+        if bytes.len() != 4 || !bytes.iter().all(u8::is_ascii) {
+            continue;
+        }
+
+        let tag_u32 = (bytes[0] as u32) << 24
+            | (bytes[1] as u32) << 16
+            | (bytes[2] as u32) << 8
+            | bytes[3] as u32;
+        let value = feature.value.min(u32::from(u16::MAX)) as u16;
+        by_tag.insert(tag_u32, value);
+    }
+
+    by_tag.len().hash(hasher);
+    for (tag, value) in by_tag {
+        tag.hash(hasher);
+        value.hash(hasher);
+    }
 }
 
 fn axes_shaping_fingerprint(
@@ -7060,6 +7099,37 @@ mod tests {
             spans_shaping_fingerprint(&spans_a),
             spans_shaping_fingerprint(&spans_d),
             "axis overrides must participate in shaping fingerprints"
+        );
+
+        let mut spans_e = spans_a.clone();
+        spans_e[0].shaping = spans_e[0].shaping.clone().with_feature("liga", 0);
+        assert_ne!(
+            spans_shaping_fingerprint(&spans_a),
+            spans_shaping_fingerprint(&spans_e),
+            "feature overrides must participate in shaping fingerprints"
+        );
+
+        let mut spans_f = spans_a.clone();
+        spans_f[0].shaping = spans_f[0]
+            .shaping
+            .clone()
+            .with_feature("liga", 0)
+            .with_feature("liga", 1)
+            .with_feature(" lig ", 42)
+            .with_feature("", 1)
+            .with_feature("calt", 0);
+
+        let mut spans_g = spans_a.clone();
+        spans_g[0].shaping = spans_g[0]
+            .shaping
+            .clone()
+            .with_feature("calt", 0)
+            .with_feature("liga", 1);
+
+        assert_eq!(
+            spans_shaping_fingerprint(&spans_f),
+            spans_shaping_fingerprint(&spans_g),
+            "expected feature canonicalization to ignore invalid tags, coalesce duplicates, and be order-independent"
         );
 
         let rich_a = fret_core::AttributedText::new(
