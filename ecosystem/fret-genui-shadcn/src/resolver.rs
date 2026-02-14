@@ -230,42 +230,53 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
 
                 let model = Self::ensure_string_model(cx, desired.clone());
 
-                let element_id = cx.root_id();
-                let focused = cx.is_focused_element(element_id);
-                if !focused {
-                    let cur = cx.app.models().get_cloned(&model).unwrap_or_default();
-                    if cur != desired {
-                        let _ = cx.app.models_mut().update(&model, |v| *v = desired.clone());
-                    }
-                }
+                let cur = cx.app.models().get_cloned(&model).unwrap_or_default();
 
                 if let (Some(scope), Some(path)) =
                     (Self::genui_scope(cx), props.bindings.get("value"))
                 {
                     #[derive(Default)]
                     struct LastState {
-                        last: Option<String>,
+                        last_model: Option<String>,
+                        last_desired: Option<String>,
                     }
-                    let cur = cx.app.models().get_cloned(&model).unwrap_or_default();
+
                     let mut to_emit: Option<String> = None;
+                    let mut sync_model_to: Option<String> = None;
                     cx.with_state(LastState::default, |st| {
-                        if focused && st.last.as_deref() != Some(cur.as_str()) {
-                            st.last = Some(cur.clone());
+                        let model_changed =
+                            st.last_model.as_deref().is_some_and(|v| v != cur.as_str());
+                        let desired_changed = st
+                            .last_desired
+                            .as_deref()
+                            .is_some_and(|v| v != desired.as_str());
+
+                        if model_changed && cur != desired {
                             to_emit = Some(cur.clone());
-                        } else if !focused {
-                            st.last = Some(desired.clone());
+                        } else if desired_changed && !model_changed && cur != desired {
+                            sync_model_to = Some(desired.clone());
                         }
+
+                        st.last_model = Some(cur.clone());
+                        st.last_desired = Some(desired.clone());
                     });
-                    if let Some(cur) = to_emit {
+
+                    if let Some(v) = sync_model_to {
+                        let _ = cx.app.models_mut().update(&model, |m| *m = v);
+                    }
+                    if let Some(v) = to_emit {
                         Self::emit_set_state(
                             cx,
                             &scope,
                             key,
                             "change",
                             path.as_str(),
-                            Value::String(cur),
+                            Value::String(v),
                         );
                     }
+                } else if cur != desired {
+                    // Treat as a controlled prop when no binding is provided.
+                    let _ = cx.app.models_mut().update(&model, |v| *v = desired.clone());
                 }
 
                 let mut input = fret_ui_shadcn::Input::new(model);
