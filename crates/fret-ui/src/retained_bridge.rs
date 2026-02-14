@@ -50,10 +50,24 @@ impl RetainedSubtreeFactory {
     }
 
     pub(crate) fn build<H: UiHost + 'static>(&self, ui: &mut UiTree<H>) -> NodeId {
-        let f = self
+        let Some(f) = self
             .inner
             .downcast_ref::<Arc<dyn Fn(&mut UiTree<H>) -> NodeId>>()
-            .expect("retained subtree factory type mismatch (host type changed?)");
+        else {
+            if crate::strict_runtime::strict_runtime_enabled() {
+                panic!("retained subtree factory type mismatch (host type changed?)");
+            }
+
+            tracing::error!(
+                "retained subtree factory type mismatch (host type changed?); returning fallback empty widget node"
+            );
+
+            struct FallbackWidget;
+            impl<H2: UiHost> Widget<H2> for FallbackWidget {}
+
+            return ui.create_node(FallbackWidget);
+        };
+
         (f)(ui)
     }
 }

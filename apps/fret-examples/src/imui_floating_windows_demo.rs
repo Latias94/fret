@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use fret::prelude::*;
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_imui::prelude::UiWriter;
-use fret_kit::prelude::*;
 
 struct ImUiFloatingWindowsState {
     open_a: Model<bool>,
@@ -11,7 +11,7 @@ struct ImUiFloatingWindowsState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app("imui-floating-windows-demo", init_window, view)?
+    fret::app("imui-floating-windows-demo", init_window, view)?
         .with_main_window("imui_floating_windows_demo", (720.0, 480.0))
         .run()?;
     Ok(())

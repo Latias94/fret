@@ -62,7 +62,7 @@ For each module, we consider it “closed enough to scale” when:
 - `apps/fret-examples` — end-to-end harness code.
 - `apps/fret-demo` — native harness shells.
 - `apps/fret-demo-web` — wasm harness shell.
-- `crates/fret` — facade crate (re-exports).
+- `crates/fret-framework` — facade crate (re-exports).
 
 Hard rules: see `docs/dependency-policy.md` and ADR 0037.
 

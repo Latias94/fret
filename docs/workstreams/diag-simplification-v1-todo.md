@@ -85,7 +85,7 @@ Evidence pointers:
 - [x] Tooling writes a minimal per-run `manifest.json` (index + size stats) alongside v1 artifacts.
 - [x] Define an initial v2 chunk layout for bundle payloads: `<run_id>/chunks/bundle_json/*` with `manifest.json` recording chunk list + sizes + hashes.
 - [x] Validate chunk integrity (per-chunk + total hash) and fail fast with a stable `reason_code` when corruption is detected.
-- [ ] Define `manifest.json` + chunk directory layout (v2 artifact format; beyond bundle payload).
+- [x] Define `manifest.json` + chunk directory layout (v2 artifact format; beyond bundle payload).
 - [x] Keep `bundle.json` as a compatibility artifact (can be materialized on-demand from v2 chunks).
 - [x] Update pack/triage/lint to accept both v1 and v2 artifact layouts.
 - [ ] Introduce chunking policy for WS:
@@ -94,6 +94,19 @@ Evidence pointers:
 
 ## Phase 6: Config consolidation (compat-first)
 
-- [ ] Add `FRET_DIAG_CONFIG_PATH` support and a canonical config file.
-- [ ] Make tooling generate and pass the config file when launching.
+- [x] Add `FRET_DIAG_CONFIG_PATH` support and a canonical config file.
+- [x] Make tooling generate and pass the config file when launching.
 - [ ] Deprecate ambiguous env vars by introducing explicit replacements (keep old names supported).
+  - [x] Add explicit screenshot env aliases: `FRET_DIAG_GPU_SCREENSHOTS` and `FRET_DIAG_BUNDLE_SCREENSHOT` (keep old names supported).
+
+## Phase 7: Implementation split (reduce monolith risk)
+
+- [x] Extract script/pick runtime helpers from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/script_runtime.rs`.
+- [x] Move `json_pointer_set` helper out of `crates/fret-diag/src/stats.rs` (share via `crates/fret-diag/src/util.rs`).
+- [x] Extract pick subcommand handlers into `crates/fret-diag/src/commands/pick.rs` (reduce `lib.rs` churn surface).
+- [x] Extract inspect subcommand handler into `crates/fret-diag/src/commands/inspect.rs` (reduce `lib.rs` churn surface).
+- [x] Extract pack/triage/lint subcommand handlers into `crates/fret-diag/src/commands/artifacts.rs` (reduce `lib.rs` churn surface).
+- [x] Extract path/poke/latest subcommand handlers into `crates/fret-diag/src/commands/session.rs` (reduce `lib.rs` churn surface).
+- [x] Extract script subcommand handler into `crates/fret-diag/src/commands/script.rs` (reduce `lib.rs` churn surface).
+- [x] Extract script path helpers into `crates/fret-diag/src/paths.rs` (reduce `lib.rs` churn surface).
+- [x] Extract runtime DevTools WS handling (inbox/send + per-window request drivers + bundle.dumped export + result pushes) into `ecosystem/fret-bootstrap/src/ui_diagnostics_devtools_ws.rs` (reduce `ui_diagnostics.rs` churn surface).

@@ -410,6 +410,7 @@ fn default_thinking_message<H: UiHost>(
         color: Some(fg),
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     })
 }
 

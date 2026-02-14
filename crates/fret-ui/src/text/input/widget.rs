@@ -185,6 +185,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             max_width: Some(inner_width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let (blob, metrics) =
@@ -277,6 +278,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             max_width: Some(inner_width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let (blob, metrics) =
@@ -1075,6 +1077,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             max_width: Some(cx.available.width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         // `TextSystem` returns zero-height metrics for empty strings (no shaped lines). Text inputs
@@ -1142,6 +1145,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
 
@@ -1166,7 +1170,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             && self.text.is_empty()
             && self.placeholder.as_ref().is_some_and(|s| !s.is_empty());
         if show_placeholder && self.placeholder_blob.is_none() {
-            let placeholder = self.placeholder.as_ref().expect("checked above").as_ref();
+            let Some(placeholder) = self.placeholder.as_deref() else {
+                debug_assert!(false, "placeholder checked above");
+                return;
+            };
             let (blob, metrics) =
                 cx.services
                     .text()

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use fret::interop::embedded_viewport as embedded;
+use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::Color;
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
     runtime as dock_runtime,
 };
-use fret_kit::interop::embedded_viewport as embedded;
-use fret_kit::prelude::*;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
     ActivationPolicy, FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
@@ -60,7 +60,7 @@ impl embedded::EmbeddedViewportRecord for ImUiEditorProofState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("imui-editor-proof-demo", init_window, view, |d| {
+    fret::app_with_hooks("imui-editor-proof-demo", init_window, view, |d| {
         d.drive_embedded_viewport()
             .dock_op(on_dock_op)
             .window_create_spec(window_create_spec)

@@ -915,6 +915,7 @@ impl InputGroupText {
             color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
         })
     }
 }
@@ -1160,6 +1161,7 @@ impl InputGroupButton {
                             color: Some(fg),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
                         }));
                     }
                     row.extend(children);

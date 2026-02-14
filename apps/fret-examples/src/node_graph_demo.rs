@@ -2696,6 +2696,7 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
             max_width: Some(Px(rect.size.width.0 - 2.0 * Self::PAD_PX)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
 
@@ -2846,6 +2847,7 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
 

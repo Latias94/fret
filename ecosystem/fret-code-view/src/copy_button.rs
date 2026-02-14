@@ -165,6 +165,7 @@ pub(crate) fn render_copy_button<H: UiHost>(
                     color: Some(fg),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 })]
             })],
         )

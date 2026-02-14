@@ -39,6 +39,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     max_width: Some(Px(max_w)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor: effective_scale_factor(scale_factor, zoom),
                 };
                 let (blob, metrics) = self.paint_cache.text_blob(
@@ -75,6 +76,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     max_width: Some(Px(max_w)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor: effective_scale_factor(scale_factor, zoom),
                 };
                 let (blob, metrics) = self.paint_cache.text_blob(
@@ -106,6 +108,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 max_width: Some(info.max_width),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: effective_scale_factor(scale_factor, zoom),
             };
             let (blob, metrics) = self.paint_cache.text_blob(

@@ -4,6 +4,8 @@ use super::ElementHostWidget;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::widget::MeasureCx;
 use fret_core::{FrameId, TextWrap};
+use std::collections::HashSet;
+use std::sync::{Mutex, OnceLock};
 
 fn available_px_or_zero(constraints: LayoutConstraints) -> Size {
     let w = constraints
@@ -75,6 +77,85 @@ fn clamp_to_constraints_in_measure(
     }
 
     size
+}
+
+fn warn_taffy_error_once(op: &'static str, err: taffy::TaffyError) {
+    static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+    if crate::strict_runtime::strict_runtime_enabled() {
+        panic!("taffy {op} failed: {err:?}");
+    }
+
+    let key = format!("{op}:{err:?}");
+    let seen = SEEN.get_or_init(|| Mutex::new(HashSet::new()));
+    let first = match seen.lock() {
+        Ok(mut guard) => guard.insert(key),
+        Err(_) => true,
+    };
+
+    if first {
+        tracing::warn!("taffy {op} failed; falling back to naive flex measurement: {err:?}");
+    }
+}
+
+fn fallback_measure_flex<H: UiHost>(
+    cx: &mut MeasureCx<'_, H>,
+    inner_available: LayoutSize<AvailableSpace>,
+    props: &FlexProps,
+    pad_w: f32,
+    pad_h: f32,
+) -> Size {
+    let child_constraints = LayoutConstraints::new(LayoutSize::new(None, None), inner_available);
+
+    let mut main = 0.0f32;
+    let mut cross = 0.0f32;
+    let gap = props.gap.0.max(0.0);
+
+    for (i, &child) in cx.children.iter().enumerate() {
+        let size = cx.measure_in(child, child_constraints);
+        let (main_delta, cross_delta) = match props.direction {
+            fret_core::Axis::Horizontal => (size.width.0.max(0.0), size.height.0.max(0.0)),
+            fret_core::Axis::Vertical => (size.height.0.max(0.0), size.width.0.max(0.0)),
+        };
+
+        if i > 0 {
+            main = (main + gap).max(0.0);
+        }
+        main = (main + main_delta).max(0.0);
+        cross = cross.max(cross_delta);
+    }
+
+    let (inner_w, inner_h) = match props.direction {
+        fret_core::Axis::Horizontal => (main, cross),
+        fret_core::Axis::Vertical => (cross, main),
+    };
+
+    let desired = Size::new(
+        Px((inner_w + pad_w).max(0.0)),
+        Px((inner_h + pad_h).max(0.0)),
+    );
+    clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
+}
+
+fn fallback_measure_grid<H: UiHost>(
+    cx: &mut MeasureCx<'_, H>,
+    inner_available: LayoutSize<AvailableSpace>,
+    props: &crate::element::GridProps,
+    pad_w: f32,
+    pad_h: f32,
+) -> Size {
+    let child_constraints = LayoutConstraints::new(LayoutSize::new(None, None), inner_available);
+
+    let mut max_w = 0.0f32;
+    let mut max_h = 0.0f32;
+    for &child in cx.children {
+        let size = cx.measure_in(child, child_constraints);
+        max_w = max_w.max(size.width.0.max(0.0));
+        max_h = max_h.max(size.height.0.max(0.0));
+    }
+
+    let desired = Size::new(Px((max_w + pad_w).max(0.0)), Px((max_h + pad_h).max(0.0)));
+    clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
 }
 
 fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap) -> Option<Px> {
@@ -446,6 +527,7 @@ impl ElementHostWidget {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
+            align: props.align,
             scale_factor: cx.scale_factor,
         };
         cx.tree
@@ -470,6 +552,7 @@ impl ElementHostWidget {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
+            align: props.align,
             scale_factor: cx.scale_factor,
         };
         cx.tree
@@ -494,6 +577,7 @@ impl ElementHostWidget {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
+            align: props.align,
             scale_factor: cx.scale_factor,
         };
         cx.tree
@@ -516,6 +600,7 @@ impl ElementHostWidget {
             max_width,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx
@@ -549,6 +634,7 @@ impl ElementHostWidget {
             max_width,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx
@@ -883,7 +969,13 @@ impl ElementHostWidget {
         };
 
         let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
-        let root = taffy.new_leaf(root_style).expect("taffy root");
+        let root = match taffy.new_leaf(root_style) {
+            Ok(root) => root,
+            Err(err) => {
+                warn_taffy_error_once("new_leaf(root)", err);
+                return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+            }
+        };
 
         let mut child_nodes = Vec::with_capacity(cx.children.len());
         for &child in cx.children {
@@ -955,14 +1047,19 @@ impl ElementHostWidget {
                 ..Default::default()
             };
 
-            let node = taffy
-                .new_leaf_with_context(style, Some(child))
-                .expect("taffy child");
+            let node = match taffy.new_leaf_with_context(style, Some(child)) {
+                Ok(node) => node,
+                Err(err) => {
+                    warn_taffy_error_once("new_leaf_with_context(child)", err);
+                    return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+                }
+            };
             child_nodes.push(node);
         }
-        taffy
-            .set_children(root, &child_nodes)
-            .expect("taffy children");
+        if let Err(err) = taffy.set_children(root, &child_nodes) {
+            warn_taffy_error_once("set_children(root)", err);
+            return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+        }
 
         let mut measure_cache: std::collections::HashMap<
             super::super::taffy_layout::TaffyMeasureKey,
@@ -974,8 +1071,8 @@ impl ElementHostWidget {
             width: available_space_to_taffy(inner_available.width),
             height: available_space_to_taffy(inner_available.height),
         };
-        taffy
-            .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
+        if let Err(err) =
+            taffy.compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
                 let Some(child) = ctx.and_then(|c| *c) else {
                     return taffy::geometry::Size::default();
                 };
@@ -1006,9 +1103,18 @@ impl ElementHostWidget {
                 measure_cache.insert(key, out);
                 out
             })
-            .expect("taffy compute");
+        {
+            warn_taffy_error_once("compute_layout_with_measure(root)", err);
+            return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+        }
 
-        let root_layout = taffy.layout(root).expect("taffy root layout");
+        let root_layout = match taffy.layout(root) {
+            Ok(layout) => layout,
+            Err(err) => {
+                warn_taffy_error_once("layout(root)", err);
+                return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+            }
+        };
         let inner_size = Size::new(
             Px(root_layout.size.width.max(0.0)),
             Px(root_layout.size.height.max(0.0)),
@@ -1087,7 +1193,13 @@ impl ElementHostWidget {
         };
 
         let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
-        let root = taffy.new_leaf(root_style).expect("taffy root");
+        let root = match taffy.new_leaf(root_style) {
+            Ok(root) => root,
+            Err(err) => {
+                warn_taffy_error_once("new_leaf(root)", err);
+                return fallback_measure_grid(cx, inner_available, &props, pad_w, pad_h);
+            }
+        };
 
         let mut child_nodes = Vec::with_capacity(cx.children.len());
         for &child in cx.children {
@@ -1135,14 +1247,19 @@ impl ElementHostWidget {
                 grid_row: super::super::taffy_layout::taffy_grid_line(layout_style.grid.row),
                 ..Default::default()
             };
-            let node = taffy
-                .new_leaf_with_context(style, Some(child))
-                .expect("taffy child");
+            let node = match taffy.new_leaf_with_context(style, Some(child)) {
+                Ok(node) => node,
+                Err(err) => {
+                    warn_taffy_error_once("new_leaf_with_context(child)", err);
+                    return fallback_measure_grid(cx, inner_available, &props, pad_w, pad_h);
+                }
+            };
             child_nodes.push(node);
         }
-        taffy
-            .set_children(root, &child_nodes)
-            .expect("taffy children");
+        if let Err(err) = taffy.set_children(root, &child_nodes) {
+            warn_taffy_error_once("set_children(root)", err);
+            return fallback_measure_grid(cx, inner_available, &props, pad_w, pad_h);
+        }
 
         let mut measure_cache: std::collections::HashMap<
             super::super::taffy_layout::TaffyMeasureKey,
@@ -1154,8 +1271,8 @@ impl ElementHostWidget {
             width: available_space_to_taffy(inner_available.width),
             height: available_space_to_taffy(inner_available.height),
         };
-        taffy
-            .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
+        if let Err(err) =
+            taffy.compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
                 let Some(child) = ctx.and_then(|c| *c) else {
                     return taffy::geometry::Size::default();
                 };
@@ -1186,9 +1303,18 @@ impl ElementHostWidget {
                 measure_cache.insert(key, out);
                 out
             })
-            .expect("taffy compute");
+        {
+            warn_taffy_error_once("compute_layout_with_measure(root)", err);
+            return fallback_measure_grid(cx, inner_available, &props, pad_w, pad_h);
+        }
 
-        let root_layout = taffy.layout(root).expect("taffy root layout");
+        let root_layout = match taffy.layout(root) {
+            Ok(layout) => layout,
+            Err(err) => {
+                warn_taffy_error_once("layout(root)", err);
+                return fallback_measure_grid(cx, inner_available, &props, pad_w, pad_h);
+            }
+        };
         let inner_size = Size::new(
             Px(root_layout.size.width.max(0.0)),
             Px(root_layout.size.height.max(0.0)),

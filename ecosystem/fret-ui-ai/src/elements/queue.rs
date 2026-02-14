@@ -483,6 +483,7 @@ impl QueueSectionLabel {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
         });
 
         let mut children = vec![chevron];
@@ -888,6 +889,7 @@ impl QueueItemContent {
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
+                align: fret_core::TextAlign::Start,
             })
         } else {
             cx.text_props(TextProps {
@@ -897,6 +899,7 @@ impl QueueItemContent {
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
+                align: fret_core::TextAlign::Start,
             })
         };
 
@@ -990,6 +993,7 @@ impl QueueItemDescription {
                 color: Some(fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })
         } else {
             cx.text_props(TextProps {
@@ -999,6 +1003,7 @@ impl QueueItemDescription {
                 color: Some(fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
             })
         };
 
@@ -1375,6 +1380,7 @@ impl QueueItemFile {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
         });
 
         let row = stack::hstack(

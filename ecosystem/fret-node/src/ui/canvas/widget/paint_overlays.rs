@@ -44,6 +44,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 max_width: Some(Px((rect.size.width.0 - 2.0 * pad).max(0.0))),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: effective_scale_factor(cx.scale_factor, zoom),
             };
             let (blob, metrics) =

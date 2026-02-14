@@ -626,6 +626,7 @@ impl FileTreeName {
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
         })
     }
 }

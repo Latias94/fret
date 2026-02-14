@@ -601,6 +601,7 @@ fn render_code_block_header<H: UiHost>(
                         color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                     }));
                 }
                 left.extend(header.left.iter().cloned());
@@ -975,6 +976,7 @@ fn render_code_block_line_row<H: UiHost>(
         color: Some(row_theme.fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     });
 
     if !prepared.show_line_numbers {
@@ -1007,6 +1009,7 @@ fn render_code_block_line_row<H: UiHost>(
         color: Some(row_theme.muted_fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     });
 
     let gutter = cx.container(
@@ -1285,6 +1288,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         color: Some(theme.color_token("muted-foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
     });
 
     let gutter = cx.container(
@@ -1382,6 +1386,7 @@ fn render_code_block_text<H: UiHost>(
                 color: Some(fg),
                 wrap: text_wrap,
                 overflow,
+                align: fret_core::TextAlign::Start,
             })]
         },
     );

@@ -173,6 +173,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 max_width: Some(Px(max_w)),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
+                align: fret_core::TextAlign::Start,
                 scale_factor: scale_factor * zoom,
             };
 

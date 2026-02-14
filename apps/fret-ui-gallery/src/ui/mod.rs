@@ -18,6 +18,7 @@
     clippy::useless_format
 )]
 
+use fret::prelude::ModelWatchExt as _;
 use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
 use fret_code_editor_view as code_editor_view;
@@ -27,7 +28,6 @@ use fret_core::{
     FontWeight, ImageId, Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan,
     TextStyle, TextWrap,
 };
-use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
 use fret_ui::Theme;
 use fret_ui::element::{CanvasProps, SemanticsDecoration, StackProps};
@@ -57,6 +57,7 @@ mod previews;
 pub(crate) use content::content_view;
 pub(crate) use models::UiGalleryModels;
 pub(crate) use nav::sidebar_view;
+use pages::preview_motion_presets;
 use previews::gallery::*;
 use previews::magic::*;
 use previews::material3::*;

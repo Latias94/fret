@@ -13,6 +13,11 @@ const THEME_DURATION_SHADCN_SPRING_DRAWER_INERTIA_BOUNCE: &str =
 const THEME_NUMBER_SHADCN_SPRING_DRAWER_INERTIA_BOUNCE_BOUNCE: &str =
     "number.shadcn.motion.spring.drawer.inertia_bounce.bounce";
 
+const THEME_DURATION_MOTION_SPRING_DRAG_RELEASE_SETTLE: &str =
+    "duration.motion.spring.drag_release_settle";
+const THEME_NUMBER_MOTION_SPRING_DRAG_RELEASE_SETTLE_BOUNCE: &str =
+    "number.motion.spring.drag_release_settle.bounce";
+
 fn duration_from_theme_ms<H: UiHost>(app: &H, key: &str) -> Option<Duration> {
     let theme = Theme::global(app);
     let ms = theme.duration_ms_by_key(key)?;
@@ -48,8 +53,12 @@ pub fn shadcn_drawer_settle_spring_description<H: UiHost>(app: &H) -> SpringDesc
     let default_bounce = 0.0;
 
     let duration = duration_from_theme_ms(app, THEME_DURATION_SHADCN_SPRING_DRAWER_SETTLE)
+        .or_else(|| duration_from_theme_ms(app, THEME_DURATION_MOTION_SPRING_DRAG_RELEASE_SETTLE))
         .unwrap_or(default_duration);
     let bounce = bounce_from_theme_number(app, THEME_NUMBER_SHADCN_SPRING_DRAWER_SETTLE_BOUNCE)
+        .or_else(|| {
+            bounce_from_theme_number(app, THEME_NUMBER_MOTION_SPRING_DRAG_RELEASE_SETTLE_BOUNCE)
+        })
         .unwrap_or(default_bounce);
 
     spring_from_duration_and_bounce(duration, bounce)
@@ -60,9 +69,13 @@ pub fn shadcn_drawer_inertia_bounce_spring_description<H: UiHost>(app: &H) -> Sp
     let default_bounce = 0.25;
 
     let duration = duration_from_theme_ms(app, THEME_DURATION_SHADCN_SPRING_DRAWER_INERTIA_BOUNCE)
+        .or_else(|| duration_from_theme_ms(app, THEME_DURATION_MOTION_SPRING_DRAG_RELEASE_SETTLE))
         .unwrap_or(default_duration);
     let bounce =
         bounce_from_theme_number(app, THEME_NUMBER_SHADCN_SPRING_DRAWER_INERTIA_BOUNCE_BOUNCE)
+            .or_else(|| {
+                bounce_from_theme_number(app, THEME_NUMBER_MOTION_SPRING_DRAG_RELEASE_SETTLE_BOUNCE)
+            })
             .unwrap_or(default_bounce);
 
     spring_from_duration_and_bounce(duration, bounce)

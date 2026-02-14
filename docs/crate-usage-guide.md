@@ -15,10 +15,10 @@ If you are a component author, start with:
 
 ### The 5 crate names to remember
 
-- `fret-kit`: desktop-first batteries-included app entry point.
+- `fret`: desktop-first batteries-included app entry point (recommended).
 - `fret-ui-shadcn`: default component surface (apps).
 - `fret-ui-kit`: component authoring glue (ecosystem libraries).
-- `fret`: framework facade for advanced/manual assembly.
+- `fret-framework`: framework facade for advanced/manual assembly.
 - `fretboard`: dev tooling (templates + native/web runner).
 
 1) If you are writing a reusable ecosystem library, avoid backend crates (`fret-launch`, `winit`, `wgpu`).
@@ -33,7 +33,7 @@ If you are a component author, start with:
 
 Desktop-first quick start:
 
-- If you want a single dependency for a native desktop app, use `fret-kit` (ecosystem-level batteries-included wrapper).
+- If you want a single dependency for a native desktop app, use `fret` (ecosystem-level batteries-included wrapper).
 
 Web/wasm quick start (tooling):
 
@@ -65,7 +65,7 @@ Portability notes (native vs wasm):
 Dependency guidance:
 
 - **Reusable ecosystem crates** SHOULD depend on portable surfaces only (`fret-core` / `fret-runtime` / `fret-ui`) and use the inbox/dispatcher surface (ADR 0111, ADR 0175).
-- **Apps** may use `fret-bootstrap` (or `fret-kit`) to get the golden-path wiring so they do not need to hand-roll channels + timers + wake logic.
+- **Apps** may use `fret-bootstrap` (or `fret`) to get the golden-path wiring so they do not need to hand-roll channels + timers + wake logic.
 
 ## Features (Cargo)
 
@@ -74,11 +74,17 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 ## Core framework crates (`crates/*`)
 
-### `fret`
+### `fret` (ecosystem meta crate)
+
+**What it is:** desktop-first, batteries-included app entry points (golden path).
+
+**Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
+
+### `fret-framework`
 
 **What it is:** the public facade (re-exports + convenience feature bundles).
 
-**Use it when:** you want a single dependency for “core + app + ui” (and optional bundles like `native-wgpu` / `web`).
+**Use it when:** you want an advanced/manual assembly surface for “core + app + ui” (and optional bundles like `native-wgpu` / `web`), without pulling ecosystem defaults into `crates/*`.
 
 ### `fret-core`
 
@@ -220,14 +226,6 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - optional UI app driver wiring,
 - optional command palette integration,
 - optional dev hotpatch toggles.
-
-### `fret-kit`
-
-**What it is:** a desktop-first batteries-included convenience crate that composes:
-
-- `fret` (with `native-wgpu`) + `fret-bootstrap` (golden path wiring) + `fret-ui-shadcn` (default component surface).
-
-**Use it when:** you want a working native app with minimal boilerplate and a single memorable dependency.
 
 ### `fret-executor`
 

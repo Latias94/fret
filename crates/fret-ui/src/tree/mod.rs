@@ -20,8 +20,9 @@ use slotmap::{Key, SecondaryMap, SlotMap};
 use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
-use std::slice;
+use std::panic::{AssertUnwindSafe, Location, catch_unwind, resume_unwind};
 use std::sync::Arc;
+use std::sync::{Mutex, OnceLock};
 
 mod bounds_tree;
 mod commands;
@@ -276,6 +277,18 @@ impl<H: UiHost> Node<H> {
     }
 }
 
+/// # Safety
+///
+/// The caller must guarantee that every element in `slice` is initialized.
+#[inline]
+unsafe fn assume_init_slice_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
+    // SAFETY: `MaybeUninit<T>` has the same layout as `T`, and the caller guarantees initialization.
+    //
+    // Note: our pinned toolchain does not expose a standard-library helper for assuming init on
+    // `&[MaybeUninit<T>]`, so we use the conventional `from_raw_parts` cast.
+    unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<T>(), slice.len()) }
+}
+
 #[derive(Debug)]
 pub(super) struct SmallNodeList<const N: usize> {
     len: usize,
@@ -312,7 +325,9 @@ impl<const N: usize> SmallNodeList<N> {
         if !self.spill.is_empty() {
             return self.spill.as_slice();
         }
-        unsafe { slice::from_raw_parts(self.inline.as_ptr() as *const NodeId, self.len) }
+        debug_assert!(self.len <= N);
+        // SAFETY: when `spill` is empty, indices `0..len` are initialized via `set()`.
+        unsafe { assume_init_slice_ref(&self.inline[..self.len]) }
     }
 }
 
@@ -338,16 +353,16 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
         if self.spill.is_empty() && self.len < N {
             self.inline[self.len].write(value);
             self.len += 1;
+            debug_assert!(self.len <= N);
             return;
         }
 
         if self.spill.is_empty() {
+            debug_assert!(self.len <= N);
             self.spill.reserve(self.len.saturating_add(1));
-            for i in 0..self.len {
-                // SAFETY: indices 0..len have been written.
-                let v = unsafe { self.inline[i].assume_init() };
-                self.spill.push(v);
-            }
+            // SAFETY: indices `0..len` are initialized while `spill` is empty.
+            let inline = unsafe { assume_init_slice_ref(&self.inline[..self.len]) };
+            self.spill.extend_from_slice(inline);
             self.len = 0;
         }
 
@@ -358,7 +373,68 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
         if !self.spill.is_empty() {
             return self.spill.as_slice();
         }
-        unsafe { slice::from_raw_parts(self.inline.as_ptr() as *const T, self.len) }
+        debug_assert!(self.len <= N);
+        // SAFETY: indices `0..len` are initialized until we spill.
+        unsafe { assume_init_slice_ref(&self.inline[..self.len]) }
+    }
+}
+
+#[cfg(test)]
+mod small_list_tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn node(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn small_node_list_uses_inline_storage_for_small_slices() {
+        let mut list: SmallNodeList<4> = SmallNodeList::default();
+        let nodes = [node(1), node(2), node(3)];
+        list.set(&nodes);
+
+        assert!(list.spill.is_empty());
+        assert_eq!(list.len, nodes.len());
+        assert_eq!(list.as_slice(), nodes.as_slice());
+    }
+
+    #[test]
+    fn small_node_list_spills_for_large_slices_and_can_return_to_inline() {
+        let mut list: SmallNodeList<2> = SmallNodeList::default();
+
+        let spilled = [node(10), node(11), node(12)];
+        list.set(&spilled);
+        assert_eq!(list.len, 0);
+        assert_eq!(list.spill.as_slice(), spilled.as_slice());
+        assert_eq!(list.as_slice(), spilled.as_slice());
+
+        let inline = [node(20)];
+        list.set(&inline);
+        assert!(list.spill.is_empty());
+        assert_eq!(list.len, inline.len());
+        assert_eq!(list.as_slice(), inline.as_slice());
+    }
+
+    #[test]
+    fn small_copy_list_stays_inline_until_full_and_then_spills_in_order() {
+        let mut list: SmallCopyList<u32, 3> = SmallCopyList::default();
+
+        list.push(1);
+        list.push(2);
+        list.push(3);
+        assert!(list.spill.is_empty());
+        assert_eq!(list.len, 3);
+        assert_eq!(list.as_slice(), &[1, 2, 3]);
+
+        list.push(4);
+        assert_eq!(list.len, 0);
+        assert_eq!(list.spill.as_slice(), &[1, 2, 3, 4]);
+        assert_eq!(list.as_slice(), &[1, 2, 3, 4]);
+
+        list.push(5);
+        assert_eq!(list.spill.as_slice(), &[1, 2, 3, 4, 5]);
+        assert_eq!(list.as_slice(), &[1, 2, 3, 4, 5]);
     }
 }
 
@@ -4817,25 +4893,84 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn with_widget_mut<R>(
+    #[track_caller]
+    fn with_widget_mut<R: Default>(
         &mut self,
         node: NodeId,
         f: impl FnOnce(&mut dyn Widget<H>, &mut UiTree<H>) -> R,
     ) -> R {
+        fn warn_with_widget_mut_failure_once(node: NodeId, reason: &'static str) {
+            static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+            let caller = Location::caller();
+            let key = format!(
+                "{reason}:{node:?}:{}:{}:{}",
+                caller.file(),
+                caller.line(),
+                caller.column()
+            );
+
+            let seen = SEEN.get_or_init(|| Mutex::new(HashSet::new()));
+            let first = match seen.lock() {
+                Ok(mut guard) => guard.insert(key),
+                Err(_) => true,
+            };
+
+            if first {
+                tracing::error!(
+                    ?node,
+                    reason,
+                    file = caller.file(),
+                    line = caller.line(),
+                    column = caller.column(),
+                    "UiTree widget access failed; returning default"
+                );
+            }
+        }
+
         let Some(n) = self.nodes.get_mut(node) else {
-            panic!("node must exist: {node:?}");
+            if crate::strict_runtime::strict_runtime_enabled() {
+                let caller = Location::caller();
+                panic!(
+                    "UiTree::with_widget_mut: node missing: {node:?} at {}:{}:{}",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+
+            warn_with_widget_mut_failure_once(node, "node_missing");
+            return R::default();
         };
+
         let Some(widget) = n.widget.take() else {
-            panic!("node widget must exist: {node:?}");
+            if crate::strict_runtime::strict_runtime_enabled() {
+                let caller = Location::caller();
+                panic!(
+                    "UiTree::with_widget_mut: widget missing (re-entrant borrow?): {node:?} at {}:{}:{}",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+
+            warn_with_widget_mut_failure_once(node, "widget_missing");
+            return R::default();
         };
+
         let mut widget = widget;
-        let result = f(widget.as_mut(), self);
+        let result = catch_unwind(AssertUnwindSafe(|| f(widget.as_mut(), self)));
+
         if let Some(n) = self.nodes.get_mut(node) {
             n.widget = Some(widget);
         } else {
             self.deferred_cleanup.push(widget);
         }
-        result
+
+        match result {
+            Ok(result) => result,
+            Err(payload) => resume_unwind(payload),
+        }
     }
 
     fn node_render_transform(&self, node: NodeId) -> Option<Transform2D> {

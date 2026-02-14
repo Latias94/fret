@@ -572,19 +572,18 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder =
-        fret_kit::app_with_hooks("external-texture-imports", init_window, view, |driver| {
-            driver
-                .on_event(on_event)
-                .record_engine_frame(record_engine_frame)
-        })?
-        .init_app(|app| {
-            app.set_global(PlatformCapabilities::default());
-        })
-        .with_main_window(
-            "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source)",
-            (960.0, 640.0),
-        );
+    let builder = fret::app_with_hooks("external-texture-imports", init_window, view, |driver| {
+        driver
+            .on_event(on_event)
+            .record_engine_frame(record_engine_frame)
+    })?
+    .init_app(|app| {
+        app.set_global(PlatformCapabilities::default());
+    })
+    .with_main_window(
+        "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source)",
+        (960.0, 640.0),
+    );
 
     builder.run().context("run external_texture_imports_demo")
 }

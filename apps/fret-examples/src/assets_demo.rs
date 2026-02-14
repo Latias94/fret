@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_kit::fret::core::{ImageColorSpace, SvgId};
-use fret_kit::fret::ui::element::{ImageProps, SvgIconProps};
-use fret_kit::prelude::*;
+use fret::kernel::core::{ImageColorSpace, SvgId};
+use fret::kernel::ui::element::{ImageProps, SvgIconProps};
+use fret::prelude::*;
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::GlobalWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -28,7 +28,7 @@ struct AssetsDemoImageEvents {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("assets-demo", init_window, view, |d| d.on_event(on_event))?
+    fret::app_with_hooks("assets-demo", init_window, view, |d| d.on_event(on_event))?
         .with_main_window("assets_demo", (720.0, 520.0))
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
@@ -121,7 +121,7 @@ fn on_event(
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret::ViewElements {
     let theme = cx.theme().clone();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
@@ -204,6 +204,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
                 text: Arc::from(line),
                 style: None,
                 color: Some(theme.color_token("muted-foreground")),
+                align: fret_core::TextAlign::Start,
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
             })

@@ -1553,17 +1553,20 @@ name = "fret"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-bootstrap",
  "fret-core",
- "fret-fonts",
+ "fret-framework",
+ "fret-icons",
  "fret-launch",
- "fret-platform",
- "fret-platform-native",
- "fret-platform-web",
- "fret-render",
- "fret-runner-web",
- "fret-runner-winit",
+ "fret-router-ui",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
+ "fret-workspace",
+ "slotmap",
+ "thiserror 2.0.18",
+ "wgpu",
 ]
 
 [[package]]
@@ -1808,6 +1811,7 @@ dependencies = [
  "fret-diag-ws",
  "glob",
  "image",
+ "serde",
  "serde_json",
  "sysinfo",
  "windows-sys 0.61.2",
@@ -1896,6 +1900,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "delinea",
+ "fret",
  "fret-app",
  "fret-bootstrap",
  "fret-chart",
@@ -1907,7 +1912,6 @@ dependencies = [
  "fret-gizmo",
  "fret-icons",
  "fret-imui",
- "fret-kit",
  "fret-launch",
  "fret-markdown",
  "fret-node",
@@ -1957,6 +1961,24 @@ dependencies = [
 [[package]]
 name = "fret-fonts"
 version = "0.1.0"
+
+[[package]]
+name = "fret-framework"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-fonts",
+ "fret-launch",
+ "fret-platform",
+ "fret-platform-native",
+ "fret-platform-web",
+ "fret-render",
+ "fret-runner-web",
+ "fret-runner-winit",
+ "fret-runtime",
+ "fret-ui",
+]
 
 [[package]]
 name = "fret-gizmo"
@@ -2025,27 +2047,6 @@ version = "0.1.0"
 dependencies = [
  "fret-core",
  "fret-runtime",
-]
-
-[[package]]
-name = "fret-kit"
-version = "0.1.0"
-dependencies = [
- "fret",
- "fret-app",
- "fret-bootstrap",
- "fret-core",
- "fret-icons",
- "fret-launch",
- "fret-router-ui",
- "fret-runtime",
- "fret-ui",
- "fret-ui-kit",
- "fret-ui-shadcn",
- "fret-workspace",
- "slotmap",
- "thiserror 2.0.18",
- "wgpu",
 ]
 
 [[package]]
@@ -2406,6 +2407,7 @@ name = "fret-ui-ai"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-canvas",
  "fret-code-view",
  "fret-core",
  "fret-icons",
@@ -2441,8 +2443,12 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "image",
+ "js-sys",
  "slotmap",
  "tracing",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -2451,6 +2457,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "delinea",
+ "fret",
  "fret-app",
  "fret-bootstrap",
  "fret-canvas",
@@ -2461,7 +2468,6 @@ dependencies = [
  "fret-core",
  "fret-fonts",
  "fret-icons",
- "fret-kit",
  "fret-launch",
  "fret-markdown",
  "fret-node",

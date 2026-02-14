@@ -5221,6 +5221,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         max_width: None,
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                         scale_factor: cx.scale_factor,
                     };
 
@@ -6187,6 +6188,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         max_width: None,
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
                         scale_factor: cx.scale_factor,
                     };
 
@@ -6901,6 +6903,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     max_width: None,
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor: cx.scale_factor,
                 };
 
@@ -7343,6 +7346,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
 
@@ -7640,6 +7644,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: cx.scale_factor,
             };
 
@@ -7708,6 +7713,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     max_width: None,
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                     scale_factor: cx.scale_factor,
                 };
 
@@ -8083,6 +8089,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: cx.scale_factor,
             };
 

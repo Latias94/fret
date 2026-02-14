@@ -108,6 +108,10 @@ impl PathCache {
         self.entries.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
     pub fn reset_stats(&mut self) {
         self.stats = CacheStats::default();
     }
@@ -246,12 +250,10 @@ impl PathCache {
 
         self.entries.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
-            if !keep {
-                if let Some(path) = entry.path.take() {
-                    services.path().release(path);
-                    self.stats.release_prune_age = self.stats.release_prune_age.saturating_add(1);
-                    self.id_to_key.remove(&path);
-                }
+            if !keep && let Some(path) = entry.path.take() {
+                services.path().release(path);
+                self.stats.release_prune_age = self.stats.release_prune_age.saturating_add(1);
+                self.id_to_key.remove(&path);
             }
             keep
         });
@@ -274,13 +276,12 @@ impl PathCache {
 
         let over = self.entries.len().saturating_sub(max_entries);
         for (_, key) in candidates.into_iter().take(over) {
-            if let Some(mut entry) = self.entries.remove(&key) {
-                if let Some(path) = entry.path.take() {
-                    services.path().release(path);
-                    self.stats.release_prune_budget =
-                        self.stats.release_prune_budget.saturating_add(1);
-                    self.id_to_key.remove(&path);
-                }
+            if let Some(mut entry) = self.entries.remove(&key)
+                && let Some(path) = entry.path.take()
+            {
+                services.path().release(path);
+                self.stats.release_prune_budget = self.stats.release_prune_budget.saturating_add(1);
+                self.id_to_key.remove(&path);
             }
         }
     }

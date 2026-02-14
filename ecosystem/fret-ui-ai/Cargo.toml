@@ -22,6 +22,7 @@ fret-ui-shadcn = { path = "../fret-ui-shadcn" }
 fret-icons = { path = "../fret-icons" }
 fret-markdown = { path = "../fret-markdown" }
 fret-code-view = { path = "../fret-code-view" }
+fret-canvas = { path = "../fret-canvas", features = ["ui"] }
 fret-webview = { path = "../../crates/fret-webview", optional = true }
 serde_json.workspace = true
 serde.workspace = true

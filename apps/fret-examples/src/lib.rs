@@ -9,7 +9,7 @@ pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     app: fret_app::App,
     driver: D,
 ) -> anyhow::Result<()> {
-    fret_kit::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
+    fret::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -63,6 +63,8 @@ pub mod form_demo;
 pub mod gizmo3d_demo;
 pub mod grouped_bars_demo;
 pub mod heatmap_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod hello_counter_demo;
 pub mod histogram2d_demo;
 pub mod histogram_demo;
 pub mod horizontal_bars_demo;

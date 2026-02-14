@@ -95,11 +95,20 @@ pub enum TextOverflow {
     Ellipsis,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum TextAlign {
+    #[default]
+    Start,
+    Center,
+    End,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextConstraints {
     pub max_width: Option<Px>,
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
+    pub align: TextAlign,
     /// Window/device scale factor used for rasterization and caching.
     ///
     /// UI/layout coordinates remain in logical pixels. Implementations should rasterize at
@@ -114,6 +123,7 @@ impl Default for TextConstraints {
             max_width: None,
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
             scale_factor: 1.0,
         }
     }

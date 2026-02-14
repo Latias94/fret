@@ -1,4 +1,4 @@
-use fret_kit::prelude::*;
+use fret::prelude::*;
 
 struct ImUiHelloState {
     count: Model<u32>,
@@ -6,7 +6,7 @@ struct ImUiHelloState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app("imui-hello-demo", init_window, view)?
+    fret::app("imui-hello-demo", init_window, view)?
         .with_main_window("imui_hello_demo", (520.0, 240.0))
         .run()?;
     Ok(())
@@ -19,7 +19,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ImUiHelloState {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiHelloState) -> fret_kit::ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiHelloState) -> fret::ViewElements {
     let count = cx
         .watch_model(&st.count)
         .layout()

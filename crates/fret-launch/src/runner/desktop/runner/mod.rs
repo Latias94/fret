@@ -148,7 +148,7 @@ use hotpatch::{HotpatchRequestKind, HotpatchTrigger, hotpatch_trigger_from_env};
 #[cfg(target_os = "macos")]
 use macos_cursor::{
     MacCursorTransformTable, macos_cursor_trace_enabled, macos_dockfloating_parenting_enabled,
-    macos_is_left_mouse_down, macos_mouse_location,
+    macos_is_left_mouse_down,
 };
 use macos_cursor::{dock_tearoff_log, macos_window_log};
 use streaming_images::UploadedImageEntry;

@@ -133,6 +133,7 @@ pub(crate) fn sidebar_view(
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
                 }),
                 stack::vstack(
                     cx,

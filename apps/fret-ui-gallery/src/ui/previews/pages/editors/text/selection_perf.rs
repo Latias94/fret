@@ -141,6 +141,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 scale_factor,
+                                align: fret_core::TextAlign::Start,
                             };
 
                             let (blob, metrics) = services
