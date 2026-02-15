@@ -292,6 +292,9 @@ Optional diag scripts:
 - type, delete, IME compose, and ensure caret/selection geometry stays aligned.
 - `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`: gates
   catastrophic wrap regressions under window resize jitter (word wrap baseline).
+- `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`: exercises platform-style
+  IME composition flows for the code editor, including selection-replacing composition + cancel
+  semantics (selection/caret is restored; base buffer stays unchanged).
 - `tools/diag-scripts/ui-gallery-code-editor-ime-cursor-area.json`: focuses the code editor gate
   and asserts `WindowTextInputSnapshot.ime_cursor_area` is present and within window bounds.
 - `tools/diag-scripts/ui-gallery-web-ime-harness-ime-cursor-area.json`: focuses the harness region

@@ -147,6 +147,8 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - Evidence:
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`platform_replace_and_mark_empty_text_cancels_and_restores_selection`)
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json` + `crates/fret-diag/src/stats.rs`
+      (`check_bundle_for_ui_gallery_code_editor_a11y_composition_json`)
 - [x] Observe `TextFontStackKey` and invalidate editor-local geometry caches so platform queries never use stale row geometry after font changes.
 
 ## M5 — Row geometry cache boundary (future fearless refactor)
