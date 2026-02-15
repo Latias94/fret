@@ -58,7 +58,7 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 ## P4 — Adaptive layouts (strategy layer)
 
 - [x] Add `ResponsiveGrid` to `fret-genui-shadcn` (container-query driven).
-- [ ] Add `ResponsiveStack` (switches between HStack/VStack via queries).
+- [x] Add `ResponsiveStack` (switches between HStack/VStack via queries).
 - [x] Add a resize-driven demo spec section to validate behavior by eye.
 
 ## P4 — LLM ingest utilities (strategy/boundary layer)

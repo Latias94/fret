@@ -236,6 +236,52 @@ line is an RFC 6902 JSON Patch operation applied to a single in-progress spec ob
 
 This is provider-agnostic: it works with any LLM streaming transport (SSE/websocket/etc).
 
+## 7b. Adaptive layouts (responsive, strategy layer)
+
+In React (including json-render), “responsiveness” is usually implemented by component styling:
+CSS media queries, Tailwind breakpoints, or custom hooks. json-render itself does not provide a
+global “responsive engine”; it provides a safe spec + registry and relies on registered components
+to implement layout policy.
+
+Fret has no CSS runtime, so GenUI v1 models responsiveness as **explicit strategy components**
+living in `ecosystem/` (not `crates/fret-ui`):
+
+- `ResponsiveGrid`: chooses a column count based on container/viewport width, then chunks children
+  into rows.
+- `ResponsiveStack`: chooses between a vertical stack (`VStack`) and a horizontal stack (`HStack`)
+  based on container/viewport width.
+
+Both components are:
+
+- catalog-guardrailed (typed props; Tailwind-compatible breakpoint keys),
+- deterministic (no hidden global rules),
+- implemented via Fret’s container/viewport query utilities (ADR 0231/0232),
+- subject to query realities:
+  - container queries read **last committed** bounds (frame-lagged),
+  - hysteresis is applied to reduce oscillation near thresholds.
+
+### 7b.1 Breakpoint object shape (Tailwind-compatible)
+
+For breakpoint-driven props we use a small object format with Tailwind-like min-width keys:
+
+- Keys: `base`, `sm`, `md`, `lg`, `xl`, `xxl`
+- Semantics: pick the last value whose `min_width <= current_width`, otherwise `base`
+- `query`: `"container"` (default) or `"viewport"`
+
+Examples:
+
+```json
+{
+  "type": "ResponsiveStack",
+  "props": {
+    "query": "container",
+    "gap": "N2",
+    "direction": { "base": "vertical", "lg": "horizontal" }
+  },
+  "children": ["a", "b", "c"]
+}
+```
+
 ## 8. Diagnostics and test strategy
 
 Minimum gates to avoid “AI broke the UI silently”:
@@ -254,3 +300,4 @@ Minimum gates to avoid “AI broke the UI silently”:
 - How do we version the spec grammar (schema_version field vs crate version)?
 - Should `visible=false` unmount (React-like) or preserve state via a “presence/interactivity gate” wrapper?
 - How do we surface validation errors in-app (devtools panel vs inline error component)?
+- Do we want additional adaptive primitives beyond `ResponsiveGrid`/`ResponsiveStack` (e.g. `ResponsiveTextSize`, `ResponsiveGap`) or should we keep policy in app kits?

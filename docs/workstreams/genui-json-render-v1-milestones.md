@@ -67,6 +67,7 @@ Candidate exit criteria:
 Candidate exit criteria:
 
 - `ResponsiveGrid` exists in `fret-genui-shadcn` and uses container queries by default.
+- `ResponsiveStack` exists in `fret-genui-shadcn` and switches between `VStack`/`HStack` via queries.
 - Demo spec includes a small section that visibly changes with window/panel resize.
 - Catalog types express breakpoint-driven props cleanly (no ad-hoc stringly-typed breakpoints).
 

@@ -68,7 +68,9 @@ const SPEC_JSON: &str = r#"
         "todos_list",
         "sep_3",
         "responsive_title",
-        "responsive_grid"
+        "responsive_grid",
+        "responsive_stack_title",
+        "responsive_stack"
       ]
     },
     "bind_title": { "type": "Text", "props": { "text": "Bindings ($bindState demo)" }, "children": [] },
@@ -211,8 +213,24 @@ const SPEC_JSON: &str = r#"
     "rg_card_5": { "type": "Card", "props": {}, "children": ["rg_card_5_text"] },
     "rg_card_5_text": { "type": "Text", "props": { "text": "Card 5" }, "children": [] },
     "rg_card_6": { "type": "Card", "props": {}, "children": ["rg_card_6_text"] },
-    "rg_card_6_text": { "type": "Text", "props": { "text": "Card 6" }, "children": [] }
-    }
+    "rg_card_6_text": { "type": "Text", "props": { "text": "Card 6" }, "children": [] },
+
+    "responsive_stack_title": { "type": "Text", "props": { "text": "ResponsiveStack (container query demo)" }, "children": [] },
+    "responsive_stack": {
+      "type": "ResponsiveStack",
+      "props": {
+        "gap": "N2",
+        "query": "container",
+        "direction": { "base": "vertical", "lg": "horizontal" }
+      },
+      "children": ["rs_card_1", "rs_card_2", "rs_card_3"]
+    },
+    "rs_card_1": { "type": "Card", "props": {}, "children": ["rs_card_1_text"] },
+    "rs_card_1_text": { "type": "Text", "props": { "text": "Stack card A" }, "children": [] },
+    "rs_card_2": { "type": "Card", "props": {}, "children": ["rs_card_2_text"] },
+    "rs_card_2_text": { "type": "Text", "props": { "text": "Stack card B" }, "children": [] },
+    "rs_card_3": { "type": "Card", "props": {}, "children": ["rs_card_3_text"] },
+    "rs_card_3_text": { "type": "Text", "props": { "text": "Stack card C" }, "children": [] }
   },
   "state": {
     "name": "Ada",

@@ -229,6 +229,33 @@ impl ShadcnResolver {
         ColumnsSpec::Breakpoints(bp)
     }
 
+    fn parse_stack_direction(v: Option<&serde_json::Value>) -> Option<StackDirection> {
+        let s = v?.as_str()?;
+        Some(match s {
+            "vertical" => StackDirection::Vertical,
+            "horizontal" => StackDirection::Horizontal,
+            _ => return None,
+        })
+    }
+
+    fn parse_direction_spec(v: Option<&serde_json::Value>) -> DirectionSpec {
+        if let Some(dir) = Self::parse_stack_direction(v) {
+            return DirectionSpec::Fixed(dir);
+        }
+        let Some(obj) = v.and_then(|v| v.as_object()) else {
+            return DirectionSpec::Fixed(StackDirection::Vertical);
+        };
+
+        let mut bp = BreakpointDirection::default();
+        bp.base = Self::parse_stack_direction(obj.get("base")).or(bp.base);
+        bp.sm = Self::parse_stack_direction(obj.get("sm"));
+        bp.md = Self::parse_stack_direction(obj.get("md"));
+        bp.lg = Self::parse_stack_direction(obj.get("lg"));
+        bp.xl = Self::parse_stack_direction(obj.get("xl"));
+        bp.xxl = Self::parse_stack_direction(obj.get("xxl"));
+        DirectionSpec::Breakpoints(bp)
+    }
+
     fn build_grid_rows(
         cx: &mut ElementContext<'_, impl UiHost>,
         columns: u8,
@@ -287,6 +314,26 @@ impl ShadcnResolver {
         .w_full()
         .into_element(cx)
     }
+
+    fn build_stack(
+        cx: &mut ElementContext<'_, impl UiHost>,
+        direction: StackDirection,
+        gap: fret_ui_kit::Space,
+        children: Vec<AnyElement>,
+    ) -> AnyElement {
+        match direction {
+            StackDirection::Vertical => fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+                .gap(gap)
+                .items_start()
+                .w_full()
+                .into_element(cx),
+            StackDirection::Horizontal => fret_ui_kit::ui::h_flex(cx, move |_cx| children)
+                .gap(gap)
+                .items_center()
+                .w_full()
+                .into_element(cx),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -303,6 +350,28 @@ struct BreakpointColumns {
     lg: Option<u8>,
     xl: Option<u8>,
     xxl: Option<u8>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StackDirection {
+    Vertical,
+    Horizontal,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum DirectionSpec {
+    Fixed(StackDirection),
+    Breakpoints(BreakpointDirection),
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct BreakpointDirection {
+    base: Option<StackDirection>,
+    sm: Option<StackDirection>,
+    md: Option<StackDirection>,
+    lg: Option<StackDirection>,
+    xl: Option<StackDirection>,
+    xxl: Option<StackDirection>,
 }
 
 impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
@@ -677,6 +746,86 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                                     fill_last_row,
                                     children,
                                 )]
+                            },
+                        ))
+                    }
+                }
+            }
+            "ResponsiveStack" => {
+                let gap =
+                    Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
+                let query = resolved_props
+                    .get("query")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("container");
+
+                let direction_spec = Self::parse_direction_spec(resolved_props.get("direction"));
+
+                match (query, direction_spec) {
+                    (_, DirectionSpec::Fixed(dir)) => Ok(Self::build_stack(cx, dir, gap, children)),
+                    ("viewport", DirectionSpec::Breakpoints(bp)) => {
+                        let mut breakpoints: Vec<(fret_core::Px, StackDirection)> = Vec::new();
+                        use fret_ui_kit::declarative::viewport_queries::tailwind as tw;
+                        if let Some(v) = bp.sm {
+                            breakpoints.push((tw::SM, v));
+                        }
+                        if let Some(v) = bp.md {
+                            breakpoints.push((tw::MD, v));
+                        }
+                        if let Some(v) = bp.lg {
+                            breakpoints.push((tw::LG, v));
+                        }
+                        if let Some(v) = bp.xl {
+                            breakpoints.push((tw::XL, v));
+                        }
+                        if let Some(v) = bp.xxl {
+                            breakpoints.push((tw::XXL, v));
+                        }
+
+                        let base = bp.base.unwrap_or(StackDirection::Vertical);
+                        let dir = fret_ui_kit::declarative::viewport_breakpoints(
+                            cx,
+                            Invalidation::Layout,
+                            base,
+                            &breakpoints,
+                            fret_ui_kit::declarative::viewport_queries::ViewportQueryHysteresis::default(),
+                        );
+                        Ok(Self::build_stack(cx, dir, gap, children))
+                    }
+                    (_, DirectionSpec::Breakpoints(bp)) => {
+                        Ok(fret_ui_kit::declarative::container_query_region_with_id(
+                            cx,
+                            "genui.responsive_stack",
+                            LayoutQueryRegionProps::default(),
+                            |cx, region| {
+                                let mut breakpoints: Vec<(fret_core::Px, StackDirection)> =
+                                    Vec::new();
+                                use fret_ui_kit::declarative::container_queries::tailwind as tw;
+                                if let Some(v) = bp.sm {
+                                    breakpoints.push((tw::SM, v));
+                                }
+                                if let Some(v) = bp.md {
+                                    breakpoints.push((tw::MD, v));
+                                }
+                                if let Some(v) = bp.lg {
+                                    breakpoints.push((tw::LG, v));
+                                }
+                                if let Some(v) = bp.xl {
+                                    breakpoints.push((tw::XL, v));
+                                }
+                                if let Some(v) = bp.xxl {
+                                    breakpoints.push((tw::XXL, v));
+                                }
+                                let base = bp.base.unwrap_or(StackDirection::Vertical);
+                                let dir = fret_ui_kit::declarative::container_breakpoints(
+                                    cx,
+                                    region,
+                                    Invalidation::Layout,
+                                    base,
+                                    &breakpoints,
+                                    fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                                );
+                                [Self::build_stack(cx, dir, gap, children)]
                             },
                         ))
                     }

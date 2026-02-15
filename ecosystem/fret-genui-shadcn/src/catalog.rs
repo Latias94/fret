@@ -154,6 +154,30 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         .build(),
     );
 
+    out.insert(
+        "ResponsiveStack".to_string(),
+        component(
+            "Responsive stack layout: switches between VStack/HStack via container/viewport width.",
+        )
+        .prop(
+            "direction",
+            CatalogPropV1::one_of([
+                stack_direction_enum_ty(),
+                breakpoint_stack_direction_object_ty(),
+            ])
+            .default_value(json!("vertical")),
+        )
+        .prop(
+            "query",
+            CatalogPropV1::enum_values(["container", "viewport"]).default_value(json!("container")),
+        )
+        .prop(
+            "gap",
+            CatalogPropV1::enum_values(SPACE_TOKENS).default_value(json!("N2")),
+        )
+        .build(),
+    );
+
     out
 }
 
@@ -166,6 +190,31 @@ fn breakpoint_columns_object_ty() -> CatalogValueTypeV1 {
     fields.insert("lg".to_string(), CatalogPropV1::integer());
     fields.insert("xl".to_string(), CatalogPropV1::integer());
     fields.insert("xxl".to_string(), CatalogPropV1::integer());
+    CatalogValueTypeV1::Object {
+        fields,
+        additional: false,
+    }
+}
+
+fn stack_direction_enum_ty() -> CatalogValueTypeV1 {
+    CatalogValueTypeV1::Enum {
+        values: ["vertical", "horizontal"]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+    }
+}
+
+fn breakpoint_stack_direction_object_ty() -> CatalogValueTypeV1 {
+    let mut fields = BTreeMap::new();
+    // Tailwind-compatible keys.
+    let dir = CatalogPropV1::one_of([stack_direction_enum_ty()]);
+    fields.insert("base".to_string(), dir.clone());
+    fields.insert("sm".to_string(), dir.clone());
+    fields.insert("md".to_string(), dir.clone());
+    fields.insert("lg".to_string(), dir.clone());
+    fields.insert("xl".to_string(), dir.clone());
+    fields.insert("xxl".to_string(), dir);
     CatalogValueTypeV1::Object {
         fields,
         additional: false,
