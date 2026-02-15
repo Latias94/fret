@@ -109,7 +109,11 @@ pub(super) fn push_mask(
                 }
             }
         }
-        Mask::Image { image, uv } => {
+        Mask::Image {
+            image,
+            uv,
+            sampling,
+        } => {
             // v1 wgpu renderer limitation: support at most one concurrently-active image mask.
             if state.mask_image.is_some() {
                 state.mask_pop_stack.push(MaskPop::NoShader);
@@ -133,7 +137,7 @@ pub(super) fn push_mask(
                 .is_some_and(|fmt| fmt.is_srgb());
             uniform.tile_mode = u32::from(use_alpha_channel);
 
-            state.mask_image = Some(image);
+            state.mask_image = Some(UniformMaskImageSelection { image, sampling });
         }
     }
 

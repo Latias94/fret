@@ -674,10 +674,10 @@ impl AttachmentPreview {
                 layout.size.height = Length::Fill;
                 vec![cx.image_props(ImageProps {
                     layout,
-                    image,
                     fit: ViewportFit::Cover,
                     opacity: 1.0,
                     uv: None,
+                    ..ImageProps::new(image)
                 })]
             }
             _ => vec![decl_icon::icon_with(

@@ -1,4 +1,5 @@
 use super::super::super::super::super::*;
+use fret_core::scene::ImageSamplingHint;
 use ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub(in crate::ui) fn preview_image_object_fit(
@@ -142,10 +143,11 @@ pub(in crate::ui) fn preview_image_object_fit(
         let wide_state = cx.use_image_source_state(&assets.wide_png);
         let tall_state = cx.use_image_source_state(&assets.tall_png);
         let square_state = cx.use_image_source_state(&assets.square_png);
+        let pixel_state = cx.use_image_source_state(&assets.pixel_png);
 
         let status = cx.text(format!(
-            "Status — wide: {:?}, tall: {:?}, square: {:?}",
-            wide_state.status, tall_state.status, square_state.status
+            "Status — wide: {:?}, tall: {:?}, square: {:?}, pixel: {:?}",
+            wide_state.status, tall_state.status, square_state.status, pixel_state.status
         ));
 
         let row_opt = |cx: &mut ElementContext<'_, App>,
@@ -189,6 +191,68 @@ pub(in crate::ui) fn preview_image_object_fit(
                         row_opt(cx, "Wide source (PNG bytes)", wide_state.image),
                         row_opt(cx, "Tall source (PNG bytes)", tall_state.image),
                         row_opt(cx, "Square source (PNG bytes)", square_state.image),
+                        {
+                            let linear = shadcn::MediaImage::maybe(pixel_state.image)
+                                .fit(fret_core::ViewportFit::Stretch)
+                                .loading(true)
+                                .sampling_hint(ImageSamplingHint::Linear)
+                                .refine_style(ChromeRefinement::default().rounded(Radius::Md))
+                                .refine_layout(
+                                    LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(160.0)),
+                                )
+                                .into_element(cx)
+                                .test_id("ui-gallery-image-sampling-linear");
+
+                            let nearest = shadcn::MediaImage::maybe(pixel_state.image)
+                                .fit(fret_core::ViewportFit::Stretch)
+                                .loading(true)
+                                .sampling_hint(ImageSamplingHint::Nearest)
+                                .refine_style(ChromeRefinement::default().rounded(Radius::Md))
+                                .refine_layout(
+                                    LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(160.0)),
+                                )
+                                .into_element(cx)
+                                .test_id("ui-gallery-image-sampling-nearest");
+
+                            let grid = stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .gap(Space::N4)
+                                    .items_start()
+                                    .layout(LayoutRefinement::default().w_full()),
+                                move |cx| {
+                                    vec![
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_start()
+                                                .layout(LayoutRefinement::default()),
+                                            move |cx| vec![cx.text("Linear (explicit)"), linear],
+                                        ),
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_start()
+                                                .layout(LayoutRefinement::default()),
+                                            move |cx| vec![cx.text("Nearest (opt-in)"), nearest],
+                                        ),
+                                    ]
+                                },
+                            );
+
+                            stack::vstack(
+                                cx,
+                                stack::VStackProps::default()
+                                    .gap(Space::N3)
+                                    .items_start()
+                                    .layout(LayoutRefinement::default().w_full()),
+                                move |cx| {
+                                    vec![cx.text("Sampling hints (16×16 → 160×160)"), grid]
+                                },
+                            )
+                        },
                     ]
                 },
             )

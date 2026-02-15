@@ -337,6 +337,7 @@ pub(crate) struct UiGalleryImageSourceDemoAssets {
     pub wide_png: fret_ui_assets::ImageSource,
     pub tall_png: fret_ui_assets::ImageSource,
     pub square_png: fret_ui_assets::ImageSource,
+    pub pixel_png: fret_ui_assets::ImageSource,
 }
 
 impl UiGalleryDriver {
@@ -347,6 +348,7 @@ impl UiGalleryDriver {
     const IMAGE_FIT_DEMO_WIDE_SIZE: (u32, u32) = (320, 180);
     const IMAGE_FIT_DEMO_TALL_SIZE: (u32, u32) = (180, 320);
     const IMAGE_FIT_DEMO_STREAMING_SIZE: (u32, u32) = (320, 200);
+    const IMAGE_SAMPLING_DEMO_PIXEL_SIZE: (u32, u32) = (16, 16);
 
     fn ensure_image_source_demo_assets_installed(app: &mut App) {
         if app.global::<UiGalleryImageSourceDemoAssets>().is_some() {
@@ -370,6 +372,10 @@ impl UiGalleryDriver {
             Self::AVATAR_DEMO_IMAGE_WIDTH,
             Self::AVATAR_DEMO_IMAGE_HEIGHT,
         );
+        let pixel_rgba = Self::generate_pixel_demo_image_rgba8(
+            Self::IMAGE_SAMPLING_DEMO_PIXEL_SIZE.0,
+            Self::IMAGE_SAMPLING_DEMO_PIXEL_SIZE.1,
+        );
 
         let wide_png = Self::encode_rgba8_png_bytes(
             Self::IMAGE_FIT_DEMO_WIDE_SIZE.0,
@@ -386,11 +392,17 @@ impl UiGalleryDriver {
             Self::AVATAR_DEMO_IMAGE_HEIGHT,
             &square_rgba,
         );
+        let pixel_png = Self::encode_rgba8_png_bytes(
+            Self::IMAGE_SAMPLING_DEMO_PIXEL_SIZE.0,
+            Self::IMAGE_SAMPLING_DEMO_PIXEL_SIZE.1,
+            &pixel_rgba,
+        );
 
         app.set_global(UiGalleryImageSourceDemoAssets {
             wide_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(wide_png)),
             tall_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(tall_png)),
             square_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(square_png)),
+            pixel_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(pixel_png)),
         });
     }
 
@@ -836,6 +848,42 @@ impl UiGalleryDriver {
                     r = 10;
                     g = 10;
                     b = 10;
+                }
+
+                out[idx] = r;
+                out[idx + 1] = g;
+                out[idx + 2] = b;
+                out[idx + 3] = 255;
+            }
+        }
+
+        out
+    }
+
+    fn generate_pixel_demo_image_rgba8(width: u32, height: u32) -> Vec<u8> {
+        let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+
+        for y in 0..height {
+            for x in 0..width {
+                let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+
+                let border = x == 0 || y == 0 || x + 1 == width || y + 1 == height;
+                let checker = ((x ^ y) & 1) == 0;
+
+                let (mut r, mut g, mut b) = if border {
+                    (10u8, 10u8, 10u8)
+                } else if x == y || x + y + 1 == width {
+                    (245u8, 50u8, 50u8)
+                } else if checker {
+                    (255u8, 255u8, 255u8)
+                } else {
+                    (35u8, 35u8, 35u8)
+                };
+
+                if x >= width / 2 && y < height / 2 {
+                    r = r.saturating_add(0);
+                    g = g.saturating_add(80);
+                    b = b.saturating_add(0);
                 }
 
                 out[idx] = r;

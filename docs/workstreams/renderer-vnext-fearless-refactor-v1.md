@@ -7,6 +7,14 @@ Tracking files:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 
+Current status (as of 2026-02-15):
+
+- WebGPU/Tint uniformity closure landed (browser smoke verified).
+- Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
+- A cheap headless perf gate exists and has a checked-in baseline:
+  - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
+  - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
 ## 0) Why this workstream exists
 
 Fret’s renderer must satisfy a hard set of constraints simultaneously:
@@ -75,6 +83,7 @@ This workstream is intentionally “fearless but gated”. Before and after each
   - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+  - `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
   - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
   - `crates/fret-render-wgpu/tests/materials_conformance.rs`
   - `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
@@ -84,6 +93,10 @@ When a new contract is added, extend this list with the smallest conformance gat
 - ordering is preserved,
 - the fallback path is deterministic,
 - and the wasm/mobile story is explicit.
+
+WebGPU guardrail (portability sanity):
+
+- `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
 ## 2.2) Baseline runbook (copy/paste)
 
@@ -105,9 +118,19 @@ cargo nextest run -p fret-render-wgpu --test viewport_surface_metadata_conforman
 cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance
 cargo nextest run -p fret-render-wgpu --test mask_gradient_conformance
 cargo nextest run -p fret-render-wgpu --test mask_image_conformance
+cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance
 cargo nextest run -p fret-render-wgpu --test composite_group_conformance
 cargo nextest run -p fret-render-wgpu --test materials_conformance
 cargo nextest run -p fret-render-wgpu --test materials_sampled_conformance
+```
+
+Windows note:
+
+- If you hit `os error 206` (“filename or extension too long”) while building tests, set a shorter
+  target directory, for example:
+
+```powershell
+$env:CARGO_TARGET_DIR = 'F:\ct'
 ```
 
 Fallback (no nextest):
@@ -122,17 +145,25 @@ Record perf snapshots using the deterministic SVG atlas stress harness (prints `
 `headless_renderer_perf:` lines). Suggested baseline capture:
 
 ```bash
-cargo run -p fret-svg-atlas-stress -- --headless --frames 600
+cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600
 ```
 
 Notes:
 
 - PowerShell:
-  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600`
 - bash/zsh:
-  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600`
 - Keep the run duration and flags stable (e.g. 600 frames) so future diffs are meaningful.
 - Capture both `renderer_perf:` and `renderer_perf_pipelines:` lines if enabled.
+
+Headless gate (stable counters + thresholds):
+
+```powershell
+python3 tools/perf/headless_svg_atlas_stress_gate.py
+```
+
+Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
 
 ## 3) Proposed internal architecture (implementation, not contract)
 
@@ -435,6 +466,8 @@ Use this checklist before starting any renderer-internal refactor step.
 
 - [ ] Capability gating and fallback behavior are documented (ADR + workstream capability matrix update when decided).
 - [ ] Missing resources degrade deterministically (e.g. missing images/materials → no-op/solid fallback), not per-backend.
+- [ ] WebGPU uniformity rule is respected (Tint): derivative ops and sampling are not gated by non-uniform control flow.
+  - If a shader path needs derivatives, prefer pipeline variants with bounded keys (kind/tile mode) over branching on instance data.
 
 ### A4) Guardrails (always run)
 

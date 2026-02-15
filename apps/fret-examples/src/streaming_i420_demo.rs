@@ -224,6 +224,7 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingI420DemoSta
             rect,
             image,
             fit: fret_core::ViewportFit::Stretch,
+            sampling: fret_core::scene::ImageSamplingHint::Default,
             opacity: 1.0,
         });
 

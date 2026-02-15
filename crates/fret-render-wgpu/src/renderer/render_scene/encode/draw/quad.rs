@@ -258,22 +258,6 @@ pub(in super::super) fn encode_quad(
         return;
     }
 
-    let needs_new_batch = match state.quad_batch {
-        Some((scissor, uniform_index, _)) => {
-            scissor != state.current_scissor || uniform_index != state.current_uniform_index
-        }
-        None => true,
-    };
-
-    if needs_new_batch {
-        state.flush_quad_batch();
-        state.quad_batch = Some((
-            state.current_scissor,
-            state.current_uniform_index,
-            state.instances.len() as u32,
-        ));
-    }
-
     let t_px = state.to_physical_px(state.current_transform());
     let (transform0, transform1) = transform_rows(t_px);
 
@@ -305,6 +289,44 @@ pub(in super::super) fn encode_quad(
             *state.material_sampled_quad_ops = state.material_sampled_quad_ops.saturating_add(1);
         }
     }
+
+    let border_sum = border[0] + border[1] + border[2] + border[3];
+    let border_present = border_sum > 0.0;
+    let dash_enabled = border_present && dash_params[3] > 0.5;
+
+    let fill_kind = fill_paint_gpu.kind.min(3) as u8;
+    let border_kind = if border_present {
+        border_paint_gpu.kind.min(3) as u8
+    } else {
+        0
+    };
+
+    let pipeline = QuadPipelineKey {
+        fill_kind,
+        border_kind,
+        border_present,
+        dash_enabled,
+    };
+
+    let needs_new_batch = match state.quad_batch {
+        Some((scissor, uniform_index, prev_pipeline, _)) => {
+            scissor != state.current_scissor
+                || uniform_index != state.current_uniform_index
+                || prev_pipeline != pipeline
+        }
+        None => true,
+    };
+
+    if needs_new_batch {
+        state.flush_quad_batch();
+        state.quad_batch = Some((
+            state.current_scissor,
+            state.current_uniform_index,
+            pipeline,
+            state.instances.len() as u32,
+        ));
+    }
+
     state.instances.push(QuadInstance {
         rect: [x, y, w, h],
         transform0,

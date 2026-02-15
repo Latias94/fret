@@ -61,6 +61,7 @@ pub struct Renderer {
     uniform_bind_group: wgpu::BindGroup,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
     mask_image_sampler: wgpu::Sampler,
+    mask_image_sampler_nearest: wgpu::Sampler,
     _mask_image_identity_texture: wgpu::Texture,
     mask_image_identity_view: wgpu::TextureView,
     mask_image_identity_uploaded: bool,
@@ -78,12 +79,13 @@ pub struct Renderer {
     material_catalog_uploaded: bool,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
-    quad_pipeline: Option<wgpu::RenderPipeline>,
+    quad_pipelines: HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
 
     viewport_pipeline_format: Option<wgpu::TextureFormat>,
     viewport_pipeline: Option<wgpu::RenderPipeline>,
     viewport_bind_group_layout: wgpu::BindGroupLayout,
     viewport_sampler: wgpu::Sampler,
+    image_sampler_nearest: wgpu::Sampler,
 
     instance_buffers: Vec<wgpu::Buffer>,
     quad_instance_bind_group_layout: wgpu::BindGroupLayout,
@@ -237,11 +239,12 @@ pub struct Renderer {
     render_target_revisions: HashMap<fret_core::RenderTargetId, u64>,
     render_targets_generation: u64,
 
-    image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup)>,
+    image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup, wgpu::BindGroup)>,
     image_revisions: HashMap<fret_core::ImageId, u64>,
     images_generation: u64,
 
-    uniform_mask_image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup)>,
+    uniform_mask_image_bind_groups:
+        HashMap<fret_core::ImageId, (u64, wgpu::BindGroup, wgpu::BindGroup)>,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,

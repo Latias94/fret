@@ -1291,10 +1291,10 @@ impl QueueItemImage {
 
         let img = cx.image_props(ImageProps {
             layout: image_layout,
-            image: self.image,
             fit: ViewportFit::Cover,
             opacity: 1.0,
             uv: None,
+            ..ImageProps::new(self.image)
         });
 
         let mut el = cx.container(wrapper, move |_cx| vec![img]);
