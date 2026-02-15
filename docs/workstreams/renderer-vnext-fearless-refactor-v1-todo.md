@@ -194,6 +194,31 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed: Text draws now tighten the scissor to the glyph-quad bounds per `(kind, atlas_page)` batch.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (`flush_group`, `bounds_of_quad_points`)
 
+## M7 — Post-v1 semantic expansions (deferred backlog)
+
+These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
+renderer semantics that are either missing today or only available via approximation. Track them
+here as a backlog so we can spin them into dedicated workstreams (3-doc format: purpose/TODO/
+milestones) when implementation begins.
+
+- [ ] REN-VNEXT-sem-010 Path fill paint surface: allow `SceneOp::Path` to accept `Paint` (gradients/materials).
+  - Current: `SceneOp::Path` is solid-only (`color: Color`).
+  - Risk: binding surface + key space growth; needs bounded, capability-gated fallbacks (wasm/mobile).
+- [ ] REN-VNEXT-sem-020 General path stroke: introduce a `SceneOp::StrokePath` (or equivalent) with bounded stroke style.
+  - Current: only `StrokeRRect` exists; no stroke for arbitrary prepared paths.
+- [ ] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter, dash, and constant-px stroke width semantics.
+  - Current: `StrokeStyleV1` only supports dash.
+- [ ] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient` (or a minimal equivalent).
+  - Current: only linear + radial gradients exist.
+- [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
+  - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
+- [ ] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
+  - Current: `SceneOp::Text` is solid-color only; effects-based recipes exist but are not contract-level.
+- [ ] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` and/or image/pattern paints.
+  - Current: sanitize degrades repeat/mirror to clamp for determinism.
+- [ ] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
+  - Current: sanitize degrades Oklab to sRGB for determinism.
+
 ## Always-run guardrails (before/after each milestone)
 
 - [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
