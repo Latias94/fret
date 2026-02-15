@@ -83,7 +83,7 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 - [x] Add mixed-stream parser utilities (text + JSONL patches) similar to `pipeJsonRender`.
 - [x] Add a demo “playground” inspector (tabs for state/queue/issues/spec/schema/prompt/editor/stream).
 - [x] Add an opt-in spec auto-fixer for common LLM mistakes (move `visible/on/repeat` out of `props`) and expose it in the demo.
-- [ ] Decide if/where to enable JSON repair (input boundary only; never for patch-only mode).
+- [x] Decide if/where to enable JSON repair (input boundary only; never for patch-only mode). Decision: defer; keep patch-only strict; consider opt-in at the app boundary if needed.
 
 ## Testing + gates
 
@@ -97,5 +97,5 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 
 - [x] Add a generic `Box` component (padding + sizing) to avoid growing per-component layout props indefinitely.
 - [x] Improve catalog prompt hints for layout patterns (Box boundaries, HStack + Input `flex1 + minW0`).
-- [ ] Normalize card content ergonomics in the spec examples (e.g. prefer `Card` → `CardContent` for padded content).
+- [x] Normalize card content ergonomics in the spec examples (see Card ergonomics section and demo specs).
 - [x] Add one more smoke spec focused on forms layout (labels, input widths, wrap, and alignment).

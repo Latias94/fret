@@ -272,6 +272,30 @@ Cards in shadcn are **structure + spacing**. In GenUI v1, prefer these rules to 
 - Avoid using `CardContent` as a generic padding wrapper for headerless cards: upstream shadcn-style content typically uses `pt-0` to sit closer to the header. Use `Box` for generic padding/layout boundaries.
   - hysteresis is applied to reduce oscillation near thresholds.
 
+Recommended patterns:
+
+- Page padding boundary:
+
+```json
+{ "type": "Box", "props": { "p": "N3", "wFull": true, "minW0": true }, "children": ["card"] }
+```
+
+- Simple card (default padded content):
+
+```json
+{ "type": "Card", "props": { "wrapContent": true }, "children": ["body_stack"] }
+```
+
+- Card with header:
+
+```json
+{
+  "type": "Card",
+  "props": { "wrapContent": false },
+  "children": ["card_header", "card_content"]
+}
+```
+
 ### 7b.1 Breakpoint object shape (Tailwind-compatible)
 
 For breakpoint-driven props we use a small object format with Tailwind-like min-width keys:
@@ -332,3 +356,4 @@ Minimum gates to avoid “AI broke the UI silently”:
 - Should `visible=false` unmount (React-like) or preserve state via a “presence/interactivity gate” wrapper?
 - How do we surface validation errors in-app (devtools panel vs inline error component)?
 - Do we want additional adaptive primitives beyond `ResponsiveGrid`/`ResponsiveStack` (e.g. `ResponsiveTextSize`, `ResponsiveGap`) or should we keep policy in app kits?
+- Do we enable JSON repair at the input boundary? Current stance: no (defer; patch-only mode must stay strict).
