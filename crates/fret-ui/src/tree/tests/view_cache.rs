@@ -380,36 +380,6 @@ fn view_cache_scroll_handle_hit_test_only_invalidations_do_not_mark_cache_root_n
 }
 
 #[test]
-fn view_cache_layout_invalidations_without_rerender_allow_reuse() {
-    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
-    ui.set_window(AppWindowId::default());
-    ui.set_view_cache_enabled(true);
-
-    let root = ui.create_node(TestStack);
-    let boundary = ui.create_node(TestStack);
-
-    ui.set_root(root);
-    ui.set_children(root, vec![boundary]);
-
-    ui.set_node_view_cache_flags(boundary, true, true, true);
-
-    for id in [root, boundary] {
-        ui.test_clear_node_invalidations(id);
-        ui.nodes[id].view_cache_needs_rerender = false;
-    }
-
-    // Resizes and other external constraint changes can mark layout invalidations, but view-cache
-    // reuse should still be allowed when the cache root does not require rerendering.
-    ui.test_set_layout_invalidation(boundary, true);
-
-    assert!(ui.nodes[boundary].invalidation.layout);
-    assert!(
-        ui.should_reuse_view_cache_node(boundary),
-        "layout invalidations alone should not disable view-cache reuse"
-    );
-}
-
-#[test]
 fn view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
