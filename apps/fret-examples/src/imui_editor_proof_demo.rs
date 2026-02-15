@@ -19,7 +19,8 @@ use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, Prope
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
     EnumSelectOptions, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
-    NumericParseFn, NumericValidateFn, TransformEdit, TransformEditOptions, Vec3Edit,
+    NumericParseFn, NumericValidateFn, TextField, TextFieldOptions, TransformEdit,
+    TransformEditOptions, Vec3Edit,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -161,6 +162,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_cast_shadows_model = editor_demo_cast_shadows_model(cx);
     let editor_shading_model = editor_demo_shading_model(cx);
     let editor_base_color_model = editor_demo_base_color_model(cx);
+    let editor_name_model = editor_demo_name_model(cx);
+    let editor_notes_model = editor_demo_notes_model(cx);
     let (editor_pos_x, editor_pos_y, editor_pos_z) = editor_demo_position_models(cx);
     let (editor_rot_x, editor_rot_y, editor_rot_z) = editor_demo_rotation_models(cx);
     let (editor_scl_x, editor_scl_y, editor_scl_z) = editor_demo_scale_models(cx);
@@ -324,6 +327,91 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                         ..Default::default()
                                     })
                                     .into_element(cx),
+                            );
+
+                            out.push(
+                                PropertyGroup::new("Object")
+                                    .options(fret_ui_editor::composites::PropertyGroupOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.object",
+                                        )),
+                                        header_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.object.header",
+                                        )),
+                                        content_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.object.content",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(
+                                        cx,
+                                        |_cx| None,
+                                        move |cx| {
+                                            vec![PropertyGrid::new().into_element(
+                                                cx,
+                                                move |cx, row_cx| {
+                                                    let mut rows = Vec::new();
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Name"),
+                                                        |cx| {
+                                                            TextField::new(
+                                                                editor_name_model.clone(),
+                                                            )
+                                                            .options(TextFieldOptions {
+                                                                placeholder: Some(Arc::from(
+                                                                    "Untitled",
+                                                                )),
+                                                                clear_button: true,
+                                                                test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.name",
+                                                                )),
+                                                                clear_test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.name.clear",
+                                                                )),
+                                                                ..Default::default()
+                                                            })
+                                                            .into_element(cx)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Notes"),
+                                                        |cx| {
+                                                            TextField::new(
+                                                                editor_notes_model.clone(),
+                                                            )
+                                                            .options(TextFieldOptions {
+                                                                multiline: true,
+                                                                min_height: Some(Px(96.0)),
+                                                                clear_button: true,
+                                                                test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.notes",
+                                                                )),
+                                                                clear_test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.notes.clear",
+                                                                )),
+                                                                ..Default::default()
+                                                            })
+                                                            .into_element(cx)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows
+                                                },
+                                            )]
+                                        },
+                                    ),
                             );
 
                             out.push(
@@ -1135,6 +1223,46 @@ fn editor_demo_search_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(
+                || None::<Model<String>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    let model = cx.with_state(|| None::<Model<String>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert("Cube".to_string());
+            cx.with_state(
+                || None::<Model<String>>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some(model.clone());
+                    }
+                },
+            );
+            model
+        }
+    }
+}
+
+fn editor_demo_notes_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    let model = cx.with_state(|| None::<Model<String>>, |st| st.clone());
+    match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(
+                "Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n".to_string(),
+            );
             cx.with_state(
                 || None::<Model<String>>,
                 |st| {
