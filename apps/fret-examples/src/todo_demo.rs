@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use fret::prelude::*;
-use fret_launch::{DevStateHook, DevStateHooks};
+use fret_launch::{DevStateExport, DevStateHook, DevStateHooks};
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
@@ -147,8 +147,10 @@ pub fn run() -> anyhow::Result<()> {
             app.with_global_mut_untracked(DevStateHooks::default, |hooks, _app| {
                 hooks.register(
                     DevStateHook::new(DEV_STATE_TODO_STATE_KEY, |app| {
-                        let models = app.global::<TodoDevStateModels>()?;
-                        Some(export_todo_dev_state(app, models))
+                        let Some(models) = app.global::<TodoDevStateModels>() else {
+                            return DevStateExport::Noop;
+                        };
+                        DevStateExport::Set(export_todo_dev_state(app, models))
                     })
                     .with_import(|app, value| {
                         let snapshot = parse_todo_dev_state(value)?;

@@ -5,6 +5,16 @@ use fret_app::App;
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
+pub enum DevStateExport {
+    /// Leave the previous outgoing value untouched.
+    Noop,
+    /// Remove the outgoing key (clears persisted state on next flush).
+    Remove,
+    /// Set the outgoing value.
+    Set(Value),
+}
+
+#[derive(Debug, Clone)]
 pub struct DevStateSnapshot {
     pub epoch: u64,
     pub data: HashMap<String, Value>,
@@ -20,7 +30,7 @@ pub struct DevStateService {
 
 pub struct DevStateHook {
     key: String,
-    export: Box<dyn Fn(&App) -> Option<Value> + Send + Sync>,
+    export: Box<dyn Fn(&App) -> DevStateExport + Send + Sync>,
     import: Option<Box<dyn Fn(&mut App, Value) -> Result<(), String> + Send + Sync>>,
 }
 
@@ -35,7 +45,7 @@ impl std::fmt::Debug for DevStateHook {
 impl DevStateHook {
     pub fn new(
         key: impl Into<String>,
-        export: impl Fn(&App) -> Option<Value> + Send + Sync + 'static,
+        export: impl Fn(&App) -> DevStateExport + Send + Sync + 'static,
     ) -> Self {
         Self {
             key: key.into(),
@@ -111,16 +121,16 @@ impl DevStateHooks {
             }
 
             for hook in &hooks.hooks {
-                let value = (hook.export)(app);
-                match value {
-                    Some(value) => {
-                        app.with_global_mut_untracked(DevStateService::default, |svc, _app| {
-                            svc.set_outgoing_if_changed(&hook.key, value);
-                        });
-                    }
-                    None => {
+                match (hook.export)(app) {
+                    DevStateExport::Noop => {}
+                    DevStateExport::Remove => {
                         app.with_global_mut_untracked(DevStateService::default, |svc, _app| {
                             svc.remove_outgoing(&hook.key);
+                        });
+                    }
+                    DevStateExport::Set(value) => {
+                        app.with_global_mut_untracked(DevStateService::default, |svc, _app| {
+                            svc.set_outgoing_if_changed(&hook.key, value);
                         });
                     }
                 }
