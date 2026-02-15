@@ -226,7 +226,8 @@ They are tracked here to keep the workstream grounded in “what feels broken”
   close menu overlays even when outside pointer events are disabled (`disableOutsidePointerEvents`-style policy).
   Owner: `fret-ui-kit` overlay substrates + editor policies.
 - **State keying discipline**: stateful controls must key their internal state per instance (stable key preference:
-  `test_id` then `model.id()`), otherwise multiple widgets can fight over drag/typing state.
+  explicit `id_source` then `(callsite, model.id())`), otherwise multiple widgets can fight over drag/typing state.
+  `test_id` is for diagnostics/automation and must not be treated as widget identity.
   This was a real failure mode for `Slider<T>` and is treated as a regression class.
 - **Visual cohesion**: editor controls are still missing a single, shared “widget visuals” resolver (hover/active/disabled)
   comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`. Without this, chrome and density drift across controls.

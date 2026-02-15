@@ -6,6 +6,7 @@
 //! - visuals reuse the shared editor "frame" chrome policy to stay consistent with other controls.
 //! - optional value display and a typing mode (double-click).
 
+use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -151,6 +152,12 @@ pub struct SliderOptions {
     pub show_value: bool,
     pub value_width: Px,
     pub allow_typing: bool,
+    /// Explicit identity source for internal state (drag/typing focus restore).
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when a helper function builds multiple sliders from the same callsite and
+    /// you need stable, per-instance state separation.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub a11y_label: Option<Arc<str>>,
 }
@@ -177,6 +184,7 @@ impl Default for SliderOptions {
             show_value: true,
             value_width: Px(52.0),
             allow_typing: true,
+            id_source: None,
             test_id: None,
             a11y_label: None,
         }
@@ -241,15 +249,27 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        // Important: key the internal state so multiple sliders don't share drag/typing state.
-        // Using an internal `scope()` here would otherwise collapse the callsite identity to this
-        // file, which can make multiple slider instances fight over one state slot.
-        let test_id = self.options.test_id.clone();
-        if let Some(test_id) = test_id.as_deref() {
-            cx.keyed(test_id, |cx| self.into_element_keyed(cx))
+        // Important: key internal state per slider instance so multiple sliders don't share
+        // drag/typing state.
+        //
+        // Do not use `test_id` for identity: test ids are for diagnostics/automation, not widget
+        // identity. Instead, follow egui/imgui-style identity rules:
+        // - Prefer an explicit `id_source` (PushID/id_source equivalent) when provided.
+        // - Otherwise key by `(callsite, model.id())` to prevent helper-function callsite
+        //   collisions while keeping per-instance state separation.
+        let model_id = self.model.id();
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.slider", id_source), |cx| {
+                self.into_element_keyed(cx)
+            })
         } else {
-            let model_id = self.model.id();
-            cx.keyed(model_id, |cx| self.into_element_keyed(cx))
+            cx.keyed(("fret-ui-editor.slider", callsite, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
         }
     }
 
