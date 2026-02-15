@@ -51,6 +51,43 @@ fn resolve_bind_item_path(field: &str, ctx: &PropResolutionContext<'_>) -> Optio
     Some(format!("{base}/{field}"))
 }
 
+/// Resolve a single action param value.
+///
+/// This is like [`resolve_value`] but with json-render-style semantics for repeat-scoped path
+/// expressions:
+/// - `{ "$item": "field" }` resolves to an **absolute state path** (e.g. `/todos/0/field`),
+///   not the field's current value.
+/// - `{ "$bindItem": "field" }` resolves to the same absolute state path.
+/// - `{ "$index": true }` resolves to the current repeat index as a number.
+///
+/// Everything else delegates to [`resolve_value`] (including `$state`, `$bindState`, `$cond`, and
+/// literal objects/arrays).
+pub fn resolve_action_param(value: &Value, ctx: &PropResolutionContext<'_>) -> Value {
+    let Some(obj) = is_obj(value) else {
+        return resolve_value(value, ctx);
+    };
+
+    if let Some(field) = get_str(obj, "$item") {
+        return resolve_bind_item_path(field, ctx)
+            .map(Value::String)
+            .unwrap_or(Value::Null);
+    }
+    if let Some(field) = get_str(obj, "$bindItem") {
+        return resolve_bind_item_path(field, ctx)
+            .map(Value::String)
+            .unwrap_or(Value::Null);
+    }
+    if get_bool(obj, "$index") == Some(true) {
+        return ctx
+            .repeat
+            .index
+            .map(|i| Value::from(i as i64))
+            .unwrap_or(Value::Null);
+    }
+
+    resolve_value(value, ctx)
+}
+
 pub fn resolve_value(value: &Value, ctx: &PropResolutionContext<'_>) -> Value {
     let Some(obj) = is_obj(value) else {
         return match value {
@@ -210,6 +247,41 @@ mod tests {
         assert_eq!(
             bindings.get("value").map(|s| s.as_str()),
             Some("/form/email")
+        );
+    }
+
+    #[test]
+    fn resolve_action_param_turns_item_into_absolute_state_path() {
+        let state = json!({
+          "todos": [
+            { "id": "a", "title": "One" }
+          ]
+        });
+        let repeat_scope = RepeatScope {
+            item: state.get("todos").and_then(|v| v.get(0)),
+            index: Some(0),
+            base_path: Some("/todos/0"),
+        };
+        let ctx = PropResolutionContext {
+            state: &state,
+            repeat: repeat_scope,
+        };
+
+        assert_eq!(
+            resolve_action_param(&json!({"$item": "title"}), &ctx),
+            json!("/todos/0/title")
+        );
+        assert_eq!(
+            resolve_action_param(&json!({"$bindItem": "title"}), &ctx),
+            json!("/todos/0/title")
+        );
+        assert_eq!(
+            resolve_action_param(&json!({"$index": true}), &ctx),
+            json!(0)
+        );
+        assert_eq!(
+            resolve_action_param(&json!({"$state": "/todos/0/title"}), &ctx),
+            json!("One")
         );
     }
 }

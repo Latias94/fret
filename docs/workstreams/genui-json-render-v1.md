@@ -180,6 +180,12 @@ Standard actions:
 - `fret-genui-core` provides a small helper (`fret_genui_core::actions::apply_standard_action`) so
   apps can opt into these semantics without embedding them in the renderer.
 
+Action param resolution:
+
+- In `on.*.params`, `{ "$item": "field" }` resolves to an **absolute JSON Pointer path** within the
+  state model (e.g. `/todos/0/field`) so actions can target the current repeated item safely.
+  Use `$state` when you need the current value instead of the path.
+
 ## 7a. SpecStream (streaming patches)
 
 To match json-render's progressive UI fill-in, GenUI supports a JSONL streaming format where each

@@ -158,7 +158,7 @@ impl EventDispatcher {
                         Value::Object(
                             map.iter()
                                 .map(|(k, v)| {
-                                    (k.clone(), crate::props::resolve_value(v, &prop_ctx))
+                                    (k.clone(), crate::props::resolve_action_param(v, &prop_ctx))
                                 })
                                 .collect(),
                         )
