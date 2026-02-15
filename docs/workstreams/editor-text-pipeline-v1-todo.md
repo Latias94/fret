@@ -56,7 +56,9 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - [ ] span range correctness:
     - [x] emoji ZWJ/VS16 sequences never split.
       - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_does_not_split_zwj_or_vs16_graphemes`)
-    - [ ] mixed scripts + surrogate-pair UTF-16 ranges remain deterministic at platform boundaries.
+    - [x] mixed scripts + surrogate-pair UTF-16 ranges remain deterministic at platform boundaries.
+      - `crates/fret-ui/src/declarative/tests/semantics.rs`
+        (`declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates`)
 - [x] Add a test that theme-only changes do not affect shaping keys.
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
  - [~] Add an editor-focused test suite (ecosystem) that:

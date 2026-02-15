@@ -74,6 +74,9 @@ Evidence anchors (expected):
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_only_syntax_color_changes_do_not_affect_rich_text_shaping_eq`)
 - Grapheme-safe span gate (ZWJ/VS16):
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_does_not_split_zwj_or_vs16_graphemes`)
+- Platform UTF-16 determinism gate (mixed scripts + surrogates):
+  - `crates/fret-ui/src/declarative/tests/semantics.rs`
+    (`declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates`)
 - Shaping-key stability gate:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
 
