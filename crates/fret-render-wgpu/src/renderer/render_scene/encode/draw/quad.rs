@@ -301,11 +301,17 @@ pub(in super::super) fn encode_quad(
         0
     };
 
+    let fill_material_sampled = fill_kind == 3 && fill_paint_gpu.stop_count == 1;
+    let border_material_sampled =
+        border_present && border_kind == 3 && border_paint_gpu.stop_count == 1;
+
     let pipeline = QuadPipelineKey {
         fill_kind,
         border_kind,
         border_present,
         dash_enabled,
+        fill_material_sampled,
+        border_material_sampled,
     };
 
     let needs_new_batch = match state.quad_batch {

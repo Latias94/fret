@@ -507,6 +507,8 @@ pub(super) struct QuadPipelineKey {
     pub(super) border_kind: u8,
     pub(super) border_present: bool,
     pub(super) dash_enabled: bool,
+    pub(super) fill_material_sampled: bool,
+    pub(super) border_material_sampled: bool,
 }
 
 #[derive(Clone, Copy)]

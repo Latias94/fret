@@ -128,9 +128,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-render-wgpu/src/renderer/types.rs` (`QuadPipelineKey`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (batch split),
     `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (pipeline constants), `crates/fret-render-wgpu/src/renderer/shaders.rs` (override + `paint_eval_fill/border`),
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (variant selection per draw).
+  - Landed: split `Paint::Material` params-only vs sampled into bounded per-side variants:
+    - overrides: `FRET_{FILL,BORDER}_MATERIAL_SAMPLED`
+    - goal: avoid material catalog `textureSample` on params-only paths.
+    - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`material_eval(sample_catalog)`), `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (constants),
+      `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (keying by `stop_count` aux channel).
   - Next:
-    - Add a focused headless perf gate that stresses quad paint/material/dash combos (so decisions are evidence-driven).
-    - Consider material `tile_mode` variants (or a bounded subset) only if material patterns become hot in perf bundles.
+    - Gate exists: `python3 tools/perf/headless_quad_material_stress_gate.py` (baseline in `docs/workstreams/perf-baselines/`).
+    - Consider further bounded variants (e.g. material-kind or tile-mode subsets) only if perf bundles show material sampling/derivative hotspots.
 - [ ] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
   - Keep `renderer::tests::shaders_validate_for_webgpu` as a baseline (Naga),
   - and consider adding an optional Tint-based compile check (or a minimal static heuristic) to catch uniformity drift.

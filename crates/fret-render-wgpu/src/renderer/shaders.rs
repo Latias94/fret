@@ -121,6 +121,8 @@ override FRET_FILL_KIND: u32 = 0u;
 override FRET_BORDER_KIND: u32 = 0u;
 override FRET_BORDER_PRESENT: u32 = 1u;
 override FRET_DASH_ENABLED: u32 = 0u;
+override FRET_FILL_MATERIAL_SAMPLED: u32 = 0u;
+override FRET_BORDER_MATERIAL_SAMPLED: u32 = 0u;
 
 struct Paint {
   kind: u32,
@@ -545,7 +547,7 @@ fn mat_rot(v: vec2<f32>, a: f32) -> vec2<f32> {
   return vec2<f32>(c * v.x - s * v.y, s * v.x + c * v.y);
 }
 
-fn material_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f32> {
   let base = p.params0;
   let fg = p.params1;
   let pos = local_pos + p.params3.zw;
@@ -614,12 +616,14 @@ fn material_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     u32(floor(pos.y / noise_scale + 0.5))
   );
   let noise_r0 = mat_rand01(noise_cell, seed);
-  let noise_xi = noise_cell.x & 63u;
-  let noise_yi = noise_cell.y & 63u;
-  let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
-  let noise_layer = select(0, i32(p.color_space), p.stop_count == 1u);
-  let noise_r1 = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
-  let noise_r = select(noise_r0, noise_r1, p.stop_count == 1u);
+  var noise_r = noise_r0;
+  if (sample_catalog) {
+    let noise_xi = noise_cell.x & 63u;
+    let noise_yi = noise_cell.y & 63u;
+    let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
+    let noise_layer = i32(p.color_space);
+    noise_r = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
+  }
   let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
   let noise_cov = noise_intensity * noise_r;
   let mat4 = base * (1.0 - noise_cov) + fg * noise_cov;
@@ -703,7 +707,8 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 3u) {
-    return material_eval(p, local_pos);
+    let sampled = FRET_FILL_MATERIAL_SAMPLED != 0u;
+    return material_eval(p, local_pos, sampled);
   }
   return vec4<f32>(0.0);
 }
@@ -730,7 +735,8 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 3u) {
-    return material_eval(p, local_pos);
+    let sampled = FRET_BORDER_MATERIAL_SAMPLED != 0u;
+    return material_eval(p, local_pos, sampled);
   }
   return vec4<f32>(0.0);
 }

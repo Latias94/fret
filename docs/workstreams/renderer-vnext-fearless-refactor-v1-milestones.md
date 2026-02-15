@@ -295,6 +295,15 @@ Perf snapshot (post quad variants):
   - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=17.58ms ... pipelines=1200 binds=27600 ...`
   - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
 
+Progress record (Material sampled split in quad variants):
+
+- Date: 2026-02-15
+- Status: Landed (avoid material catalog sampling on params-only paths)
+- Commit: (pending)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/types.rs` (`QuadPipelineKey.fill_material_sampled`, `border_material_sampled`)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`material_eval(sample_catalog)`, `FRET_{FILL,BORDER}_MATERIAL_SAMPLED`)
+
 ## M6 — Evidence-driven perf recovery follow-ups (time-boxed)
 
 Deliverables:
