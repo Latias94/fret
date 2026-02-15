@@ -165,6 +165,59 @@ Evidence:
 - `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` became consistently under the
   `ui-gallery-steady.windows-rtx4090.v1` thresholds in repeated local runs.
 
+## Finding (2026-02-15): Make the VirtualList cache root layout definite to avoid rerender on deferred scroll
+
+Background:
+
+- `ViewCache` reuse under layout invalidation is only safe for definite-sized cache roots.
+- `CachedSubtreeProps` previously created `ViewCacheProps` with the default (Auto-sized) layout, which makes
+  `layout_definite=false` even when the subtree itself has a definite size.
+
+Observed symptom:
+
+- `ui-gallery-virtual-list-torture-steady` failed `ui-gallery-steady.windows-rtx4090.v1` on Windows due to
+  max spikes in `top_total_time_us` / `top_layout_time_us` / `top_layout_engine_solve_time_us` during
+  the jump-to-item + scroll-to-bottom sequence.
+
+Change:
+
+- Extend `CachedSubtreeProps` (ecosystem helper) to allow overriding the `ViewCache` wrapper layout.
+- In `virtual_list_torture`, set the cache root layout to the same fixed-size layout as the list (`w_full`, `h=420px`).
+
+Result (local, `repeat=3`, baseline `ui-gallery-steady.windows-rtx4090.v1`):
+
+- `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` no longer trips the max thresholds.
+
+Repro command:
+
+- `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json --repeat 3 --warmup-frames 5 --sort time --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+
+## Finding (2026-02-15): Batch-solve barrier roots to eliminate per-root solve spikes
+
+Observed symptom:
+
+- `ui-gallery-virtual-list-torture-steady` could still hit max spikes in `top_layout_engine_solve_time_us`
+  during “jump + scroll to bottom”, with `layout_engine_solves` often matching the visible item count
+  (e.g. ~38 independent solves in one frame).
+
+Root cause:
+
+- Layout barriers (VirtualList/Scroll/etc.) solved each child root one-by-one, amplifying fixed Taffy
+  solve overhead into tail latency.
+
+Change:
+
+- Add `TaffyLayoutEngine::compute_independent_roots_with_measure_if_needed(...)` and use it from the
+  barrier solve path so many child roots can be solved in a single synthetic-root Taffy compute when
+  they are independent and have definite sizes.
+
+Result (local, `repeat=3`):
+
+- `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` now stays under the baseline with
+  `top_layout_engine_solve_time_us` max around ~1.1ms (previously ~1.9ms worst frames).
+- `ui-gallery-steady`, `ui-resize-probes`, and `ui-code-editor-resize-probes` all pass their
+  `windows-rtx4090.v1` baselines.
+
 ## Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)
 
 Observed:

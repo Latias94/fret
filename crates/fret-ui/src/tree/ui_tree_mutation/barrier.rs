@@ -139,7 +139,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "diagnostics")]
-    fn debug_is_reachable_from_layer_roots(&mut self, node: NodeId) -> bool {
+    pub(super) fn debug_is_reachable_from_layer_roots(&mut self, node: NodeId) -> bool {
         if !self.debug_enabled {
             return false;
         }
