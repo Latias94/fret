@@ -122,6 +122,8 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
   - [x] `PropertyGroup` header has a background and divider for visual grouping.
     - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
+  - [x] Proof demo uses ui-kit-styled buttons for top-level actions (avoid bare text buttons).
+    - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - [ ] Define a shared `EditorChrome` recipe (optional): centralize token keys and defaults so controls don’t drift.
   - [ ] Ensure docking tabs remain legible under the demo theme (tab text, hover/active states).
     - Evidence anchor: `apps/fret-examples/src/imui_editor_proof_demo.rs`
