@@ -22,6 +22,7 @@ mod fullscreen;
 mod intermediate_pool;
 mod pipelines;
 mod render_plan;
+mod render_plan_compiler;
 mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
@@ -60,6 +61,7 @@ pub struct Renderer {
     uniform_bind_group: wgpu::BindGroup,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
     mask_image_sampler: wgpu::Sampler,
+    mask_image_sampler_nearest: wgpu::Sampler,
     _mask_image_identity_texture: wgpu::Texture,
     mask_image_identity_view: wgpu::TextureView,
     mask_image_identity_uploaded: bool,
@@ -77,12 +79,13 @@ pub struct Renderer {
     material_catalog_uploaded: bool,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
-    quad_pipeline: Option<wgpu::RenderPipeline>,
+    quad_pipelines: HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
 
     viewport_pipeline_format: Option<wgpu::TextureFormat>,
     viewport_pipeline: Option<wgpu::RenderPipeline>,
     viewport_bind_group_layout: wgpu::BindGroupLayout,
     viewport_sampler: wgpu::Sampler,
+    image_sampler_nearest: wgpu::Sampler,
 
     instance_buffers: Vec<wgpu::Buffer>,
     quad_instance_bind_group_layout: wgpu::BindGroupLayout,
@@ -216,6 +219,7 @@ pub struct Renderer {
     perf_svg_mask_atlas_entries_evicted: u64,
     perf: RenderPerfStats,
     last_frame_perf: Option<RenderPerfSnapshot>,
+    last_render_plan_segment_report: Option<Vec<RenderPlanSegmentReport>>,
     render_scene_frame_index: u64,
 
     path_msaa_samples: u32,
@@ -235,11 +239,12 @@ pub struct Renderer {
     render_target_revisions: HashMap<fret_core::RenderTargetId, u64>,
     render_targets_generation: u64,
 
-    image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup)>,
+    image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup, wgpu::BindGroup)>,
     image_revisions: HashMap<fret_core::ImageId, u64>,
     images_generation: u64,
 
-    uniform_mask_image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup)>,
+    uniform_mask_image_bind_groups:
+        HashMap<fret_core::ImageId, (u64, wgpu::BindGroup, wgpu::BindGroup)>,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,
@@ -249,6 +254,15 @@ pub struct Renderer {
     materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
     material_paint_budget_per_frame: u64,
     material_distinct_budget_per_frame: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct RenderPlanSegmentReport {
+    draw_range: (usize, usize),
+    start_uniform_fingerprint: u64,
+    flags_mask: u8,
+    scene_draw_range_passes: u32,
+    path_msaa_batch_passes: u32,
 }
 
 #[derive(Clone, Copy, Debug)]

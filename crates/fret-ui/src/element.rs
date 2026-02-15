@@ -1439,6 +1439,7 @@ pub struct ImageProps {
     pub layout: LayoutStyle,
     pub image: ImageId,
     pub fit: ViewportFit,
+    pub sampling: fret_core::scene::ImageSamplingHint,
     pub opacity: f32,
     pub uv: Option<UvRect>,
 }
@@ -1449,9 +1450,15 @@ impl ImageProps {
             layout: LayoutStyle::default(),
             image,
             fit: ViewportFit::Stretch,
+            sampling: fret_core::scene::ImageSamplingHint::Default,
             opacity: 1.0,
             uv: None,
         }
+    }
+
+    pub fn sampling(mut self, sampling: fret_core::scene::ImageSamplingHint) -> Self {
+        self.sampling = sampling;
+        self
     }
 }
 

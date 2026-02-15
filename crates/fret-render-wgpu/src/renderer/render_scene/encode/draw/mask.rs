@@ -7,6 +7,7 @@ pub(in super::super) fn encode_mask_image(
     rect: Rect,
     image: fret_core::ImageId,
     uv: UvRect,
+    sampling: fret_core::scene::ImageSamplingHint,
     color: Color,
     opacity: f32,
 ) {
@@ -71,5 +72,6 @@ pub(in super::super) fn encode_mask_image(
         first_vertex,
         vertex_count: 6,
         image,
+        sampling,
     }));
 }

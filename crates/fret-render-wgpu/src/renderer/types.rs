@@ -220,6 +220,18 @@ pub struct RenderPerfSnapshot {
     pub intermediate_pool_evictions: u64,
     pub intermediate_pool_free_bytes: u64,
     pub intermediate_pool_free_textures: u64,
+    pub render_plan_estimated_peak_intermediate_bytes: u64,
+    pub render_plan_segments: u64,
+    pub render_plan_segments_changed: u64,
+    pub render_plan_segments_passes_increased: u64,
+    pub render_plan_degradations: u64,
+    pub render_plan_degradations_budget_zero: u64,
+    pub render_plan_degradations_budget_insufficient: u64,
+    pub render_plan_degradations_target_exhausted: u64,
+    pub render_plan_degradations_backdrop_noop: u64,
+    pub render_plan_degradations_filter_content_disabled: u64,
+    pub render_plan_degradations_clip_path_disabled: u64,
+    pub render_plan_degradations_composite_group_blend_to_over: u64,
 
     pub draw_calls: u64,
     pub quad_draw_calls: u64,
@@ -307,6 +319,18 @@ pub(super) struct RenderPerfStats {
     pub(super) intermediate_pool_evictions: u64,
     pub(super) intermediate_pool_free_bytes: u64,
     pub(super) intermediate_pool_free_textures: u64,
+    pub(super) render_plan_estimated_peak_intermediate_bytes: u64,
+    pub(super) render_plan_segments: u64,
+    pub(super) render_plan_segments_changed: u64,
+    pub(super) render_plan_segments_passes_increased: u64,
+    pub(super) render_plan_degradations: u64,
+    pub(super) render_plan_degradations_budget_zero: u64,
+    pub(super) render_plan_degradations_budget_insufficient: u64,
+    pub(super) render_plan_degradations_target_exhausted: u64,
+    pub(super) render_plan_degradations_backdrop_noop: u64,
+    pub(super) render_plan_degradations_filter_content_disabled: u64,
+    pub(super) render_plan_degradations_clip_path_disabled: u64,
+    pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
 
     pub(super) draw_calls: u64,
     pub(super) quad_draw_calls: u64,
@@ -477,11 +501,21 @@ impl SvgMaskAtlasPage {
     }
 }
 
-pub(super) struct DrawCall {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) struct QuadPipelineKey {
+    pub(super) fill_kind: u8,
+    pub(super) border_kind: u8,
+    pub(super) border_present: bool,
+    pub(super) dash_enabled: bool,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct QuadDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
     pub(super) first_instance: u32,
     pub(super) instance_count: u32,
+    pub(super) pipeline: QuadPipelineKey,
 }
 
 pub(super) struct ViewportDraw {
@@ -492,6 +526,12 @@ pub(super) struct ViewportDraw {
     pub(super) target: fret_core::RenderTargetId,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct UniformMaskImageSelection {
+    pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct ImageDraw {
     pub(super) scissor: ScissorRect,
@@ -499,6 +539,7 @@ pub(super) struct ImageDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
 }
 
 #[derive(Clone, Copy)]
@@ -508,6 +549,7 @@ pub(super) struct MaskDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
 }
 
 pub(super) struct TextDraw {
@@ -554,7 +596,7 @@ pub(super) struct PathIntermediate {
 }
 
 pub(super) enum OrderedDraw {
-    Quad(DrawCall),
+    Quad(QuadDraw),
     Viewport(ViewportDraw),
     Image(ImageDraw),
     Mask(MaskDraw),
@@ -605,7 +647,7 @@ pub(super) struct SceneEncoding {
     pub(super) masks: Vec<MaskGradientUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
     /// Per-uniform CPU-side mask-image selection used to pick the correct bind group for `Mask::Image`.
-    pub(super) uniform_mask_images: Vec<Option<fret_core::ImageId>>,
+    pub(super) uniform_mask_images: Vec<Option<UniformMaskImageSelection>>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
 

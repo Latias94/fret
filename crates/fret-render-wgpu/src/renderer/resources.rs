@@ -175,6 +175,16 @@ impl Renderer {
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
+        let mask_image_sampler_nearest = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret mask image sampler (nearest)"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
 
         let mask_image_identity_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("fret mask image identity texture"),
@@ -278,6 +288,16 @@ impl Renderer {
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+        let image_sampler_nearest = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret image sampler (nearest)"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
@@ -437,6 +457,7 @@ impl Renderer {
             uniform_bind_group,
             uniform_bind_group_layout,
             mask_image_sampler,
+            mask_image_sampler_nearest,
             _mask_image_identity_texture: mask_image_identity_texture,
             mask_image_identity_view,
             mask_image_identity_uploaded: false,
@@ -452,11 +473,12 @@ impl Renderer {
             material_catalog_texture,
             material_catalog_uploaded: false,
             quad_pipeline_format: None,
-            quad_pipeline: None,
+            quad_pipelines: HashMap::new(),
             viewport_pipeline_format: None,
             viewport_pipeline: None,
             viewport_bind_group_layout,
             viewport_sampler,
+            image_sampler_nearest,
             instance_buffers,
             quad_instance_bind_group_layout,
             quad_instance_bind_groups,
@@ -563,6 +585,7 @@ impl Renderer {
             perf_svg_mask_atlas_entries_evicted: 0,
             perf: RenderPerfStats::default(),
             last_frame_perf: None,
+            last_render_plan_segment_report: None,
             render_scene_frame_index: 0,
             path_msaa_samples: 4,
             debug_offscreen_blit_enabled: false,

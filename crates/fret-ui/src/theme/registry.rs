@@ -31,6 +31,30 @@ fn canonicalize_color_key(key: &str) -> &str {
         // shadcn-style core semantic keys (aliases).
         "ring_offset_background" => "ring-offset-background",
 
+        // shadcn v4 chart palette keys (aliases).
+        "chart.1" => "chart-1",
+        "chart.2" => "chart-2",
+        "chart.3" => "chart-3",
+        "chart.4" => "chart-4",
+        "chart.5" => "chart-5",
+
+        // shadcn v4 sidebar keys (aliases).
+        //
+        // Upstream uses `--sidebar` as the background token (not `--sidebar-background`), so we
+        // treat `sidebar` as canonical and accept common dotted/hyphenated variants.
+        "sidebar.background" => "sidebar",
+        "sidebar-background" => "sidebar",
+
+        "sidebar.foreground" => "sidebar-foreground",
+        "sidebar.border" => "sidebar-border",
+        "sidebar.ring" => "sidebar-ring",
+
+        "sidebar.primary" => "sidebar-primary",
+        "sidebar.primary.foreground" => "sidebar-primary-foreground",
+
+        "sidebar.accent" => "sidebar-accent",
+        "sidebar.accent.foreground" => "sidebar-accent-foreground",
+
         // shadcn surface sub-keys (aliases).
         "card.background" => "card",
         "card.foreground" => "card-foreground",

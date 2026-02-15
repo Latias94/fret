@@ -13,6 +13,10 @@ Active workstreams:
 - `docs/workstreams/genui-json-render-v1.md`
 - `docs/workstreams/genui-json-render-v1-todo.md`
 - `docs/workstreams/genui-json-render-v1-milestones.md`
+- `docs/workstreams/hotpatch-devloop-alignment-v1.md`
+- `docs/workstreams/hotpatch-devloop-alignment-v1-refactor-design.md`
+- `docs/workstreams/hotpatch-devloop-alignment-v1-todo.md`
+- `docs/workstreams/hotpatch-devloop-alignment-v1-milestones.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`

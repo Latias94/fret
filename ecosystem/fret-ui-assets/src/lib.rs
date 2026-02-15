@@ -5,7 +5,9 @@
 
 pub mod image_asset_state;
 pub mod image_source;
+pub mod reload;
 pub mod svg_asset_state;
+pub mod svg_file;
 pub mod ui_assets;
 
 #[cfg(feature = "ui")]
@@ -13,6 +15,8 @@ pub mod ui;
 
 pub use fret_asset_cache::*;
 pub use image_source::*;
+pub use reload::*;
+pub use svg_file::*;
 pub use ui_assets::*;
 
 #[cfg(feature = "app-integration")]

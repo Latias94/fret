@@ -280,6 +280,7 @@ fn image_fit_cover_encodes_cropped_uvs() {
         ),
         image,
         fit: ViewportFit::Cover,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
         opacity: 1.0,
     });
 
@@ -371,6 +372,7 @@ fn image_fit_contain_encodes_centered_draw_rect() {
         ),
         image,
         fit: ViewportFit::Contain,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
         opacity: 1.0,
     });
 

@@ -117,6 +117,11 @@ struct MaskStack {
 
 const MAX_STOPS: u32 = 8u;
 
+override FRET_FILL_KIND: u32 = 0u;
+override FRET_BORDER_KIND: u32 = 0u;
+override FRET_BORDER_PRESENT: u32 = 1u;
+override FRET_DASH_ENABLED: u32 = 0u;
+
 struct Paint {
   kind: u32,
   tile_mode: u32,
@@ -423,9 +428,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -434,7 +437,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -443,7 +446,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -454,7 +457,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -542,172 +545,194 @@ fn mat_rot(v: vec2<f32>, a: f32) -> vec2<f32> {
   return vec2<f32>(c * v.x - s * v.y, s * v.x + c * v.y);
 }
 
-fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
-  switch p.kind {
-    // 0 = Solid
-    case 0u: {
-      return p.params0;
-    }
-    // 1 = LinearGradient
-    case 1u: {
-      let start = p.params0.xy;
-      let end = p.params0.zw;
-      let dir = end - start;
-      let len2 = dot(dir, dir);
-      let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-      let tt = clamp(t, 0.0, 1.0);
-      return paint_sample_stops(p, tt);
-    }
-    // 2 = RadialGradient
-    case 2u: {
-      let center = p.params0.xy;
-      let radius = max(p.params0.zw, vec2<f32>(1e-6));
-      let d = (local_pos - center) / radius;
-      let t = length(d);
-      let tt = clamp(t, 0.0, 1.0);
-      return paint_sample_stops(p, tt);
-    }
-    // 3 = Material (Tier B procedural patterns)
-    case 3u: {
-      let base = p.params0;
-      let fg = p.params1;
-      let pos = local_pos + p.params3.zw;
+fn material_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  let base = p.params0;
+  let fg = p.params1;
+  let pos = local_pos + p.params3.zw;
 
-      // params2: primary (x/y), thickness/radius (z), seed (w)
-      // params3: time/phase (x), angle/softness (y), offset (z/w)
-      let spacing = max(p.params2.x, 1.0);
-      let spacing_y = max(p.params2.y, 1.0);
-      let thickness = max(p.params2.z, 0.0);
-      let seed = u32(max(p.params2.w, 0.0));
-      let t = p.params3.x;
-      let angle = p.params3.y;
+  // params2: primary (x/y), thickness/radius (z), seed (w)
+  // params3: time/phase (x), angle/softness (y), offset (z/w)
+  let spacing = max(p.params2.x, 1.0);
+  let spacing_y = max(p.params2.y, 1.0);
+  let thickness = max(p.params2.z, 0.0);
+  let seed = u32(max(p.params2.w, 0.0));
+  let time = p.params3.x;
+  let angle = p.params3.y;
 
-      // 0 DotGrid
-      if (p.tile_mode == 0u) {
-        let cell = pos / spacing;
-        let frac = fract(cell) - vec2<f32>(0.5);
-        let r = select(spacing * 0.12, thickness, thickness > 0.0);
-        let d = length(frac) * spacing;
-        let aa = max(fwidth(d), 1e-4);
-        let cov = 1.0 - smoothstep(r, r + aa, d);
-        return base * (1.0 - cov) + fg * cov;
-      }
+  let tm0 = p.tile_mode == 0u;
+  let tm1 = p.tile_mode == 1u;
+  let tm2 = p.tile_mode == 2u;
+  let tm3 = p.tile_mode == 3u;
+  let tm4 = p.tile_mode == 4u;
+  let tm5 = p.tile_mode == 5u;
+  let tm6 = p.tile_mode == 6u;
+  let tm7 = p.tile_mode == 7u;
 
-      // 1 Grid
-      if (p.tile_mode == 1u) {
-        let cell = pos / vec2<f32>(spacing, spacing_y);
-        let frac = abs(fract(cell) - vec2<f32>(0.5));
-        let dx = frac.x * spacing;
-        let dy = frac.y * spacing_y;
-        let w = select(1.0, thickness, thickness > 0.0);
-        let aa_x = max(fwidth(dx), 1e-4);
-        let aa_y = max(fwidth(dy), 1e-4);
-        let cov_x = 1.0 - smoothstep(w * 0.5, w * 0.5 + aa_x, dx);
-        let cov_y = 1.0 - smoothstep(w * 0.5, w * 0.5 + aa_y, dy);
-        let cov = max(cov_x, cov_y);
-        return base * (1.0 - cov) + fg * cov;
-      }
+  // 0 DotGrid
+  let dot_cell = pos / spacing;
+  let dot_frac = fract(dot_cell) - vec2<f32>(0.5);
+  let dot_r = select(spacing * 0.12, thickness, thickness > 0.0);
+  let dot_d = length(dot_frac) * spacing;
+  let dot_aa = max(fwidth(dot_d), 1e-4);
+  let dot_cov = 1.0 - smoothstep(dot_r, dot_r + dot_aa, dot_d);
+  let mat0 = base * (1.0 - dot_cov) + fg * dot_cov;
 
-      // 2 Checkerboard
-      if (p.tile_mode == 2u) {
-        let cell = vec2<u32>(
-          u32(floor(pos.x / spacing)),
-          u32(floor(pos.y / spacing_y))
-        );
-        let parity = (cell.x + cell.y) & 1u;
-        return select(base, fg, parity == 1u);
-      }
+  // 1 Grid
+  let grid_cell = pos / vec2<f32>(spacing, spacing_y);
+  let grid_frac = abs(fract(grid_cell) - vec2<f32>(0.5));
+  let grid_dx = grid_frac.x * spacing;
+  let grid_dy = grid_frac.y * spacing_y;
+  let grid_w = select(1.0, thickness, thickness > 0.0);
+  let grid_aa_x = max(fwidth(grid_dx), 1e-4);
+  let grid_aa_y = max(fwidth(grid_dy), 1e-4);
+  let grid_cov_x = 1.0 - smoothstep(grid_w * 0.5, grid_w * 0.5 + grid_aa_x, grid_dx);
+  let grid_cov_y = 1.0 - smoothstep(grid_w * 0.5, grid_w * 0.5 + grid_aa_y, grid_dy);
+  let grid_cov = max(grid_cov_x, grid_cov_y);
+  let mat1 = base * (1.0 - grid_cov) + fg * grid_cov;
 
-      // 3 Stripe
-      if (p.tile_mode == 3u) {
-        let p2 = mat_rot(pos, angle);
-        let u = p2.x / spacing;
-        let du = abs(fract(u) - 0.5) * spacing;
-        let w = select(spacing * 0.25, thickness, thickness > 0.0);
-        let aa = max(fwidth(du), 1e-4);
-        let cov = 1.0 - smoothstep(w * 0.5, w * 0.5 + aa, du);
-        return base * (1.0 - cov) + fg * cov;
-      }
+  // 2 Checkerboard
+  let chk_cell = vec2<u32>(
+    u32(floor(pos.x / spacing)),
+    u32(floor(pos.y / spacing_y))
+  );
+  let chk_parity = (chk_cell.x + chk_cell.y) & 1u;
+  let mat2 = select(base, fg, chk_parity == 1u);
 
-      // 4 Noise (deterministic cell noise)
-      if (p.tile_mode == 4u) {
-        let scale = spacing;
-        let cell = vec2<u32>(
-          u32(floor(pos.x / scale + 0.5)),
-          u32(floor(pos.y / scale + 0.5))
-        );
-        var r = mat_rand01(cell, seed);
-        // v2 (ADR 0242): optionally sample a renderer-owned catalog texture (fixed binding shape).
-        if (p.stop_count == 1u) {
-          let xi = cell.x & 63u;
-          let yi = cell.y & 63u;
-          let uv = (vec2<f32>(f32(xi) + 0.5, f32(yi) + 0.5) / 64.0);
-          let layer = i32(p.color_space);
-          r = textureSample(material_catalog_texture, material_catalog_sampler, uv, layer).r;
-        }
-        let intensity = clamp(p.params2.y, 0.0, 1.0);
-        let cov = intensity * r;
-        return base * (1.0 - cov) + fg * cov;
-      }
+  // 3 Stripe
+  let stripe_p2 = mat_rot(pos, angle);
+  let stripe_u = stripe_p2.x / spacing;
+  let stripe_du = abs(fract(stripe_u) - 0.5) * spacing;
+  let stripe_w = select(spacing * 0.25, thickness, thickness > 0.0);
+  let stripe_aa = max(fwidth(stripe_du), 1e-4);
+  let stripe_cov = 1.0 - smoothstep(stripe_w * 0.5, stripe_w * 0.5 + stripe_aa, stripe_du);
+  let mat3 = base * (1.0 - stripe_cov) + fg * stripe_cov;
 
-      // 5 Beam (caller-driven phase via `t`)
-      if (p.tile_mode == 5u) {
-        let p2 = mat_rot(pos, angle);
-        let u = p2.x;
-        let center = t;
-        let width = max(p.params2.x, 1.0);
-        let softness = max(p.params2.y, 0.0);
-        let d = abs(u - center);
-        let aa = max(fwidth(d), 1e-4);
-        let cov = 1.0 - smoothstep(width * 0.5, width * 0.5 + softness + aa, d);
-        return base * (1.0 - cov) + fg * cov;
-      }
+  // 4 Noise (deterministic cell noise; optionally sampled from a renderer-owned catalog texture)
+  let noise_scale = spacing;
+  let noise_cell = vec2<u32>(
+    u32(floor(pos.x / noise_scale + 0.5)),
+    u32(floor(pos.y / noise_scale + 0.5))
+  );
+  let noise_r0 = mat_rand01(noise_cell, seed);
+  let noise_xi = noise_cell.x & 63u;
+  let noise_yi = noise_cell.y & 63u;
+  let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
+  let noise_layer = select(0, i32(p.color_space), p.stop_count == 1u);
+  let noise_r1 = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
+  let noise_r = select(noise_r0, noise_r1, p.stop_count == 1u);
+  let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
+  let noise_cov = noise_intensity * noise_r;
+  let mat4 = base * (1.0 - noise_cov) + fg * noise_cov;
 
-      // 6 Sparkle (cell-based, explicit `t`, explicit `seed`)
-      if (p.tile_mode == 6u) {
-        let cell_size = max(p.params2.x, 1.0);
-        let cell = vec2<u32>(
-          u32(floor(pos.x / cell_size)),
-          u32(floor(pos.y / cell_size))
-        );
-        let r0 = mat_rand01(cell, seed);
-        let density = clamp(p.params2.y, 0.0, 1.0);
-        if (r0 > density) {
-          return base;
-        }
-        let rx = mat_rand01(cell, seed ^ 0x68bc21ebu);
-        let ry = mat_rand01(cell, seed ^ 0x02e5be93u);
-        let phase = mat_rand01(cell, seed ^ 0xa1b3c5d7u) * 6.2831853;
-        let p_cell = (fract(pos / cell_size) - vec2<f32>(rx, ry)) * cell_size;
-        let radius = select(cell_size * 0.08, thickness, thickness > 0.0);
-        let d = length(p_cell);
-        let aa = max(fwidth(d), 1e-4);
-        let cov = 1.0 - smoothstep(radius, radius + aa, d);
-        let twinkle = 0.5 + 0.5 * sin(t * 2.0 + phase);
-        let k = cov * twinkle;
-        return base * (1.0 - k) + fg * k;
-      }
+  // 5 Beam (caller-driven phase via `time`)
+  let beam_p2 = mat_rot(pos, angle);
+  let beam_u = beam_p2.x;
+  let beam_center = time;
+  let beam_width = max(p.params2.x, 1.0);
+  let beam_soft = max(p.params2.y, 0.0);
+  let beam_d = abs(beam_u - beam_center);
+  let beam_aa = max(fwidth(beam_d), 1e-4);
+  let beam_cov = 1.0 - smoothstep(beam_width * 0.5, beam_width * 0.5 + beam_soft + beam_aa, beam_d);
+  let mat5 = base * (1.0 - beam_cov) + fg * beam_cov;
 
-      // 7 ConicSweep (center in params2.xy, width in params2.z (turns), phase in params3.x (turns))
-      if (p.tile_mode == 7u) {
-        let center = p.params2.xy;
-        let v = local_pos - center;
-        let a = atan2(v.y, v.x);
-        let turns = fract(a * (1.0 / 6.2831853) + fract(p.params3.x));
-        let d = abs(fract(turns + 0.5) - 0.5);
-        let w = clamp(p.params2.z, 0.0, 0.5);
-        let soft = max(p.params3.y, 0.0);
-        let aa = max(fwidth(d), 1e-4);
-        let cov = 1.0 - smoothstep(w, w + soft + aa, d);
-        return base * (1.0 - cov) + fg * cov;
-      }
+  // 6 Sparkle (cell-based, explicit `time`, explicit `seed`)
+  let sp_cell_size = max(p.params2.x, 1.0);
+  let sp_cell = vec2<u32>(
+    u32(floor(pos.x / sp_cell_size)),
+    u32(floor(pos.y / sp_cell_size))
+  );
+  let sp_r0 = mat_rand01(sp_cell, seed);
+  let sp_density = clamp(p.params2.y, 0.0, 1.0);
+  let sp_enabled = sp_r0 <= sp_density;
+  let sp_rx = mat_rand01(sp_cell, seed ^ 0x68bc21ebu);
+  let sp_ry = mat_rand01(sp_cell, seed ^ 0x02e5be93u);
+  let sp_phase = mat_rand01(sp_cell, seed ^ 0xa1b3c5d7u) * 6.2831853;
+  let sp_p_cell = (fract(pos / sp_cell_size) - vec2<f32>(sp_rx, sp_ry)) * sp_cell_size;
+  let sp_radius = select(sp_cell_size * 0.08, thickness, thickness > 0.0);
+  let sp_d = length(sp_p_cell);
+  let sp_aa = max(fwidth(sp_d), 1e-4);
+  let sp_cov = 1.0 - smoothstep(sp_radius, sp_radius + sp_aa, sp_d);
+  let sp_twinkle = 0.5 + 0.5 * sin(time * 2.0 + sp_phase);
+  let sp_k = sp_cov * sp_twinkle;
+  let sp_out = base * (1.0 - sp_k) + fg * sp_k;
+  let mat6 = select(base, sp_out, sp_enabled);
 
-      return base;
-    }
-    default: {
-      return vec4<f32>(0.0);
-    }
+  // 7 ConicSweep (center in params2.xy, width in params2.z (turns), phase in params3.x (turns))
+  let con_center = p.params2.xy;
+  let con_v = local_pos - con_center;
+  let con_a = atan2(con_v.y, con_v.x);
+  let con_turns = fract(con_a * (1.0 / 6.2831853) + fract(p.params3.x));
+  let con_d = abs(fract(con_turns + 0.5) - 0.5);
+  let con_w = clamp(p.params2.z, 0.0, 0.5);
+  let con_soft = max(p.params3.y, 0.0);
+  let con_aa = max(fwidth(con_d), 1e-4);
+  let con_cov = 1.0 - smoothstep(con_w, con_w + con_soft + con_aa, con_d);
+  let mat7 = base * (1.0 - con_cov) + fg * con_cov;
+
+  var material = base;
+  material = select(material, mat0, tm0);
+  material = select(material, mat1, tm1);
+  material = select(material, mat2, tm2);
+  material = select(material, mat3, tm3);
+  material = select(material, mat4, tm4);
+  material = select(material, mat5, tm5);
+  material = select(material, mat6, tm6);
+  material = select(material, mat7, tm7);
+  return material;
+}
+
+fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (FRET_FILL_KIND == 0u) {
+    return p.params0;
   }
+  if (FRET_FILL_KIND == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_FILL_KIND == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_FILL_KIND == 3u) {
+    return material_eval(p, local_pos);
+  }
+  return vec4<f32>(0.0);
+}
+
+fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (FRET_BORDER_KIND == 0u) {
+    return p.params0;
+  }
+  if (FRET_BORDER_KIND == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_BORDER_KIND == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_BORDER_KIND == 3u) {
+    return material_eval(p, local_pos);
+  }
+  return vec4<f32>(0.0);
 }
 
 @fragment
@@ -743,31 +768,32 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
   let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
-  let border_sum = input.border.x + input.border.y + input.border.z + input.border.w;
-  let border_present = border_sum > 0.0;
+  let border_present = FRET_BORDER_PRESENT != 0u;
 
   let alpha_fill = select(alpha_outer, alpha_inner, border_present);
   let border_cov_raw = saturate(alpha_outer - alpha_inner);
   let border_cov = select(0.0, border_cov_raw, border_present);
 
-  let fill = paint_eval(inst.fill_paint, input.local_pos) * alpha_fill;
-  var dash_mask = 1.0;
-  if (inst.dash_params.w > 0.5 && border_present) {
-    let dash = inst.dash_params.x;
-    let gap = inst.dash_params.y;
-    let phase = inst.dash_params.z;
-    let period = dash + gap;
-    if (period > 0.0 && dash > 0.0) {
+  let fill = paint_eval_fill(inst.fill_paint, input.local_pos) * alpha_fill;
+  var border = vec4<f32>(0.0);
+  if (border_present) {
+    var dash_mask = 1.0;
+    if (FRET_DASH_ENABLED != 0u) {
+      let dash = inst.dash_params.x;
+      let gap = inst.dash_params.y;
+      let phase = inst.dash_params.z;
+      let period = dash + gap;
+      let period_safe = max(period, 1e-6);
       let s = rrect_perimeter_s(input.local_pos, input.rect, input.corner_radii);
-      let t = s + phase;
-      let m = t - floor(t / period) * period;
+      let tt = s + phase;
+      let m = tt - floor(tt / period_safe) * period_safe;
       let aa = max(fwidth(s), 1e-4);
       let on_start = smoothstep(0.0, aa, m);
       let on_end = 1.0 - smoothstep(dash - aa, dash + aa, m);
       dash_mask = on_start * on_end;
     }
+    border = paint_eval_border(inst.border_paint, input.local_pos) * border_cov * dash_mask;
   }
-  let border = paint_eval(inst.border_paint, input.local_pos) * border_cov * dash_mask;
 
   let out = (fill + border) * clip * mask;
   return encode_output_premul(out);
@@ -969,9 +995,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   // 1 = LinearGradient
   if (m.kind == 1u) {
@@ -981,7 +1005,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   // 2 = RadialGradient
@@ -991,7 +1015,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   // 3 = Image mask
@@ -1003,7 +1027,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -3214,9 +3238,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -3225,7 +3247,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -3234,7 +3256,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -3245,7 +3267,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -3437,9 +3459,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -3448,7 +3468,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -3457,7 +3477,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -3468,7 +3488,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -3766,9 +3786,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -3777,7 +3795,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -3786,7 +3804,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -3797,7 +3815,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4050,9 +4068,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4061,7 +4077,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4070,7 +4086,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4081,7 +4097,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4367,9 +4383,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4378,7 +4392,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4387,7 +4401,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4398,7 +4412,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4654,9 +4668,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4665,7 +4677,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4674,7 +4686,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4685,7 +4697,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4968,9 +4980,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4979,7 +4989,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4988,7 +4998,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4999,7 +5009,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;

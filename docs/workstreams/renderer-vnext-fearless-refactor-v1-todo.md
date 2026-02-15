@@ -19,7 +19,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M0 — Design baseline
 
-- [ ] REN-VNEXT-docs-001 Add a short “invariants checklist” appendix for renderer refactors (what must never change).
+- [x] REN-VNEXT-docs-001 Add a short “invariants checklist” appendix for renderer refactors (what must never change).
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix A).
 - [x] REN-VNEXT-adr-001 Draft ADR: isolated opacity / saveLayer(alpha) (group alpha).
 - [x] REN-VNEXT-adr-002 Draft ADR: clip path + image mask sources (bounded, cacheable, deterministic).
 - [x] REN-VNEXT-adr-003 Draft ADR: paint/material portability closure (capabilities + fallbacks + conformance gates).
@@ -29,10 +30,26 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M1 — RenderPlan compilation substrate
 
-- [ ] REN-VNEXT-plan-001 Define the internal RenderPlan IR (segments, sequence points, state snapshots).
-- [ ] REN-VNEXT-plan-002 Move budget/degradation decisions into plan compilation (deterministic ordering).
-- [ ] REN-VNEXT-plan-003 Add telemetry hooks: per-window intermediate peak bytes and degradations applied.
-- [ ] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
+- [x] REN-VNEXT-plan-001 Define the internal RenderPlan IR (segments, sequence points, state snapshots).
+  - Draft: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (3.1.1–3.1.5).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanSegment`, `RenderPlanSegmentFlags`),
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`alloc_segment`, sequence points at markers + path MSAA batches).
+- [x] REN-VNEXT-plan-005 Remove the legacy plan compiler (and temporary switches/tests) after vNext parity is proven.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderPlan compilation has no flavor switch),
+    `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`compile_for_scene` delegates to vNext),
+    `crates/fret-render-wgpu/Cargo.toml` (no legacy compiler feature).
+- [x] REN-VNEXT-plan-002 Move budget/degradation decisions into plan compilation (deterministic ordering).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (scopes-aware effective budgets for effect chains),
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (clip-mask bytes are budget-accounted; mask tiers respect unavailable targets).
+- [x] REN-VNEXT-plan-003 Add telemetry hooks: per-window intermediate peak bytes and degradations applied.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanCompileStats`, `RenderPlanDegradation`),
+    `crates/fret-render-wgpu/src/renderer/types.rs` (`RenderPerfSnapshot` fields),
+    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (plumbs plan stats into perf),
+    `crates/fret-render-wgpu/src/renderer/config.rs` (perf snapshot output),
+    `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (JSON dump: estimated peak bytes + degradations list),
+    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (segment stability counters: changed segments + pass growth).
+- [x] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
+  - Note: This was a temporary safety rail during rollout and has been removed after completing `REN-VNEXT-plan-005`.
 
 ## M2 — Isolated opacity (saveLayerAlpha)
 
@@ -46,7 +63,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ### M3a — ClipPath v1
 
 - [x] REN-VNEXT-clip-001 Decide v1 clip-path contract shape (prepared path handle vs dedicated clip handle).
-  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan.rs` (mask pass planning + composite with mask).
+  - Evidence (v1): `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushClipPath`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (encoding + effect markers), `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`EffectMarkerKind::ClipPathPush`/`ClipPathPop`).
 - [x] REN-VNEXT-clip-003 Add conformance tests:
   - [x] Clip-path clips to shape (not just bounds): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - [x] Clip capture at push time (does not follow later transforms): `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
@@ -59,19 +76,25 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] REN-VNEXT-clip-002 Decide image-mask v1 sampling semantics (minimal enum, deterministic degradation).
   - Evidence: `docs/adr/0273-clip-path-and-image-mask-sources-v1.md` (bounds-as-computation-bound + channel policy), `crates/fret-core/src/scene/mask.rs` (`Mask::Image` sanitize), `crates/fret-render-wgpu/src/renderer/render_scene/encode/mask.rs` (single-active image-mask + deterministic degrade), `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval` kind=3 sampling).
-- [~] REN-VNEXT-mask-001 Add conformance tests for nested masks + groups and paint-only hit-testing invariants.
+- [x] REN-VNEXT-mask-001 Add conformance tests for nested masks + groups and paint-only hit-testing invariants.
   - [x] GPU coverage gates for `Mask::Image`: `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
-  - [ ] Paint-only hit-testing invariants (runtime-level; add an integration gate when the hit-test harness is ready).
+  - [x] Paint-only hit-testing invariants (runtime-level): `crates/fret-ui/src/declarative/tests/core.rs` (`mask_layer_is_paint_only_for_hit_testing_by_default`)
 
 ## M4 — Paint/Material evolution (controlled extensibility)
 
 ### M4a — Capability matrix + deterministic fallbacks
 
-- [ ] REN-VNEXT-paint-001 Inventory where `Paint` is supported vs missing (quad/path/stroke/mask).
-- [ ] REN-VNEXT-paint-002 Decide whether `SceneOp::Path` should accept `Paint` in v1/v2 (or remain solid-only).
-- [ ] REN-VNEXT-mat-001 Document the renderer’s MaterialId capability matrix and deterministic fallbacks for wasm/mobile.
-- [ ] REN-VNEXT-mat-002 Fill the capability matrix table with concrete “Must/May/Degrade” decisions per target.
-- [ ] REN-VNEXT-mat-003 Add at least one conformance scene for `Paint::Material` fallback behavior (unsupported registration, missing id, and budget pressure).
+- [x] REN-VNEXT-paint-001 Inventory where `Paint` is supported vs missing (quad/path/stroke/mask).
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix B).
+- [x] REN-VNEXT-paint-002 Decide whether `SceneOp::Path` should accept `Paint` in v1/v2 (or remain solid-only).
+  - Decision (v1): remain solid-only.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix B).
+- [x] REN-VNEXT-mat-001 Document the renderer’s MaterialId capability matrix and deterministic fallbacks for wasm/mobile.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C).
+- [x] REN-VNEXT-mat-002 Fill the capability matrix table with concrete “Must/May/Degrade” decisions per target.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C).
+- [x] REN-VNEXT-mat-003 Add at least one conformance scene for `Paint::Material` fallback behavior (unsupported registration, missing id, and budget pressure).
+  - Evidence: `crates/fret-render-wgpu/tests/materials_conformance.rs` (unknown id + budget pressure), `crates/fret-render-wgpu/src/renderer/services.rs` (capability-gated registration).
 
 ### M4b — Optional contract expansion
 
@@ -79,11 +102,59 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M5 — Sampling hints (bounded state surface)
 
-- [ ] REN-VNEXT-samp-001 Decide where sampling hints live (image op, viewport op, or material).
-- [ ] REN-VNEXT-samp-002 Add a small conformance scene that exercises nearest/linear on mixed primitives without reordering.
+- [x] REN-VNEXT-samp-001 Decide where sampling hints live (image op, viewport op, or material).
+  - Decision (v1): sampling hints live on image sampling sites (`SceneOp::Image*`, `SceneOp::MaskImage`, `Mask::Image`), not on `Paint`/`Material`.
+  - Evidence: `docs/adr/0276-image-sampling-hints-v1.md`, `crates/fret-core/src/scene/mod.rs` (`ImageSamplingHint`, `SceneOp::{Image,ImageRegion,MaskImage}`),
+    `crates/fret-core/src/scene/mask.rs` (`Mask::Image { sampling }`).
+- [x] REN-VNEXT-samp-002 Add a small conformance scene that exercises nearest/linear on mixed primitives without reordering.
+  - Evidence: `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
+- [x] REN-VNEXT-samp-003 Plumb sampling hints through the UI mechanism layer and add ecosystem opt-in helpers.
+  - Goal: keep `crates/fret-ui` as a pure mechanism/pass-through, while allowing policy layers to opt in.
+  - Evidence: `crates/fret-ui/src/element.rs` (`ImageProps.sampling`), `crates/fret-ui/src/declarative/host_widget/paint.rs` (SceneOp plumb),
+    `ecosystem/fret-ui-kit/src/image_sampling.rs` (`ImageSamplingExt`), `ecosystem/fret-ui-kit/tests/image_sampling_ext_smoke.rs`,
+    `ecosystem/fret-ui-shadcn/src/media_image.rs` (`MediaImage::sampling_hint`),
+    `apps/fret-ui-gallery/src/ui/previews/gallery/atoms/media/image_object_fit.rs` (explicit Linear vs opt-in Nearest demo),
+    `tools/diag-scripts/ui-gallery-image-sampling-hints-screenshots.json` (scripted screenshot/bundle gate for Linear vs Nearest).
+
+## M5b — WebGPU/Tint uniformity closure (derivatives + sampling)
+
+- [x] REN-VNEXT-webgpu-001 Make WGSL shaders satisfy WebGPU uniformity rules (Tint):
+  - Derivative ops (`fwidth`, `dpdx`, `dpdy`) and sampling (`textureSample`) are not gated by non-uniform control flow.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval`, `paint_eval`, dashed border mask).
+- [~] REN-VNEXT-webgpu-002 Recover performance after uniformity fixes:
+  - Avoid “evaluate all material patterns per pixel” in the quad shader on web/mobile.
+  - Preferred direction: compile a small set of shader/pipeline variants keyed by stable (bounded) paint/material kinds.
+  - Landed: quad pipeline variants keyed by `(fill_kind, border_kind, border_present, dash_enabled)` using WGSL `override` constants.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/types.rs` (`QuadPipelineKey`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (batch split),
+    `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (pipeline constants), `crates/fret-render-wgpu/src/renderer/shaders.rs` (override + `paint_eval_fill/border`),
+    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (variant selection per draw).
+  - Next:
+    - Add a focused headless perf gate that stresses quad paint/material/dash combos (so decisions are evidence-driven).
+    - Consider material `tile_mode` variants (or a bounded subset) only if material patterns become hot in perf bundles.
+- [ ] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
+  - Keep `renderer::tests::shaders_validate_for_webgpu` as a baseline (Naga),
+  - and consider adding an optional Tint-based compile check (or a minimal static heuristic) to catch uniformity drift.
+
+## M6 — Perf recovery follow-ups (evidence-driven)
+
+- [ ] REN-VNEXT-perf-001 Add a headless quad/material stress gate:
+  - Target: quad shader hot paths (fill/border paint kinds, dash on/off, material sampled vs params-only).
+  - Output: stable counters + baseline in `docs/workstreams/perf-baselines/`.
+  - Motivation: keep pipeline-variant decisions bounded and justified.
+- [ ] REN-VNEXT-webgpu-004 If perf evidence warrants, add bounded `MaterialTileMode` pipeline variants:
+  - Guardrail: keep the key space small and observable in perf snapshots (`pipeline_switches_*`).
+- [ ] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
 
 ## Always-run guardrails (before/after each milestone)
 
-- [ ] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-- [ ] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
-- [ ] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
+- [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
+  - Last run: 2026-02-15 (post quad pipeline variants), commit `6f092733`.
+- [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
+  - Status: satisfied through M5 (sampling hints conformance gate landed).
+- [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
+  - Last capture: 2026-02-15 (post quad variants), commit `6f092733`.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).
+- [~] REN-VNEXT-guard-004 Keep a cheap headless perf gate green (stable counters).
+  - Gate: `python3 tools/perf/headless_svg_atlas_stress_gate.py`
+  - Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+  - Landed: 2026-02-15, commit `49181551`.

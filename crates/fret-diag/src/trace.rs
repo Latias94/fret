@@ -75,9 +75,49 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 .and_then(|m| m.get("hit_test_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let ui_thread_cpu_time_us = stats
+                .and_then(|m| m.get("ui_thread_cpu_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_delta_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_delta_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_total_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_total_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
             let layout_obs_record_time_us = stats
                 .and_then(|m| m.get("layout_observation_record_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_collect_roots_time_us = stats
+                .and_then(|m| m.get("layout_collect_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_invalidate_scroll_handle_bindings_time_us = stats
+                .and_then(|m| m.get("layout_invalidate_scroll_handle_bindings_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_expand_view_cache_invalidations_time_us = stats
+                .and_then(|m| m.get("layout_expand_view_cache_invalidations_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_request_build_roots_time_us = stats
+                .and_then(|m| m.get("layout_request_build_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_roots_time_us = stats
+                .and_then(|m| m.get("layout_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_view_cache_time_us = stats
+                .and_then(|m| m.get("layout_view_cache_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_engine_solve_time_us = stats
+                .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let paint_obs_record_time_us = stats
@@ -88,18 +128,47 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 .and_then(|m| m.get("paint_text_prepare_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let paint_record_visual_bounds_time_us = stats
+                .and_then(|m| m.get("paint_record_visual_bounds_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_cache_key_time_us = stats
+                .and_then(|m| m.get("paint_cache_key_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_cache_hit_check_time_us = stats
+                .and_then(|m| m.get("paint_cache_hit_check_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_cache_replay_time_us = stats
+                .and_then(|m| m.get("paint_cache_replay_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_cache_bounds_translate_time_us = stats
+                .and_then(|m| m.get("paint_cache_bounds_translate_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_widget_time_us = stats
+                .and_then(|m| m.get("paint_widget_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
-            let mut frame_dur_us = total_time_us;
-            if frame_dur_us == 0 {
-                frame_dur_us = dispatch_time_us
-                    .saturating_add(hit_test_time_us)
-                    .saturating_add(layout_time_us)
-                    .saturating_add(prepaint_time_us)
-                    .saturating_add(paint_time_us);
-            }
+            let phase_sum_us = dispatch_time_us
+                .saturating_add(hit_test_time_us)
+                .saturating_add(layout_time_us)
+                .saturating_add(prepaint_time_us)
+                .saturating_add(paint_time_us);
+            let frame_dur_us = total_time_us.max(phase_sum_us);
             if frame_dur_us == 0 {
                 continue;
             }
+
+            let frame_wall_us = frame_end_us_hint.saturating_sub(frame_start_us);
+            let cpu_pct_denom_us = if frame_wall_us > 0 {
+                frame_wall_us
+            } else {
+                frame_dur_us
+            };
 
             let frame_ts_us = frame_start_us.min(frame_end_us_hint.saturating_sub(frame_dur_us));
 
@@ -114,6 +183,14 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                     "window": window_id_u64,
                     "tick_id": tick_id,
                     "frame_id": frame_id,
+                    "ui_thread_cpu_time_us": ui_thread_cpu_time_us,
+                    "ui_thread_cpu_cycle_time_delta_cycles": ui_thread_cpu_cycle_time_delta_cycles,
+                    "ui_thread_cpu_cycle_time_total_cycles": ui_thread_cpu_cycle_time_total_cycles,
+                    "ui_thread_cpu_pct_of_wall": if frame_dur_us > 0 {
+                        (ui_thread_cpu_time_us as f64) * 100.0 / (cpu_pct_denom_us as f64)
+                    } else {
+                        0.0
+                    },
                 }),
             ));
 
@@ -141,6 +218,7 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
             );
 
             let layout_ts = cursor;
+            let layout_dur_us = layout_time_us.min(remaining);
             cursor = push_phase(
                 &mut events,
                 pid,
@@ -151,8 +229,36 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 "layout",
                 layout_time_us,
             );
+            if layout_dur_us > 0 {
+                push_subphases(
+                    &mut events,
+                    pid,
+                    tid,
+                    layout_ts,
+                    layout_dur_us,
+                    "layout",
+                    &[
+                        ("layout.collect_roots", layout_collect_roots_time_us),
+                        (
+                            "layout.invalidate_scroll_bindings",
+                            layout_invalidate_scroll_handle_bindings_time_us,
+                        ),
+                        (
+                            "layout.expand_view_cache_invalidations",
+                            layout_expand_view_cache_invalidations_time_us,
+                        ),
+                        (
+                            "layout.request_build_roots",
+                            layout_request_build_roots_time_us,
+                        ),
+                        ("layout.engine_solve", layout_engine_solve_time_us),
+                        ("layout.roots", layout_roots_time_us),
+                        ("layout.view_cache", layout_view_cache_time_us),
+                    ],
+                );
+            }
             if layout_obs_record_time_us > 0 && layout_time_us > 0 {
-                let dur = layout_obs_record_time_us.min(layout_time_us);
+                let dur = layout_obs_record_time_us.min(layout_dur_us);
                 events.push(chrome_x(
                     "layout.obs_record",
                     "layout",
@@ -179,6 +285,7 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
             );
 
             let paint_ts = cursor;
+            let paint_dur_us = paint_time_us.min(remaining);
             cursor = push_phase(
                 &mut events,
                 pid,
@@ -189,8 +296,34 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 "paint",
                 paint_time_us,
             );
+            if paint_dur_us > 0 {
+                push_subphases(
+                    &mut events,
+                    pid,
+                    tid,
+                    paint_ts,
+                    paint_dur_us,
+                    "paint",
+                    &[
+                        (
+                            "paint.record_visual_bounds",
+                            paint_record_visual_bounds_time_us,
+                        ),
+                        ("paint.cache_key", paint_cache_key_time_us),
+                        ("paint.cache_hit_check", paint_cache_hit_check_time_us),
+                        ("paint.cache_replay", paint_cache_replay_time_us),
+                        (
+                            "paint.cache_bounds_translate",
+                            paint_cache_bounds_translate_time_us,
+                        ),
+                        ("paint.widget", paint_widget_time_us),
+                        ("paint.text_prepare", paint_text_prepare_time_us),
+                        ("paint.obs_record", paint_obs_record_time_us),
+                    ],
+                );
+            }
             if paint_obs_record_time_us > 0 && paint_time_us > 0 {
-                let dur = paint_obs_record_time_us.min(paint_time_us);
+                let dur = paint_obs_record_time_us.min(paint_dur_us);
                 events.push(chrome_x(
                     "paint.obs_record",
                     "paint",
@@ -205,7 +338,7 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 ));
             }
             if paint_text_prepare_time_us > 0 && paint_time_us > 0 {
-                let dur = paint_text_prepare_time_us.min(paint_time_us);
+                let dur = paint_text_prepare_time_us.min(paint_dur_us);
                 events.push(chrome_x(
                     "paint.text_prepare",
                     "paint",
@@ -283,6 +416,34 @@ fn push_phase(
     cursor_us.saturating_add(dur)
 }
 
+fn push_subphases(
+    events: &mut Vec<Value>,
+    pid: u32,
+    tid: u32,
+    parent_ts_us: u64,
+    parent_dur_us: u64,
+    cat: &'static str,
+    phases: &[(&'static str, u64)],
+) {
+    let mut cursor = parent_ts_us;
+    let mut remaining = parent_dur_us;
+    for (name, desired_us) in phases {
+        cursor = push_phase(
+            events,
+            pid,
+            tid,
+            cursor,
+            &mut remaining,
+            name,
+            cat,
+            *desired_us,
+        );
+        if remaining == 0 {
+            break;
+        }
+    }
+}
+
 fn snapshot_frame_window_us(s: &Value, fallback_start_us: u64) -> (u64, u64) {
     let ts_unix_ms = s
         .get("timestamp_unix_ms")
@@ -329,6 +490,8 @@ mod tests {
                     "debug": { "stats": {
                         "total_time_us": 1000,
                         "layout_time_us": 400,
+                        "layout_collect_roots_time_us": 50,
+                        "layout_engine_solve_time_us": 100,
                         "prepaint_time_us": 100,
                         "paint_time_us": 500
                     } }
@@ -351,5 +514,7 @@ mod tests {
             .filter_map(|e| e.get("name").and_then(|v| v.as_str()))
             .collect::<Vec<_>>();
         assert!(names.contains(&"fret.frame"));
+        assert!(names.contains(&"layout.collect_roots"));
+        assert!(names.contains(&"layout.engine_solve"));
     }
 }

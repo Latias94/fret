@@ -1,0 +1,22 @@
+[package]
+name = "fret-ui-literals"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = []
+# Optional `ElementContext` sugar (ViewCache-safe observation), consistent with other ecosystem crates.
+ui = ["dep:fret-ui"]
+
+[dependencies]
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+

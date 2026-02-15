@@ -246,6 +246,16 @@ impl fret_core::SvgService for Renderer {
     }
 }
 
+fn catalog_texture_material_supported(
+    allowed_usages: wgpu::TextureUsages,
+    flags: wgpu::TextureFormatFeatureFlags,
+) -> bool {
+    let ok_usages = allowed_usages
+        .contains(wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST);
+    let ok_filterable = flags.contains(wgpu::TextureFormatFeatureFlags::FILTERABLE);
+    ok_usages && ok_filterable
+}
+
 impl fret_core::MaterialService for Renderer {
     fn register_material(
         &mut self,
@@ -261,13 +271,7 @@ impl fret_core::MaterialService for Renderer {
                 let f = self
                     .adapter
                     .get_texture_format_features(wgpu::TextureFormat::Rgba8Unorm);
-                let ok_usages = f
-                    .allowed_usages
-                    .contains(wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST);
-                let ok_filterable = f
-                    .flags
-                    .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE);
-                if !(ok_usages && ok_filterable) {
+                if !catalog_texture_material_supported(f.allowed_usages, f.flags) {
                     return Err(fret_core::MaterialRegistrationError::Unsupported);
                 }
             }
@@ -309,5 +313,33 @@ impl fret_core::MaterialService for Renderer {
 
         self.materials_by_desc.remove(&entry.desc);
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sampled_material_registration_is_capability_gated() {
+        let required_usages = wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST;
+        let required_flags = wgpu::TextureFormatFeatureFlags::FILTERABLE;
+
+        assert!(!catalog_texture_material_supported(
+            wgpu::TextureUsages::COPY_DST,
+            required_flags
+        ));
+        assert!(!catalog_texture_material_supported(
+            wgpu::TextureUsages::TEXTURE_BINDING,
+            required_flags
+        ));
+        assert!(!catalog_texture_material_supported(
+            required_usages,
+            wgpu::TextureFormatFeatureFlags::empty()
+        ));
+        assert!(catalog_texture_material_supported(
+            required_usages,
+            required_flags
+        ));
     }
 }

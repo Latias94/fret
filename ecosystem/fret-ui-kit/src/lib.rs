@@ -15,6 +15,7 @@ pub mod dnd;
 mod edges4;
 pub mod headless;
 pub mod image_metadata;
+pub mod image_sampling;
 #[cfg(feature = "imui")]
 pub mod imui;
 pub mod overlay;
@@ -41,6 +42,7 @@ mod styled;
 pub use corners4::Corners4;
 pub use edges4::{Edges4, MarginEdge};
 pub use image_metadata::{ImageMetadata, ImageMetadataStore, with_image_metadata_store_mut};
+pub use image_sampling::ImageSamplingExt;
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
@@ -99,16 +101,17 @@ pub mod prelude {
 
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
-        ImageMetadataStore, LayoutRefinement, MarginEdge, MetricRef, OverrideSlot, Radius,
-        ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt, WidgetState,
-        WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot, resolve_override_slot,
-        resolve_override_slot_opt, resolve_override_slot_opt_with, resolve_override_slot_with,
-        resolve_slot,
+        ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
+        OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+        WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+        resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+        resolve_override_slot_with, resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};
     pub use crate::{WindowOverlayStackEntry, WindowOverlayStackSnapshot};
 
+    pub use fret_core::scene::ImageSamplingHint;
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_runtime::{CommandId, Model};
     pub use fret_ui::element::{AnyElement, AnyElementIterExt as _, TextProps};

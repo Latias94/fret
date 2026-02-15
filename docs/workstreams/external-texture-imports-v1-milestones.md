@@ -77,7 +77,7 @@ Evidence:
   - Evidence (native):
     - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-decoded-png-cpu-copy.windows-local.v1.json`
-- [ ] EXT-web-perf-131 Web GPU copy path perf baseline (when stable).
+- [x] EXT-web-perf-131 Web GPU copy path perf baseline (when stable).
   - Evidence:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
     - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)

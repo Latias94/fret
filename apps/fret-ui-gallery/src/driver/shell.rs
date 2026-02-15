@@ -25,6 +25,7 @@ pub(super) fn sidebar_view(
                 layout.size.height = Length::Fill;
                 ViewCacheProps {
                     layout,
+                    contained_layout: true,
                     ..Default::default()
                 }
             },

@@ -1,5 +1,5 @@
 use fret_core::{Corners, Rect, TextStyle};
-use fret_ui::element::{AnyElement, ViewCacheProps};
+use fret_ui::element::{AnyElement, LayoutStyle, ViewCacheProps};
 use fret_ui::{ElementContext, UiHost};
 
 /// Component-layer helper for authoring explicit cached subtree boundaries.
@@ -27,11 +27,17 @@ pub trait CachedSubtreeExt {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CachedSubtreeProps {
+    pub layout: LayoutStyle,
     pub contained_layout: bool,
     pub cache_key: u64,
 }
 
 impl CachedSubtreeProps {
+    pub fn layout(mut self, layout: LayoutStyle) -> Self {
+        self.layout = layout;
+        self
+    }
+
     pub fn contained_layout(mut self, contained_layout: bool) -> Self {
         self.contained_layout = contained_layout;
         self
@@ -73,6 +79,7 @@ impl<'a, H: UiHost> CachedSubtreeExt for ElementContext<'a, H> {
         I: IntoIterator<Item = AnyElement>,
     {
         let mut view_cache = ViewCacheProps::default();
+        view_cache.layout = props.layout;
         view_cache.contained_layout = props.contained_layout;
         view_cache.cache_key = props.cache_key;
         self.view_cache(view_cache, f)

@@ -26,6 +26,7 @@ use fret_runtime::{Model, ModelHost, ModelId};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast as _;
 
+use crate::UiAssetsReloadEpoch;
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache};
 
@@ -176,6 +177,7 @@ impl ImageSource {
 struct ImageSourceRequestKey {
     source: ImageSourceId,
     color_space: ImageColorSpace,
+    reload_epoch: u64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -195,9 +197,10 @@ impl Default for ImageSourceOptions {
 }
 
 #[cfg(feature = "ui")]
-fn request_key_for_source(
+fn request_key_for_source_with_epoch(
     source: &ImageSource,
     options: ImageSourceOptions,
+    reload_epoch: u64,
 ) -> ImageSourceRequestKey {
     let color_space = source
         .rgba8_meta()
@@ -206,6 +209,18 @@ fn request_key_for_source(
     ImageSourceRequestKey {
         source: source.id,
         color_space,
+        reload_epoch,
+    }
+}
+
+fn reload_epoch_for_source<H: GlobalsHost>(host: &H, source: &ImageSource) -> u64 {
+    match &source.kind {
+        #[cfg(not(target_arch = "wasm32"))]
+        ImageSourceKind::Path { .. } => host
+            .global::<UiAssetsReloadEpoch>()
+            .map(|v| v.0)
+            .unwrap_or(0),
+        _ => 0,
     }
 }
 
@@ -428,7 +443,7 @@ impl ImageSourceLoader {
     }
 
     #[cfg(feature = "ui")]
-    pub(crate) fn use_signal_model<H: ModelHost + TimeHost>(
+    pub(crate) fn use_signal_model<H: ModelHost + TimeHost + GlobalsHost>(
         &mut self,
         app: &mut H,
         source: &ImageSource,
@@ -477,7 +492,8 @@ impl ImageSourceLoader {
             }
         }
 
-        let request = request_key_for_source(source, options);
+        let reload_epoch = reload_epoch_for_source(app, source);
+        let request = request_key_for_source_with_epoch(source, options, reload_epoch);
 
         let entry = self.signal_handles.entry(request).or_insert_with(|| {
             let model = app.models_mut().insert(ImageSourceUiSignal::default());
@@ -714,8 +730,10 @@ pub(crate) fn register_asset_key_for_source<H: GlobalsHost>(
     options: ImageSourceOptions,
     asset_key: ImageAssetKey,
 ) {
+    let reload_epoch = reload_epoch_for_source(app, source);
+    let request = request_key_for_source_with_epoch(source, options, reload_epoch);
+
     let _ = with_image_source_loader(app, |loader, _app| {
-        let request = request_key_for_source(source, options);
         loader
             .runtime
             .register_asset_key_signal_mapping(request, asset_key);
@@ -787,9 +805,11 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
         });
     }
 
+    let reload_epoch = reload_epoch_for_source(host, source);
     let request = ImageSourceRequestKey {
         source: source.id,
         color_space: options.color_space,
+        reload_epoch,
     };
     let frame = host.frame_id().0;
 
@@ -1398,6 +1418,7 @@ mod tests {
         let request = ImageSourceRequestKey {
             source: src.id,
             color_space: ImageColorSpace::Srgb,
+            reload_epoch: 0,
         };
         let (decoded_width, decoded_height) =
             with_image_source_loader(&mut host, |loader, _host| {
@@ -1446,6 +1467,58 @@ mod tests {
         assert!(rev2 > rev1, "expected GPU-ready to bump signal model");
     }
 
+    #[cfg(all(feature = "image-decode", not(target_arch = "wasm32")))]
+    #[test]
+    fn image_source_path_request_key_includes_reload_epoch() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+        host.set_global(crate::UiAssetsReloadEpoch(0));
+        let window = AppWindowId::default();
+
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../assets/textures/test.jpg");
+        let src = ImageSource::from_path(path);
+
+        let _ = use_image_source_state(&mut host, window, &src);
+        let request0 = ImageSourceRequestKey {
+            source: src.id,
+            color_space: ImageColorSpace::Srgb,
+            reload_epoch: 0,
+        };
+        let has0 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .contains_key(&request0)
+        })
+        .expect("dispatcher installed");
+        assert!(has0, "expected entry for reload_epoch=0");
+
+        crate::bump_ui_assets_reload_epoch(&mut host);
+        let _ = use_image_source_state(&mut host, window, &src);
+        let request1 = ImageSourceRequestKey {
+            source: src.id,
+            color_space: ImageColorSpace::Srgb,
+            reload_epoch: 1,
+        };
+        let has1 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .contains_key(&request1)
+        })
+        .expect("dispatcher installed");
+        assert!(has1, "expected entry for reload_epoch=1");
+    }
+
     #[test]
     fn image_source_entries_gc_removes_stale_ready_entries() {
         let dispatcher = Arc::new(QueuedDispatcher::default());
@@ -1466,6 +1539,7 @@ mod tests {
         let request1 = ImageSourceRequestKey {
             source: src1.id,
             color_space: ImageColorSpace::Srgb,
+            reload_epoch: 0,
         };
 
         // Make entry1 eligible for GC by forcing it into a stable state.
