@@ -252,12 +252,16 @@ struct GenUiState {
     genui_state: Model<Value>,
     action_queue: Model<GenUiActionQueue>,
     auto_apply_standard_actions: Model<bool>,
+    editor_text: Model<String>,
+    editor_error: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone)]
 enum Msg {
     ClearActions,
     ResetState,
+    ApplyEditorSpec,
+    ResetEditor,
 }
 
 struct GenUiProgram;
@@ -275,6 +279,8 @@ impl MvuProgram for GenUiProgram {
             genui_state: app.models_mut().insert(seed),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
             auto_apply_standard_actions: app.models_mut().insert(true),
+            editor_text: app.models_mut().insert(SPEC_JSON.to_string()),
+            editor_error: None,
         }
     }
 
@@ -291,6 +297,33 @@ impl MvuProgram for GenUiProgram {
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
+            }
+            Msg::ApplyEditorSpec => {
+                let text = app
+                    .models()
+                    .read(&state.editor_text, Clone::clone)
+                    .ok()
+                    .unwrap_or_default();
+                match serde_json::from_str::<SpecV1>(&text) {
+                    Ok(spec) => {
+                        state.spec = spec;
+                        state.editor_error = None;
+                        let seed = state.spec.state.clone().unwrap_or(Value::Null);
+                        let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
+                        let _ = app
+                            .models_mut()
+                            .update(&state.action_queue, |q| q.invocations.clear());
+                    }
+                    Err(err) => {
+                        state.editor_error = Some(Arc::<str>::from(err.to_string()));
+                    }
+                }
+            }
+            Msg::ResetEditor => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.editor_text, |s| *s = SPEC_JSON.to_string());
+                state.editor_error = None;
             }
         }
     }
@@ -313,6 +346,8 @@ fn view(
 
     let clear_cmd = msg.cmd(Msg::ClearActions);
     let reset_cmd = msg.cmd(Msg::ResetState);
+    let apply_editor_cmd = msg.cmd(Msg::ApplyEditorSpec);
+    let reset_editor_cmd = msg.cmd(Msg::ResetEditor);
 
     let auto_apply_model = st.auto_apply_standard_actions.clone();
     let auto_apply_enabled = cx
@@ -482,6 +517,9 @@ fn view(
         })
         .collect();
 
+    let editor_model = st.editor_text.clone();
+    let editor_error = st.editor_error.clone();
+
     let right = {
         let state_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| state_lines)
             .gap(Space::N0)
@@ -556,6 +594,58 @@ fn view(
         .h_full()
         .into_element(cx);
 
+        let mut editor_children: Vec<AnyElement> = Vec::new();
+        editor_children.push(
+            ui::h_flex(cx, move |cx| {
+                vec![
+                    shadcn::Button::new("Apply spec")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .on_click(apply_editor_cmd)
+                        .into_element(cx),
+                    shadcn::Button::new("Reset editor")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .on_click(reset_editor_cmd)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+        );
+        editor_children.push(
+            ui::text(
+                cx,
+                Arc::<str>::from("Apply parses SpecV1 JSON and resets state/queue to spec.state."),
+            )
+            .text_sm()
+            .into_element(cx),
+        );
+        editor_children.push(
+            shadcn::Textarea::new(editor_model.clone())
+                .a11y_label("Spec editor")
+                .min_height(Px(280.0))
+                .into_element(cx),
+        );
+        if let Some(err) = editor_error {
+            editor_children.push(
+                shadcn::Alert::new([
+                    shadcn::AlertTitle::new("Editor error").into_element(cx),
+                    shadcn::AlertDescription::new(err).into_element(cx),
+                ])
+                .into_element(cx),
+            );
+        }
+        let editor_panel = ui::v_flex(cx, move |_cx| editor_children)
+            .gap(Space::N2)
+            .items_start()
+            .w_full()
+            .into_element(cx);
+        let editor_scroll = shadcn::ScrollArea::new([editor_panel])
+            .ui()
+            .w_full()
+            .h_full()
+            .into_element(cx);
+
         let tabs = shadcn::Tabs::uncontrolled(Some("state"))
             .content_fill_remaining(true)
             .items([
@@ -569,6 +659,7 @@ fn view(
                 shadcn::TabsItem::new("spec", "Spec", [spec_scroll]),
                 shadcn::TabsItem::new("schema", "Schema", [schema_scroll]),
                 shadcn::TabsItem::new("prompt", "Prompt", [prompt_scroll]),
+                shadcn::TabsItem::new("editor", "Editor", [editor_scroll]),
             ])
             .into_element(cx);
 
