@@ -4,6 +4,8 @@ pub mod density;
 pub mod edit_session;
 pub mod tokens;
 
+pub(crate) mod chrome;
+
 pub mod drag_value_core;
 
 pub use density::EditorDensity;

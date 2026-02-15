@@ -16,27 +16,16 @@ use fret_ui::element::{
     SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::recipes::input::InputTokenKeys;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
     NumericValidateFn,
 };
+use crate::primitives::chrome::resolve_editor_frame_chrome;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::{DragValueCore, DragValueCoreOptions, EditorDensity};
-
-#[derive(Clone, Copy)]
-struct DragValueScrubChrome {
-    padding: Edges,
-    radius: Px,
-    border_width: Px,
-    bg: fret_core::Color,
-    border: fret_core::Color,
-    border_focus: fret_core::Color,
-    fg: fret_core::Color,
-    text_px: Px,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragValueMode {
@@ -120,7 +109,7 @@ where
             let (density, scrub_chrome) = {
                 let theme = Theme::global(&*cx.app);
                 let density = EditorDensity::resolve(theme);
-                let resolved = resolve_input_chrome(
+                let resolved = resolve_editor_frame_chrome(
                     theme,
                     Size::Small,
                     &ChromeRefinement::default(),
@@ -132,19 +121,7 @@ where
                         ..InputTokenKeys::none()
                     },
                 );
-                (
-                    density,
-                    DragValueScrubChrome {
-                        padding: resolved.padding,
-                        radius: resolved.radius,
-                        border_width: resolved.border_width,
-                        bg: resolved.background,
-                        border: resolved.border_color,
-                        border_focus: resolved.border_color_focused,
-                        fg: resolved.text_color,
-                        text_px: resolved.text_px,
-                    },
-                )
+                (density, resolved)
             };
 
             let model_for_change = self.model.clone();
