@@ -23,7 +23,7 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
-use crate::primitives::chrome::resolve_editor_frame_chrome;
+use crate::primitives::chrome::{resolve_editor_frame_chrome, sanitize_editor_surface_bg};
 use crate::primitives::icons::editor_icon_with;
 use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
@@ -149,13 +149,11 @@ impl EnumSelect {
                     ..InputTokenKeys::none()
                 },
             );
-            let mut bg = theme
+            let bg = theme
                 .color_by_key("popover")
                 .or_else(|| theme.color_by_key("component.input.bg"))
                 .unwrap_or_else(|| theme.color_token("background"));
-            if bg.a <= 0.02 {
-                bg = theme.color_token("background");
-            }
+            let bg = sanitize_editor_surface_bg(theme, bg);
             let border = theme
                 .color_by_key("border")
                 .or_else(|| theme.color_by_key("component.input.border"))

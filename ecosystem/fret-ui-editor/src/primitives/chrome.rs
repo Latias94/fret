@@ -49,7 +49,7 @@ fn editor_fallback_input_bg(theme: &Theme) -> Color {
     out
 }
 
-fn sanitize_editor_input_bg(theme: &Theme, bg: Color) -> Color {
+pub(crate) fn sanitize_editor_surface_bg(theme: &Theme, bg: Color) -> Color {
     if is_effectively_transparent(bg) {
         return editor_fallback_input_bg(theme);
     }
@@ -86,7 +86,7 @@ pub(crate) fn resolve_editor_frame_chrome(
         padding: resolved.padding,
         radius: resolved.radius,
         border_width: resolved.border_width,
-        bg: sanitize_editor_input_bg(theme, resolved.background),
+        bg: sanitize_editor_surface_bg(theme, resolved.background),
         border: resolved.border_color,
         border_focus: resolved.border_color_focused,
         fg: resolved.text_color,
@@ -106,7 +106,7 @@ pub(crate) fn resolve_editor_text_input_style(
     chrome.padding = resolved.padding;
     chrome.corner_radii = Corners::all(resolved.radius);
     chrome.border = Edges::all(resolved.border_width);
-    chrome.background = sanitize_editor_input_bg(theme, resolved.background);
+    chrome.background = sanitize_editor_surface_bg(theme, resolved.background);
     chrome.border_color = resolved.border_color;
     chrome.border_color_focused = resolved.border_color_focused;
     chrome.text_color = resolved.text_color;
