@@ -165,6 +165,270 @@ fn declarative_text_input_region_answers_platform_text_input_queries_in_utf16() 
 }
 
 #[test]
+fn declarative_text_input_region_platform_query_hook_can_answer_bounds_and_index() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-query-hook",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("abc".into());
+            props.a11y_text_selection = Some((0, 0));
+
+            let region = cx.text_input_region(props, |cx| {
+                cx.text_input_region_on_platform_text_input_query(std::sync::Arc::new(
+                    move |_host, _action_cx, _services, _bounds, _scale_factor, _props, query| {
+                        match query {
+                            fret_runtime::PlatformTextInputQuery::BoundsForRange { .. } => {
+                                Some(fret_runtime::PlatformTextInputQueryResult::Bounds(Some(
+                                    Rect::new(
+                                        Point::new(Px(10.0), Px(20.0)),
+                                        Size::new(Px(1.0), Px(12.0)),
+                                    ),
+                                )))
+                            }
+                            fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint {
+                                point,
+                            } => {
+                                let idx = if point.x.0 < 0.0 { 0 } else { 1 };
+                                Some(fret_runtime::PlatformTextInputQueryResult::Index(Some(idx)))
+                            }
+                            _ => None,
+                        }
+                    },
+                ));
+                Vec::<AnyElement>::new()
+            });
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    let bounds_for = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::BoundsForRange {
+            range: fret_runtime::Utf16Range::new(0, 0),
+        },
+    );
+    assert_eq!(
+        bounds_for,
+        fret_runtime::PlatformTextInputQueryResult::Bounds(Some(Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(1.0), Px(12.0)),
+        )))
+    );
+
+    let idx = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint {
+            point: Point::new(Px(5.0), Px(5.0)),
+        },
+    );
+    assert_eq!(
+        idx,
+        fret_runtime::PlatformTextInputQueryResult::Index(Some(1))
+    );
+}
+
+#[test]
+fn declarative_text_input_region_platform_replace_hook_can_handle_replace_text() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(Vec::<(
+        fret_runtime::Utf16Range,
+        String,
+    )>::new()));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-replace-hook",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("abc".into());
+            props.a11y_text_selection = Some((0, 0));
+
+            let called = called.clone();
+            let region = cx.text_input_region(props, |cx| {
+                cx.text_input_region_on_platform_text_input_replace_text_in_range_utf16(
+                    std::sync::Arc::new(
+                        move |_host,
+                              _action_cx,
+                              _services,
+                              _bounds,
+                              _scale_factor,
+                              _props,
+                              range,
+                              text| {
+                            called.borrow_mut().push((range, text.to_string()));
+                            true
+                        },
+                    ),
+                );
+                Vec::<AnyElement>::new()
+            });
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    assert!(ui.platform_text_input_replace_text_in_range_utf16(
+        &mut app,
+        &mut services,
+        1.0,
+        fret_runtime::Utf16Range::new(0, 0),
+        "X"
+    ));
+    assert_eq!(
+        called.borrow().as_slice(),
+        &[(fret_runtime::Utf16Range::new(0, 0), "X".to_string())]
+    );
+}
+
+#[test]
+fn declarative_text_input_region_platform_replace_hook_can_handle_replace_and_mark() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(Vec::<(
+        fret_runtime::Utf16Range,
+        String,
+        Option<fret_runtime::Utf16Range>,
+    )>::new()));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-replace-and-mark-hook",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("abc".into());
+            props.a11y_text_selection = Some((0, 0));
+
+            let called = called.clone();
+            let region = cx.text_input_region(props, |cx| {
+                cx.text_input_region_on_platform_text_input_replace_and_mark_text_in_range_utf16(
+                    std::sync::Arc::new(
+                        move |_host,
+                              _action_cx,
+                              _services,
+                              _bounds,
+                              _scale_factor,
+                              _props,
+                              range,
+                              text,
+                              marked| {
+                            called.borrow_mut().push((range, text.to_string(), marked));
+                            true
+                        },
+                    ),
+                );
+                Vec::<AnyElement>::new()
+            });
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    assert!(ui.platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut app,
+        &mut services,
+        1.0,
+        fret_runtime::Utf16Range::new(0, 0),
+        "X",
+        Some(fret_runtime::Utf16Range::new(0, 1))
+    ));
+    assert_eq!(
+        called.borrow().as_slice(),
+        &[(
+            fret_runtime::Utf16Range::new(0, 0),
+            "X".to_string(),
+            Some(fret_runtime::Utf16Range::new(0, 1))
+        )]
+    );
+}
+
+#[test]
 fn declarative_attach_semantics_overrides_role_label_and_sets_test_id() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
