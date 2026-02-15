@@ -59,6 +59,11 @@ Policy:
 - Otherwise, `fretboard` should fall back to “runner reload boundary” mode (file trigger), and clearly state that
   Rust hotpatching is not active.
 
+Supervisor note:
+
+- In non-`dx` hotpatch modes, `fretboard` may restart the process on fast repeated exits to keep iteration tight.
+- Disable this behavior with `--no-supervise`.
+
 ### 3.2) Advanced/explicit modes remain available
 
 - `--hotpatch-reload`: force “reload boundary only” (never run `dx`)

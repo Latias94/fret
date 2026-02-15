@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use crate::cli::{help, workspace_root};
 use crate::demos::{
@@ -187,6 +188,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let mut hotpatch_build_id: Option<HotpatchBuildIdArg> = None;
     let mut hotpatch_dx = false;
     let mut hotpatch_dx_ws: Option<String> = None;
+    let mut supervise: Option<bool> = None;
     let mut passthrough: Vec<String> = Vec::new();
 
     let mut it = args.into_iter();
@@ -229,6 +231,8 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                         .ok_or_else(|| "--hotpatch-dx-ws requires a value".to_string())?,
                 );
             }
+            "--supervise" => supervise = Some(true),
+            "--no-supervise" => supervise = Some(false),
             "--hotpatch-build-id" => {
                 let raw = it
                     .next()
@@ -311,6 +315,14 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             passthrough,
         );
     }
+
+    // In reload-boundary/devserver mode, `cargo run` is the supervisor. If the app crashes,
+    // it's easy to end up in a frustrating "rerun command manually" loop.
+    //
+    // For hotpatch-focused workflows, default to a lightweight restart supervisor that prints
+    // actionable guidance on repeated failures. This keeps the inner loop closer to `dx serve`
+    // without embedding a full file-watcher build system in `fretboard` (L1 scope).
+    let effective_supervise = supervise.unwrap_or(hotpatch || hotpatch_devserver_ws.is_some());
 
     let mut cmd = Command::new("cargo");
     cmd.current_dir(&root).args(["run", "-p", "fret-demo"]);
@@ -413,11 +425,114 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         cmd.arg("--").args(passthrough);
     }
 
-    let status = cmd.status().map_err(|e| e.to_string())?;
-    if !status.success() {
-        return Err(format!("cargo exited with status: {status}"));
+    if effective_supervise {
+        run_with_restart_supervisor(cmd, RestartSupervisorOptions {
+            bin: bin.clone(),
+            dx_available,
+            demo_hotpatch_ready: is_hotpatch_ready_native_demo(&bin),
+            hotpatch_enabled: hotpatch || hotpatch_devserver_ws.is_some(),
+            max_restarts: 5,
+            crash_window: Duration::from_secs(60),
+            crash_threshold: Duration::from_secs(10),
+        })?;
+    } else {
+        let status = cmd.status().map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("cargo exited with status: {status}"));
+        }
     }
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct RestartSupervisorOptions {
+    bin: String,
+    dx_available: bool,
+    demo_hotpatch_ready: bool,
+    hotpatch_enabled: bool,
+    max_restarts: usize,
+    crash_window: Duration,
+    crash_threshold: Duration,
+}
+
+fn run_with_restart_supervisor(mut cmd: Command, opts: RestartSupervisorOptions) -> Result<(), String> {
+    let mut crash_times: std::collections::VecDeque<Instant> = std::collections::VecDeque::new();
+    let mut restarts = 0usize;
+
+    loop {
+        let start = Instant::now();
+        let status = cmd.status().map_err(|e| e.to_string())?;
+        if status.success() {
+            return Ok(());
+        }
+
+        // Ctrl+C or similar user interrupt: exit cleanly without "crash" guidance.
+        if status.code() == Some(130) {
+            return Ok(());
+        }
+
+        // Cargo uses 101 for "compilation failed". Restarting doesn't help without a rebuild trigger.
+        if status.code() == Some(101) {
+            return Err(format!("cargo exited with status: {status}"));
+        }
+
+        let elapsed = Instant::now().duration_since(start);
+        if elapsed <= opts.crash_threshold {
+            crash_times.push_back(Instant::now());
+        }
+        while crash_times
+            .front()
+            .is_some_and(|t| Instant::now().duration_since(*t) > opts.crash_window)
+        {
+            crash_times.pop_front();
+        }
+
+        restarts += 1;
+        if restarts > opts.max_restarts {
+            eprintln!(
+                "error: dev supervisor exceeded max restarts ({}).",
+                opts.max_restarts
+            );
+            print_repeated_crash_guidance(&opts, "too many restarts");
+            return Err(format!("cargo exited with status: {status}"));
+        }
+
+        if crash_times.len() >= 3 {
+            print_repeated_crash_guidance(&opts, "repeated fast exits detected");
+        } else {
+            eprintln!(
+                "warning: process exited with status: {status} (restart {restarts}/{})",
+                opts.max_restarts
+            );
+        }
+
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
+fn print_repeated_crash_guidance(opts: &RestartSupervisorOptions, reason: &str) {
+    eprintln!("warning: {reason} (bin={})", opts.bin);
+    eprintln!("  status: fretboard hotpatch status --tail 80");
+    eprintln!("  logs:");
+    eprintln!("    runner: .fret/hotpatch_runner.log");
+    eprintln!("    view:   .fret/hotpatch_bootstrap.log");
+
+    if opts.dx_available && opts.demo_hotpatch_ready {
+        eprintln!("  try: fretboard dev native --bin {} --hotpatch", opts.bin);
+    }
+
+    if opts.hotpatch_enabled {
+        eprintln!(
+            "  try: fretboard dev native --bin {} --hotpatch-reload (disable Subsecond; reload boundary only)",
+            opts.bin
+        );
+    }
+
+    if opts.hotpatch_enabled && !cfg!(windows) {
+        eprintln!("  try: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct (disables view-level hotpatching)");
+    }
+
+    eprintln!("  fallback: do a full rebuild/restart (hotpatch is best-effort; structural changes require rebuild)");
 }
 
 fn dx_available() -> bool {

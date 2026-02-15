@@ -43,9 +43,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] HP-DL-win-001 Replace “memorize env var” with a supervised recommendation for Windows view crash cases.
   - Evidence: `apps/fretboard/src/dev.rs` startup summary, ADR 0105 known issue text.
 
-- [ ] HP-DL-win-002 Add a fast “restart suggestion” UX when repeated crashes are detected.
-  - Minimal: print actionable instructions with the exact command line.
-  - Stretch: `fretboard` as a supervisor that relaunches automatically (time-boxed).
+- [x] HP-DL-win-002 Add a fast “restart suggestion” UX when repeated crashes are detected.
+  - Evidence: `apps/fretboard/src/dev.rs` (restart supervisor + repeated-crash guidance)
 
 ## M2 — No-compile: theme reload
 
