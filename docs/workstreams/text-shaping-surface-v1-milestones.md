@@ -48,8 +48,11 @@ Exit criteria:
   - keep UI text defaults unchanged.
 - Attributed spans produced for syntax highlighting do not accidentally pull paint-only changes into
   shaping keys (regression test).
-- Optional: a demo page exists to visualize feature toggles on a known string (and documents which
-  fonts exhibit visible differences).
+- Regression gates:
+  - a feature toggle changes shaping keys deterministically (no stale shaping/layout reuse),
+  - paint-only edits hit the shape cache (no reshaping on color-only span changes).
+- Optional (recommended): a small demo/harness exists to visualize feature toggles on a known
+  string (and documents which bundled/system fonts exhibit visible differences).
 
 Evidence checklist:
 

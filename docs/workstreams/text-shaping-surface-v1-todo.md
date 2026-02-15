@@ -24,8 +24,17 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 - [ ] Decide the default editor feature policy (code vs UI):
   - [ ] disable `liga`/`calt` by default for code (common editor baseline),
   - [ ] keep UI defaults unchanged.
-- [ ] Wire the policy in `ecosystem/fret-code-view` and/or `ecosystem/fret-code-editor`.
-- [ ] Add a minimal demo string and a “feature toggle” harness page (optional).
+- [ ] Implement the policy at the ecosystem layer (avoid expanding mechanism-layer APIs):
+  - [ ] `ecosystem/fret-code-view`: ensure syntax-highlighted spans can set shaping features
+    deterministically (default-off ligatures).
+  - [ ] `ecosystem/fret-code-editor`: ensure editor text surfaces can apply the same policy (or
+    explicitly defer to `fret-code-view` if it becomes the shared policy owner).
+- [ ] Regression gates:
+  - [ ] a feature toggle changes shaping keys (no stale shaping/layout reuse),
+  - [ ] paint-only span changes do not trigger reshaping (shape cache hit under palette-only edits).
+- [ ] Add a minimal demo/harness (recommended, bundled-font-friendly):
+  - [ ] a “feature toggle” UI to flip `calt`/`liga` (and one `ssXX`) on a known sample string,
+  - [ ] document which bundled/system fonts show a visible difference.
 
 ## Open questions
 

@@ -27,8 +27,9 @@ However, for editor-grade text, we still need a first-class shaping surface for:
 3) explicit cache-keying rules so that feature changes never reuse stale shaping / glyph raster
    outputs.
 
-Today, we do not expose OpenType features in `fret-core::TextShapingStyle`, even though Parley
-supports `StyleProperty::FontFeatures`.
+Historically, we did not expose OpenType features in `fret-core::TextShapingStyle`, even though
+Parley supports `StyleProperty::FontFeatures`. This gap is now closed for M0 (contracts + plumbing);
+remaining work is ecosystem policy adoption and productization.
 
 ## Goals
 
@@ -164,7 +165,8 @@ Do not require consumers to decode Parley internals.
   - Ensure cache keys include features deterministically.
   - Add unit tests for canonicalization + keying.
 - M1: Editor-grade adoption
-  - `ecosystem/fret-code-view` uses features for ligature policy (e.g. disable `liga` in code).
+  - `ecosystem/fret-code-view` / `ecosystem/fret-code-editor` uses features for ligature policy
+    (e.g. disable `liga`/`calt` in code, or provide a toggle).
   - Add a small conformance page in UI gallery (optional) to visualize feature toggles.
 - M2: Settings surface (optional, ecosystem)
   - Add a component-layer policy for “code font features” vs “UI font features”.
