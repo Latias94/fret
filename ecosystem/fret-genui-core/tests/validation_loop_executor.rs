@@ -32,7 +32,7 @@ fn executor_gates_submit_and_records_validation_issues() {
     let mut app = App::new();
     let state = app
         .models_mut()
-        .insert(json!({ "form": { "email": "" }, "lastResult": "" }));
+        .insert(json!({ "form": { "email": "" }, "validation": { "emailHasError": false, "emailError": "" }, "lastResult": "" }));
     let validation = app.models_mut().insert(ValidationStateV1::default());
 
     let registry = ValidationRegistryV1::new().with_validator(Arc::new(|st| {
@@ -62,7 +62,21 @@ fn executor_gates_submit_and_records_validation_issues() {
                 .unwrap_or(Value::Null);
             let out = validate_all(&snapshot, &registry);
             let ok = out.is_ok();
+            let email_error = out
+                .issues
+                .iter()
+                .find(|i| i.path == "/form/email")
+                .map(|i| i.message.clone())
+                .unwrap_or_default();
             let _ = host.models_mut().update(&validation_model, |v| *v = out);
+            let _ = host.models_mut().update(state, |v| {
+                let _ = json_pointer::set(
+                    v,
+                    "/validation/emailHasError",
+                    Value::Bool(!email_error.is_empty()),
+                );
+                let _ = json_pointer::set(v, "/validation/emailError", Value::String(email_error));
+            });
             if ok {
                 Ok(())
             } else {
@@ -90,7 +104,11 @@ fn executor_gates_submit_and_records_validation_issues() {
     );
     assert_eq!(
         host.app.models().get_cloned(&state),
-        Some(json!({ "form": { "email": "" }, "lastResult": "error" }))
+        Some(json!({
+            "form": { "email": "" },
+            "validation": { "emailHasError": true, "emailError": "Email is required." },
+            "lastResult": "error"
+        }))
     );
 }
 
@@ -99,7 +117,7 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
     let mut app = App::new();
     let state = app
         .models_mut()
-        .insert(json!({ "form": { "email": "a@b.com" }, "lastResult": "" }));
+        .insert(json!({ "form": { "email": "a@b.com" }, "validation": { "emailHasError": true, "emailError": "stale" }, "lastResult": "" }));
     let validation = app.models_mut().insert(ValidationStateV1::default());
 
     let registry = ValidationRegistryV1::new().with_validator(Arc::new(|st| {
@@ -129,7 +147,21 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
                 .unwrap_or(Value::Null);
             let out = validate_all(&snapshot, &registry);
             let ok = out.is_ok();
+            let email_error = out
+                .issues
+                .iter()
+                .find(|i| i.path == "/form/email")
+                .map(|i| i.message.clone())
+                .unwrap_or_default();
             let _ = host.models_mut().update(&validation_model, |v| *v = out);
+            let _ = host.models_mut().update(state, |v| {
+                let _ = json_pointer::set(
+                    v,
+                    "/validation/emailHasError",
+                    Value::Bool(!email_error.is_empty()),
+                );
+                let _ = json_pointer::set(v, "/validation/emailError", Value::String(email_error));
+            });
             if ok {
                 Ok(())
             } else {
@@ -154,6 +186,10 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
     );
     assert_eq!(
         host.app.models().get_cloned(&state),
-        Some(json!({ "form": { "email": "a@b.com" }, "lastResult": "ok" }))
+        Some(json!({
+            "form": { "email": "a@b.com" },
+            "validation": { "emailHasError": false, "emailError": "" },
+            "lastResult": "ok"
+        }))
     );
 }

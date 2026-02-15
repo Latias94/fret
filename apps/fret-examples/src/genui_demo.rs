@@ -87,6 +87,7 @@ const SPEC_JSON: &str = r#"
         "validation_title",
         "validation_desc",
         "email_row",
+        "email_error",
         "submit_row",
         "sep_5",
         "responsive_title",
@@ -268,6 +269,12 @@ const SPEC_JSON: &str = r#"
       "children": []
     },
     "email_value": { "type": "Text", "props": { "text": { "$state": "/form/email" }, "variant": "small" }, "children": [] },
+    "email_error": {
+      "type": "Badge",
+      "props": { "label": { "$state": "/validation/emailError" }, "variant": "destructive" },
+      "visible": { "$state": "/validation/emailHasError", "eq": true },
+      "children": []
+    },
     "submit_row": {
       "type": "HStack",
       "props": { "gap": "N2", "wrap": true, "items": "center" },
@@ -353,7 +360,8 @@ const SPEC_JSON: &str = r#"
       { "id": "c", "label": "Repeat scopes with stable keys" }
     ],
     "lastResult": "",
-    "form": { "email": "" }
+    "form": { "email": "" },
+    "validation": { "emailHasError": false, "emailError": "" }
   }
 }
 "#;
@@ -454,6 +462,8 @@ impl MvuProgram for GenUiProgram {
 
                 let mut host = fret_ui::action::UiActionHostAdapter { app };
                 let state_model = state.genui_state.clone();
+                let state_model_for_confirm = state_model.clone();
+                let state_model_for_submit = state_model.clone();
                 let validation_model = state.validation_state.clone();
                 let validation_registry =
                     Arc::new(ValidationRegistryV1::new().with_validator(Arc::new(|st| {
@@ -492,7 +502,7 @@ impl MvuProgram for GenUiProgram {
 
                         let enabled = host
                             .models_mut()
-                            .read(&state_model, |v| {
+                            .read(&state_model_for_confirm, |v| {
                                 json_pointer::get_opt(v, "/enabled")
                                     .and_then(|v| v.as_bool())
                                     .unwrap_or(true)
@@ -503,7 +513,7 @@ impl MvuProgram for GenUiProgram {
                             return true;
                         }
 
-                        let _ = host.models_mut().update(&state_model, |v| {
+                        let _ = host.models_mut().update(&state_model_for_confirm, |v| {
                             let _ = json_pointer::set(
                                 v,
                                 "/lastResult",
@@ -526,7 +536,25 @@ impl MvuProgram for GenUiProgram {
                                 .unwrap_or(Value::Null);
                             let out = validate_all(&current, &validation_registry);
                             let ok = out.is_ok();
+                            let email_error = out
+                                .issues
+                                .iter()
+                                .find(|i| i.path == "/form/email")
+                                .map(|i| i.message.clone())
+                                .unwrap_or_default();
                             let _ = host.models_mut().update(&validation_model, |v| *v = out);
+                            let _ = host.models_mut().update(&state_model_for_submit, |v| {
+                                let _ = json_pointer::set(
+                                    v,
+                                    "/validation/emailHasError",
+                                    Value::Bool(!email_error.is_empty()),
+                                );
+                                let _ = json_pointer::set(
+                                    v,
+                                    "/validation/emailError",
+                                    Value::String(email_error),
+                                );
+                            });
                             if ok {
                                 Ok(())
                             } else {
