@@ -237,3 +237,14 @@ Progress record (Sampling hints v1):
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
   - `python3 tools/check_layering.py`
   - `$env:CARGO_TARGET_DIR='F:\\ct'; cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance --test mask_image_conformance`
+
+Perf snapshot record (post M5 plumbing):
+
+- Date: 2026-02-15
+- Commit: e6d518c4
+- Commands run (exact):
+  - `$env:CARGO_TARGET_DIR='F:\\ct'; $env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- Outputs (summary):
+  - `headless: frames=600 wall=1.39s prepare=22.55ms hits=26312 misses=88 ...`
+  - `headless_renderer_perf: frames=600 encode=0.10ms prepare_svg=22.57ms prepare_text=1.24ms draws=27000 ...`
+  - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 ...`

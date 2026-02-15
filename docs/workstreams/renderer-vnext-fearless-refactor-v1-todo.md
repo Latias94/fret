@@ -121,4 +121,5 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
   - Status: satisfied through M5 (sampling hints conformance gate landed).
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
-  - Next: re-capture perf snapshot after M5 adoption plumbing (optional but recommended).
+  - Last capture: 2026-02-15 (post M5 plumbing), commit `e6d518c4`.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).
