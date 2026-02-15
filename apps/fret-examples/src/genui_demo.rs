@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret::prelude::*;
-use fret_genui_core::actions;
 use fret_genui_core::catalog::CatalogV1;
+use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::json_pointer;
 use fret_genui_core::mixed_stream::{MixedSpecStreamCompiler, MixedStreamMode, MixedStreamOptions};
 use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
@@ -270,6 +270,7 @@ struct GenUiState {
     catalog: Arc<CatalogV1>,
     genui_state: Model<Value>,
     action_queue: Model<GenUiActionQueue>,
+    queue_summary: Option<Arc<str>>,
     auto_apply_standard_actions: Model<bool>,
     auto_fix_on_apply: Model<bool>,
     auto_fix_summary: Option<Arc<str>>,
@@ -284,7 +285,7 @@ struct GenUiState {
 #[derive(Debug, Clone)]
 enum Msg {
     ClearActions,
-    ApplyQueuedStandardActions,
+    ApplyQueuedActions,
     ResetState,
     ApplyEditorSpec,
     ResetEditor,
@@ -306,6 +307,7 @@ impl MvuProgram for GenUiProgram {
             catalog: Arc::new(shadcn_catalog_v1()),
             genui_state: app.models_mut().insert(seed),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
+            queue_summary: None,
             auto_apply_standard_actions: app.models_mut().insert(true),
             auto_fix_on_apply: app.models_mut().insert(true),
             auto_fix_summary: None,
@@ -324,19 +326,44 @@ impl MvuProgram for GenUiProgram {
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
+                state.queue_summary = None;
             }
-            Msg::ApplyQueuedStandardActions => {
+            Msg::ApplyQueuedActions => {
+                let auto_apply = app
+                    .models()
+                    .get_copied(&state.auto_apply_standard_actions)
+                    .unwrap_or(true);
                 let invocations = app
                     .models()
                     .read(&state.action_queue, |q| q.invocations.clone())
                     .ok()
                     .unwrap_or_default();
-                let _ = app.models_mut().update(&state.genui_state, |st| {
-                    for inv in invocations.iter() {
-                        let _ =
-                            actions::apply_standard_action(st, inv.action.as_ref(), &inv.params);
+
+                if auto_apply {
+                    state.queue_summary = Some(Arc::<str>::from(
+                        "Queue apply is disabled when auto-apply is on (queue is a log). Turn auto-apply off to replay the queue via executor.",
+                    ));
+                    return;
+                }
+
+                let mut host = fret_ui::action::UiActionHostAdapter { app };
+                let mut executor = GenUiActionExecutorV1::new(state.genui_state.clone())
+                    .with_standard_actions()
+                    .with_portable_effect_actions();
+
+                let mut applied: usize = 0;
+                let mut skipped: usize = 0;
+                let mut errors: usize = 0;
+                for inv in invocations.iter() {
+                    match executor.execute_invocation(&mut host, inv) {
+                        GenUiActionOutcome::Applied => applied = applied.saturating_add(1),
+                        GenUiActionOutcome::Skipped => skipped = skipped.saturating_add(1),
+                        GenUiActionOutcome::Error(_) => errors = errors.saturating_add(1),
                     }
-                });
+                }
+                state.queue_summary = Some(Arc::<str>::from(format!(
+                    "applied queue via executor: applied={applied}, skipped={skipped}, errors={errors}"
+                )));
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
@@ -347,6 +374,7 @@ impl MvuProgram for GenUiProgram {
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
+                state.queue_summary = None;
             }
             Msg::ApplyEditorSpec => {
                 let text = app
@@ -369,6 +397,7 @@ impl MvuProgram for GenUiProgram {
                         let _ = app
                             .models_mut()
                             .update(&state.action_queue, |q| q.invocations.clear());
+                        state.queue_summary = None;
 
                         if auto_fix {
                             let pretty = serde_json::to_string_pretty(&state.spec)
@@ -387,6 +416,7 @@ impl MvuProgram for GenUiProgram {
                     .update(&state.editor_text, |s| *s = SPEC_JSON.to_string());
                 state.editor_error = None;
                 state.auto_fix_summary = None;
+                state.queue_summary = None;
             }
             Msg::ApplyStream => {
                 let text = app
@@ -449,6 +479,7 @@ impl MvuProgram for GenUiProgram {
                         let _ = app
                             .models_mut()
                             .update(&state.action_queue, |q| q.invocations.clear());
+                        state.queue_summary = None;
 
                         let pretty = serde_json::to_string_pretty(&state.spec)
                             .unwrap_or_else(|_| "<spec>".to_string());
@@ -468,6 +499,7 @@ impl MvuProgram for GenUiProgram {
                 state.stream_summary = None;
                 state.stream_error = None;
                 state.auto_fix_summary = None;
+                state.queue_summary = None;
             }
         }
     }
@@ -489,7 +521,7 @@ fn view(
     let theme = Theme::global(&*cx.app).snapshot();
 
     let clear_cmd = msg.cmd(Msg::ClearActions);
-    let apply_queue_cmd = msg.cmd(Msg::ApplyQueuedStandardActions);
+    let apply_queue_cmd = msg.cmd(Msg::ApplyQueuedActions);
     let reset_cmd = msg.cmd(Msg::ResetState);
     let apply_editor_cmd = msg.cmd(Msg::ApplyEditorSpec);
     let reset_editor_cmd = msg.cmd(Msg::ResetEditor);
@@ -597,8 +629,9 @@ fn view(
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(clear_cmd)
                 .into_element(cx),
-            shadcn::Button::new("Apply queue (standard)")
+            shadcn::Button::new("Apply queue (executor)")
                 .variant(shadcn::ButtonVariant::Outline)
+                .disabled(auto_apply_enabled)
                 .on_click(apply_queue_cmd)
                 .into_element(cx),
             shadcn::Button::new("Reset state")
@@ -650,7 +683,7 @@ fn view(
                 shadcn::Alert::new([
                     shadcn::AlertTitle::new("Queue-only mode").into_element(cx),
                     shadcn::AlertDescription::new(
-                        "Auto-apply is off: pressing buttons will only append action invocations to the queue. Use “Apply queue (standard)” or turn auto-apply on to update state.",
+                        "Auto-apply is off: pressing buttons will only append action invocations to the queue. Use “Apply queue (executor)” or turn auto-apply on to update state.",
                     )
                     .into_element(cx),
                 ])
@@ -727,6 +760,7 @@ fn view(
     let editor_model = st.editor_text.clone();
     let editor_error = st.editor_error.clone();
     let auto_fix_summary = st.auto_fix_summary.clone();
+    let queue_summary = st.queue_summary.clone();
     let stream_model = st.stream_text.clone();
     let stream_patch_only_model = st.stream_patch_only.clone();
     let stream_patch_only = cx
@@ -755,6 +789,24 @@ fn view(
             .items_start()
             .into_element(cx)])
         .ui()
+        .w_full()
+        .h_full()
+        .into_element(cx);
+        let queue_panel = ui::v_flex(cx, move |cx| {
+            let mut out: Vec<AnyElement> = Vec::new();
+            if let Some(summary) = queue_summary.clone() {
+                out.push(
+                    shadcn::Alert::new([
+                        shadcn::AlertTitle::new("Queue summary").into_element(cx),
+                        shadcn::AlertDescription::new(summary).into_element(cx),
+                    ])
+                    .into_element(cx),
+                );
+            }
+            out.push(queue_scroll);
+            out
+        })
+        .gap(Space::N2)
         .w_full()
         .h_full()
         .into_element(cx);
@@ -964,7 +1016,7 @@ fn view(
             .content_fill_remaining(true)
             .items([
                 shadcn::TabsItem::new("state", "State", [state_scroll]),
-                shadcn::TabsItem::new("queue", format!("Queue ({queue_len})"), [queue_scroll]),
+                shadcn::TabsItem::new("queue", format!("Queue ({queue_len})"), [queue_panel]),
                 shadcn::TabsItem::new(
                     "issues",
                     format!("Issues ({spec_issue_count})"),
