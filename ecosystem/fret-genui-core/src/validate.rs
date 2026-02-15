@@ -372,6 +372,31 @@ fn value_matches_type(
         CatalogValueTypeV1::Enum { values } => value
             .as_str()
             .is_some_and(|s| values.iter().any(|v| v.as_str() == s)),
+        CatalogValueTypeV1::Object { fields, additional } => {
+            let Some(obj) = value.as_object() else {
+                return false;
+            };
+            for (k, v) in obj {
+                if let Some(def) = fields.get(k) {
+                    if !value_matches_type(v, &def.value_type, def.nullable) {
+                        return false;
+                    }
+                } else if !*additional {
+                    return false;
+                }
+            }
+            true
+        }
+        CatalogValueTypeV1::Array { items } => {
+            let Some(arr) = value.as_array() else {
+                return false;
+            };
+            arr.iter()
+                .all(|v| value_matches_type(v, &items.value_type, items.nullable))
+        }
+        CatalogValueTypeV1::OneOf { variants } => variants
+            .iter()
+            .any(|ty| value_matches_type(value, ty, nullable)),
     }
 }
 
@@ -569,6 +594,178 @@ mod tests {
             out.issues
                 .iter()
                 .any(|i| i.code == SpecIssueCode::UnknownComponent)
+        );
+    }
+
+    #[test]
+    fn catalog_validation_checks_object_array_and_oneof_prop_types() {
+        let mut catalog = CatalogV1::new();
+        catalog.components.insert(
+            "Typed".to_string(),
+            CatalogComponentV1 {
+                description: None,
+                props: {
+                    let mut p = BTreeMap::new();
+                    p.insert(
+                        "obj".to_string(),
+                        CatalogPropV1::object_fields([("a", CatalogPropV1::string())]),
+                    );
+                    p.insert(
+                        "ints".to_string(),
+                        CatalogPropV1::array_of(CatalogPropV1::integer()),
+                    );
+                    p.insert(
+                        "choice".to_string(),
+                        CatalogPropV1::one_of([
+                            CatalogValueTypeV1::String,
+                            CatalogValueTypeV1::Integer,
+                        ]),
+                    );
+                    p
+                },
+                events: Default::default(),
+            },
+        );
+
+        let mut elements = BTreeMap::new();
+        elements.insert(
+            key("root_ok"),
+            ElementV1 {
+                ty: "Typed".to_string(),
+                props: serde_json::from_value(serde_json::json!({
+                  "obj": {"a": "x"},
+                  "ints": [1, 2, 3],
+                  "choice": 7
+                }))
+                .unwrap(),
+                children: vec![],
+                visible: None,
+                on: None,
+                repeat: None,
+            },
+        );
+        elements.insert(
+            key("root_bad_obj"),
+            ElementV1 {
+                ty: "Typed".to_string(),
+                props: serde_json::from_value(serde_json::json!({
+                  "obj": {"a": "x", "b": 1}
+                }))
+                .unwrap(),
+                children: vec![],
+                visible: None,
+                on: None,
+                repeat: None,
+            },
+        );
+        elements.insert(
+            key("root_bad_arr"),
+            ElementV1 {
+                ty: "Typed".to_string(),
+                props: serde_json::from_value(serde_json::json!({
+                  "ints": [1, "nope"]
+                }))
+                .unwrap(),
+                children: vec![],
+                visible: None,
+                on: None,
+                repeat: None,
+            },
+        );
+        elements.insert(
+            key("root_bad_oneof"),
+            ElementV1 {
+                ty: "Typed".to_string(),
+                props: serde_json::from_value(serde_json::json!({
+                  "choice": true
+                }))
+                .unwrap(),
+                children: vec![],
+                visible: None,
+                on: None,
+                repeat: None,
+            },
+        );
+
+        let mk = |root: &str, elements: BTreeMap<ElementKey, ElementV1>| SpecV1 {
+            schema_version: 1,
+            root: key(root),
+            elements,
+            state: None,
+        };
+
+        let ok = mk(
+            "root_ok",
+            elements
+                .iter()
+                .filter(|(k, _)| k.0 == "root_ok")
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+        );
+        let bad_obj = mk(
+            "root_bad_obj",
+            elements
+                .iter()
+                .filter(|(k, _)| k.0 == "root_bad_obj")
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+        );
+        let bad_arr = mk(
+            "root_bad_arr",
+            elements
+                .iter()
+                .filter(|(k, _)| k.0 == "root_bad_arr")
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+        );
+        let bad_oneof = mk(
+            "root_bad_oneof",
+            elements
+                .iter()
+                .filter(|(k, _)| k.0 == "root_bad_oneof")
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+        );
+
+        let opts = |catalog: CatalogV1| ValidateSpecOptions {
+            check_orphans: false,
+            supported_schema_versions: {
+                let mut set = BTreeSet::new();
+                set.insert(1);
+                set
+            },
+            catalog: Some(Arc::new(catalog)),
+            catalog_validation: ValidationMode::Strict,
+        };
+
+        let out_ok = validate_spec(&ok, opts(catalog.clone()));
+        assert!(out_ok.valid);
+
+        let out_bad_obj = validate_spec(&bad_obj, opts(catalog.clone()));
+        assert!(!out_bad_obj.valid);
+        assert!(
+            out_bad_obj
+                .issues
+                .iter()
+                .any(|i| i.code == SpecIssueCode::InvalidPropType)
+        );
+
+        let out_bad_arr = validate_spec(&bad_arr, opts(catalog.clone()));
+        assert!(!out_bad_arr.valid);
+        assert!(
+            out_bad_arr
+                .issues
+                .iter()
+                .any(|i| i.code == SpecIssueCode::InvalidPropType)
+        );
+
+        let out_bad_oneof = validate_spec(&bad_oneof, opts(catalog));
+        assert!(!out_bad_oneof.valid);
+        assert!(
+            out_bad_oneof
+                .issues
+                .iter()
+                .any(|i| i.code == SpecIssueCode::InvalidPropType)
         );
     }
 }

@@ -20,7 +20,22 @@ pub enum CatalogValueTypeV1 {
     Boolean,
     Number,
     Integer,
-    Enum { values: Vec<String> },
+    Enum {
+        values: Vec<String>,
+    },
+    Object {
+        #[serde(default)]
+        fields: BTreeMap<String, CatalogPropV1>,
+        #[serde(default)]
+        additional: bool,
+    },
+    Array {
+        items: Box<CatalogPropV1>,
+    },
+    OneOf {
+        #[serde(default)]
+        variants: Vec<CatalogValueTypeV1>,
+    },
 }
 
 impl Default for CatalogValueTypeV1 {
@@ -126,6 +141,19 @@ impl CatalogV1 {
                     out.push_str(": ");
                     out.push_str(def.value_type.prompt_hint().as_str());
                     out.push('\n');
+
+                    if let CatalogValueTypeV1::Object { fields, .. } = &def.value_type {
+                        if !fields.is_empty() {
+                            out.push_str("    fields:\n");
+                            for (k, v) in fields {
+                                out.push_str("    - ");
+                                out.push_str(k);
+                                out.push_str(": ");
+                                out.push_str(v.value_type.prompt_hint().as_str());
+                                out.push('\n');
+                            }
+                        }
+                    }
                 }
             } else {
                 out.push_str("  props: (none)\n");
@@ -162,6 +190,19 @@ impl CatalogV1 {
                         out.push_str(desc);
                     }
                     out.push('\n');
+
+                    if let CatalogValueTypeV1::Object { fields, .. } = &v.value_type {
+                        if !fields.is_empty() {
+                            out.push_str("    fields:\n");
+                            for (fk, fv) in fields {
+                                out.push_str("    - ");
+                                out.push_str(fk);
+                                out.push_str(": ");
+                                out.push_str(fv.value_type.prompt_hint().as_str());
+                                out.push('\n');
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -293,6 +334,50 @@ impl CatalogPropV1 {
         }
     }
 
+    pub fn object_fields(
+        fields: impl IntoIterator<Item = (impl Into<String>, CatalogPropV1)>,
+    ) -> Self {
+        let mut map = BTreeMap::new();
+        for (k, v) in fields {
+            map.insert(k.into(), v);
+        }
+        Self {
+            value_type: CatalogValueTypeV1::Object {
+                fields: map,
+                additional: false,
+            },
+            ..Self::new()
+        }
+    }
+
+    pub fn object_fields_allowing_additional(
+        fields: impl IntoIterator<Item = (impl Into<String>, CatalogPropV1)>,
+    ) -> Self {
+        let mut out = Self::object_fields(fields);
+        if let CatalogValueTypeV1::Object { additional, .. } = &mut out.value_type {
+            *additional = true;
+        }
+        out
+    }
+
+    pub fn array_of(item: CatalogPropV1) -> Self {
+        Self {
+            value_type: CatalogValueTypeV1::Array {
+                items: Box::new(item),
+            },
+            ..Self::new()
+        }
+    }
+
+    pub fn one_of(variants: impl IntoIterator<Item = CatalogValueTypeV1>) -> Self {
+        Self {
+            value_type: CatalogValueTypeV1::OneOf {
+                variants: variants.into_iter().collect(),
+            },
+            ..Self::new()
+        }
+    }
+
     pub fn nullable(mut self, nullable: bool) -> Self {
         self.nullable = nullable;
         self
@@ -397,18 +482,48 @@ fn action_params_schema(action: &CatalogActionV1) -> Value {
 
 fn expression_object_schema() -> Value {
     json!({
-      "type": "object",
-      "properties": {
-        "$state": { "type": "string" },
-        "$item": { "type": "string" },
-        "$index": { "type": "boolean" },
-        "$bindState": { "type": "string" },
-        "$bindItem": { "type": "string" },
-        "$cond": {},
-        "$then": {},
-        "$else": {}
-      },
-      "additionalProperties": true
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$state"],
+          "properties": { "$state": { "type": "string" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$item"],
+          "properties": { "$item": { "type": "string" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$index"],
+          "properties": { "$index": { "type": "boolean", "const": true } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$bindState"],
+          "properties": { "$bindState": { "type": "string" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$bindItem"],
+          "properties": { "$bindItem": { "type": "string" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$cond", "$then", "$else"],
+          "properties": {
+            "$cond": {},
+            "$then": {},
+            "$else": {}
+          }
+        }
+      ]
     })
 }
 
@@ -417,24 +532,44 @@ fn dynamic_value_schema(ty: &CatalogValueTypeV1, nullable: bool) -> Value {
         return json!({});
     }
 
-    let mut base = match ty {
+    let mut base = base_value_schema(ty);
+    if nullable {
+        base = json!({
+          "anyOf": [base, { "type": "null" }]
+        });
+    }
+    json!({
+      "anyOf": [base, expression_object_schema()]
+    })
+}
+
+fn base_value_schema(ty: &CatalogValueTypeV1) -> Value {
+    match ty {
+        CatalogValueTypeV1::Any => json!({}),
         CatalogValueTypeV1::String => json!({ "type": "string" }),
         CatalogValueTypeV1::Boolean => json!({ "type": "boolean" }),
         CatalogValueTypeV1::Number => json!({ "type": "number" }),
         CatalogValueTypeV1::Integer => json!({ "type": "integer" }),
         CatalogValueTypeV1::Enum { values } => json!({ "type": "string", "enum": values }),
-        CatalogValueTypeV1::Any => unreachable!("handled above"),
-    };
-    if nullable {
-        if let Some(t) = base.get_mut("type") {
-            if let Some(s) = t.as_str() {
-                *t = json!([s, "null"]);
-            }
+        CatalogValueTypeV1::Object { fields, additional } => {
+            let properties = fields
+                .iter()
+                .map(|(k, v)| (k.clone(), dynamic_value_schema(&v.value_type, v.nullable)))
+                .collect::<serde_json::Map<_, _>>();
+            json!({
+              "type": "object",
+              "additionalProperties": *additional,
+              "properties": properties
+            })
         }
+        CatalogValueTypeV1::Array { items } => json!({
+          "type": "array",
+          "items": dynamic_value_schema(&items.value_type, items.nullable)
+        }),
+        CatalogValueTypeV1::OneOf { variants } => json!({
+          "oneOf": variants.iter().map(base_value_schema).collect::<Vec<_>>()
+        }),
     }
-    json!({
-      "anyOf": [base, expression_object_schema()]
-    })
 }
 
 impl CatalogValueTypeV1 {
@@ -446,6 +581,16 @@ impl CatalogValueTypeV1 {
             Self::Number => "number".to_string(),
             Self::Integer => "integer".to_string(),
             Self::Enum { values } => format!("enum({})", values.join(" | ")),
+            Self::Object { .. } => "object".to_string(),
+            Self::Array { items } => format!("array<{}>", items.value_type.prompt_hint()),
+            Self::OneOf { variants } => format!(
+                "oneOf({})",
+                variants
+                    .iter()
+                    .map(CatalogValueTypeV1::prompt_hint)
+                    .collect::<Vec<_>>()
+                    .join(" | ")
+            ),
         }
     }
 }

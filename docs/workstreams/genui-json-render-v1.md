@@ -43,7 +43,7 @@ The current MVP matches the core **shape and semantics** (flat spec + catalog gu
 
 - Spec auto-fixes: ✅ GenUI v1 includes an opt-in auto-fixer for common LLM mistakes (moving `visible/on/repeat` out of `props`); it is not enabled automatically by the renderer.
 - Action execution pipeline helpers: json-render has built-in helpers for `confirm`, `onSuccess`, `onError`, and async action execution; GenUI keeps these fields app-owned and does not ship a default executor.
-- Catalog type expressiveness: json-render uses Zod schemas (nested objects, arrays, unions, optional fields); GenUI v1 currently supports a small typed surface (primitive + enum + nullable) plus dynamic expressions.
+- Catalog type expressiveness: json-render uses Zod schemas (nested objects, arrays, unions, optional fields); GenUI v1 supports a growing typed surface (primitive + enum + nullable + object/array/oneOf) plus dynamic expressions, but still lacks required/optional field modeling and richer unions.
 - Devtools/playground: json-render ships catalog display + interactive playground; GenUI v1 currently relies on the demo app and existing Fret diagnostics.
 - Mixed stream transforms: json-render has helpers to separate text and JSONL patches in a mixed stream; GenUI v1 currently provides a patch compiler but not mixed-stream parsing utilities.
 - Spec transforms: json-render includes flat↔tree helpers; GenUI v1 focuses on the flat map and does not provide general tree conversion utilities yet.
