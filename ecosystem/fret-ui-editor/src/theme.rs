@@ -17,23 +17,29 @@ pub fn apply_editor_theme_patch_v1<H: UiHost>(app: &mut H) {
 
         // Editor density defaults (used by most controls).
         cfg.metrics
-            .insert(EditorTokenKeys::DENSITY_ROW_HEIGHT.to_string(), 22.0);
+            .insert(EditorTokenKeys::DENSITY_ROW_HEIGHT.to_string(), 24.0);
         cfg.metrics
             .insert(EditorTokenKeys::DENSITY_PADDING_X.to_string(), 6.0);
         cfg.metrics
-            .insert(EditorTokenKeys::DENSITY_PADDING_Y.to_string(), 3.0);
+            .insert(EditorTokenKeys::DENSITY_PADDING_Y.to_string(), 4.0);
         cfg.metrics
-            .insert(EditorTokenKeys::DENSITY_HIT_THICKNESS.to_string(), 18.0);
+            .insert(EditorTokenKeys::DENSITY_HIT_THICKNESS.to_string(), 20.0);
         cfg.metrics
             .insert(EditorTokenKeys::DENSITY_ICON_SIZE.to_string(), 14.0);
+
+        // Checkbox metrics (used by TransformEdit link toggles and inspector rows).
+        cfg.metrics
+            .insert(EditorTokenKeys::CHECKBOX_SIZE.to_string(), 16.0);
+        cfg.metrics
+            .insert(EditorTokenKeys::CHECKBOX_RADIUS.to_string(), 4.0);
 
         // Text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
         cfg.metrics
             .insert("component.text_field.padding_x".to_string(), 6.0);
         cfg.metrics
-            .insert("component.text_field.padding_y".to_string(), 3.0);
+            .insert("component.text_field.padding_y".to_string(), 4.0);
         cfg.metrics
-            .insert("component.text_field.min_height".to_string(), 22.0);
+            .insert("component.text_field.min_height".to_string(), 24.0);
         cfg.metrics
             .insert("component.text_field.radius".to_string(), 4.0);
         cfg.metrics
