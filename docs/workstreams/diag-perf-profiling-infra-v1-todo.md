@@ -2,9 +2,9 @@
 
 ## P0 (make the signals usable)
 
-- [ ] Add a compact "CPU delta vs wall delta" recipe to `docs/ui-diagnostics-and-scripted-tests.md`.
+- [x] Add a compact "CPU delta vs wall delta" recipe to `docs/ui-diagnostics-and-scripted-tests.md`.
 - [ ] Add one example bundle + interpretation notes to `docs/workstreams/diag-perf-profiling-infra-v1.md`.
-- [ ] Ensure `diag stats --json` includes CPU cycle deltas in `top[]` rows (for tooling consumers).
+- [x] Ensure `diag stats --json` includes CPU cycle deltas in `top[]` rows (for tooling consumers).
 
 ## Contract & schema discipline
 
@@ -16,7 +16,7 @@
 
 ## Tooling UX (shorten the attribution loop)
 
-- [ ] Add `diag stats --sort cpu_cycles` (or equivalent) to find frames where UI thread actually ran.
+- [x] Add `diag stats --sort cpu_cycles` (or equivalent) to find frames where UI thread actually ran.
 - [ ] Add a `diag stats --diff` view that highlights both typical (p95) and tail (max) deltas.
 - [ ] Make `check.perf_thresholds.json` link to:
   - [ ] worst bundle per failing metric

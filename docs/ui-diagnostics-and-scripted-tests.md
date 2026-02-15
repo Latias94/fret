@@ -280,7 +280,16 @@ The command prints the export directory path, and writes:
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
-   - `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`
+   - Tail (worst wall-time frames): `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`
+   - "Real work" vs preemption (UI thread CPU deltas):
+     - Windows (best signal): `cargo run -p fretboard -- diag stats <bundle_dir> --sort cpu_cycles --top 20`
+     - Cross-platform fallback: `cargo run -p fretboard -- diag stats <bundle_dir> --sort cpu_time --top 20`
+
+   Notes:
+   - If a frame is high in `--sort time` but near-zero in `cpu_time` / `cpu_cycles`, it's often OS scheduling noise
+     (the UI thread didn't run), not a "real work" regression inside the frame phases.
+   - For typical perf (ignore rare max spikes), prefer `diag perf --repeat ... --warmup-frames ... --json` and gate on
+     `--perf-threshold-agg p95` (see perf workstreams for baseline policy).
 
 4. Compare two bundles (diff by impact):
 
