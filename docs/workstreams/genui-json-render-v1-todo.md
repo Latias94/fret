@@ -1,6 +1,6 @@
 # GenUI Spec Rendering (json-render-inspired) v1 — TODO
 
-Status: Draft
+Status: In progress
 
 Tracking doc for implementing the GenUI spec renderer and shadcn-backed catalog.
 
@@ -8,59 +8,53 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 
 ## P0 — Contracts first (least-refactor path)
 
-- [ ] Define spec grammar types (flat map + root) in `ecosystem/fret-genui-core`.
-- [ ] Add a structural validator with stable issue codes (missing root, missing child, misplaced fields).
-- [ ] Decide spec versioning strategy (`schema_version` field vs implicit).
-- [ ] Define action binding shape (`on.<event> -> { action, params }`) and event naming conventions.
+- [x] Define spec grammar types (flat map + root) in `ecosystem/fret-genui-core`.
+- [x] Add a structural validator with stable issue codes (missing root, missing child, misplaced fields).
+- [x] Decide spec versioning strategy (`schema_version` field, currently `1`).
+- [x] Define action binding shape (`on.<event> -> { action, params }`) and event naming conventions.
 
 ## P0 — Rendering MVP (small catalog)
 
-- [ ] Implement `SpecRenderer` that renders `root` into `Vec<AnyElement>`.
-- [ ] Identity contract: each element key is rendered under `cx.keyed(key, ...)`.
-- [ ] Implement `emit(event)` dispatch plumbing (no-op actions first).
-- [ ] Add `fret-genui-shadcn` catalog with 5–10 “safe baseline” components:
-  - [ ] `Card`
-  - [ ] `Text` / `Heading`
-  - [ ] `Button`
-  - [ ] `Badge`
-  - [ ] `Input` / `Textarea` (optional for initial)
+- [x] Implement `SpecRenderer` that renders `root` into `Vec<AnyElement>`.
+- [x] Identity contract: each element key is rendered under `cx.keyed(key, ...)`.
+- [x] Implement event→action invocation emission into an app-owned queue model.
+- [x] Add `fret-genui-shadcn` catalog with a conservative baseline component set (Card/Text/Button/Badge/Input/Switch/Stacks/Separator/ScrollArea).
 
 ## P1 — State + expressions
 
-- [ ] Introduce `Model<serde_json::Value>` as the state model (app-owned, passed into renderer).
-- [ ] Implement JSON Pointer helpers (`get_by_pointer`, `set_by_pointer`, `add/remove` as needed).
-- [ ] Implement expression resolution for props:
-  - [ ] `$state`
-  - [ ] `$cond/$then/$else`
-- [ ] Implement `visible` evaluation (same expression model).
+- [x] Introduce `Model<serde_json::Value>` as the state model (app-owned, passed into renderer).
+- [x] Implement JSON Pointer helpers (`get`, `set`, basic array ops via standard actions).
+- [x] Implement expression resolution for props (`$state`, `$cond/$then/$else`).
+- [x] Implement `visible` evaluation (visibility condition grammar + evaluator).
 
 ## P1 — Repeat + item scope
 
-- [ ] Implement `repeat: { statePath, key? }` rendering.
-- [ ] Add repeat scope propagation (repeat item/index/base path).
-- [ ] Implement `$item` and `$index` resolution.
+- [x] Implement `repeat: { statePath, key? }` rendering.
+- [x] Add repeat scope propagation (item/index/base path).
+- [x] Implement `$item` and `$index` resolution.
 
 ## P2 — Bindings + forms
 
-- [ ] Implement `$bindState` / `$bindItem` binding extraction (prop name → state path).
-- [ ] Add a safe write-back API exposed to components (no direct arbitrary JSON mutation from spec).
-- [ ] Implement minimal form patterns in `fret-genui-shadcn` (Input/Checkbox/Switch write-back).
+- [x] Implement `$bindState` / `$bindItem` binding extraction (prop name → state path).
+- [x] Keep writes app-owned: components emit `setState` into the queue (or fall back to direct apply when no queue exists).
+- [x] Implement minimal form patterns in `fret-genui-shadcn` (Input + Switch write-back).
 
 ## P2 — Actions
 
-- [ ] Implement action param resolution (same expression model as props).
-- [ ] Add action handler interface + adapters for common app patterns (navigation, clipboard, downloads).
-- [ ] Add “confirm” support if desired (optional; keep app-owned).
+- [x] Implement action param resolution (including repeat-scoped path semantics for `$item/$bindItem/$index`).
+- [ ] Add a first-class action handler interface + adapters for common app patterns (navigation, clipboard, downloads).
+- [ ] Add “confirm/onSuccess/onError” default executor helpers (optional; keep app-owned).
 
 ## P3 — Schema export for LLM structured outputs
 
-- [ ] Export a catalog schema (components + actions) for LLM constraints.
-- [ ] Decide schema library (`schemars` vs custom).
-- [ ] Add prompt helpers / docs for generating valid specs.
+- [x] Export a catalog-derived JSON Schema for LLM constraints.
+- [x] Decide schema strategy: custom JSON Schema export (keep portable; no `schemars` dependency in v1).
+- [x] Add system prompt export from catalog.
+- [x] Add typed catalog guardrails for prop/param values (primitive types + enums + nullable + dynamic expressions).
+- [x] Add SpecStream compiler (JSONL RFC6902 patch stream → in-progress spec JSON).
 
 ## Testing + gates
 
-- [ ] Unit test matrix for validator and expression resolver.
-- [ ] Add at least one end-to-end “spec renders a dashboard” test using `fret-ui-kit` test harness patterns.
+- [x] Unit tests for standard actions, expression/binding resolution, schema export, and catalog validation.
+- [ ] Add at least one end-to-end “spec renders a small dashboard” test using `fret-ui-kit` harness patterns.
 - [ ] Add regression test for identity stability across repeat reorder (key field vs index fallback).
-

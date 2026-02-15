@@ -1,6 +1,6 @@
 # GenUI Spec Rendering (json-render-inspired) v1 — Milestones
 
-Status: Draft
+Status: In progress
 
 This plan intentionally locks the spec shape early to avoid future refactors.
 
@@ -11,46 +11,53 @@ TODO: `docs/workstreams/genui-json-render-v1-todo.md`
 
 Exit criteria:
 
-- Spec types exist (root + flat elements + optional state).
-- Structural validator exists with stable issue codes and human-readable output.
-- Renderer can fail deterministically with “invalid spec” errors (no silent drop).
+- ✅ Spec types exist (root + flat elements + optional state).
+- ✅ Structural validator exists with stable issue codes and human-readable output.
+- ✅ Renderer fails deterministically (invalid specs return issues; no silent drop).
 
 ## M1 — Minimal renderer + shadcn-backed catalog (static props)
 
 Exit criteria:
 
-- `fret-genui-core` renders a spec with a small component set.
-- `fret-genui-shadcn` provides a curated, safe baseline catalog.
-- Element identity is stable via `cx.keyed(element_key, ...)`.
+- ✅ `fret-genui-core` renders a spec with a small component set.
+- ✅ `fret-genui-shadcn` provides a curated, safe baseline catalog.
+- ✅ Element identity is stable via `cx.keyed(element_key, ...)`.
 
 ## M2 — State + `visible` + basic expressions
 
 Exit criteria:
 
-- Renderer reads from a state model (`serde_json::Value`) via JSON Pointer.
-- `visible` is supported.
-- `$state` and `$cond/$then/$else` work for props and visibility.
+- ✅ Renderer reads from a state model (`serde_json::Value`) via JSON Pointer.
+- ✅ `visible` is supported (including `not`, `eq/neq`, comparisons, `$and/$or`).
+- ✅ `$state` and `$cond/$then/$else` work for props and visibility.
 
 ## M3 — Repeat + item scope
 
 Exit criteria:
 
-- `repeat` renders children per item in a state array.
-- `$item` and `$index` resolve correctly inside repeat scopes.
-- Identity is stable across reorder when `repeat.key` is provided.
+- ✅ `repeat` renders children per item in a state array.
+- ✅ `$item` and `$index` resolve correctly inside repeat scopes.
+- ✅ Identity is stable across reorder when `repeat.key` is provided.
 
 ## M4 — Bindings + write-back for forms
 
 Exit criteria:
 
-- `$bindState` / `$bindItem` produce binding paths exposed to components.
-- Shadcn form components can write back safely (controlled API).
+- ✅ `$bindState` / `$bindItem` produce binding paths exposed to components.
+- ✅ Shadcn Input/Switch can write back safely by emitting `setState` into the app-owned queue.
 
 ## M5 — Actions + schema export
 
 Exit criteria:
 
-- Event → action binding dispatch works with resolved params.
-- Catalog schema export exists for LLM structured outputs.
-- At least one end-to-end demo spec is validated + rendered + interactive.
+- ✅ Event → action invocation emission works with resolved params.
+- ✅ Catalog-derived JSON Schema + system prompt export exist for LLM structured outputs.
+- ✅ Demo spec is validated + rendered + interactive (standard actions auto-applied in the demo app).
 
+## M6 — Hardening + devtools closure (next)
+
+Candidate exit criteria:
+
+- Add an opt-in "spec auto-fixer" for common LLM mistakes (moved fields, missing defaults).
+- Add at least one end-to-end harness test for spec rendering + interaction.
+- Add lightweight in-app diagnostics panels (spec issues, state snapshot, action log) or integrate with existing devtools.
