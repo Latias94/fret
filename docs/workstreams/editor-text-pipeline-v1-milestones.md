@@ -72,6 +72,8 @@ Evidence anchors (expected):
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_for_text`)
 - Paint-only shaping_eq gate (editor-level):
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_only_syntax_color_changes_do_not_affect_rich_text_shaping_eq`)
+- Grapheme-safe span gate (ZWJ/VS16):
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_does_not_split_zwj_or_vs16_graphemes`)
 - Shaping-key stability gate:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
 

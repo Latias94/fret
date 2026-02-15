@@ -54,8 +54,9 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
       same text + shaping style.
       - `crates/fret-render-wgpu/src/text/mod.rs` (`paint_only_changes_miss_blob_cache_but_hit_shape_cache`)
   - [ ] span range correctness:
-    - emoji ZWJ/VS16 sequences never split,
-    - mixed scripts + surrogate-pair UTF-16 ranges remain deterministic at platform boundaries.
+    - [x] emoji ZWJ/VS16 sequences never split.
+      - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_does_not_split_zwj_or_vs16_graphemes`)
+    - [ ] mixed scripts + surrogate-pair UTF-16 ranges remain deterministic at platform boundaries.
 - [x] Add a test that theme-only changes do not affect shaping keys.
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
  - [~] Add an editor-focused test suite (ecosystem) that:
