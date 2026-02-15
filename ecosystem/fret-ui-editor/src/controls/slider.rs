@@ -325,7 +325,12 @@ where
         let value_f = quantize_value(min, max, clamp, step, value_f);
         let t = t_from_value(min, max, clamp, value_f);
 
-        let state: Arc<Mutex<SliderState>> = cx.with_state(
+        // Anchor state to a stable element id under the slider's identity key. This avoids any
+        // accidental state sharing across sibling sliders when the surrounding composition
+        // changes.
+        let state_id = cx.named("slider.state", |cx| cx.root_id());
+        let state: Arc<Mutex<SliderState>> = cx.with_state_for(
+            state_id,
             || Arc::new(Mutex::new(SliderState::default())),
             |s| s.clone(),
         );

@@ -547,72 +547,94 @@ fn request_overlay<H: UiHost>(
                     ..Default::default()
                 },
                 move |cx| {
-                    let mut out = Vec::new();
-
-                    let mut search = MiniSearchBox::new(filter.clone()).into_element(cx);
-                    if let Some(test_id) = search_test_id.as_ref() {
-                        search = search.test_id(test_id.clone());
-                    }
-                    out.push(search);
-
-                    let scroll = cx.scroll(
-                        ScrollProps {
+                    // `Container` does not imply vertical flow layout. Use an explicit column so
+                    // the search box and the list do not overlap.
+                    vec![cx.flex(
+                        FlexProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
-                                    height: Length::Px(max_h),
+                                    height: Length::Auto,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
-                            axis: ScrollAxis::Y,
-                            ..Default::default()
+                            direction: Axis::Vertical,
+                            gap: Px(6.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
                         },
                         move |cx| {
-                            let filtered = filtered.clone();
-                            vec![cx.flex(
-                                FlexProps {
+                            let mut out: Vec<AnyElement> = Vec::new();
+
+                            let mut search = MiniSearchBox::new(filter.clone()).into_element(cx);
+                            if let Some(test_id) = search_test_id.as_ref() {
+                                search = search.test_id(test_id.clone());
+                            }
+                            out.push(search);
+
+                            let scroll = cx.scroll(
+                                ScrollProps {
                                     layout: LayoutStyle {
                                         size: SizeStyle {
                                             width: Length::Fill,
-                                            height: Length::Auto,
+                                            height: Length::Px(max_h),
                                             ..Default::default()
                                         },
                                         ..Default::default()
                                     },
-                                    direction: Axis::Vertical,
-                                    gap: Px(2.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
+                                    axis: ScrollAxis::Y,
+                                    ..Default::default()
                                 },
                                 move |cx| {
-                                    if filtered.is_empty() {
-                                        return vec![cx.text("No matches")];
-                                    }
+                                    let filtered = filtered.clone();
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Auto,
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            direction: Axis::Vertical,
+                                            gap: Px(2.0),
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Stretch,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
+                                            if filtered.is_empty() {
+                                                return vec![cx.text("No matches")];
+                                            }
 
-                                    filtered
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(idx, it)| {
-                                            enum_select_row(
-                                                cx,
-                                                idx,
-                                                filtered.len(),
-                                                &model_for_list,
-                                                &open_for_list,
-                                                it.clone(),
-                                                density,
-                                            )
-                                        })
-                                        .collect::<Vec<_>>()
+                                            filtered
+                                                .iter()
+                                                .enumerate()
+                                                .map(|(idx, it)| {
+                                                    enum_select_row(
+                                                        cx,
+                                                        idx,
+                                                        filtered.len(),
+                                                        &model_for_list,
+                                                        &open_for_list,
+                                                        it.clone(),
+                                                        density,
+                                                    )
+                                                })
+                                                .collect::<Vec<_>>()
+                                        },
+                                    )]
                                 },
-                            )]
+                            );
+                            out.push(scroll);
+                            out
                         },
-                    );
-                    out.push(scroll);
-                    out
+                    )]
                 },
             );
 
