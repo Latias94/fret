@@ -4,6 +4,7 @@
 //! without hard-binding `fret-ui-editor` to a specific design system crate.
 
 use fret_core::{Color, Corners, Edges, Px, TextStyle};
+use fret_ui::element::{RingPlacement, RingStyle};
 use fret_ui::{TextAreaStyle, TextInputStyle, Theme};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, Size};
@@ -132,6 +133,9 @@ pub(crate) fn resolve_editor_text_area_style(
     keys: InputTokenKeys,
 ) -> (TextAreaStyle, TextStyle) {
     let resolved = resolve_input_chrome(theme, size, refinement, keys);
+    let ring_color = theme
+        .color_by_key("ring")
+        .unwrap_or_else(|| theme.color_token("primary"));
 
     let font_line_height = theme
         .metric_by_key("font.line_height")
@@ -148,7 +152,14 @@ pub(crate) fn resolve_editor_text_area_style(
         background: sanitize_editor_surface_bg(theme, resolved.background),
         border: Edges::all(resolved.border_width),
         border_color: resolved.border_color,
-        focus_ring: None,
+        focus_ring: Some(RingStyle {
+            placement: RingPlacement::Outset,
+            width: Px(2.0),
+            offset: Px(2.0),
+            color: ring_color,
+            offset_color: None,
+            corner_radii: Corners::all(resolved.radius),
+        }),
         corner_radii: Corners::all(resolved.radius),
         text_color: resolved.text_color,
         selection_color: resolved.selection_color,
