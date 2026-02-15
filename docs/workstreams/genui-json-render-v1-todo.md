@@ -69,5 +69,6 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 ## Testing + gates
 
 - [x] Unit tests for standard actions, expression/binding resolution, schema export, and catalog validation.
+- [x] Add an end-to-end interaction test (press → queue → state via auto-apply).
 - [ ] Add at least one end-to-end “spec renders a small dashboard” test using `fret-ui-kit` harness patterns.
 - [x] Add regression test for identity stability across repeat reorder (key field vs index fallback).
