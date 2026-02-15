@@ -37,12 +37,32 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         "VStack".to_string(),
         component("Vertical stack (flex column)")
             .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop(
+                "items",
+                CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
+            )
+            .prop(
+                "justify",
+                CatalogPropV1::enum_values(["start", "center", "end", "between"]),
+            )
+            .prop("wrap", CatalogPropV1::boolean())
             .build(),
     );
     out.insert(
         "HStack".to_string(),
         component("Horizontal stack (flex row)")
             .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop(
+                "items",
+                CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
+            )
+            .prop(
+                "justify",
+                CatalogPropV1::enum_values(["start", "center", "end", "between"]),
+            )
+            .prop("wrap", CatalogPropV1::boolean())
             .build(),
     );
     out.insert(

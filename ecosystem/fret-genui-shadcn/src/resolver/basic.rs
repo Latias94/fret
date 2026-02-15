@@ -99,11 +99,36 @@ impl ShadcnResolver {
         children: Vec<AnyElement>,
     ) -> AnyElement {
         let gap = Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
-        fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+        let p = Self::parse_space(resolved_props.get("p"));
+        let items = resolved_props.get("items").and_then(|v| v.as_str());
+        let justify = resolved_props.get("justify").and_then(|v| v.as_str());
+        let wrap = resolved_props
+            .get("wrap")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut v = fret_ui_kit::ui::v_flex(cx, move |_cx| children)
             .gap(gap)
-            .items_start()
-            .w_full()
-            .into_element(cx)
+            .w_full();
+        v = match items {
+            Some("center") => v.items_center(),
+            Some("end") => v.items_end(),
+            Some("stretch") => v.items_stretch(),
+            _ => v.items_start(),
+        };
+        v = match justify {
+            Some("center") => v.justify_center(),
+            Some("end") => v.justify_end(),
+            Some("between") => v.justify_between(),
+            _ => v.justify_start(),
+        };
+        if wrap {
+            v = v.wrap();
+        }
+        if let Some(p) = p {
+            v = v.p(p);
+        }
+        v.into_element(cx)
     }
 
     pub(super) fn render_hstack<H: UiHost>(
@@ -113,11 +138,36 @@ impl ShadcnResolver {
         children: Vec<AnyElement>,
     ) -> AnyElement {
         let gap = Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
-        fret_ui_kit::ui::h_flex(cx, move |_cx| children)
+        let p = Self::parse_space(resolved_props.get("p"));
+        let items = resolved_props.get("items").and_then(|v| v.as_str());
+        let justify = resolved_props.get("justify").and_then(|v| v.as_str());
+        let wrap = resolved_props
+            .get("wrap")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut h = fret_ui_kit::ui::h_flex(cx, move |_cx| children)
             .gap(gap)
-            .items_center()
-            .w_full()
-            .into_element(cx)
+            .w_full();
+        h = match items {
+            Some("start") => h.items_start(),
+            Some("end") => h.items_end(),
+            Some("stretch") => h.items_stretch(),
+            _ => h.items_center(),
+        };
+        h = match justify {
+            Some("center") => h.justify_center(),
+            Some("end") => h.justify_end(),
+            Some("between") => h.justify_between(),
+            _ => h.justify_start(),
+        };
+        if wrap {
+            h = h.wrap();
+        }
+        if let Some(p) = p {
+            h = h.p(p);
+        }
+        h.into_element(cx)
     }
 
     pub(super) fn render_separator<H: UiHost>(
