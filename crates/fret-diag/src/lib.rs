@@ -21173,6 +21173,22 @@ mod tests {
                                 { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [2,2] },
                                 { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-composition-gate-viewport", "parent": 2 }
                             ] } }
+                        },
+                        {
+                            "tick_id": 4,
+                            "frame_id": 4,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [2,2], "text_composition": [0,2] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-composition-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 5,
+                            "frame_id": 5,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [0,5] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-composition-gate-viewport", "parent": 2 }
+                            ] } }
                         }
                     ]
                 }
