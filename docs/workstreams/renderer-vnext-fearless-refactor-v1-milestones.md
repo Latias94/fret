@@ -237,6 +237,7 @@ Progress record (Sampling hints v1):
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
   - `python3 tools/check_layering.py`
   - `$env:CARGO_TARGET_DIR='F:\\ct'; cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance --test mask_image_conformance`
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-image-sampling-hints-screenshots.json --env FRET_DIAG_GPU_SCREENSHOTS=1 --pack --include-all --include-triage --include-screenshots --launch -- cargo run -p fret-ui-gallery --release`
 
 Perf snapshot record (post M5 plumbing):
 

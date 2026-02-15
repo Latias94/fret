@@ -113,7 +113,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-ui/src/element.rs` (`ImageProps.sampling`), `crates/fret-ui/src/declarative/host_widget/paint.rs` (SceneOp plumb),
     `ecosystem/fret-ui-kit/src/image_sampling.rs` (`ImageSamplingExt`), `ecosystem/fret-ui-kit/tests/image_sampling_ext_smoke.rs`,
     `ecosystem/fret-ui-shadcn/src/media_image.rs` (`MediaImage::sampling_hint`),
-    `apps/fret-ui-gallery/src/ui/previews/gallery/atoms/media/image_object_fit.rs` (explicit Linear vs opt-in Nearest demo).
+    `apps/fret-ui-gallery/src/ui/previews/gallery/atoms/media/image_object_fit.rs` (explicit Linear vs opt-in Nearest demo),
+    `tools/diag-scripts/ui-gallery-image-sampling-hints-screenshots.json` (scripted screenshot/bundle gate for Linear vs Nearest).
 
 ## Always-run guardrails (before/after each milestone)
 
