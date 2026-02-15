@@ -121,9 +121,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] REN-VNEXT-webgpu-001 Make WGSL shaders satisfy WebGPU uniformity rules (Tint):
   - Derivative ops (`fwidth`, `dpdx`, `dpdy`) and sampling (`textureSample`) are not gated by non-uniform control flow.
   - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval`, `paint_eval`, dashed border mask).
-- [ ] REN-VNEXT-webgpu-002 Recover performance after uniformity fixes:
+- [~] REN-VNEXT-webgpu-002 Recover performance after uniformity fixes:
   - Avoid “evaluate all material patterns per pixel” in the quad shader on web/mobile.
   - Preferred direction: compile a small set of shader/pipeline variants keyed by stable (bounded) paint/material kinds.
+  - Progress: quad pipeline variants keyed by `(fill_kind, border_kind, border_present, dash_enabled)` using WGSL `override` constants.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/types.rs` (`QuadPipelineKey`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (batch split),
+    `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (pipeline constants), `crates/fret-render-wgpu/src/renderer/shaders.rs` (override + `paint_eval_fill/border`),
+    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (variant selection per draw).
+  - Next: consider material `tile_mode` variants (or a bounded subset) if material patterns become hot in perf bundles.
 - [ ] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
   - Keep `renderer::tests::shaders_validate_for_webgpu` as a baseline (Naga),
   - and consider adding an optional Tint-based compile check (or a minimal static heuristic) to catch uniformity drift.
