@@ -113,7 +113,6 @@ pub(super) fn content_view(
                 layout.flex.grow = 1.0;
                 ViewCacheProps {
                     layout,
-                    contained_layout: true,
                     ..Default::default()
                 }
             },
