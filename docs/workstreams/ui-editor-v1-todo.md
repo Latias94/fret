@@ -167,10 +167,11 @@ adding new runtime contracts unless evidence demands it.
   - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
 - [ ] Add an editor-facing `Slider<T>` control:
   - horizontal first; clamping policy; optional value typing; unit formatting hook
-- [ ] Add a reusable `TextField` control surface:
+- [~] Add a reusable `TextField` control surface:
   - single-line + multi-line
   - password mode (masking + copy policy)
   - optional clear button + completion/history hook placeholders
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/text_field.rs`
 
 ### M3 — Core editor controls (Color / Vec / Transform / Asset refs)
 

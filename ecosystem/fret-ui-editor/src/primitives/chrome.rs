@@ -4,7 +4,7 @@
 //! without hard-binding `fret-ui-editor` to a specific design system crate.
 
 use fret_core::{Color, Corners, Edges, Px, TextStyle};
-use fret_ui::{TextInputStyle, Theme};
+use fret_ui::{TextAreaStyle, TextInputStyle, Theme};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, Size};
 
@@ -125,12 +125,75 @@ pub(crate) fn resolve_editor_text_input_style(
     (chrome, text_style)
 }
 
+pub(crate) fn resolve_editor_text_area_style(
+    theme: &Theme,
+    size: Size,
+    refinement: &ChromeRefinement,
+    keys: InputTokenKeys,
+) -> (TextAreaStyle, TextStyle) {
+    let resolved = resolve_input_chrome(theme, size, refinement, keys);
+
+    let font_line_height = theme
+        .metric_by_key("font.line_height")
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let text_style = TextStyle {
+        size: resolved.text_px,
+        line_height: Some(font_line_height),
+        ..Default::default()
+    };
+
+    let chrome = TextAreaStyle {
+        padding_x: resolved.padding.left,
+        padding_y: resolved.padding.top,
+        background: sanitize_editor_surface_bg(theme, resolved.background),
+        border: Edges::all(resolved.border_width),
+        border_color: resolved.border_color,
+        focus_ring: None,
+        corner_radii: Corners::all(resolved.radius),
+        text_color: resolved.text_color,
+        selection_color: resolved.selection_color,
+        caret_color: resolved.text_color,
+        preedit_bg_color: Color {
+            a: 0.22,
+            ..resolved.selection_color
+        },
+        preedit_underline_color: theme.color_token("primary"),
+    };
+
+    (chrome, text_style)
+}
+
 pub(crate) fn resolve_editor_text_field_style(
     theme: &Theme,
     size: Size,
     refinement: &ChromeRefinement,
 ) -> (TextInputStyle, TextStyle) {
     resolve_editor_text_input_style(
+        theme,
+        size,
+        refinement,
+        InputTokenKeys {
+            padding_x: Some("component.text_field.padding_x"),
+            padding_y: Some("component.text_field.padding_y"),
+            min_height: Some("component.text_field.min_height"),
+            radius: Some("component.text_field.radius"),
+            border_width: Some("component.text_field.border_width"),
+            bg: Some("component.text_field.bg"),
+            border: Some("component.text_field.border"),
+            border_focus: Some("component.text_field.border_focus"),
+            fg: Some("component.text_field.fg"),
+            text_px: Some("component.text_field.text_px"),
+            selection: Some("component.text_field.selection"),
+        },
+    )
+}
+
+pub(crate) fn resolve_editor_text_area_field_style(
+    theme: &Theme,
+    size: Size,
+    refinement: &ChromeRefinement,
+) -> (TextAreaStyle, TextStyle) {
+    resolve_editor_text_area_style(
         theme,
         size,
         refinement,
