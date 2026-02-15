@@ -54,7 +54,7 @@ const SPEC_JSON: &str = r#"
     },
     "card_stack": {
       "type": "VStack",
-      "props": { "gap": "N2" },
+      "props": { "gap": "N2", "py": "N3" },
       "children": [
         "bind_title",
         "enabled_row",
@@ -77,7 +77,7 @@ const SPEC_JSON: &str = r#"
     "bind_title": { "type": "Text", "props": { "text": "Bindings ($bindState demo)" }, "children": [] },
     "enabled_row": {
       "type": "HStack",
-      "props": { "gap": "N2" },
+      "props": { "gap": "N2", "wrap": true },
       "children": ["enabled_label", "enabled_switch", "enabled_badge", "disabled_badge"]
     },
     "enabled_label": { "type": "Text", "props": { "text": "Enabled:" }, "children": [] },
@@ -100,7 +100,7 @@ const SPEC_JSON: &str = r#"
     },
     "name_row": {
       "type": "HStack",
-      "props": { "gap": "N2" },
+      "props": { "gap": "N2", "wrap": true, "items": "center" },
       "children": ["name_label", "name_input", "name_value"]
     },
     "name_label": { "type": "Text", "props": { "text": "Name:" }, "children": [] },
@@ -131,7 +131,7 @@ const SPEC_JSON: &str = r#"
     "counter_title": { "type": "Text", "props": { "text": "Counter (standard actions)" }, "children": [] },
     "counter_row": {
       "type": "HStack",
-      "props": { "gap": "N2" },
+      "props": { "gap": "N2", "wrap": true },
       "children": ["counter_label", "counter_value", "counter_dec", "counter_inc"]
     },
     "counter_label": { "type": "Text", "props": { "text": "Count:" }, "children": [] },
@@ -156,7 +156,7 @@ const SPEC_JSON: &str = r#"
     "todos_title": { "type": "Text", "props": { "text": "Todos (repeat demo)" }, "children": [] },
     "todo_add_row": {
       "type": "HStack",
-      "props": { "gap": "N2" },
+      "props": { "gap": "N2", "wrap": true, "items": "center" },
       "children": ["todo_input", "todo_add_btn"]
     },
     "todo_input": {
@@ -176,7 +176,7 @@ const SPEC_JSON: &str = r#"
       "repeat": { "statePath": "/todos", "key": "id" },
       "children": ["todo_item"]
     },
-    "todo_item": { "type": "HStack", "props": { "gap": "N2" }, "children": ["todo_label", "todo_remove"] },
+    "todo_item": { "type": "HStack", "props": { "gap": "N2", "wrap": true, "items": "center" }, "children": ["todo_label", "todo_remove"] },
     "todo_label": { "type": "Text", "props": { "text": { "$item": "label" } }, "children": [] },
     "todo_remove": {
       "type": "Button",

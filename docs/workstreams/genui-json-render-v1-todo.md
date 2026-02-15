@@ -26,10 +26,10 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 Goal: improve spec expressiveness for spacing/typography without leaking policy into `crates/fret-ui`.
 
 - [x] Add minimal layout props to `VStack`/`HStack`: `p/items/justify/wrap` (typed + deterministic mapping).
-- [ ] Extend stack layout props: `px/py`, `wFull/hFull`, `minW0/minH0` (and decide whether `flex1` belongs here).
+- [x] Extend stack layout props: `px/py`, `wFull/hFull`, `minW0/minH0` (and decide whether `flex1` belongs here).
 - [ ] Decide whether to add a generic `Box`/`Container` component (padding + sizing + alignment) vs growing per-component layout props.
 - [ ] Add a small typography surface: either `Text.variant` (enum) or separate components (`Heading`/`Paragraph`/`Code`).
-- [ ] Update demo specs to use layout/typography props (visual sanity gates).
+- [x] Update demo specs to use layout props (visual sanity gates).
 
 ## P1 — State + expressions
 
