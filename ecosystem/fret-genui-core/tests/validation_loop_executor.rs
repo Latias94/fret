@@ -30,9 +30,11 @@ fn inv(action: &str, params: Value) -> GenUiActionInvocation {
 #[test]
 fn executor_gates_submit_and_records_validation_issues() {
     let mut app = App::new();
-    let state = app
-        .models_mut()
-        .insert(json!({ "form": { "email": "" }, "validation": { "emailHasError": false, "emailError": "" }, "lastResult": "" }));
+    let state = app.models_mut().insert(json!({
+        "form": { "email": "" },
+        "validation": { "issues": [] },
+        "lastResult": ""
+    }));
     let validation = app.models_mut().insert(ValidationStateV1::default());
 
     let registry = ValidationRegistryV1::new().with_validator(Arc::new(|st| {
@@ -62,20 +64,24 @@ fn executor_gates_submit_and_records_validation_issues() {
                 .unwrap_or(Value::Null);
             let out = validate_all(&snapshot, &registry);
             let ok = out.is_ok();
-            let email_error = out
-                .issues
-                .iter()
-                .find(|i| i.path == "/form/email")
-                .map(|i| i.message.clone())
-                .unwrap_or_default();
+
+            let issues_for_state = Value::Array(
+                out.issues
+                    .iter()
+                    .map(|i| {
+                        let mut obj = serde_json::Map::new();
+                        obj.insert("path".to_string(), Value::String(i.path.clone()));
+                        obj.insert("code".to_string(), Value::String(i.code.clone()));
+                        obj.insert("message".to_string(), Value::String(i.message.clone()));
+                        Value::Object(obj)
+                    })
+                    .collect::<Vec<_>>(),
+            );
+
             let _ = host.models_mut().update(&validation_model, |v| *v = out);
             let _ = host.models_mut().update(state, |v| {
-                let _ = json_pointer::set(
-                    v,
-                    "/validation/emailHasError",
-                    Value::Bool(!email_error.is_empty()),
-                );
-                let _ = json_pointer::set(v, "/validation/emailError", Value::String(email_error));
+                let _ = json_pointer::set(v, "/validation/issues", issues_for_state.clone());
+                let _ = json_pointer::set(v, "/validation/hasErrors", Value::Bool(!ok));
             });
             if ok {
                 Ok(())
@@ -106,7 +112,12 @@ fn executor_gates_submit_and_records_validation_issues() {
         host.app.models().get_cloned(&state),
         Some(json!({
             "form": { "email": "" },
-            "validation": { "emailHasError": true, "emailError": "Email is required." },
+            "validation": {
+                "issues": [
+                    { "path": "/form/email", "code": "required", "message": "Email is required." }
+                ],
+                "hasErrors": true
+            },
             "lastResult": "error"
         }))
     );
@@ -115,9 +126,16 @@ fn executor_gates_submit_and_records_validation_issues() {
 #[test]
 fn executor_allows_submit_when_valid_and_clears_issues() {
     let mut app = App::new();
-    let state = app
-        .models_mut()
-        .insert(json!({ "form": { "email": "a@b.com" }, "validation": { "emailHasError": true, "emailError": "stale" }, "lastResult": "" }));
+    let state = app.models_mut().insert(json!({
+        "form": { "email": "a@b.com" },
+        "validation": {
+            "issues": [
+                { "path": "/form/email", "code": "required", "message": "stale" }
+            ],
+            "hasErrors": true
+        },
+        "lastResult": ""
+    }));
     let validation = app.models_mut().insert(ValidationStateV1::default());
 
     let registry = ValidationRegistryV1::new().with_validator(Arc::new(|st| {
@@ -147,20 +165,24 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
                 .unwrap_or(Value::Null);
             let out = validate_all(&snapshot, &registry);
             let ok = out.is_ok();
-            let email_error = out
-                .issues
-                .iter()
-                .find(|i| i.path == "/form/email")
-                .map(|i| i.message.clone())
-                .unwrap_or_default();
+
+            let issues_for_state = Value::Array(
+                out.issues
+                    .iter()
+                    .map(|i| {
+                        let mut obj = serde_json::Map::new();
+                        obj.insert("path".to_string(), Value::String(i.path.clone()));
+                        obj.insert("code".to_string(), Value::String(i.code.clone()));
+                        obj.insert("message".to_string(), Value::String(i.message.clone()));
+                        Value::Object(obj)
+                    })
+                    .collect::<Vec<_>>(),
+            );
+
             let _ = host.models_mut().update(&validation_model, |v| *v = out);
             let _ = host.models_mut().update(state, |v| {
-                let _ = json_pointer::set(
-                    v,
-                    "/validation/emailHasError",
-                    Value::Bool(!email_error.is_empty()),
-                );
-                let _ = json_pointer::set(v, "/validation/emailError", Value::String(email_error));
+                let _ = json_pointer::set(v, "/validation/issues", issues_for_state.clone());
+                let _ = json_pointer::set(v, "/validation/hasErrors", Value::Bool(!ok));
             });
             if ok {
                 Ok(())
@@ -188,7 +210,7 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
         host.app.models().get_cloned(&state),
         Some(json!({
             "form": { "email": "a@b.com" },
-            "validation": { "emailHasError": false, "emailError": "" },
+            "validation": { "issues": [], "hasErrors": false },
             "lastResult": "ok"
         }))
     );
