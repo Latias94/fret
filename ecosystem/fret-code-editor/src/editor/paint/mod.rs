@@ -6,6 +6,60 @@ use std::time::Instant;
 use super::*;
 use fret_core::TextMetrics;
 
+#[cfg(feature = "syntax")]
+fn normalize_syntax_spans_for_text(text: &str, spans: &mut Vec<SyntaxSpan>) {
+    let max = text.len();
+
+    for span in spans.iter_mut() {
+        let mut start = span.range.start.min(max);
+        let mut end = span.range.end.min(max).max(start);
+
+        start = fret_code_editor_view::clamp_to_char_boundary(text, start).min(max);
+        end = fret_code_editor_view::clamp_to_char_boundary(text, end)
+            .min(max)
+            .max(start);
+
+        span.range = start..end;
+    }
+
+    spans.retain(|s| s.range.start < s.range.end);
+    spans.sort_by(|a, b| {
+        a.range
+            .start
+            .cmp(&b.range.start)
+            .then(a.range.end.cmp(&b.range.end))
+            .then(a.highlight.cmp(&b.highlight))
+    });
+    spans.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
+
+    // Ensure a stable, non-overlapping sequence even if inputs are stale after edits.
+    let mut out: Vec<SyntaxSpan> = Vec::with_capacity(spans.len());
+    let mut cursor = 0usize;
+    for span in spans.drain(..) {
+        let start = span.range.start.max(cursor);
+        let end = span.range.end.max(start);
+        if start >= end {
+            continue;
+        }
+
+        if let Some(last) = out.last_mut()
+            && last.highlight == span.highlight
+            && last.range.end == start
+        {
+            last.range.end = end;
+            cursor = last.range.end;
+            continue;
+        }
+
+        cursor = end;
+        out.push(SyntaxSpan {
+            range: start..end,
+            highlight: span.highlight,
+        });
+    }
+    *spans = out;
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn paint_row(
     painter: &mut fret_ui::canvas::CanvasPainter<'_>,
@@ -380,19 +434,8 @@ pub(super) fn paint_row(
                                         line.len(),
                                     );
                                 for r in ranges {
-                                    let mut start = r.start.min(line.len());
-                                    let mut end = r.end.min(line.len()).max(start);
-                                    start = fret_code_editor_view::clamp_to_char_boundary(
-                                        line.as_ref(),
-                                        start,
-                                    )
-                                    .min(line.len());
-                                    end = fret_code_editor_view::clamp_to_char_boundary(
-                                        line.as_ref(),
-                                        end,
-                                    )
-                                    .min(line.len())
-                                    .max(start);
+                                    let start = r.start.min(line.len());
+                                    let end = r.end.min(line.len()).max(start);
                                     if start >= end {
                                         continue;
                                     }
@@ -402,26 +445,9 @@ pub(super) fn paint_row(
                                     });
                                 }
                             }
-
-                            if !mapped.is_empty() {
-                                mapped.sort_by_key(|s| s.range.start);
-                                mapped.dedup_by(|a, b| {
-                                    a.range == b.range && a.highlight == b.highlight
-                                });
-                                let mut merged_display: Vec<SyntaxSpan> = Vec::new();
-                                for span in mapped {
-                                    if let Some(last) = merged_display.last_mut()
-                                        && last.highlight == span.highlight
-                                        && last.range.end == span.range.start
-                                    {
-                                        last.range.end = span.range.end;
-                                        continue;
-                                    }
-                                    merged_display.push(span);
-                                }
-                                mapped = merged_display;
-                            }
                         }
+
+                        normalize_syntax_spans_for_text(line.as_ref(), &mut mapped);
 
                         let started = perf_enabled.then(Instant::now);
                         let rich = {
@@ -1612,4 +1638,69 @@ pub(super) fn materialize_row_rich_text(
     }
 
     AttributedText::new(line, out)
+}
+
+#[cfg(all(test, feature = "syntax"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_syntax_spans_clamps_and_is_deterministic_for_stale_inputs() {
+        let text = "a😀b";
+        let mut spans = vec![
+            SyntaxSpan {
+                range: 999..1000,
+                highlight: "keyword",
+            },
+            SyntaxSpan {
+                // Inside the emoji's UTF-8 bytes.
+                range: 2..4,
+                highlight: "string",
+            },
+            SyntaxSpan {
+                // Overlaps the emoji.
+                range: 1..5,
+                highlight: "keyword",
+            },
+            SyntaxSpan {
+                // Out of order; overlaps the previous highlight.
+                range: 0..1,
+                highlight: "comment",
+            },
+        ];
+
+        normalize_syntax_spans_for_text(text, &mut spans);
+
+        assert!(
+            spans.iter().all(|s| {
+                s.range.start < s.range.end
+                    && s.range.end <= text.len()
+                    && text.is_char_boundary(s.range.start)
+                    && text.is_char_boundary(s.range.end)
+            }),
+            "expected normalized, in-bounds, char-boundary-aligned spans"
+        );
+        assert!(
+            spans.windows(2).all(|w| w[0].range.end <= w[1].range.start),
+            "expected non-overlapping spans"
+        );
+
+        let mut out: Vec<fret_core::TextSpan> = Vec::new();
+        let mut cursor = 0usize;
+        for span in spans.iter() {
+            if span.range.start > cursor {
+                out.push(fret_core::TextSpan::new(span.range.start - cursor));
+            }
+            out.push(fret_core::TextSpan::new(span.range.end - span.range.start));
+            cursor = span.range.end;
+        }
+        if cursor < text.len() {
+            out.push(fret_core::TextSpan::new(text.len() - cursor));
+        }
+        let rich = fret_core::AttributedText::new(Arc::<str>::from(text), out);
+        assert!(
+            rich.is_valid(),
+            "expected AttributedText to be valid after normalization"
+        );
+    }
 }
