@@ -64,6 +64,23 @@ pub(crate) fn hover_overlay_bg(theme: &Theme, base: Color, hovered: bool, presse
     out
 }
 
+pub(crate) fn hover_overlay_border(
+    theme: &Theme,
+    base: Color,
+    hovered: bool,
+    pressed: bool,
+) -> Color {
+    let accent = theme.color_token("accent");
+    let mut out = base;
+    if hovered {
+        out = mix(out, accent, 0.10);
+    }
+    if pressed {
+        out = mix(out, accent, 0.14);
+    }
+    out
+}
+
 /// Compute input-like frame visuals for the given interaction state.
 ///
 /// This is a small helper intended for editor controls built from `Container` + `Pressable`.

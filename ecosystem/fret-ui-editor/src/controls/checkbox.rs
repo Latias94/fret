@@ -18,6 +18,7 @@ use fret_ui_kit::primitives::checkbox::{
     CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool,
 };
 
+use crate::primitives::visuals::{hover_overlay_bg, hover_overlay_border};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -106,6 +107,11 @@ impl Checkbox {
             .color_by_key("input")
             .or_else(|| theme.color_by_key("border"))
             .unwrap_or_else(|| theme.color_token("foreground"));
+        let bg_unchecked = theme
+            .color_by_key("component.checkbox.bg")
+            .or_else(|| theme.color_by_key("component.input.bg"))
+            .or_else(|| theme.color_by_key("background"))
+            .unwrap_or_else(|| theme.color_token("background"));
         let bg_checked = theme.color_token("primary");
         let fg_checked = theme.color_token("primary-foreground");
         let ring_color = theme
@@ -202,15 +208,27 @@ impl Checkbox {
                 a11y,
                 ..Default::default()
             },
-            move |cx, _st| {
+            move |cx, st| {
                 cx.pressable_add_on_activate(on_activate.clone());
 
                 let disabled_alpha = if enabled_for_paint { 1.0 } else { 0.55 };
 
-                let bg = match checked_state {
-                    CheckedState::Unchecked => None,
-                    _ => Some(alpha_mul(bg_checked, disabled_alpha)),
+                let theme = Theme::global(&*cx.app);
+                let hovered = (st.hovered || st.hovered_raw) && enabled_for_paint;
+                let pressed = st.pressed && enabled_for_paint;
+
+                let base_bg = match checked_state {
+                    CheckedState::Unchecked => bg_unchecked,
+                    _ => bg_checked,
                 };
+                let bg =
+                    hover_overlay_bg(theme, alpha_mul(base_bg, disabled_alpha), hovered, pressed);
+                let border = hover_overlay_border(
+                    theme,
+                    alpha_mul(border_color, disabled_alpha),
+                    hovered,
+                    pressed,
+                );
 
                 let box_el = cx.container(
                     ContainerProps {
@@ -222,9 +240,9 @@ impl Checkbox {
                             },
                             ..Default::default()
                         },
-                        background: bg,
+                        background: Some(bg),
                         border: Edges::all(Px(1.0)),
-                        border_color: Some(alpha_mul(border_color, disabled_alpha)),
+                        border_color: Some(border),
                         corner_radii: Corners::all(checkbox_radius),
                         ..Default::default()
                     },
