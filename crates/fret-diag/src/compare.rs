@@ -1399,6 +1399,9 @@ pub(super) struct PerfThresholds {
     pub(super) max_top_total_us: Option<u64>,
     pub(super) max_top_layout_us: Option<u64>,
     pub(super) max_top_solve_us: Option<u64>,
+    pub(super) max_frame_p95_total_us: Option<u64>,
+    pub(super) max_frame_p95_layout_us: Option<u64>,
+    pub(super) max_frame_p95_solve_us: Option<u64>,
     pub(super) max_pointer_move_dispatch_us: Option<u64>,
     pub(super) max_pointer_move_hit_test_us: Option<u64>,
     pub(super) max_pointer_move_global_changes: Option<u64>,
@@ -1411,6 +1414,9 @@ impl PerfThresholds {
         self.max_top_total_us.is_some()
             || self.max_top_layout_us.is_some()
             || self.max_top_solve_us.is_some()
+            || self.max_frame_p95_total_us.is_some()
+            || self.max_frame_p95_layout_us.is_some()
+            || self.max_frame_p95_solve_us.is_some()
             || self.max_pointer_move_dispatch_us.is_some()
             || self.max_pointer_move_hit_test_us.is_some()
             || self.max_pointer_move_global_changes.is_some()
@@ -1507,6 +1513,15 @@ pub(super) fn read_perf_baseline_file(
                 .and_then(|v| v.as_u64()),
             max_top_solve_us: t
                 .and_then(|m| m.get("max_top_solve_us"))
+                .and_then(|v| v.as_u64()),
+            max_frame_p95_total_us: t
+                .and_then(|m| m.get("max_frame_p95_total_us"))
+                .and_then(|v| v.as_u64()),
+            max_frame_p95_layout_us: t
+                .and_then(|m| m.get("max_frame_p95_layout_us"))
+                .and_then(|v| v.as_u64()),
+            max_frame_p95_solve_us: t
+                .and_then(|m| m.get("max_frame_p95_solve_us"))
                 .and_then(|v| v.as_u64()),
             max_pointer_move_dispatch_us: t
                 .and_then(|m| m.get("max_pointer_move_dispatch_us"))
@@ -1661,6 +1676,15 @@ pub(super) fn scan_perf_threshold_failures(
     observed_layout_engine_solve_time_us: u64,
     max_layout_engine_solve_time_us: u64,
     p95_layout_engine_solve_time_us: u64,
+    observed_frame_p95_total_time_us: u64,
+    max_frame_p95_total_time_us: u64,
+    p95_frame_p95_total_time_us: u64,
+    observed_frame_p95_layout_time_us: u64,
+    max_frame_p95_layout_time_us: u64,
+    p95_frame_p95_layout_time_us: u64,
+    observed_frame_p95_layout_engine_solve_time_us: u64,
+    max_frame_p95_layout_engine_solve_time_us: u64,
+    p95_frame_p95_layout_engine_solve_time_us: u64,
     pointer_move_frames_present: bool,
     max_pointer_move_dispatch_time_us: u64,
     max_pointer_move_hit_test_time_us: u64,
@@ -1678,6 +1702,14 @@ pub(super) fn scan_perf_threshold_failures(
         resolve_threshold(cli.max_top_layout_us, baseline.max_top_layout_us);
     let (threshold_solve, source_solve) =
         resolve_threshold(cli.max_top_solve_us, baseline.max_top_solve_us);
+    let (threshold_frame_p95_total, source_frame_p95_total) =
+        resolve_threshold(cli.max_frame_p95_total_us, baseline.max_frame_p95_total_us);
+    let (threshold_frame_p95_layout, source_frame_p95_layout) = resolve_threshold(
+        cli.max_frame_p95_layout_us,
+        baseline.max_frame_p95_layout_us,
+    );
+    let (threshold_frame_p95_solve, source_frame_p95_solve) =
+        resolve_threshold(cli.max_frame_p95_solve_us, baseline.max_frame_p95_solve_us);
     let (threshold_pointer_move_dispatch, source_pointer_move_dispatch) = resolve_threshold(
         cli.max_pointer_move_dispatch_us,
         baseline.max_pointer_move_dispatch_us,
@@ -1754,6 +1786,60 @@ pub(super) fn scan_perf_threshold_failures(
             "actual_max_us": max_layout_engine_solve_time_us,
             "actual_p95_us": p95_layout_engine_solve_time_us,
             "outlier_suspected": p95_layout_engine_solve_time_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_frame_p95_total
+        && observed_frame_p95_total_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "frame_p95_total_time_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_frame_p95_total,
+            "actual_us": observed_frame_p95_total_time_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_frame_p95_total_time_us,
+            "actual_p95_us": p95_frame_p95_total_time_us,
+            "outlier_suspected": p95_frame_p95_total_time_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_frame_p95_layout
+        && observed_frame_p95_layout_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "frame_p95_layout_time_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_frame_p95_layout,
+            "actual_us": observed_frame_p95_layout_time_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_frame_p95_layout_time_us,
+            "actual_p95_us": p95_frame_p95_layout_time_us,
+            "outlier_suspected": p95_frame_p95_layout_time_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_frame_p95_solve
+        && observed_frame_p95_layout_engine_solve_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "frame_p95_layout_engine_solve_time_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_frame_p95_solve,
+            "actual_us": observed_frame_p95_layout_engine_solve_time_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_frame_p95_layout_engine_solve_time_us,
+            "actual_p95_us": p95_frame_p95_layout_engine_solve_time_us,
+            "outlier_suspected": p95_frame_p95_layout_engine_solve_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
             "evidence_bundle": evidence_bundle,
