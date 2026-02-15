@@ -30,7 +30,10 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
     out.insert(
         "Text".to_string(),
         component("Plain text")
-            .prop("text", CatalogPropV1::any())
+            .prop(
+                "text",
+                desc(CatalogPropV1::any(), "Text content (string or expression)."),
+            )
             .prop(
                 "variant",
                 CatalogPropV1::enum_values([
@@ -52,83 +55,209 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
     out.insert(
         "VStack".to_string(),
         component("Vertical stack (flex column)")
-            .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("px", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("py", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop(
+                "gap",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Space token between children (e.g. N2).",
+                ),
+            )
+            .prop(
+                "p",
+                desc(CatalogPropV1::enum_values(SPACE_TOKENS), "Padding token."),
+            )
+            .prop(
+                "px",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Horizontal padding token.",
+                ),
+            )
+            .prop(
+                "py",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Vertical padding token.",
+                ),
+            )
             .prop(
                 "items",
-                CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
+                desc(
+                    CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
+                    "Cross-axis alignment.",
+                ),
             )
             .prop(
                 "justify",
-                CatalogPropV1::enum_values(["start", "center", "end", "between"]),
+                desc(
+                    CatalogPropV1::enum_values(["start", "center", "end", "between"]),
+                    "Main-axis alignment.",
+                ),
             )
-            .prop("wrap", CatalogPropV1::boolean())
-            .prop("wFull", CatalogPropV1::boolean().default_value(json!(true)))
+            .prop(
+                "wrap",
+                desc(
+                    CatalogPropV1::boolean(),
+                    "Allow wrapping (mostly relevant for HStack).",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(true)),
+                    "Fill parent width.",
+                ),
+            )
             .prop(
                 "hFull",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent height.",
+                ),
             )
             .prop(
                 "minW0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (fix row overflow).",
+                ),
             )
             .prop(
                 "minH0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in height (fix column overflow).",
+                ),
             )
             .build(),
     );
     out.insert(
         "HStack".to_string(),
         component("Horizontal stack (flex row)")
-            .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("px", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("py", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop(
+                "gap",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Space token between children (e.g. N2).",
+                ),
+            )
+            .prop(
+                "p",
+                desc(CatalogPropV1::enum_values(SPACE_TOKENS), "Padding token."),
+            )
+            .prop(
+                "px",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Horizontal padding token.",
+                ),
+            )
+            .prop(
+                "py",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Vertical padding token.",
+                ),
+            )
             .prop(
                 "items",
-                CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
+                desc(
+                    CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
+                    "Cross-axis alignment.",
+                ),
             )
             .prop(
                 "justify",
-                CatalogPropV1::enum_values(["start", "center", "end", "between"]),
+                desc(
+                    CatalogPropV1::enum_values(["start", "center", "end", "between"]),
+                    "Main-axis alignment.",
+                ),
             )
-            .prop("wrap", CatalogPropV1::boolean())
-            .prop("wFull", CatalogPropV1::boolean().default_value(json!(true)))
+            .prop(
+                "wrap",
+                desc(
+                    CatalogPropV1::boolean(),
+                    "Allow wrapping (recommended for button rows).",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(true)),
+                    "Fill parent width.",
+                ),
+            )
             .prop(
                 "hFull",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent height.",
+                ),
             )
             .prop(
                 "minW0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (use with Input.flex1 in rows).",
+                ),
             )
             .prop(
                 "minH0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in height.",
+                ),
             )
             .build(),
     );
     out.insert(
         "Box".to_string(),
         component("Generic container (padding + sizing)")
-            .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("px", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("py", CatalogPropV1::enum_values(SPACE_TOKENS))
-            .prop("wFull", CatalogPropV1::boolean().default_value(json!(true)))
+            .prop(
+                "p",
+                desc(CatalogPropV1::enum_values(SPACE_TOKENS), "Padding token."),
+            )
+            .prop(
+                "px",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Horizontal padding token.",
+                ),
+            )
+            .prop(
+                "py",
+                desc(
+                    CatalogPropV1::enum_values(SPACE_TOKENS),
+                    "Vertical padding token.",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(true)),
+                    "Fill parent width.",
+                ),
+            )
             .prop(
                 "hFull",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent height.",
+                ),
             )
             .prop(
                 "minW0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (fix overflow).",
+                ),
             )
             .prop(
                 "minH0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in height (fix overflow).",
+                ),
             )
             .note("Box is not a stack: use VStack/HStack for `gap/items/justify/wrap`.")
             .build(),
@@ -138,6 +267,7 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         component("Card container")
             .prop("wrapContent", CatalogPropV1::boolean())
             .note("Default: wraps children with CardContent; set wrapContent=false to provide CardHeader/CardContent/CardFooter explicitly.")
+            .note("Prefer Box for generic padding/sizing boundaries; do not use CardContent as a general-purpose padding wrapper.")
             .build(),
     );
     out.insert(
@@ -146,7 +276,11 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
     );
     out.insert(
         "CardContent".to_string(),
-        component("Card content section (layout only)").build(),
+        component("Card content section (layout only)")
+            .note(
+                "CardContent is for Card internals; use Box for generic padding/sizing boundaries.",
+            )
+            .build(),
     );
     out.insert(
         "CardFooter".to_string(),
@@ -169,18 +303,30 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
     out.insert(
         "Button".to_string(),
         component("Button (clickable)")
-            .prop("label", CatalogPropV1::any())
+            .prop(
+                "label",
+                desc(CatalogPropV1::any(), "Button label (string or expression)."),
+            )
             .prop(
                 "wFull",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent width.",
+                ),
             )
             .prop(
                 "flex1",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Expand to fill available space in a row.",
+                ),
             )
             .prop(
                 "minW0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (fix overflow).",
+                ),
             )
             .events(["press"])
             .build(),
@@ -199,28 +345,51 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
     out.insert(
         "Input".to_string(),
         component("Single-line input")
-            .prop("placeholder", CatalogPropV1::string())
-            .prop("value", CatalogPropV1::string())
+            .prop(
+                "placeholder",
+                desc(CatalogPropV1::string(), "Placeholder text."),
+            )
+            .prop(
+                "value",
+                desc(
+                    CatalogPropV1::string(),
+                    "Input value (string or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
             .prop(
                 "wFull",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent width.",
+                ),
             )
             .prop(
                 "flex1",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Expand to fill available space in a row.",
+                ),
             )
             .prop(
                 "minW0",
-                CatalogPropV1::boolean().default_value(json!(false)),
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (use with flex1=true inside HStack).",
+                ),
             )
-            .note("Use {\"$bindState\": \"/path\"} for two-way binding on `value`.")
+            .note("Row pattern: HStack(items=center, wrap=true) + Input(flex1=true, minW0=true) to avoid overflow.")
             .build(),
     );
     out.insert(
         "Switch".to_string(),
         component("Boolean toggle")
-            .prop("checked", CatalogPropV1::boolean())
-            .note("Use {\"$bindState\": \"/path\"} for two-way binding on `checked`.")
+            .prop(
+                "checked",
+                desc(
+                    CatalogPropV1::boolean(),
+                    "Checked value (boolean or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
             .build(),
     );
     out.insert(

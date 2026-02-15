@@ -147,6 +147,10 @@ impl CatalogV1 {
                         out.push_str(" default=");
                         out.push_str(default.to_string().as_str());
                     }
+                    if let Some(desc) = def.description.as_deref() {
+                        out.push_str(" — ");
+                        out.push_str(desc);
+                    }
                     out.push('\n');
 
                     if let CatalogValueTypeV1::Object { fields, .. } = &def.value_type {
@@ -163,6 +167,10 @@ impl CatalogV1 {
                                 if let Some(default) = v.default.as_ref() {
                                     out.push_str(" default=");
                                     out.push_str(default.to_string().as_str());
+                                }
+                                if let Some(desc) = v.description.as_deref() {
+                                    out.push_str(" — ");
+                                    out.push_str(desc);
                                 }
                                 out.push('\n');
                             }

@@ -57,6 +57,12 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 - [x] Add a first-class action handler interface + executor (`GenUiActionExecutorV1`) with standard actions and portable effect actions (`openUrl`, `clipboardSetText`).
 - [x] Add “confirm/onSuccess/onError” executor helpers (opt-in confirm policy; best-effort chaining; bounded recursion).
 
+## P2.5 — Validation loop (forms, app-owned)
+
+- [ ] Decide v1 validation contract: issues keyed by JSON Pointer paths (e.g. `/form/email`), plus a stable issue shape for UI rendering.
+- [ ] Add a small validation helper (ecosystem-first): `ValidationState` model + `validate_all()` (spec/state + validator registry).
+- [ ] Wire `validate_all()` into submit-like actions via the app-owned executor (gate submit; record issues; keep UI policy app-owned).
+
 ## P3 — Schema export for LLM structured outputs
 
 - [x] Export a catalog-derived JSON Schema for LLM constraints.
@@ -90,5 +96,6 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 ## Next (proposed order)
 
 - [x] Add a generic `Box` component (padding + sizing) to avoid growing per-component layout props indefinitely.
+- [x] Improve catalog prompt hints for layout patterns (Box boundaries, HStack + Input `flex1 + minW0`).
 - [ ] Normalize card content ergonomics in the spec examples (e.g. prefer `Card` → `CardContent` for padded content).
 - [x] Add one more smoke spec focused on forms layout (labels, input widths, wrap, and alignment).

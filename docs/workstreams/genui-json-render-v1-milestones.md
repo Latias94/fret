@@ -87,3 +87,11 @@ Candidate exit criteria:
 
 - ✅ Mixed stream parser exists (text + JSONL patches) with deterministic behavior and small memory usage.
 - ✅ Apps can opt into "patch-only" strict mode vs "mixed" mode.
+
+## M9 — Validation loop (forms, app-owned)
+
+Candidate exit criteria:
+
+- A validation state model exists (issues keyed by JSON Pointer paths).
+- At least one submit-like action is gated by `validate_all()` via the app-owned executor.
+- Demo shows validation failures deterministically (no silent accept) and exposes issues in the inspector.

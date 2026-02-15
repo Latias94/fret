@@ -45,6 +45,7 @@ The current MVP matches the core **shape and semantics** (flat spec + catalog gu
 
 - Spec auto-fixes: ✅ GenUI v1 includes an opt-in auto-fixer for common LLM mistakes (moving `visible/on/repeat` out of `props`); it is not enabled automatically by the renderer.
 - Action execution pipeline helpers: ✅ GenUI v1 ships an opt-in executor (`GenUiActionExecutorV1`) with standard actions, portable effects, confirm gating, and `onSuccess`/`onError` chaining. Async execution, dialogs, permissions, and app-level policies remain app-owned.
+- Validation loop (forms): json-render wires a validation store into action handling (notably submit-like actions) via a provider and `validateAll`. GenUI v1 does not yet have a first-class validation surface.
 - Catalog type expressiveness: json-render uses Zod schemas (nested objects, arrays, unions, optional fields); GenUI v1 supports a growing typed surface (primitive + enum + nullable + object/array/oneOf + required/default metadata) plus dynamic expressions, but still lacks richer unions and deeper schema composition (e.g. nested optional/required modeling with strict repair hints).
 - Devtools/playground: json-render ships catalog display + interactive playground; GenUI v1 currently relies on the demo app (now includes a basic inspector) and existing Fret diagnostics.
 - Mixed stream transforms: ✅ GenUI v1 includes `mixed_stream` utilities (`MixedStreamParser`, `MixedSpecStreamCompiler`) with ```spec fence support, inspired by `pipeJsonRender`.
@@ -291,6 +292,25 @@ Examples:
   "children": ["a", "b", "c"]
 }
 ```
+
+## 7d. Validation loop (forms, app-owned)
+
+Upstream json-render wires a validation store into action handling (notably submit-like actions) via a provider and a `validateAll` hook.
+
+GenUI should match the same boundary:
+
+- Keep validation policy in ecosystem/app code (forms layer), not in `crates/fret-ui`.
+- Keep `fret-genui-core` unaware of validation semantics; it only emits invocations and provides app-owned execution hooks.
+
+Least-refactor v1 approach:
+
+- Introduce a small validation helper (ecosystem-first):
+  - `ValidationState` model: issues keyed by JSON Pointer path (e.g. `/form/email`).
+  - `validate_all(spec, state) -> ValidationState` (or a registry-based variant).
+- Wire it into the executor in apps:
+  - A submit-like action runs `validate_all()` first and either proceeds or records issues and fails fast.
+
+This mirrors the upstream pattern while keeping toasts/dialogs/navigation app-owned.
 
 ## 8. Diagnostics and test strategy
 
