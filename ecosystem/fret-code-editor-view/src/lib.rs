@@ -15,6 +15,7 @@ use std::sync::Arc;
 pub mod code_wrap_policy;
 mod folds;
 mod inlays;
+pub mod row_spans;
 
 pub use folds::{
     FoldSpan, FoldSpanError, apply_fold_spans, folded_byte_to_col, folded_col_count,
