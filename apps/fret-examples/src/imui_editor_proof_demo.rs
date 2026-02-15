@@ -22,6 +22,7 @@ use fret_ui_editor::controls::{
     NumericParseFn, NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions,
     TransformEdit, TransformEditOptions, Vec3Edit,
 };
+use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
@@ -488,6 +489,11 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                     }
 
                                                     if show_roughness {
+                                                        let roughness_fmt: NumericFormatFn<f64> =
+                                                            percent_0_1_format(0);
+                                                        let roughness_parse: NumericParseFn<f64> =
+                                                            percent_0_1_parse();
+
                                                         let model_for_reset =
                                                             editor_roughness_model.clone();
                                                         let on_reset = Arc::new(
@@ -519,6 +525,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                                     0.0,
                                                                     1.0,
                                                                 )
+                                                                .format(roughness_fmt.clone())
+                                                                .parse(roughness_parse.clone())
                                                                 .options(SliderOptions {
                                                                     a11y_label: Some(Arc::from(
                                                                         "Roughness",
@@ -543,6 +551,11 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                     }
 
                                                     if show_metallic {
+                                                        let metallic_fmt: NumericFormatFn<f64> =
+                                                            percent_0_1_format(0);
+                                                        let metallic_parse: NumericParseFn<f64> =
+                                                            percent_0_1_parse();
+
                                                         let model_for_reset =
                                                             editor_metallic_model.clone();
                                                         let on_reset = Arc::new(
@@ -574,6 +587,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                                     0.0,
                                                                     1.0,
                                                                 )
+                                                                .format(metallic_fmt.clone())
+                                                                .parse(metallic_parse.clone())
                                                                 .options(SliderOptions {
                                                                     a11y_label: Some(Arc::from(
                                                                         "Metallic",
