@@ -98,7 +98,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ### M4b — Optional contract expansion
 
-- [ ] REN-VNEXT-paint-010 If `Path` accepts `Paint`, add a conformance gate for gradient/material path fills.
+- [x] REN-VNEXT-paint-010 If `Path` accepts `Paint`, add a conformance gate for gradient/material path fills.
+  - Status: N/A for v1 (decision: `SceneOp::Path` remains solid-only).
+  - Follow-up: if v2 expands `Path` to accept `Paint`, add a dedicated work item and gate at that time.
 
 ## M5 — Sampling hints (bounded state surface)
 
@@ -177,11 +179,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ## Always-run guardrails (before/after each milestone)
 
 - [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-  - Last run: 2026-02-15 (post quad pipeline variants), commit `6f092733`.
+  - Last run: 2026-02-15, commit `c4f08adb`.
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
   - Status: satisfied through M5 (sampling hints conformance gate landed).
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
-  - Last capture: 2026-02-15 (post quad variants), commit `6f092733`.
+  - Last capture: 2026-02-15, commit `c4f08adb`.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).
 - [~] REN-VNEXT-guard-004 Keep a cheap headless perf gate green (stable counters).
   - Gate: `python3 tools/perf/headless_svg_atlas_stress_gate.py`

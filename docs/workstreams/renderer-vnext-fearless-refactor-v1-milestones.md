@@ -295,6 +295,17 @@ Perf snapshot (post quad variants):
   - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=17.58ms ... pipelines=1200 binds=27600 ...`
   - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
 
+Perf snapshot (post scissor tightening for textured draws):
+
+- Date: 2026-02-15
+- Commit: `c4f08adb`
+- Commands run (exact):
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -q -p fret-svg-atlas-stress --release -- --headless --frames 600`
+- Outputs (summary):
+  - `headless: frames=600 wall=0.06s prepare=12.69ms ...`
+  - `headless_renderer_perf: frames=600 encode=0.05ms prepare_svg=12.69ms prepare_text=0.09ms draws=27000 ... pipelines=1200 binds=27600 ...`
+  - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
+
 Progress record (Material sampled split in quad variants):
 
 - Date: 2026-02-15
