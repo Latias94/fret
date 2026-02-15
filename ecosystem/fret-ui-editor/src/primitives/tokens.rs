@@ -27,6 +27,11 @@ impl EditorTokenKeys {
 
     pub const ENUM_SELECT_MAX_LIST_HEIGHT: &'static str = "editor.enum_select.max_list_height";
 
+    pub const AXIS_X_COLOR: &'static str = "editor.axis.x_color";
+    pub const AXIS_Y_COLOR: &'static str = "editor.axis.y_color";
+    pub const AXIS_Z_COLOR: &'static str = "editor.axis.z_color";
+    pub const AXIS_W_COLOR: &'static str = "editor.axis.w_color";
+
     pub const COLOR_SWATCH_SIZE: &'static str = "editor.color.swatch_size";
     pub const COLOR_POPUP_PADDING: &'static str = "editor.color.popup_padding";
 }

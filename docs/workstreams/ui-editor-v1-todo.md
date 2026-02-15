@@ -122,9 +122,10 @@ Exit criteria:
   - [~] popup picker placeholder (can be minimal)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/color_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - [ ] copy/paste affordances (optional)
-- [ ] `Vec2Edit` / `Vec3Edit` / `Vec4Edit` (built on `DragValue<T>`):
-  - [ ] axis labels + axis color tokens
-  - [ ] per-axis reset hooks
+- [x] `Vec2Edit` / `Vec3Edit` / `Vec4Edit` (built on `DragValue<T>`):
+  - [x] axis labels + axis color tokens
+  - [x] per-axis reset hooks
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
 - [ ] `TransformEdit` (position/rotation/scale composite):
   - [ ] layout variants (row/column)
   - [ ] link scale toggle (optional)
@@ -171,8 +172,9 @@ Exit criteria:
 
 - Should `fret-ui-editor` integrate `fret-undo` behind a feature flag or keep undo policy app-owned?
 - Where should “axis color” defaults live (tokens vs theme aliases)?
-- Do we need a shared “precision format” helper module (unit formatting, angle display, percent display)?
-- What is the minimal popup picker contract for `ColorEdit` without importing a full color engine?
+  - Do we need a shared “precision format” helper module (unit formatting, angle display, percent display)?
+  - What is the minimal popup picker contract for `ColorEdit` without importing a full color engine?
+  - Should `VecNEdit` expose a combined model surface (e.g. `Model<[f64; 3]>`) in addition to per-axis models?
 
 ## Evidence checklist (for each landed component)
 

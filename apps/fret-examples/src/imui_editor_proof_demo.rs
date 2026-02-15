@@ -19,7 +19,7 @@ use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, Prope
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
     EnumSelectOptions, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
-    NumericParseFn, NumericValidateFn,
+    NumericParseFn, NumericValidateFn, Vec3Edit,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -159,6 +159,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_cast_shadows_model = editor_demo_cast_shadows_model(cx);
     let editor_shading_model = editor_demo_shading_model(cx);
     let editor_base_color_model = editor_demo_base_color_model(cx);
+    let (editor_pos_x, editor_pos_y, editor_pos_z) = editor_demo_position_models(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
 
@@ -256,6 +257,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
 
                     let advanced_show_all = q.is_empty() || matches("advanced");
                     let show_iterations = advanced_show_all || matches("iterations");
+                    let show_position =
+                        advanced_show_all || matches("position") || matches("pos");
 
                     let any_match =
                         show_opacity
@@ -265,7 +268,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                             || show_shading_model
                             || show_alpha_clip
                             || show_cast_shadows
-                            || show_iterations;
+                            || show_iterations
+                            || show_position;
 
                     vec![cx.flex(
                         FlexProps {
@@ -617,6 +621,10 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                         cx,
                                         |_cx| None,
                                         move |cx| {
+                                            let fmt_f64: fret_ui_editor::controls::NumericFormatFn<f64> =
+                                                Arc::new(|v| Arc::from(format!("{v:.3}")));
+                                            let parse_f64: fret_ui_editor::controls::NumericParseFn<f64> =
+                                                Arc::new(|s| s.trim().parse::<f64>().ok());
                                             let fmt_i32: fret_ui_editor::controls::NumericFormatFn<i32> =
                                                 Arc::new(|v| Arc::from(format!("{v}")));
                                             let parse_i32: fret_ui_editor::controls::NumericParseFn<i32> =
@@ -626,6 +634,55 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                 cx,
                                                 move |cx, row_cx| {
                                                     let mut rows = Vec::new();
+
+                                                    if show_position {
+                                                        let x_for_reset = editor_pos_x.clone();
+                                                        let y_for_reset = editor_pos_y.clone();
+                                                        let z_for_reset = editor_pos_z.clone();
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&x_for_reset, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&y_for_reset, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&z_for_reset, |v| *v = 0.0);
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().reset(Some(
+                                                                PropertyRowReset::new(on_reset)
+                                                                    .options(
+                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.advanced.position.reset")),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ),
+                                                            )),
+                                                            |cx| cx.text("Position"),
+                                                            |cx| {
+                                                                Vec3Edit::new(
+                                                                    editor_pos_x.clone(),
+                                                                    editor_pos_y.clone(),
+                                                                    editor_pos_z.clone(),
+                                                                    fmt_f64.clone(),
+                                                                    parse_f64.clone(),
+                                                                )
+                                                                .into_element(cx)
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.advanced.position",
+                                                                )
+                                                            },
+                                                            |_cx| None,
+                                                        ));
+                                                    }
 
                                                     if show_iterations {
                                                         let model_for_reset =
@@ -797,6 +854,32 @@ fn editor_demo_base_color_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Mo
                 },
             );
             model
+        }
+    }
+}
+
+fn editor_demo_position_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<f64>, Model<f64>, Model<f64>) {
+    let models = cx.with_state(
+        || None::<(Model<f64>, Model<f64>, Model<f64>)>,
+        |st| st.clone(),
+    );
+    match models {
+        Some(models) => models,
+        None => {
+            let x = cx.app.models_mut().insert(0.0_f64);
+            let y = cx.app.models_mut().insert(1.0_f64);
+            let z = cx.app.models_mut().insert(0.0_f64);
+            cx.with_state(
+                || None::<(Model<f64>, Model<f64>, Model<f64>)>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some((x.clone(), y.clone(), z.clone()));
+                    }
+                },
+            );
+            (x, y, z)
         }
     }
 }
