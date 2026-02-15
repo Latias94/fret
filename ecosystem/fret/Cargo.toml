@@ -27,8 +27,10 @@ desktop = [
     "dep:wgpu",
     "fret-framework/native-wgpu",
     "fret-bootstrap/ui-app-driver",
-    "fret-launch/dev-state",
 ]
+
+# Dev-only iteration helpers (fast restart state restore, etc).
+devloop = ["fret-launch/dev-state"]
 
 # Common app/dev conveniences (still optional; users can disable for minimal builds).
 diagnostics = ["fret-bootstrap/diagnostics"]

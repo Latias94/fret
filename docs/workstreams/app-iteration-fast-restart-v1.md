@@ -47,6 +47,11 @@ Recommended default (no Subsecond required):
 
 - `fretboard dev native --bin <app> --watch`
 
+Build note:
+
+- Dev-state is a dev-only feature gate. In external apps, enable `fret` feature `devloop`
+  (or `fret-launch` feature `dev-state`) for state restore support.
+
 Optional (Subsecond + fallback ladder):
 
 - `fretboard dev native --bin <app> --hotpatch`
@@ -142,7 +147,7 @@ Notes:
 4. **Crash loops**
    - Supervisor should detect repeated crashes and offer an easy “start clean” escape hatch:
      - ignore dev-state for one run (e.g. `FRET_DEV_STATE_RESET=1`)
-     - or delete/rename the dev-state file (manual; not automatic).
+     - or use `fretboard dev native --dev-state-reset` (clears the dev-state file).
 
 ## Deliverables
 
