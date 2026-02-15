@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use crate::catalog::CatalogV1;
+use crate::catalog::{CatalogV1, CatalogValueTypeV1};
 use crate::spec::{ElementKey, SpecV1};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,9 +25,11 @@ pub enum SpecIssueCode {
     SchemaVersionUnsupported,
     UnknownComponent,
     InvalidPropKey,
+    InvalidPropType,
     UnknownEvent,
     UnknownAction,
     InvalidActionParamKey,
+    InvalidActionParamType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -145,8 +147,8 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                 }
 
                 if let Some(component) = component {
-                    for prop_key in element.props.keys() {
-                        if !component.props.contains_key(prop_key) {
+                    for (prop_key, prop_value) in element.props.iter() {
+                        let Some(prop_def) = component.props.get(prop_key) else {
                             issues.push(SpecIssue {
                                 severity,
                                 code: SpecIssueCode::InvalidPropKey,
@@ -156,23 +158,38 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                                 ),
                                 element_key: Some(key.clone()),
                             });
+                            continue;
+                        };
+
+                        if !value_matches_type(prop_value, &prop_def.value_type, prop_def.nullable)
+                        {
+                            issues.push(SpecIssue {
+                                severity,
+                                code: SpecIssueCode::InvalidPropType,
+                                message: format!(
+                                    "Element {:?} has invalid value for prop key {:?} on component {} (expected {})",
+                                    key,
+                                    prop_key,
+                                    element.ty,
+                                    prop_def.value_type.prompt_hint(),
+                                ),
+                                element_key: Some(key.clone()),
+                            });
                         }
                     }
 
                     if let Some(on) = element.on.as_ref() {
-                        if !component.events.is_empty() {
-                            for event in on.keys() {
-                                if !component.events.contains(event.as_str()) {
-                                    issues.push(SpecIssue {
-                                        severity,
-                                        code: SpecIssueCode::UnknownEvent,
-                                        message: format!(
-                                            "Element {:?} binds unknown event {:?} for component {}",
-                                            key, event, element.ty
-                                        ),
-                                        element_key: Some(key.clone()),
-                                    });
-                                }
+                        for event in on.keys() {
+                            if !component.events.contains(event.as_str()) {
+                                issues.push(SpecIssue {
+                                    severity,
+                                    code: SpecIssueCode::UnknownEvent,
+                                    message: format!(
+                                        "Element {:?} binds unknown event {:?} for component {}",
+                                        key, event, element.ty
+                                    ),
+                                    element_key: Some(key.clone()),
+                                });
                             }
                         }
 
@@ -196,14 +213,35 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                                 // allow any params (action semantics are app-owned).
                                 if !action_def.params.is_empty() {
                                     if let Some(params) = b.params.as_ref() {
-                                        for param_key in params.keys() {
-                                            if !action_def.params.contains_key(param_key) {
+                                        for (param_key, param_value) in params.iter() {
+                                            let Some(param_def) = action_def.params.get(param_key)
+                                            else {
                                                 issues.push(SpecIssue {
                                                     severity,
                                                     code: SpecIssueCode::InvalidActionParamKey,
                                                     message: format!(
                                                         "Element {:?} uses unsupported param key {:?} for action {:?}",
                                                         key, param_key, b.action
+                                                    ),
+                                                    element_key: Some(key.clone()),
+                                                });
+                                                continue;
+                                            };
+
+                                            if !value_matches_type(
+                                                param_value,
+                                                &param_def.value_type,
+                                                param_def.nullable,
+                                            ) {
+                                                issues.push(SpecIssue {
+                                                    severity,
+                                                    code: SpecIssueCode::InvalidActionParamType,
+                                                    message: format!(
+                                                        "Element {:?} has invalid value for param key {:?} on action {:?} (expected {})",
+                                                        key,
+                                                        param_key,
+                                                        b.action,
+                                                        param_def.value_type.prompt_hint()
                                                     ),
                                                     element_key: Some(key.clone()),
                                                 });
@@ -311,6 +349,60 @@ fn catalog_issue_severity(mode: ValidationMode) -> Option<SpecIssueSeverity> {
         ValidationMode::Warn => Some(SpecIssueSeverity::Warning),
         ValidationMode::Ignore => None,
     }
+}
+
+fn value_matches_type(
+    value: &serde_json::Value,
+    expected: &CatalogValueTypeV1,
+    nullable: bool,
+) -> bool {
+    if value.is_null() {
+        return nullable;
+    }
+    if is_dynamic_expression(value) {
+        return true;
+    }
+
+    match expected {
+        CatalogValueTypeV1::Any => true,
+        CatalogValueTypeV1::String => value.as_str().is_some(),
+        CatalogValueTypeV1::Boolean => value.as_bool().is_some(),
+        CatalogValueTypeV1::Number => value.as_f64().is_some(),
+        CatalogValueTypeV1::Integer => value.as_i64().is_some() || value.as_u64().is_some(),
+        CatalogValueTypeV1::Enum { values } => value
+            .as_str()
+            .is_some_and(|s| values.iter().any(|v| v.as_str() == s)),
+    }
+}
+
+fn is_dynamic_expression(value: &serde_json::Value) -> bool {
+    let serde_json::Value::Object(obj) = value else {
+        return false;
+    };
+
+    // Keep this strict to avoid accidentally accepting literal objects as expressions.
+    if obj.len() == 1 {
+        if obj.get("$state").and_then(|v| v.as_str()).is_some() {
+            return true;
+        }
+        if obj.get("$item").and_then(|v| v.as_str()).is_some() {
+            return true;
+        }
+        if obj.get("$bindState").and_then(|v| v.as_str()).is_some() {
+            return true;
+        }
+        if obj.get("$bindItem").and_then(|v| v.as_str()).is_some() {
+            return true;
+        }
+        if obj.get("$index").and_then(|v| v.as_bool()) == Some(true) {
+            return true;
+        }
+    }
+
+    obj.len() == 3
+        && obj.contains_key("$cond")
+        && obj.contains_key("$then")
+        && obj.contains_key("$else")
 }
 
 #[cfg(test)]

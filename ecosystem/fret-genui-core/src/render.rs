@@ -15,9 +15,10 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 use serde_json::Value;
 
+use crate::catalog::CatalogV1;
 use crate::props::{PropResolutionContext, ResolvedProps};
 use crate::spec::{ElementKey, ElementV1, OnBindingV1, SpecV1};
-use crate::validate::{SpecIssue, ValidateSpecOptions, validate_spec};
+use crate::validate::{SpecIssue, ValidateSpecOptions, ValidationMode, validate_spec};
 use crate::visibility::{RepeatScope, VisibilityContext};
 
 #[derive(Debug, Clone, Default)]
@@ -48,6 +49,8 @@ pub struct GenUiRuntime {
     pub state: Model<Value>,
     pub action_queue: Option<Model<GenUiActionQueue>>,
     pub limits: RenderLimits,
+    pub catalog: Option<Arc<CatalogV1>>,
+    pub catalog_validation: ValidationMode,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -196,7 +199,8 @@ pub fn render_spec<H: UiHost, R: ComponentResolver<H>>(
                 set.insert(1);
                 set
             },
-            ..ValidateSpecOptions::default()
+            catalog: runtime.catalog.clone(),
+            catalog_validation: runtime.catalog_validation,
         },
     );
     if !validate.valid {

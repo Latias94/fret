@@ -13,6 +13,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum CatalogValueTypeV1 {
+    Any,
+    String,
+    Boolean,
+    Number,
+    Integer,
+    Enum { values: Vec<String> },
+}
+
+impl Default for CatalogValueTypeV1 {
+    fn default() -> Self {
+        Self::Any
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CatalogV1 {
     pub schema_version: u32,
     #[serde(default)]
@@ -103,9 +120,11 @@ impl CatalogV1 {
 
             if !component.props.is_empty() {
                 out.push_str("  props:\n");
-                for prop in component.props.keys() {
+                for (prop, def) in &component.props {
                     out.push_str("  - ");
                     out.push_str(prop);
+                    out.push_str(": ");
+                    out.push_str(def.value_type.prompt_hint().as_str());
                     out.push('\n');
                 }
             } else {
@@ -136,10 +155,11 @@ impl CatalogV1 {
                 for (k, v) in &action.params {
                     out.push_str("  - ");
                     out.push_str(k);
+                    out.push_str(": ");
+                    out.push_str(v.value_type.prompt_hint().as_str());
                     if let Some(desc) = v.description.as_deref() {
-                        out.push_str(" (");
+                        out.push_str(" — ");
                         out.push_str(desc);
-                        out.push(')');
                     }
                     out.push('\n');
                 }
@@ -151,6 +171,7 @@ impl CatalogV1 {
         out.push_str("- Every child key must exist in `elements`.\n");
         out.push_str("- Prefer a small, readable tree over many tiny nodes.\n");
         out.push_str("- Do not use components/actions outside the catalog.\n");
+        out.push_str("- Omit optional props/params instead of setting them to null.\n");
         out
     }
 }
@@ -215,11 +236,66 @@ pub struct CatalogPropV1 {
     /// Optional human prompt hint (not used for validation).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(default)]
+    pub value_type: CatalogValueTypeV1,
+    #[serde(default)]
+    pub nullable: bool,
 }
 
 impl CatalogPropV1 {
     pub fn new() -> Self {
-        Self { description: None }
+        Self {
+            description: None,
+            value_type: CatalogValueTypeV1::Any,
+            nullable: false,
+        }
+    }
+
+    pub fn any() -> Self {
+        Self::new()
+    }
+
+    pub fn string() -> Self {
+        Self {
+            value_type: CatalogValueTypeV1::String,
+            ..Self::new()
+        }
+    }
+
+    pub fn boolean() -> Self {
+        Self {
+            value_type: CatalogValueTypeV1::Boolean,
+            ..Self::new()
+        }
+    }
+
+    pub fn number() -> Self {
+        Self {
+            value_type: CatalogValueTypeV1::Number,
+            ..Self::new()
+        }
+    }
+
+    pub fn integer() -> Self {
+        Self {
+            value_type: CatalogValueTypeV1::Integer,
+            ..Self::new()
+        }
+    }
+
+    pub fn enum_values(values: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        let mut values = values.into_iter().map(Into::into).collect::<Vec<_>>();
+        values.sort();
+        values.dedup();
+        Self {
+            value_type: CatalogValueTypeV1::Enum { values },
+            ..Self::new()
+        }
+    }
+
+    pub fn nullable(mut self, nullable: bool) -> Self {
+        self.nullable = nullable;
+        self
     }
 }
 
@@ -230,19 +306,26 @@ impl Default for CatalogPropV1 {
 }
 
 fn action_binding_schema(catalog: &CatalogV1) -> Value {
-    let actions = catalog.actions.keys().cloned().collect::<Vec<_>>();
-    json!({
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["action"],
-      "properties": {
-        "action": { "type": "string", "enum": actions },
-        "params": { "type": "object", "additionalProperties": {} },
-        "confirm": {},
-        "onSuccess": {},
-        "onError": {}
-      }
-    })
+    let per_action = catalog
+        .actions
+        .iter()
+        .map(|(name, action)| {
+            json!({
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["action"],
+              "properties": {
+                "action": { "const": name },
+                "params": action_params_schema(action),
+                "confirm": {},
+                "onSuccess": {},
+                "onError": {}
+              }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    json!({ "oneOf": per_action })
 }
 
 fn on_schema(catalog: &CatalogV1) -> Value {
@@ -270,8 +353,8 @@ fn repeat_schema() -> Value {
 fn component_element_schema(name: &str, c: &CatalogComponentV1, catalog: &CatalogV1) -> Value {
     let props_properties = c
         .props
-        .keys()
-        .map(|k| (k.clone(), json!({})))
+        .iter()
+        .map(|(k, v)| (k.clone(), dynamic_value_schema(&v.value_type, v.nullable)))
         .collect::<serde_json::Map<_, _>>();
 
     json!({
@@ -293,6 +376,80 @@ fn component_element_schema(name: &str, c: &CatalogComponentV1, catalog: &Catalo
     })
 }
 
+fn action_params_schema(action: &CatalogActionV1) -> Value {
+    if action.params.is_empty() {
+        return json!({
+          "type": "object",
+          "additionalProperties": {}
+        });
+    }
+    let props = action
+        .params
+        .iter()
+        .map(|(k, v)| (k.clone(), dynamic_value_schema(&v.value_type, v.nullable)))
+        .collect::<serde_json::Map<_, _>>();
+    json!({
+      "type": "object",
+      "additionalProperties": false,
+      "properties": props
+    })
+}
+
+fn expression_object_schema() -> Value {
+    json!({
+      "type": "object",
+      "properties": {
+        "$state": { "type": "string" },
+        "$item": { "type": "string" },
+        "$index": { "type": "boolean" },
+        "$bindState": { "type": "string" },
+        "$bindItem": { "type": "string" },
+        "$cond": {},
+        "$then": {},
+        "$else": {}
+      },
+      "additionalProperties": true
+    })
+}
+
+fn dynamic_value_schema(ty: &CatalogValueTypeV1, nullable: bool) -> Value {
+    if matches!(ty, CatalogValueTypeV1::Any) {
+        return json!({});
+    }
+
+    let mut base = match ty {
+        CatalogValueTypeV1::String => json!({ "type": "string" }),
+        CatalogValueTypeV1::Boolean => json!({ "type": "boolean" }),
+        CatalogValueTypeV1::Number => json!({ "type": "number" }),
+        CatalogValueTypeV1::Integer => json!({ "type": "integer" }),
+        CatalogValueTypeV1::Enum { values } => json!({ "type": "string", "enum": values }),
+        CatalogValueTypeV1::Any => unreachable!("handled above"),
+    };
+    if nullable {
+        if let Some(t) = base.get_mut("type") {
+            if let Some(s) = t.as_str() {
+                *t = json!([s, "null"]);
+            }
+        }
+    }
+    json!({
+      "anyOf": [base, expression_object_schema()]
+    })
+}
+
+impl CatalogValueTypeV1 {
+    pub fn prompt_hint(&self) -> String {
+        match self {
+            Self::Any => "any".to_string(),
+            Self::String => "string".to_string(),
+            Self::Boolean => "boolean".to_string(),
+            Self::Number => "number".to_string(),
+            Self::Integer => "integer".to_string(),
+            Self::Enum { values } => format!("enum({})", values.join(" | ")),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,13 +460,9 @@ mod tests {
         catalog
             .components
             .insert("Text".to_string(), CatalogComponentV1::default());
-        catalog.actions.insert(
-            "setState".to_string(),
-            CatalogActionV1 {
-                description: None,
-                params: BTreeMap::new(),
-            },
-        );
+        catalog
+            .actions
+            .insert("setState".to_string(), CatalogActionV1::default());
 
         let schema = catalog.spec_json_schema();
         let elements = schema
@@ -331,7 +484,7 @@ mod tests {
         });
         assert!(text_variant.is_some());
 
-        let action_enum: Vec<String> = schema
+        let action_variants = schema
             .get("properties")
             .and_then(|p| p.get("elements"))
             .and_then(|e| e.get("additionalProperties"))
@@ -344,16 +497,17 @@ mod tests {
             .and_then(|ap| ap.get("oneOf"))
             .and_then(|v| v.as_array())
             .and_then(|oneof| oneof.first())
-            .and_then(|binding| binding.get("properties"))
-            .and_then(|p| p.get("action"))
-            .and_then(|a| a.get("enum"))
+            .and_then(|binding| binding.get("oneOf"))
             .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect()
-            })
+            .cloned()
             .unwrap_or_default();
-        assert!(action_enum.iter().any(|v| v == "setState"));
+
+        assert!(action_variants.iter().any(|v| {
+            v.get("properties")
+                .and_then(|p| p.get("action"))
+                .and_then(|a| a.get("const"))
+                .and_then(|v| v.as_str())
+                == Some("setState")
+        }));
     }
 }
