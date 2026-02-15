@@ -53,25 +53,20 @@ fn genui_layout_and_typography_smoke_renders_under_strict_catalog_validation() {
                 "props": { "gap": "N2", "query": "container", "fillLastRow": true, "columns": { "base": 1, "md": 2 } },
                 "children": ["g1", "g2", "g3"]
             },
-            "g1": { "type": "Card", "props": {}, "children": ["g1c"] },
-            "g1c": { "type": "CardContent", "props": {}, "children": ["g1t"] },
+            "g1": { "type": "Card", "props": {}, "children": ["g1t"] },
             "g1t": { "type": "Text", "props": { "text": "Card 1", "variant": "body" }, "children": [] },
-            "g2": { "type": "Card", "props": {}, "children": ["g2c"] },
-            "g2c": { "type": "CardContent", "props": {}, "children": ["g2t"] },
+            "g2": { "type": "Card", "props": {}, "children": ["g2t"] },
             "g2t": { "type": "Text", "props": { "text": "Card 2", "variant": "body" }, "children": [] },
-            "g3": { "type": "Card", "props": {}, "children": ["g3c"] },
-            "g3c": { "type": "CardContent", "props": {}, "children": ["g3t"] },
+            "g3": { "type": "Card", "props": {}, "children": ["g3t"] },
             "g3t": { "type": "Text", "props": { "text": "Card 3", "variant": "body" }, "children": [] },
             "stack": {
                 "type": "ResponsiveStack",
                 "props": { "gap": "N2", "query": "container", "direction": { "base": "vertical", "lg": "horizontal" } },
                 "children": ["s1", "s2"]
             },
-            "s1": { "type": "Card", "props": {}, "children": ["s1c"] },
-            "s1c": { "type": "CardContent", "props": {}, "children": ["s1t"] },
+            "s1": { "type": "Card", "props": {}, "children": ["s1t"] },
             "s1t": { "type": "Text", "props": { "text": "Stack A", "variant": "body" }, "children": [] },
-            "s2": { "type": "Card", "props": {}, "children": ["s2c"] },
-            "s2c": { "type": "CardContent", "props": {}, "children": ["s2t"] },
+            "s2": { "type": "Card", "props": {}, "children": ["s2t"] },
             "s2t": { "type": "Text", "props": { "text": "Stack B", "variant": "body" }, "children": [] }
         },
         "state": { "count": 3 }
