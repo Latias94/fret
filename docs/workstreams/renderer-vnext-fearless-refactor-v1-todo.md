@@ -136,9 +136,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Next:
     - Gate exists: `python3 tools/perf/headless_quad_material_stress_gate.py` (baseline in `docs/workstreams/perf-baselines/`).
     - Consider further bounded variants (e.g. material-kind or tile-mode subsets) only if perf bundles show material sampling/derivative hotspots.
-- [ ] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
+- [x] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
   - Keep `renderer::tests::shaders_validate_for_webgpu` as a baseline (Naga),
-  - and consider adding an optional Tint-based compile check (or a minimal static heuristic) to catch uniformity drift.
+  - and add an optional browser (Tint) compile gate to catch uniformity drift early.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/tests.rs` (`webgpu_tint_compiles_all_wgsl_shaders`)
 
 ## M6 — Perf recovery follow-ups (evidence-driven)
 

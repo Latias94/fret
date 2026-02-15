@@ -2249,6 +2249,7 @@ dependencies = [
  "unicode-script",
  "unicode-segmentation",
  "usvg",
+ "wasm-bindgen-test",
  "wgpu",
 ]
 

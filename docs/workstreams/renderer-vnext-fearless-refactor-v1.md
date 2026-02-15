@@ -98,6 +98,11 @@ WebGPU guardrail (portability sanity):
 
 - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
+Optional stronger guardrail (runs in a real browser WebGPU implementation, catches Tint uniformity drift):
+
+- `cd crates/fret-render-wgpu`
+- `wasm-pack test --headless --chrome`
+
 ## 2.2) Baseline runbook (copy/paste)
 
 This section describes a minimal, reproducible baseline capture for the refactor.
