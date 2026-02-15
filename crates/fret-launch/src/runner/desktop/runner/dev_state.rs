@@ -36,6 +36,7 @@ pub(crate) struct DevStateController {
     restore_outcome: RestoreOutcome,
     restored_main: Option<MainWindowGeometry>,
     restore_logged: bool,
+    restore_printed: bool,
     incoming_app: std::collections::HashMap<String, serde_json::Value>,
 
     next_poll_at: Instant,
@@ -117,6 +118,7 @@ impl DevStateController {
             restore_outcome,
             restored_main,
             restore_logged: false,
+            restore_printed: false,
             incoming_app,
             next_poll_at: now + poll_interval,
             last_observed: None,
@@ -178,6 +180,38 @@ impl DevStateController {
                         size = ?self.restored_main.map(|g| (g.logical_size.width, g.logical_size.height)),
                         restored_position = restored_position,
                         "dev_state: restored main window geometry",
+                    );
+                }
+            }
+        }
+
+        if !self.restore_printed {
+            self.restore_printed = true;
+            match self.restore_outcome {
+                RestoreOutcome::Disabled => {}
+                RestoreOutcome::ResetRequested => {
+                    eprintln!(
+                        "dev_state: reset requested (restore skipped): {}",
+                        self.path.display()
+                    );
+                }
+                RestoreOutcome::FileNotFound => {
+                    eprintln!(
+                        "dev_state: file not found (restore skipped): {}",
+                        self.path.display()
+                    );
+                }
+                RestoreOutcome::ParseFailed => {
+                    eprintln!(
+                        "dev_state: parse failed (restore skipped): {}",
+                        self.path.display()
+                    );
+                }
+                RestoreOutcome::Restored => {
+                    let restored_position = self.restored_main.and_then(|g| g.position).is_some();
+                    eprintln!(
+                        "dev_state: restored main window (restored_position={restored_position}) from {}",
+                        self.path.display()
                     );
                 }
             }
