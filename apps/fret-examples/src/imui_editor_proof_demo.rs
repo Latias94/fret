@@ -171,6 +171,15 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
 
+    #[cfg(debug_assertions)]
+    {
+        debug_assert_ne!(
+            editor_roughness_model.id(),
+            editor_metallic_model.id(),
+            "Roughness/Metallic models must be distinct; otherwise sliders will sync unintentionally."
+        );
+    }
+
     fret_imui::imui(cx, |ui| {
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
@@ -1007,304 +1016,137 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     })
 }
 
-fn editor_demo_value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
-    let model = cx.with_state(|| None::<Model<f64>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0.8_f64);
-            cx.with_state(
-                || None::<Model<f64>>,
-                |st| {
+fn named_demo_state<H: UiHost, S: Clone + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    name: &'static str,
+    init: impl FnOnce(&mut ElementContext<'_, H>) -> S,
+) -> S {
+    cx.named(name, |cx| {
+        let existing = cx.with_state(|| None::<S>, |st| st.clone());
+        match existing {
+            Some(v) => v,
+            None => {
+                let v = init(cx);
+                cx.with_state(|| None::<S>, |st| {
                     if st.is_none() {
-                        *st = Some(model.clone());
+                        *st = Some(v.clone());
                     }
-                },
-            );
-            model
+                });
+                v
+            }
         }
-    }
+    })
+}
+
+fn editor_demo_value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.value", |cx| {
+        cx.app.models_mut().insert(0.8_f64)
+    })
 }
 
 fn editor_demo_roughness_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
-    let model = cx.with_state(|| None::<Model<f64>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0.35_f64);
-            cx.with_state(
-                || None::<Model<f64>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.roughness", |cx| {
+        cx.app.models_mut().insert(0.35_f64)
+    })
 }
 
 fn editor_demo_metallic_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
-    let model = cx.with_state(|| None::<Model<f64>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0.1_f64);
-            cx.with_state(
-                || None::<Model<f64>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.metallic", |cx| {
+        cx.app.models_mut().insert(0.1_f64)
+    })
 }
 
 fn editor_demo_base_color_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Color> {
-    let model = cx.with_state(|| None::<Model<Color>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Color {
-                r: 0.9,
-                g: 0.2,
-                b: 0.2,
-                a: 1.0,
-            });
-            cx.with_state(
-                || None::<Model<Color>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.base_color", |cx| {
+        cx.app.models_mut().insert(Color {
+            r: 0.9,
+            g: 0.2,
+            b: 0.2,
+            a: 1.0,
+        })
+    })
 }
 
 fn editor_demo_position_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> (Model<f64>, Model<f64>, Model<f64>) {
-    let models = cx.with_state(
-        || None::<(Model<f64>, Model<f64>, Model<f64>)>,
-        |st| st.clone(),
-    );
-    match models {
-        Some(models) => models,
-        None => {
-            let x = cx.app.models_mut().insert(0.0_f64);
-            let y = cx.app.models_mut().insert(1.0_f64);
-            let z = cx.app.models_mut().insert(0.0_f64);
-            cx.with_state(
-                || None::<(Model<f64>, Model<f64>, Model<f64>)>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some((x.clone(), y.clone(), z.clone()));
-                    }
-                },
-            );
-            (x, y, z)
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.position", |cx| {
+        let x = cx.app.models_mut().insert(0.0_f64);
+        let y = cx.app.models_mut().insert(1.0_f64);
+        let z = cx.app.models_mut().insert(0.0_f64);
+        (x, y, z)
+    })
 }
 
 fn editor_demo_rotation_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> (Model<f64>, Model<f64>, Model<f64>) {
-    let models = cx.with_state(
-        || None::<(Model<f64>, Model<f64>, Model<f64>)>,
-        |st| st.clone(),
-    );
-    match models {
-        Some(models) => models,
-        None => {
-            let x = cx.app.models_mut().insert(0.0_f64);
-            let y = cx.app.models_mut().insert(0.0_f64);
-            let z = cx.app.models_mut().insert(0.0_f64);
-            cx.with_state(
-                || None::<(Model<f64>, Model<f64>, Model<f64>)>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some((x.clone(), y.clone(), z.clone()));
-                    }
-                },
-            );
-            (x, y, z)
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.rotation", |cx| {
+        let x = cx.app.models_mut().insert(0.0_f64);
+        let y = cx.app.models_mut().insert(0.0_f64);
+        let z = cx.app.models_mut().insert(0.0_f64);
+        (x, y, z)
+    })
 }
 
 fn editor_demo_scale_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> (Model<f64>, Model<f64>, Model<f64>) {
-    let models = cx.with_state(
-        || None::<(Model<f64>, Model<f64>, Model<f64>)>,
-        |st| st.clone(),
-    );
-    match models {
-        Some(models) => models,
-        None => {
-            let x = cx.app.models_mut().insert(1.0_f64);
-            let y = cx.app.models_mut().insert(1.0_f64);
-            let z = cx.app.models_mut().insert(1.0_f64);
-            cx.with_state(
-                || None::<(Model<f64>, Model<f64>, Model<f64>)>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some((x.clone(), y.clone(), z.clone()));
-                    }
-                },
-            );
-            (x, y, z)
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.scale", |cx| {
+        let x = cx.app.models_mut().insert(1.0_f64);
+        let y = cx.app.models_mut().insert(1.0_f64);
+        let z = cx.app.models_mut().insert(1.0_f64);
+        (x, y, z)
+    })
 }
 
 fn editor_demo_alpha_clip_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let model = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(
-                || None::<Model<bool>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.alpha_clip", |cx| {
+        cx.app.models_mut().insert(false)
+    })
 }
 
 fn editor_demo_cast_shadows_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<Option<bool>> {
-    let model = cx.with_state(|| None::<Model<Option<bool>>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            // Start in "mixed/indeterminate" to exercise tri-state checkbox rendering.
-            let model = cx.app.models_mut().insert(None::<bool>);
-            cx.with_state(
-                || None::<Model<Option<bool>>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.cast_shadows", |cx| {
+        // Start in "mixed/indeterminate" to exercise tri-state checkbox rendering.
+        cx.app.models_mut().insert(None::<bool>)
+    })
 }
 
 fn editor_demo_shading_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    let model = cx.with_state(|| None::<Model<Option<Arc<str>>>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Some::<Arc<str>>(Arc::from("lit")));
-            cx.with_state(
-                || None::<Model<Option<Arc<str>>>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.shading_model", |cx| {
+        cx.app
+            .models_mut()
+            .insert(Some::<Arc<str>>(Arc::from("lit")))
+    })
 }
 
 fn editor_demo_iterations_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<i32> {
-    let model = cx.with_state(|| None::<Model<i32>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(16_i32);
-            cx.with_state(
-                || None::<Model<i32>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.iterations", |cx| {
+        cx.app.models_mut().insert(16_i32)
+    })
 }
 
 fn editor_demo_search_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let model = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(
-                || None::<Model<String>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.search", |cx| {
+        cx.app.models_mut().insert(String::new())
+    })
 }
 
 fn editor_demo_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let model = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert("Cube".to_string());
-            cx.with_state(
-                || None::<Model<String>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.name", |cx| {
+        cx.app.models_mut().insert("Cube".to_string())
+    })
 }
 
 fn editor_demo_notes_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let model = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(
-                "Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n".to_string(),
-            );
-            cx.with_state(
-                || None::<Model<String>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    named_demo_state(cx, "imui_editor_proof_demo.model.notes", |cx| {
+        cx.app.models_mut().insert(
+            "Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n".to_string(),
+        )
+    })
 }
 
 fn install_dock_panel_registry(app: &mut App) {
