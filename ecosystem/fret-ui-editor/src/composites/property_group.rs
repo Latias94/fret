@@ -87,13 +87,25 @@ impl PropertyGroup {
         contents: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
-            let header_height = self
-                .options
-                .header_height
-                .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT))
-                .unwrap_or(density.row_height);
+            let (density, header_height, header_bg, header_border) = {
+                let theme = Theme::global(&*cx.app);
+                let density = EditorDensity::resolve(theme);
+                let header_height = self
+                    .options
+                    .header_height
+                    .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT))
+                    .unwrap_or(density.row_height);
+                let header_bg = theme
+                    .color_by_key("muted")
+                    .or_else(|| theme.color_by_key("component.card.bg"))
+                    .unwrap_or_else(|| theme.color_token("background"));
+                let header_border = theme
+                    .color_by_key("border")
+                    .or_else(|| theme.color_by_key("component.card.border"))
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+                (density, header_height, header_bg, header_border)
+            };
+
             let gap = self.options.gap.unwrap_or(Px(4.0));
 
             let collapsed_model = self
@@ -156,8 +168,8 @@ impl PropertyGroup {
                     cx.pressable_add_on_activate(on_activate);
 
                     let actions = header_actions(cx);
-                    vec![cx.flex(
-                        FlexProps {
+                    vec![cx.container(
+                        fret_ui::element::ContainerProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
@@ -166,24 +178,47 @@ impl PropertyGroup {
                                 },
                                 ..Default::default()
                             },
-                            direction: Axis::Horizontal,
-                            gap: Px(6.0),
-                            padding: Edges::symmetric(density.padding_x, density.padding_y),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: false,
+                            background: Some(header_bg),
+                            border: Edges {
+                                top: Px(0.0),
+                                right: Px(0.0),
+                                bottom: Px(1.0),
+                                left: Px(0.0),
+                            },
+                            border_color: Some(header_border),
+                            ..Default::default()
                         },
                         move |cx| {
-                            let mut out = Vec::new();
-                            if !disclosure.is_empty() {
-                                out.push(cx.text(disclosure));
-                            }
-                            out.push(cx.text(label.clone()));
-                            out.push(cx.spacer(SpacerProps::default()));
-                            if let Some(actions) = actions {
-                                out.push(actions);
-                            }
-                            out
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Auto,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    direction: Axis::Horizontal,
+                                    gap: Px(6.0),
+                                    padding: Edges::symmetric(density.padding_x, density.padding_y),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |cx| {
+                                    let mut out = Vec::new();
+                                    if !disclosure.is_empty() {
+                                        out.push(cx.text(disclosure));
+                                    }
+                                    out.push(cx.text(label.clone()));
+                                    out.push(cx.spacer(SpacerProps::default()));
+                                    if let Some(actions) = actions {
+                                        out.push(actions);
+                                    }
+                                    out
+                                },
+                            )]
                         },
                     )]
                 },

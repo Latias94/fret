@@ -7,18 +7,36 @@
 
 use std::sync::{Arc, Mutex};
 
-use fret_core::Px;
+use fret_core::text::{TextOverflow, TextWrap};
+use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::element::{
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
+    SizeStyle, TextProps,
+};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
     NumericValidateFn,
 };
 use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::{DragValueCore, DragValueCoreOptions};
+use crate::primitives::{DragValueCore, DragValueCoreOptions, EditorDensity};
+
+#[derive(Clone, Copy)]
+struct DragValueScrubChrome {
+    padding: Edges,
+    radius: Px,
+    border_width: Px,
+    bg: fret_core::Color,
+    border: fret_core::Color,
+    border_focus: fret_core::Color,
+    fg: fret_core::Color,
+    text_px: Px,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragValueMode {
@@ -99,6 +117,36 @@ where
 
             let typing = mode == DragValueMode::Typing;
 
+            let (density, scrub_chrome) = {
+                let theme = Theme::global(&*cx.app);
+                let density = EditorDensity::resolve(theme);
+                let resolved = resolve_input_chrome(
+                    theme,
+                    Size::Small,
+                    &ChromeRefinement::default(),
+                    InputTokenKeys {
+                        bg: Some("component.input.bg"),
+                        border: Some("component.input.border"),
+                        border_focus: Some("component.input.border_focus"),
+                        fg: Some("component.input.fg"),
+                        ..InputTokenKeys::none()
+                    },
+                );
+                (
+                    density,
+                    DragValueScrubChrome {
+                        padding: resolved.padding,
+                        radius: resolved.radius,
+                        border_width: resolved.border_width,
+                        bg: resolved.background,
+                        border: resolved.border_color,
+                        border_focus: resolved.border_color_focused,
+                        fg: resolved.text_color,
+                        text_px: resolved.text_px,
+                    },
+                )
+            };
+
             let model_for_change = self.model.clone();
             let on_change_live: Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, T) + 'static> =
                 Arc::new(move |host, action_cx, next| {
@@ -146,7 +194,54 @@ where
                         },
                     ));
 
-                    vec![cx.text(value_text.as_ref())]
+                    let is_focused = cx.is_focused_element(scrub_id);
+                    let border = if is_focused {
+                        scrub_chrome.border_focus
+                    } else {
+                        scrub_chrome.border
+                    };
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    min_height: Some(density.row_height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            padding: scrub_chrome.padding,
+                            background: Some(scrub_chrome.bg),
+                            border: Edges::all(scrub_chrome.border_width),
+                            border_color: Some(border),
+                            corner_radii: Corners::all(scrub_chrome.radius),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.text_props(TextProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Auto,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                text: value_text.clone(),
+                                style: Some(TextStyle {
+                                    size: scrub_chrome.text_px,
+                                    line_height: Some(density.row_height),
+                                    ..Default::default()
+                                }),
+                                color: Some(scrub_chrome.fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                                align: TextAlign::Start,
+                            })]
+                        },
+                    )]
                 });
 
             let mut input_layout = self.options.layout;
@@ -195,7 +290,16 @@ fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
     layout.size = SizeStyle {
         width: Length::Px(Px(0.0)),
         height: Length::Px(Px(0.0)),
+        min_width: Some(Px(0.0)),
+        min_height: Some(Px(0.0)),
         ..Default::default()
     };
+    layout.position = PositionStyle::Absolute;
+    layout.inset = InsetStyle {
+        top: Some(Px(0.0)),
+        left: Some(Px(0.0)),
+        ..Default::default()
+    };
+    layout.overflow = Overflow::Clip;
     layout
 }

@@ -196,6 +196,12 @@ impl EnumSelect {
                     });
                 cx.pressable_add_on_activate(on_activate);
 
+                let caret = if is_open { "▴" } else { "▾" };
+                let caret_fg = Theme::global(&*cx.app)
+                    .color_by_key("muted-foreground")
+                    .or_else(|| Theme::global(&*cx.app).color_by_key("muted_foreground"))
+                    .unwrap_or_else(|| Theme::global(&*cx.app).color_token("foreground"));
+
                 vec![cx.container(
                     ContainerProps {
                         layout: LayoutStyle {
@@ -214,26 +220,69 @@ impl EnumSelect {
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
-                                ..Default::default()
+                                direction: Axis::Horizontal,
+                                gap: Px(6.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                                wrap: false,
                             },
-                            text: trigger_text.clone(),
-                            style: Some(TextStyle {
-                                size: Px(12.0),
-                                line_height: Some(density.row_height),
-                                ..Default::default()
-                            }),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: TextAlign::Start,
-                        })]
+                            move |cx| {
+                                vec![
+                                    cx.text_props(TextProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Auto,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        text: trigger_text.clone(),
+                                        style: Some(TextStyle {
+                                            size: Px(12.0),
+                                            line_height: Some(density.row_height),
+                                            ..Default::default()
+                                        }),
+                                        color: Some(fg),
+                                        wrap: TextWrap::None,
+                                        overflow: TextOverflow::Ellipsis,
+                                        align: TextAlign::Start,
+                                    }),
+                                    cx.spacer(Default::default()),
+                                    cx.text_props(TextProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Px(density.hit_thickness),
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        text: Arc::from(caret),
+                                        style: Some(TextStyle {
+                                            size: Px(12.0),
+                                            line_height: Some(density.row_height),
+                                            ..Default::default()
+                                        }),
+                                        color: Some(caret_fg),
+                                        wrap: TextWrap::None,
+                                        overflow: TextOverflow::Clip,
+                                        align: TextAlign::Center,
+                                    }),
+                                ]
+                            },
+                        )]
                     },
                 )]
             },
