@@ -1619,6 +1619,7 @@ mod tests {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum PerfThresholdAggregate {
     Max,
+    P90,
     P95,
 }
 
@@ -1626,6 +1627,7 @@ impl PerfThresholdAggregate {
     pub(super) fn as_str(self) -> &'static str {
         match self {
             PerfThresholdAggregate::Max => "max",
+            PerfThresholdAggregate::P90 => "p90",
             PerfThresholdAggregate::P95 => "p95",
         }
     }
@@ -1637,8 +1639,9 @@ impl std::str::FromStr for PerfThresholdAggregate {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_ascii_lowercase().as_str() {
             "max" => Ok(PerfThresholdAggregate::Max),
+            "p90" => Ok(PerfThresholdAggregate::P90),
             "p95" => Ok(PerfThresholdAggregate::P95),
-            _ => Err(format!("invalid aggregate (expected max|p95): {s:?}")),
+            _ => Err(format!("invalid aggregate (expected max|p90|p95): {s:?}")),
         }
     }
 }

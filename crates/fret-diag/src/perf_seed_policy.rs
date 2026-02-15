@@ -164,6 +164,12 @@ pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'stat
             "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
             "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
         ]),
+        "ui-gallery-complex-steady" => Some(&[
+            "tools/diag-scripts/ui-gallery-chrome-torture-steady.json",
+            "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
+            "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+            "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+        ]),
         "extras-marquee-steady" => Some(&["tools/diag-scripts/extras-marquee-steady.json"]),
         _ => None,
     }

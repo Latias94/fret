@@ -7077,6 +7077,7 @@ See: `docs/tracy.md`.\n";
                     name,
                     "ui-gallery"
                         | "ui-gallery-steady"
+                        | "ui-gallery-complex-steady"
                         | "ui-resize-probes"
                         | "ui-code-editor-resize-probes"
                 ) {
@@ -7087,7 +7088,10 @@ See: `docs/tracy.md`.\n";
                         "1",
                     );
                 }
-                if matches!(name, "ui-gallery" | "ui-gallery-steady") {
+                if matches!(
+                    name,
+                    "ui-gallery" | "ui-gallery-steady" | "ui-gallery-complex-steady"
+                ) {
                     let _ = ensure_env_var(
                         &mut perf_launch_env,
                         "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
@@ -9067,14 +9071,17 @@ See: `docs/tracy.md`.\n";
 
                         let observed_total = match perf_threshold_agg {
                             PerfThresholdAggregate::Max => max_total,
+                            PerfThresholdAggregate::P90 => p90_total,
                             PerfThresholdAggregate::P95 => p95_total,
                         };
                         let observed_layout = match perf_threshold_agg {
                             PerfThresholdAggregate::Max => max_layout,
+                            PerfThresholdAggregate::P90 => p90_layout,
                             PerfThresholdAggregate::P95 => p95_layout,
                         };
                         let observed_solve = match perf_threshold_agg {
                             PerfThresholdAggregate::Max => max_solve,
+                            PerfThresholdAggregate::P90 => p90_solve,
                             PerfThresholdAggregate::P95 => p95_solve,
                         };
                         let row = serde_json::json!({
@@ -9111,6 +9118,11 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": percentile_nearest_rank_sorted(&sorted_total, 0.50),
                                 "top_layout_time_us": percentile_nearest_rank_sorted(&sorted_layout, 0.50),
                                 "top_layout_engine_solve_time_us": percentile_nearest_rank_sorted(&sorted_solve, 0.50),
+                            },
+                            "p90": {
+                                "top_total_time_us": p90_total,
+                                "top_layout_time_us": p90_layout,
+                                "top_layout_engine_solve_time_us": p90_solve,
                             },
                             "p95": {
                                 "top_total_time_us": p95_total,

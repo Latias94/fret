@@ -71,7 +71,18 @@ suite normalization hooks to reduce cross-script state contamination:
 Suggested defaults for UI-gallery perf work:
 
 - `--suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json`
-- `--suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json`
+- `--suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json`
+
+## Complex UI suite (typical perf)
+
+When you want to reason about “normal” performance (not just rare spikes), use a smaller suite that
+leans on editor-class and virtualization-heavy surfaces:
+
+- `target/release/fretboard.exe diag perf ui-gallery-complex-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+For “typical perf” gates (not tail), prefer comparing against `p90`:
+
+- `--perf-threshold-agg p90`
 
 ## Failure triage (when a gate fails)
 
