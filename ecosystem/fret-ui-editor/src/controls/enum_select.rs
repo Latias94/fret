@@ -626,8 +626,14 @@ fn request_overlay<H: UiHost>(
         list
     };
 
+    // For editor selects, we want menu-like outside press dismissal that does not "click through"
+    // (outside press closes the overlay without activating the underlay), but we do not need
+    // Radix-style `disableOutsidePointerEvents` occlusion. Keeping occlusion off improves
+    // reliability when other layers temporarily hold pointer capture.
     let mut request =
-        OverlayRequest::dismissible_menu(overlay_id, trigger_id, open, presence, vec![list]);
+        OverlayRequest::dismissible_popover(overlay_id, trigger_id, open, presence, vec![list]);
+    request.consume_outside_pointer_events = true;
+    request.disable_outside_pointer_events = false;
     request.close_on_window_focus_lost = true;
     request.close_on_window_resize = true;
     request.on_close_auto_focus = Some(close_focus);
