@@ -12,7 +12,7 @@ use fret_core::{Axis, Corners, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnCloseAutoFocus, OnKeyDown};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
@@ -500,6 +500,7 @@ fn request_overlay<H: UiHost>(
                             height: Length::Auto,
                             ..Default::default()
                         },
+                        overflow: Overflow::Clip,
                         ..Default::default()
                     },
                     padding: Edges::all(Px(8.0)),
