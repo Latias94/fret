@@ -260,6 +260,14 @@ Both components are:
 - implemented via Fret’s container/viewport query utilities (ADR 0231/0232),
 - subject to query realities:
   - container queries read **last committed** bounds (frame-lagged),
+
+## 7c. Card ergonomics (shadcn-backed)
+
+Cards in shadcn are **structure + spacing**. In GenUI v1, prefer these rules to avoid “everything is glued to the edge”:
+
+- Prefer `Card` with `wrapContent=true` (default) for single-body cards. This uses a conservative padded body container.
+- Use `Card.wrapContent=false` only when you explicitly author `CardHeader` / `CardContent` / `CardFooter`.
+- Avoid using `CardContent` as a generic padding wrapper for headerless cards: upstream shadcn-style content typically uses `pt-0` to sit closer to the header. Use `Box` for generic padding/layout boundaries.
   - hysteresis is applied to reduce oscillation near thresholds.
 
 ### 7b.1 Breakpoint object shape (Tailwind-compatible)
