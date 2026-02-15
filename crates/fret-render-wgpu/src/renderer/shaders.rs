@@ -754,35 +754,36 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let aa_outer = max(fwidth(outer_sdf), 1e-4);
   let alpha_outer = 1.0 - smoothstep(-aa_outer, aa_outer, outer_sdf);
 
-  // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
-  let inner_origin = input.rect.xy + vec2<f32>(input.border.x, input.border.y);
-  let inner_size = input.rect.zw - vec2<f32>(input.border.x + input.border.z, input.border.y + input.border.w);
+  var alpha_fill = alpha_outer;
+  var border_cov = 0.0;
+  if (FRET_BORDER_PRESENT != 0u) {
+    // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
+    let inner_origin = input.rect.xy + vec2<f32>(input.border.x, input.border.y);
+    let inner_size = input.rect.zw - vec2<f32>(input.border.x + input.border.z, input.border.y + input.border.w);
 
-  let inner_radii = max(
-    vec4<f32>(0.0),
-    vec4<f32>(
-      input.corner_radii.x - max(input.border.x, input.border.y), // TL
-      input.corner_radii.y - max(input.border.z, input.border.y), // TR
-      input.corner_radii.z - max(input.border.z, input.border.w), // BR
-      input.corner_radii.w - max(input.border.x, input.border.w)  // BL
-    )
-  );
+    let inner_radii = max(
+      vec4<f32>(0.0),
+      vec4<f32>(
+        input.corner_radii.x - max(input.border.x, input.border.y), // TL
+        input.corner_radii.y - max(input.border.z, input.border.y), // TR
+        input.corner_radii.z - max(input.border.z, input.border.w), // BR
+        input.corner_radii.w - max(input.border.x, input.border.w)  // BL
+      )
+    );
 
-  let inner_sdf = quad_sdf(input.local_pos, inner_origin, max(inner_size, vec2<f32>(0.0)), inner_radii);
-  let aa_inner = max(fwidth(inner_sdf), 1e-4);
-  let alpha_inner_raw = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
-  let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
-  let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
+    let inner_sdf = quad_sdf(input.local_pos, inner_origin, max(inner_size, vec2<f32>(0.0)), inner_radii);
+    let aa_inner = max(fwidth(inner_sdf), 1e-4);
+    let alpha_inner_raw = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
+    let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
+    let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
-  let border_present = FRET_BORDER_PRESENT != 0u;
-
-  let alpha_fill = select(alpha_outer, alpha_inner, border_present);
-  let border_cov_raw = saturate(alpha_outer - alpha_inner);
-  let border_cov = select(0.0, border_cov_raw, border_present);
+    alpha_fill = alpha_inner;
+    border_cov = saturate(alpha_outer - alpha_inner);
+  }
 
   let fill = paint_eval_fill(inst.fill_paint, input.local_pos) * alpha_fill;
   var border = vec4<f32>(0.0);
-  if (border_present) {
+  if (FRET_BORDER_PRESENT != 0u) {
     var dash_mask = 1.0;
     if (FRET_DASH_ENABLED != 0u) {
       let dash = inst.dash_params.x;
