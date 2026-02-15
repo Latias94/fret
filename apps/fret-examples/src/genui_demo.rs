@@ -73,6 +73,7 @@ const SPEC_JSON: &str = r#"
         "name_buttons",
         "sep_1",
         "counter_title",
+        "counter_desc",
         "counter_row",
         "sep_2",
         "todos_title",
@@ -87,7 +88,7 @@ const SPEC_JSON: &str = r#"
         "validation_title",
         "validation_desc",
         "email_row",
-        "email_error",
+        "email_errors",
         "submit_row",
         "sep_5",
         "responsive_title",
@@ -151,6 +152,7 @@ const SPEC_JSON: &str = r#"
     },
     "sep_1": { "type": "Separator", "props": {}, "children": [] },
     "counter_title": { "type": "Text", "props": { "text": "Counter (standard actions)", "variant": "large" }, "children": [] },
+    "counter_desc": { "type": "Text", "props": { "text": "Auto-apply on: updates immediately. Auto-apply off: actions only append to the queue.", "variant": "muted" }, "children": [] },
     "counter_row": {
       "type": "HStack",
       "props": { "gap": "N2", "wrap": true },
@@ -256,7 +258,7 @@ const SPEC_JSON: &str = r#"
     "sep_4": { "type": "Separator", "props": {}, "children": [] },
 
     "validation_title": { "type": "Text", "props": { "text": "Validation loop (submit is executor-gated)", "variant": "large" }, "children": [] },
-    "validation_desc": { "type": "Text", "props": { "text": "Try submitting with an invalid email. The app-owned formSubmit handler runs validate_all(), records issues into devtools state, and fails fast (onError chain).", "variant": "muted" }, "children": [] },
+    "validation_desc": { "type": "Text", "props": { "text": "Turn auto-apply off, press Submit form (enqueue), then click “Apply queue (executor)”. Invalid email should record issues and fail fast (onError chain).", "variant": "muted" }, "children": [] },
     "email_row": {
       "type": "HStack",
       "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true, "minW0": true },
@@ -269,10 +271,16 @@ const SPEC_JSON: &str = r#"
       "children": []
     },
     "email_value": { "type": "Text", "props": { "text": { "$state": "/form/email" }, "variant": "small" }, "children": [] },
-    "email_error": {
+    "email_errors": {
+      "type": "VStack",
+      "props": { "gap": "N1" },
+      "repeat": { "statePath": "/validation/issues" },
+      "children": ["email_error_item"]
+    },
+    "email_error_item": {
       "type": "Badge",
-      "props": { "label": { "$state": "/validation/emailError" }, "variant": "destructive" },
-      "visible": { "$state": "/validation/emailHasError", "eq": true },
+      "props": { "label": { "$item": "message" }, "variant": "destructive" },
+      "visible": { "$item": "path", "eq": "/form/email" },
       "children": []
     },
     "submit_row": {
@@ -361,7 +369,7 @@ const SPEC_JSON: &str = r#"
     ],
     "lastResult": "",
     "form": { "email": "" },
-    "validation": { "emailHasError": false, "emailError": "" }
+    "validation": { "issues": [] }
   }
 }
 "#;
@@ -536,25 +544,40 @@ impl MvuProgram for GenUiProgram {
                                 .unwrap_or(Value::Null);
                             let out = validate_all(&current, &validation_registry);
                             let ok = out.is_ok();
-                            let email_error = out
-                                .issues
-                                .iter()
-                                .find(|i| i.path == "/form/email")
-                                .map(|i| i.message.clone())
-                                .unwrap_or_default();
+
+                            let issues_for_state = Value::Array(
+                                out.issues
+                                    .iter()
+                                    .map(|i| {
+                                        let mut obj = serde_json::Map::new();
+                                        obj.insert(
+                                            "path".to_string(),
+                                            Value::String(i.path.clone()),
+                                        );
+                                        obj.insert(
+                                            "code".to_string(),
+                                            Value::String(i.code.clone()),
+                                        );
+                                        obj.insert(
+                                            "message".to_string(),
+                                            Value::String(i.message.clone()),
+                                        );
+                                        Value::Object(obj)
+                                    })
+                                    .collect::<Vec<_>>(),
+                            );
+
                             let _ = host.models_mut().update(&validation_model, |v| *v = out);
                             let _ = host.models_mut().update(&state_model_for_submit, |v| {
                                 let _ = json_pointer::set(
                                     v,
-                                    "/validation/emailHasError",
-                                    Value::Bool(!email_error.is_empty()),
+                                    "/validation/issues",
+                                    issues_for_state.clone(),
                                 );
-                                let _ = json_pointer::set(
-                                    v,
-                                    "/validation/emailError",
-                                    Value::String(email_error),
-                                );
+                                let _ =
+                                    json_pointer::set(v, "/validation/hasErrors", Value::Bool(!ok));
                             });
+
                             if ok {
                                 Ok(())
                             } else {
