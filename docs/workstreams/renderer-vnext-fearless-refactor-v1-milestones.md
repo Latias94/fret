@@ -321,6 +321,17 @@ Diag perf record (ui-gallery-steady; time-sorted):
   - Renderer p95 counters: draw_calls=`137`, pipeline_switches=`88`, bind_group_switches=`130`
   - Note: this run is native Vulkan (RTX 4090); it is intended as a stable “macro” datapoint for refactors, not a WebGPU-specific measure.
 
+Progress record (Material counters surfaced in diag perf stats):
+
+- Date: 2026-02-15
+- Status: Landed (evidence plumbing for `REN-VNEXT-webgpu-004`)
+- Commit: `26acd3ac`
+- Command (exact):
+  - `cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --repeat 1 --warmup-frames 5 --sort time --top 5 --json --dir target/fret-diag-perf/material-counters-check --env FRET_RENDERER_PERF_PIPELINES=1 --launch -- cargo run -q -p fret-ui-gallery --release`
+- Outputs (evidence bundle):
+  - Bundle: `target/fret-diag-perf/material-counters-check/1771146473986-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Output contains: `top_renderer_material_{quad_ops,sampled_quad_ops,distinct,unknown_ids,degraded_due_to_budget}`
+
 Progress record (Material sampled split in quad variants):
 
 - Date: 2026-02-15

@@ -154,12 +154,25 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `apps/fret-quad-material-stress/src/main.rs`
     - `tools/perf/headless_quad_material_stress_gate.py`
     - `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
+- [x] REN-VNEXT-diag-001 Surface renderer material counters in `diag perf` stats:
+  - Motivation: make `REN-VNEXT-webgpu-004` evidence-driven (avoid expanding the pipeline key space blindly).
+  - Output keys:
+    - `top_renderer_material_quad_ops`
+    - `top_renderer_material_sampled_quad_ops`
+    - `top_renderer_material_distinct`
+    - `top_renderer_material_unknown_ids`
+    - `top_renderer_material_degraded_due_to_budget`
+  - Evidence:
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1`)
+    - `crates/fret-diag/src/stats.rs` (`BundleStatsSnapshotRow`)
+    - `crates/fret-diag/src/lib.rs` (`diag perf --json` output)
 - [ ] REN-VNEXT-webgpu-004 If perf evidence warrants, add bounded `MaterialTileMode` pipeline variants:
   - Note: “tile mode” here refers to the material-kind selector channel in the quad shader (see `material_eval`),
     not gradient tile modes (which are sanitized/degraded today).
   - Decision rule (do not do this without evidence):
     - Only proceed if material work is measurably hot in at least one reproducible bundle:
       - `fretboard diag perf` (or a GPU profiler) shows the quad fragment shader is a top hotspot and `material_eval` dominates.
+      - Use `top_renderer_material_*` counters from `fretboard diag perf --json` (added in `REN-VNEXT-diag-001`) to keep this quantitative.
     - And the current bounded variants are insufficient (confirmed by one of):
       - `material_sampled_quad_ops` is high relative to `quad_draw_calls` in the headless gate’s `headless_renderer_perf_materials`
         output and wall time regresses in `fret-quad-material-stress` on the same machine.
