@@ -70,10 +70,12 @@ pub(crate) struct DevReloadWatcher {
 
 impl DevReloadWatcher {
     fn enabled() -> bool {
-        env_flag("FRET_DEV_RELOAD")
-            || env_flag("FRET_HOTPATCH")
-            || env_flag("DIOXUS_CLI_ENABLED")
-            || env_flag("FRET_DIAG")
+        // Explicit override: allow disabling even in hotpatch contexts.
+        if std::env::var_os("FRET_DEV_RELOAD").is_some() {
+            return env_flag("FRET_DEV_RELOAD");
+        }
+
+        env_flag("FRET_HOTPATCH") || env_flag("DIOXUS_CLI_ENABLED") || env_flag("FRET_DIAG")
     }
 
     pub(crate) fn install_if_enabled(app: &mut App) {

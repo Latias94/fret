@@ -122,6 +122,11 @@ fn hotpatch_status(args: Vec<String>) -> Result<(), String> {
                     println!("  last_view_call: {strategy} (from bootstrap log)");
                 }
             }
+
+            let reload_needle = "dev_reload:";
+            if let Some(line) = lines.iter().rev().find(|line| line.contains(reload_needle)) {
+                println!("  last_dev_reload: {line}");
+            }
         }
     }
 

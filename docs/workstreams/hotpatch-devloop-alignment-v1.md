@@ -107,6 +107,7 @@ Channels:
    - svg/png/fonts; invalidate caches and request redraw
    - default trigger file: `.fret/ui_assets.touch` (bump `UiAssetsReloadEpoch`)
    - intended usage: a tooling watcher updates the trigger file when assets change
+   - current scope (L1): path-based image decode (`ImageSource::from_path`) and SVG file bytes (`SvgFileSource`)
 
 3) **Hot literals**
    - developer strings/labels/tooltips sourced from a data file in `.fret/` or the app root
