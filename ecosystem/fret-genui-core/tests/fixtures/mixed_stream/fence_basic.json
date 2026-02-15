@@ -1,0 +1,21 @@
+{
+  "name": "fence_basic",
+  "options": { "mode": "mixed" },
+  "chunks": [
+    "Prose first\n",
+    "```spec\n",
+    "{\"op\":\"add\",\"path\":\"/a\",\"value\":1}\n",
+    "{\"op\":\"add\",\"path\":\"/b\",\"value\":2}\n",
+    "```\n",
+    "Tail prose\n"
+  ],
+  "expect": {
+    "text_lines": ["Prose first", "Tail prose"],
+    "patches": [
+      { "op": "add", "path": "/a", "value": 1 },
+      { "op": "add", "path": "/b", "value": 2 }
+    ],
+    "result": { "a": 1, "b": 2 }
+  }
+}
+

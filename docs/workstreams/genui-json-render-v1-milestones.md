@@ -74,5 +74,5 @@ Candidate exit criteria:
 
 Candidate exit criteria:
 
-- Mixed stream parser exists (text + JSONL patches) with deterministic behavior and small memory usage.
+- ✅ Mixed stream parser exists (text + JSONL patches) with deterministic behavior and small memory usage.
 - Apps can opt into "patch-only" strict mode vs "mixed" mode.

@@ -63,7 +63,7 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 
 ## P4 — LLM ingest utilities (strategy/boundary layer)
 
-- [ ] Add mixed-stream parser utilities (text + JSONL patches) similar to `pipeJsonRender`.
+- [x] Add mixed-stream parser utilities (text + JSONL patches) similar to `pipeJsonRender`.
 - [ ] Decide if/where to enable JSON repair (input boundary only; never for patch-only mode).
 
 ## Testing + gates

@@ -73,6 +73,11 @@ impl SpecStreamCompiler {
         self.result
     }
 
+    /// Apply a parsed JSON Patch operation to the current compiled value.
+    pub fn apply_patch(&mut self, patch: &JsonPatch) -> Result<(), SpecStreamError> {
+        apply_patch(&mut self.result, patch)
+    }
+
     /// Push a raw text chunk (typically from an LLM stream) and apply any complete patch lines.
     ///
     /// Returns the patches that were applied, in order.
@@ -103,7 +108,7 @@ impl SpecStreamCompiler {
             }
 
             let patch: JsonPatch = serde_json::from_str(trimmed)?;
-            apply_patch(&mut self.result, &patch)?;
+            self.apply_patch(&patch)?;
             applied.push(patch);
         }
 
