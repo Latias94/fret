@@ -145,12 +145,18 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 Goal: make editor geometry queries (caret/hit-test/IME bounds) **cache-stable and auditable** under:
 folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
 
-- [ ] Define the stable cache key for row geometry:
-  - [ ] text revision + display window mapping epoch,
-  - [ ] shaping-relevant style key (font/axes/features/letter spacing),
-  - [ ] constraints key (wrap width bucket, scale factor),
-  - [ ] `TextFontStackKey` revision.
-- [ ] Ensure paint-only changes never invalidate row geometry caches.
+- [~] Define the stable cache key for row geometry:
+  - [~] text revision + display window mapping epoch (handled by cache invalidation on
+    `(revision, wrap_cols, folds_epoch, inlays_epoch)` and by pointer-identity row keys),
+  - [x] shaping-relevant style key (font/axes/features/letter spacing) via `RowGeomKey`,
+  - [x] constraints key (wrap/overflow/max width bucket, scale factor) via `RowGeomKey`,
+  - [x] `TextFontStackKey` revision via `RowGeomKey` + cache clears on font stack change.
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
+- [x] Ensure paint-only changes never invalidate row geometry caches.
+  - Regression gate:
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
 - [ ] Add a catastrophic regression guard for “resize jitter + visible viewport”:
   - reuse the UI wrap smoke gate as a baseline,
   - add a code-editor-specific diag perf script once the row spans pipeline is in place.

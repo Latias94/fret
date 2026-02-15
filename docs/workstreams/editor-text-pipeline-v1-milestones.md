@@ -132,3 +132,11 @@ Exit criteria:
 - Regression gates exist for:
   - resize jitter stability,
   - font stack invalidation (no stale geometry answers).
+
+Evidence anchors (initial):
+
+- Geometry cache key:
+  - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
+- Paint-only stability gate:
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
