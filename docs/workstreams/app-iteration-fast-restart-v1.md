@@ -1,6 +1,6 @@
 ---
 title: App Iteration Fast Restart + State Restore (v1)
-status: draft
+status: in_progress
 date: 2026-02-15
 scope: app authoring devloop (native-first; wasm follow-up)
 ---
@@ -16,6 +16,23 @@ Bottom line:
 - High-frequency UI tweaks should prefer **no-compile reload channels** (theme/assets/literals), not Rust patching.
 
 The goal is a workflow that feels “hot” while staying conservative and portable.
+
+## Current status (2026-02-15)
+
+Implemented on branch `ws/app-iteration-fast-restart-v1` (worktree); not merged to `main` yet.
+
+- Dev-state file: `.fret/dev_state.json` (v1, versioned, forward-compatible, atomic writes).
+- Window geometry restore:
+  - `main` window restore
+  - multi-window restore by stable keys (e.g. `main`, `floating-1`, `aux:<id>`), including app-registered keys.
+  - off-screen restored positions are dropped (best-effort clamp-by-drop).
+- Docking layout restore:
+  - `docking_demo` and `docking_arbitration_demo` persist/restore layout via dev-state hooks.
+- App-owned state (opt-in):
+  - `todo_demo` restores a small snapshot via hooks.
+- Restart hygiene:
+  - flush dev-state on window close / quit
+  - watch-mode restarts request a graceful exit before killing the process
 
 ## Goals
 

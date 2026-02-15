@@ -1,6 +1,6 @@
 ---
 title: App Iteration Fast Restart + State Restore (v1) — Milestones
-status: draft
+status: in_progress
 date: 2026-02-15
 scope: native-first devloop; docking + multi-window follow-up
 ---
@@ -13,6 +13,13 @@ Workstream entry:
 
 This milestone plan defines “done” in terms of observable outcomes (demos / diagnostics evidence),
 not internal implementation details.
+
+## Status (2026-02-15)
+
+Implemented on branch `ws/app-iteration-fast-restart-v1` (worktree); not merged to `main` yet.
+
+- M0–M4 are functionally complete for native devloop iteration.
+- Remaining follow-ups are mostly polish / diagnostics surfacing (see TODO tracker).
 
 ## M0 — Scope locked (contract + UX)
 
