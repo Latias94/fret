@@ -176,6 +176,7 @@ The GenUI layer should not bake in navigation, persistence, or side-effect polic
 Standard actions:
 
 - `setState`: update the JSON state model via JSON Pointer (`/path`) with a new `value`.
+- `incrementState`: increment a numeric JSON state field (`/path`) by an integer `delta` (defaults to `1`).
 - `fret-genui-core` provides a small helper (`fret_genui_core::actions::apply_standard_action`) so
   apps can opt into these semantics without embedding them in the renderer.
 

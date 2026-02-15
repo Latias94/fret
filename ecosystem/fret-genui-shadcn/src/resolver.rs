@@ -188,10 +188,39 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
     ) -> Result<AnyElement, ShadcnResolverError> {
         let resolved_props = &props.props;
         match element.ty.as_str() {
-            "Card" => Ok(fret_ui_shadcn::Card::new([
-                fret_ui_shadcn::CardContent::new(children).into_element(cx)
-            ])
-            .into_element(cx)),
+            "Card" => {
+                let wrap_content = resolved_props
+                    .get("wrapContent")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                if wrap_content {
+                    Ok(fret_ui_shadcn::Card::new([
+                        fret_ui_shadcn::CardContent::new(children).into_element(cx)
+                    ])
+                    .into_element(cx))
+                } else {
+                    Ok(fret_ui_shadcn::Card::new(children).into_element(cx))
+                }
+            }
+            "CardHeader" => Ok(fret_ui_shadcn::CardHeader::new(children).into_element(cx)),
+            "CardContent" => Ok(fret_ui_shadcn::CardContent::new(children).into_element(cx)),
+            "CardFooter" => Ok(fret_ui_shadcn::CardFooter::new(children).into_element(cx)),
+            "CardTitle" => {
+                let text = Self::json_to_label(
+                    resolved_props
+                        .get("text")
+                        .or_else(|| resolved_props.get("title")),
+                );
+                Ok(fret_ui_shadcn::CardTitle::new(text).into_element(cx))
+            }
+            "CardDescription" => {
+                let text = Self::json_to_label(
+                    resolved_props
+                        .get("text")
+                        .or_else(|| resolved_props.get("description")),
+                );
+                Ok(fret_ui_shadcn::CardDescription::new(text).into_element(cx))
+            }
             "Text" => {
                 let text = Self::json_to_label(resolved_props.get("text"));
                 Ok(fret_ui_kit::ui::text(cx, text).into_element(cx))
@@ -202,6 +231,7 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                 Ok(fret_ui_kit::ui::v_flex(cx, move |_cx| children)
                     .gap(gap)
                     .items_start()
+                    .w_full()
                     .into_element(cx))
             }
             "HStack" => {
@@ -210,6 +240,48 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                 Ok(fret_ui_kit::ui::h_flex(cx, move |_cx| children)
                     .gap(gap)
                     .items_center()
+                    .w_full()
+                    .into_element(cx))
+            }
+            "Separator" => {
+                let orientation = resolved_props
+                    .get("orientation")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| match s {
+                        "horizontal" => Some(fret_ui_shadcn::SeparatorOrientation::Horizontal),
+                        "vertical" => Some(fret_ui_shadcn::SeparatorOrientation::Vertical),
+                        _ => None,
+                    })
+                    .unwrap_or(fret_ui_shadcn::SeparatorOrientation::Horizontal);
+                let flex_stretch_cross_axis = resolved_props
+                    .get("flexStretchCrossAxis")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
+                Ok(fret_ui_shadcn::Separator::new()
+                    .orientation(orientation)
+                    .flex_stretch_cross_axis(flex_stretch_cross_axis)
+                    .into_element(cx))
+            }
+            "ScrollArea" => {
+                let axis = resolved_props
+                    .get("axis")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| match s {
+                        "x" => Some(fret_ui::element::ScrollAxis::X),
+                        "y" => Some(fret_ui::element::ScrollAxis::Y),
+                        "both" => Some(fret_ui::element::ScrollAxis::Both),
+                        _ => None,
+                    })
+                    .unwrap_or(fret_ui::element::ScrollAxis::Y);
+                let show_scrollbar = resolved_props
+                    .get("showScrollbar")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+
+                Ok(fret_ui_shadcn::ScrollArea::new(children)
+                    .axis(axis)
+                    .show_scrollbar(show_scrollbar)
                     .into_element(cx))
             }
             "Button" => {

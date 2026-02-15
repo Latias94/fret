@@ -34,13 +34,36 @@ const SPEC_JSON: &str = r#"
     "header": { "type": "Text", "props": { "text": "GenUI Demo (json-render-inspired)" }, "children": [] },
     "card": {
       "type": "Card",
+      "props": { "wrapContent": false },
+      "children": ["card_header", "card_content"]
+    },
+    "card_header": {
+      "type": "CardHeader",
+      "props": {},
+      "children": ["card_title", "card_desc"]
+    },
+    "card_title": { "type": "CardTitle", "props": { "text": "Spec-driven UI" }, "children": [] },
+    "card_desc": { "type": "CardDescription", "props": { "text": "Bindings, repeat, and standard actions." }, "children": [] },
+    "card_content": {
+      "type": "CardContent",
       "props": {},
       "children": ["card_stack"]
     },
     "card_stack": {
       "type": "VStack",
       "props": { "gap": "N2" },
-      "children": ["bind_title", "enabled_row", "name_row", "name_buttons", "todos_title", "todos_list"]
+      "children": [
+        "bind_title",
+        "enabled_row",
+        "name_row",
+        "name_buttons",
+        "sep_1",
+        "counter_title",
+        "counter_row",
+        "sep_2",
+        "todos_title",
+        "todos_list"
+      ]
     },
     "bind_title": { "type": "Text", "props": { "text": "Bindings ($bindState demo)" }, "children": [] },
     "enabled_row": {
@@ -95,6 +118,32 @@ const SPEC_JSON: &str = r#"
       "on": { "press": { "action": "setState", "params": { "statePath": "/name", "value": "" } } },
       "children": []
     },
+    "sep_1": { "type": "Separator", "props": {}, "children": [] },
+    "counter_title": { "type": "Text", "props": { "text": "Counter (standard actions)" }, "children": [] },
+    "counter_row": {
+      "type": "HStack",
+      "props": { "gap": "N2" },
+      "children": ["counter_label", "counter_value", "counter_dec", "counter_inc"]
+    },
+    "counter_label": { "type": "Text", "props": { "text": "Count:" }, "children": [] },
+    "counter_value": {
+      "type": "Badge",
+      "props": { "label": { "$state": "/count" }, "variant": "secondary" },
+      "children": []
+    },
+    "counter_dec": {
+      "type": "Button",
+      "props": { "label": "Decrement" },
+      "on": { "press": { "action": "incrementState", "params": { "statePath": "/count", "delta": -1 } } },
+      "children": []
+    },
+    "counter_inc": {
+      "type": "Button",
+      "props": { "label": "Increment" },
+      "on": { "press": { "action": "incrementState", "params": { "statePath": "/count", "delta": 1 } } },
+      "children": []
+    },
+    "sep_2": { "type": "Separator", "props": {}, "children": [] },
     "todos_title": { "type": "Text", "props": { "text": "Todos (repeat demo)" }, "children": [] },
     "todos_list": {
       "type": "VStack",
@@ -107,6 +156,7 @@ const SPEC_JSON: &str = r#"
   "state": {
     "name": "Ada",
     "enabled": true,
+    "count": 0,
     "todos": [
       { "id": "a", "label": "Keep runtime mechanism-only (ADR 0066)" },
       { "id": "b", "label": "Render from a flat spec + catalog" },
