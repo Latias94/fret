@@ -149,7 +149,7 @@ folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
   - [~] text revision + display window mapping epoch (handled by cache invalidation on
     `(revision, wrap_cols, folds_epoch, inlays_epoch)` and by pointer-identity row keys),
   - [x] shaping-relevant style key (font/axes/features/letter spacing) via `RowGeomKey`,
-  - [x] constraints key (wrap/overflow/max width bucket, scale factor) via `RowGeomKey`,
+  - [x] constraints key (wrap/overflow/max width bucket, scale factor) via `RowGeomKey` (64px ceil bucket for wrap=None + align=Start),
   - [x] `TextFontStackKey` revision via `RowGeomKey` + cache clears on font stack change.
   - Evidence:
     - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
