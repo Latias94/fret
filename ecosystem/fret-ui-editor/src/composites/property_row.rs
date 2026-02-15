@@ -27,7 +27,8 @@ impl Default for PropertyRowResetOptions {
     fn default() -> Self {
         Self {
             enabled: true,
-            glyph: Arc::from("⟲"),
+            // ASCII fallback (avoid missing-glyph tofu on default fonts).
+            glyph: Arc::from("R"),
             a11y_label: Arc::from("Reset to default"),
             test_id: None,
         }

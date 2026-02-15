@@ -12,8 +12,8 @@ use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SizeStyle, TextProps,
+    AnyElement, ContainerProps, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::recipes::input::InputTokenKeys;
@@ -50,10 +50,31 @@ impl Default for DragValueState {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct DragValueOptions {
     pub layout: LayoutStyle,
     pub test_id: Option<Arc<str>>,
+}
+
+impl Default for DragValueOptions {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                flex: FlexItemStyle {
+                    grow: 1.0,
+                    basis: Length::Px(Px(0.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            test_id: None,
+        }
+    }
 }
 
 #[derive(Clone)]

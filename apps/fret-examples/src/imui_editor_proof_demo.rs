@@ -82,6 +82,7 @@ pub fn run() -> anyhow::Result<()> {
             shadcn::shadcn_themes::ShadcnBaseColor::Slate,
             shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         );
+        fret_icons_lucide::install_app(app);
         install_dock_panel_registry(app);
     })
     .run()?;

@@ -146,10 +146,7 @@ pub(super) fn paint_dock(
                 )
             } else {
                 (
-                    Color {
-                        a: 0.0,
-                        ..panel_bg
-                    },
+                    Color { a: 0.0, ..panel_bg },
                     Edges::all(Px(0.0)),
                     fret_core::Corners::all(Px(0.0)),
                 )

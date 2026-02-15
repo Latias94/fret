@@ -8,12 +8,12 @@
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
+    MainAlign, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -38,7 +38,8 @@ impl Default for AxisResetOptions {
     fn default() -> Self {
         Self {
             enabled: true,
-            glyph: Arc::from("⟲"),
+            // ASCII fallback (avoid missing-glyph tofu on default fonts).
+            glyph: Arc::from("R"),
             a11y_label: Arc::from("Reset axis"),
             test_id: None,
         }
@@ -69,8 +70,11 @@ fn axis_label_el<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     density: EditorDensity,
     label: Arc<str>,
-    color: Color,
+    tint: Color,
+    fg: Color,
 ) -> AnyElement {
+    let bg = Color { a: 0.22, ..tint };
+    let border = Color { a: 0.55, ..tint };
     cx.container(
         ContainerProps {
             layout: LayoutStyle {
@@ -82,6 +86,10 @@ fn axis_label_el<H: UiHost>(
                 ..Default::default()
             },
             padding: Edges::all(Px(0.0)),
+            background: Some(bg),
+            border: Edges::all(Px(1.0)),
+            border_color: Some(border),
+            corner_radii: Corners::all(Px(4.0)),
             ..Default::default()
         },
         move |cx| {
@@ -100,7 +108,7 @@ fn axis_label_el<H: UiHost>(
                     line_height: Some(density.row_height),
                     ..Default::default()
                 }),
-                color: Some(color),
+                color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: TextAlign::Center,
@@ -203,6 +211,11 @@ where
                     height: Length::Auto,
                     ..Default::default()
                 },
+                flex: FlexItemStyle {
+                    grow: 1.0,
+                    basis: Length::Px(Px(0.0)),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             direction: Axis::Horizontal,
@@ -217,7 +230,9 @@ where
             if let Some(reset) = reset_el {
                 out.push(reset);
             }
-            out.push(axis_label_el(cx, density, label, color));
+            let theme = Theme::global(&*cx.app);
+            let label_fg = theme.color_token("foreground");
+            out.push(axis_label_el(cx, density, label, color, label_fg));
             out.push(
                 DragValue::new(model, format, parse)
                     .validate(validate)

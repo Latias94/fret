@@ -2,6 +2,7 @@
 
 pub mod density;
 pub mod edit_session;
+pub(crate) mod icons;
 pub mod tokens;
 
 pub(crate) mod chrome;

@@ -613,9 +613,15 @@ impl DockSpace {
         layout: &std::collections::HashMap<DockNodeId, Rect>,
         drag_panel: Option<&PanelKey>,
     ) {
-        self.tab_text_style.size = theme.metric_token("font.size");
-        self.tab_close_style.size = theme.metric_token("font.size");
-        self.empty_state_style.size = theme.metric_token("font.size");
+        let font_size = theme.metric_token("font.size");
+        let line_height = theme.metric_token("font.line_height");
+
+        self.tab_text_style.size = font_size;
+        self.tab_close_style.size = font_size;
+        self.empty_state_style.size = font_size;
+        self.tab_text_style.line_height = Some(line_height);
+        self.tab_close_style.line_height = Some(line_height);
+        self.empty_state_style.line_height = Some(line_height);
 
         let mut visible_set: HashSet<PanelKey> = HashSet::new();
         for &node_id in layout.keys() {
@@ -646,7 +652,7 @@ impl DockSpace {
             let titles_unchanged = visible_set.iter().all(|panel| {
                 let title = dock
                     .panel(panel)
-                    .map(|p| p.title.as_str())
+                    .and_then(|p| (!p.title.is_empty()).then_some(p.title.as_str()))
                     .unwrap_or(panel.kind.0.as_str());
                 let hash = hash_title(title);
                 self.tab_titles
@@ -683,8 +689,9 @@ impl DockSpace {
             scale_factor,
         };
 
+        // ASCII fallbacks: avoid missing-glyph tofu on default fonts.
         let (close_blob, close_metrics) = services.text().prepare_str(
-            "×",
+            "x",
             &self.tab_close_style,
             TextConstraints {
                 max_width: None,
@@ -701,7 +708,7 @@ impl DockSpace {
         });
 
         let (more_blob, more_metrics) = services.text().prepare_str(
-            "⋯",
+            "...",
             &self.tab_close_style,
             TextConstraints {
                 max_width: None,
@@ -720,7 +727,7 @@ impl DockSpace {
         for panel in visible_set {
             let title = dock
                 .panel(&panel)
-                .map(|p| p.title.as_str())
+                .and_then(|p| (!p.title.is_empty()).then_some(p.title.as_str()))
                 .unwrap_or(panel.kind.0.as_str());
             let title_hash = hash_title(title);
             let (mut blob, mut metrics) =

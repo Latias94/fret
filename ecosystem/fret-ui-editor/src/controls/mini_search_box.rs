@@ -7,19 +7,19 @@
 
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Edges, KeyCode, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Edges, KeyCode, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
-    PressableProps, SizeStyle, TextInputProps, TextProps,
+    PressableProps, SizeStyle, TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::EditorDensity;
+use crate::primitives::icons::editor_icon;
 
 #[derive(Debug, Clone)]
 pub struct MiniSearchBoxOptions {
@@ -78,7 +78,7 @@ impl MiniSearchBox {
             .read_model_ref(&self.model, Invalidation::Layout, |s| !s.is_empty())
             .unwrap_or(false);
 
-        let (density, chrome, text_style, muted_fg) = {
+        let (density, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
             let density = EditorDensity::resolve(theme);
             let resolved = resolve_input_chrome(
@@ -119,10 +119,7 @@ impl MiniSearchBox {
                 line_height: Some(font_line_height),
                 ..Default::default()
             };
-
-            let muted_fg = theme.color_token("muted-foreground");
-
-            (density, chrome, text_style, muted_fg)
+            (density, chrome, text_style)
         };
 
         let mut input_props = TextInputProps::new(self.model.clone());
@@ -194,26 +191,32 @@ impl MiniSearchBox {
                     });
                     cx.pressable_add_on_activate(on_activate);
 
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            direction: Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
                         },
-                        text: Arc::from("×"),
-                        style: Some(TextStyle {
-                            size: Px(12.0),
-                            line_height: Some(density.row_height),
-                            ..Default::default()
-                        }),
-                        color: Some(muted_fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: TextAlign::Center,
-                    })]
+                        move |cx| {
+                            vec![editor_icon(
+                                cx,
+                                density,
+                                fret_icons::ids::ui::CLOSE,
+                                Some(Px(12.0)),
+                            )]
+                        },
+                    )]
                 },
             );
             if let Some(test_id) = self.options.clear_test_id.as_ref() {

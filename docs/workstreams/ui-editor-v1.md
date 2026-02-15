@@ -76,6 +76,18 @@ a shadcn-aligned skin:
 
 This avoids long-term dependency cycles and keeps the editor surface reusable outside shadcn apps.
 
+## Icon strategy (editor chrome)
+
+`fret-ui-editor` uses **semantic icon IDs** from `ecosystem/fret-icons` for small chrome affordances
+(e.g. disclosure chevrons, combo caret, clear buttons). Rendering is done via `SvgIcon` elements
+(`crates/fret-ui` mechanism) and SVG sources resolved through the global icon registry (`IconRegistry`).
+
+Guidelines:
+
+- Components should prefer semantic IDs (`ui.chevron.down`, `ui.close`, …) rather than vendor IDs.
+- Apps should install an icon pack (e.g. `ecosystem/fret-icons-lucide`) or provide their own mapping.
+- The editor-proof demo installs the lucide pack to avoid “missing icon” placeholders.
+
 ## Authoring model (single source of truth)
 
 Rules:
@@ -190,6 +202,13 @@ Notes:
 | `editor.axis.w_color` | color | Axis label color (W) | muted |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
+
+## Demo / repro
+
+Proof harness (native):
+
+- Run: `cargo run -p fret-demo --bin imui_editor_proof_demo`
+- Single-window mode (no tear-off): `$env:FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW="1"; cargo run -p fret-demo --bin imui_editor_proof_demo`
 
 ## Interaction contracts (v1)
 

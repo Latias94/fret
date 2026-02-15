@@ -1,7 +1,7 @@
 # `fret-ui-editor` — ImGui / `fret-ui-precision` Alignment Inventory v1
 
 Status: Active inventory (workstream note; not an ADR)  
-Last updated: 2026-02-14
+Last updated: 2026-02-15
 
 ## Purpose
 
@@ -46,13 +46,13 @@ Legend:
 | `PropertyRow` | C | M1 | “2-column item layout” (common inspector pattern) | `repo-ref/fret-ui-precision/src/components/showcase/demos/BuildSettingsDemo.tsx` | `editor.property.column_gap`, `editor.density.row_height` | `label_slot`, `value_slot`, `actions_slot`, `reset_hook` | Slots: label/value/actions; reset-to-default affordance. |
 | `EditorDensity` | A | M2 | `ImGuiStyle` metrics (frame padding, item spacing, etc.) | `repo-ref/fret-ui-precision/docs/DESIGN_PHILOSOPHY.md` | `editor.density.*` | (N/A) | Namespaced density tokens; used across composites. |
 | `FieldStatus` | A | M2 | Disabled/hovered variants; status text patterns | (N/A) | `editor.*` + theme semantic colors | `status_slot`, query/selector adapters | Optional `query/selector` glue for loading/error/mixed/dirty. |
-| `MiniSearchBox` | B | M2 | `InputTextWithHint` | `repo-ref/fret-ui-precision/src/components/showcase/demos/CommandPaletteDemo.tsx` | `editor.density.*` | `on_change`, `on_submit`, `leading_icon_slot` | Used by palette + inspector filtering. |
+| `MiniSearchBox` | B | M2 | `InputTextWithHint` | `repo-ref/fret-ui-precision/src/components/showcase/demos/CommandPaletteDemo.tsx` | `editor.density.*` | `on_change`, `on_submit`, `leading_icon_slot` | Used by palette + inspector filtering; clear affordance uses semantic `ui.close` icon (SVG). |
 | `PropertyGroup` | C | M2 | `CollapsingHeader` / `TreeNodeEx` patterns | `repo-ref/fret-ui-precision/src/components/showcase/demos/CollapsingHeaderDemo.tsx` | `editor.property.group_header_height` | `header_slot`, `default_open` | Collapsible group header + section; search anchors. |
 | `PropertyGrid` | C | M2 | “inspector layout” + child scrolling | `repo-ref/fret-ui-precision/src/components/showcase/demos/BuildSettingsDemo.tsx` | `editor.property.*`, `editor.density.*` | `row_builder`, `virtualization_policy` | Decide virtualization strategy; avoid forcing runtime changes. |
 | `Checkbox` | B | M3 | `Checkbox`, mixed/indeterminate patterns | (N/A) | `editor.checkbox.*`, `editor.density.*` | `a11y_label`, `test_id` | Supports `Model<bool>` and `Model<Option<bool>>` (`None` = indeterminate). |
 | `EnumSelect` | B | M3 | `Combo` / listbox patterns | `repo-ref/fret-ui-precision/src/components/showcase/demos/AutocompleteDemo.tsx` | `editor.density.*` | `item_renderer`, `filter_policy` | Filterable select; item render slot. |
 | `ColorEdit` | B | M3 | `ColorEdit3/4`, `ColorPicker3/4` | `repo-ref/fret-ui-precision/src/components/showcase/demos/ColorPickerDemo.tsx` | `editor.color.*`, `editor.density.*` | `popup_content_slot`, `format_policy` | Start minimal: swatch + hex; popup picker can be incremental. |
-| `VecNEdit` | B | M3 | `DragFloat2/3/4` | `repo-ref/fret-ui-precision/src/components/showcase/demos/MatrixInputDemo.tsx` | `editor.numeric.*`, axis color tokens | `axis_label_slot`, `axis_reset_hook` | Implemented as `Vec2Edit/Vec3Edit/Vec4Edit` (axis labels + tokens + optional per-axis reset hooks). Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
+| `VecNEdit` | B | M3 | `DragFloat2/3/4` | `repo-ref/fret-ui-precision/src/components/showcase/demos/MatrixInputDemo.tsx` | `editor.numeric.*`, axis color tokens | `axis_label_slot`, `axis_reset_hook` | Implemented as `Vec2Edit/Vec3Edit/Vec4Edit` (axis labels + tokens + optional per-axis reset hooks). Axis groups grow evenly in-row; axis labels use a tinted background for stronger affordance. Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
 | `TransformEdit` | C | M3 | common editor composite | `repo-ref/fret-ui-precision/src/components/showcase/demos/MaterialEditorDemo.tsx` | `editor.density.*` | `layout_variant`, per-section slots | Implemented as `TransformEdit` (position/rotation/scale, optional link-scale). Evidence: `ecosystem/fret-ui-editor/src/controls/transform_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
 | `AssetRefField` | B | M3 | “combo + preview” patterns | `repo-ref/fret-ui-precision/src/components/showcase/demos/AssetPickerDemo.tsx` | `editor.density.*` | `data_source`, `preview_slot`, query adapters | UI-only shell; caller injects data; query integration optional. |
 | `InspectorPanel` | C | M3 | “left inspector” pattern | `repo-ref/fret-ui-precision/src/components/showcase/demos/BuildSettingsDemo.tsx` | `editor.density.*`, `editor.property.*` | `toolbar_slot`, `sections_slot` | Search + toolbar slots + grid; should look “real”. |

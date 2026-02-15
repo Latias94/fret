@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
+use crate::primitives::icons::editor_icon;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 pub type OnPropertyGroupToggle = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
@@ -97,7 +98,6 @@ impl PropertyGroup {
                 panel_border,
                 radius,
                 header_fg,
-                header_muted_fg,
             ) = {
                 let theme = Theme::global(&*cx.app);
                 let density = EditorDensity::resolve(theme);
@@ -126,10 +126,6 @@ impl PropertyGroup {
                 let header_fg = theme
                     .color_by_key("foreground")
                     .unwrap_or_else(|| theme.color_token("foreground"));
-                let header_muted_fg = theme
-                    .color_by_key("muted-foreground")
-                    .or_else(|| theme.color_by_key("muted_foreground"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
                 (
                     density,
                     header_height,
@@ -139,7 +135,6 @@ impl PropertyGroup {
                     panel_border,
                     radius,
                     header_fg,
-                    header_muted_fg,
                 )
             };
 
@@ -154,12 +149,13 @@ impl PropertyGroup {
                 .get_model_copied(&collapsed_model, Invalidation::Layout)
                 .unwrap_or(self.options.default_collapsed);
 
-            let disclosure = if self.options.collapsible {
-                // ASCII fallback (avoid missing-glyph tofu on default fonts).
-                if collapsed { ">" } else { "v" }
-            } else {
-                ""
-            };
+            let disclosure_icon = self.options.collapsible.then(|| {
+                if collapsed {
+                    fret_icons::ids::ui::CHEVRON_RIGHT
+                } else {
+                    fret_icons::ids::ui::CHEVRON_DOWN
+                }
+            });
 
             let label = self.label.clone();
             let collapsible = self.options.collapsible;
@@ -251,16 +247,8 @@ impl PropertyGroup {
                                         line_height: Some(header_height),
                                         ..Default::default()
                                     };
-                                    if !disclosure.is_empty() {
-                                        out.push(cx.text_props(TextProps {
-                                            layout: LayoutStyle::default(),
-                                            text: Arc::from(disclosure),
-                                            style: Some(header_text_style.clone()),
-                                            color: Some(header_muted_fg),
-                                            wrap: TextWrap::None,
-                                            overflow: TextOverflow::Clip,
-                                            align: TextAlign::Start,
-                                        }));
+                                    if let Some(icon) = disclosure_icon.clone() {
+                                        out.push(editor_icon(cx, density, icon, Some(Px(12.0))));
                                     }
                                     out.push(cx.text_props(TextProps {
                                         layout: LayoutStyle {

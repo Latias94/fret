@@ -122,12 +122,19 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
   - [x] `PropertyGroup` header has a background and divider for visual grouping.
     - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
+  - [x] Replace tofu-prone glyph chrome with SVG icons via semantic `fret-icons` IDs.
+    - Evidence: `ecosystem/fret-ui-editor/src/primitives/icons.rs`
+    - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs` (disclosure chevrons)
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs` (caret)
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/mini_search_box.rs` (clear)
+    - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (lucide pack install)
   - [x] Proof demo uses ui-kit-styled buttons for top-level actions (avoid bare text buttons).
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - [ ] Define a shared `EditorChrome` recipe (optional): centralize token keys and defaults so controls don’t drift.
   - [~] Ensure docking tabs remain legible under the demo theme (tab text, hover/active states).
     - Evidence anchor: `apps/fret-examples/src/imui_editor_proof_demo.rs`
     - Implementation evidence: `ecosystem/fret-docking/src/dock/paint.rs`
+    - Implementation evidence: `ecosystem/fret-docking/src/dock/space.rs` (tab title prep fallback + line-height)
 
 ### M3 — Core editor controls (Color / Vec / Transform / Asset refs)
 
@@ -143,7 +150,7 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
 - [x] `Vec2Edit` / `Vec3Edit` / `Vec4Edit` (built on `DragValue<T>`):
   - [x] axis labels + axis color tokens
   - [x] per-axis reset hooks
-  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `ecosystem/fret-ui-editor/src/controls/drag_value.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
 - [~] `TransformEdit` (position/rotation/scale composite):
   - [x] layout variants (row/column)
   - [x] link scale toggle (optional)

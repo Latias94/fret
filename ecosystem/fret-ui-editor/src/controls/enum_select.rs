@@ -22,6 +22,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
+use crate::primitives::icons::editor_icon;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -196,12 +197,11 @@ impl EnumSelect {
                     });
                 cx.pressable_add_on_activate(on_activate);
 
-                // ASCII fallback (avoid missing-glyph tofu on default fonts).
-                let caret = if is_open { "^" } else { "v" };
-                let caret_fg = Theme::global(&*cx.app)
-                    .color_by_key("muted-foreground")
-                    .or_else(|| Theme::global(&*cx.app).color_by_key("muted_foreground"))
-                    .unwrap_or_else(|| Theme::global(&*cx.app).color_token("foreground"));
+                let caret_icon = if is_open {
+                    fret_icons::ids::ui::CHEVRON_UP
+                } else {
+                    fret_icons::ids::ui::CHEVRON_DOWN
+                };
 
                 vec![cx.container(
                     ContainerProps {
@@ -261,26 +261,48 @@ impl EnumSelect {
                                         align: TextAlign::Start,
                                     }),
                                     cx.spacer(Default::default()),
-                                    cx.text_props(TextProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Px(density.hit_thickness),
-                                                height: Length::Fill,
+                                    cx.container(
+                                        ContainerProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Px(density.hit_thickness),
+                                                    height: Length::Fill,
+                                                    ..Default::default()
+                                                },
                                                 ..Default::default()
                                             },
+                                            padding: Edges::all(Px(0.0)),
                                             ..Default::default()
                                         },
-                                        text: Arc::from(caret),
-                                        style: Some(TextStyle {
-                                            size: Px(12.0),
-                                            line_height: Some(density.row_height),
-                                            ..Default::default()
-                                        }),
-                                        color: Some(caret_fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Clip,
-                                        align: TextAlign::Center,
-                                    }),
+                                        move |cx| {
+                                            vec![cx.flex(
+                                                FlexProps {
+                                                    layout: LayoutStyle {
+                                                        size: SizeStyle {
+                                                            width: Length::Fill,
+                                                            height: Length::Fill,
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    direction: Axis::Horizontal,
+                                                    gap: Px(0.0),
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::Center,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                },
+                                                move |cx| {
+                                                    vec![editor_icon(
+                                                        cx,
+                                                        density,
+                                                        caret_icon,
+                                                        Some(Px(12.0)),
+                                                    )]
+                                                },
+                                            )]
+                                        },
+                                    ),
                                 ]
                             },
                         )]
