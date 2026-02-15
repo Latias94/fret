@@ -1,7 +1,7 @@
 # Workstream: Editor Text Pipeline v1 (Rope + Rows + Parley Integration)
 
-Status: Draft (design). This workstream focuses on editor-grade text surfaces, not general UI
-labels.
+Status: Active (design + partial implementation). This workstream focuses on editor-grade text
+surfaces, not general UI labels.
 
 Related workstreams:
 
@@ -75,8 +75,56 @@ Without a careful integration, the editor will regress into:
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range`)
 - Renderer text system expects prepared blobs per string:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::prepare`, `prepare_attributed`)
-- Current UI text wrap is renderer-owned and heuristic:
+- UI text wrap is renderer-owned and Parley-driven for `TextWrap::Word`:
   - `crates/fret-render-wgpu/src/text/wrapper.rs`
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+
+## Capability Snapshot (2026-02-15)
+
+This is a **non-normative** status dashboard for editor/self-drawn UI consumers. The authoritative
+contracts are ADR-driven; use this section to keep “what works today” and “what is still missing”
+easy to audit.
+
+### Mechanism layer (renderer + UI bridge)
+
+| Area | Capability | Status | Evidence / Notes |
+| --- | --- | --- | --- |
+| Shaping engine | Parley shaping + metrics | Supported | `crates/fret-render-wgpu/src/text/parley_shaper.rs` |
+| OpenType features | `calt`/`liga`/`ssXX` etc via `TextShapingStyle.features` | Supported (best-effort) | Unknown tags are ignored by the resolved face; keep it deterministic via tests. |
+| Variable axes | `wght`/`wdth` etc via `TextShapingStyle.axes` | Supported (best-effort) | Same “best-effort” contract as features. |
+| Rich text paint | `fg`/`bg`/underline/strikethrough spans | Supported | `crates/fret-core/src/text/mod.rs` (`TextSpan`, `TextPaintStyle`) |
+| Wrap (UI) | `TextWrap::Word` with paragraph line breaking | Supported + gated | `docs/workstreams/text-line-breaking-v1.md` + fixtures |
+| Wrap (editor) | Editor-owned row segmentation (policy) | Supported (ecosystem) | Renderer wrap should be `TextWrap::None` per display row. |
+| Overflow | `TextOverflow::Ellipsis` (single-line) | Supported | Deterministic mapping is gated in text tests. |
+| Geometry queries | caret/hit-test/selection rects across wrap + RTL | Supported + gated | `crates/fret-render-wgpu/src/text/mod.rs` tests cover wrapped RTL/mixed scripts. |
+| Font system | family overrides + fallback injection + invalidation key | Supported + gated | `TextFontFamilyConfig`, `TextFontStackKey` invalidation; see font workstreams. |
+| Perf/diag guard | resize jitter catastrophic regression gate for word wrap | Supported | `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json` + `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py` |
+
+### Ecosystem layer (editor pipeline)
+
+| Area | Capability | Status | Evidence / Notes |
+| --- | --- | --- | --- |
+| Buffer | rope-backed editor buffer (`ropey::Rope`) | Supported | `ecosystem/fret-code-editor-buffer/src/lib.rs` |
+| Display rows | `DisplayMap` + row-local text materialization | Supported (baseline) | `ecosystem/fret-code-editor-view/src/lib.rs` |
+| Row text caching | visible-row `Arc<str>` cache keyed by revision + row + wrap | Supported (baseline) | `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range`) |
+| Code wrap policy | presets + knobs, ecosystem-owned | Supported (baseline) | `ecosystem/fret-code-editor-view/src/code_wrap_policy.rs` |
+| Platform text input | composed-view UTF-16 query + snapshot via `TextInputRegion` | Supported (baseline) | `TextInputRegionProps.a11y_value` + UTF-8 ranges → UTF-16 answers |
+| Bounds/hit-test queries | `BoundsForRange` / `CharacterIndexForPoint` via hooks | Supported (opt-in) | Install `TextInputRegionActionHooks.on_platform_text_input_query` |
+| Replace-by-range edits | `replace_*_utf16` via hooks | Supported (opt-in) | Install `TextInputRegionActionHooks` replace handlers; keep limitations explicit. |
+
+### Key gaps (what to build next)
+
+1) **Row-local attributed spans** for syntax highlighting (tree-sitter → per-row spans), with
+   regression gates that paint-only changes do not trigger reshaping.
+2) **Mapping contracts** for editor surfaces:
+   buffer byte ↔ composed a11y window byte ↔ row-local byte ↔ geometry, under folds/inlays/preedit.
+3) **Allocation/perf gates** for large documents:
+   prevent per-frame `to_string()` churn, ensure shaping/raster work is bounded to visible rows, and
+   keep resize jitter stable under width oscillations.
+4) **IME-quality gates** for editor composition flows:
+   cursor area (`ime_cursor_area`) stability, surrogate pairs, and deterministic UTF-8↔UTF-16 clamps.
+5) **Calibrated perf baselines** (optional after the catastrophic smoke gate):
+   record stable per-scenario budgets with attribution bundles.
 
 ## Proposed Architecture
 
@@ -225,6 +273,8 @@ Unit tests:
 Optional diag scripts:
 
 - type, delete, IME compose, and ensure caret/selection geometry stays aligned.
+- `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`: gates
+  catastrophic wrap regressions under window resize jitter (word wrap baseline).
 - `tools/diag-scripts/ui-gallery-code-editor-ime-cursor-area.json`: focuses the code editor gate
   and asserts `WindowTextInputSnapshot.ime_cursor_area` is present and within window bounds.
 - `tools/diag-scripts/ui-gallery-web-ime-harness-ime-cursor-area.json`: focuses the harness region
