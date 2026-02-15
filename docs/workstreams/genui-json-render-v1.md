@@ -29,7 +29,7 @@ This workstream has an end-to-end MVP implementation in-tree:
   - Catalog: `ecosystem/fret-genui-shadcn/src/catalog.rs`
   - Resolver: `ecosystem/fret-genui-shadcn/src/resolver.rs`
 
-- Interactive demo (validates + renders + shows action queue; auto-applies standard actions via `GenUiRuntime.auto_apply_standard_actions`): `apps/fret-examples/src/genui_demo.rs`
+- Interactive demo (validates + renders + inspector tabs for state/queue/issues/spec/schema/prompt; auto-applies standard actions via `GenUiRuntime.auto_apply_standard_actions`): `apps/fret-examples/src/genui_demo.rs`
 
 Workstream tracking:
 
@@ -44,7 +44,7 @@ The current MVP matches the core **shape and semantics** (flat spec + catalog gu
 - Spec auto-fixes: ✅ GenUI v1 includes an opt-in auto-fixer for common LLM mistakes (moving `visible/on/repeat` out of `props`); it is not enabled automatically by the renderer.
 - Action execution pipeline helpers: json-render has built-in helpers for `confirm`, `onSuccess`, `onError`, and async action execution; GenUI keeps these fields app-owned and does not ship a default executor.
 - Catalog type expressiveness: json-render uses Zod schemas (nested objects, arrays, unions, optional fields); GenUI v1 supports a growing typed surface (primitive + enum + nullable + object/array/oneOf + required/default metadata) plus dynamic expressions, but still lacks richer unions and deeper schema composition (e.g. nested optional/required modeling with strict repair hints).
-- Devtools/playground: json-render ships catalog display + interactive playground; GenUI v1 currently relies on the demo app and existing Fret diagnostics.
+- Devtools/playground: json-render ships catalog display + interactive playground; GenUI v1 currently relies on the demo app (now includes a basic inspector) and existing Fret diagnostics.
 - Mixed stream transforms: ✅ GenUI v1 includes `mixed_stream` utilities (`MixedStreamParser`, `MixedSpecStreamCompiler`) with ```spec fence support, inspired by `pipeJsonRender`.
 - Spec transforms: json-render includes flat↔tree helpers; GenUI v1 focuses on the flat map and does not provide general tree conversion utilities yet.
 
