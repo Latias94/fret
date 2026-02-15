@@ -17,6 +17,8 @@ pub use stacksafe_config::configure_stacksafe_from_env;
 
 #[cfg(feature = "dev-state")]
 pub use dev_state::DevStateService;
+#[cfg(feature = "dev-state")]
+pub use dev_state::{DevStateHook, DevStateHooks};
 
 pub use runner::{
     EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks, ImportedViewportRenderTarget,

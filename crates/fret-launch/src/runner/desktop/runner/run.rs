@@ -133,6 +133,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
         #[cfg(feature = "dev-state")]
         runner.dev_state.install_into_app(&mut runner.app);
+        #[cfg(feature = "dev-state")]
+        crate::dev_state::DevStateHooks::import_all(&mut runner.app);
         runner.publish_system_font_rescan_state();
         runner
     }

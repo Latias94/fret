@@ -10,7 +10,7 @@ use fret_core::AppWindowId;
 
 use super::WindowCreateSpec;
 
-use crate::dev_state::DevStateService;
+use crate::dev_state::{DevStateHooks, DevStateService};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RestoreOutcome {
@@ -171,6 +171,13 @@ impl DevStateController {
             .iter()
             .map(|(k, v)| (*k, v.clone()))
             .collect()
+    }
+
+    pub(crate) fn export_app_state(&mut self, app: &mut App) {
+        if !self.enabled {
+            return;
+        }
+        DevStateHooks::export_all(app);
     }
 
     pub(crate) fn apply_main_window_spec(&mut self, spec: &mut WindowCreateSpec) {

@@ -1829,6 +1829,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         ))]
         {
             if self.dev_state.enabled() {
+                self.dev_state.export_app_state(&mut self.app);
                 let keys = self.dev_state.window_keys_snapshot();
                 let mut observed: Vec<(
                     String,
