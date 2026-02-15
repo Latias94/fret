@@ -13,8 +13,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnCloseAutoFocus, OnKeyDown};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PointerRegionProps, PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle,
-    TextProps,
+    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -150,10 +149,13 @@ impl EnumSelect {
                     ..InputTokenKeys::none()
                 },
             );
-            let bg = theme
+            let mut bg = theme
                 .color_by_key("popover")
                 .or_else(|| theme.color_by_key("component.input.bg"))
                 .unwrap_or_else(|| theme.color_token("background"));
+            if bg.a <= 0.02 {
+                bg = theme.color_token("background");
+            }
             let border = theme
                 .color_by_key("border")
                 .or_else(|| theme.color_by_key("component.input.border"))
@@ -423,6 +425,7 @@ fn request_overlay<H: UiHost>(
 ) {
     let model_for_list = model.clone();
     let open_for_list = open.clone();
+    let open_for_dismiss = open.clone();
     let list_test_id = options.list_test_id.clone();
     let search_test_id = options.search_test_id.clone();
 
@@ -599,30 +602,16 @@ fn request_overlay<H: UiHost>(
         list
     };
 
-    let mut request = OverlayRequest::dismissible_menu(
-        overlay_id,
-        trigger_id,
-        open,
-        presence,
-        vec![cx.pointer_region(
-            PointerRegionProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                enabled: true,
-                capture_phase_pointer_moves: false,
-            },
-            move |_cx| vec![list],
-        )],
-    );
+    let mut request =
+        OverlayRequest::dismissible_menu(overlay_id, trigger_id, open, presence, vec![list]);
     request.close_on_window_focus_lost = true;
     request.close_on_window_resize = true;
     request.on_close_auto_focus = Some(close_focus);
+    request.dismissible_on_dismiss_request =
+        Some(Arc::new(move |host, action_cx: ActionCx, _req| {
+            let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        }));
 
     OverlayController::request(cx, request);
 }
