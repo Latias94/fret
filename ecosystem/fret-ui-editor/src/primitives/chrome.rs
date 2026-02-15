@@ -8,6 +8,45 @@ use fret_ui::{TextInputStyle, Theme};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, Size};
 
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
+fn mix(a: Color, b: Color, t: f32) -> Color {
+    let t = t.clamp(0.0, 1.0);
+    Color {
+        r: lerp(a.r, b.r, t),
+        g: lerp(a.g, b.g, t),
+        b: lerp(a.b, b.b, t),
+        a: lerp(a.a, b.a, t),
+    }
+}
+
+fn is_effectively_transparent(c: Color) -> bool {
+    c.a <= 0.02
+}
+
+fn editor_fallback_input_bg(theme: &Theme) -> Color {
+    // Shadcn themes sometimes set `component.input.bg` to fully transparent. For editor controls we
+    // need a stable, non-transparent surface so frames are visible and we don't expose stale
+    // pixels from cached overlay layers.
+    let bg = theme.color_token("background");
+    let muted = theme
+        .color_by_key("muted")
+        .unwrap_or_else(|| theme.color_token("muted"));
+    let mut out = mix(bg, muted, 0.10);
+    out.a = 1.0;
+    out
+}
+
+fn sanitize_editor_input_bg(theme: &Theme, bg: Color) -> Color {
+    if is_effectively_transparent(bg) {
+        editor_fallback_input_bg(theme)
+    } else {
+        bg
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ResolvedEditorFrameChrome {
     pub(crate) padding: Edges,
@@ -31,7 +70,7 @@ pub(crate) fn resolve_editor_frame_chrome(
         padding: resolved.padding,
         radius: resolved.radius,
         border_width: resolved.border_width,
-        bg: resolved.background,
+        bg: sanitize_editor_input_bg(theme, resolved.background),
         border: resolved.border_color,
         border_focus: resolved.border_color_focused,
         fg: resolved.text_color,
@@ -51,7 +90,7 @@ pub(crate) fn resolve_editor_text_input_style(
     chrome.padding = resolved.padding;
     chrome.corner_radii = Corners::all(resolved.radius);
     chrome.border = Edges::all(resolved.border_width);
-    chrome.background = resolved.background;
+    chrome.background = sanitize_editor_input_bg(theme, resolved.background);
     chrome.border_color = resolved.border_color;
     chrome.border_color_focused = resolved.border_color_focused;
     chrome.text_color = resolved.text_color;
