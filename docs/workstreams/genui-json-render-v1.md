@@ -180,6 +180,17 @@ Standard actions:
 - `fret-genui-core` provides a small helper (`fret_genui_core::actions::apply_standard_action`) so
   apps can opt into these semantics without embedding them in the renderer.
 
+## 7a. SpecStream (streaming patches)
+
+To match json-render's progressive UI fill-in, GenUI supports a JSONL streaming format where each
+line is an RFC 6902 JSON Patch operation applied to a single in-progress spec object.
+
+- One patch per line (JSON object).
+- Feed chunks into `fret_genui_core::spec_stream::SpecStreamCompiler`.
+- When new patches apply, apps can (re-)validate and (re-)render the compiled spec.
+
+This is provider-agnostic: it works with any LLM streaming transport (SSE/websocket/etc).
+
 ## 8. Diagnostics and test strategy
 
 Minimum gates to avoid “AI broke the UI silently”:

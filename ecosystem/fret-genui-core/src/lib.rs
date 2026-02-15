@@ -8,5 +8,6 @@ pub mod json_pointer;
 pub mod props;
 pub mod render;
 pub mod spec;
+pub mod spec_stream;
 pub mod validate;
 pub mod visibility;
