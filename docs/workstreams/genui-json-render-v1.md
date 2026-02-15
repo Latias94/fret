@@ -24,12 +24,13 @@ This workstream has an end-to-end MVP implementation in-tree:
   - Renderer (`SpecV1` → `AnyElement`, repeat, visible, event→queue): `ecosystem/fret-genui-core/src/render.rs`
   - Catalog + JSON Schema export + system prompt export: `ecosystem/fret-genui-core/src/catalog.rs`
   - SpecStream compiler (JSONL RFC6902 patches → in-progress spec JSON): `ecosystem/fret-genui-core/src/spec_stream.rs`
+  - Conservative spec auto-fixer (opt-in): `ecosystem/fret-genui-core/src/spec_fixer.rs`
 
 - Shadcn-backed baseline resolver + catalog: `ecosystem/fret-genui-shadcn`
   - Catalog: `ecosystem/fret-genui-shadcn/src/catalog.rs`
   - Resolver: `ecosystem/fret-genui-shadcn/src/resolver/mod.rs` (and submodules)
 
-- Interactive demo (validates + renders + inspector tabs for state/queue/issues/spec/schema/prompt/editor/stream; auto-applies standard actions via `GenUiRuntime.auto_apply_standard_actions`): `apps/fret-examples/src/genui_demo.rs`
+- Interactive demo (validates + renders + inspector tabs for state/queue/issues/spec/schema/prompt/editor/stream; supports optional spec auto-fix on apply; auto-applies standard actions via `GenUiRuntime.auto_apply_standard_actions`): `apps/fret-examples/src/genui_demo.rs`
 - Smoke gate (strict catalog validation; layout/typography/responsive sanity): `ecosystem/fret-genui-shadcn/tests/genui_layout_typography_smoke.rs`
 
 Workstream tracking:
