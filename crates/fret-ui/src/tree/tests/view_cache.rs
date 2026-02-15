@@ -380,6 +380,39 @@ fn view_cache_scroll_handle_hit_test_only_invalidations_do_not_mark_cache_root_n
 }
 
 #[test]
+fn view_cache_layout_invalidations_allow_reuse_for_definite_contained_roots() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.nodes[boundary].bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+    );
+    ui.nodes[boundary].measured_size = ui.nodes[boundary].bounds.size;
+
+    for id in [root, boundary] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.test_set_layout_invalidation(boundary, true);
+
+    assert!(ui.nodes[boundary].invalidation.layout);
+    assert!(
+        ui.should_reuse_view_cache_node(boundary),
+        "layout invalidations should not disable view-cache reuse for definite contained roots"
+    );
+}
+
+#[test]
 fn view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());

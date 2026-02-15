@@ -25,6 +25,7 @@ pub(super) fn sidebar_view(
                 layout.size.height = Length::Fill;
                 ViewCacheProps {
                     layout,
+                    contained_layout: true,
                     ..Default::default()
                 }
             },
@@ -112,6 +113,7 @@ pub(super) fn content_view(
                 layout.flex.grow = 1.0;
                 ViewCacheProps {
                     layout,
+                    contained_layout: true,
                     ..Default::default()
                 }
             },
