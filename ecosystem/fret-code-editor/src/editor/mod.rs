@@ -594,6 +594,7 @@ struct RowTextCacheEntry {
     range: Range<usize>,
     fold_map: Option<geom::RowFoldMap>,
     preedit_range: Option<Range<usize>>,
+    row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -612,6 +613,7 @@ struct RowRichCacheEntry {
     row_range: Range<usize>,
     line: Arc<str>,
     syntax_spans: Arc<[SyntaxSpan]>,
+    row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
     theme_revision: u64,
     rich: fret_core::AttributedText,
 }
@@ -1106,7 +1108,7 @@ impl CodeEditorHandle {
             return None;
         }
         let row = st.display_map.line_first_display_row(line);
-        let (_, text, _, _) = paint::cached_row_text_with_range(&mut st, row, 64);
+        let (_, text, _, _, _) = paint::cached_row_text_with_range(&mut st, row, 64);
         Some(text.as_ref().to_string())
     }
 

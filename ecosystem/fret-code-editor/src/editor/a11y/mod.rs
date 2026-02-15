@@ -209,7 +209,7 @@ fn build_a11y_display_window(
 
     for row in start_row..=end_row {
         let line = st.display_map.display_row_line(row);
-        let (row_range, text, fold_map, preedit_range) =
+        let (row_range, text, fold_map, preedit_range, _row_spans) =
             cached_row_text_with_range(st, row, text_cache_max_entries);
         rows.push(A11yDisplayRow {
             line,

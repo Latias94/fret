@@ -29,7 +29,7 @@ pub(super) fn paint_row(
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
-    let (row_range, line, row_folds, row_preedit_range) = if perf_enabled {
+    let (row_range, line, row_folds, row_preedit_range, row_spans) = if perf_enabled {
         let started = Instant::now();
         let out = cached_row_text_with_range(st, row, text_cache_max_entries);
         st.paint_perf_frame.us_row_text = st
@@ -40,6 +40,8 @@ pub(super) fn paint_row(
     } else {
         cached_row_text_with_range(st, row, text_cache_max_entries)
     };
+    #[cfg(not(feature = "syntax"))]
+    let _ = &row_spans;
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
@@ -248,7 +250,8 @@ pub(super) fn paint_row(
                 let seg_start_in_line = row_range
                     .start
                     .saturating_sub(st.buffer.line_start(line_idx).unwrap_or(row_range.start));
-                let seg_end_in_line = seg_start_in_line.saturating_add(line.len());
+                let base_len = row_range.end.saturating_sub(row_range.start);
+                let seg_end_in_line = seg_start_in_line.saturating_add(base_len);
 
                 let theme_revision = {
                     let theme = painter.theme();
@@ -262,7 +265,8 @@ pub(super) fn paint_row(
                     let hit = cached.theme_revision == theme_revision
                         && cached.row_range == row_range
                         && Arc::ptr_eq(&cached.line, &line)
-                        && Arc::ptr_eq(&cached.syntax_spans, &spans);
+                        && Arc::ptr_eq(&cached.syntax_spans, &spans)
+                        && Arc::ptr_eq(&cached.row_spans, &row_spans);
                     if hit {
                         *last_used = tick;
                         st.row_rich_cache_queue.push_back((row, tick));
@@ -324,10 +328,68 @@ pub(super) fn paint_row(
                             merged.push(span);
                         }
 
+                        // Map base-buffer spans into the composed display row coordinate space so
+                        // fold placeholders / inlays / inline preedit do not misalign syntax paint.
+                        let mut mapped: Vec<SyntaxSpan> = Vec::new();
+                        if row_spans.is_empty() {
+                            mapped = merged;
+                        } else {
+                            for span in merged {
+                                let ranges =
+                                    fret_code_editor_view::row_spans::map_buffer_range_to_display_ranges(
+                                        row_spans.as_ref(),
+                                        span.range.clone(),
+                                        base_len,
+                                        line.len(),
+                                    );
+                                for r in ranges {
+                                    let mut start = r.start.min(line.len());
+                                    let mut end = r.end.min(line.len()).max(start);
+                                    start = fret_code_editor_view::clamp_to_char_boundary(
+                                        line.as_ref(),
+                                        start,
+                                    )
+                                    .min(line.len());
+                                    end = fret_code_editor_view::clamp_to_char_boundary(
+                                        line.as_ref(),
+                                        end,
+                                    )
+                                    .min(line.len())
+                                    .max(start);
+                                    if start >= end {
+                                        continue;
+                                    }
+                                    mapped.push(SyntaxSpan {
+                                        range: start..end,
+                                        highlight: span.highlight,
+                                    });
+                                }
+                            }
+
+                            if !mapped.is_empty() {
+                                mapped.sort_by_key(|s| s.range.start);
+                                mapped.dedup_by(|a, b| {
+                                    a.range == b.range && a.highlight == b.highlight
+                                });
+                                let mut merged_display: Vec<SyntaxSpan> = Vec::new();
+                                for span in mapped {
+                                    if let Some(last) = merged_display.last_mut()
+                                        && last.highlight == span.highlight
+                                        && last.range.end == span.range.start
+                                    {
+                                        last.range.end = span.range.end;
+                                        continue;
+                                    }
+                                    merged_display.push(span);
+                                }
+                                mapped = merged_display;
+                            }
+                        }
+
                         let started = perf_enabled.then(Instant::now);
                         let rich = {
                             let theme = painter.theme();
-                            materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref())
+                            materialize_row_rich_text(theme, Arc::clone(&line), mapped.as_ref())
                         };
                         if let Some(started) = started {
                             st.paint_perf_frame.us_rich_materialize = st
@@ -342,6 +404,7 @@ pub(super) fn paint_row(
                                     row_range: row_range.clone(),
                                     line: Arc::clone(&line),
                                     syntax_spans: Arc::clone(&spans),
+                                    row_spans: Arc::clone(&row_spans),
                                     theme_revision,
                                     rich: rich.clone(),
                                 },
@@ -875,6 +938,7 @@ pub(super) fn cached_row_text_with_range(
     Arc<str>,
     Option<super::geom::RowFoldMap>,
     Option<Range<usize>>,
+    Arc<[fret_code_editor_view::DisplayRowSpan]>,
 ) {
     st.cache_stats.row_text_get_calls = st.cache_stats.row_text_get_calls.saturating_add(1);
     let rev = st.buffer.revision();
@@ -915,6 +979,7 @@ pub(super) fn cached_row_text_with_range(
             Arc::clone(&text.text),
             text.fold_map.clone(),
             text.preedit_range.clone(),
+            Arc::clone(&text.row_spans),
         );
     }
     st.cache_stats.row_text_misses = st.cache_stats.row_text_misses.saturating_add(1);
@@ -924,12 +989,12 @@ pub(super) fn cached_row_text_with_range(
     let range_for_return = range.clone();
     let preedit_range = materialized.preedit_range.clone();
 
-    let spans: Vec<super::geom::RowFoldSpan> = materialized
-        .spans
-        .into_iter()
+    let row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]> = Arc::from(materialized.spans);
+    let spans: Vec<super::geom::RowFoldSpan> = row_spans
+        .iter()
         .map(|span| super::geom::RowFoldSpan {
-            buffer_range: span.buffer_range,
-            display_range: span.display_range,
+            buffer_range: span.buffer_range.clone(),
+            display_range: span.display_range.clone(),
         })
         .collect();
     let fold_map = (!spans.is_empty()).then_some(super::geom::RowFoldMap::new(spans));
@@ -943,6 +1008,7 @@ pub(super) fn cached_row_text_with_range(
                 range,
                 fold_map: fold_map.clone(),
                 preedit_range: preedit_range.clone(),
+                row_spans: Arc::clone(&row_spans),
             },
             tick,
         ),
@@ -963,7 +1029,7 @@ pub(super) fn cached_row_text_with_range(
         }
     }
 
-    (range_for_return, text, fold_map, preedit_range)
+    (range_for_return, text, fold_map, preedit_range, row_spans)
 }
 
 pub(super) fn materialize_preedit_rich_text(

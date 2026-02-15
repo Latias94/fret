@@ -63,6 +63,7 @@ fn replace_buffer_resets_state() {
                     range: 0..5,
                     fold_map: None,
                     preedit_range: None,
+                    row_spans: Arc::from([]),
                 },
                 1,
             ),
@@ -174,8 +175,10 @@ fn cached_row_text_hits_and_reuses_arc_for_repeated_calls() {
 
     let (a, b, stats) = {
         let mut st = handle.state.borrow_mut();
-        let (_range_a, a, _folds_a, _preedit_a) = paint::cached_row_text_with_range(&mut st, 0, 64);
-        let (_range_b, b, _folds_b, _preedit_b) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        let (_range_a, a, _folds_a, _preedit_a, _spans_a) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
+        let (_range_b, b, _folds_b, _preedit_b, _spans_b) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
         (a, b, st.cache_stats)
     };
 
@@ -193,7 +196,8 @@ fn cached_row_text_invalidates_on_buffer_revision_change() {
 
     let (before, after, resets) = {
         let mut st = handle.state.borrow_mut();
-        let (_range, before, _folds, _preedit) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        let (_range, before, _folds, _preedit, _spans) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
 
         let mut tx = st.buffer.transaction_begin();
         st.buffer
@@ -208,7 +212,8 @@ fn cached_row_text_invalidates_on_buffer_revision_change() {
         let _ = st.buffer.transaction_commit(tx);
         st.refresh_display_map();
 
-        let (_range, after, _folds, _preedit) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        let (_range, after, _folds, _preedit, _spans) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
         (before, after, st.cache_stats.row_text_resets)
     };
 
@@ -225,11 +230,11 @@ fn cached_row_text_lru_eviction_rebuilds_evicted_rows() {
 
     let (first0, first1, second0, stats) = {
         let mut st = handle.state.borrow_mut();
-        let (_range0, first0, _folds0, _preedit0) =
+        let (_range0, first0, _folds0, _preedit0, _spans0) =
             paint::cached_row_text_with_range(&mut st, 0, 1);
-        let (_range1, first1, _folds1, _preedit1) =
+        let (_range1, first1, _folds1, _preedit1, _spans1) =
             paint::cached_row_text_with_range(&mut st, 1, 1);
-        let (_range0, second0, _folds0, _preedit0) =
+        let (_range0, second0, _folds0, _preedit0, _spans0) =
             paint::cached_row_text_with_range(&mut st, 0, 1);
         (first0, first1, second0, st.cache_stats)
     };
@@ -1054,7 +1059,7 @@ fn platform_replace_and_mark_non_empty_range_replaces_in_composed_view_without_m
     assert_eq!(composition, Some((1, 3)));
     assert_eq!(selection, Some((1, 3)));
 
-    let (_range, row_text, _folds, preedit_range) =
+    let (_range, row_text, _folds, preedit_range, _spans) =
         paint::cached_row_text_with_range(&mut st, 0, 1024);
     assert_eq!(
         row_text.as_ref(),
