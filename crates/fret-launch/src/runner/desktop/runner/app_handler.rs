@@ -396,6 +396,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
                 };
                 self.main_window = Some(main_window);
+                #[cfg(feature = "dev-state")]
+                self.dev_state.register_window_key(main_window, "main");
             }
 
             self.init_renderdoc_if_needed();
@@ -758,6 +760,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
             };
             self.main_window = Some(main_window);
+            #[cfg(feature = "dev-state")]
+            self.dev_state.register_window_key(main_window, "main");
             self.driver.init(&mut self.app, main_window);
             self.driver_initialized = true;
             self.maybe_deliver_startup_incoming_open(main_window);
@@ -1824,16 +1828,24 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             not(any(target_os = "android", target_os = "ios"))
         ))]
         {
-            if self.dev_state.enabled()
-                && let Some(main_window) = self.main_window
-                && let Some(state) = self.windows.get(main_window)
-            {
-                let physical = state.window.surface_size();
-                let logical: winit::dpi::LogicalSize<f64> =
-                    physical.to_logical(state.window.scale_factor());
-                let position = state.window.outer_position().ok();
-                self.dev_state
-                    .observe_main_window(now, &self.app, logical, position);
+            if self.dev_state.enabled() {
+                let keys = self.dev_state.window_keys_snapshot();
+                let mut observed: Vec<(
+                    String,
+                    winit::dpi::LogicalSize<f64>,
+                    Option<winit::dpi::PhysicalPosition<i32>>,
+                )> = Vec::new();
+                for (window, key) in keys {
+                    let Some(state) = self.windows.get(window) else {
+                        continue;
+                    };
+                    let physical = state.window.surface_size();
+                    let logical: winit::dpi::LogicalSize<f64> =
+                        physical.to_logical(state.window.scale_factor());
+                    let position = state.window.outer_position().ok();
+                    observed.push((key, logical, position));
+                }
+                self.dev_state.observe_windows(now, &self.app, observed);
             }
         }
 

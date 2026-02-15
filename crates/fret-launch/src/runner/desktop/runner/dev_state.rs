@@ -6,6 +6,7 @@ use tracing::{debug, info, warn};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
 
 use fret_app::App;
+use fret_core::AppWindowId;
 
 use super::WindowCreateSpec;
 
@@ -40,9 +41,11 @@ pub(crate) struct DevStateController {
     incoming_app: std::collections::HashMap<String, serde_json::Value>,
 
     next_poll_at: Instant,
-    last_observed: Option<MainWindowGeometry>,
+    windows_state: std::collections::HashMap<String, MainWindowGeometry>,
     dirty_since: Option<Instant>,
     last_app_epoch: u64,
+
+    window_keys: std::collections::HashMap<AppWindowId, String>,
 }
 
 impl DevStateController {
@@ -72,43 +75,52 @@ impl DevStateController {
         let reset_requested =
             std::env::var_os("FRET_DEV_STATE_RESET").is_some_and(|v| !v.is_empty());
 
-        let (restore_outcome, restored_main, incoming_app) = if !enabled {
+        let (restore_outcome, windows_state, incoming_app) = if !enabled {
             (
                 RestoreOutcome::Disabled,
-                None,
+                std::collections::HashMap::new(),
                 std::collections::HashMap::new(),
             )
         } else if reset_requested {
             let _ = std::fs::remove_file(&path);
             (
                 RestoreOutcome::ResetRequested,
-                None,
+                std::collections::HashMap::new(),
                 std::collections::HashMap::new(),
             )
         } else {
             match load_dev_state_file(&path) {
                 Ok(Some(file)) => {
-                    let geom = file.windows.get("main").map(|geom| MainWindowGeometry {
-                        logical_size: LogicalSize::new(
-                            geom.logical_size.width,
-                            geom.logical_size.height,
-                        ),
-                        position: geom.position.map(|p| PhysicalPosition::new(p.x, p.y)),
-                    });
-                    (RestoreOutcome::Restored, geom, file.app)
+                    let mut windows: std::collections::HashMap<String, MainWindowGeometry> =
+                        std::collections::HashMap::new();
+                    for (key, geom) in file.windows {
+                        windows.insert(
+                            key,
+                            MainWindowGeometry {
+                                logical_size: LogicalSize::new(
+                                    geom.logical_size.width,
+                                    geom.logical_size.height,
+                                ),
+                                position: geom.position.map(|p| PhysicalPosition::new(p.x, p.y)),
+                            },
+                        );
+                    }
+                    (RestoreOutcome::Restored, windows, file.app)
                 }
                 Ok(None) => (
                     RestoreOutcome::FileNotFound,
-                    None,
+                    std::collections::HashMap::new(),
                     std::collections::HashMap::new(),
                 ),
                 Err(_) => (
                     RestoreOutcome::ParseFailed,
-                    None,
+                    std::collections::HashMap::new(),
                     std::collections::HashMap::new(),
                 ),
             }
         };
+
+        let restored_main = windows_state.get("main").copied();
 
         Self {
             enabled,
@@ -121,9 +133,10 @@ impl DevStateController {
             restore_printed: false,
             incoming_app,
             next_poll_at: now + poll_interval,
-            last_observed: None,
+            windows_state,
             dirty_since: None,
             last_app_epoch: 0,
+            window_keys: std::collections::HashMap::new(),
         }
     }
 
@@ -139,17 +152,33 @@ impl DevStateController {
         self.enabled
     }
 
+    pub(crate) fn register_window_key(&mut self, window: AppWindowId, key: impl Into<String>) {
+        if !self.enabled {
+            return;
+        }
+        self.window_keys.insert(window, key.into());
+    }
+
+    pub(crate) fn unregister_window(&mut self, window: AppWindowId) {
+        if !self.enabled {
+            return;
+        }
+        self.window_keys.remove(&window);
+    }
+
+    pub(crate) fn window_keys_snapshot(&self) -> Vec<(AppWindowId, String)> {
+        self.window_keys
+            .iter()
+            .map(|(k, v)| (*k, v.clone()))
+            .collect()
+    }
+
     pub(crate) fn apply_main_window_spec(&mut self, spec: &mut WindowCreateSpec) {
         if !self.enabled {
             return;
         }
 
-        if let Some(geom) = self.restored_main {
-            spec.size = geom.logical_size;
-            if let Some(pos) = geom.position {
-                spec.position = Some(Position::Physical(pos));
-            }
-        }
+        self.apply_window_spec("main", spec);
 
         if !self.restore_logged {
             self.restore_logged = true;
@@ -218,12 +247,24 @@ impl DevStateController {
         }
     }
 
-    pub(crate) fn observe_main_window(
+    pub(crate) fn apply_window_spec(&mut self, key: &str, spec: &mut WindowCreateSpec) {
+        if !self.enabled {
+            return;
+        }
+
+        if let Some(geom) = self.windows_state.get(key).copied() {
+            spec.size = geom.logical_size;
+            if let Some(pos) = geom.position {
+                spec.position = Some(Position::Physical(pos));
+            }
+        }
+    }
+
+    pub(crate) fn observe_windows(
         &mut self,
         now: Instant,
         app: &App,
-        logical_size: LogicalSize<f64>,
-        position: Option<PhysicalPosition<i32>>,
+        windows: impl IntoIterator<Item = (String, LogicalSize<f64>, Option<PhysicalPosition<i32>>)>,
     ) {
         if !self.enabled {
             return;
@@ -234,23 +275,30 @@ impl DevStateController {
         }
         self.next_poll_at = now + self.poll_interval;
 
-        let observed = MainWindowGeometry {
-            logical_size,
-            position,
-        };
-
         let app_epoch = app
             .global::<DevStateService>()
             .map(|svc| svc.outgoing_snapshot().epoch)
             .unwrap_or(0);
 
-        if self.last_observed.is_some_and(|prev| prev == observed)
-            && app_epoch == self.last_app_epoch
-        {
+        let mut changed = app_epoch != self.last_app_epoch;
+        self.last_app_epoch = app_epoch;
+
+        for (key, logical_size, position) in windows {
+            let observed = MainWindowGeometry {
+                logical_size,
+                position,
+            };
+            if self.windows_state.get(&key).copied() != Some(observed) {
+                self.windows_state.insert(key, observed);
+                changed = true;
+            }
+        }
+
+        if !changed {
             if let Some(since) = self.dirty_since
                 && now.saturating_duration_since(since) >= self.debounce
             {
-                if let Err(err) = self.flush_main_window(app, observed) {
+                if let Err(err) = self.flush_file(app) {
                     warn!(path = %self.path.display(), error = %err, "dev_state: flush failed");
                 }
                 self.dirty_since = None;
@@ -258,16 +306,31 @@ impl DevStateController {
             return;
         }
 
-        self.last_observed = Some(observed);
-        self.last_app_epoch = app_epoch;
         self.dirty_since = Some(now);
     }
 
-    fn flush_main_window(&mut self, app: &App, geom: MainWindowGeometry) -> Result<(), String> {
+    fn flush_file(&mut self, app: &App) -> Result<(), String> {
         let app_data = app
             .global::<DevStateService>()
             .map(|svc| svc.outgoing_snapshot().data)
             .unwrap_or_default();
+
+        let windows: std::collections::HashMap<String, WindowGeometryV1> = self
+            .windows_state
+            .iter()
+            .map(|(key, geom)| {
+                (
+                    key.clone(),
+                    WindowGeometryV1 {
+                        logical_size: LogicalSizeV1 {
+                            width: geom.logical_size.width,
+                            height: geom.logical_size.height,
+                        },
+                        position: geom.position.map(|p| PhysicalPositionV1 { x: p.x, y: p.y }),
+                    },
+                )
+            })
+            .collect();
 
         let file = DevStateFileV1 {
             version: 1,
@@ -276,16 +339,7 @@ impl DevStateController {
                 .map(|d| d.as_millis() as u64)
                 .unwrap_or_default(),
             app: app_data,
-            windows: std::collections::HashMap::from([(
-                "main".to_string(),
-                WindowGeometryV1 {
-                    logical_size: LogicalSizeV1 {
-                        width: geom.logical_size.width,
-                        height: geom.logical_size.height,
-                    },
-                    position: geom.position.map(|p| PhysicalPositionV1 { x: p.x, y: p.y }),
-                },
-            )]),
+            windows,
         };
 
         write_json_atomic(&self.path, &file)
