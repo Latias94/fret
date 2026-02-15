@@ -70,6 +70,8 @@ Evidence anchors (expected):
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`rich_text_with_blob`)
 - Defensive span normalization (stale/out-of-date ranges):
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_for_text`)
+- Paint-only shaping_eq gate (editor-level):
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_only_syntax_color_changes_do_not_affect_rich_text_shaping_eq`)
 - Shaping-key stability gate:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
 

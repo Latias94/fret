@@ -48,7 +48,8 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`rich_text_with_blob`)
 - [ ] Regression gates:
   - [ ] “paint-only span changes do not reshape”:
-    - assert `AttributedText::shaping_eq` holds across theme-only updates,
+    - [x] assert `AttributedText::shaping_eq` holds across theme-only updates.
+      - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_only_syntax_color_changes_do_not_affect_rich_text_shaping_eq`)
     - [x] add a `TextSystem` gate that shape-cache hits remain stable across paint-only edits for the
       same text + shaping style.
       - `crates/fret-render-wgpu/src/text/mod.rs` (`paint_only_changes_miss_blob_cache_but_hit_shape_cache`)
@@ -59,9 +60,10 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
  - [~] Add an editor-focused test suite (ecosystem) that:
    - [x] validates row-local mapping under fold/inlay/preedit composition,
-   - [ ] verifies paint-only changes do not invalidate row shaping.
+   - [x] verifies paint-only changes do not invalidate row shaping.
    - Evidence:
      - `ecosystem/fret-code-editor-view/src/row_spans.rs` (end-to-end mapping tests)
+     - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_only_syntax_color_changes_do_not_affect_rich_text_shaping_eq`)
 
 ## M3 — Wrap policy separation
 
