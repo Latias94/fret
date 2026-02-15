@@ -1,6 +1,6 @@
 # Workstream: Text Shaping Surface v1 (OpenType Features + Cache Semantics)
 
-Status: M0 implemented (contracts + Parley plumbing); M1 partially implemented (ecosystem policy adoption in `fret-code-editor`; `fret-code-view` pending).
+Status: M0 implemented (contracts + Parley plumbing); M1 implemented (ecosystem policy adoption in `fret-code-editor` + `fret-code-view`).
 
 This document is **non-normative**. Normative contracts live in ADRs (notably the v2 Parley text
 system ADRs) and in the `fret-core` public API.

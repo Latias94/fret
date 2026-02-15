@@ -29,6 +29,7 @@ struct TestHost {
     frame_id: FrameId,
     next_timer_token: u64,
     next_clipboard_token: u64,
+    next_share_sheet_token: u64,
     next_image_upload_token: u64,
 }
 
@@ -148,6 +149,12 @@ impl TimeHost for TestHost {
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         let token = fret_runtime::ClipboardToken(self.next_clipboard_token);
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+        token
+    }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        let token = fret_runtime::ShareSheetToken(self.next_share_sheet_token);
+        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
         token
     }
 

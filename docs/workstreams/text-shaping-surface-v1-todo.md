@@ -24,9 +24,9 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 - [x] Decide the default editor feature policy (code vs UI):
   - [x] disable `liga`/`calt` by default for code (common editor baseline),
   - [x] keep UI defaults unchanged.
-- [~] Implement the policy at the ecosystem layer (avoid expanding mechanism-layer APIs):
-  - [ ] `ecosystem/fret-code-view`: ensure syntax-highlighted spans can set shaping features
-    deterministically (default-off ligatures).
+- [x] Implement the policy at the ecosystem layer (avoid expanding mechanism-layer APIs):
+  - [x] `ecosystem/fret-code-view`: apply the policy to code blocks (plain + syntax spans).
+    - Evidence: `ecosystem/fret-code-view/src/code_block.rs` (`disable_ligatures`, `disable_contextual_alternates`)
   - [x] `ecosystem/fret-code-editor`: apply the policy to code text (plain + syntax + preedit).
     - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeFontFeaturePolicy`)
     - Evidence: `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (code shaping applied to spans)
