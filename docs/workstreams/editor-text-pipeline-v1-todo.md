@@ -105,8 +105,19 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - [x] allow breaks around punctuation runs (`.`, `,`, `:`, `;`),
     - [x] allow breaks at identifier boundaries (snake `_`, camelCase transitions),
     - [x] allow breaks around common operator tokens (`::`, `->`, `.`, `=`) (optional).
-- [ ] Ensure the policy matches cursor movement and selection semantics (no drift between row
+- [x] Ensure the policy matches cursor movement and selection semantics (no drift between row
   segmentation and rendered geometry).
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`move_caret_vertical_clamps_in_display_row_space_when_wrapped`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`home_end_move_within_wrapped_display_rows`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_home_end_extends_selection_within_wrapped_display_rows`)
+    - `ecosystem/fret-code-editor-view/src/lib.rs`
+      (`display_map_code_wrap_policy_does_not_split_arrow_operator_token`)
 - [~] Add fixture-driven conformance tests for the policy (ecosystem-owned, deterministic):
   - Status: initial JSON suite landed; expand coverage as new edge-cases are found.
   - Evidence:

@@ -2173,6 +2173,105 @@ fn home_end_move_within_wrapped_display_rows() {
 }
 
 #[test]
+fn shift_home_end_extends_selection_within_wrapped_display_rows() {
+    let handle = CodeEditorHandle::new("abcd\nef");
+    handle.set_soft_wrap_cols(Some(2));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 3,
+        focus: 3,
+    };
+
+    input::move_caret_home_end(&mut st, true, false, true);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 3,
+            focus: 2,
+        }
+    );
+
+    st.selection = Selection {
+        anchor: 3,
+        focus: 3,
+    };
+    input::move_caret_home_end(&mut st, false, false, true);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 3,
+            focus: 4,
+        }
+    );
+}
+
+#[test]
+fn shift_vertical_extends_selection_in_display_row_space_when_wrapped() {
+    let handle = CodeEditorHandle::new("abcd\nef");
+    handle.set_soft_wrap_cols(Some(2));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    input::move_caret_vertical(&mut st, 1, true, Px(10.0));
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 0,
+            focus: 2,
+        }
+    );
+
+    input::move_caret_vertical(&mut st, 1, true, Px(10.0));
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 0,
+            focus: 5,
+        }
+    );
+}
+
+#[test]
+fn home_end_respects_code_wrap_policy_row_boundaries() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let mut st = handle.state.borrow_mut();
+    // Place the caret inside the "right" segment.
+    st.selection = Selection {
+        anchor: "left->r".len(),
+        focus: "left->r".len(),
+    };
+
+    // Sanity: End should produce a caret in the same display-map space as the policy segmentation.
+    input::move_caret_home_end(&mut st, false, false, false);
+
+    let mut rows: Vec<String> = Vec::new();
+    for row in 0..st.display_map.row_count() {
+        let range = st.display_map.display_row_byte_range(&st.buffer, row);
+        rows.push(st.buffer.slice_to_string(range).unwrap_or_default());
+    }
+    assert_eq!(rows.join(""), st.buffer.text_string());
+
+    for w in rows.windows(2) {
+        assert!(
+            !(w[0].ends_with('-') && w[1].starts_with('>')),
+            "expected `->` to not be split across a wrap boundary: rows={rows:?}"
+        );
+    }
+}
+
+#[test]
 fn page_down_moves_by_viewport_rows_and_scrolls() {
     let handle = CodeEditorHandle::new("abcd\nefgh\nijkl\nmnop\nqrst\n");
     handle.set_soft_wrap_cols(Some(2));
