@@ -27,7 +27,7 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 
 - [x] Add minimal layout props to `VStack`/`HStack`: `p/items/justify/wrap` (typed + deterministic mapping).
 - [x] Extend stack layout props: `px/py`, `wFull/hFull`, `minW0/minH0` (and decide whether `flex1` belongs here).
-- [ ] Decide whether to add a generic `Box`/`Container` component (padding + sizing + alignment) vs growing per-component layout props.
+- [x] Decide whether to add a generic `Box`/`Container` component (padding + sizing + alignment) vs growing per-component layout props (`Box` shipped in `ecosystem/fret-genui-shadcn`).
 - [x] Add a small typography surface: `Text.variant` (enum) mapped deterministically in the shadcn resolver.
 - [x] Update demo specs to use layout props (visual sanity gates).
 
@@ -91,4 +91,4 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 
 - [x] Add a generic `Box` component (padding + sizing) to avoid growing per-component layout props indefinitely.
 - [ ] Normalize card content ergonomics in the spec examples (e.g. prefer `Card` → `CardContent` for padded content).
-- [ ] Add one more smoke spec focused on forms layout (labels, input widths, wrap, and alignment).
+- [x] Add one more smoke spec focused on forms layout (labels, input widths, wrap, and alignment).

@@ -68,6 +68,7 @@ Candidate exit criteria:
 Candidate exit criteria:
 
 - ✅ `VStack`/`HStack` expose a minimal, typed layout surface (`p/px/py`, `items/justify`, `wrap`, `wFull/hFull`, `minW0/minH0`).
+- ✅ `Box` exists as a generic padding/sizing boundary (avoids overloading `CardContent` and growing per-component layout props).
 - ✅ A small typography vocabulary exists (via `Text.variant`) with deterministic shadcn mapping.
 - ✅ Demo specs use these props to avoid “everything is glued to the edge” defaults.
 
@@ -75,14 +76,14 @@ Candidate exit criteria:
 
 Candidate exit criteria:
 
-- `ResponsiveGrid` exists in `fret-genui-shadcn` and uses container queries by default.
-- `ResponsiveStack` exists in `fret-genui-shadcn` and switches between `VStack`/`HStack` via queries.
-- Demo spec includes a small section that visibly changes with window/panel resize.
-- Catalog types express breakpoint-driven props cleanly (no ad-hoc stringly-typed breakpoints).
+- ✅ `ResponsiveGrid` exists in `fret-genui-shadcn` and uses container queries by default.
+- ✅ `ResponsiveStack` exists in `fret-genui-shadcn` and switches between `VStack`/`HStack` via queries.
+- ✅ Demo spec includes a small section that visibly changes with window/panel resize.
+- ✅ Catalog types express breakpoint-driven props cleanly (no ad-hoc stringly-typed breakpoints).
 
 ## M8 — Ingest utilities (mixed streams)
 
 Candidate exit criteria:
 
 - ✅ Mixed stream parser exists (text + JSONL patches) with deterministic behavior and small memory usage.
-- Apps can opt into "patch-only" strict mode vs "mixed" mode.
+- ✅ Apps can opt into "patch-only" strict mode vs "mixed" mode.
