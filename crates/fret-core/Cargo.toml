@@ -14,6 +14,7 @@ description = "Core contracts, IDs, geometry, events, and shared data types for 
 slotmap.workspace = true
 serde.workspace = true
 keyboard-types.workspace = true
+smol_str.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time.workspace = true
