@@ -273,3 +273,14 @@ Progress record (Uniformity closure):
   - `cargo check -p fret-demo-web --target wasm32-unknown-unknown`
   - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
   - `cargo run -p fretboard -- dev web --demo ui_gallery` (manual browser smoke)
+
+Perf snapshot (post quad variants):
+
+- Date: 2026-02-15
+- Commit: `6f092733`
+- Commands run (exact):
+  - `$env:CARGO_TARGET_DIR='F:\\ct'; $env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- Outputs (summary):
+  - `headless: frames=600 wall=0.58s prepare=17.57ms ...`
+  - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=17.58ms ... pipelines=1200 binds=27600 ...`
+  - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
