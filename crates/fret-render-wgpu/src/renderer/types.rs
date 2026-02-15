@@ -516,6 +516,12 @@ pub(super) struct ViewportDraw {
     pub(super) target: fret_core::RenderTargetId,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct UniformMaskImageSelection {
+    pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct ImageDraw {
     pub(super) scissor: ScissorRect,
@@ -523,6 +529,7 @@ pub(super) struct ImageDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
 }
 
 #[derive(Clone, Copy)]
@@ -532,6 +539,7 @@ pub(super) struct MaskDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
 }
 
 pub(super) struct TextDraw {
@@ -629,7 +637,7 @@ pub(super) struct SceneEncoding {
     pub(super) masks: Vec<MaskGradientUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
     /// Per-uniform CPU-side mask-image selection used to pick the correct bind group for `Mask::Image`.
-    pub(super) uniform_mask_images: Vec<Option<fret_core::ImageId>>,
+    pub(super) uniform_mask_images: Vec<Option<UniformMaskImageSelection>>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
 

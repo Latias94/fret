@@ -277,29 +277,32 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             rect,
             image,
             fit,
+            sampling,
             opacity,
             ..
         } => {
-            draw::encode_image(renderer, state, rect, image, fit, opacity);
+            draw::encode_image(renderer, state, rect, image, fit, sampling, opacity);
         }
         SceneOp::ImageRegion {
             rect,
             image,
             uv,
+            sampling,
             opacity,
             ..
         } => {
-            draw::encode_image_region(renderer, state, rect, image, uv, opacity);
+            draw::encode_image_region(renderer, state, rect, image, uv, sampling, opacity);
         }
         SceneOp::MaskImage {
             rect,
             image,
             uv,
+            sampling,
             color,
             opacity,
             ..
         } => {
-            draw::encode_mask_image(renderer, state, rect, image, uv, color, opacity);
+            draw::encode_mask_image(renderer, state, rect, image, uv, sampling, color, opacity);
         }
         SceneOp::SvgMaskIcon {
             rect,

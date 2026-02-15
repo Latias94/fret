@@ -169,13 +169,25 @@ fn mix_mask(mut state: u64, m: Mask) -> u64 {
             }
             state
         }
-        Mask::Image { image, uv } => {
+        Mask::Image {
+            image,
+            uv,
+            sampling,
+        } => {
             state = mix_u64(state, 3);
             state = mix_u64(state, image.data().as_ffi());
             state = mix_f32(state, uv.u0);
             state = mix_f32(state, uv.v0);
             state = mix_f32(state, uv.u1);
-            mix_f32(state, uv.v1)
+            state = mix_f32(state, uv.v1);
+            mix_u64(
+                state,
+                match sampling {
+                    super::ImageSamplingHint::Default => 0,
+                    super::ImageSamplingHint::Linear => 1,
+                    super::ImageSamplingHint::Nearest => 2,
+                },
+            )
         }
     }
 }
@@ -382,6 +394,7 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             rect,
             image,
             fit,
+            sampling,
             opacity,
         } => {
             let mut state = mix_u64(state, 4);
@@ -396,6 +409,14 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                     crate::ViewportFit::Cover => 3,
                 },
             );
+            state = mix_u64(
+                state,
+                match sampling {
+                    super::ImageSamplingHint::Default => 0,
+                    super::ImageSamplingHint::Linear => 1,
+                    super::ImageSamplingHint::Nearest => 2,
+                },
+            );
             mix_f32(state, opacity)
         }
         SceneOp::ImageRegion {
@@ -403,6 +424,7 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             rect,
             image,
             uv,
+            sampling,
             opacity,
         } => {
             let mut state = mix_u64(state, 7);
@@ -413,6 +435,14 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_f32(state, uv.v0);
             state = mix_f32(state, uv.u1);
             state = mix_f32(state, uv.v1);
+            state = mix_u64(
+                state,
+                match sampling {
+                    super::ImageSamplingHint::Default => 0,
+                    super::ImageSamplingHint::Linear => 1,
+                    super::ImageSamplingHint::Nearest => 2,
+                },
+            );
             mix_f32(state, opacity)
         }
         SceneOp::MaskImage {
@@ -420,6 +450,7 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             rect,
             image,
             uv,
+            sampling,
             color,
             opacity,
         } => {
@@ -431,6 +462,14 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_f32(state, uv.v0);
             state = mix_f32(state, uv.u1);
             state = mix_f32(state, uv.v1);
+            state = mix_u64(
+                state,
+                match sampling {
+                    super::ImageSamplingHint::Default => 0,
+                    super::ImageSamplingHint::Linear => 1,
+                    super::ImageSamplingHint::Nearest => 2,
+                },
+            );
             state = mix_color(state, color);
             mix_f32(state, opacity)
         }

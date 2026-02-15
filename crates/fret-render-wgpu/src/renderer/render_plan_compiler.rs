@@ -247,7 +247,19 @@ fn compile_for_scene_inner(
                 .flatten();
             hash = mix_fnv1a(
                 hash,
-                mask_image.map(|id| id.data().as_ffi() as u64).unwrap_or(0),
+                mask_image
+                    .map(|sel| sel.image.data().as_ffi() as u64)
+                    .unwrap_or(0),
+            );
+            hash = mix_fnv1a(
+                hash,
+                mask_image
+                    .map(|sel| match sel.sampling {
+                        fret_core::scene::ImageSamplingHint::Default => 0,
+                        fret_core::scene::ImageSamplingHint::Linear => 1,
+                        fret_core::scene::ImageSamplingHint::Nearest => 2,
+                    })
+                    .unwrap_or(0),
             );
             hash
         } else {

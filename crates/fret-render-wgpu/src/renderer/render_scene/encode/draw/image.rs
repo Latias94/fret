@@ -8,6 +8,7 @@ pub(in super::super) fn encode_image(
     rect: Rect,
     image: fret_core::ImageId,
     fit: fret_core::ViewportFit,
+    sampling: fret_core::scene::ImageSamplingHint,
     opacity: f32,
 ) {
     state.flush_quad_batch();
@@ -87,6 +88,7 @@ pub(in super::super) fn encode_image(
         first_vertex,
         vertex_count: 6,
         image,
+        sampling,
     }));
 }
 
@@ -96,6 +98,7 @@ pub(in super::super) fn encode_image_region(
     rect: Rect,
     image: fret_core::ImageId,
     uv: UvRect,
+    sampling: fret_core::scene::ImageSamplingHint,
     opacity: f32,
 ) {
     state.flush_quad_batch();
@@ -168,5 +171,6 @@ pub(in super::super) fn encode_image_region(
         first_vertex,
         vertex_count: 6,
         image,
+        sampling,
     }));
 }

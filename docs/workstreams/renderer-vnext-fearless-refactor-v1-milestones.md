@@ -217,3 +217,18 @@ Deliverables:
 Exit criteria:
 
 - Mixed scenes (text + quads + viewports + images) preserve order and do not regress batching catastrophically.
+
+Progress record (Sampling hints v1):
+
+- Date: 2026-02-15
+- Status: Landed (wgpu default renderer; conformance gated)
+- Evidence anchors:
+  - `docs/adr/0276-image-sampling-hints-v1.md`
+  - `crates/fret-core/src/scene/mod.rs` (`ImageSamplingHint`, image ops carry `sampling`)
+  - `crates/fret-core/src/scene/mask.rs` (`Mask::Image { sampling }`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (dual bind groups: linear vs nearest)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`pick_image_bind_group`, `pick_uniform_bind_group_for_mask_image`)
+  - `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance`
+  - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`

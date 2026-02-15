@@ -12,7 +12,7 @@ pub(super) enum MaskPop {
     NoShader,
     Shader {
         prev_head: u32,
-        prev_mask_image: Option<fret_core::ImageId>,
+        prev_mask_image: Option<UniformMaskImageSelection>,
     },
 }
 
@@ -32,7 +32,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) clips: &'a mut Vec<ClipRRectUniform>,
     pub(super) masks: &'a mut Vec<MaskGradientUniform>,
     pub(super) uniforms: &'a mut Vec<ViewportUniform>,
-    pub(super) uniform_mask_images: &'a mut Vec<Option<fret_core::ImageId>>,
+    pub(super) uniform_mask_images: &'a mut Vec<Option<UniformMaskImageSelection>>,
     pub(super) ordered_draws: &'a mut Vec<OrderedDraw>,
     pub(super) effect_markers: &'a mut Vec<EffectMarker>,
 
@@ -46,7 +46,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) mask_pop_stack: Vec<MaskPop>,
     pub(super) mask_head: u32,
     pub(super) mask_count: u32,
-    pub(super) mask_image: Option<fret_core::ImageId>,
+    pub(super) mask_image: Option<UniformMaskImageSelection>,
 
     pub(super) mask_scope_stack: Vec<(u32, u32)>,
     pub(super) mask_scope_head: u32,

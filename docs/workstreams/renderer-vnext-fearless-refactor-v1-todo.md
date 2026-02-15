@@ -102,8 +102,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M5 — Sampling hints (bounded state surface)
 
-- [ ] REN-VNEXT-samp-001 Decide where sampling hints live (image op, viewport op, or material).
-- [ ] REN-VNEXT-samp-002 Add a small conformance scene that exercises nearest/linear on mixed primitives without reordering.
+- [x] REN-VNEXT-samp-001 Decide where sampling hints live (image op, viewport op, or material).
+  - Decision (v1): sampling hints live on image sampling sites (`SceneOp::Image*`, `SceneOp::MaskImage`, `Mask::Image`), not on `Paint`/`Material`.
+  - Evidence: `docs/adr/0276-image-sampling-hints-v1.md`, `crates/fret-core/src/scene/mod.rs` (`ImageSamplingHint`, `SceneOp::{Image,ImageRegion,MaskImage}`),
+    `crates/fret-core/src/scene/mask.rs` (`Mask::Image { sampling }`).
+- [x] REN-VNEXT-samp-002 Add a small conformance scene that exercises nearest/linear on mixed primitives without reordering.
+  - Evidence: `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
 
 ## Always-run guardrails (before/after each milestone)
 

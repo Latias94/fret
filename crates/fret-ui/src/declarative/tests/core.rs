@@ -528,12 +528,7 @@ fn mask_layer_is_paint_only_for_hit_testing_by_default() {
             .debug_node_bounds(pressable_node)
             .expect("pressable bounds");
 
-        (
-            root,
-            pressable_node,
-            mask_bounds,
-            pressable_bounds,
-        )
+        (root, pressable_node, mask_bounds, pressable_bounds)
     }
 
     let mut app = TestHost::new();
@@ -568,7 +563,10 @@ fn mask_layer_is_paint_only_for_hit_testing_by_default() {
         Px(pressable_bounds.origin.y.0 + 2.0),
     );
 
-    assert_eq!(ui.debug_hit_test(overflow_hit_pos).hit, Some(pressable_node));
+    assert_eq!(
+        ui.debug_hit_test(overflow_hit_pos).hit,
+        Some(pressable_node)
+    );
 
     app.advance_frame();
 

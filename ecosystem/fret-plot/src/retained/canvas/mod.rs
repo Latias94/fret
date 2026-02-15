@@ -284,6 +284,7 @@ fn paint_plot_images(
             rect: Rect::new(Point::new(Px(left), Px(top)), Size::new(Px(w), Px(h))),
             image: img.image,
             uv: img.uv,
+            sampling: fret_core::scene::ImageSamplingHint::Default,
             opacity,
         });
     }

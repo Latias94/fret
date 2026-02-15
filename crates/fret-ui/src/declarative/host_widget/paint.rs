@@ -1439,6 +1439,7 @@ impl ElementHostWidget {
                         rect: cx.bounds,
                         image: props.image,
                         uv,
+                        sampling: fret_core::scene::ImageSamplingHint::Default,
                         opacity,
                     });
                 } else {
@@ -1447,6 +1448,7 @@ impl ElementHostWidget {
                         rect: cx.bounds,
                         image: props.image,
                         fit: props.fit,
+                        sampling: fret_core::scene::ImageSamplingHint::Default,
                         opacity,
                     });
                 }

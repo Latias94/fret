@@ -102,6 +102,7 @@ pub(in super::super) fn encode_svg_mask_icon(
         first_vertex,
         vertex_count: 6,
         image: entry.image,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
     }));
 }
 
@@ -201,5 +202,6 @@ pub(in super::super) fn encode_svg_image(
         first_vertex,
         vertex_count: 6,
         image: entry.image,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
     }));
 }
