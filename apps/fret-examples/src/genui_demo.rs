@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_genui_core::catalog::CatalogV1;
+use fret_genui_core::mixed_stream::{MixedSpecStreamCompiler, MixedStreamMode, MixedStreamOptions};
 use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
 use fret_genui_core::spec::SpecV1;
 use fret_genui_core::validate::ValidationMode;
@@ -254,6 +255,10 @@ struct GenUiState {
     auto_apply_standard_actions: Model<bool>,
     editor_text: Model<String>,
     editor_error: Option<Arc<str>>,
+    stream_text: Model<String>,
+    stream_patch_only: Model<bool>,
+    stream_summary: Option<Arc<str>>,
+    stream_error: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone)]
@@ -262,6 +267,8 @@ enum Msg {
     ResetState,
     ApplyEditorSpec,
     ResetEditor,
+    ApplyStream,
+    ResetStream,
 }
 
 struct GenUiProgram;
@@ -281,6 +288,10 @@ impl MvuProgram for GenUiProgram {
             auto_apply_standard_actions: app.models_mut().insert(true),
             editor_text: app.models_mut().insert(SPEC_JSON.to_string()),
             editor_error: None,
+            stream_text: app.models_mut().insert(String::new()),
+            stream_patch_only: app.models_mut().insert(false),
+            stream_summary: None,
+            stream_error: None,
         }
     }
 
@@ -325,6 +336,80 @@ impl MvuProgram for GenUiProgram {
                     .update(&state.editor_text, |s| *s = SPEC_JSON.to_string());
                 state.editor_error = None;
             }
+            Msg::ApplyStream => {
+                let text = app
+                    .models()
+                    .read(&state.stream_text, Clone::clone)
+                    .ok()
+                    .unwrap_or_default();
+                let patch_only = app
+                    .models()
+                    .get_copied(&state.stream_patch_only)
+                    .unwrap_or(false);
+
+                let mut compiler = MixedSpecStreamCompiler::new(MixedStreamOptions {
+                    mode: if patch_only {
+                        MixedStreamMode::PatchOnly
+                    } else {
+                        MixedStreamMode::Mixed
+                    },
+                    ..Default::default()
+                });
+
+                let delta1 = match compiler.push_chunk(&text) {
+                    Ok(d) => d,
+                    Err(err) => {
+                        state.stream_error = Some(Arc::<str>::from(err.to_string()));
+                        return;
+                    }
+                };
+                let delta2 = match compiler.flush() {
+                    Ok(d) => d,
+                    Err(err) => {
+                        state.stream_error = Some(Arc::<str>::from(err.to_string()));
+                        return;
+                    }
+                };
+                let mut delta = delta1;
+                delta.text_lines.extend(delta2.text_lines);
+                delta.patches.extend(delta2.patches);
+
+                let value = compiler.into_result();
+                match serde_json::from_value::<SpecV1>(value) {
+                    Ok(spec) => {
+                        state.spec = spec;
+                        state.editor_error = None;
+                        state.stream_error = None;
+                        state.stream_summary = Some(Arc::<str>::from(format!(
+                            "applied {} patches, saw {} text lines",
+                            delta.patches.len(),
+                            delta.text_lines.len()
+                        )));
+
+                        let seed = state.spec.state.clone().unwrap_or(Value::Null);
+                        let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
+                        let _ = app
+                            .models_mut()
+                            .update(&state.action_queue, |q| q.invocations.clear());
+
+                        let pretty = serde_json::to_string_pretty(&state.spec)
+                            .unwrap_or_else(|_| "<spec>".to_string());
+                        let _ = app.models_mut().update(&state.editor_text, |s| *s = pretty);
+                    }
+                    Err(err) => {
+                        state.stream_error =
+                            Some(Arc::<str>::from(format!("Spec parse error: {err}")));
+                    }
+                }
+            }
+            Msg::ResetStream => {
+                let _ = app.models_mut().update(&state.stream_text, |s| s.clear());
+                let _ = app
+                    .models_mut()
+                    .update(&state.stream_patch_only, |v| *v = false);
+                state.stream_summary = None;
+                state.stream_error = None;
+            }
         }
     }
 
@@ -348,6 +433,8 @@ fn view(
     let reset_cmd = msg.cmd(Msg::ResetState);
     let apply_editor_cmd = msg.cmd(Msg::ApplyEditorSpec);
     let reset_editor_cmd = msg.cmd(Msg::ResetEditor);
+    let apply_stream_cmd = msg.cmd(Msg::ApplyStream);
+    let reset_stream_cmd = msg.cmd(Msg::ResetStream);
 
     let auto_apply_model = st.auto_apply_standard_actions.clone();
     let auto_apply_enabled = cx
@@ -519,6 +606,16 @@ fn view(
 
     let editor_model = st.editor_text.clone();
     let editor_error = st.editor_error.clone();
+    let stream_model = st.stream_text.clone();
+    let stream_patch_only_model = st.stream_patch_only.clone();
+    let stream_patch_only = cx
+        .watch_model(&st.stream_patch_only)
+        .layout()
+        .read(|_host, v| *v)
+        .ok()
+        .unwrap_or(false);
+    let stream_summary = st.stream_summary.clone();
+    let stream_error = st.stream_error.clone();
 
     let right = {
         let state_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| state_lines)
@@ -646,6 +743,84 @@ fn view(
             .h_full()
             .into_element(cx);
 
+        let mut stream_children: Vec<AnyElement> = Vec::new();
+        stream_children.push(
+            ui::h_flex(cx, move |cx| {
+                vec![
+                    shadcn::Button::new("Apply stream → spec")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .on_click(apply_stream_cmd)
+                        .into_element(cx),
+                    shadcn::Button::new("Reset stream")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .on_click(reset_stream_cmd)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+        );
+        stream_children.push(
+            ui::h_flex(cx, move |cx| {
+                vec![
+                    ui::text(
+                        cx,
+                        Arc::<str>::from(format!(
+                            "patch-only: {}",
+                            if stream_patch_only { "on" } else { "off" }
+                        )),
+                    )
+                    .text_sm()
+                    .into_element(cx),
+                    shadcn::Switch::new(stream_patch_only_model.clone())
+                        .a11y_label("Patch-only stream mode")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+        );
+        stream_children.push(
+            ui::text(
+                cx,
+                Arc::<str>::from(
+                    "Paste json-render-style mixed streams here (text + JSONL RFC6902 patches). Supports ```spec fences.",
+                ),
+            )
+            .text_sm()
+            .into_element(cx),
+        );
+        stream_children.push(
+            shadcn::Textarea::new(stream_model.clone())
+                .a11y_label("Mixed stream input")
+                .min_height(Px(220.0))
+                .into_element(cx),
+        );
+        if let Some(summary) = stream_summary {
+            stream_children.push(ui::text(cx, summary).text_sm().into_element(cx));
+        }
+        if let Some(err) = stream_error {
+            stream_children.push(
+                shadcn::Alert::new([
+                    shadcn::AlertTitle::new("Stream error").into_element(cx),
+                    shadcn::AlertDescription::new(err).into_element(cx),
+                ])
+                .into_element(cx),
+            );
+        }
+        let stream_panel = ui::v_flex(cx, move |_cx| stream_children)
+            .gap(Space::N2)
+            .items_start()
+            .w_full()
+            .into_element(cx);
+        let stream_scroll = shadcn::ScrollArea::new([stream_panel])
+            .ui()
+            .w_full()
+            .h_full()
+            .into_element(cx);
+
         let tabs = shadcn::Tabs::uncontrolled(Some("state"))
             .content_fill_remaining(true)
             .items([
@@ -660,6 +835,7 @@ fn view(
                 shadcn::TabsItem::new("schema", "Schema", [schema_scroll]),
                 shadcn::TabsItem::new("prompt", "Prompt", [prompt_scroll]),
                 shadcn::TabsItem::new("editor", "Editor", [editor_scroll]),
+                shadcn::TabsItem::new("stream", "Stream", [stream_scroll]),
             ])
             .into_element(cx);
 
