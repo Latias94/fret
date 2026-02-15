@@ -26,10 +26,12 @@ pub enum SpecIssueCode {
     UnknownComponent,
     InvalidPropKey,
     InvalidPropType,
+    MissingRequiredProp,
     UnknownEvent,
     UnknownAction,
     InvalidActionParamKey,
     InvalidActionParamType,
+    MissingRequiredActionParam,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,6 +149,20 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                 }
 
                 if let Some(component) = component {
+                    for (prop_key, prop_def) in component.props.iter() {
+                        if prop_def.required && !element.props.contains_key(prop_key) {
+                            issues.push(SpecIssue {
+                                severity,
+                                code: SpecIssueCode::MissingRequiredProp,
+                                message: format!(
+                                    "Element {:?} is missing required prop key {:?} for component {}",
+                                    key, prop_key, element.ty
+                                ),
+                                element_key: Some(key.clone()),
+                            });
+                        }
+                    }
+
                     for (prop_key, prop_value) in element.props.iter() {
                         let Some(prop_def) = component.props.get(prop_key) else {
                             issues.push(SpecIssue {
@@ -212,7 +228,25 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                                 // If the action declares param keys, enforce them. If it declares no keys,
                                 // allow any params (action semantics are app-owned).
                                 if !action_def.params.is_empty() {
-                                    if let Some(params) = b.params.as_ref() {
+                                    let params = b.params.as_ref();
+
+                                    for (param_key, param_def) in action_def.params.iter() {
+                                        if param_def.required
+                                            && params.and_then(|p| p.get(param_key)).is_none()
+                                        {
+                                            issues.push(SpecIssue {
+                                                severity,
+                                                code: SpecIssueCode::MissingRequiredActionParam,
+                                                message: format!(
+                                                    "Element {:?} is missing required param key {:?} for action {:?}",
+                                                    key, param_key, b.action
+                                                ),
+                                                element_key: Some(key.clone()),
+                                            });
+                                        }
+                                    }
+
+                                    if let Some(params) = params {
                                         for (param_key, param_value) in params.iter() {
                                             let Some(param_def) = action_def.params.get(param_key)
                                             else {
@@ -396,7 +430,7 @@ fn value_matches_type(
         }
         CatalogValueTypeV1::OneOf { variants } => variants
             .iter()
-            .any(|ty| value_matches_type(value, ty, nullable)),
+            .any(|ty| value_matches_type(value, ty, false)),
     }
 }
 

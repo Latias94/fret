@@ -140,6 +140,13 @@ impl CatalogV1 {
                     out.push_str(prop);
                     out.push_str(": ");
                     out.push_str(def.value_type.prompt_hint().as_str());
+                    if def.required {
+                        out.push_str(" (required)");
+                    }
+                    if let Some(default) = def.default.as_ref() {
+                        out.push_str(" default=");
+                        out.push_str(default.to_string().as_str());
+                    }
                     out.push('\n');
 
                     if let CatalogValueTypeV1::Object { fields, .. } = &def.value_type {
@@ -150,6 +157,13 @@ impl CatalogV1 {
                                 out.push_str(k);
                                 out.push_str(": ");
                                 out.push_str(v.value_type.prompt_hint().as_str());
+                                if v.required {
+                                    out.push_str(" (required)");
+                                }
+                                if let Some(default) = v.default.as_ref() {
+                                    out.push_str(" default=");
+                                    out.push_str(default.to_string().as_str());
+                                }
                                 out.push('\n');
                             }
                         }
@@ -185,6 +199,13 @@ impl CatalogV1 {
                     out.push_str(k);
                     out.push_str(": ");
                     out.push_str(v.value_type.prompt_hint().as_str());
+                    if v.required {
+                        out.push_str(" (required)");
+                    }
+                    if let Some(default) = v.default.as_ref() {
+                        out.push_str(" default=");
+                        out.push_str(default.to_string().as_str());
+                    }
                     if let Some(desc) = v.description.as_deref() {
                         out.push_str(" — ");
                         out.push_str(desc);
@@ -199,6 +220,13 @@ impl CatalogV1 {
                                 out.push_str(fk);
                                 out.push_str(": ");
                                 out.push_str(fv.value_type.prompt_hint().as_str());
+                                if fv.required {
+                                    out.push_str(" (required)");
+                                }
+                                if let Some(default) = fv.default.as_ref() {
+                                    out.push_str(" default=");
+                                    out.push_str(default.to_string().as_str());
+                                }
                                 out.push('\n');
                             }
                         }
@@ -281,6 +309,12 @@ pub struct CatalogPropV1 {
     pub value_type: CatalogValueTypeV1,
     #[serde(default)]
     pub nullable: bool,
+    /// Whether this prop/param is required to be present (catalog validation only).
+    #[serde(default)]
+    pub required: bool,
+    /// Optional default value for prompting/schema (not auto-applied by core).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<Value>,
 }
 
 impl CatalogPropV1 {
@@ -289,6 +323,8 @@ impl CatalogPropV1 {
             description: None,
             value_type: CatalogValueTypeV1::Any,
             nullable: false,
+            required: false,
+            default: None,
         }
     }
 
@@ -382,6 +418,16 @@ impl CatalogPropV1 {
         self.nullable = nullable;
         self
     }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
+    pub fn default_value(mut self, value: Value) -> Self {
+        self.default = Some(value);
+        self
+    }
 }
 
 impl Default for CatalogPropV1 {
@@ -439,8 +485,13 @@ fn component_element_schema(name: &str, c: &CatalogComponentV1, catalog: &Catalo
     let props_properties = c
         .props
         .iter()
-        .map(|(k, v)| (k.clone(), dynamic_value_schema(&v.value_type, v.nullable)))
+        .map(|(k, v)| (k.clone(), dynamic_prop_schema(v)))
         .collect::<serde_json::Map<_, _>>();
+    let required_props = c
+        .props
+        .iter()
+        .filter_map(|(k, v)| v.required.then_some(k.clone()))
+        .collect::<Vec<_>>();
 
     json!({
       "type": "object",
@@ -451,7 +502,8 @@ fn component_element_schema(name: &str, c: &CatalogComponentV1, catalog: &Catalo
         "props": {
           "type": "object",
           "additionalProperties": false,
-          "properties": props_properties
+          "properties": props_properties,
+          "required": required_props
         },
         "children": { "type": "array", "items": { "type": "string" } },
         "visible": {},
@@ -471,12 +523,18 @@ fn action_params_schema(action: &CatalogActionV1) -> Value {
     let props = action
         .params
         .iter()
-        .map(|(k, v)| (k.clone(), dynamic_value_schema(&v.value_type, v.nullable)))
+        .map(|(k, v)| (k.clone(), dynamic_prop_schema(v)))
         .collect::<serde_json::Map<_, _>>();
+    let required = action
+        .params
+        .iter()
+        .filter_map(|(k, v)| v.required.then_some(k.clone()))
+        .collect::<Vec<_>>();
     json!({
       "type": "object",
       "additionalProperties": false,
-      "properties": props
+      "properties": props,
+      "required": required
     })
 }
 
@@ -543,6 +601,16 @@ fn dynamic_value_schema(ty: &CatalogValueTypeV1, nullable: bool) -> Value {
     })
 }
 
+fn dynamic_prop_schema(def: &CatalogPropV1) -> Value {
+    let mut v = dynamic_value_schema(&def.value_type, def.nullable);
+    if let Some(default) = def.default.as_ref() {
+        if let Some(obj) = v.as_object_mut() {
+            obj.insert("default".to_string(), default.clone());
+        }
+    }
+    v
+}
+
 fn base_value_schema(ty: &CatalogValueTypeV1) -> Value {
     match ty {
         CatalogValueTypeV1::Any => json!({}),
@@ -554,17 +622,22 @@ fn base_value_schema(ty: &CatalogValueTypeV1) -> Value {
         CatalogValueTypeV1::Object { fields, additional } => {
             let properties = fields
                 .iter()
-                .map(|(k, v)| (k.clone(), dynamic_value_schema(&v.value_type, v.nullable)))
+                .map(|(k, v)| (k.clone(), dynamic_prop_schema(v)))
                 .collect::<serde_json::Map<_, _>>();
+            let required = fields
+                .iter()
+                .filter_map(|(k, v)| v.required.then_some(k.clone()))
+                .collect::<Vec<_>>();
             json!({
               "type": "object",
               "additionalProperties": *additional,
-              "properties": properties
+              "properties": properties,
+              "required": required
             })
         }
         CatalogValueTypeV1::Array { items } => json!({
           "type": "array",
-          "items": dynamic_value_schema(&items.value_type, items.nullable)
+          "items": dynamic_prop_schema(items)
         }),
         CatalogValueTypeV1::OneOf { variants } => json!({
           "oneOf": variants.iter().map(base_value_schema).collect::<Vec<_>>()
@@ -598,6 +671,7 @@ impl CatalogValueTypeV1 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::catalog::{CatalogActionV1, CatalogComponentV1};
 
     #[test]
     fn spec_schema_includes_component_and_action_enums() {
@@ -654,5 +728,109 @@ mod tests {
                 .and_then(|v| v.as_str())
                 == Some("setState")
         }));
+    }
+
+    #[test]
+    fn spec_schema_marks_required_props_and_params() {
+        let mut catalog = CatalogV1::new();
+        catalog.components.insert(
+            "Text".to_string(),
+            CatalogComponentV1 {
+                description: None,
+                props: {
+                    let mut p = BTreeMap::new();
+                    p.insert("text".to_string(), CatalogPropV1::string().required(true));
+                    p.insert(
+                        "tone".to_string(),
+                        CatalogPropV1::enum_values(["muted", "default"])
+                            .default_value(Value::String("default".to_string())),
+                    );
+                    p
+                },
+                events: Default::default(),
+            },
+        );
+        catalog.actions.insert(
+            "doIt".to_string(),
+            CatalogActionV1 {
+                description: None,
+                params: {
+                    let mut p = BTreeMap::new();
+                    p.insert("id".to_string(), CatalogPropV1::string().required(true));
+                    p
+                },
+            },
+        );
+
+        let schema = catalog.spec_json_schema();
+        let elements = schema
+            .get("properties")
+            .and_then(|p| p.get("elements"))
+            .and_then(|e| e.get("additionalProperties"))
+            .and_then(|a| a.get("oneOf"))
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let text_variant = elements
+            .iter()
+            .find(|v| {
+                v.get("properties")
+                    .and_then(|p| p.get("type"))
+                    .and_then(|t| t.get("const"))
+                    .and_then(|v| v.as_str())
+                    == Some("Text")
+            })
+            .cloned()
+            .expect("Text variant must exist");
+
+        let required_props = text_variant
+            .get("properties")
+            .and_then(|p| p.get("props"))
+            .and_then(|p| p.get("required"))
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert!(required_props.iter().any(|v| v.as_str() == Some("text")));
+
+        let tone_default = text_variant
+            .get("properties")
+            .and_then(|p| p.get("props"))
+            .and_then(|p| p.get("properties"))
+            .and_then(|p| p.get("tone"))
+            .and_then(|v| v.get("default"))
+            .cloned()
+            .unwrap_or(Value::Null);
+        assert_eq!(tone_default, Value::String("default".to_string()));
+
+        let action_variants = text_variant
+            .get("properties")
+            .and_then(|p| p.get("on"))
+            .and_then(|on| on.get("additionalProperties"))
+            .and_then(|ap| ap.get("oneOf"))
+            .and_then(|v| v.as_array())
+            .and_then(|oneof| oneof.first())
+            .and_then(|binding| binding.get("oneOf"))
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let do_it = action_variants
+            .iter()
+            .find(|v| {
+                v.get("properties")
+                    .and_then(|p| p.get("action"))
+                    .and_then(|a| a.get("const"))
+                    .and_then(|v| v.as_str())
+                    == Some("doIt")
+            })
+            .cloned()
+            .expect("doIt action variant must exist");
+        let required_params = do_it
+            .get("properties")
+            .and_then(|p| p.get("params"))
+            .and_then(|p| p.get("required"))
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert!(required_params.iter().any(|v| v.as_str() == Some("id")));
     }
 }
