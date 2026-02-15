@@ -158,7 +158,9 @@ adding new runtime contracts unless evidence demands it.
   - Evidence: `ecosystem/fret-ui-editor/src/primitives/visuals.rs`
   - Evidence: `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/mini_search_box.rs` (clear affordance hover)
   - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
+  - Evidence: `ecosystem/fret-ui-editor/src/composites/property_row.rs` (reset button hover)
 - [~] Define a shared `EditorChrome` recipe (if not already done in M2.5):
   - input-like frame chrome (bg/border/radius/padding) + state variants
   - icon sizing + spacing defaults
