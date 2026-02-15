@@ -119,6 +119,22 @@ Interpretation:
 - High sampled CPU with stable stacks in Fret code ⇒ real work regression (optimize the hottest phase).
 - DPC/ISR spikes aligned with frame spikes ⇒ driver/OS noise; consider isolating (priority, affinity, power plan, background activity).
 
+## In-app CPU-time signal (when ETW/WPR is unavailable)
+
+Some environments block WPR/ETW system profiling. In that case, use the in-app UI-thread CPU-time
+signal exported into `debug.stats`:
+
+- `ui_thread_cpu_time_us`: approximate CPU time consumed by the UI thread since the previous snapshot.
+- `ui_thread_cpu_cycle_time_delta_cycles`: UI thread cycle delta since the previous snapshot (Windows-only, higher resolution).
+
+How to interpret:
+
+- Prefer `ui_thread_cpu_cycle_time_delta_cycles` when available: `GetThreadTimes` can be coarse and appear quantized.
+- Treat `ui_thread_cpu_time_us` as a best-effort hint, not a precise per-frame budget.
+
+- If `total_time_us` spikes but `ui_thread_cpu_time_us` stays low ⇒ schedule noise / preemption likely.
+- If both spike together ⇒ real CPU work regression (optimize the dominating phase).
+
 ## What “typical perf” means here (not tail)
 
 Tail (spikes) is “max / worst frame”. Typical perf should use **percentiles** (p50/p95) to answer

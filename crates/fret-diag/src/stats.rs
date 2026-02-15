@@ -701,6 +701,8 @@ pub(super) struct BundleStatsReport {
     sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
     sum_total_time_us: u64,
+    sum_ui_thread_cpu_time_us: u64,
+    sum_ui_thread_cpu_cycle_time_delta_cycles: u64,
     sum_layout_engine_solve_time_us: u64,
     sum_cache_roots: u64,
     sum_cache_roots_reused: u64,
@@ -725,6 +727,8 @@ pub(super) struct BundleStatsReport {
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
+    max_ui_thread_cpu_time_us: u64,
+    max_ui_thread_cpu_cycle_time_delta_cycles: u64,
     max_layout_engine_solve_time_us: u64,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
@@ -733,6 +737,10 @@ pub(super) struct BundleStatsReport {
     pub(super) max_hover_layout_invalidations: u32,
     p50_total_time_us: u64,
     p95_total_time_us: u64,
+    p50_ui_thread_cpu_time_us: u64,
+    p95_ui_thread_cpu_time_us: u64,
+    p50_ui_thread_cpu_cycle_time_delta_cycles: u64,
+    p95_ui_thread_cpu_cycle_time_delta_cycles: u64,
     p50_layout_time_us: u64,
     p95_layout_time_us: u64,
     p50_prepaint_time_us: u64,
@@ -765,6 +773,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) frame_arena_grow_events: u32,
     pub(super) element_children_vec_pool_reuses: u32,
     pub(super) element_children_vec_pool_misses: u32,
+    pub(super) ui_thread_cpu_time_us: u64,
+    pub(super) ui_thread_cpu_total_time_us: u64,
+    pub(super) ui_thread_cpu_cycle_time_delta_cycles: u64,
+    pub(super) ui_thread_cpu_cycle_time_total_cycles: u64,
     pub(super) layout_time_us: u64,
     pub(super) layout_collect_roots_time_us: u64,
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
@@ -1144,9 +1156,11 @@ impl BundleStatsReport {
             self.sum_paint_time_us
         );
         println!(
-            "time p50/p95 (us): total={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
+            "time p50/p95 (us): total={}/{} cpu_time={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
             self.p50_total_time_us,
             self.p95_total_time_us,
+            self.p50_ui_thread_cpu_time_us,
+            self.p95_ui_thread_cpu_time_us,
             self.p50_layout_time_us,
             self.p95_layout_time_us,
             self.p50_prepaint_time_us,
@@ -1158,6 +1172,17 @@ impl BundleStatsReport {
             self.p50_hit_test_time_us,
             self.p95_hit_test_time_us
         );
+        if self.p50_ui_thread_cpu_cycle_time_delta_cycles > 0
+            || self.p95_ui_thread_cpu_cycle_time_delta_cycles > 0
+            || self.max_ui_thread_cpu_cycle_time_delta_cycles > 0
+        {
+            println!(
+                "cpu cycles p50/p95/max: {}/{}/{}",
+                self.p50_ui_thread_cpu_cycle_time_delta_cycles,
+                self.p95_ui_thread_cpu_cycle_time_delta_cycles,
+                self.max_ui_thread_cpu_cycle_time_delta_cycles
+            );
+        }
         println!(
             "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
             self.p50_layout_engine_solve_time_us,
@@ -1932,6 +1957,14 @@ impl BundleStatsReport {
             Value::from(self.sum_total_time_us),
         );
         sum.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.sum_ui_thread_cpu_time_us),
+        );
+        sum.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.sum_ui_thread_cpu_cycle_time_delta_cycles),
+        );
+        sum.insert(
             "layout_engine_solve_time_us".to_string(),
             Value::from(self.sum_layout_engine_solve_time_us),
         );
@@ -2026,6 +2059,14 @@ impl BundleStatsReport {
         max.insert(
             "total_time_us".to_string(),
             Value::from(self.max_total_time_us),
+        );
+        max.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.max_ui_thread_cpu_time_us),
+        );
+        max.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.max_ui_thread_cpu_cycle_time_delta_cycles),
         );
         max.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -2148,6 +2189,20 @@ impl BundleStatsReport {
             Value::from(avg_us(self.sum_total_time_us, self.snapshots_considered)),
         );
         avg.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_ui_thread_cpu_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(avg_us(
+                self.sum_ui_thread_cpu_cycle_time_delta_cycles,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_engine_solve_time_us".to_string(),
             Value::from(avg_us(
                 self.sum_layout_engine_solve_time_us,
@@ -2194,6 +2249,14 @@ impl BundleStatsReport {
             Value::from(self.p50_total_time_us),
         );
         p50.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.p50_ui_thread_cpu_time_us),
+        );
+        p50.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.p50_ui_thread_cpu_cycle_time_delta_cycles),
+        );
+        p50.insert(
             "layout_time_us".to_string(),
             Value::from(self.p50_layout_time_us),
         );
@@ -2231,6 +2294,14 @@ impl BundleStatsReport {
         p95.insert(
             "total_time_us".to_string(),
             Value::from(self.p95_total_time_us),
+        );
+        p95.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.p95_ui_thread_cpu_time_us),
+        );
+        p95.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.p95_ui_thread_cpu_cycle_time_delta_cycles),
         );
         p95.insert(
             "layout_time_us".to_string(),
@@ -2319,6 +2390,22 @@ impl BundleStatsReport {
                     row.timestamp_unix_ms
                         .map(Value::from)
                         .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "ui_thread_cpu_time_us".to_string(),
+                    Value::from(row.ui_thread_cpu_time_us),
+                );
+                obj.insert(
+                    "ui_thread_cpu_total_time_us".to_string(),
+                    Value::from(row.ui_thread_cpu_total_time_us),
+                );
+                obj.insert(
+                    "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+                    Value::from(row.ui_thread_cpu_cycle_time_delta_cycles),
+                );
+                obj.insert(
+                    "ui_thread_cpu_cycle_time_total_cycles".to_string(),
+                    Value::from(row.ui_thread_cpu_cycle_time_total_cycles),
                 );
                 obj.insert(
                     "layout_time_us".to_string(),
@@ -8754,6 +8841,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("hit_test_fallback_traversal_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let ui_thread_cpu_time_us = stats
+                .and_then(|m| m.get("ui_thread_cpu_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_total_time_us = stats
+                .and_then(|m| m.get("ui_thread_cpu_total_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_delta_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_delta_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_total_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_total_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let total_time_us = layout_time_us
                 .saturating_add(prepaint_time_us)
                 .saturating_add(paint_time_us);
@@ -9336,6 +9439,12 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.sum_prepaint_time_us = out.sum_prepaint_time_us.saturating_add(prepaint_time_us);
             out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint_time_us);
             out.sum_total_time_us = out.sum_total_time_us.saturating_add(total_time_us);
+            out.sum_ui_thread_cpu_time_us = out
+                .sum_ui_thread_cpu_time_us
+                .saturating_add(ui_thread_cpu_time_us);
+            out.sum_ui_thread_cpu_cycle_time_delta_cycles = out
+                .sum_ui_thread_cpu_cycle_time_delta_cycles
+                .saturating_add(ui_thread_cpu_cycle_time_delta_cycles);
             out.sum_layout_engine_solve_time_us = out
                 .sum_layout_engine_solve_time_us
                 .saturating_add(layout_engine_solve_time_us);
@@ -9424,6 +9533,11 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
+            out.max_ui_thread_cpu_time_us =
+                out.max_ui_thread_cpu_time_us.max(ui_thread_cpu_time_us);
+            out.max_ui_thread_cpu_cycle_time_delta_cycles = out
+                .max_ui_thread_cpu_cycle_time_delta_cycles
+                .max(ui_thread_cpu_cycle_time_delta_cycles);
             out.max_layout_engine_solve_time_us = out
                 .max_layout_engine_solve_time_us
                 .max(layout_engine_solve_time_us);
@@ -9437,6 +9551,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 frame_arena_grow_events,
                 element_children_vec_pool_reuses,
                 element_children_vec_pool_misses,
+                ui_thread_cpu_time_us,
+                ui_thread_cpu_total_time_us,
+                ui_thread_cpu_cycle_time_delta_cycles,
+                ui_thread_cpu_cycle_time_total_cycles,
                 layout_time_us,
                 layout_collect_roots_time_us,
                 layout_invalidate_scroll_handle_bindings_time_us,
@@ -9649,6 +9767,12 @@ pub(super) fn bundle_stats_from_json_with_options(
     }
 
     (out.p50_total_time_us, out.p95_total_time_us) = p50_p95(rows.iter().map(|r| r.total_time_us));
+    (out.p50_ui_thread_cpu_time_us, out.p95_ui_thread_cpu_time_us) =
+        p50_p95(rows.iter().map(|r| r.ui_thread_cpu_time_us));
+    (
+        out.p50_ui_thread_cpu_cycle_time_delta_cycles,
+        out.p95_ui_thread_cpu_cycle_time_delta_cycles,
+    ) = p50_p95(rows.iter().map(|r| r.ui_thread_cpu_cycle_time_delta_cycles));
     (out.p50_layout_time_us, out.p95_layout_time_us) =
         p50_p95(rows.iter().map(|r| r.layout_time_us));
     (out.p50_prepaint_time_us, out.p95_prepaint_time_us) =
