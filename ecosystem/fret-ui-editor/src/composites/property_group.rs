@@ -155,7 +155,8 @@ impl PropertyGroup {
                 .unwrap_or(self.options.default_collapsed);
 
             let disclosure = if self.options.collapsible {
-                if collapsed { "▸" } else { "▾" }
+                // ASCII fallback (avoid missing-glyph tofu on default fonts).
+                if collapsed { ">" } else { "v" }
             } else {
                 ""
             };

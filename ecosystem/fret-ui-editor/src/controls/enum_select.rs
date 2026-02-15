@@ -196,7 +196,8 @@ impl EnumSelect {
                     });
                 cx.pressable_add_on_activate(on_activate);
 
-                let caret = if is_open { "▴" } else { "▾" };
+                // ASCII fallback (avoid missing-glyph tofu on default fonts).
+                let caret = if is_open { "^" } else { "v" };
                 let caret_fg = Theme::global(&*cx.app)
                     .color_by_key("muted-foreground")
                     .or_else(|| Theme::global(&*cx.app).color_by_key("muted_foreground"))

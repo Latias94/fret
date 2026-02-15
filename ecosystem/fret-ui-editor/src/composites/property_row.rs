@@ -6,8 +6,8 @@ use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Axis, Edges, Px, TextAlign, TextStyle};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
+    MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -149,6 +149,12 @@ impl PropertyRow {
                             height: Length::Px(density.hit_thickness),
                             ..Default::default()
                         },
+                        flex: FlexItemStyle {
+                            grow: 0.0,
+                            shrink: 0.0,
+                            basis: Length::Px(density.hit_thickness),
+                            align_self: None,
+                        },
                         ..Default::default()
                     },
                     a11y: PressableA11y {
@@ -213,8 +219,16 @@ impl PropertyRow {
                             size: SizeStyle {
                                 width: Length::Px(label_w),
                                 height: Length::Auto,
+                                min_height: Some(density.row_height),
                                 ..Default::default()
                             },
+                            flex: FlexItemStyle {
+                                grow: 0.0,
+                                shrink: 0.0,
+                                basis: Length::Px(label_w),
+                                align_self: None,
+                            },
+                            overflow: Overflow::Clip,
                             ..Default::default()
                         },
                         ..Default::default()
@@ -228,8 +242,16 @@ impl PropertyRow {
                             size: SizeStyle {
                                 width: Length::Fill,
                                 height: Length::Auto,
+                                min_height: Some(density.row_height),
                                 ..Default::default()
                             },
+                            flex: FlexItemStyle {
+                                grow: 1.0,
+                                shrink: 1.0,
+                                basis: Length::Fill,
+                                align_self: None,
+                            },
+                            overflow: Overflow::Clip,
                             ..Default::default()
                         },
                         ..Default::default()
