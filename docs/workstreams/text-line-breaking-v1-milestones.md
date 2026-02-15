@@ -91,3 +91,10 @@ Exit criteria:
   - fully supported, or
   - explicitly documented as limited (with deterministic tests covering the limitation surface).
 - Additional mapping (if required) is implemented with tests.
+
+Evidence anchors (expected):
+
+- Wrapped RTL hit testing and geometry:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (tests exercising `TextSystem::prepare` + `hit_test_point`)
+- Mixed-direction wrapped selection geometry:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (selection rects for RTL ranges under wrapping)

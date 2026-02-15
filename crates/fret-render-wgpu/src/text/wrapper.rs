@@ -1194,6 +1194,55 @@ mod tests {
     }
 
     #[test]
+    fn parley_word_wrap_handles_long_plain_paragraph_under_resize_jitter() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let mut text = String::new();
+        for i in 0..500 {
+            if i > 0 {
+                text.push(' ');
+            }
+            text.push_str("word");
+            text.push_str(&(i % 97).to_string());
+        }
+
+        let widths = [60.0, 80.0, 120.0, 90.0, 70.0, 140.0, 60.0];
+        for w in widths {
+            let constraints = TextConstraints {
+                max_width: Some(Px(w)),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            };
+            let wrapped =
+                wrap_with_constraints(&mut shaper, TextInputRef::plain(&text, &base), constraints);
+
+            assert_eq!(wrapped.text_len, text.len());
+            assert!(!wrapped.line_ranges.is_empty());
+            assert_eq!(wrapped.line_ranges[0].start, 0);
+            assert_eq!(wrapped.line_ranges.last().unwrap().end, text.len());
+
+            for r in &wrapped.line_ranges {
+                assert!(text.is_char_boundary(r.start));
+                assert!(text.is_char_boundary(r.end));
+                assert!(r.start < r.end, "expected non-empty line range");
+            }
+            for win in wrapped.line_ranges.windows(2) {
+                assert_eq!(
+                    win[0].end, win[1].start,
+                    "expected contiguous coverage for a single-paragraph plain text wrap"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn newlines_split_into_paragraphs_and_create_gaps_in_ranges() {
         let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {

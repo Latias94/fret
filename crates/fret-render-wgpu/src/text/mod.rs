@@ -6006,6 +6006,122 @@ mod tests {
     }
 
     #[test]
+    fn rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        // A short RTL paragraph with spaces so `TextWrap::Word` has deterministic breakpoints.
+        let content = "אבג דהו זחט יכל מנ";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+        let blob_ref = text.blob(blob).expect("wrapped blob");
+        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
+
+        for line in blob_ref.shape.lines.iter() {
+            if line.start >= line.end {
+                continue;
+            }
+            assert!(
+                !line.caret_stops.is_empty(),
+                "expected caret stops for wrapped RTL line"
+            );
+
+            let mut x_min = f32::INFINITY;
+            let mut x_max = f32::NEG_INFINITY;
+            for (_, x) in line.caret_stops.iter() {
+                x_min = x_min.min(x.0);
+                x_max = x_max.max(x.0);
+            }
+            assert!(
+                x_min.is_finite() && x_max.is_finite() && x_max >= x_min,
+                "expected finite caret stop bounds for RTL line"
+            );
+
+            let y = Px(line.y_top.0 + line.height.0 * 0.5);
+            let left = text
+                .hit_test_point(blob, Point::new(Px(x_min), y))
+                .expect("hit test (left edge)");
+            let right = text
+                .hit_test_point(blob, Point::new(Px(x_max), y))
+                .expect("hit test (right edge)");
+
+            assert_eq!(
+                left.index, line.end,
+                "expected left edge to map to logical end for RTL line: line={:?} left={:?}",
+                line, left
+            );
+            assert_eq!(
+                right.index, line.start,
+                "expected right edge to map to logical start for RTL line: line={:?} right={:?}",
+                line, right
+            );
+        }
+
+        text.release(blob);
+    }
+
+    #[test]
+    fn mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "abc אבג (123) def ghi jkl mno pqr";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(70.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+
+        let rtl_start = content.find('א').expect("hebrew start");
+        let rtl_end = content.find('ג').expect("hebrew end") + 'ג'.len_utf8();
+
+        let mut rects = Vec::new();
+        text.selection_rects(blob, (rtl_start, rtl_end), &mut rects)
+            .expect("selection rects");
+        assert!(
+            rects.iter().any(|r| r.size.width.0 > 0.1),
+            "expected a non-empty selection rect for wrapped RTL range: rects={rects:?}"
+        );
+
+        text.release(blob);
+    }
+
+    #[test]
     fn ellipsis_overflow_truncates_single_line_layout() {
         let text = "This is a long line that should truncate";
         let constraints = TextConstraints {
