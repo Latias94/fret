@@ -1476,6 +1476,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(16);
+        let mut target_ids: std::collections::HashSet<NodeId> = std::collections::HashSet::new();
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled || !node.view_cache.contained_layout {
                 continue;
@@ -1510,6 +1511,22 @@ impl<H: UiHost> UiTree<H> {
             }
 
             targets.push((id, bounds));
+            target_ids.insert(id);
+        }
+
+        // Avoid redundant contained relayouts for nested cache roots. If an ancestor cache root is
+        // already scheduled for a contained relayout, its pass will cover the descendant subtree.
+        if targets.len() > 1 {
+            targets.retain(|(root, _)| {
+                let mut current = self.nodes.get(*root).and_then(|n| n.parent);
+                while let Some(parent) = current {
+                    if target_ids.contains(&parent) {
+                        return false;
+                    }
+                    current = self.nodes.get(parent).and_then(|n| n.parent);
+                }
+                true
+            });
         }
 
         for (root, bounds) in targets {
