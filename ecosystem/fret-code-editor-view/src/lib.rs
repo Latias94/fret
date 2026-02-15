@@ -1708,6 +1708,14 @@ pub fn clamp_to_char_boundary(text: &str, idx: usize) -> usize {
     text_nav::clamp_to_char_boundary(text, idx)
 }
 
+pub fn clamp_to_grapheme_boundary_down(text: &str, idx: usize) -> usize {
+    text_nav::clamp_to_grapheme_boundary_down(text, idx)
+}
+
+pub fn clamp_to_grapheme_boundary_up(text: &str, idx: usize) -> usize {
+    text_nav::clamp_to_grapheme_boundary_up(text, idx)
+}
+
 pub fn prev_char_boundary(text: &str, idx: usize) -> usize {
     text_nav::prev_char_boundary(text, idx)
 }

@@ -14,8 +14,9 @@ fn normalize_syntax_spans_for_text(text: &str, spans: &mut Vec<SyntaxSpan>) {
         let mut start = span.range.start.min(max);
         let mut end = span.range.end.min(max).max(start);
 
-        start = fret_code_editor_view::clamp_to_char_boundary(text, start).min(max);
-        end = fret_code_editor_view::clamp_to_char_boundary(text, end)
+        // Keep span boundaries grapheme-safe so we never split ZWJ/VS16 clusters.
+        start = fret_code_editor_view::clamp_to_grapheme_boundary_down(text, start).min(max);
+        end = fret_code_editor_view::clamp_to_grapheme_boundary_up(text, end)
             .min(max)
             .max(start);
 
@@ -1684,8 +1685,14 @@ mod tests {
             spans.iter().all(|s| {
                 s.range.start < s.range.end
                     && s.range.end <= text.len()
-                    && text.is_char_boundary(s.range.start)
-                    && text.is_char_boundary(s.range.end)
+                    && fret_code_editor_view::clamp_to_grapheme_boundary_down(text, s.range.start)
+                        == s.range.start
+                    && fret_code_editor_view::clamp_to_grapheme_boundary_up(text, s.range.start)
+                        == s.range.start
+                    && fret_code_editor_view::clamp_to_grapheme_boundary_down(text, s.range.end)
+                        == s.range.end
+                    && fret_code_editor_view::clamp_to_grapheme_boundary_up(text, s.range.end)
+                        == s.range.end
             }),
             "expected normalized, in-bounds, char-boundary-aligned spans"
         );
@@ -1766,5 +1773,38 @@ mod tests {
                 .all(|s| s.shaping == Default::default()),
             "expected syntax highlighting spans to remain paint-only (no shaping overrides)"
         );
+    }
+
+    #[test]
+    fn normalize_syntax_spans_does_not_split_zwj_or_vs16_graphemes() {
+        let zwj = "👩\u{200D}💻"; // woman technologist
+        let vs16 = "✌\u{FE0F}"; // victory hand with VS16
+        let text = format!("a{zwj}b{vs16}c");
+
+        let zwj_start = 1;
+        let zwj_after_first_scalar = zwj_start + "👩".len();
+        let zwj_end = zwj_start + zwj.len();
+
+        let vs16_start = zwj_end + 1;
+        let vs16_after_base = vs16_start + "✌".len();
+        let vs16_end = vs16_start + vs16.len();
+
+        let mut spans = vec![
+            // Span boundaries inside a single grapheme cluster (char-boundary but not grapheme-boundary).
+            SyntaxSpan {
+                range: zwj_after_first_scalar..zwj_end,
+                highlight: "keyword",
+            },
+            SyntaxSpan {
+                range: vs16_start..vs16_after_base,
+                highlight: "string",
+            },
+        ];
+
+        normalize_syntax_spans_for_text(text.as_str(), &mut spans);
+
+        assert_eq!(spans.len(), 2);
+        assert_eq!(spans[0].range, zwj_start..zwj_end);
+        assert_eq!(spans[1].range, vs16_start..vs16_end);
     }
 }
