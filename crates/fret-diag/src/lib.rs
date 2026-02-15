@@ -7026,6 +7026,11 @@ See: `docs/tracy.md`.\n";
 
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
+            if perf_threshold_agg == PerfThresholdAggregate::P90 && repeat < 10 {
+                eprintln!(
+                    "warning: --perf-threshold-agg p90 with --repeat < 10 is not meaningful (p90 collapses to max); consider --repeat 11+",
+                );
+            }
             let reuse_process = launch.is_none() || reuse_launch;
             let perf_hint_gate_opts = parse_perf_hint_gate_options(
                 check_perf_hints,

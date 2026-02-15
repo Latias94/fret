@@ -85,6 +85,7 @@ For “typical perf” gates (not tail), prefer comparing against `p90`:
 
 - `--perf-threshold-agg p90`
 - `--perf-baseline docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json`
+- Use `--repeat >= 11` when gating percentiles (with small repeat counts, `p90` collapses to `max`).
 
 ## Failure triage (when a gate fails)
 
