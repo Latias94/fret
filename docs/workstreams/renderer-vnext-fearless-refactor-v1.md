@@ -175,6 +175,9 @@ Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-loc
 This gate is focused on the quad shader hot paths (paint kinds + dash), and is intended to keep the
 pipeline-variant keyspace bounded and observable.
 
+It also reports Tier B material usage counters (`material_*`) so follow-up variants (e.g. material-kind splits)
+are only pursued when evidence shows materials are hot.
+
 ```powershell
 python3 tools/perf/headless_quad_material_stress_gate.py
 ```

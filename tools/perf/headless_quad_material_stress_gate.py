@@ -92,6 +92,15 @@ _PIPELINES_RE = re.compile(
     r"clip_mask=(?P<pipeline_switches_clip_mask>\d+)"
 )
 
+_MATERIALS_RE = re.compile(
+    r"headless_renderer_perf_materials:\s+"
+    r"quad_ops=(?P<material_quad_ops>\d+)\s+"
+    r"sampled_ops=(?P<material_sampled_quad_ops>\d+)\s+"
+    r"distinct=(?P<material_distinct>\d+)\s+"
+    r"unknown_ids=(?P<material_unknown_ids>\d+)\s+"
+    r"degraded_budget=(?P<material_degraded_due_to_budget>\d+)"
+)
+
 
 def _extract_last_match(text: str, rx: re.Pattern[str]) -> dict[str, str] | None:
     last: dict[str, str] | None = None
@@ -203,6 +212,7 @@ def main() -> int:
         stdout_text = stdout_path.read_text(encoding="utf-8", errors="replace")
         perf = _extract_last_match(stdout_text, _PERF_RE)
         pipes = _extract_last_match(stdout_text, _PIPELINES_RE)
+        materials = _extract_last_match(stdout_text, _MATERIALS_RE)
 
         failures: list[str] = []
         if rc != 0:
@@ -211,12 +221,16 @@ def main() -> int:
             failures.append("missing:headless_renderer_perf")
         if pipes is None:
             failures.append("missing:headless_renderer_perf_pipelines")
+        if materials is None:
+            failures.append("missing:headless_renderer_perf_materials")
 
         merged: dict[str, int] = {}
         if perf is not None:
             merged.update(_to_ints(perf))
         if pipes is not None:
             merged.update(_to_ints(pipes))
+        if materials is not None:
+            merged.update(_to_ints(materials))
 
         extra_headroom = max(0, int(args.headroom_pct))
         for k, v in thresholds.items():
@@ -283,4 +297,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

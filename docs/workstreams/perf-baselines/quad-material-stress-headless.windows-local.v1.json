@@ -9,8 +9,8 @@
   "headroom_pct": 20,
   "measured_max": {
     "frames": 300,
-    "draw_calls": 8700,
-    "quad_draw_calls": 8700,
+    "draw_calls": 9000,
+    "quad_draw_calls": 9000,
     "viewport_draw_calls": 0,
     "image_draw_calls": 0,
     "text_draw_calls": 0,
@@ -18,8 +18,8 @@
     "mask_draw_calls": 0,
     "fullscreen_draw_calls": 0,
     "clip_mask_draw_calls": 0,
-    "pipeline_switches": 8700,
-    "pipeline_switches_quad": 8700,
+    "pipeline_switches": 9000,
+    "pipeline_switches_quad": 9000,
     "pipeline_switches_viewport": 0,
     "pipeline_switches_mask": 0,
     "pipeline_switches_text_mask": 0,
@@ -37,13 +37,18 @@
     "instance_kb": 172968,
     "vertex_kb": 0,
     "cache_hits": 299,
-    "cache_misses": 1
+    "cache_misses": 1,
+    "material_quad_ops": 134400,
+    "material_sampled_quad_ops": 19200,
+    "material_distinct": 900,
+    "material_unknown_ids": 0,
+    "material_degraded_due_to_budget": 0
   },
   "thresholds": {
-    "draw_calls": 10440,
-    "quad_draw_calls": 10440,
-    "pipeline_switches": 10440,
-    "pipeline_switches_quad": 10440,
+    "draw_calls": 10800,
+    "quad_draw_calls": 10800,
+    "pipeline_switches": 10800,
+    "pipeline_switches_quad": 10800,
     "bind_group_switches": 720,
     "uniform_bind_group_switches": 360,
     "texture_bind_group_switches": 0,
@@ -51,6 +56,11 @@
     "uniform_kb": 90,
     "instance_kb": 207561,
     "vertex_kb": 0,
-    "cache_misses": 5
+    "cache_misses": 5,
+    "material_quad_ops": 161280,
+    "material_sampled_quad_ops": 23040,
+    "material_distinct": 1080,
+    "material_unknown_ids": 0,
+    "material_degraded_due_to_budget": 0
   }
 }

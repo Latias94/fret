@@ -334,6 +334,14 @@ fn run_headless(frames: u64, group_n: u32, wait_gpu: bool, wait_every: u64) -> a
             snap.scene_encoding_cache_hits,
             snap.scene_encoding_cache_misses
         );
+        println!(
+            "headless_renderer_perf_materials: quad_ops={} sampled_ops={} distinct={} unknown_ids={} degraded_budget={}",
+            snap.material_quad_ops,
+            snap.material_sampled_quad_ops,
+            snap.material_distinct,
+            snap.material_unknown_ids,
+            snap.material_degraded_due_to_budget
+        );
         if pipeline_breakdown {
             println!(
                 "headless_renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",

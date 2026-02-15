@@ -153,7 +153,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `tools/perf/headless_quad_material_stress_gate.py`
     - `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
 - [ ] REN-VNEXT-webgpu-004 If perf evidence warrants, add bounded `MaterialTileMode` pipeline variants:
-  - Guardrail: keep the key space small and observable in perf snapshots (`pipeline_switches_*`).
+  - Note: “tile mode” here refers to the material-kind selector channel in the quad shader (see `material_eval`),
+    not gradient tile modes (which are sanitized/degraded today).
+  - Decision rule (do not do this without evidence):
+    - Only proceed if material work is measurably hot in at least one reproducible bundle:
+      - `fretboard diag perf` (or a GPU profiler) shows the quad fragment shader is a top hotspot and `material_eval` dominates.
+    - And the current bounded variants are insufficient (confirmed by one of):
+      - `material_sampled_quad_ops` is high relative to `quad_draw_calls` in the headless gate’s `headless_renderer_perf_materials`
+        output and wall time regresses in `fret-quad-material-stress` on the same machine.
+      - or real app perf snapshots show unacceptable regression under WebGPU with no alternative mitigation.
+  - Guardrail: keep the key space small and observable in perf snapshots (`pipeline_switches_*`), and update headless baselines
+    if (and only if) the added variants are justified.
 - [ ] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
 
 ## Always-run guardrails (before/after each milestone)
