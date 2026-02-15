@@ -58,7 +58,7 @@ Exit criteria:
 
 Candidate exit criteria:
 
-- Add an opt-in "spec auto-fixer" for common LLM mistakes (moved fields, missing defaults).
+- ✅ Add an opt-in "spec auto-fixer" for common LLM mistakes (moved fields, missing defaults).
 - ✅ Add at least one end-to-end harness test for spec rendering + interaction.
 - ✅ Add a lightweight in-demo inspector (state/queue/issues/spec/schema/prompt/editor/stream) to close the debug loop.
 - Add a reusable devtools surface (or integrate with existing devtools) once the contracts stabilize.
