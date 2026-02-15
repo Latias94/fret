@@ -19,6 +19,17 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 - [x] Identity contract: each element key is rendered under `cx.keyed(key, ...)`.
 - [x] Implement event→action invocation emission into an app-owned queue model.
 - [x] Add `fret-genui-shadcn` catalog with a conservative baseline component set (Card/Text/Button/Badge/Input/Switch/Stacks/Separator/ScrollArea).
+- [x] Split `fret-genui-shadcn` resolver into modules (keep the component surface stable while letting implementations grow).
+
+## P0 — Layout/typography building blocks (guardrailed)
+
+Goal: improve spec expressiveness for spacing/typography without leaking policy into `crates/fret-ui`.
+
+- [x] Add minimal layout props to `VStack`/`HStack`: `p/items/justify/wrap` (typed + deterministic mapping).
+- [ ] Extend stack layout props: `px/py`, `wFull/hFull`, `minW0/minH0` (and decide whether `flex1` belongs here).
+- [ ] Decide whether to add a generic `Box`/`Container` component (padding + sizing + alignment) vs growing per-component layout props.
+- [ ] Add a small typography surface: either `Text.variant` (enum) or separate components (`Heading`/`Paragraph`/`Code`).
+- [ ] Update demo specs to use layout/typography props (visual sanity gates).
 
 ## P1 — State + expressions
 
@@ -64,6 +75,7 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 ## P4 — LLM ingest utilities (strategy/boundary layer)
 
 - [x] Add mixed-stream parser utilities (text + JSONL patches) similar to `pipeJsonRender`.
+- [x] Add a demo “playground” inspector (tabs for state/queue/issues/spec/schema/prompt/editor/stream).
 - [ ] Decide if/where to enable JSON repair (input boundary only; never for patch-only mode).
 
 ## Testing + gates
@@ -72,3 +84,4 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 - [x] Add an end-to-end interaction test (press → queue → state via auto-apply).
 - [x] Add at least one end-to-end “spec renders a small dashboard” test using `fret-ui-kit`/shadcn resolver.
 - [x] Add regression test for identity stability across repeat reorder (key field vs index fallback).
+- [ ] Add a smoke spec that exercises layout props + responsive components (render + strict catalog validation; no visual assertions yet).

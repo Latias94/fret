@@ -60,7 +60,16 @@ Candidate exit criteria:
 
 - Add an opt-in "spec auto-fixer" for common LLM mistakes (moved fields, missing defaults).
 - Add at least one end-to-end harness test for spec rendering + interaction.
-- Add lightweight in-app diagnostics panels (spec issues, state snapshot, action log) or integrate with existing devtools.
+- ✅ Add a lightweight in-demo inspector (state/queue/issues/spec/schema/prompt/editor/stream) to close the debug loop.
+- Add a reusable devtools surface (or integrate with existing devtools) once the contracts stabilize.
+
+## M6.1 — Layout/typography guardrails (next)
+
+Candidate exit criteria:
+
+- `VStack`/`HStack` expose a minimal, typed layout surface (`p/px/py`, `items/justify`, `wrap`, `wFull/hFull`, `minW0/minH0`).
+- A small typography vocabulary exists (either `Text.variant` or `Heading/Paragraph/Code` components).
+- Demo specs use these props to avoid “everything is glued to the edge” defaults.
 
 ## M7 — Adaptive layout primitives (strategy layer)
 
