@@ -35,9 +35,12 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
     - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` feature key tests.
   - [x] paint-only span changes do not trigger reshaping (shape cache hit under palette-only edits).
     - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` + editor paint gates.
-- [ ] Add a minimal demo/harness (recommended, bundled-font-friendly):
-  - [ ] a “feature toggle” UI to flip `calt`/`liga` (and one `ssXX`) on a known sample string,
-  - [ ] document which bundled/system fonts show a visible difference.
+- [x] Add a minimal demo/harness (recommended, bundled-font-friendly):
+  - [x] a "feature toggle" UI to flip `calt`/`liga` (and one `ssXX`) on a known sample string:
+    - `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/feature_toggles.rs`
+    - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_TEXT_FEATURE_TOGGLES`)
+  - [x] document which bundled/system fonts show a visible difference:
+    - `apps/fret-ui-gallery/src/docs.rs` (`DOC_TEXT_FEATURE_TOGGLES`)
 
 ## Open questions
 

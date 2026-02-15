@@ -105,6 +105,7 @@ pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
 pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
+pub(crate) const PAGE_TEXT_FEATURE_TOGGLES: &str = "text_feature_toggles";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
@@ -299,6 +300,7 @@ pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
 pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
     "ui_gallery.nav.select.text_mixed_script_fallback";
 pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.text_measure_overlay";
+pub(crate) const CMD_NAV_TEXT_FEATURE_TOGGLES: &str = "ui_gallery.nav.select.text_feature_toggles";
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
@@ -809,6 +811,18 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["text", "layout", "measure", "diagnostics", "tli1"],
                 docs::DOC_TEXT_MEASURE_OVERLAY,
                 docs::USAGE_TEXT_MEASURE_OVERLAY,
+            ),
+            PageSpec::new(
+                PAGE_TEXT_FEATURE_TOGGLES,
+                "Text Features (OpenType)",
+                "Text / OpenType Feature Toggles",
+                "Text shaping surface v1",
+                CMD_NAV_TEXT_FEATURE_TOGGLES,
+                &[
+                    "text", "shaping", "opentype", "features", "liga", "calt", "tsv1",
+                ],
+                docs::DOC_TEXT_FEATURE_TOGGLES,
+                docs::USAGE_TEXT_FEATURE_TOGGLES,
             ),
             PageSpec::new(
                 PAGE_WEB_IME_HARNESS,

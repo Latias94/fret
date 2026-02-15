@@ -589,6 +589,39 @@ pub(crate) const USAGE_TEXT_MEASURE_OVERLAY: &str = r#"
 ```
 "#;
 
+pub(crate) const DOC_TEXT_FEATURE_TOGGLES: &str = r#"
+## Text OpenType feature toggles (diagnostic)
+
+This page is a small harness for the `TextShapingStyle.features` surface:
+
+- toggles `liga` / `calt` / one `ssXX` (`ss01`) via `TextFontFeatureSetting`,
+- shapes the same sample string twice:
+  - baseline (no explicit features),
+  - explicit feature overrides.
+
+Notes:
+
+- This is a **best-effort** surface: if a resolved font face does not support a tag, it is ignored.
+- Visible differences are font-dependent. Inter typically demonstrates `liga` (fi/fl/ffi/ffl).
+"#;
+
+pub(crate) const USAGE_TEXT_FEATURE_TOGGLES: &str = r#"
+```rust
+use fret_core::{TextShapingStyle, TextSpan};
+
+let shaping = TextShapingStyle::default()
+    .with_feature("liga", 0)
+    .with_feature("calt", 0)
+    .with_feature("ss01", 1);
+
+let span = TextSpan {
+    len: text.len(),
+    shaping,
+    ..Default::default()
+};
+```
+"#;
+
 pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
 ## Web IME (harness)
 
