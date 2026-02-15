@@ -85,6 +85,7 @@ Usage:
   fretboard list web-demos
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-reload] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--no-supervise] [-- <args...>]
+  fretboard dev native [--bin <name> | --choose] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev web [--port <port>] [--demo <demo> | --choose]

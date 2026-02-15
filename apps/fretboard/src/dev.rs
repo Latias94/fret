@@ -189,6 +189,8 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let mut hotpatch_dx = false;
     let mut hotpatch_dx_ws: Option<String> = None;
     let mut supervise: Option<bool> = None;
+    let mut watch: Option<bool> = None;
+    let mut watch_poll_ms: Option<u64> = None;
     let mut passthrough: Vec<String> = Vec::new();
 
     let mut it = args.into_iter();
@@ -233,6 +235,14 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             }
             "--supervise" => supervise = Some(true),
             "--no-supervise" => supervise = Some(false),
+            "--watch" => watch = Some(true),
+            "--no-watch" => watch = Some(false),
+            "--watch-poll-ms" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--watch-poll-ms requires a value".to_string())?;
+                watch_poll_ms = Some(raw.parse::<u64>().map_err(|e| e.to_string())?);
+            }
             "--hotpatch-build-id" => {
                 let raw = it
                     .next()
@@ -316,16 +326,25 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         );
     }
 
+    let effective_watch = watch.unwrap_or(hotpatch && !dx_available && hotpatch_devserver_ws.is_none());
+    let effective_watch_poll = Duration::from_millis(watch_poll_ms.unwrap_or(800));
+
     // In reload-boundary/devserver mode, `cargo run` is the supervisor. If the app crashes,
     // it's easy to end up in a frustrating "rerun command manually" loop.
     //
     // For hotpatch-focused workflows, default to a lightweight restart supervisor that prints
     // actionable guidance on repeated failures. This keeps the inner loop closer to `dx serve`
     // without embedding a full file-watcher build system in `fretboard` (L1 scope).
-    let effective_supervise = supervise.unwrap_or(hotpatch || hotpatch_devserver_ws.is_some());
+    let effective_supervise =
+        supervise.unwrap_or(hotpatch || hotpatch_devserver_ws.is_some() || effective_watch);
 
     let mut cmd = Command::new("cargo");
-    cmd.current_dir(&root).args(["run", "-p", "fret-demo"]);
+    cmd.current_dir(&root);
+
+    // When `--watch` is enabled, prefer `cargo build` + running the produced binary directly so we can
+    // reliably terminate and restart the app process on Windows.
+    let cargo_subcommand = if effective_watch { "build" } else { "run" };
+    cmd.args([cargo_subcommand, "-p", "fret-demo"]);
     let mut cargo_features: Vec<&str> = Vec::new();
     if hotpatch || hotpatch_devserver_ws.is_some() {
         cargo_features.push("hotpatch");
@@ -421,27 +440,307 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         }
     }
     cmd.args(["--bin", &bin]);
-    if !passthrough.is_empty() {
-        cmd.arg("--").args(passthrough);
+
+    if !effective_watch {
+        if !passthrough.is_empty() {
+            cmd.arg("--").args(passthrough);
+        }
+
+        if effective_supervise {
+            run_with_restart_supervisor(
+                cmd,
+                RestartSupervisorOptions {
+                    bin: bin.clone(),
+                    dx_available,
+                    demo_hotpatch_ready: is_hotpatch_ready_native_demo(&bin),
+                    hotpatch_enabled: hotpatch || hotpatch_devserver_ws.is_some(),
+                    max_restarts: 5,
+                    crash_window: Duration::from_secs(60),
+                    crash_threshold: Duration::from_secs(10),
+                },
+            )?;
+        } else {
+            let status = cmd.status().map_err(|e| e.to_string())?;
+            if !status.success() {
+                return Err(format!("cargo exited with status: {status}"));
+            }
+        }
+
+        return Ok(());
     }
 
-    if effective_supervise {
-        run_with_restart_supervisor(cmd, RestartSupervisorOptions {
+    let build_env = capture_command_env(&cmd);
+    dev_native_watch_build_and_run(
+        &root,
+        &bin,
+        cmd,
+        build_env,
+        passthrough,
+        WorkspaceWatchOptions {
+            poll_interval: effective_watch_poll,
+        },
+        RestartSupervisorOptions {
             bin: bin.clone(),
             dx_available,
             demo_hotpatch_ready: is_hotpatch_ready_native_demo(&bin),
             hotpatch_enabled: hotpatch || hotpatch_devserver_ws.is_some(),
-            max_restarts: 5,
+            max_restarts: 20,
             crash_window: Duration::from_secs(60),
             crash_threshold: Duration::from_secs(10),
-        })?;
-    } else {
-        let status = cmd.status().map_err(|e| e.to_string())?;
+        },
+    )
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WorkspaceWatchOptions {
+    poll_interval: Duration,
+}
+
+#[derive(Debug, Clone)]
+struct CapturedEnv(Vec<(std::ffi::OsString, std::ffi::OsString)>);
+
+fn capture_command_env(cmd: &Command) -> CapturedEnv {
+    let pairs = cmd.get_envs().filter_map(|(k, v)| Some((k.to_os_string(), v?.to_os_string())));
+    CapturedEnv(pairs.collect())
+}
+
+fn apply_captured_env(cmd: &mut Command, env: &CapturedEnv) {
+    for (k, v) in env.0.iter() {
+        cmd.env(k, v);
+    }
+}
+
+fn dev_native_watch_build_and_run(
+    workspace_root: &Path,
+    bin: &str,
+    mut build_cmd: Command,
+    build_env: CapturedEnv,
+    passthrough: Vec<String>,
+    watch: WorkspaceWatchOptions,
+    supervisor_opts: RestartSupervisorOptions,
+) -> Result<(), String> {
+    eprintln!(
+        "Watch: enabled (poll_ms={})",
+        watch.poll_interval.as_millis()
+    );
+    eprintln!("  note: this is a rebuild+restart loop (not Subsecond patch building)");
+
+    let mut watcher = WorkspaceWatch::new(workspace_root, watch.poll_interval);
+    watcher.baseline()?;
+
+    loop {
+        // Build step
+        let status = build_cmd.status().map_err(|e| e.to_string())?;
         if !status.success() {
-            return Err(format!("cargo exited with status: {status}"));
+            eprintln!("error: build failed (status: {status})");
+            eprintln!("  waiting for changes...");
+            watcher.wait_for_change()?;
+            continue;
+        }
+
+        // Run step
+        let exe = dev_native_exe_path(workspace_root, bin);
+        if !exe.is_file() {
+            return Err(format!(
+                "expected built binary at `{}` but it was not found",
+                exe.display()
+            ));
+        }
+
+        let mut run_cmd = Command::new(&exe);
+        run_cmd.current_dir(workspace_root);
+        apply_captured_env(&mut run_cmd, &build_env);
+        if !passthrough.is_empty() {
+            run_cmd.args(passthrough.iter());
+        }
+
+        let mut child = run_cmd.spawn().map_err(|e| e.to_string())?;
+        let start = Instant::now();
+
+        loop {
+            if watcher.poll_changed()? {
+                eprintln!("Watch: change detected, restarting...");
+                let _ = child.kill();
+                let _ = child.wait();
+
+                // Re-create the build command to ensure any transient state is cleared.
+                let mut next_build = Command::new("cargo");
+                next_build.current_dir(workspace_root);
+                next_build.args(build_cmd.get_args());
+                apply_captured_env(&mut next_build, &build_env);
+                build_cmd = next_build;
+                break;
+            }
+
+            if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
+                if status.success() {
+                    return Ok(());
+                }
+
+                let elapsed = Instant::now().duration_since(start);
+                if elapsed <= supervisor_opts.crash_threshold {
+                    print_repeated_crash_guidance(&supervisor_opts, "fast exit detected");
+                } else {
+                    eprintln!("warning: process exited with status: {status}");
+                    eprintln!("  waiting for changes (or press Ctrl+C to stop)...");
+                }
+
+                watcher.wait_for_change()?;
+
+                // Ensure we rebuild after a crash once a change occurs.
+                break;
+            }
+
+            std::thread::sleep(watch.poll_interval);
         }
     }
-    Ok(())
+}
+
+fn dev_native_exe_path(workspace_root: &Path, bin: &str) -> std::path::PathBuf {
+    let mut p = workspace_root.join("target").join("debug").join(bin);
+    if cfg!(windows) {
+        p.set_extension("exe");
+    }
+    p
+}
+
+struct WorkspaceWatch {
+    root: std::path::PathBuf,
+    poll_interval: Duration,
+    last_sig: Option<u64>,
+}
+
+impl WorkspaceWatch {
+    fn new(root: &Path, poll_interval: Duration) -> Self {
+        Self {
+            root: root.to_path_buf(),
+            poll_interval,
+            last_sig: None,
+        }
+    }
+
+    fn baseline(&mut self) -> Result<(), String> {
+        self.last_sig = Some(self.scan_signature()?);
+        Ok(())
+    }
+
+    fn poll_changed(&mut self) -> Result<bool, String> {
+        let sig = self.scan_signature()?;
+        let changed = self.last_sig.is_some_and(|prev| prev != sig);
+        self.last_sig = Some(sig);
+        Ok(changed)
+    }
+
+    fn wait_for_change(&mut self) -> Result<(), String> {
+        loop {
+            if self.poll_changed()? {
+                return Ok(());
+            }
+            std::thread::sleep(self.poll_interval);
+        }
+    }
+
+    fn scan_signature(&self) -> Result<u64, String> {
+        use std::hash::Hasher as _;
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+
+        // Always include root-level build configuration files.
+        for path in [
+            self.root.join("Cargo.toml"),
+            self.root.join("Cargo.lock"),
+            self.root.join("rust-toolchain.toml"),
+        ] {
+            self.hash_file_stamp(&path, &mut hasher)?;
+        }
+
+        // Watch the Rust workspace surface but exclude extremely large areas (`repo-ref`, `target`, `.git`).
+        for dir in ["apps", "crates", "ecosystem"] {
+            let p = self.root.join(dir);
+            self.walk_and_hash(&p, &mut hasher)?;
+        }
+
+        Ok(hasher.finish())
+    }
+
+    fn walk_and_hash(
+        &self,
+        root: &Path,
+        hasher: &mut std::collections::hash_map::DefaultHasher,
+    ) -> Result<(), String> {
+        let mut stack = vec![root.to_path_buf()];
+        while let Some(dir) = stack.pop() {
+            let read_dir = match std::fs::read_dir(&dir) {
+                Ok(rd) => rd,
+                Err(_) => continue,
+            };
+
+            for entry in read_dir.flatten() {
+                let path = entry.path();
+                let file_name = entry.file_name();
+                let file_name = file_name.to_string_lossy();
+
+                if entry
+                    .file_type()
+                    .map(|t| t.is_dir())
+                    .unwrap_or(false)
+                {
+                    if file_name == "target"
+                        || file_name == ".git"
+                        || file_name == ".fret"
+                        || file_name == "repo-ref"
+                        || file_name == "docs"
+                    {
+                        continue;
+                    }
+                    stack.push(path);
+                    continue;
+                }
+
+                if !self.should_watch_file(&path) {
+                    continue;
+                }
+
+                self.hash_file_stamp(&path, hasher)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn should_watch_file(&self, path: &Path) -> bool {
+        let Some(ext) = path.extension().and_then(|s| s.to_str()) else {
+            return false;
+        };
+        matches!(ext, "rs" | "toml" | "lock" | "wgsl" | "ron")
+    }
+
+    fn hash_file_stamp(
+        &self,
+        path: &Path,
+        hasher: &mut std::collections::hash_map::DefaultHasher,
+    ) -> Result<(), String> {
+        use std::hash::Hash as _;
+
+        let meta = match std::fs::metadata(path) {
+            Ok(m) => m,
+            Err(_) => {
+                // Missing files affect the signature; include the path only.
+                path.to_string_lossy().hash(hasher);
+                return Ok(());
+            }
+        };
+
+        let modified = meta.modified().ok();
+        let nanos = modified
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+
+        path.to_string_lossy().hash(hasher);
+        meta.len().hash(hasher);
+        nanos.hash(hasher);
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
