@@ -203,11 +203,21 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
 
                 let controls = fret_ui_kit::ui::h_flex_build(ui.cx_mut(), move |cx, out| {
                     fret_imui::imui_build(cx, out, |ui| {
-                        if ui.button("Reset layout").clicked() {
+                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                            ui,
+                            "Reset layout",
+                        )
+                        .clicked()
+                        {
                             reset_dock_graph(ui.cx_mut().app, window);
                             dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
                         }
-                        if ui.button("Center floatings").clicked() {
+                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                            ui,
+                            "Center floatings",
+                        )
+                        .clicked()
+                        {
                             dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
                         }
                     });

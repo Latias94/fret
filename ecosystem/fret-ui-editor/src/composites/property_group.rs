@@ -2,12 +2,13 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, Px};
+use fret_core::text::{TextOverflow, TextWrap};
+use fret_core::{Axis, Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
-    PressableProps, SizeStyle, SpacerProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    PressableA11y, PressableProps, SizeStyle, SpacerProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -87,7 +88,17 @@ impl PropertyGroup {
         contents: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let (density, header_height, header_bg, header_border) = {
+            let (
+                density,
+                header_height,
+                header_bg,
+                header_border,
+                panel_bg,
+                panel_border,
+                radius,
+                header_fg,
+                header_muted_fg,
+            ) = {
                 let theme = Theme::global(&*cx.app);
                 let density = EditorDensity::resolve(theme);
                 let header_height = self
@@ -103,7 +114,33 @@ impl PropertyGroup {
                     .color_by_key("border")
                     .or_else(|| theme.color_by_key("component.card.border"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
-                (density, header_height, header_bg, header_border)
+                let panel_bg = theme
+                    .color_by_key("card")
+                    .or_else(|| theme.color_by_key("component.card.bg"))
+                    .unwrap_or_else(|| theme.color_token("background"));
+                let panel_border = theme
+                    .color_by_key("border")
+                    .or_else(|| theme.color_by_key("component.card.border"))
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let radius = theme.metric_token("metric.radius.sm");
+                let header_fg = theme
+                    .color_by_key("foreground")
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let header_muted_fg = theme
+                    .color_by_key("muted-foreground")
+                    .or_else(|| theme.color_by_key("muted_foreground"))
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+                (
+                    density,
+                    header_height,
+                    header_bg,
+                    header_border,
+                    panel_bg,
+                    panel_border,
+                    radius,
+                    header_fg,
+                    header_muted_fg,
+                )
             };
 
             let gap = self.options.gap.unwrap_or(Px(4.0));
@@ -208,10 +245,38 @@ impl PropertyGroup {
                                 },
                                 move |cx| {
                                     let mut out = Vec::new();
+                                    let header_text_style = TextStyle {
+                                        size: Px(12.0),
+                                        line_height: Some(header_height),
+                                        ..Default::default()
+                                    };
                                     if !disclosure.is_empty() {
-                                        out.push(cx.text(disclosure));
+                                        out.push(cx.text_props(TextProps {
+                                            layout: LayoutStyle::default(),
+                                            text: Arc::from(disclosure),
+                                            style: Some(header_text_style.clone()),
+                                            color: Some(header_muted_fg),
+                                            wrap: TextWrap::None,
+                                            overflow: TextOverflow::Clip,
+                                            align: TextAlign::Start,
+                                        }));
                                     }
-                                    out.push(cx.text(label.clone()));
+                                    out.push(cx.text_props(TextProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Auto,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        text: label.clone(),
+                                        style: Some(header_text_style),
+                                        color: Some(header_fg),
+                                        wrap: TextWrap::None,
+                                        overflow: TextOverflow::Ellipsis,
+                                        align: TextAlign::Start,
+                                    }));
                                     out.push(cx.spacer(SpacerProps::default()));
                                     if let Some(actions) = actions {
                                         out.push(actions);
@@ -273,7 +338,19 @@ impl PropertyGroup {
             if let Some(test_id) = self.options.test_id.as_ref() {
                 root = root.test_id(test_id.clone());
             }
-            root
+
+            cx.container(
+                ContainerProps {
+                    layout: self.options.layout,
+                    padding: Edges::all(Px(0.0)),
+                    background: Some(panel_bg),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(panel_border),
+                    corner_radii: Corners::all(radius),
+                    ..Default::default()
+                },
+                move |_cx| vec![root],
+            )
         })
     }
 }
