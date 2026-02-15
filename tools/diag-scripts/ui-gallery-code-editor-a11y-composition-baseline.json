@@ -127,6 +127,69 @@
       },
       "timeout_frames": 240
     },
-    { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-after" }
+    { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-after" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-ime-set-marked-selection"
+      },
+      "delta_y": 240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-ime-set-marked-selection"
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text_field",
+          "name": "Code editor a11y composition gate"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-a11y-composition-platform-selection-replace-preedit"
+    },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-ime-cancel-marked-selection"
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text_field",
+          "name": "Code editor a11y composition gate"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-a11y-composition-platform-selection-replace-cancelled"
+    }
   ]
 }

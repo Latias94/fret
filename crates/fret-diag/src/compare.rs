@@ -1664,8 +1664,11 @@ pub(super) fn scan_perf_threshold_failures(
     max_pointer_move_global_changes: u64,
     max_run_paint_cache_hit_test_only_replay_allowed: u64,
     max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch: u64,
+    evidence_bundle: Option<&Path>,
+    evidence_run_index: Option<u64>,
 ) -> Vec<serde_json::Value> {
     let mut out: Vec<serde_json::Value> = Vec::new();
+    let evidence_bundle = evidence_bundle.map(|p| p.display().to_string());
     let (threshold_total, source_total) =
         resolve_threshold(cli.max_top_total_us, baseline.max_top_total_us);
     let (threshold_layout, source_layout) =
@@ -1714,6 +1717,8 @@ pub(super) fn scan_perf_threshold_failures(
             "outlier_suspected": p95_total_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
         }));
     }
     if let Some(threshold_us) = threshold_layout
@@ -1730,6 +1735,8 @@ pub(super) fn scan_perf_threshold_failures(
             "outlier_suspected": p95_layout_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
         }));
     }
     if let Some(threshold_us) = threshold_solve
@@ -1746,6 +1753,8 @@ pub(super) fn scan_perf_threshold_failures(
             "outlier_suspected": p95_layout_engine_solve_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
         }));
     }
     if pointer_move_frames_present {
@@ -1759,6 +1768,8 @@ pub(super) fn scan_perf_threshold_failures(
                 "actual_us": max_pointer_move_dispatch_time_us,
                 "script": script,
                 "sort": sort.as_str(),
+                "evidence_bundle": evidence_bundle,
+                "evidence_run_index": evidence_run_index,
             }));
         }
         if let Some(threshold_us) = threshold_pointer_move_hit_test
@@ -1771,6 +1782,8 @@ pub(super) fn scan_perf_threshold_failures(
                 "actual_us": max_pointer_move_hit_test_time_us,
                 "script": script,
                 "sort": sort.as_str(),
+                "evidence_bundle": evidence_bundle,
+                "evidence_run_index": evidence_run_index,
             }));
         }
         if let Some(threshold) = threshold_pointer_move_global_changes
@@ -1783,6 +1796,8 @@ pub(super) fn scan_perf_threshold_failures(
                 "actual": max_pointer_move_global_changes,
                 "script": script,
                 "sort": sort.as_str(),
+                "evidence_bundle": evidence_bundle,
+                "evidence_run_index": evidence_run_index,
             }));
         }
     }
@@ -1796,6 +1811,8 @@ pub(super) fn scan_perf_threshold_failures(
             "actual": max_run_paint_cache_hit_test_only_replay_allowed,
             "script": script,
             "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
         }));
     }
     if let Some(threshold) =
@@ -1809,6 +1826,8 @@ pub(super) fn scan_perf_threshold_failures(
             "actual": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
             "script": script,
             "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle,
+            "evidence_run_index": evidence_run_index,
         }));
     }
     out

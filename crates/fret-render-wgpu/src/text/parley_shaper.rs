@@ -5,8 +5,8 @@ use parley::Layout;
 use parley::LayoutContext;
 use parley::fontique::{FamilyId, GenericFamily};
 use parley::style::{
-    FontSettings, FontStyle, FontVariation, FontWeight as ParleyFontWeight, StyleProperty,
-    TextStyle as ParleyTextStyle,
+    FontFeature, FontSettings, FontStyle, FontVariation, FontWeight as ParleyFontWeight,
+    OverflowWrap, StyleProperty, TextStyle as ParleyTextStyle, TextWrapMode, WordBreakStrength,
 };
 use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
@@ -600,6 +600,40 @@ impl ParleyShaper {
         }
     }
 
+    pub fn shape_paragraph_word_wrap(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: f32,
+        scale: f32,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        self.shape_paragraph_with_wrap(
+            input,
+            Some(max_width_px),
+            WordBreakStrength::Normal,
+            OverflowWrap::BreakWord,
+            TextWrapMode::Wrap,
+            scale,
+            false,
+        )
+    }
+
+    pub fn shape_paragraph_word_wrap_metrics(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: f32,
+        scale: f32,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        self.shape_paragraph_with_wrap(
+            input,
+            Some(max_width_px),
+            WordBreakStrength::Normal,
+            OverflowWrap::BreakWord,
+            TextWrapMode::Wrap,
+            scale,
+            true,
+        )
+    }
+
     pub fn shape_single_line_metrics(
         &mut self,
         input: TextInputRef<'_>,
@@ -703,6 +737,174 @@ impl ParleyShaper {
             clusters,
         }
     }
+
+    fn shape_paragraph_with_wrap(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: Option<f32>,
+        word_break: WordBreakStrength,
+        overflow_wrap: OverflowWrap,
+        text_wrap_mode: TextWrapMode,
+        scale: f32,
+        metrics_only: bool,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        let (text, base_style, spans) = match input {
+            TextInputRef::Plain { text, style } => (text, style, &[][..]),
+            TextInputRef::Attributed { text, base, spans } => (text, base, spans),
+        };
+
+        if text.is_empty() {
+            let fallback = if metrics_only {
+                self.shape_single_line_metrics(TextInputRef::plain(" ", base_style), scale)
+            } else {
+                self.shape_single_line(TextInputRef::plain(" ", base_style), scale)
+            };
+            return vec![(
+                0..0,
+                ShapedLineLayout {
+                    width: 0.0,
+                    ascent: fallback.ascent,
+                    descent: fallback.descent,
+                    baseline: fallback.baseline,
+                    line_height: fallback.line_height,
+                    glyphs: Vec::new(),
+                    clusters: Vec::new(),
+                },
+            )];
+        }
+
+        let mut root_style = ParleyTextStyle::default();
+        root_style.word_break = word_break;
+        root_style.overflow_wrap = overflow_wrap;
+        root_style.text_wrap_mode = text_wrap_mode;
+
+        let mut builder = self
+            .lcx
+            .tree_builder(&mut self.fcx, scale, true, &root_style);
+
+        let mut base = base_parley_style(
+            base_style,
+            self.default_locale.as_deref(),
+            &self.common_fallback_stack_suffix,
+        );
+        base.word_break = word_break;
+        base.overflow_wrap = overflow_wrap;
+        base.text_wrap_mode = text_wrap_mode;
+        builder.push_style_span(base);
+
+        if let Some(span_ranges) = resolve_span_ranges(text, spans) {
+            for (range, span) in span_ranges {
+                let chunk = &text[range.clone()];
+                if let Some(props) = shaping_properties_for_span(
+                    base_style,
+                    span,
+                    &self.common_fallback_stack_suffix,
+                ) {
+                    builder.push_style_modification_span(props.iter());
+                    builder.push_text(chunk);
+                    builder.pop_style_span();
+                } else {
+                    builder.push_text(chunk);
+                }
+            }
+        } else {
+            builder.push_text(text);
+        }
+
+        builder.pop_style_span();
+        let _built_text = builder.build_into(&mut self.layout);
+        self.layout.break_all_lines(max_width_px);
+
+        let mut out: Vec<(Range<usize>, ShapedLineLayout)> = Vec::new();
+
+        for line in self.layout.lines() {
+            let line_range = line.text_range();
+            let line_start = line_range.start;
+            let metrics = *line.metrics();
+
+            let mut line_height = metrics.line_height.max(0.0);
+            line_height =
+                line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
+            if let Some(requested) = base_style.line_height {
+                line_height = line_height.max((requested.0 * scale).max(0.0));
+            }
+
+            let mut glyphs: Vec<ParleyGlyph> = Vec::new();
+            let mut clusters: Vec<ShapedCluster> = Vec::new();
+
+            let mut run_x = metrics.offset;
+            for run in line.runs() {
+                let font = run.font();
+                let font_data = font.clone();
+                let font_size = run.font_size();
+                let normalized_coords: Arc<[i16]> = Arc::from(run.normalized_coords());
+                let synthesis = run.synthesis();
+
+                for cluster in run.visual_clusters() {
+                    let cluster_range = cluster.text_range();
+                    let cluster_x0 = run_x;
+
+                    let adjusted_range = (cluster_range.start.saturating_sub(line_start))
+                        ..(cluster_range.end.saturating_sub(line_start));
+
+                    if !metrics_only {
+                        let mut glyph_x = cluster_x0;
+                        for mut g in cluster.glyphs() {
+                            g.x += glyph_x;
+                            glyph_x += g.advance;
+
+                            glyphs.push(ParleyGlyph {
+                                id: g.id,
+                                x: g.x,
+                                y: g.y,
+                                advance: g.advance,
+                                font: font_data.clone(),
+                                font_size,
+                                normalized_coords: normalized_coords.clone(),
+                                synthesis,
+                                text_range: adjusted_range.clone(),
+                                is_rtl: cluster.is_rtl(),
+                            });
+                        }
+                    }
+
+                    run_x = cluster_x0 + cluster.advance();
+                    clusters.push(ShapedCluster {
+                        text_range: adjusted_range,
+                        x0: cluster_x0,
+                        x1: run_x,
+                        is_rtl: cluster.is_rtl(),
+                    });
+                }
+            }
+
+            out.push((
+                line_range.clone(),
+                ShapedLineLayout {
+                    width: metrics.advance,
+                    ascent: metrics.ascent,
+                    descent: metrics.descent,
+                    baseline: metrics.baseline,
+                    line_height,
+                    glyphs,
+                    clusters,
+                },
+            ));
+        }
+
+        if out.is_empty() {
+            out.push((
+                0..text.len(),
+                if metrics_only {
+                    self.shape_single_line_metrics(input, scale)
+                } else {
+                    self.shape_single_line(input, scale)
+                },
+            ));
+        }
+
+        out
+    }
 }
 
 fn resolve_span_ranges<'a>(
@@ -786,6 +988,7 @@ fn shaping_properties_for_span(
         weight,
         slant,
         letter_spacing_em,
+        features,
         axes,
     } = &span.shaping;
 
@@ -828,6 +1031,14 @@ fn shaping_properties_for_span(
             )));
         }
     }
+    if !features.is_empty() {
+        let features = font_features_for_settings(features);
+        if !features.is_empty() {
+            out.push(StyleProperty::FontFeatures(FontSettings::List(Cow::Owned(
+                features.into(),
+            ))));
+        }
+    }
     if let Some(weight) = effective_weight {
         out.push(StyleProperty::FontWeight(ParleyFontWeight::new(
             weight.0 as f32,
@@ -866,6 +1077,31 @@ fn font_variations_for_axes(axes: &[fret_core::TextFontAxisSetting]) -> Vec<Font
         tag_bytes.copy_from_slice(bytes);
         let tuple = (tag_bytes, axis.value);
         let setting = FontVariation::from(&tuple);
+        by_tag.insert(setting.tag, setting);
+    }
+
+    by_tag.into_values().collect::<Vec<_>>()
+}
+
+fn font_features_for_settings(features: &[fret_core::TextFontFeatureSetting]) -> Vec<FontFeature> {
+    use std::collections::BTreeMap;
+
+    let mut by_tag: BTreeMap<u32, FontFeature> = BTreeMap::new();
+    for feature in features {
+        let tag = feature.tag.trim();
+        if tag.is_empty() {
+            continue;
+        }
+        let bytes = tag.as_bytes();
+        if bytes.len() != 4 || !bytes.iter().all(u8::is_ascii) {
+            continue;
+        }
+
+        let value = feature.value.min(u32::from(u16::MAX)) as u16;
+        let mut tag_bytes = [0u8; 4];
+        tag_bytes.copy_from_slice(bytes);
+        let tuple = (tag_bytes, value);
+        let setting = FontFeature::from(&tuple);
         by_tag.insert(setting.tag, setting);
     }
 
@@ -937,6 +1173,72 @@ mod tests {
                 .any(|p| matches!(p, StyleProperty::FontVariations(_))),
             "expected `wght` axis to be removed from FontVariations"
         );
+    }
+
+    #[test]
+    fn shaping_properties_emit_font_features_when_present() {
+        let base = TextStyle {
+            font: FontId::family("Roboto Flex"),
+            size: Px(16.0),
+            weight: FontWeight(400),
+            ..Default::default()
+        };
+
+        let span = TextSpan {
+            len: 1,
+            shaping: TextShapingStyle::default()
+                .with_feature("liga", 0)
+                .with_feature("liga", 1)
+                .with_feature(" lig ", 42)
+                .with_feature("", 1)
+                .with_feature("calt", 0),
+            paint: Default::default(),
+        };
+
+        let props =
+            shaping_properties_for_span(&base, &span, "").expect("expected shaping properties");
+
+        fn tag_u32(tag: &[u8; 4]) -> u32 {
+            (tag[0] as u32) << 24 | (tag[1] as u32) << 16 | (tag[2] as u32) << 8 | tag[3] as u32
+        }
+
+        let mut features: Vec<FontFeature> = Vec::new();
+        for p in &props {
+            if let StyleProperty::FontFeatures(FontSettings::List(settings)) = p {
+                features.extend(settings.iter().copied());
+            }
+        }
+
+        assert!(!features.is_empty(), "expected FontFeatures to be emitted");
+
+        let liga_tag = tag_u32(b"liga");
+        let calt_tag = tag_u32(b"calt");
+
+        let tags = features
+            .iter()
+            .map(|f| f.tag)
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(
+            tags,
+            std::collections::BTreeSet::from([calt_tag, liga_tag]),
+            "expected invalid tags to be ignored and duplicates to be coalesced"
+        );
+
+        let liga: Vec<FontFeature> = features
+            .iter()
+            .cloned()
+            .filter(|f| f.tag == liga_tag)
+            .collect();
+        assert_eq!(liga.len(), 1, "expected duplicate tags to be coalesced");
+        assert_eq!(liga[0].value, 1, "expected last-writer-wins for `liga`");
+
+        let calt: Vec<FontFeature> = features
+            .iter()
+            .cloned()
+            .filter(|f| f.tag == calt_tag)
+            .collect();
+        assert_eq!(calt.len(), 1);
+        assert_eq!(calt[0].value, 0);
     }
 
     #[test]

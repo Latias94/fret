@@ -13,3 +13,8 @@ documentation.workspace = true
 fret-code-editor-buffer = { path = "../fret-code-editor-buffer" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-text-nav = { path = "../../crates/fret-text-nav" }
+unicode-ident.workspace = true
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true

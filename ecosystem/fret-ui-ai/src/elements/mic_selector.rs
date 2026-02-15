@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, TextAlign, TextStyle, TextWrap};
+use fret_core::{Color, FontId, FontWeight, Px, TextAlign, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, SemanticsDecoration, TextProps};
@@ -65,6 +65,7 @@ impl std::fmt::Debug for MicSelectorController {
 #[derive(Debug, Default, Clone)]
 struct MicSelectorProviderState {
     controller: Option<MicSelectorController>,
+    anchor_width: Option<Px>,
 }
 
 pub fn use_mic_selector_controller<H: UiHost>(
@@ -72,6 +73,11 @@ pub fn use_mic_selector_controller<H: UiHost>(
 ) -> Option<MicSelectorController> {
     cx.inherited_state::<MicSelectorProviderState>()
         .and_then(|st| st.controller.clone())
+}
+
+fn use_mic_selector_anchor_width<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Px> {
+    cx.inherited_state::<MicSelectorProviderState>()
+        .and_then(|st| st.anchor_width)
 }
 
 #[derive(Default)]
@@ -223,17 +229,19 @@ impl MicSelector {
         let controller_for_trigger = controller.clone();
         let controller_for_content = controller.clone();
 
-        Popover::new(open.clone()).into_element(
+        Popover::new(open.clone()).into_element_with_anchor(
             cx,
             move |cx| {
                 cx.with_state(MicSelectorProviderState::default, |st| {
                     st.controller = Some(controller_for_trigger.clone());
+                    st.anchor_width = None;
                 });
                 trigger(cx)
             },
-            move |cx| {
+            move |cx, anchor_rect| {
                 cx.with_state(MicSelectorProviderState::default, |st| {
                     st.controller = Some(controller_for_content.clone());
+                    st.anchor_width = Some(anchor_rect.size.width);
                 });
                 content(cx)
             },
@@ -378,9 +386,15 @@ impl MicSelectorContent {
             .refine_layout(self.command_layout)
             .into_element(cx);
 
+        let mut popover_layout = self.popover_layout;
+        if let Some(anchor_width) = use_mic_selector_anchor_width(cx) {
+            popover_layout =
+                popover_layout.merge(LayoutRefinement::default().w_px(anchor_width).min_w_0());
+        }
+
         let mut content = PopoverContent::new([command])
             .refine_style(self.popover_chrome)
-            .refine_layout(self.popover_layout)
+            .refine_layout(popover_layout)
             .into_element(cx);
 
         if let Some(test_id) = self.test_id_root {

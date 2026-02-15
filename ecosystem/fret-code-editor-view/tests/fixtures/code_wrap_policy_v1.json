@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "whitespace_run_trailing_is_selectable",
+      "text": "foo   bar",
+      "wrap_cols": 6,
+      "preset": "Balanced",
+      "expected_rows": ["foo   ", "bar"]
+    },
+    {
+      "id": "snake_identifier_breaks_after_underscore",
+      "text": "abc_def",
+      "wrap_cols": 5,
+      "preset": "Balanced",
+      "expected_rows": ["abc_", "def"]
+    },
+    {
+      "id": "camel_identifier_breaks_at_lower_to_upper_boundary",
+      "text": "abcDefGhi",
+      "wrap_cols": 6,
+      "preset": "Balanced",
+      "expected_rows": ["abcDef", "Ghi"]
+    },
+    {
+      "id": "identifier_breaks_at_digit_transition",
+      "text": "foo2bar",
+      "wrap_cols": 4,
+      "preset": "Balanced",
+      "expected_rows": ["foo2", "bar"]
+    },
+    {
+      "id": "operator_breaks_after_double_colon",
+      "text": "std::path::Path",
+      "wrap_cols": 7,
+      "preset": "Balanced",
+      "expected_rows": ["std::", "path::", "Path"]
+    },
+    {
+      "id": "operator_breaks_after_arrow",
+      "text": "left->right->tail",
+      "wrap_cols": 6,
+      "preset": "Balanced",
+      "expected_rows": ["left->", "right", "->tail"]
+    },
+    {
+      "id": "path_breaks_after_slash",
+      "text": "foo/bar/baz/qux",
+      "wrap_cols": 6,
+      "preset": "Balanced",
+      "expected_rows": ["foo/", "bar/", "baz/", "qux"]
+    },
+    {
+      "id": "windows_path_breaks_after_backslash",
+      "text": "C:\\foo\\bar\\baz\\qux",
+      "wrap_cols": 7,
+      "preset": "Balanced",
+      "expected_rows": ["C:\\foo\\", "bar\\", "baz\\qux"]
+    },
+    {
+      "id": "url_breaks_after_separators",
+      "text": "foo?bar=baz&x=y",
+      "wrap_cols": 5,
+      "preset": "Balanced",
+      "expected_rows": ["foo?", "bar=", "baz&", "x=y"]
+    },
+    {
+      "id": "punctuation_breaks_after_dot",
+      "text": "foo.bar.baz",
+      "wrap_cols": 6,
+      "preset": "Balanced",
+      "expected_rows": ["foo.", "bar.", "baz"]
+    },
+    {
+      "id": "variation_selector_emoji_cluster_is_atomic",
+      "text": "a\u270C\uFE0Fb",
+      "wrap_cols": 2,
+      "preset": "Aggressive",
+      "expected_rows": ["a", "\u270C\uFE0F", "b"]
+    },
+    {
+      "id": "combining_mark_grapheme_cluster_is_atomic",
+      "text": "a\u0301a\u0301a\u0301",
+      "wrap_cols": 2,
+      "preset": "Aggressive",
+      "expected_rows": ["a\u0301", "a\u0301", "a\u0301"]
+    },
+    {
+      "id": "zwj_emoji_cluster_is_atomic_even_under_small_wrap",
+      "text": "aa👨‍👩‍👧‍👦bb",
+      "wrap_cols": 3,
+      "preset": "Aggressive",
+      "expected_rows": ["aa", "👨‍👩‍👧‍👦", "bb"]
+    },
+    {
+      "id": "long_token_emergency_breaks_losslessly",
+      "text": "0123456789",
+      "wrap_cols": 4,
+      "preset": "Conservative",
+      "expected_rows": ["0123", "4567", "89"]
+    },
+    {
+      "id": "knobs_can_disable_path_breaks_and_fall_back_to_emergency_breaks",
+      "text": "foo/bar",
+      "wrap_cols": 5,
+      "preset": "Balanced",
+      "knobs": {
+        "break_after_path_separators": false,
+        "break_after_url_separators": true,
+        "break_after_punctuation": true,
+        "break_at_identifier_boundaries": true,
+        "break_around_operators": true
+      },
+      "expected_rows": ["foo/b", "ar"]
+    },
+    {
+      "id": "knobs_can_disable_identifier_breaks_and_fall_back_to_emergency_breaks",
+      "text": "abc_def",
+      "wrap_cols": 5,
+      "preset": "Balanced",
+      "knobs": {
+        "break_after_path_separators": true,
+        "break_after_url_separators": true,
+        "break_after_punctuation": true,
+        "break_at_identifier_boundaries": false,
+        "break_around_operators": true
+      },
+      "expected_rows": ["abc_d", "ef"]
+    }
+  ]
+}

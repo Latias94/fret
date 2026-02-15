@@ -103,6 +103,7 @@ impl Interpreter {
             | SceneOp::SvgImage { .. }
             | SceneOp::Text { .. }
             | SceneOp::Path { .. }
+            | SceneOp::StrokeRRect { .. }
             | SceneOp::ViewportSurface { .. } => {}
         }
     }

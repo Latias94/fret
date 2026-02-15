@@ -1,11 +1,12 @@
 use crate::UiHost;
 use fret_core::{
     AppWindowId, Axis, CursorIcon, InternalDragKind, KeyCode, Modifiers, MouseButton, Point,
-    PointerId, PointerType,
+    PointerId, PointerType, Rect, UiServices,
 };
 use fret_runtime::{
-    CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, Model, ModelStore, TickId,
-    TimerToken, WeakModel,
+    CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, Model, ModelStore,
+    PlatformTextInputQuery, PlatformTextInputQueryResult, TickId, TimerToken, Utf16Range,
+    WeakModel,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -617,6 +618,48 @@ pub type OnTextInputRegionClipboardUnavailable =
 pub type OnTextInputRegionSetSelection =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, u32, u32) -> bool + 'static>;
 
+pub type OnTextInputRegionPlatformTextInputQuery = Arc<
+    dyn Fn(
+            &mut dyn UiActionHost,
+            ActionCx,
+            &mut dyn UiServices,
+            Rect,
+            f32,
+            &crate::element::TextInputRegionProps,
+            &PlatformTextInputQuery,
+        ) -> Option<PlatformTextInputQueryResult>
+        + 'static,
+>;
+
+pub type OnTextInputRegionPlatformTextInputReplaceTextInRangeUtf16 = Arc<
+    dyn Fn(
+            &mut dyn UiActionHost,
+            ActionCx,
+            &mut dyn UiServices,
+            Rect,
+            f32,
+            &crate::element::TextInputRegionProps,
+            Utf16Range,
+            &str,
+        ) -> bool
+        + 'static,
+>;
+
+pub type OnTextInputRegionPlatformTextInputReplaceAndMarkTextInRangeUtf16 = Arc<
+    dyn Fn(
+            &mut dyn UiActionHost,
+            ActionCx,
+            &mut dyn UiServices,
+            Rect,
+            f32,
+            &crate::element::TextInputRegionProps,
+            Utf16Range,
+            &str,
+            Option<Utf16Range>,
+        ) -> bool
+        + 'static,
+>;
+
 #[derive(Default)]
 pub(crate) struct TextInputRegionActionHooks {
     pub on_text_input: Option<OnTextInputRegionTextInput>,
@@ -624,6 +667,11 @@ pub(crate) struct TextInputRegionActionHooks {
     pub on_clipboard_text: Option<OnTextInputRegionClipboardText>,
     pub on_clipboard_unavailable: Option<OnTextInputRegionClipboardUnavailable>,
     pub on_set_selection: Option<OnTextInputRegionSetSelection>,
+    pub on_platform_text_input_query: Option<OnTextInputRegionPlatformTextInputQuery>,
+    pub on_platform_text_input_replace_text_in_range_utf16:
+        Option<OnTextInputRegionPlatformTextInputReplaceTextInRangeUtf16>,
+    pub on_platform_text_input_replace_and_mark_text_in_range_utf16:
+        Option<OnTextInputRegionPlatformTextInputReplaceAndMarkTextInRangeUtf16>,
 }
 
 pub type OnPointerDown =

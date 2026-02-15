@@ -2204,6 +2204,71 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         );
     }
 
+    pub fn text_input_region_on_platform_text_input_query(
+        &mut self,
+        handler: crate::action::OnTextInputRegionPlatformTextInputQuery,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_platform_text_input_query = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_platform_text_input_query(&mut self) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_platform_text_input_query = None;
+            },
+        );
+    }
+
+    pub fn text_input_region_on_platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        handler: crate::action::OnTextInputRegionPlatformTextInputReplaceTextInRangeUtf16,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_platform_text_input_replace_text_in_range_utf16 = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_platform_text_input_replace_text_in_range_utf16(&mut self) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_platform_text_input_replace_text_in_range_utf16 = None;
+            },
+        );
+    }
+
+    pub fn text_input_region_on_platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        handler: crate::action::OnTextInputRegionPlatformTextInputReplaceAndMarkTextInRangeUtf16,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_platform_text_input_replace_and_mark_text_in_range_utf16 = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_platform_text_input_replace_and_mark_text_in_range_utf16 = None;
+            },
+        );
+    }
+
     pub fn key_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = Some(handler);
