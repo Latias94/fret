@@ -61,13 +61,25 @@ Workflow when it fails:
   - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
   - `target/release/fretboard.exe diag stats <bundle.json> --sort cpu_cycles --top 30`
 
+If suite results look inconsistent (a script is fast when run alone but slow inside a suite), use
+suite normalization hooks to reduce cross-script state contamination:
+
+- `--suite-prewarm <script.json>...`: run once per launched process before the suite.
+- `--suite-prelude <script.json>...`: run before each measured script (and per-run when combined with
+  `--suite-prelude-each-run`).
+
+Suggested defaults for UI-gallery perf work:
+
+- `--suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json`
+- `--suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json`
+
 ## Failure triage (when a gate fails)
 
 1) Look at the generated perf check:
 
 - `<out_dir>/check.perf_thresholds.json`
   - Includes `max` and percentiles (`p50`/`p95`) per script.
-  - When a threshold fails, `failures[]` also includes `actual_p95_us` and `outlier_suspected` for quick triage.
+  - When a threshold fails, `failures[]` includes `actual_p95_us`, `outlier_suspected`, and `evidence_bundle` (a bundle.json path you can feed to `diag stats`) for quick triage.
 
 2) Open the worst evidence bundle:
 
