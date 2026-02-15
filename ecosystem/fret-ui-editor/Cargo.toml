@@ -27,7 +27,7 @@ fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-headless = { path = "../fret-ui-headless" }
-fret-ui-kit = { path = "../fret-ui-kit" }
+fret-ui-kit = { path = "../fret-ui-kit", features = ["icons"] }
 fret-icons = { path = "../fret-icons" }
 
 fret-authoring = { path = "../fret-authoring", optional = true }

@@ -134,7 +134,8 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (lucide pack install)
   - [x] Proof demo uses ui-kit-styled buttons for top-level actions (avoid bare text buttons).
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
-  - [ ] Define a shared `EditorChrome` recipe (optional): centralize token keys and defaults so controls don’t drift.
+  - [~] Define a shared `EditorChrome` recipe (optional): centralize token keys and defaults so controls don’t drift.
+    - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
   - [~] Ensure docking tabs remain legible under the demo theme (tab text, hover/active states).
     - Evidence anchor: `apps/fret-examples/src/imui_editor_proof_demo.rs`
     - Implementation evidence: `ecosystem/fret-docking/src/dock/paint.rs`

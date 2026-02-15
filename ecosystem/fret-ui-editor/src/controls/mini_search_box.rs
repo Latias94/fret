@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, KeyCode, Px, TextStyle};
+use fret_core::{Axis, Edges, KeyCode, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
@@ -15,10 +15,10 @@ use fret_ui::element::{
     PressableProps, SizeStyle, TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::EditorDensity;
+use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::icons::editor_icon;
 
 #[derive(Debug, Clone)]
@@ -81,44 +81,11 @@ impl MiniSearchBox {
         let (density, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
             let density = EditorDensity::resolve(theme);
-            let resolved = resolve_input_chrome(
+            let (chrome, text_style) = resolve_editor_text_field_style(
                 theme,
                 self.options.size,
                 &ChromeRefinement::default(),
-                InputTokenKeys {
-                    padding_x: Some("component.text_field.padding_x"),
-                    padding_y: Some("component.text_field.padding_y"),
-                    min_height: Some("component.text_field.min_height"),
-                    radius: Some("component.text_field.radius"),
-                    border_width: Some("component.text_field.border_width"),
-                    bg: Some("component.text_field.bg"),
-                    border: Some("component.text_field.border"),
-                    border_focus: Some("component.text_field.border_focus"),
-                    fg: Some("component.text_field.fg"),
-                    text_px: Some("component.text_field.text_px"),
-                    selection: Some("component.text_field.selection"),
-                },
             );
-
-            let mut chrome = fret_ui::TextInputStyle::from_theme(theme.snapshot());
-            chrome.padding = resolved.padding;
-            chrome.corner_radii = fret_core::Corners::all(resolved.radius);
-            chrome.border = Edges::all(resolved.border_width);
-            chrome.background = resolved.background;
-            chrome.border_color = resolved.border_color;
-            chrome.border_color_focused = resolved.border_color_focused;
-            chrome.text_color = resolved.text_color;
-            chrome.caret_color = resolved.text_color;
-            chrome.selection_color = resolved.selection_color;
-
-            let font_line_height = theme
-                .metric_by_key("font.line_height")
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
-            let text_style = TextStyle {
-                size: resolved.text_px,
-                line_height: Some(font_line_height),
-                ..Default::default()
-            };
             (density, chrome, text_style)
         };
 

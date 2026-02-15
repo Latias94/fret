@@ -17,9 +17,9 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::popper;
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, OverlayController, OverlayPresence, OverlayRequest, Size};
 
+use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -108,40 +108,11 @@ impl ColorEdit {
         let input = {
             let (chrome, text_style) = {
                 let theme = Theme::global(&*cx.app);
-                let resolved = resolve_input_chrome(
+                let (chrome, text_style) = resolve_editor_text_field_style(
                     theme,
                     Size::default(),
                     &ChromeRefinement::default(),
-                    InputTokenKeys {
-                        bg: Some("component.input.bg"),
-                        border: Some("component.input.border"),
-                        border_focus: Some("component.input.border_focus"),
-                        fg: Some("component.input.fg"),
-                        selection: Some("component.input.selection"),
-                        ..InputTokenKeys::none()
-                    },
                 );
-
-                let mut chrome = fret_ui::TextInputStyle::from_theme(theme.snapshot());
-                chrome.padding = resolved.padding;
-                chrome.corner_radii = Corners::all(resolved.radius);
-                chrome.border = Edges::all(resolved.border_width);
-                chrome.background = resolved.background;
-                chrome.border_color = resolved.border_color;
-                chrome.border_color_focused = resolved.border_color_focused;
-                chrome.text_color = resolved.text_color;
-                chrome.caret_color = resolved.text_color;
-                chrome.selection_color = resolved.selection_color;
-
-                let font_line_height = theme
-                    .metric_by_key("font.line_height")
-                    .unwrap_or_else(|| theme.metric_token("font.line_height"));
-                let text_style = TextStyle {
-                    size: resolved.text_px,
-                    line_height: Some(font_line_height),
-                    ..Default::default()
-                };
-
                 (chrome, text_style)
             };
 
