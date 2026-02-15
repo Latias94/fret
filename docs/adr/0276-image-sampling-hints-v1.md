@@ -103,6 +103,20 @@ Evidence (wgpu default renderer):
 
 - `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
 
+## Adoption guidance (layering)
+
+Sampling hints are intentionally a *mechanism-level* contract. Default choices are policy.
+
+Recommended adoption pattern:
+
+- Mechanism layer (`crates/fret-ui`): plumb the hint through authoring props with a stable default
+  (`Default`), but do not opt in to `Nearest` implicitly.
+- Policy layers (`ecosystem/*`): provide explicit opt-in helpers (e.g. extension traits or recipe
+  knobs) for pixel-art / canvas / mask-heavy surfaces that must use nearest-neighbor sampling.
+- Component recipes (`fret-ui-shadcn`, app code): decide per component/recipe whether sampling is a
+  styling knob or an internal invariant, and prefer a small set of hint values across the app to
+  avoid excessive state splits.
+
 ## Alternatives considered
 
 ### A1 — Put sampling controls on `Paint` / `MaterialId`
@@ -126,4 +140,3 @@ Deferred:
   sampling sites.
 - Renderer implementations must be careful to avoid unbounded sampler permutations and to keep
   sampler selection deterministic across backends.
-

@@ -229,6 +229,9 @@ Progress record (Sampling hints v1):
   - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (dual bind groups: linear vs nearest)
   - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`pick_image_bind_group`, `pick_uniform_bind_group_for_mask_image`)
   - `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
+  - `crates/fret-ui/src/element.rs` (`ImageProps.sampling`)
+  - `ecosystem/fret-ui-kit/src/image_sampling.rs` (`ImageSamplingExt`)
+  - `ecosystem/fret-ui-shadcn/src/media_image.rs` (`MediaImage::sampling_hint`)
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance`
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`

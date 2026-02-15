@@ -108,6 +108,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-core/src/scene/mask.rs` (`Mask::Image { sampling }`).
 - [x] REN-VNEXT-samp-002 Add a small conformance scene that exercises nearest/linear on mixed primitives without reordering.
   - Evidence: `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
+- [x] REN-VNEXT-samp-003 Plumb sampling hints through the UI mechanism layer and add ecosystem opt-in helpers.
+  - Goal: keep `crates/fret-ui` as a pure mechanism/pass-through, while allowing policy layers to opt in.
+  - Evidence: `crates/fret-ui/src/element.rs` (`ImageProps.sampling`), `crates/fret-ui/src/declarative/host_widget/paint.rs` (SceneOp plumb),
+    `ecosystem/fret-ui-kit/src/image_sampling.rs` (`ImageSamplingExt`), `ecosystem/fret-ui-kit/tests/image_sampling_ext_smoke.rs`,
+    `ecosystem/fret-ui-shadcn/src/media_image.rs` (`MediaImage::sampling_hint`).
 
 ## Always-run guardrails (before/after each milestone)
 

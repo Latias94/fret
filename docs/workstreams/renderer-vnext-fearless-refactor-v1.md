@@ -112,6 +112,15 @@ cargo nextest run -p fret-render-wgpu --test materials_conformance
 cargo nextest run -p fret-render-wgpu --test materials_sampled_conformance
 ```
 
+Windows note:
+
+- If you hit `os error 206` (“filename or extension too long”) while building tests, set a shorter
+  target directory, for example:
+
+```powershell
+$env:CARGO_TARGET_DIR = 'F:\ct'
+```
+
 Fallback (no nextest):
 
 ```bash
