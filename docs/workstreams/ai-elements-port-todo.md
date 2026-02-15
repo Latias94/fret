@@ -520,6 +520,7 @@ Keep this list in sync with the pinned upstream commit recorded in
     (e.g. a toolbar button/menu item that triggers `on_add_attachments`).
   - Add a diag script gate:
     - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
+    - Note: the gate currently submits via keyboard `Enter` after focusing the textarea. Pointer-click on the send button is still not a reliable hit-test target and needs a follow-up parity pass.
   - UI Gallery page: `ai_prompt_input_provider_demo`.
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
 - [x] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).
