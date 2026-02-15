@@ -116,10 +116,22 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `apps/fret-ui-gallery/src/ui/previews/gallery/atoms/media/image_object_fit.rs` (explicit Linear vs opt-in Nearest demo),
     `tools/diag-scripts/ui-gallery-image-sampling-hints-screenshots.json` (scripted screenshot/bundle gate for Linear vs Nearest).
 
+## M5b — WebGPU/Tint uniformity closure (derivatives + sampling)
+
+- [x] REN-VNEXT-webgpu-001 Make WGSL shaders satisfy WebGPU uniformity rules (Tint):
+  - Derivative ops (`fwidth`, `dpdx`, `dpdy`) and sampling (`textureSample`) are not gated by non-uniform control flow.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval`, `paint_eval`, dashed border mask).
+- [ ] REN-VNEXT-webgpu-002 Recover performance after uniformity fixes:
+  - Avoid “evaluate all material patterns per pixel” in the quad shader on web/mobile.
+  - Preferred direction: compile a small set of shader/pipeline variants keyed by stable (bounded) paint/material kinds.
+- [ ] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
+  - Keep `renderer::tests::shaders_validate_for_webgpu` as a baseline (Naga),
+  - and consider adding an optional Tint-based compile check (or a minimal static heuristic) to catch uniformity drift.
+
 ## Always-run guardrails (before/after each milestone)
 
 - [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-  - Last run: 2026-02-15 (post M5 sampling opt-in).
+  - Last run: 2026-02-15 (post WebGPU uniformity closure), commit `6340d4d4`.
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
   - Status: satisfied through M5 (sampling hints conformance gate landed).
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.

@@ -446,6 +446,8 @@ Use this checklist before starting any renderer-internal refactor step.
 
 - [ ] Capability gating and fallback behavior are documented (ADR + workstream capability matrix update when decided).
 - [ ] Missing resources degrade deterministically (e.g. missing images/materials → no-op/solid fallback), not per-backend.
+- [ ] WebGPU uniformity rule is respected (Tint): derivative ops and sampling are not gated by non-uniform control flow.
+  - If a shader path needs derivatives, prefer pipeline variants with bounded keys (kind/tile mode) over branching on instance data.
 
 ### A4) Guardrails (always run)
 

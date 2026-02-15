@@ -249,3 +249,27 @@ Perf snapshot record (post M5 plumbing):
   - `headless: frames=600 wall=1.39s prepare=22.55ms hits=26312 misses=88 ...`
   - `headless_renderer_perf: frames=600 encode=0.10ms prepare_svg=22.57ms prepare_text=1.24ms draws=27000 ...`
   - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 ...`
+
+## M5b — WebGPU/Tint uniformity closure (derivatives + sampling)
+
+Deliverables:
+
+- Web demo (wasm/WebGPU) compiles and runs without uniformity-related WGSL validation errors in the browser.
+- Shader core adopts a portability invariant:
+  derivative ops and sampling must not be gated by non-uniform control flow (Tint/WebGPU uniformity rules).
+
+Progress record (Uniformity closure):
+
+- Date: 2026-02-15
+- Status: Landed (browser smoke verified)
+- Commits:
+  - `45ef6df8` (mask uniformity closure)
+  - `6340d4d4` (paint/material + dash uniformity closure)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval`, `paint_eval`, dashed border mask)
+  - `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu shaders_`
+  - `cargo check -p fret-demo-web --target wasm32-unknown-unknown`
+  - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
+  - `cargo run -p fretboard -- dev web --demo ui_gallery` (manual browser smoke)
