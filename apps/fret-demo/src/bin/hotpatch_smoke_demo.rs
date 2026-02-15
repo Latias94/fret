@@ -5,9 +5,9 @@ mod hotpatch {
     use fret_bootstrap::ui_app_driver::UiAppDriver;
     use fret_core::{AppWindowId, UiServices};
     use fret_runtime::Model;
-    use fret_ui::element::AnyElement;
     use fret_ui::{ElementContext, Invalidation};
     use fret_ui_kit::declarative::ElementContextThemeExt as _;
+    use fret_ui_literals::HotLiterals;
     use fret_ui_shadcn as shadcn;
 
     use std::sync::Arc;
@@ -79,6 +79,7 @@ mod hotpatch {
 
         cx.observe_model(&st.counter, Invalidation::Paint);
         cx.observe_model(&st.debug, Invalidation::Paint);
+        cx.observe_global::<HotLiterals>(Invalidation::Paint);
 
         let value = cx
             .app
@@ -92,12 +93,20 @@ mod hotpatch {
             .read(&st.debug, |v| v.clone())
             .unwrap_or_else(|_| Arc::<str>::from("<missing debug model>"));
 
+        let headline = HotLiterals::global(&*cx.app)
+            .get("demo.headline")
+            .unwrap_or(DEMO_HEADLINE);
+
         let content = shadcn::Card::new([
             shadcn::CardHeader::new([
-                shadcn::CardTitle::new(DEMO_HEADLINE).into_element(cx),
+                shadcn::CardTitle::new(headline).into_element(cx),
                 shadcn::CardDescription::new(format!(
                     "counter={value} (click, then watch the terminal logs)"
                 ))
+                .into_element(cx),
+                shadcn::CardDescription::new(
+                    "hot literals: edit `.fret/literals.json` (key: demo.headline)",
+                )
                 .into_element(cx),
                 shadcn::CardDescription::new(format!("debug: {debug}")).into_element(cx),
             ])

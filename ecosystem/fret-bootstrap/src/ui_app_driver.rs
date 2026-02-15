@@ -1228,6 +1228,8 @@ fn ui_app_create_window_state<S>(
     app: &mut App,
     window: AppWindowId,
 ) -> UiAppWindowState<S> {
+    crate::dev_reload::DevReloadWatcher::install_if_enabled(app);
+
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
     ui.set_debug_enabled(
@@ -1301,6 +1303,29 @@ fn ui_app_handle_event<S>(
                 tick.menu_bar_error,
                 tick.actionable_keymap_conflicts,
                 tick.keymap_conflict_samples,
+            ));
+        }
+        return;
+    }
+
+    if let Event::Timer { token } = event
+        && let Some(tick) = crate::dev_reload::handle_dev_reload_timer(app, window, *token)
+    {
+        let actionable = tick.reloaded_theme
+            || tick.reloaded_literals
+            || tick.bumped_ui_assets_epoch
+            || tick.theme_error.is_some()
+            || tick.literals_error.is_some();
+
+        if actionable {
+            app.request_redraw(window);
+            hotpatch_trace_log(&format!(
+                "dev_reload: window={window:?} theme_reload={} literals_reload={} assets_epoch={} theme_err={:?} literals_err={:?}",
+                tick.reloaded_theme,
+                tick.reloaded_literals,
+                tick.bumped_ui_assets_epoch,
+                tick.theme_error,
+                tick.literals_error,
             ));
         }
         return;

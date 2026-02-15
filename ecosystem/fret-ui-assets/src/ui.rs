@@ -5,6 +5,7 @@
 
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
+use crate::UiAssetsReloadEpoch;
 use crate::image_asset_cache::ImageAssetKey;
 use crate::image_source::{
     ImageSource, ImageSourceOptions, ImageSourceState, register_asset_key_for_source,
@@ -31,6 +32,10 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
         source: &ImageSource,
         options: ImageSourceOptions,
     ) -> ImageSourceState {
+        // ViewCache correctness for dev reloads: observe a global epoch that can be bumped when
+        // path-based assets should be reloaded (without restarting the app).
+        self.observe_global::<UiAssetsReloadEpoch>(Invalidation::Paint);
+
         // ViewCache correctness:
         //
         // - observe a per-request model that is updated when async decode completes (inbox drainer),

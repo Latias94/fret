@@ -100,13 +100,26 @@ Channels:
 
 1) **Theme reload**
    - tokens, typography, radii, spacing, shadows
-   - reloadable via watcher and applied at a safe frame boundary
+   - default file: `.fret/theme.json` (a `fret_ui::ThemeConfig` JSON)
+   - reloadable via a polling watcher and applied at a safe frame boundary
 
 2) **Asset reload**
    - svg/png/fonts; invalidate caches and request redraw
+   - default trigger file: `.fret/ui_assets.touch` (bump `UiAssetsReloadEpoch`)
+   - intended usage: a tooling watcher updates the trigger file when assets change
 
 3) **Hot literals**
    - developer strings/labels/tooltips sourced from a data file in `.fret/` or the app root
+   - default file: `.fret/literals.json` (string→string map; example key: `demo.headline`)
+
+Enablement (native):
+
+- Enabled automatically in dev/hotpatch contexts (`FRET_HOTPATCH=1`, `DIOXUS_CLI_ENABLED=1`) or explicitly via `FRET_DEV_RELOAD=1`.
+- Poll interval: `FRET_DEV_RELOAD_POLL_MS` (default: `250`).
+- Path overrides:
+  - `FRET_DEV_RELOAD_THEME_PATH`
+  - `FRET_DEV_RELOAD_LITERALS_PATH`
+  - `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH`
 
 Principle:
 
@@ -165,4 +178,3 @@ Potential gates:
 - ADR 0105: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - Dev tooling posture: `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - Dioxus hot reload overview: `repo-ref/dioxus/notes/architecture/07-HOTRELOAD.md`
-
