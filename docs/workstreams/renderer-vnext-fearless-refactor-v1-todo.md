@@ -112,7 +112,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: keep `crates/fret-ui` as a pure mechanism/pass-through, while allowing policy layers to opt in.
   - Evidence: `crates/fret-ui/src/element.rs` (`ImageProps.sampling`), `crates/fret-ui/src/declarative/host_widget/paint.rs` (SceneOp plumb),
     `ecosystem/fret-ui-kit/src/image_sampling.rs` (`ImageSamplingExt`), `ecosystem/fret-ui-kit/tests/image_sampling_ext_smoke.rs`,
-    `ecosystem/fret-ui-shadcn/src/media_image.rs` (`MediaImage::sampling_hint`).
+    `ecosystem/fret-ui-shadcn/src/media_image.rs` (`MediaImage::sampling_hint`),
+    `apps/fret-ui-gallery/src/ui/previews/gallery/atoms/media/image_object_fit.rs` (explicit Linear vs opt-in Nearest demo).
 
 ## Always-run guardrails (before/after each milestone)
 
