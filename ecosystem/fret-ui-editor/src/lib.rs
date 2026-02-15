@@ -12,6 +12,7 @@
 pub mod composites;
 pub mod controls;
 pub mod primitives;
+pub mod theme;
 
 #[cfg(feature = "imui")]
 pub mod imui;
