@@ -347,6 +347,11 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() || dev_state_reset {
         cmd.env("FRET_DEV_STATE", "1");
     }
+    if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() {
+        // In watch/hotpatch workflows, favor a tighter "state is always there after restart"
+        // loop over minimizing JSON writes.
+        cmd.env("FRET_DEV_STATE_DEBOUNCE_MS", "0");
+    }
     if dev_state_reset {
         cmd.env("FRET_DEV_STATE_RESET", "1");
     }

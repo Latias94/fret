@@ -349,6 +349,12 @@ impl DevStateController {
         }
 
         self.dirty_since = Some(now);
+        if self.debounce == Duration::from_millis(0) {
+            if let Err(err) = self.flush_file(app) {
+                warn!(path = %self.path.display(), error = %err, "dev_state: flush failed");
+            }
+            self.dirty_since = None;
+        }
     }
 
     fn flush_file(&mut self, app: &App) -> Result<(), String> {
