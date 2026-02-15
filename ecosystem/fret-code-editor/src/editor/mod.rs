@@ -15,8 +15,9 @@ use fret_code_editor_view::{
 };
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
-    Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow,
-    TextPaintStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
+    Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size,
+    TextFontFeatureSetting, TextOverflow, TextPaintStyle, TextShapingStyle, TextSpan, TextStyle,
+    TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode, TimerToken};
 use fret_ui::Invalidation;
@@ -317,6 +318,68 @@ pub struct PreeditState {
     pub cursor: Option<(usize, usize)>,
 }
 
+/// Editor-owned OpenType feature policy for code surfaces.
+///
+/// This is intentionally an ecosystem-layer surface: mechanism-layer text types expose a generic
+/// feature representation (`TextShapingStyle.features`), and editors/components decide defaults.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CodeFontFeaturePreset {
+    /// Do not override font feature defaults.
+    PreserveDefaults,
+    /// Common editor baseline: disable standard ligatures (`liga`) and contextual alternates
+    /// (`calt`), best-effort.
+    EditorDefault,
+    /// Disable standard ligatures (`liga`) only, best-effort.
+    NoLigatures,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CodeFontFeaturePolicy {
+    pub preset: CodeFontFeaturePreset,
+    /// Additional feature overrides applied after the preset (best-effort).
+    pub overrides: Vec<TextFontFeatureSetting>,
+}
+
+impl Default for CodeFontFeaturePolicy {
+    fn default() -> Self {
+        Self {
+            preset: CodeFontFeaturePreset::EditorDefault,
+            overrides: Vec::new(),
+        }
+    }
+}
+
+impl CodeFontFeaturePolicy {
+    fn shaping_style(&self) -> TextShapingStyle {
+        let mut out = TextShapingStyle::default();
+        match self.preset {
+            CodeFontFeaturePreset::PreserveDefaults => {}
+            CodeFontFeaturePreset::EditorDefault => {
+                out.features.push(TextFontFeatureSetting {
+                    tag: "liga".into(),
+                    value: 0,
+                });
+                out.features.push(TextFontFeatureSetting {
+                    tag: "calt".into(),
+                    value: 0,
+                });
+            }
+            CodeFontFeaturePreset::NoLigatures => {
+                out.features.push(TextFontFeatureSetting {
+                    tag: "liga".into(),
+                    value: 0,
+                });
+            }
+        }
+
+        if !self.overrides.is_empty() {
+            out.features.extend(self.overrides.iter().cloned());
+        }
+
+        out
+    }
+}
+
 /// Controls how the code editor surface participates in focus, selection, and editing.
 ///
 /// This is intentionally an ecosystem-layer policy surface (ADR 0066).
@@ -554,6 +617,9 @@ struct CodeEditorState {
     preedit: Option<PreeditState>,
     preedit_replace_range: Option<Range<usize>>,
     preedit_saved_selection: Option<Selection>,
+    code_font_feature_policy: CodeFontFeaturePolicy,
+    code_font_feature_policy_rev: u64,
+    code_font_shaping_style: TextShapingStyle,
     font_stack_key: fret_runtime::TextFontStackKey,
     allow_decorations_under_inline_preedit: bool,
     compose_inline_preedit: bool,
@@ -643,6 +709,7 @@ struct RowRichCacheEntry {
     syntax_spans: Arc<[SyntaxSpan]>,
     row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
     theme_revision: u64,
+    code_font_feature_policy_rev: u64,
     rich: fret_core::AttributedText,
 }
 
@@ -670,6 +737,14 @@ impl CodeEditorState {
         self.row_geom_cache_tick = 0;
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
+
+        #[cfg(feature = "syntax")]
+        {
+            self.row_rich_cache_tick = 0;
+            self.row_rich_cache.clear();
+            self.row_rich_cache_queue.clear();
+            self.cache_stats.row_rich_resets = self.cache_stats.row_rich_resets.saturating_add(1);
+        }
     }
 
     fn refresh_display_map(&mut self) {
@@ -831,6 +906,9 @@ impl CodeEditorHandle {
                 preedit: None,
                 preedit_replace_range: None,
                 preedit_saved_selection: None,
+                code_font_feature_policy: CodeFontFeaturePolicy::default(),
+                code_font_feature_policy_rev: 0,
+                code_font_shaping_style: CodeFontFeaturePolicy::default().shaping_style(),
                 font_stack_key: fret_runtime::TextFontStackKey::default(),
                 allow_decorations_under_inline_preedit: false,
                 compose_inline_preedit: false,
@@ -893,6 +971,22 @@ impl CodeEditorHandle {
                 row_rich_cache_queue: VecDeque::new(),
             })),
         }
+    }
+
+    /// v1 font feature seam for code surfaces.
+    ///
+    /// This controls OpenType feature overrides (e.g. `liga`/`calt`) applied to code text shaping.
+    /// The policy is ecosystem-owned and best-effort: if the resolved font face does not support a
+    /// tag, it will be ignored by the shaping backend.
+    pub fn set_code_font_feature_policy(&self, policy: CodeFontFeaturePolicy) {
+        let mut st = self.state.borrow_mut();
+        if st.code_font_feature_policy == policy {
+            return;
+        }
+        st.code_font_feature_policy = policy;
+        st.code_font_feature_policy_rev = st.code_font_feature_policy_rev.saturating_add(1);
+        st.code_font_shaping_style = st.code_font_feature_policy.shaping_style();
+        st.invalidate_row_caches();
     }
 
     pub fn set_language(&self, language: Option<impl Into<Arc<str>>>) {
@@ -1269,6 +1363,7 @@ pub struct CodeEditor {
     overscan: usize,
     torture: Option<CodeEditorTorture>,
     soft_wrap_cols: Option<usize>,
+    code_font_features: Option<CodeFontFeaturePolicy>,
     interaction: Option<CodeEditorInteractionOptions>,
     key: u64,
     a11y_label: Option<Arc<str>>,
@@ -1301,6 +1396,7 @@ impl CodeEditor {
             overscan: 16,
             torture: None,
             soft_wrap_cols: None,
+            code_font_features: None,
             interaction: None,
             key: 0,
             a11y_label: None,
@@ -1324,6 +1420,11 @@ impl CodeEditor {
 
     pub fn soft_wrap_cols(mut self, cols: Option<usize>) -> Self {
         self.soft_wrap_cols = cols.filter(|v| *v > 0);
+        self
+    }
+
+    pub fn code_font_features(mut self, policy: CodeFontFeaturePolicy) -> Self {
+        self.code_font_features = Some(policy);
         self
     }
 
@@ -1358,6 +1459,7 @@ impl CodeEditor {
         let overscan = self.overscan;
         let torture = self.torture;
         let soft_wrap_cols = self.soft_wrap_cols;
+        let code_font_features = self.code_font_features;
         let interaction = self.interaction;
         let key = self.key;
         let viewport_test_id = self.viewport_test_id;
@@ -1406,6 +1508,9 @@ impl CodeEditor {
                 ime_cursor_area,
             ) = {
                 handle.set_soft_wrap_cols(soft_wrap_cols);
+                if let Some(policy) = code_font_features.clone() {
+                    handle.set_code_font_feature_policy(policy);
+                }
                 if let Some(interaction) = interaction {
                     handle.set_interaction(interaction);
                 }

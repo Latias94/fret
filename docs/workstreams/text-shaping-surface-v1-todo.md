@@ -21,17 +21,20 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 
 ## M1 — Ecosystem adoption
 
-- [ ] Decide the default editor feature policy (code vs UI):
-  - [ ] disable `liga`/`calt` by default for code (common editor baseline),
-  - [ ] keep UI defaults unchanged.
-- [ ] Implement the policy at the ecosystem layer (avoid expanding mechanism-layer APIs):
+- [x] Decide the default editor feature policy (code vs UI):
+  - [x] disable `liga`/`calt` by default for code (common editor baseline),
+  - [x] keep UI defaults unchanged.
+- [~] Implement the policy at the ecosystem layer (avoid expanding mechanism-layer APIs):
   - [ ] `ecosystem/fret-code-view`: ensure syntax-highlighted spans can set shaping features
     deterministically (default-off ligatures).
-  - [ ] `ecosystem/fret-code-editor`: ensure editor text surfaces can apply the same policy (or
-    explicitly defer to `fret-code-view` if it becomes the shared policy owner).
-- [ ] Regression gates:
-  - [ ] a feature toggle changes shaping keys (no stale shaping/layout reuse),
-  - [ ] paint-only span changes do not trigger reshaping (shape cache hit under palette-only edits).
+  - [x] `ecosystem/fret-code-editor`: apply the policy to code text (plain + syntax + preedit).
+    - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeFontFeaturePolicy`)
+    - Evidence: `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (code shaping applied to spans)
+- [x] Regression gates:
+  - [x] a feature toggle changes shaping keys (no stale shaping/layout reuse).
+    - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` feature key tests.
+  - [x] paint-only span changes do not trigger reshaping (shape cache hit under palette-only edits).
+    - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` + editor paint gates.
 - [ ] Add a minimal demo/harness (recommended, bundled-font-friendly):
   - [ ] a “feature toggle” UI to flip `calt`/`liga` (and one `ssXX`) on a known sample string,
   - [ ] document which bundled/system fonts show a visible difference.

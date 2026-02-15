@@ -209,6 +209,7 @@ pub(super) fn paint_row(
                 let rich = materialize_preedit_rich_text_for_range(
                     Arc::clone(&line),
                     range,
+                    &st.code_font_shaping_style,
                     preedit,
                     fg,
                     selection_bg,
@@ -257,6 +258,7 @@ pub(super) fn paint_row(
                 let rich = materialize_preedit_rich_text(
                     Arc::clone(&line),
                     caret_in_line,
+                    &st.code_font_shaping_style,
                     preedit,
                     fg,
                     selection_bg,
@@ -344,6 +346,7 @@ pub(super) fn paint_row(
                 if let Some((cached, last_used)) = st.row_rich_cache.get_mut(&row) {
                     let hit = cached.theme_revision == theme_revision
                         && cached.row_range == row_range
+                        && cached.code_font_feature_policy_rev == st.code_font_feature_policy_rev
                         && Arc::ptr_eq(&cached.line, &line)
                         && Arc::ptr_eq(&cached.syntax_spans, &spans)
                         && Arc::ptr_eq(&cached.row_spans, &row_spans);
@@ -453,7 +456,12 @@ pub(super) fn paint_row(
                         let started = perf_enabled.then(Instant::now);
                         let rich = {
                             let theme = painter.theme();
-                            materialize_row_rich_text(theme, Arc::clone(&line), mapped.as_ref())
+                            materialize_row_rich_text(
+                                theme,
+                                Arc::clone(&line),
+                                mapped.as_ref(),
+                                &st.code_font_shaping_style,
+                            )
                         };
                         row_geom_key = Some(geom::RowGeomKey::for_attributed(
                             &rich,
@@ -482,6 +490,7 @@ pub(super) fn paint_row(
                                     syntax_spans: Arc::clone(&spans),
                                     row_spans: Arc::clone(&row_spans),
                                     theme_revision,
+                                    code_font_feature_policy_rev: st.code_font_feature_policy_rev,
                                     rich: rich.clone(),
                                 },
                                 tick,
@@ -532,37 +541,80 @@ pub(super) fn paint_row(
     }
 
     if !drew_rich {
-        row_geom_key = Some(geom::RowGeomKey::for_plain(
-            &line,
-            text_style,
-            (
-                constraints.max_width,
-                constraints.wrap,
-                constraints.overflow,
-                fret_core::TextAlign::Start,
+        if !st.code_font_shaping_style.features.is_empty() {
+            let rich = AttributedText::new(
+                Arc::clone(&line),
+                vec![TextSpan {
+                    len: line.len(),
+                    shaping: st.code_font_shaping_style.clone(),
+                    paint: Default::default(),
+                }],
+            );
+            row_geom_key = Some(geom::RowGeomKey::for_attributed(
+                &rich,
+                text_style,
+                (
+                    constraints.max_width,
+                    constraints.wrap,
+                    constraints.overflow,
+                    fret_core::TextAlign::Start,
+                    scale_factor,
+                ),
+                st.font_stack_key,
+            ));
+            let started = perf_enabled.then(Instant::now);
+            let (blob, metrics) = painter.rich_text_with_blob(
+                key,
+                DrawOrder(2),
+                origin,
+                rich,
+                text_style.clone(),
+                fg,
+                constraints,
                 scale_factor,
-            ),
-            st.font_stack_key,
-        ));
-        let started = perf_enabled.then(Instant::now);
-        let (blob, metrics) = painter.text_with_blob(
-            key,
-            DrawOrder(2),
-            origin,
-            Arc::clone(&line),
-            text_style.clone(),
-            fg,
-            constraints,
-            scale_factor,
-        );
-        if let Some(started) = started {
-            st.paint_perf_frame.us_text_draw = st
-                .paint_perf_frame
-                .us_text_draw
-                .saturating_add(started.elapsed().as_micros() as u64);
+            );
+            if let Some(started) = started {
+                st.paint_perf_frame.us_text_draw = st
+                    .paint_perf_frame
+                    .us_text_draw
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
+            row_blob = Some(blob);
+            row_blob_metrics = Some(metrics);
+            drew_rich = true;
+        } else {
+            row_geom_key = Some(geom::RowGeomKey::for_plain(
+                &line,
+                text_style,
+                (
+                    constraints.max_width,
+                    constraints.wrap,
+                    constraints.overflow,
+                    fret_core::TextAlign::Start,
+                    scale_factor,
+                ),
+                st.font_stack_key,
+            ));
+            let started = perf_enabled.then(Instant::now);
+            let (blob, metrics) = painter.text_with_blob(
+                key,
+                DrawOrder(2),
+                origin,
+                Arc::clone(&line),
+                text_style.clone(),
+                fg,
+                constraints,
+                scale_factor,
+            );
+            if let Some(started) = started {
+                st.paint_perf_frame.us_text_draw = st
+                    .paint_perf_frame
+                    .us_text_draw
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
+            row_blob = Some(blob);
+            row_blob_metrics = Some(metrics);
         }
-        row_blob = Some(blob);
-        row_blob_metrics = Some(metrics);
     }
 
     let mut fresh_geom = None::<RowGeom>;
@@ -1125,6 +1177,7 @@ pub(super) fn cached_row_text_with_range(
 pub(super) fn materialize_preedit_rich_text(
     line: Arc<str>,
     caret_in_line: usize,
+    code_shaping: &fret_core::TextShapingStyle,
     preedit: &PreeditState,
     fg: Color,
     selection_bg: Color,
@@ -1210,12 +1263,19 @@ pub(super) fn materialize_preedit_rich_text(
         spans.push(TextSpan::new(after_len));
     }
 
+    if *code_shaping != Default::default() {
+        for span in &mut spans {
+            span.shaping = code_shaping.clone();
+        }
+    }
+
     AttributedText::new(display, spans)
 }
 
 pub(super) fn materialize_preedit_rich_text_for_range(
     line: Arc<str>,
     preedit_range: Range<usize>,
+    code_shaping: &fret_core::TextShapingStyle,
     preedit: &PreeditState,
     fg: Color,
     selection_bg: Color,
@@ -1297,6 +1357,12 @@ pub(super) fn materialize_preedit_rich_text_for_range(
 
     if after_len > 0 {
         spans.push(TextSpan::new(after_len));
+    }
+
+    if *code_shaping != Default::default() {
+        for span in &mut spans {
+            span.shaping = code_shaping.clone();
+        }
     }
 
     AttributedText::new(display, spans)
@@ -1599,6 +1665,7 @@ pub(super) fn syntax_color(theme: &fret_ui::Theme, highlight: &str) -> Option<Co
 fn materialize_row_rich_text_with_fg(
     line: Arc<str>,
     spans: &[SyntaxSpan],
+    code_shaping: &fret_core::TextShapingStyle,
     mut fg_for_highlight: impl FnMut(&str) -> Option<Color>,
 ) -> AttributedText {
     let mut out: Vec<TextSpan> = Vec::new();
@@ -1615,6 +1682,7 @@ fn materialize_row_rich_text_with_fg(
         if start > cursor {
             out.push(TextSpan {
                 len: start - cursor,
+                shaping: code_shaping.clone(),
                 ..Default::default()
             });
         }
@@ -1622,7 +1690,7 @@ fn materialize_row_rich_text_with_fg(
         let fg = fg_for_highlight(span.highlight);
         out.push(TextSpan {
             len: end - start,
-            shaping: Default::default(),
+            shaping: code_shaping.clone(),
             paint: TextPaintStyle {
                 fg,
                 ..Default::default()
@@ -1634,6 +1702,7 @@ fn materialize_row_rich_text_with_fg(
     if cursor < max {
         out.push(TextSpan {
             len: max - cursor,
+            shaping: code_shaping.clone(),
             ..Default::default()
         });
     }
@@ -1646,13 +1715,53 @@ pub(super) fn materialize_row_rich_text(
     theme: &fret_ui::Theme,
     line: Arc<str>,
     spans: &[SyntaxSpan],
+    code_shaping: &fret_core::TextShapingStyle,
 ) -> AttributedText {
-    materialize_row_rich_text_with_fg(line, spans, |highlight| syntax_color(theme, highlight))
+    materialize_row_rich_text_with_fg(line, spans, code_shaping, |highlight| {
+        syntax_color(theme, highlight)
+    })
 }
 
 #[cfg(all(test, feature = "syntax"))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn materialize_row_rich_text_applies_code_shaping_to_all_spans() {
+        let line: Arc<str> = Arc::<str>::from("abc");
+        let spans = vec![
+            SyntaxSpan {
+                range: 0..1,
+                highlight: "keyword",
+            },
+            SyntaxSpan {
+                range: 1..3,
+                highlight: "string",
+            },
+        ];
+        let shaping = fret_core::TextShapingStyle::default()
+            .with_feature("liga", 0)
+            .with_feature("calt", 0);
+
+        let rich = materialize_row_rich_text_with_fg(line, &spans, &shaping, |_| None);
+        assert!(rich.is_valid());
+        assert!(
+            rich.spans.iter().all(|s| s
+                .shaping
+                .features
+                .iter()
+                .any(|f| f.tag == "liga" && f.value == 0)),
+            "expected `liga=0` to be applied to every span"
+        );
+        assert!(
+            rich.spans.iter().all(|s| s
+                .shaping
+                .features
+                .iter()
+                .any(|f| f.tag == "calt" && f.value == 0)),
+            "expected `calt=0` to be applied to every span"
+        );
+    }
 
     #[test]
     fn normalize_syntax_spans_clamps_and_is_deterministic_for_stale_inputs() {
@@ -1738,24 +1847,38 @@ mod tests {
             },
         ];
 
-        let rich_a = materialize_row_rich_text_with_fg(Arc::clone(&text), &spans, |h| match h {
-            "keyword" => Some(Color {
-                r: 1.0,
-                g: 0.0,
-                b: 0.0,
-                a: 1.0,
-            }),
-            _ => None,
-        });
-        let rich_b = materialize_row_rich_text_with_fg(Arc::clone(&text), &spans, |h| match h {
-            "keyword" => Some(Color {
-                r: 0.0,
-                g: 1.0,
-                b: 0.0,
-                a: 1.0,
-            }),
-            _ => None,
-        });
+        let code_shaping = fret_core::TextShapingStyle::default()
+            .with_feature("liga", 0)
+            .with_feature("calt", 0);
+
+        let rich_a = materialize_row_rich_text_with_fg(
+            Arc::clone(&text),
+            &spans,
+            &code_shaping,
+            |h| match h {
+                "keyword" => Some(Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                _ => None,
+            },
+        );
+        let rich_b = materialize_row_rich_text_with_fg(
+            Arc::clone(&text),
+            &spans,
+            &code_shaping,
+            |h| match h {
+                "keyword" => Some(Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                _ => None,
+            },
+        );
 
         assert_ne!(
             rich_a, rich_b,
@@ -1770,8 +1893,8 @@ mod tests {
                 .spans
                 .iter()
                 .chain(rich_b.spans.iter())
-                .all(|s| s.shaping == Default::default()),
-            "expected syntax highlighting spans to remain paint-only (no shaping overrides)"
+                .all(|s| s.shaping == code_shaping),
+            "expected syntax highlighting to remain paint-only relative to the code shaping baseline"
         );
     }
 
