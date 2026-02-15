@@ -196,6 +196,7 @@ pub fn render_spec<H: UiHost, R: ComponentResolver<H>>(
                 set.insert(1);
                 set
             },
+            ..ValidateSpecOptions::default()
         },
     );
     if !validate.valid {
