@@ -141,6 +141,7 @@ pub(super) fn paint_row(
     let mut row_preedit = None::<RowPreeditMapping>;
     let mut row_blob = None::<fret_core::TextBlobId>;
     let mut row_blob_metrics = None::<TextMetrics>;
+    let mut row_geom_key = None::<geom::RowGeomKey>;
     let compose_inline_preedit = st.compose_inline_preedit
         || st
             .preedit_replace_range
@@ -157,6 +158,18 @@ pub(super) fn paint_row(
                     fg,
                     selection_bg,
                 );
+                row_geom_key = Some(geom::RowGeomKey::for_attributed(
+                    &rich,
+                    text_style,
+                    (
+                        constraints.max_width,
+                        constraints.wrap,
+                        constraints.overflow,
+                        fret_core::TextAlign::Start,
+                        scale_factor,
+                    ),
+                    st.font_stack_key,
+                ));
                 let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
                 let (blob, metrics) = painter.rich_text_with_blob(
                     key,
@@ -193,6 +206,18 @@ pub(super) fn paint_row(
                     fg,
                     selection_bg,
                 );
+                row_geom_key = Some(geom::RowGeomKey::for_attributed(
+                    &rich,
+                    text_style,
+                    (
+                        constraints.max_width,
+                        constraints.wrap,
+                        constraints.overflow,
+                        fret_core::TextAlign::Start,
+                        scale_factor,
+                    ),
+                    st.font_stack_key,
+                ));
                 let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
                 let started = perf_enabled.then(Instant::now);
                 let (blob, metrics) = painter.rich_text_with_blob(
@@ -293,6 +318,18 @@ pub(super) fn paint_row(
                         row_blob = Some(blob);
                         row_blob_metrics = Some(metrics);
                         drew_rich = true;
+                        row_geom_key = Some(geom::RowGeomKey::for_attributed(
+                            &cached.rich,
+                            text_style,
+                            (
+                                constraints.max_width,
+                                constraints.wrap,
+                                constraints.overflow,
+                                fret_core::TextAlign::Start,
+                                scale_factor,
+                            ),
+                            st.font_stack_key,
+                        ));
                     }
                 }
 
@@ -391,6 +428,18 @@ pub(super) fn paint_row(
                             let theme = painter.theme();
                             materialize_row_rich_text(theme, Arc::clone(&line), mapped.as_ref())
                         };
+                        row_geom_key = Some(geom::RowGeomKey::for_attributed(
+                            &rich,
+                            text_style,
+                            (
+                                constraints.max_width,
+                                constraints.wrap,
+                                constraints.overflow,
+                                fret_core::TextAlign::Start,
+                                scale_factor,
+                            ),
+                            st.font_stack_key,
+                        ));
                         if let Some(started) = started {
                             st.paint_perf_frame.us_rich_materialize = st
                                 .paint_perf_frame
@@ -456,6 +505,18 @@ pub(super) fn paint_row(
     }
 
     if !drew_rich {
+        row_geom_key = Some(geom::RowGeomKey::for_plain(
+            &line,
+            text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                scale_factor,
+            ),
+            st.font_stack_key,
+        ));
         let started = perf_enabled.then(Instant::now);
         let (blob, metrics) = painter.text_with_blob(
             key,
@@ -481,9 +542,11 @@ pub(super) fn paint_row(
     let mut caret_stops = &[][..];
     let mut caret_rect_top = None::<Px>;
     let mut caret_rect_height = None::<Px>;
-    if let (Some(blob), Some(blob_metrics)) = (row_blob, row_blob_metrics.as_ref()) {
+    if let (Some(blob), Some(blob_metrics), Some(row_geom_key)) =
+        (row_blob, row_blob_metrics.as_ref(), row_geom_key)
+    {
         let cached = st.row_geom_cache.get(&row).is_some_and(|(geom, _)| {
-            geom.blob == blob
+            geom.key == row_geom_key
                 && geom.row_range == row_range
                 && geom.has_preedit == row_has_preedit
                 && geom.preedit == row_preedit
@@ -535,7 +598,7 @@ pub(super) fn paint_row(
 
             fresh_geom = Some(RowGeom {
                 row_range: row_range.clone(),
-                blob,
+                key: row_geom_key,
                 caret_stops: stops,
                 fold_map: row_folds.clone(),
                 caret_rect_top,

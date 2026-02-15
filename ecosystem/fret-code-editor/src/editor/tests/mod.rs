@@ -41,6 +41,21 @@ impl fret_ui::action::UiFocusActionHost for TestHost {
     fn request_focus(&mut self, _target: fret_ui::GlobalElementId) {}
 }
 
+fn row_geom_key_for_tests(text: &Arc<str>) -> geom::RowGeomKey {
+    geom::RowGeomKey::for_plain(
+        text,
+        &TextStyle::default(),
+        (
+            None,
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        fret_runtime::TextFontStackKey(0),
+    )
+}
+
 #[test]
 fn replace_buffer_resets_state() {
     let handle = CodeEditorHandle::new("hello");
@@ -74,7 +89,7 @@ fn replace_buffer_resets_state() {
             (
                 RowGeom {
                     row_range: 0..5,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("hello")),
                     caret_stops: vec![(0, Px(0.0))],
                     fold_map: None,
                     caret_rect_top: None,
@@ -396,7 +411,7 @@ fn map_row_display_local_to_buffer_byte_snaps_inside_preedit() {
     let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
     let geom = RowGeom {
         row_range: 0..buffer.len_bytes(),
-        blob: fret_core::TextBlobId::default(),
+        key: row_geom_key_for_tests(&Arc::from("hello")),
         caret_stops: Vec::new(),
         fold_map: None,
         caret_rect_top: None,
@@ -573,7 +588,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 0..4,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("aaaa")),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -595,7 +610,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 5..9,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("bbbb")),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -617,7 +632,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 10..14,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("cccc")),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -666,7 +681,7 @@ fn row_geom_cache_is_shifted_across_single_line_soft_wrap_edits() {
                 (
                     RowGeom {
                         row_range: range.clone(),
-                        blob: fret_core::TextBlobId::default(),
+                        key: row_geom_key_for_tests(&Arc::from("")),
                         caret_stops: vec![(0, Px(0.0))],
                         fold_map: None,
                         caret_rect_top: None,
@@ -752,7 +767,7 @@ fn row_geom_cache_is_byte_shifted_for_single_line_non_wrap_edits() {
                 (
                     RowGeom {
                         row_range: range.clone(),
-                        blob: fret_core::TextBlobId::default(),
+                        key: row_geom_key_for_tests(&Arc::from("")),
                         caret_stops: vec![(0, Px(0.0))],
                         fold_map: None,
                         caret_rect_top: None,
@@ -1112,7 +1127,7 @@ fn font_stack_key_change_clears_geometry_caches() {
         (
             RowGeom {
                 row_range: 0..5,
-                blob: fret_core::TextBlobId::default(),
+                key: row_geom_key_for_tests(&Arc::from("hello")),
                 caret_stops: vec![(0, Px(0.0)), (5, Px(50.0))],
                 fold_map: None,
                 caret_rect_top: None,
@@ -1169,7 +1184,7 @@ fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
             (
                 RowGeom {
                     row_range: 0..3,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("abc")),
                     caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
                     fold_map: None,
                     caret_rect_top: None,
@@ -1207,7 +1222,7 @@ fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
             (
                 RowGeom {
                     row_range: 0..3,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("abc")),
                     caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
                     fold_map: None,
                     caret_rect_top: None,
@@ -1267,6 +1282,94 @@ fn preedit_rich_text_inserts_and_underlines() {
         rich.spans.iter().any(|s| s.paint.bg.is_some()),
         "expected cursor range to be highlighted"
     );
+}
+
+#[test]
+fn row_geom_key_ignores_paint_only_changes() {
+    let text: Arc<str> = Arc::<str>::from("let x = 1;");
+    let base = TextStyle::default();
+    let constraints = (
+        Some(Px(200.0)),
+        TextWrap::None,
+        TextOverflow::Clip,
+        fret_core::TextAlign::Start,
+        1.0,
+    );
+    let font_stack_key = fret_runtime::TextFontStackKey(7);
+
+    let mk_rich = |kw: Color, ident: Color| {
+        let spans = vec![
+            TextSpan {
+                len: "let".len(),
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    fg: Some(kw),
+                    ..Default::default()
+                },
+            },
+            TextSpan::new(" ".len()),
+            TextSpan {
+                len: "x".len(),
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    fg: Some(ident),
+                    ..Default::default()
+                },
+            },
+            TextSpan::new(" = 1;".len()),
+        ];
+        AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans))
+    };
+
+    let rich_a = mk_rich(
+        Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    );
+    let rich_b = mk_rich(
+        Color {
+            r: 0.2,
+            g: 0.2,
+            b: 1.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.8,
+            g: 0.8,
+            b: 0.0,
+            a: 1.0,
+        },
+    );
+
+    assert!(
+        rich_a.shaping_eq(&rich_b),
+        "sanity: shaping_eq should ignore paint-only changes"
+    );
+
+    let key_a = geom::RowGeomKey::for_attributed(&rich_a, &base, constraints, font_stack_key);
+    let key_b = geom::RowGeomKey::for_attributed(&rich_b, &base, constraints, font_stack_key);
+    assert_eq!(
+        key_a, key_b,
+        "row geometry cache key must ignore paint-only changes"
+    );
+
+    let mut spans_c = rich_b.spans.as_ref().to_vec();
+    spans_c[0].shaping = spans_c[0]
+        .shaping
+        .clone()
+        .with_weight(fret_core::FontWeight(700));
+    let rich_c = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_c));
+    let key_c = geom::RowGeomKey::for_attributed(&rich_c, &base, constraints, font_stack_key);
+    assert_ne!(key_a, key_c, "shaping changes must affect geometry key");
 }
 
 #[test]

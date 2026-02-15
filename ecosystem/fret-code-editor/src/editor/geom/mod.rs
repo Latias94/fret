@@ -1,12 +1,158 @@
 //! Geometry helpers for caret/selection/pointer hit-testing.
 
 use std::ops::Range;
+use std::sync::Arc;
 
 use fret_code_editor_buffer::TextBuffer;
 use fret_code_editor_view::DisplayPoint;
-use fret_core::{Px, Rect, Size, TextBlobId};
+use fret_core::{
+    AttributedText, FontId, FontWeight, Px, Rect, Size, TextAlign, TextOverflow, TextSlant,
+    TextSpan, TextStyle, TextWrap,
+};
+use fret_runtime::TextFontStackKey;
 
 use super::{CodeEditorState, PreeditState};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) struct RowGeomConstraintsKey {
+    has_max_width: bool,
+    max_width_bits: u32,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    align: TextAlign,
+    scale_bits: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(super) struct RowGeomStyleKey {
+    font: FontId,
+    size_bits: u32,
+    weight: FontWeight,
+    slant: TextSlant,
+    has_line_height: bool,
+    line_height_bits: u32,
+    has_letter_spacing: bool,
+    letter_spacing_bits: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(super) struct RowGeomKey {
+    /// Pointer identity for the row `Arc<str>` used to shape the row.
+    ///
+    /// This is intentionally pointer-based: it keeps geometry cache hits cheap and ensures we never
+    /// accidentally equate different allocations that might carry different display mapping epochs.
+    text_ptr: usize,
+    text_len: usize,
+    font_stack_key: u64,
+    constraints: RowGeomConstraintsKey,
+    style: RowGeomStyleKey,
+    spans_shaping_key: u64,
+    attributed: bool,
+}
+
+fn f32_bits(v: f32) -> u32 {
+    if v.is_finite() { v.to_bits() } else { 0 }
+}
+
+fn px_bits(v: Px) -> u32 {
+    f32_bits(v.0)
+}
+
+fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    for s in spans {
+        s.len.hash(&mut h);
+        s.shaping.font.hash(&mut h);
+        s.shaping.weight.hash(&mut h);
+        s.shaping.slant.hash(&mut h);
+        s.shaping.letter_spacing_em.map(f32_bits).hash(&mut h);
+
+        s.shaping.features.len().hash(&mut h);
+        for f in &s.shaping.features {
+            f.tag.hash(&mut h);
+            f.value.hash(&mut h);
+        }
+
+        s.shaping.axes.len().hash(&mut h);
+        for a in &s.shaping.axes {
+            a.tag.hash(&mut h);
+            f32_bits(a.value).hash(&mut h);
+        }
+    }
+    h.finish()
+}
+
+impl RowGeomKey {
+    pub(super) fn for_plain(
+        text: &Arc<str>,
+        style: &TextStyle,
+        constraints: (Option<Px>, TextWrap, TextOverflow, TextAlign, f32),
+        font_stack_key: TextFontStackKey,
+    ) -> Self {
+        let (max_width, wrap, overflow, align, scale_factor) = constraints;
+        Self {
+            text_ptr: text.as_ref().as_ptr() as usize,
+            text_len: text.len(),
+            font_stack_key: font_stack_key.0,
+            constraints: RowGeomConstraintsKey {
+                has_max_width: max_width.is_some(),
+                max_width_bits: max_width.map(px_bits).unwrap_or(0),
+                wrap,
+                overflow,
+                align,
+                scale_bits: f32_bits(scale_factor.max(1.0)),
+            },
+            style: RowGeomStyleKey {
+                font: style.font.clone(),
+                size_bits: px_bits(style.size),
+                weight: style.weight,
+                slant: style.slant,
+                has_line_height: style.line_height.is_some(),
+                line_height_bits: style.line_height.map(px_bits).unwrap_or(0),
+                has_letter_spacing: style.letter_spacing_em.is_some(),
+                letter_spacing_bits: style.letter_spacing_em.map(f32_bits).unwrap_or(0),
+            },
+            spans_shaping_key: 0,
+            attributed: false,
+        }
+    }
+
+    pub(super) fn for_attributed(
+        rich: &AttributedText,
+        style: &TextStyle,
+        constraints: (Option<Px>, TextWrap, TextOverflow, TextAlign, f32),
+        font_stack_key: TextFontStackKey,
+    ) -> Self {
+        let (max_width, wrap, overflow, align, scale_factor) = constraints;
+        let text = &rich.text;
+        Self {
+            text_ptr: text.as_ref().as_ptr() as usize,
+            text_len: text.len(),
+            font_stack_key: font_stack_key.0,
+            constraints: RowGeomConstraintsKey {
+                has_max_width: max_width.is_some(),
+                max_width_bits: max_width.map(px_bits).unwrap_or(0),
+                wrap,
+                overflow,
+                align,
+                scale_bits: f32_bits(scale_factor.max(1.0)),
+            },
+            style: RowGeomStyleKey {
+                font: style.font.clone(),
+                size_bits: px_bits(style.size),
+                weight: style.weight,
+                slant: style.slant,
+                has_line_height: style.line_height.is_some(),
+                line_height_bits: style.line_height.map(px_bits).unwrap_or(0),
+                has_letter_spacing: style.letter_spacing_em.is_some(),
+                letter_spacing_bits: style.letter_spacing_em.map(f32_bits).unwrap_or(0),
+            },
+            spans_shaping_key: spans_shaping_fingerprint(rich.spans.as_ref()),
+            attributed: true,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct RowPreeditMapping {
@@ -20,8 +166,8 @@ pub(super) struct RowPreeditMapping {
 pub(super) struct RowGeom {
     /// Display-row range within the buffer (UTF-8 byte indices).
     pub(super) row_range: Range<usize>,
-    /// Prepared text blob that backs `caret_stops` and caret metrics.
-    pub(super) blob: TextBlobId,
+    /// Stable cache key for the shaped row geometry, ignoring paint-only changes.
+    pub(super) key: RowGeomKey,
     /// Caret stop table for the displayed row text (byte index -> x offset).
     pub(super) caret_stops: Vec<(usize, Px)>,
     /// Optional mapping between buffer-local and display-local indices when the row materializes
