@@ -1373,6 +1373,59 @@ fn row_geom_key_ignores_paint_only_changes() {
 }
 
 #[test]
+fn row_geom_key_buckets_max_width_for_unwrapped_start_aligned_rows() {
+    let text: Arc<str> = Arc::<str>::from("hello");
+    let style = TextStyle::default();
+    let font_stack_key = fret_runtime::TextFontStackKey(1);
+
+    let key_a = geom::RowGeomKey::for_plain(
+        &text,
+        &style,
+        (
+            Some(Px(100.0)),
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        font_stack_key,
+    );
+    let key_b = geom::RowGeomKey::for_plain(
+        &text,
+        &style,
+        (
+            Some(Px(120.0)),
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        font_stack_key,
+    );
+    assert_eq!(
+        key_a, key_b,
+        "expected small max_width changes to be bucketed for unwrapped rows"
+    );
+
+    let key_c = geom::RowGeomKey::for_plain(
+        &text,
+        &style,
+        (
+            Some(Px(120.0)),
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Center,
+            1.0,
+        ),
+        font_stack_key,
+    );
+    assert_ne!(
+        key_a, key_c,
+        "expected non-start alignment to preserve exact max_width bits"
+    );
+}
+
+#[test]
 fn a11y_window_maps_offsets_back_to_buffer_selection() {
     let handle = CodeEditorHandle::new("hello 😀 world");
     {

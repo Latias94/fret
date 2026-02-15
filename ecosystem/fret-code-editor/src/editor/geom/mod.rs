@@ -58,6 +58,26 @@ fn px_bits(v: Px) -> u32 {
     f32_bits(v.0)
 }
 
+fn max_width_bits_for_key(max_width: Option<Px>, wrap: TextWrap, align: TextAlign) -> (bool, u32) {
+    let Some(max_width) = max_width else {
+        return (false, 0);
+    };
+
+    // For unwrapped editor rows (wrap=None, align=Start) max width is an implementation detail used
+    // to keep cache keys stable under resize jitter. Quantize to an upper-bounded bucket so small
+    // width deltas do not thrash row geometry caches.
+    let bits = if wrap == TextWrap::None && align == TextAlign::Start {
+        const BUCKET_PX: f32 = 64.0;
+        let w = max_width.0.max(0.0);
+        let bucketed = (w / BUCKET_PX).ceil() * BUCKET_PX;
+        px_bits(Px(bucketed))
+    } else {
+        px_bits(max_width)
+    };
+
+    (true, bits)
+}
+
 fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut h = std::collections::hash_map::DefaultHasher::new();
@@ -91,13 +111,14 @@ impl RowGeomKey {
         font_stack_key: TextFontStackKey,
     ) -> Self {
         let (max_width, wrap, overflow, align, scale_factor) = constraints;
+        let (has_max_width, max_width_bits) = max_width_bits_for_key(max_width, wrap, align);
         Self {
             text_ptr: text.as_ref().as_ptr() as usize,
             text_len: text.len(),
             font_stack_key: font_stack_key.0,
             constraints: RowGeomConstraintsKey {
-                has_max_width: max_width.is_some(),
-                max_width_bits: max_width.map(px_bits).unwrap_or(0),
+                has_max_width,
+                max_width_bits,
                 wrap,
                 overflow,
                 align,
@@ -126,13 +147,14 @@ impl RowGeomKey {
     ) -> Self {
         let (max_width, wrap, overflow, align, scale_factor) = constraints;
         let text = &rich.text;
+        let (has_max_width, max_width_bits) = max_width_bits_for_key(max_width, wrap, align);
         Self {
             text_ptr: text.as_ref().as_ptr() as usize,
             text_len: text.len(),
             font_stack_key: font_stack_key.0,
             constraints: RowGeomConstraintsKey {
-                has_max_width: max_width.is_some(),
-                max_width_bits: max_width.map(px_bits).unwrap_or(0),
+                has_max_width,
+                max_width_bits,
                 wrap,
                 overflow,
                 align,
