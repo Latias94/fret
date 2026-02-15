@@ -169,6 +169,7 @@ Suggested v1 key families:
 - `editor.property.*` (label/value column gap, label width policies, group header height)
 - `editor.checkbox.*` (checkbox sizing/radius; colors should remain theme-driven)
 - `editor.enum_select.*` (dropdown/list sizing; row density comes from `editor.density.*`)
+- `editor.slider.*` (track height, thumb size)
 - `editor.axis.*` (axis label colors for vec/transform controls)
 - `editor.color.*` (swatch size, popup padding)
 
@@ -203,6 +204,8 @@ Notes:
 | `editor.axis.w_color` | color | Axis label color (W) | muted |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
+| `editor.slider.track_height` | metric | Slider track thickness | small (3–6px) |
+| `editor.slider.thumb_diameter` | metric | Slider thumb diameter | compact (10–14px) |
 
 ## Demo / repro
 

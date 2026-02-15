@@ -34,4 +34,7 @@ impl EditorTokenKeys {
 
     pub const COLOR_SWATCH_SIZE: &'static str = "editor.color.swatch_size";
     pub const COLOR_POPUP_PADDING: &'static str = "editor.color.popup_padding";
+
+    pub const SLIDER_TRACK_HEIGHT: &'static str = "editor.slider.track_height";
+    pub const SLIDER_THUMB_DIAMETER: &'static str = "editor.slider.thumb_diameter";
 }

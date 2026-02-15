@@ -47,6 +47,12 @@ pub fn apply_editor_theme_patch_v1<H: UiHost>(app: &mut H) {
         cfg.metrics
             .insert("component.text_field.text_px".to_string(), 12.0);
 
+        // Slider metrics (normalized floats like roughness/metallic).
+        cfg.metrics
+            .insert(EditorTokenKeys::SLIDER_TRACK_HEIGHT.to_string(), 4.0);
+        cfg.metrics
+            .insert(EditorTokenKeys::SLIDER_THUMB_DIAMETER.to_string(), 12.0);
+
         theme.apply_config_patch(&cfg);
     });
 }

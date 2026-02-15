@@ -19,8 +19,8 @@ use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, Prope
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
     EnumSelectOptions, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
-    NumericParseFn, NumericValidateFn, TextField, TextFieldOptions, TransformEdit,
-    TransformEditOptions, Vec3Edit,
+    NumericParseFn, NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions,
+    TransformEdit, TransformEditOptions, Vec3Edit,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -514,14 +514,22 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                             )),
                                                             |cx| cx.text("Roughness"),
                                                             |cx| {
-                                                                DragValue::new(
+                                                                Slider::new(
                                                                     editor_roughness_model.clone(),
-                                                                    fmt.clone(),
-                                                                    parse.clone(),
+                                                                    0.0,
+                                                                    1.0,
                                                                 )
-                                                                .validate(Some(validate.clone()))
+                                                                .options(SliderOptions {
+                                                                    a11y_label: Some(Arc::from(
+                                                                        "Roughness",
+                                                                    )),
+                                                                    step: Some(0.01),
+                                                                    test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.material.roughness",
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
                                                                 .into_element(cx)
-                                                                .test_id("imui-editor-proof.editor.material.roughness")
                                                             },
                                                             |cx| {
                                                                 Some(
@@ -561,14 +569,22 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                             )),
                                                             |cx| cx.text("Metallic"),
                                                             |cx| {
-                                                                DragValue::new(
+                                                                Slider::new(
                                                                     editor_metallic_model.clone(),
-                                                                    fmt.clone(),
-                                                                    parse.clone(),
+                                                                    0.0,
+                                                                    1.0,
                                                                 )
-                                                                .validate(Some(validate.clone()))
+                                                                .options(SliderOptions {
+                                                                    a11y_label: Some(Arc::from(
+                                                                        "Metallic",
+                                                                    )),
+                                                                    step: Some(0.01),
+                                                                    test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.material.metallic",
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
                                                                 .into_element(cx)
-                                                                .test_id("imui-editor-proof.editor.material.metallic")
                                                             },
                                                             |cx| {
                                                                 Some(

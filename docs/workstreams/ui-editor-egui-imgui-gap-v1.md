@@ -55,7 +55,7 @@ Legend:
 | Icon strategy | Egui paints vector-ish primitives; optional icon crates | Fonts/icons (e.g. FontAwesome) commonly used | SVG icon pipeline exists (`fret-icons` + packs + `SvgIcon`) | Ensure all chrome affordances (chevrons, carets, close, check, minus) use semantic SVG icons (no tofu glyphs) | `fret-ui-editor` (policy) | P0 |
 | Checkbox / tri-state visuals | `Spacing::icon_width*`, `WidgetVisuals` | Checkbox uses frame + check mark | Checkbox existed but used glyphs; now SVG icons | Still needs “hover/active/disabled” tuning, mixed state clarity, and consistent sizing | `fret-ui-editor` (policy) | P1 |
 | DragValue feature completeness | `egui::DragValue` (speed/range/prefix/suffix/formatter/parser) | `DragFloat*` flags/range/format | `DragValueCore` + `NumericInput` exist; tokens for speed/modifiers | Missing: prefix/suffix, explicit range clamp policy, step, value-decimals policy, unit formatting helpers | `fret-ui-editor` (policy) | P1 |
-| Slider widgets | `egui::Slider` (clamping, step, log, vertical, show_value) | `SliderFloat*`, `VSliderFloat*` | No editor-facing slider in `fret-ui-editor` | Add `Slider<T>` control (horizontal first), reusing numeric formatter/parser | `fret-ui-editor` (policy) | P1 |
+| Slider widgets | `egui::Slider` (clamping, step, log, vertical, show_value) | `SliderFloat*`, `VSliderFloat*` | `Slider<T>` exists (horizontal, clamp+step) | Missing: vertical/log variants, value display/typing, unit formatting helpers | `fret-ui-editor` (policy) | P1 |
 | Text input richness | `egui::TextEdit` (multiline/password/IME/cursor/selection/undo) | `InputText*` + flags (password, undo, completion/history) | `crates/fret-ui` has TextInput; editor has `MiniSearchBox` + `NumericInput` | Need a reusable `TextField` control surface (single/multi, password, selection defaults, clear buttons, completion hooks) | `fret-ui-editor` + maybe `crates/fret-ui` (mechanism gaps) | P0/P1 |
 | Menus / popups / context menu | `MenuButton`, `Area`, tooltips | `BeginMenu`, `BeginPopup*`, context popup helpers | `fret-ui-kit` has Menu/ContextMenu/OverlayController/TooltipProvider | Editor layer needs concrete recipes (inspector row menu, enum select menu, right-click row menu) + consistent chrome | `fret-ui-editor` (policy) | P1 |
 | Scroll areas & scrollbars | `ScrollArea` + `ScrollStyle` | Child windows + scrollbars | `fret-ui-kit` has scroll area policy & visibility helpers | Editor widgets should expose scroll affordances (thin/auto, hover reveal) and apply consistent tokens | `fret-ui-editor` (policy) | P1 |
@@ -72,8 +72,9 @@ Legend:
    - Provide state palette: inactive/hovered/active/open/disabled
    - Make all editor controls consume this (instead of bespoke colors)
 
-2) **Ship a v1 `Slider<T>`** (policy):
-   - Horizontal, clamping policy, optional value typing, unit formatting hooks
+2) **Harden `Slider<T>` and extend parity** (policy):
+   - Add value display, optional typing path, unit formatting hooks
+   - Consider vertical and/or log variants only if demanded by demos
    - Required for parity with common inspectors and for “coarse vs fine” editing
 
 3) **Elevate `TextField` as a first-class editor control**:
@@ -85,4 +86,3 @@ Legend:
    - Tab labels + close/overflow affordances
    - Icons (close, overflow, pin/lock later)
    - Stable hit targets and alignment
-

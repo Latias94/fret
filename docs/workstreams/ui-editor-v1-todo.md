@@ -165,8 +165,10 @@ adding new runtime contracts unless evidence demands it.
   - input-like frame chrome (bg/border/radius/padding) + state variants
   - icon sizing + spacing defaults
   - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
-- [ ] Add an editor-facing `Slider<T>` control:
-  - horizontal first; clamping policy; optional value typing; unit formatting hook
+- [x] Add an editor-facing `Slider<T>` control:
+  - horizontal first; clamping + step policy
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/slider.rs`
+  - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.material.roughness`, `imui-editor-proof.editor.material.metallic`)
 - [~] Add a reusable `TextField` control surface:
   - single-line + multi-line
   - password mode (masking + copy policy)
