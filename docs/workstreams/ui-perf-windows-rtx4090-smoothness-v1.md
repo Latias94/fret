@@ -18,6 +18,7 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 - `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (typical perf, `p90`)
 
 Seed policy (how thresholds were derived):
 
@@ -83,6 +84,7 @@ leans on editor-class and virtualization-heavy surfaces:
 For “typical perf” gates (not tail), prefer comparing against `p90`:
 
 - `--perf-threshold-agg p90`
+- `--perf-baseline docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json`
 
 ## Failure triage (when a gate fails)
 
