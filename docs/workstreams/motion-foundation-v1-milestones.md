@@ -142,3 +142,8 @@ Evidence:
   - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Deterministic retarget/interrupt gate (fixed delta; click item 3 then item 4 mid-flight):
   - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+- Layout-expand adoption seed outside UI gallery components (docking split fraction motion + retarget gate):
+  - `ecosystem/fret-docking/src/dock/space.rs`
+  - `apps/fret-examples/src/docking_demo.rs`
+  - `tools/diag-scripts/docking-demo-split-toggle-retarget-fixed-frame-delta.json`
+  - `crates/fret-diag/src/lib.rs` (builtin suite: `docking-motion-pilot`)

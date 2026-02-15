@@ -28,6 +28,7 @@ Exit criteria:
 
 - The “invariants list” is explicit and reviewed (no hidden assumptions).
 - The baseline gate set and baseline snapshot are reproducible by another contributor.
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix A — invariants checklist).
 
 Baseline record (fill in; keep this section short):
 
@@ -168,6 +169,7 @@ Progress record (Image masks v1):
   - `crates/fret-render-wgpu/src/renderer/resources.rs` + `crates/fret-render-wgpu/src/renderer/buffers.rs` (uniform bind group layout: mask image bindings)
   - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval` kind=3 image sampling)
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+  - `crates/fret-ui/src/declarative/tests/core.rs` (`mask_layer_is_paint_only_for_hit_testing_by_default`)
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
 
@@ -184,6 +186,18 @@ Deliverables:
   - and sampled-material binding shape support.
 - Portability closure requirements are captured in an ADR:
   - `docs/adr/0274-paint-and-material-portability-closure-v1.md`
+
+Progress record (Material fallbacks v1):
+
+- Date: 2026-02-14
+- Status: Landed (wgpu default renderer; deterministic fallbacks are conformance-gated)
+- Evidence anchors:
+  - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md` (Appendix C)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (`Paint::Material` fallbacks)
+  - `crates/fret-render-wgpu/src/renderer/services.rs` (capability-gated sampled registration)
+  - `crates/fret-render-wgpu/tests/materials_conformance.rs` (unknown id + budget pressure)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test materials_conformance`
 
 ### M4b — Optional contract expansion (only if required)
 

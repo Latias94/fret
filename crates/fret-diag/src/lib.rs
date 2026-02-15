@@ -4483,6 +4483,7 @@ See: `docs/tracy.md`.\n";
                 UiGalleryCodeEditor,
                 UiGalleryLayout,
                 DockingArbitration,
+                DockingMotionPilot,
             }
 
             let suite_args: Vec<String> = rest.clone();
@@ -4537,6 +4538,8 @@ See: `docs/tracy.md`.\n";
             let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = suite_args.len()
                 == 1
                 && suite_args[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
+            let is_docking_motion_pilot_suite =
+                suite_args.len() == 1 && suite_args[0] == "docking-motion-pilot";
             let is_ui_gallery_chart_torture_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-chart-torture";
             let is_ui_gallery_vlist_window_boundary_suite =
@@ -4595,6 +4598,9 @@ See: `docs/tracy.md`.\n";
                     // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
                     // redaction disabled so any role-and-name selectors remain usable in scripts.
                     push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+                    // Some motion feel gates use the `--check-pixels-changed` post-run check, which
+                    // requires GPU screenshots.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
                     (
                         vec![
                             resolve_path(
@@ -4607,6 +4613,18 @@ See: `docs/tracy.md`.\n";
                                 &workspace_root,
                                 PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
                                 ),
                             ),
                             resolve_path(
@@ -5320,6 +5338,16 @@ See: `docs/tracy.md`.\n";
                             ),
                         )],
                         None,
+                    )
+                } else if is_docking_motion_pilot_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::DockingMotionPilot),
                     )
                 } else if is_docking_arbitration_suite {
                     (
@@ -11334,6 +11362,12 @@ fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static st
     };
 
     match name {
+        "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json" => {
+            Some("ui-gallery-alert-tabs-shared-indicator")
+        }
+        "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json" => {
+            Some("ui-gallery-motion-presets-fluid-tabs-content-stage")
+        }
         "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json" => {
             Some("ui-gallery-code-editor-torture-root")
         }

@@ -43,11 +43,15 @@ pub(super) fn apply_chain_in_place(
     quality: fret_core::EffectQuality,
     scissor: ScissorRect,
     mask_uniform_index: Option<u32>,
+    unavailable_mask_targets: &[PlanTarget],
     ctx: EffectCompileCtx,
 ) {
     if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
         return;
     }
+
+    let mut budget_bytes = ctx.intermediate_budget_bytes;
+    let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
 
     let scratch_targets = available_scratch_targets(in_use_targets, srcdst);
     let forced_quarter_blur = scratch_targets.len() >= 2
@@ -62,7 +66,7 @@ pub(super) fn apply_chain_in_place(
                 let Some(chosen) = choose_effect_blur_downsample_scale(
                     ctx.viewport_size,
                     ctx.format,
-                    ctx.intermediate_budget_bytes,
+                    budget_bytes,
                     requested_downsample,
                     quality,
                 ) else {
@@ -75,20 +79,22 @@ pub(super) fn apply_chain_in_place(
     let mask_tier_cap = forced_quarter_blur.then_some(PlanTarget::Mask2);
 
     let mask = if let Some(uniform_index) = mask_uniform_index
-        && let Some(mask_target) = choose_clip_mask_target_capped(
+        && let Some((mask_target, mask_size, mask_bytes)) = choose_clip_mask_target_capped(
             ctx.viewport_size,
             scissor,
-            ctx.intermediate_budget_bytes,
+            budget_bytes,
+            srcdst_bytes,
             quality,
             mask_tier_cap,
+            unavailable_mask_targets,
         ) {
-        let mask_size = mask_target_size_in_viewport_rect(ctx.viewport_size, scissor, mask_target);
         passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
             dst: mask_target,
             dst_size: mask_size,
             dst_scissor: None,
             uniform_index,
         }));
+        budget_bytes = budget_bytes.saturating_sub(mask_bytes);
         Some(MaskRef {
             target: mask_target,
             size: mask_size,
@@ -106,7 +112,7 @@ pub(super) fn apply_chain_in_place(
                     let Some(downsample_scale) = choose_effect_blur_downsample_scale(
                         ctx.viewport_size,
                         ctx.format,
-                        ctx.intermediate_budget_bytes,
+                        budget_bytes,
                         requested_downsample,
                         quality,
                     ) else {
@@ -130,12 +136,12 @@ pub(super) fn apply_chain_in_place(
                 let Some(&scratch) = scratch_targets.first() else {
                     continue;
                 };
-                if ctx.intermediate_budget_bytes == 0 {
+                if budget_bytes == 0 {
                     continue;
                 }
                 let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
                 let required = full.saturating_mul(2);
-                if required > ctx.intermediate_budget_bytes {
+                if required > budget_bytes {
                     continue;
                 }
                 append_scissored_blur_in_place_single_scratch(
@@ -154,11 +160,7 @@ pub(super) fn apply_chain_in_place(
                 brightness,
                 contrast,
             } => {
-                if !color_adjust_enabled(
-                    ctx.viewport_size,
-                    ctx.format,
-                    ctx.intermediate_budget_bytes,
-                ) {
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
                     continue;
                 }
                 let Some(&scratch) = scratch_targets.first() else {
@@ -179,11 +181,7 @@ pub(super) fn apply_chain_in_place(
                 );
             }
             fret_core::EffectStep::ColorMatrix { m } => {
-                if !color_adjust_enabled(
-                    ctx.viewport_size,
-                    ctx.format,
-                    ctx.intermediate_budget_bytes,
-                ) {
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
                     continue;
                 }
                 let Some(&scratch) = scratch_targets.first() else {
@@ -202,11 +200,7 @@ pub(super) fn apply_chain_in_place(
                 );
             }
             fret_core::EffectStep::AlphaThreshold { cutoff, soft } => {
-                if !color_adjust_enabled(
-                    ctx.viewport_size,
-                    ctx.format,
-                    ctx.intermediate_budget_bytes,
-                ) {
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
                     continue;
                 }
                 let Some(&scratch) = scratch_targets.first() else {
@@ -230,7 +224,7 @@ pub(super) fn apply_chain_in_place(
                     ctx.viewport_size,
                     Some(scissor),
                     ctx.format,
-                    ctx.intermediate_budget_bytes,
+                    budget_bytes,
                     scale,
                 ) {
                     continue;
@@ -338,9 +332,11 @@ fn choose_clip_mask_target_capped(
     viewport_size: (u32, u32),
     viewport_rect: ScissorRect,
     budget_bytes: u64,
+    srcdst_bytes: u64,
     quality: fret_core::EffectQuality,
     tier_cap: Option<PlanTarget>,
-) -> Option<PlanTarget> {
+    unavailable_mask_targets: &[PlanTarget],
+) -> Option<(PlanTarget, (u32, u32), u64)> {
     if budget_bytes == 0 {
         return None;
     }
@@ -366,10 +362,13 @@ fn choose_clip_mask_target_capped(
         PlanTarget::Mask2 => [PlanTarget::Mask2].as_slice(),
         _ => unreachable!("desired mask tier must be a mask PlanTarget"),
     } {
+        if unavailable_mask_targets.contains(candidate) {
+            continue;
+        }
         let size = mask_target_size_in_viewport_rect(viewport_size, viewport_rect, *candidate);
         let bytes = estimate_texture_bytes(size, wgpu::TextureFormat::R8Unorm, 1);
-        if bytes <= budget_bytes {
-            return Some(*candidate);
+        if srcdst_bytes.saturating_add(bytes) <= budget_bytes {
+            return Some((*candidate, size, bytes));
         }
     }
 

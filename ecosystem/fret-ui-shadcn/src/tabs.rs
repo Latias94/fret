@@ -1,21 +1,40 @@
 use std::cell::Cell;
 use std::sync::Arc;
+use std::time::Duration;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
+use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RovingFlexProps, RovingFocusProps, SpinnerProps, SvgIconProps,
+    PressableProps, RovingFlexProps, RovingFocusProps, SpinnerProps, StackProps, SvgIconProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion_springs::shared_indicator_spring_description;
+use fret_ui_kit::declarative::motion_value::{
+    MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
+};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
     WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
     resolve_override_slot_opt, ui,
 };
+
+#[derive(Debug, Default, Clone)]
+struct TabsListLayoutRuntime {
+    triggers: Vec<GlobalElementId>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct TabsContentPresenceRuntime {
+    active_value: Option<Arc<str>>,
+    exiting_values: Vec<Arc<str>>,
+}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
@@ -160,6 +179,259 @@ pub enum TabsValueChangeSource {
     PointerDown,
     /// Selection changed from trigger activation (keyboard/pointer click activation phase).
     Activate,
+}
+
+fn tabs_shared_indicator<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    container_id: GlobalElementId,
+    orientation: TabsOrientation,
+    tab_count: usize,
+    selected_idx: Option<usize>,
+    indicator_test_id: Option<Arc<str>>,
+    disabled: bool,
+    style_override: &TabsStyle,
+) -> AnyElement {
+    cx.named("tabs_shared_indicator", move |cx| {
+        let id = cx.root_id();
+        let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let tab_bounds = selected_idx
+            .and_then(|idx| {
+                cx.with_state_for(container_id, TabsListLayoutRuntime::default, |rt| {
+                    rt.triggers.get(idx).copied()
+                })
+            })
+            .and_then(|tab_id| cx.last_bounds_for_element(tab_id));
+
+        let (
+            target_x,
+            target_y,
+            target_width,
+            target_height,
+            bg,
+            border_color,
+            border_w,
+            shadow,
+            radius,
+            spring,
+        ) = {
+            let theme = Theme::global(&*cx.app);
+
+            let mut states = WidgetStates::empty();
+            if disabled {
+                states |= WidgetStates::DISABLED;
+            }
+            if selected_idx.is_some() {
+                states |= WidgetStates::SELECTED;
+            }
+
+            let fg_inactive = if theme_is_dark(theme) {
+                tabs_list_fg_muted(theme)
+            } else {
+                theme.color_token("foreground")
+            };
+            let fg_inactive = ColorRef::Color(fg_inactive);
+            let fg_active = ColorRef::Color(theme.color_token("foreground"));
+            let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
+
+            let bg_active = ColorRef::Color(tabs_trigger_bg_active(theme));
+            let border_active = ColorRef::Color(tabs_trigger_border_active(theme));
+            let border_w = tabs_trigger_border_width(theme);
+            let radius = tabs_trigger_radius(theme);
+
+            let default_trigger_fg = WidgetStateProperty::new(fg_inactive)
+                .when(WidgetStates::SELECTED, fg_active)
+                .when(WidgetStates::DISABLED, fg_disabled);
+            let default_trigger_bg =
+                WidgetStateProperty::new(None).when(WidgetStates::SELECTED, Some(bg_active));
+            let default_trigger_border =
+                WidgetStateProperty::new(None).when(WidgetStates::SELECTED, Some(border_active));
+
+            let _ = default_trigger_fg; // keep token-resolution aligned with trigger defaults
+
+            let bg = resolve_override_slot_opt(
+                style_override.trigger_background.as_ref(),
+                &default_trigger_bg,
+                states,
+            )
+            .map(|bg| bg.resolve(theme))
+            .unwrap_or(Color::TRANSPARENT);
+            let border_color = resolve_override_slot_opt(
+                style_override.trigger_border_color.as_ref(),
+                &default_trigger_border,
+                states,
+            )
+            .map(|border| border.resolve(theme))
+            .unwrap_or(Color::TRANSPARENT);
+
+            let (target_x, target_y, target_width, target_height) = if tab_count > 0 {
+                if let Some(tab_bounds) = tab_bounds {
+                    (
+                        tab_bounds.origin.x.0 - container_bounds.origin.x.0,
+                        tab_bounds.origin.y.0 - container_bounds.origin.y.0,
+                        tab_bounds.size.width.0,
+                        tab_bounds.size.height.0,
+                    )
+                } else if let Some(idx) = selected_idx {
+                    match orientation {
+                        TabsOrientation::Horizontal => {
+                            let tab_w = container_bounds.size.width.0 / (tab_count as f32);
+                            (
+                                tab_w * (idx as f32),
+                                0.0,
+                                tab_w,
+                                container_bounds.size.height.0,
+                            )
+                        }
+                        TabsOrientation::Vertical => {
+                            let tab_h = container_bounds.size.height.0 / (tab_count as f32);
+                            (
+                                0.0,
+                                tab_h * (idx as f32),
+                                container_bounds.size.width.0,
+                                tab_h,
+                            )
+                        }
+                    }
+                } else {
+                    (0.0, 0.0, 0.0, 0.0)
+                }
+            } else {
+                (0.0, 0.0, 0.0, 0.0)
+            };
+
+            let shadow =
+                (!disabled && selected_idx.is_some()).then(|| decl_style::shadow_sm(theme, radius));
+            let spring = shared_indicator_spring_description(&*cx.app);
+
+            (
+                target_x,
+                target_y,
+                target_width,
+                target_height,
+                bg,
+                border_color,
+                border_w,
+                shadow,
+                radius,
+                spring,
+            )
+        };
+
+        let spec = MotionToSpecF32::Spring(SpringSpecF32 {
+            spring,
+            tolerance: Tolerance::default(),
+            snap_to_target: true,
+        });
+
+        let x = drive_motion_value_f32(
+            cx,
+            target_x,
+            MotionValueF32Update::To {
+                target: target_x,
+                spec,
+                kick: None,
+            },
+        );
+        let y = drive_motion_value_f32(
+            cx,
+            target_y,
+            MotionValueF32Update::To {
+                target: target_y,
+                spec,
+                kick: None,
+            },
+        );
+        let width = drive_motion_value_f32(
+            cx,
+            target_width,
+            MotionValueF32Update::To {
+                target: target_width,
+                spec,
+                kick: None,
+            },
+        );
+        let height = drive_motion_value_f32(
+            cx,
+            target_height,
+            MotionValueF32Update::To {
+                target: target_height,
+                spec,
+                kick: None,
+            },
+        );
+
+        let mut props = fret_ui::element::CanvasProps::default();
+        props.layout.position = fret_ui::element::PositionStyle::Absolute;
+        props.layout.inset.top = Some(Px(0.0));
+        props.layout.inset.right = Some(Px(0.0));
+        props.layout.inset.bottom = Some(Px(0.0));
+        props.layout.inset.left = Some(Px(0.0));
+
+        let mut indicator = cx.canvas(props, move |p| {
+            if height.value <= 0.0 || width.value <= 0.0 || bg.a <= 0.0 {
+                return;
+            }
+
+            let bounds = p.bounds();
+
+            let x_px = x.value.clamp(0.0, bounds.size.width.0);
+            let y_px = y.value.clamp(0.0, bounds.size.height.0);
+            let max_width = (bounds.size.width.0 - x_px).max(0.0);
+            let max_height = (bounds.size.height.0 - y_px).max(0.0);
+            let width_px = width.value.clamp(0.0, max_width);
+            let height_px = height.value.clamp(0.0, max_height);
+
+            let outer = fret_core::Rect::new(
+                fret_core::Point::new(Px(bounds.origin.x.0 + x_px), Px(bounds.origin.y.0 + y_px)),
+                fret_core::Size::new(Px(width_px), Px(height_px)),
+            );
+
+            if let Some(shadow) = shadow {
+                fret_ui::paint::paint_shadow(p.scene(), DrawOrder(0), outer, shadow);
+            }
+
+            let corners = Corners::all(radius);
+            if border_w.0 > 0.0 && border_color.a > 0.0 {
+                fret_ui::paint::paint_state_layer(
+                    p.scene(),
+                    DrawOrder(1),
+                    outer,
+                    border_color,
+                    1.0,
+                    corners,
+                );
+
+                let inset = border_w.0.max(0.0);
+                let inner = fret_core::Rect::new(
+                    fret_core::Point::new(
+                        Px(outer.origin.x.0 + inset),
+                        Px(outer.origin.y.0 + inset),
+                    ),
+                    fret_core::Size::new(
+                        Px((outer.size.width.0 - inset * 2.0).max(0.0)),
+                        Px((outer.size.height.0 - inset * 2.0).max(0.0)),
+                    ),
+                );
+                let inner_radius = Px((radius.0 - inset).max(0.0));
+                fret_ui::paint::paint_state_layer(
+                    p.scene(),
+                    DrawOrder(2),
+                    inner,
+                    bg,
+                    1.0,
+                    Corners::all(inner_radius),
+                );
+            } else {
+                fret_ui::paint::paint_state_layer(p.scene(), DrawOrder(1), outer, bg, 1.0, corners);
+            }
+        });
+
+        if let Some(test_id) = indicator_test_id.as_ref() {
+            indicator = indicator.test_id(test_id.clone());
+        }
+
+        indicator
+    })
 }
 
 fn set_tabs_value_and_emit_change(
@@ -336,6 +608,9 @@ pub struct TabsRoot {
     force_mount_content: bool,
     list_full_width: bool,
     content_fill_remaining: bool,
+    shared_indicator_motion: bool,
+    content_presence_motion: bool,
+    test_id: Option<Arc<str>>,
     on_value_change: Option<OnValueChange>,
     on_value_change_with_source: Option<OnValueChangeWithSource>,
 }
@@ -354,6 +629,8 @@ impl std::fmt::Debug for TabsRoot {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
+            .field("shared_indicator_motion", &self.shared_indicator_motion)
+            .field("content_presence_motion", &self.content_presence_motion)
             .field("on_value_change", &self.on_value_change.is_some())
             .field(
                 "on_value_change_with_source",
@@ -380,6 +657,9 @@ impl TabsRoot {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            shared_indicator_motion: false,
+            content_presence_motion: false,
+            test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
         }
@@ -402,6 +682,9 @@ impl TabsRoot {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            shared_indicator_motion: false,
+            content_presence_motion: false,
+            test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
         }
@@ -494,6 +777,31 @@ impl TabsRoot {
         self
     }
 
+    pub fn shared_indicator_motion(mut self, enabled: bool) -> Self {
+        self.shared_indicator_motion = enabled;
+        self
+    }
+
+    /// When `true`, the active tab panel crossfades when the active tab changes.
+    ///
+    /// Notes:
+    /// - This is a "fluid tabs" style enhancement and is intentionally opt-in.
+    /// - For now, this is only applied when `force_mount_content=false`.
+    pub fn content_presence_motion(mut self, enabled: bool) -> Self {
+        self.content_presence_motion = enabled;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn test_id_opt(mut self, test_id: Option<Arc<str>>) -> Self {
+        self.test_id = test_id;
+        self
+    }
+
     /// Called when the selected tab value changes (Base UI `onValueChange`).
     pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
         self.on_value_change = on_value_change;
@@ -555,6 +863,9 @@ impl TabsRoot {
             .force_mount_content(self.force_mount_content)
             .list_full_width(self.list_full_width)
             .content_fill_remaining(self.content_fill_remaining)
+            .shared_indicator_motion(self.shared_indicator_motion)
+            .content_presence_motion(self.content_presence_motion)
+            .test_id_opt(self.test_id)
             .items(items)
             .into_element(cx)
     }
@@ -566,6 +877,7 @@ pub struct TabsItem {
     label: Arc<str>,
     content: Vec<AnyElement>,
     trigger: Option<Vec<AnyElement>>,
+    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
 }
 
@@ -580,6 +892,7 @@ impl TabsItem {
             label: label.into(),
             content: content.into_iter().collect(),
             trigger: None,
+            trigger_test_id: None,
             disabled: false,
         }
     }
@@ -596,6 +909,11 @@ impl TabsItem {
 
     pub fn trigger_child(mut self, child: AnyElement) -> Self {
         self.trigger = Some(vec![child]);
+        self
+    }
+
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
         self
     }
 
@@ -620,6 +938,9 @@ pub struct Tabs {
     force_mount_content: bool,
     list_full_width: bool,
     content_fill_remaining: bool,
+    shared_indicator_motion: bool,
+    content_presence_motion: bool,
+    test_id: Option<Arc<str>>,
     on_value_change: Option<OnValueChange>,
     on_value_change_with_source: Option<OnValueChangeWithSource>,
 }
@@ -637,6 +958,8 @@ impl std::fmt::Debug for Tabs {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
+            .field("shared_indicator_motion", &self.shared_indicator_motion)
+            .field("content_presence_motion", &self.content_presence_motion)
             .field("on_value_change", &self.on_value_change.is_some())
             .field(
                 "on_value_change_with_source",
@@ -662,6 +985,9 @@ impl Tabs {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            shared_indicator_motion: false,
+            content_presence_motion: false,
+            test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
         }
@@ -683,6 +1009,9 @@ impl Tabs {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            shared_indicator_motion: false,
+            content_presence_motion: false,
+            test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
         }
@@ -770,6 +1099,31 @@ impl Tabs {
         self
     }
 
+    pub fn shared_indicator_motion(mut self, enabled: bool) -> Self {
+        self.shared_indicator_motion = enabled;
+        self
+    }
+
+    /// When `true`, the active tab panel crossfades when the active tab changes.
+    ///
+    /// This is intended for "fluid tabs" style motion, and is intentionally opt-in.
+    ///
+    /// Note: This is only applied when `force_mount_content=false`.
+    pub fn content_presence_motion(mut self, enabled: bool) -> Self {
+        self.content_presence_motion = enabled;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn test_id_opt(mut self, test_id: Option<Arc<str>>) -> Self {
+        self.test_id = test_id;
+        self
+    }
+
     /// Called when the selected tab value changes (Base UI `onValueChange`).
     pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
         self.on_value_change = on_value_change;
@@ -800,6 +1154,10 @@ impl Tabs {
         let force_mount_content = self.force_mount_content;
         let list_full_width = self.list_full_width;
         let content_fill_remaining = self.content_fill_remaining;
+        let shared_indicator_motion = self.shared_indicator_motion;
+        let content_presence_motion = self.content_presence_motion;
+        let root_test_id = self.test_id;
+        let root_test_id_for_children = root_test_id.clone();
         let on_value_change = self.on_value_change;
         let on_value_change_with_source = self.on_value_change_with_source;
 
@@ -869,10 +1227,13 @@ impl Tabs {
             .and_then(|active| items.get(active))
             .and_then(|item| (!force_mount_content).then_some(item.content.clone()))
             .unwrap_or_default();
+        let active_value = active_idx
+            .and_then(|active| items.get(active))
+            .map(|item| item.value.clone());
 
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
-        cx.container(root_props, move |cx| {
+        let mut root = cx.container(root_props, move |cx| {
             let selected_tab_element: Cell<Option<u64>> = Cell::new(None);
             let selected_tab_element = &selected_tab_element;
             let tab_trigger_elements: Vec<Cell<Option<u64>>> =
@@ -880,11 +1241,33 @@ impl Tabs {
             let tab_trigger_elements = &tab_trigger_elements;
             let items_for_list = items.clone();
             let mut children: Vec<AnyElement> = Vec::new();
+            let content_stage_test_id = root_test_id_for_children
+                .as_ref()
+                .map(|id| Arc::<str>::from(format!("{id}-content-stage")));
 
             let tab_list_semantics = radix_tabs::tab_list_semantics_props(list_props.layout);
             children.push(cx.semantics(tab_list_semantics, move |cx| {
-                vec![cx.container(list_props, |cx| {
-                        vec![cx.roving_flex(
+                vec![cx.container(list_props, move |cx| {
+                        let list_container_id = cx.root_id();
+                        let indicator_test_id = root_test_id_for_children
+                            .as_ref()
+                            .map(|id| Arc::<str>::from(format!("{id}-shared-indicator")));
+
+                        let mut list_children: Vec<AnyElement> = Vec::new();
+                        if shared_indicator_motion {
+                            list_children.push(tabs_shared_indicator(
+                                cx,
+                                list_container_id,
+                                orientation,
+                                items_for_list.len(),
+                                active_idx,
+                                indicator_test_id,
+                                tabs_disabled,
+                                &style_override,
+                            ));
+                        }
+
+                        list_children.push(cx.roving_flex(
                             RovingFlexProps {
                                 flex: FlexProps {
                                     direction: match orientation {
@@ -970,6 +1353,7 @@ impl Tabs {
                                         .h_px(trigger_h),
                                 );
 
+                                let list_item_count = items_for_list.len();
                                 let mut out: Vec<AnyElement> =
                                     Vec::with_capacity(disabled_flags.len());
                                 for (idx, item) in items_for_list.iter().cloned().enumerate() {
@@ -987,17 +1371,19 @@ impl Tabs {
                                     let default_trigger_border = default_trigger_border.clone();
                                     let theme = theme.clone();
 
-                                    let shadow = (active && !item_disabled)
+                                    let shadow = (!shared_indicator_motion && active && !item_disabled)
                                         .then(|| decl_style::shadow_sm(&theme, radius));
 
                                     let value = item.value.clone();
                                     let label = item.label.clone();
                                     let trigger_children = item.trigger.clone();
+                                    let trigger_test_id = item.trigger_test_id.clone();
                                     let model = model.clone();
                                     let text_style = text_style.clone();
 
                                     out.push(cx.keyed(value.clone(), move |cx| {
-                                        cx.pressable_with_id_props(move |cx, st, _id| {
+                                        let mut trigger =
+                                            cx.pressable_with_id_props(move |cx, st, _id| {
                                         let value_for_pointer = value.clone();
                                         let model_for_pointer = model.clone();
                                         let on_value_change_for_pointer = on_value_change.clone();
@@ -1063,6 +1449,19 @@ impl Tabs {
                                             cell.set(Some(_id.0));
                                         }
 
+                                        cx.with_state_for(
+                                            list_container_id,
+                                            TabsListLayoutRuntime::default,
+                                            |rt| {
+                                                if rt.triggers.len() != list_item_count {
+                                                    rt.triggers.resize(list_item_count, _id);
+                                                }
+                                                if let Some(slot) = rt.triggers.get_mut(idx) {
+                                                    *slot = _id;
+                                                }
+                                            },
+                                        );
+
                                         let mut states =
                                             WidgetStates::from_pressable(cx, st, !item_disabled);
                                         states.set(WidgetState::Selected, active);
@@ -1073,12 +1472,16 @@ impl Tabs {
                                             states,
                                         );
                                         let fg = fg_ref.resolve(&theme);
-                                        let bg = resolve_override_slot_opt(
-                                            style_override.trigger_background.as_ref(),
-                                            &default_trigger_bg,
-                                            states,
-                                        )
-                                        .map(|bg| bg.resolve(&theme));
+                                        let bg = if shared_indicator_motion {
+                                            None
+                                        } else {
+                                            resolve_override_slot_opt(
+                                                style_override.trigger_background.as_ref(),
+                                                &default_trigger_bg,
+                                                states,
+                                            )
+                                            .map(|bg| bg.resolve(&theme))
+                                        };
                                         let border = resolve_override_slot_opt(
                                             style_override.trigger_border_color.as_ref(),
                                             &default_trigger_border,
@@ -1086,6 +1489,11 @@ impl Tabs {
                                         )
                                         .map(|border| border.resolve(&theme))
                                         .unwrap_or(Color::TRANSPARENT);
+                                        let border = if shared_indicator_motion {
+                                            Color::TRANSPARENT
+                                        } else {
+                                            border
+                                        };
 
                                         let props = PressableProps {
                                             layout: trigger_layout,
@@ -1171,22 +1579,153 @@ impl Tabs {
                                         )];
 
                                         (props, children)
-                                        })
-                                    }));
+                                        });
+                                        if let Some(test_id) = trigger_test_id.as_ref() {
+                                            trigger = trigger.test_id(test_id.clone());
+                                        }
+                                        trigger
+                                     }));
                                 }
                                 out
                             },
-                        )]
+                        ));
+                        list_children
                     })]
             }));
 
             if !force_mount_content {
-                if let Some(panel) = radix_tabs::tab_panel_with_gate(
+                let active_label_opt = (!active_label.is_empty()).then_some(active_label.clone());
+
+                if content_presence_motion {
+                    let theme = Theme::global(&*cx.app);
+                    let enter_duration =
+                        Duration::from_millis(theme.duration_ms_token("duration.motion.presence.enter") as u64);
+                    let exit_duration =
+                        Duration::from_millis(theme.duration_ms_token("duration.motion.presence.exit") as u64);
+                    let easing = theme.easing_token("easing.motion.standard");
+
+                    let (switched, exiting_values) =
+                        cx.with_state(TabsContentPresenceRuntime::default, |st| {
+                            let switched = st.active_value.is_some() && st.active_value != active_value;
+                            if switched {
+                                if let Some(prev) = st.active_value.take() {
+                                    if !st.exiting_values.iter().any(|v| v == &prev) {
+                                        st.exiting_values.push(prev);
+                                    }
+                                }
+                            }
+
+                            st.active_value = active_value.clone();
+                            if let Some(v) = active_value.as_ref() {
+                                st.exiting_values.retain(|x| x != v);
+                            }
+
+                            // Keep this bounded to avoid retaining unbounded content trees if callers
+                            // spam tab switching mid-animation.
+                            const MAX_EXITING: usize = 2;
+                            if st.exiting_values.len() > MAX_EXITING {
+                                st.exiting_values
+                                    .drain(0..(st.exiting_values.len() - MAX_EXITING));
+                            }
+
+                            (switched, st.exiting_values.clone())
+                        });
+
+                    let mut prune: Vec<Arc<str>> = Vec::new();
+                    let mut stacked_panels: Vec<AnyElement> = Vec::new();
+
+                    for value in exiting_values.iter().cloned() {
+                        let Some(item) = items.iter().find(|it| it.value == value) else {
+                            prune.push(value);
+                            continue;
+                        };
+
+                        let content = item.content.clone();
+                        let (present, panel) = cx.keyed(("tabs_panel", value.clone()), |cx| {
+                            let out = transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+                                cx,
+                                false,
+                                enter_duration,
+                                exit_duration,
+                                easing,
+                                false,
+                            );
+
+                            let panel = cx.opacity(out.progress, |cx| {
+                                vec![cx.interactivity_gate(out.present, false, move |cx| {
+                                    vec![cx.container(
+                                        ContainerProps {
+                                            layout: tab_panel_layout,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| content,
+                                    )]
+                                })]
+                            });
+
+                            (out.present, panel)
+                        });
+                        if present {
+                            stacked_panels.push(panel);
+                        } else {
+                            prune.push(value);
+                        }
+                    }
+
+                    if let Some(active_value) = active_value.as_ref() {
+                        if let Some(item) = items.iter().find(|it| it.value == *active_value) {
+                            let labelled_by_element = selected_tab_element.get();
+                            let content = item.content.clone();
+                            let active_value = active_value.clone();
+
+                            let panel = cx.keyed(("tabs_panel", active_value), |cx| {
+                                let out = transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+                                    cx,
+                                    true,
+                                    enter_duration,
+                                    exit_duration,
+                                    easing,
+                                    switched,
+                                );
+                                cx.opacity(out.progress, |cx| {
+                                    vec![cx.semantics(
+                                        radix_tabs::tab_panel_semantics_props(
+                                            tab_panel_layout,
+                                            active_label_opt.clone(),
+                                            labelled_by_element,
+                                        ),
+                                        move |_cx| content,
+                                    )]
+                                })
+                            });
+                            stacked_panels.push(panel);
+                        }
+                    }
+
+                    if !prune.is_empty() {
+                        cx.with_state(TabsContentPresenceRuntime::default, |st| {
+                            st.exiting_values.retain(|v| !prune.iter().any(|p| p == v));
+                        });
+                    }
+
+                    if !stacked_panels.is_empty() {
+                        let mut stage = cx.stack_props(
+                            StackProps {
+                                layout: tab_panel_layout,
+                            },
+                            move |_cx| stacked_panels,
+                        );
+                        if let Some(test_id) = content_stage_test_id.as_ref() {
+                            stage = stage.test_id(test_id.clone());
+                        }
+                        children.push(stage);
+                    }
+                } else if let Some(panel) = radix_tabs::tab_panel_with_gate(
                     cx,
                     true,
                     false,
                     tab_panel_layout,
-                    (!active_label.is_empty()).then_some(active_label),
+                    active_label_opt,
                     selected_tab_element.get(),
                     move |_cx| active_children,
                 ) {
@@ -1232,7 +1771,13 @@ impl Tabs {
                 },
                 move |_cx| children,
             )]
-        })
+        });
+
+        if let Some(test_id) = root_test_id.as_ref() {
+            root = root.test_id(test_id.clone());
+        }
+
+        root
     }
 }
 

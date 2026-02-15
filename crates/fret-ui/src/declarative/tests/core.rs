@@ -476,6 +476,121 @@ fn render_transform_affects_hit_testing() {
 }
 
 #[test]
+fn mask_layer_is_paint_only_for_hit_testing_by_default() {
+    fn build_root(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        window: AppWindowId,
+        bounds: Rect,
+        overflow: crate::element::Overflow,
+        test_id: &'static str,
+    ) -> (NodeId, NodeId, Rect, Rect) {
+        let mask = fret_core::scene::Mask::Image {
+            image: fret_core::ImageId::default(),
+            uv: fret_core::scene::UvRect::FULL,
+        };
+
+        let root = render_root(ui, app, services, window, bounds, test_id, |cx| {
+            let mut mask_layout = crate::element::LayoutStyle::default();
+            mask_layout.position = crate::element::PositionStyle::Absolute;
+            mask_layout.inset.left = Some(Px(0.0));
+            mask_layout.inset.top = Some(Px(0.0));
+            mask_layout.size.width = Length::Px(Px(20.0));
+            mask_layout.size.height = Length::Px(Px(20.0));
+            mask_layout.overflow = overflow;
+
+            let mask_props = crate::element::MaskLayerProps {
+                layout: mask_layout,
+                mask,
+            };
+
+            vec![cx.mask_layer_props(mask_props, |cx| {
+                let mut pressable_props = crate::element::PressableProps::default();
+                pressable_props.layout.position = crate::element::PositionStyle::Absolute;
+                pressable_props.layout.inset.left = Some(Px(30.0));
+                pressable_props.layout.inset.top = Some(Px(0.0));
+                pressable_props.layout.size.width = Length::Px(Px(20.0));
+                pressable_props.layout.size.height = Length::Px(Px(20.0));
+
+                vec![cx.pressable(pressable_props, |_cx, _state| Vec::new())]
+            })]
+        });
+
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
+
+        let mask_node = ui.children(root)[0];
+        let pressable_node = ui.children(mask_node)[0];
+
+        let mask_bounds = ui.debug_node_bounds(mask_node).expect("mask bounds");
+        let pressable_bounds = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable bounds");
+
+        (
+            root,
+            pressable_node,
+            mask_bounds,
+            pressable_bounds,
+        )
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let (_root, pressable_node, mask_bounds, pressable_bounds) = build_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        crate::element::Overflow::Visible,
+        "mask-layer-hit-test-visible",
+    );
+
+    assert!(
+        pressable_bounds.origin.x.0 >= mask_bounds.origin.x.0 + mask_bounds.size.width.0,
+        "pressable should be outside the mask wrapper bounds for this hit-test gate"
+    );
+
+    let overflow_hit_pos = Point::new(
+        Px(pressable_bounds.origin.x.0 + 2.0),
+        Px(pressable_bounds.origin.y.0 + 2.0),
+    );
+
+    assert_eq!(ui.debug_hit_test(overflow_hit_pos).hit, Some(pressable_node));
+
+    app.advance_frame();
+
+    let (_root, pressable_node, _mask_bounds, pressable_bounds) = build_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        crate::element::Overflow::Clip,
+        "mask-layer-hit-test-clip",
+    );
+
+    let clipped_hit_pos = Point::new(
+        Px(pressable_bounds.origin.x.0 + 2.0),
+        Px(pressable_bounds.origin.y.0 + 2.0),
+    );
+
+    assert_ne!(ui.debug_hit_test(clipped_hit_pos).hit, Some(pressable_node));
+}
+
+#[test]
 fn hit_test_gate_is_layout_transparent_for_intrinsic_sizing() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

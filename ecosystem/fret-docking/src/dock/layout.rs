@@ -24,6 +24,27 @@ pub(super) fn compute_layout_map(
     layout
 }
 
+pub(super) fn compute_layout_map_with_split_fractions_overrides(
+    graph: &DockGraph,
+    root: DockNodeId,
+    bounds: Rect,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
+    overrides: &std::collections::HashMap<DockNodeId, std::sync::Arc<[f32]>>,
+) -> std::collections::HashMap<DockNodeId, Rect> {
+    let mut layout = std::collections::HashMap::new();
+    compute_layout_map_impl_with_overrides(
+        graph,
+        root,
+        bounds,
+        split_handle_gap,
+        split_handle_hit_thickness,
+        overrides,
+        &mut layout,
+    );
+    layout
+}
+
 fn compute_layout_map_impl(
     graph: &DockGraph,
     node: DockNodeId,
@@ -75,6 +96,72 @@ fn compute_layout_map_impl(
                 bounds,
                 split_handle_gap,
                 split_handle_hit_thickness,
+                out,
+            );
+        }
+    }
+}
+
+fn compute_layout_map_impl_with_overrides(
+    graph: &DockGraph,
+    node: DockNodeId,
+    bounds: Rect,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
+    overrides: &std::collections::HashMap<DockNodeId, std::sync::Arc<[f32]>>,
+    out: &mut std::collections::HashMap<DockNodeId, Rect>,
+) {
+    let Some(n) = graph.node(node) else {
+        return;
+    };
+
+    out.insert(node, bounds);
+    match n {
+        DockNode::Tabs { .. } => {}
+        DockNode::Split {
+            axis,
+            children,
+            fractions,
+        } => {
+            let count = children.len();
+            if count == 0 {
+                return;
+            }
+
+            let fractions = overrides
+                .get(&node)
+                .filter(|f| f.len() == fractions.len())
+                .map(|f| f.as_ref())
+                .unwrap_or(fractions);
+            let computed = resizable::compute_layout(
+                *axis,
+                bounds,
+                count,
+                fractions,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                &[],
+            );
+            for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
+                compute_layout_map_impl_with_overrides(
+                    graph,
+                    child,
+                    rect,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    overrides,
+                    out,
+                );
+            }
+        }
+        DockNode::Floating { child } => {
+            compute_layout_map_impl_with_overrides(
+                graph,
+                *child,
+                bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                overrides,
                 out,
             );
         }
