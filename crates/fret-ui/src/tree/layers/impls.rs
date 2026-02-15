@@ -1,26 +1,5 @@
-use super::*;
-
-slotmap::new_key_type! {
-    pub struct UiLayerId;
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct UiLayer {
-    pub(super) root: NodeId,
-    pub(super) visible: bool,
-    pub(super) blocks_underlay_input: bool,
-    pub(super) blocks_underlay_focus: bool,
-    pub(super) hit_testable: bool,
-    pub(super) pointer_occlusion: PointerOcclusion,
-    pub(super) wants_pointer_down_outside_events: bool,
-    pub(super) consume_pointer_down_outside_events: bool,
-    pub(super) pointer_down_outside_branches: Vec<NodeId>,
-    /// Elements that should cause this overlay to dismiss when they are inside the scroll-event
-    /// target (Radix Tooltip "close on scroll" outcome).
-    pub(super) scroll_dismiss_elements: Vec<crate::GlobalElementId>,
-    pub(super) wants_pointer_move_events: bool,
-    pub(super) wants_timer_events: bool,
-}
+use super::super::*;
+use super::{UiLayer, UiLayerId};
 
 impl<H: UiHost> UiTree<H> {
     /// Returns the current UI layer order in paint order (back-to-front).
@@ -87,6 +66,34 @@ impl<H: UiHost> UiTree<H> {
         let (active_focus_roots, focus_barrier_root) = self.active_focus_layers();
         if focus_barrier_root.is_some() {
             self.enforce_focus_barrier_scope(&active_focus_roots);
+        }
+    }
+
+    pub(in crate::tree) fn enforce_modal_barrier_scope(&mut self, active_roots: &[NodeId]) {
+        let (focus_roots, focus_barrier_root) = self.active_focus_layers();
+        if focus_barrier_root.is_some()
+            && self
+                .focus
+                .is_some_and(|n| !self.node_in_any_layer(n, focus_roots.as_slice()))
+        {
+            self.focus = None;
+        }
+        let to_remove: Vec<PointerId> = self
+            .captured
+            .iter()
+            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, active_roots)).then_some(*p))
+            .collect();
+        for p in to_remove {
+            self.captured.remove(&p);
+        }
+    }
+
+    pub(in crate::tree) fn enforce_focus_barrier_scope(&mut self, active_roots: &[NodeId]) {
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+        {
+            self.focus = None;
         }
     }
 
@@ -380,14 +387,16 @@ impl<H: UiHost> UiTree<H> {
         self.root_to_layer.get(&root).copied()
     }
 
-    pub(super) fn visible_layers_in_paint_order(&self) -> impl Iterator<Item = UiLayerId> + '_ {
+    pub(in crate::tree) fn visible_layers_in_paint_order(
+        &self,
+    ) -> impl Iterator<Item = UiLayerId> + '_ {
         self.layer_order
             .iter()
             .copied()
             .filter(|id| self.layers.get(*id).is_some_and(|l| l.visible))
     }
 
-    pub(super) fn topmost_pointer_occlusion_layer(
+    pub(in crate::tree) fn topmost_pointer_occlusion_layer(
         &self,
         barrier_root: Option<NodeId>,
     ) -> Option<(UiLayerId, PointerOcclusion)> {
@@ -415,7 +424,7 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
-    pub(super) fn active_input_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
+    pub(in crate::tree) fn active_input_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
         let mut any_visible = false;
         let mut barrier_root: Option<NodeId> = None;
         for &layer_id in &self.layer_order {
@@ -462,7 +471,7 @@ impl<H: UiHost> UiTree<H> {
         (roots, barrier_root)
     }
 
-    pub(super) fn active_pointer_down_outside_layer_roots(
+    pub(in crate::tree) fn active_pointer_down_outside_layer_roots(
         &self,
         barrier_root: Option<NodeId>,
     ) -> Vec<NodeId> {
@@ -502,7 +511,7 @@ impl<H: UiHost> UiTree<H> {
         roots
     }
 
-    pub(super) fn active_focus_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
+    pub(in crate::tree) fn active_focus_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
         let mut any_visible = false;
         let mut barrier_root: Option<NodeId> = None;
         for &layer_id in &self.layer_order {

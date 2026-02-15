@@ -120,3 +120,9 @@ impl<H: UiHost> Default for UiTree<H> {
         }
     }
 }
+
+impl<H: UiHost> UiTree<H> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
