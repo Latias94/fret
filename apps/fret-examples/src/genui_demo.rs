@@ -203,23 +203,17 @@ const SPEC_JSON: &str = r#"
         "rg_card_6"
       ]
     },
-    "rg_card_1": { "type": "Card", "props": {}, "children": ["rg_card_1_content"] },
-    "rg_card_1_content": { "type": "CardContent", "props": {}, "children": ["rg_card_1_text"] },
+    "rg_card_1": { "type": "Card", "props": {}, "children": ["rg_card_1_text"] },
     "rg_card_1_text": { "type": "Text", "props": { "text": "Card 1" }, "children": [] },
-    "rg_card_2": { "type": "Card", "props": {}, "children": ["rg_card_2_content"] },
-    "rg_card_2_content": { "type": "CardContent", "props": {}, "children": ["rg_card_2_text"] },
+    "rg_card_2": { "type": "Card", "props": {}, "children": ["rg_card_2_text"] },
     "rg_card_2_text": { "type": "Text", "props": { "text": "Card 2" }, "children": [] },
-    "rg_card_3": { "type": "Card", "props": {}, "children": ["rg_card_3_content"] },
-    "rg_card_3_content": { "type": "CardContent", "props": {}, "children": ["rg_card_3_text"] },
+    "rg_card_3": { "type": "Card", "props": {}, "children": ["rg_card_3_text"] },
     "rg_card_3_text": { "type": "Text", "props": { "text": "Card 3" }, "children": [] },
-    "rg_card_4": { "type": "Card", "props": {}, "children": ["rg_card_4_content"] },
-    "rg_card_4_content": { "type": "CardContent", "props": {}, "children": ["rg_card_4_text"] },
+    "rg_card_4": { "type": "Card", "props": {}, "children": ["rg_card_4_text"] },
     "rg_card_4_text": { "type": "Text", "props": { "text": "Card 4" }, "children": [] },
-    "rg_card_5": { "type": "Card", "props": {}, "children": ["rg_card_5_content"] },
-    "rg_card_5_content": { "type": "CardContent", "props": {}, "children": ["rg_card_5_text"] },
+    "rg_card_5": { "type": "Card", "props": {}, "children": ["rg_card_5_text"] },
     "rg_card_5_text": { "type": "Text", "props": { "text": "Card 5" }, "children": [] },
-    "rg_card_6": { "type": "Card", "props": {}, "children": ["rg_card_6_content"] },
-    "rg_card_6_content": { "type": "CardContent", "props": {}, "children": ["rg_card_6_text"] },
+    "rg_card_6": { "type": "Card", "props": {}, "children": ["rg_card_6_text"] },
     "rg_card_6_text": { "type": "Text", "props": { "text": "Card 6" }, "children": [] },
 
     "responsive_stack_title": { "type": "Text", "props": { "text": "ResponsiveStack (container query demo)", "variant": "large" }, "children": [] },
@@ -232,14 +226,11 @@ const SPEC_JSON: &str = r#"
       },
       "children": ["rs_card_1", "rs_card_2", "rs_card_3"]
     },
-    "rs_card_1": { "type": "Card", "props": {}, "children": ["rs_card_1_content"] },
-    "rs_card_1_content": { "type": "CardContent", "props": {}, "children": ["rs_card_1_text"] },
+    "rs_card_1": { "type": "Card", "props": {}, "children": ["rs_card_1_text"] },
     "rs_card_1_text": { "type": "Text", "props": { "text": "Stack card A" }, "children": [] },
-    "rs_card_2": { "type": "Card", "props": {}, "children": ["rs_card_2_content"] },
-    "rs_card_2_content": { "type": "CardContent", "props": {}, "children": ["rs_card_2_text"] },
+    "rs_card_2": { "type": "Card", "props": {}, "children": ["rs_card_2_text"] },
     "rs_card_2_text": { "type": "Text", "props": { "text": "Stack card B" }, "children": [] },
-    "rs_card_3": { "type": "Card", "props": {}, "children": ["rs_card_3_content"] },
-    "rs_card_3_content": { "type": "CardContent", "props": {}, "children": ["rs_card_3_text"] },
+    "rs_card_3": { "type": "Card", "props": {}, "children": ["rs_card_3_text"] },
     "rs_card_3_text": { "type": "Text", "props": { "text": "Stack card C" }, "children": [] }
   },
   "state": {
@@ -571,7 +562,13 @@ fn view(
         if let Some(root) = spec_root {
             body.push(root);
         }
-        shadcn::Card::new([shadcn::CardContent::new(body).into_element(cx)])
+        let body = ui::v_flex(cx, move |_cx| body)
+            .gap(Space::N3)
+            .items_start()
+            .w_full()
+            .p(Space::N6)
+            .into_element(cx);
+        shadcn::Card::new([body])
             .ui()
             .w_full()
             .h_full()
@@ -848,7 +845,13 @@ fn view(
             ])
             .into_element(cx);
 
-        shadcn::Card::new([shadcn::CardContent::new([tabs]).into_element(cx)])
+        let body = ui::v_flex(cx, move |_cx| vec![tabs])
+            .gap(Space::N0)
+            .w_full()
+            .h_full()
+            .p(Space::N6)
+            .into_element(cx);
+        shadcn::Card::new([body])
             .ui()
             .w_full()
             .h_full()
