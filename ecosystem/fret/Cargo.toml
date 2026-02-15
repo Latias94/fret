@@ -27,6 +27,7 @@ desktop = [
     "dep:wgpu",
     "fret-framework/native-wgpu",
     "fret-bootstrap/ui-app-driver",
+    "fret-launch/dev-state",
 ]
 
 # Common app/dev conveniences (still optional; users can disable for minimal builds).

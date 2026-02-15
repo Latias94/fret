@@ -6,12 +6,17 @@
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-launch/README.md`.
 
+#[cfg(feature = "dev-state")]
+pub mod dev_state;
 mod error;
 pub mod runner;
 mod stacksafe_config;
 
 pub use error::RunnerError;
 pub use stacksafe_config::configure_stacksafe_from_env;
+
+#[cfg(feature = "dev-state")]
+pub use dev_state::DevStateService;
 
 pub use runner::{
     EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks, ImportedViewportRenderTarget,

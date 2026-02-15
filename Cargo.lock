@@ -2083,6 +2083,7 @@ dependencies = [
  "objc2-ui-kit",
  "pollster",
  "renderdog",
+ "serde",
  "serde_json",
  "slotmap",
  "stacksafe",

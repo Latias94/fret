@@ -82,6 +82,8 @@ struct DiagWindowInsetsOverride {
 }
 
 mod app_handler;
+#[cfg(feature = "dev-state")]
+mod dev_state;
 mod diag_bundle_screenshots;
 mod diag_cursor_override;
 #[cfg(feature = "diag-screenshots")]
@@ -235,6 +237,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
     streaming_uploads: StreamingUploadQueue,
     nv12_gpu: Option<super::super::yuv_gpu::Nv12GpuConverter>,
+
+    #[cfg(feature = "dev-state")]
+    dev_state: dev_state::DevStateController,
 
     #[cfg(feature = "hotpatch-subsecond")]
     hotpatch: Option<HotpatchTrigger>,

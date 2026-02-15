@@ -372,7 +372,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
             if self.main_window.is_none() {
-                let spec = self.config.main_window_spec();
+                let mut spec = self.config.main_window_spec();
+                #[cfg(feature = "dev-state")]
+                self.dev_state.apply_main_window_spec(&mut spec);
                 let window = match self.create_os_window(
                     event_loop,
                     spec,
@@ -608,7 +610,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
-            let spec = self.config.main_window_spec();
+            let mut spec = self.config.main_window_spec();
+            #[cfg(feature = "dev-state")]
+            self.dev_state.apply_main_window_spec(&mut spec);
             let window = match self.create_os_window(
                 event_loop,
                 spec,
@@ -1812,7 +1816,26 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
-        self.poll_window_environment_if_due(Instant::now());
+        let now = Instant::now();
+        self.poll_window_environment_if_due(now);
+
+        #[cfg(all(
+            feature = "dev-state",
+            not(any(target_os = "android", target_os = "ios"))
+        ))]
+        {
+            if self.dev_state.enabled()
+                && let Some(main_window) = self.main_window
+                && let Some(state) = self.windows.get(main_window)
+            {
+                let physical = state.window.surface_size();
+                let logical: winit::dpi::LogicalSize<f64> =
+                    physical.to_logical(state.window.scale_factor());
+                let position = state.window.outer_position().ok();
+                self.dev_state
+                    .observe_main_window(now, &self.app, logical, position);
+            }
+        }
 
         #[cfg(target_os = "ios")]
         if self.ios_keyboard.is_none() {

@@ -191,6 +191,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let mut supervise: Option<bool> = None;
     let mut watch: Option<bool> = None;
     let mut watch_poll_ms: Option<u64> = None;
+    let mut dev_state_reset = false;
     let mut passthrough: Vec<String> = Vec::new();
 
     let mut it = args.into_iter();
@@ -237,6 +238,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             "--no-supervise" => supervise = Some(false),
             "--watch" => watch = Some(true),
             "--no-watch" => watch = Some(false),
+            "--dev-state-reset" => dev_state_reset = true,
             "--watch-poll-ms" => {
                 let raw = it
                     .next()
@@ -341,6 +343,13 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
 
     let mut cmd = Command::new("cargo");
     cmd.current_dir(&root);
+
+    if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() || dev_state_reset {
+        cmd.env("FRET_DEV_STATE", "1");
+    }
+    if dev_state_reset {
+        cmd.env("FRET_DEV_STATE_RESET", "1");
+    }
 
     // When `--watch` is enabled, prefer `cargo build` + running the produced binary directly so we can
     // reliably terminate and restart the app process on Windows.

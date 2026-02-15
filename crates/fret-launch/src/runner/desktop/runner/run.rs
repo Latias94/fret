@@ -121,6 +121,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
             nv12_gpu: None,
+            #[cfg(feature = "dev-state")]
+            dev_state: super::dev_state::DevStateController::from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
@@ -129,6 +131,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             #[cfg(feature = "diag-screenshots")]
             diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
         };
+        #[cfg(feature = "dev-state")]
+        runner.dev_state.install_into_app(&mut runner.app);
         runner.publish_system_font_rescan_state();
         runner
     }
