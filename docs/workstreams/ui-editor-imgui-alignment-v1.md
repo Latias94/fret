@@ -69,6 +69,11 @@ The intended composition direction is:
 - `PropertyRow` + `PropertyGroup` + `PropertyGrid` → `InspectorPanel`
 - `ColorEdit` + `DragValue<T>` → `GradientEditor` spike
 
+Authoring direction (Plan A):
+
+- Declarative widgets are the single source of truth.
+- imui is a façade authoring frontend that delegates to the same widgets (no parallel runtime).
+
 This mirrors the “small primitives + recipes” approach used elsewhere in the ecosystem:
 
 - `fret-ui` (mechanisms) → `fret-ui-kit` (infra) → design-system/taxonomy crates (recipes)

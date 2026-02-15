@@ -84,6 +84,27 @@ Rules:
 2) No duplicate widget implementations: if an imui façade exists, it must delegate to the declarative implementation.
 3) Keep patches centralized: use the unified patch chain (`UiBuilder<T>` / `ui()`) for layout/chrome decisions.
 
+### Architecture direction (Plan A)
+
+This workstream explicitly follows the “Plan A” architecture:
+
+- **Single source of truth**: all widgets have one authoritative, declarative implementation.
+- **imui is a façade**: immediate-style authoring is a frontend that mounts the same declarative widgets (no parallel runtime).
+- **Policy stays in ecosystem**: “editor hand feel” (chrome defaults, hover intent, dismiss policy, focus restoration,
+  density, icons, reset affordances) remains in `ecosystem/fret-ui-editor` and adjacent policy crates.
+- **Mechanisms stay in `crates/fret-ui`**: layout, focus/capture, overlay mounting, painting, and accessibility contracts.
+
+This is consistent with the already-landed imui v2 consolidation and the unified patch chain (ADR 0160).
+
+### Visual baseline (v1)
+
+For the proof demo to be usable, v1 also needs a minimal “visual baseline” policy:
+
+- Interactive controls must render a stable **frame** (background, border, radius, padding) by default.
+- “Bare text” surfaces are not acceptable for editable controls in the editor proof harness.
+- Hidden/disabled internal subtrees must not paint or leak hit testing (clip/absolute or unmount when appropriate).
+- Icons may start as glyph fallbacks, but public APIs should reserve icon slots for future skins.
+
 ### Public API naming rules (recommended)
 
 Goals:

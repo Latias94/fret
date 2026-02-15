@@ -111,6 +111,21 @@ Exit criteria:
   - mixed value affordance
   - focus traversal sanity (Tab/Shift+Tab)
 
+### M2.5 — Visual baseline (chrome + legibility)
+
+Goal: make the editor-proof harness readable and stable (no overlapped text, no “unstyled” editable surfaces).
+
+- [~] Establish a minimal chrome baseline for common editor controls:
+  - [x] `DragValue` scrub mode renders an input-like frame (bg/border/radius/padding).
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
+  - [x] `EnumSelect` trigger includes a caret indicator and input-like frame.
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+  - [x] `PropertyGroup` header has a background and divider for visual grouping.
+    - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
+  - [ ] Define a shared `EditorChrome` recipe (optional): centralize token keys and defaults so controls don’t drift.
+  - [ ] Ensure docking tabs remain legible under the demo theme (tab text, hover/active states).
+    - Evidence anchor: `apps/fret-examples/src/imui_editor_proof_demo.rs`
+
 ### M3 — Core editor controls (Color / Vec / Transform / Asset refs)
 
 - [x] `Checkbox` (bool + tri-state/mixed):
