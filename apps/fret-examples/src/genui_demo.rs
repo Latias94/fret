@@ -399,15 +399,12 @@ fn view(
     let mut resolver = ShadcnResolver::new();
     let rendered = render_spec(cx, &st.spec, &runtime, &mut resolver);
 
-    let (spec_root, spec_issues) = match rendered {
+    let (spec_root, spec_issue_lines): (Option<AnyElement>, Vec<Arc<str>>) = match rendered {
         Ok(out) => (
             out.roots.into_iter().next(),
             out.issues
                 .into_iter()
-                .map(|i| {
-                    let s = Arc::<str>::from(format!("{:?}: {}", i.code, i.message));
-                    ui::text(cx, s).text_sm().into_element(cx)
-                })
+                .map(|i| Arc::<str>::from(format!("{:?}: {}", i.code, i.message)))
                 .collect::<Vec<_>>(),
         ),
         Err(err) => {
@@ -419,11 +416,12 @@ fn view(
             (Some(err_el), Vec::new())
         }
     };
+    let spec_issue_count = spec_issue_lines.len();
 
     let left = {
         let mut body: Vec<AnyElement> = Vec::new();
         body.push(toolbar);
-        if !spec_issues.is_empty() {
+        if spec_issue_count != 0 {
             body.push(
                 shadcn::Alert::new([
                     shadcn::AlertTitle::new("Spec issues").into_element(cx),
@@ -432,7 +430,12 @@ fn view(
                 ])
                 .into_element(cx),
             );
-            body.extend(spec_issues);
+            body.extend(
+                spec_issue_lines
+                    .iter()
+                    .cloned()
+                    .map(|s| ui::text(cx, s).text_sm().into_element(cx)),
+            );
         }
         if let Some(root) = spec_root {
             body.push(root);
@@ -445,11 +448,41 @@ fn view(
             .into_element(cx)
     };
 
+    let spec_pretty = serde_json::to_string_pretty(&st.spec).unwrap_or_else(|_| {
+        serde_json::to_string(&st.spec).unwrap_or_else(|_| "<spec>".to_string())
+    });
+    let spec_lines: Vec<AnyElement> = spec_pretty
+        .lines()
+        .map(|line| {
+            ui::text(cx, Arc::<str>::from(line.to_string()))
+                .text_sm()
+                .into_element(cx)
+        })
+        .collect();
+
+    let schema_value = st.catalog.spec_json_schema();
+    let schema_pretty =
+        serde_json::to_string_pretty(&schema_value).unwrap_or_else(|_| schema_value.to_string());
+    let schema_lines: Vec<AnyElement> = schema_pretty
+        .lines()
+        .map(|line| {
+            ui::text(cx, Arc::<str>::from(line.to_string()))
+                .text_sm()
+                .into_element(cx)
+        })
+        .collect();
+
+    let prompt = st.catalog.system_prompt();
+    let prompt_lines: Vec<AnyElement> = prompt
+        .lines()
+        .map(|line| {
+            ui::text(cx, Arc::<str>::from(line.to_string()))
+                .text_sm()
+                .into_element(cx)
+        })
+        .collect();
+
     let right = {
-        let state_title = ui::text(cx, Arc::<str>::from("State (JSON)"))
-            .text_sm()
-            .font_medium()
-            .into_element(cx);
         let state_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| state_lines)
             .gap(Space::N0)
             .w_full()
@@ -459,20 +492,7 @@ fn view(
         .w_full()
         .h_full()
         .into_element(cx);
-        let state_card = shadcn::Card::new([
-            shadcn::CardHeader::new([state_title]).into_element(cx),
-            shadcn::CardContent::new([state_scroll]).into_element(cx),
-        ])
-        .ui()
-        .w_full()
-        .flex_1()
-        .min_h_0()
-        .into_element(cx);
 
-        let queue_title = ui::text(cx, Arc::<str>::from(format!("Action queue ({queue_len})")))
-            .text_sm()
-            .font_medium()
-            .into_element(cx);
         let queue_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| queue_lines)
             .gap(Space::N1)
             .w_full()
@@ -482,18 +502,78 @@ fn view(
         .w_full()
         .h_full()
         .into_element(cx);
-        let queue_card = shadcn::Card::new([
-            shadcn::CardHeader::new([queue_title]).into_element(cx),
-            shadcn::CardContent::new([queue_scroll]).into_element(cx),
-        ])
+
+        let issues_body = if spec_issue_count == 0 {
+            vec![
+                ui::text(cx, Arc::<str>::from("No spec issues."))
+                    .text_sm()
+                    .into_element(cx),
+            ]
+        } else {
+            spec_issue_lines
+                .iter()
+                .cloned()
+                .map(|s| ui::text(cx, s).text_sm().into_element(cx))
+                .collect()
+        };
+        let issues_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| issues_body)
+            .gap(Space::N1)
+            .w_full()
+            .items_start()
+            .into_element(cx)])
         .ui()
         .w_full()
-        .flex_1()
-        .min_h_0()
+        .h_full()
         .into_element(cx);
 
-        ui::v_flex(cx, move |_cx| vec![state_card, queue_card])
-            .gap(Space::N3)
+        let spec_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| spec_lines)
+            .gap(Space::N0)
+            .w_full()
+            .items_start()
+            .into_element(cx)])
+        .ui()
+        .w_full()
+        .h_full()
+        .into_element(cx);
+
+        let schema_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| schema_lines)
+            .gap(Space::N0)
+            .w_full()
+            .items_start()
+            .into_element(cx)])
+        .ui()
+        .w_full()
+        .h_full()
+        .into_element(cx);
+
+        let prompt_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| prompt_lines)
+            .gap(Space::N0)
+            .w_full()
+            .items_start()
+            .into_element(cx)])
+        .ui()
+        .w_full()
+        .h_full()
+        .into_element(cx);
+
+        let tabs = shadcn::Tabs::uncontrolled(Some("state"))
+            .content_fill_remaining(true)
+            .items([
+                shadcn::TabsItem::new("state", "State", [state_scroll]),
+                shadcn::TabsItem::new("queue", format!("Queue ({queue_len})"), [queue_scroll]),
+                shadcn::TabsItem::new(
+                    "issues",
+                    format!("Issues ({spec_issue_count})"),
+                    [issues_scroll],
+                ),
+                shadcn::TabsItem::new("spec", "Spec", [spec_scroll]),
+                shadcn::TabsItem::new("schema", "Schema", [schema_scroll]),
+                shadcn::TabsItem::new("prompt", "Prompt", [prompt_scroll]),
+            ])
+            .into_element(cx);
+
+        shadcn::Card::new([shadcn::CardContent::new([tabs]).into_element(cx)])
+            .ui()
             .w_full()
             .h_full()
             .min_w(Px(360.0))
