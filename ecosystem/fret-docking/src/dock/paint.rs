@@ -44,6 +44,7 @@ pub(super) fn paint_dock(
     let primary = theme.color_token("primary");
     let fg = theme.color_token("foreground");
     let fg_muted = theme.color_token("muted-foreground");
+    let border = theme.color_token("border");
     let pad_md = theme.metric_token("metric.padding.md");
     let radius_sm = theme.metric_token("metric.radius.sm");
 
@@ -81,8 +82,13 @@ pub(super) fn paint_dock(
             order: fret_core::DrawOrder(1),
             rect: tab_bar,
             background: fret_core::Paint::Solid(surface_bg),
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border: Edges {
+                top: Px(0.0),
+                right: Px(0.0),
+                bottom: Px(1.0),
+                left: Px(0.0),
+            },
+            border_paint: fret_core::Paint::Solid(border),
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
@@ -116,21 +122,46 @@ pub(super) fn paint_dock(
 
             let is_active = i == *active;
             let is_hovered = hovered_tab == Some((node_id, i));
-            let bg = if is_active {
-                panel_bg
+            let (bg, tab_border, corner_radii) = if is_active {
+                (
+                    panel_bg,
+                    Edges {
+                        top: Px(1.0),
+                        right: Px(1.0),
+                        bottom: Px(0.0),
+                        left: Px(1.0),
+                    },
+                    fret_core::Corners {
+                        top_left: radius_sm,
+                        top_right: radius_sm,
+                        bottom_left: Px(0.0),
+                        bottom_right: Px(0.0),
+                    },
+                )
             } else if is_hovered {
-                hover_bg
+                (
+                    hover_bg,
+                    Edges::all(Px(0.0)),
+                    fret_core::Corners::all(Px(0.0)),
+                )
             } else {
-                Color { a: 0.0, ..panel_bg }
+                (
+                    Color {
+                        a: 0.0,
+                        ..panel_bg
+                    },
+                    Edges::all(Px(0.0)),
+                    fret_core::Corners::all(Px(0.0)),
+                )
             };
 
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(2),
                 rect: tab_rect,
                 background: fret_core::Paint::Solid(bg),
-                border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(Px(0.0)),
+                border: tab_border,
+                border_paint: fret_core::Paint::Solid(border),
+                corner_radii,
             });
 
             if is_active {
