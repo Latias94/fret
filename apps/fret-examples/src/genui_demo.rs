@@ -251,6 +251,7 @@ struct GenUiState {
     catalog: Arc<CatalogV1>,
     genui_state: Model<Value>,
     action_queue: Model<GenUiActionQueue>,
+    auto_apply_standard_actions: Model<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -273,6 +274,7 @@ impl MvuProgram for GenUiProgram {
             catalog: Arc::new(shadcn_catalog_v1()),
             genui_state: app.models_mut().insert(seed),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
+            auto_apply_standard_actions: app.models_mut().insert(true),
         }
     }
 
@@ -312,6 +314,14 @@ fn view(
     let clear_cmd = msg.cmd(Msg::ClearActions);
     let reset_cmd = msg.cmd(Msg::ResetState);
 
+    let auto_apply_model = st.auto_apply_standard_actions.clone();
+    let auto_apply_enabled = cx
+        .watch_model(&st.auto_apply_standard_actions)
+        .layout()
+        .read(|_host, v| *v)
+        .ok()
+        .unwrap_or(true);
+
     let queue_snapshot: Vec<Arc<str>> = cx
         .watch_model(&st.action_queue)
         .layout()
@@ -332,10 +342,36 @@ fn view(
         .map(|line| ui::text(cx, line).text_sm().into_element(cx))
         .collect();
 
+    let state_snapshot: Vec<Arc<str>> = cx
+        .watch_model(&st.genui_state)
+        .layout()
+        .read(|_host, v| {
+            let pretty = serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string());
+            pretty
+                .lines()
+                .map(|line| Arc::<str>::from(line.to_string()))
+                .collect::<Vec<_>>()
+        })
+        .ok()
+        .unwrap_or_else(|| vec![Arc::<str>::from("null")]);
+    let state_lines: Vec<AnyElement> = state_snapshot
+        .into_iter()
+        .map(|line| ui::text(cx, line).text_sm().into_element(cx))
+        .collect();
+
     let toolbar = ui::h_flex(cx, move |cx| {
         vec![
-            shadcn::Badge::new("Actions: auto-apply standard actions only")
-                .variant(shadcn::BadgeVariant::Secondary)
+            ui::text(
+                cx,
+                Arc::<str>::from(format!(
+                    "auto-apply standard actions: {}",
+                    if auto_apply_enabled { "on" } else { "off" }
+                )),
+            )
+            .text_sm()
+            .into_element(cx),
+            shadcn::Switch::new(auto_apply_model.clone())
+                .a11y_label("Auto-apply standard actions")
                 .into_element(cx),
             shadcn::Button::new("Clear queue")
                 .variant(shadcn::ButtonVariant::Secondary)
@@ -354,7 +390,7 @@ fn view(
     let runtime = GenUiRuntime {
         state: st.genui_state.clone(),
         action_queue: Some(st.action_queue.clone()),
-        auto_apply_standard_actions: true,
+        auto_apply_standard_actions: auto_apply_enabled,
         limits: Default::default(),
         catalog: Some(st.catalog.clone()),
         catalog_validation: ValidationMode::Strict,
@@ -410,11 +446,34 @@ fn view(
     };
 
     let right = {
-        let title = ui::text(cx, Arc::<str>::from(format!("Action queue ({queue_len})")))
+        let state_title = ui::text(cx, Arc::<str>::from("State (JSON)"))
             .text_sm()
             .font_medium()
             .into_element(cx);
-        let scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| queue_lines)
+        let state_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| state_lines)
+            .gap(Space::N0)
+            .w_full()
+            .items_start()
+            .into_element(cx)])
+        .ui()
+        .w_full()
+        .h_full()
+        .into_element(cx);
+        let state_card = shadcn::Card::new([
+            shadcn::CardHeader::new([state_title]).into_element(cx),
+            shadcn::CardContent::new([state_scroll]).into_element(cx),
+        ])
+        .ui()
+        .w_full()
+        .flex_1()
+        .min_h_0()
+        .into_element(cx);
+
+        let queue_title = ui::text(cx, Arc::<str>::from(format!("Action queue ({queue_len})")))
+            .text_sm()
+            .font_medium()
+            .into_element(cx);
+        let queue_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| queue_lines)
             .gap(Space::N1)
             .w_full()
             .items_start()
@@ -423,16 +482,22 @@ fn view(
         .w_full()
         .h_full()
         .into_element(cx);
-
-        shadcn::Card::new([
-            shadcn::CardHeader::new([title]).into_element(cx),
-            shadcn::CardContent::new([scroll]).into_element(cx),
+        let queue_card = shadcn::Card::new([
+            shadcn::CardHeader::new([queue_title]).into_element(cx),
+            shadcn::CardContent::new([queue_scroll]).into_element(cx),
         ])
         .ui()
         .w_full()
-        .h_full()
-        .min_w(Px(360.0))
-        .into_element(cx)
+        .flex_1()
+        .min_h_0()
+        .into_element(cx);
+
+        ui::v_flex(cx, move |_cx| vec![state_card, queue_card])
+            .gap(Space::N3)
+            .w_full()
+            .h_full()
+            .min_w(Px(360.0))
+            .into_element(cx)
     };
 
     let page = ui::container(cx, move |cx| {
