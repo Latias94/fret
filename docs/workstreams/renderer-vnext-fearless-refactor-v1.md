@@ -7,6 +7,14 @@ Tracking files:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 
+Current status (as of 2026-02-15):
+
+- WebGPU/Tint uniformity closure landed (browser smoke verified).
+- Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
+- A cheap headless perf gate exists and has a checked-in baseline:
+  - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
+  - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
 ## 0) Why this workstream exists
 
 Fret’s renderer must satisfy a hard set of constraints simultaneously:
@@ -86,6 +94,10 @@ When a new contract is added, extend this list with the smallest conformance gat
 - the fallback path is deterministic,
 - and the wasm/mobile story is explicit.
 
+WebGPU guardrail (portability sanity):
+
+- `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
 ## 2.2) Baseline runbook (copy/paste)
 
 This section describes a minimal, reproducible baseline capture for the refactor.
@@ -133,15 +145,15 @@ Record perf snapshots using the deterministic SVG atlas stress harness (prints `
 `headless_renderer_perf:` lines). Suggested baseline capture:
 
 ```bash
-cargo run -p fret-svg-atlas-stress -- --headless --frames 600
+cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600
 ```
 
 Notes:
 
 - PowerShell:
-  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600`
 - bash/zsh:
-  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600`
 - Keep the run duration and flags stable (e.g. 600 frames) so future diffs are meaningful.
 - Capture both `renderer_perf:` and `renderer_perf_pipelines:` lines if enabled.
 

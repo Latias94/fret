@@ -274,6 +274,16 @@ Progress record (Uniformity closure):
   - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
   - `cargo run -p fretboard -- dev web --demo ui_gallery` (manual browser smoke)
 
+Progress record (Headless perf gate):
+
+- Date: 2026-02-15
+- Status: Landed (cheap counter-based guardrail)
+- Commit: `49181551`
+- Gate:
+  - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
+- Baseline:
+  - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
 Perf snapshot (post quad variants):
 
 - Date: 2026-02-15
@@ -284,3 +294,19 @@ Perf snapshot (post quad variants):
   - `headless: frames=600 wall=0.58s prepare=17.57ms ...`
   - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=17.58ms ... pipelines=1200 binds=27600 ...`
   - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
+
+## M6 — Evidence-driven perf recovery follow-ups (time-boxed)
+
+Deliverables:
+
+- A focused headless perf gate exists for quad paint/material/dash combinations (hot paths) and has a checked-in baseline.
+- Any additional WebGPU-focused shader/pipeline variants are:
+  - keyed by a small, bounded set of override constants,
+  - justified by perf evidence,
+  - and observable in perf snapshots (`pipeline_switches_*` counters).
+- A stronger portability guardrail is defined for uniformity drift (beyond “Naga compiles”).
+
+Exit criteria:
+
+- Web demo still runs (no uniformity regressions).
+- Headless perf gates remain green on the reference baseline.

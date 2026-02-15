@@ -124,14 +124,26 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-webgpu-002 Recover performance after uniformity fixes:
   - Avoid “evaluate all material patterns per pixel” in the quad shader on web/mobile.
   - Preferred direction: compile a small set of shader/pipeline variants keyed by stable (bounded) paint/material kinds.
-  - Progress: quad pipeline variants keyed by `(fill_kind, border_kind, border_present, dash_enabled)` using WGSL `override` constants.
+  - Landed: quad pipeline variants keyed by `(fill_kind, border_kind, border_present, dash_enabled)` using WGSL `override` constants.
   - Evidence: `crates/fret-render-wgpu/src/renderer/types.rs` (`QuadPipelineKey`), `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (batch split),
     `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (pipeline constants), `crates/fret-render-wgpu/src/renderer/shaders.rs` (override + `paint_eval_fill/border`),
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (variant selection per draw).
-  - Next: consider material `tile_mode` variants (or a bounded subset) if material patterns become hot in perf bundles.
+  - Next:
+    - Add a focused headless perf gate that stresses quad paint/material/dash combos (so decisions are evidence-driven).
+    - Consider material `tile_mode` variants (or a bounded subset) only if material patterns become hot in perf bundles.
 - [ ] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
   - Keep `renderer::tests::shaders_validate_for_webgpu` as a baseline (Naga),
   - and consider adding an optional Tint-based compile check (or a minimal static heuristic) to catch uniformity drift.
+
+## M6 — Perf recovery follow-ups (evidence-driven)
+
+- [ ] REN-VNEXT-perf-001 Add a headless quad/material stress gate:
+  - Target: quad shader hot paths (fill/border paint kinds, dash on/off, material sampled vs params-only).
+  - Output: stable counters + baseline in `docs/workstreams/perf-baselines/`.
+  - Motivation: keep pipeline-variant decisions bounded and justified.
+- [ ] REN-VNEXT-webgpu-004 If perf evidence warrants, add bounded `MaterialTileMode` pipeline variants:
+  - Guardrail: keep the key space small and observable in perf snapshots (`pipeline_switches_*`).
+- [ ] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
 
 ## Always-run guardrails (before/after each milestone)
 
@@ -140,8 +152,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
   - Status: satisfied through M5 (sampling hints conformance gate landed).
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
-  - Last capture: 2026-02-15 (post M5 plumbing), commit `e6d518c4`.
+  - Last capture: 2026-02-15 (post quad variants), commit `6f092733`.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).
 - [~] REN-VNEXT-guard-004 Keep a cheap headless perf gate green (stable counters).
   - Gate: `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+  - Landed: 2026-02-15, commit `49181551`.
