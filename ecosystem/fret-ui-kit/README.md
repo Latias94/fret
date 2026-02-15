@@ -21,3 +21,13 @@ Default features are minimal. Opt in as needed:
 - `imui`: integration helpers for immediate-mode authoring frontends
 - `recipes`: opinionated helpers closer to recipes than substrate
 
+## References / Thanks
+
+This project is inspired by many open-source projects. Thanks to the authors and contributors of:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- MUI Base UI: https://github.com/mui/base-ui
+- Animata: https://github.com/codse/animata
+- Motion (motion.dev): https://github.com/motiondivision/motion
+- Flutter: https://github.com/flutter/flutter
