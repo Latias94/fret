@@ -254,6 +254,57 @@ impl ShadcnResolver {
         h.into_element(cx)
     }
 
+    pub(super) fn render_box<H: UiHost>(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        resolved_props: &serde_json::Map<String, serde_json::Value>,
+        children: Vec<AnyElement>,
+    ) -> AnyElement {
+        let p = Self::parse_space(resolved_props.get("p"));
+        let px = Self::parse_space(resolved_props.get("px"));
+        let py = Self::parse_space(resolved_props.get("py"));
+        let w_full = resolved_props
+            .get("wFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let h_full = resolved_props
+            .get("hFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_w_0 = resolved_props
+            .get("minW0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_h_0 = resolved_props
+            .get("minH0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut b = fret_ui_kit::ui::container(cx, move |_cx| children);
+        if w_full {
+            b = b.w_full();
+        }
+        if h_full {
+            b = b.h_full();
+        }
+        if min_w_0 {
+            b = b.min_w_0();
+        }
+        if min_h_0 {
+            b = b.min_h_0();
+        }
+        if let Some(p) = p {
+            b = b.p(p);
+        }
+        if let Some(px) = px {
+            b = b.px(px);
+        }
+        if let Some(py) = py {
+            b = b.py(py);
+        }
+        b.into_element(cx)
+    }
+
     pub(super) fn render_separator<H: UiHost>(
         &mut self,
         cx: &mut ElementContext<'_, H>,

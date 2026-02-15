@@ -112,6 +112,28 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
             .build(),
     );
     out.insert(
+        "Box".to_string(),
+        component("Generic container (padding + sizing)")
+            .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("px", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("py", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("wFull", CatalogPropV1::boolean().default_value(json!(true)))
+            .prop(
+                "hFull",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minW0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minH0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .note("Box is not a stack: use VStack/HStack for `gap/items/justify/wrap`.")
+            .build(),
+    );
+    out.insert(
         "Card".to_string(),
         component("Card container")
             .prop("wrapContent", CatalogPropV1::boolean())

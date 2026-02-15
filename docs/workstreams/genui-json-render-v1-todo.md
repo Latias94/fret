@@ -89,6 +89,6 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 
 ## Next (proposed order)
 
-- [ ] Decide on a generic `Box`/`Container` component (padding + sizing + alignment) vs growing per-component layout props.
+- [x] Add a generic `Box` component (padding + sizing) to avoid growing per-component layout props indefinitely.
 - [ ] Normalize card content ergonomics in the spec examples (e.g. prefer `Card` → `CardContent` for padded content).
 - [ ] Add one more smoke spec focused on forms layout (labels, input widths, wrap, and alignment).
