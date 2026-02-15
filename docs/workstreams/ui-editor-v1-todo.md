@@ -121,6 +121,8 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - [x] `EnumSelect` trigger includes a caret indicator and input-like frame.
     - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+  - [x] `Checkbox` uses an input-like frame (bg/border) with hover/pressed affordances.
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/checkbox.rs`
   - [x] `PropertyGroup` header has a background and divider for visual grouping.
     - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
   - [x] Replace tofu-prone glyph chrome with SVG icons via semantic `fret-icons` IDs.
