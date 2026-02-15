@@ -1595,10 +1595,10 @@ pub(super) fn syntax_color(theme: &fret_ui::Theme, highlight: &str) -> Option<Co
 }
 
 #[cfg(feature = "syntax")]
-pub(super) fn materialize_row_rich_text(
-    theme: &fret_ui::Theme,
+fn materialize_row_rich_text_with_fg(
     line: Arc<str>,
     spans: &[SyntaxSpan],
+    mut fg_for_highlight: impl FnMut(&str) -> Option<Color>,
 ) -> AttributedText {
     let mut out: Vec<TextSpan> = Vec::new();
     let mut cursor = 0usize;
@@ -1618,7 +1618,7 @@ pub(super) fn materialize_row_rich_text(
             });
         }
 
-        let fg = syntax_color(theme, span.highlight);
+        let fg = fg_for_highlight(span.highlight);
         out.push(TextSpan {
             len: end - start,
             shaping: Default::default(),
@@ -1638,6 +1638,15 @@ pub(super) fn materialize_row_rich_text(
     }
 
     AttributedText::new(line, out)
+}
+
+#[cfg(feature = "syntax")]
+pub(super) fn materialize_row_rich_text(
+    theme: &fret_ui::Theme,
+    line: Arc<str>,
+    spans: &[SyntaxSpan],
+) -> AttributedText {
+    materialize_row_rich_text_with_fg(line, spans, |highlight| syntax_color(theme, highlight))
 }
 
 #[cfg(all(test, feature = "syntax"))]
@@ -1701,6 +1710,61 @@ mod tests {
         assert!(
             rich.is_valid(),
             "expected AttributedText to be valid after normalization"
+        );
+    }
+
+    #[test]
+    fn paint_only_syntax_color_changes_do_not_affect_rich_text_shaping_eq() {
+        let text: Arc<str> = Arc::<str>::from("fn main() { return 1; }");
+        let spans = vec![
+            SyntaxSpan {
+                range: 0..2,
+                highlight: "keyword",
+            },
+            SyntaxSpan {
+                range: 3..7,
+                highlight: "function",
+            },
+            SyntaxSpan {
+                range: 10..11,
+                highlight: "punctuation",
+            },
+        ];
+
+        let rich_a = materialize_row_rich_text_with_fg(Arc::clone(&text), &spans, |h| match h {
+            "keyword" => Some(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }),
+            _ => None,
+        });
+        let rich_b = materialize_row_rich_text_with_fg(Arc::clone(&text), &spans, |h| match h {
+            "keyword" => Some(Color {
+                r: 0.0,
+                g: 1.0,
+                b: 0.0,
+                a: 1.0,
+            }),
+            _ => None,
+        });
+
+        assert_ne!(
+            rich_a, rich_b,
+            "expected paint-only color changes to affect rich text paint"
+        );
+        assert!(
+            rich_a.shaping_eq(&rich_b),
+            "expected paint-only color changes to preserve shaping_eq"
+        );
+        assert!(
+            rich_a
+                .spans
+                .iter()
+                .chain(rich_b.spans.iter())
+                .all(|s| s.shaping == Default::default()),
+            "expected syntax highlighting spans to remain paint-only (no shaping overrides)"
         );
     }
 }
