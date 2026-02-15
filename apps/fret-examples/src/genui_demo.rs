@@ -2,9 +2,11 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_genui_core::catalog::CatalogV1;
+use fret_genui_core::json_pointer;
 use fret_genui_core::mixed_stream::{MixedSpecStreamCompiler, MixedStreamMode, MixedStreamOptions};
 use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
 use fret_genui_core::spec::SpecV1;
+use fret_genui_core::spec_fixer::{SpecFixups, auto_fix_spec};
 use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
@@ -253,6 +255,8 @@ struct GenUiState {
     genui_state: Model<Value>,
     action_queue: Model<GenUiActionQueue>,
     auto_apply_standard_actions: Model<bool>,
+    auto_fix_on_apply: Model<bool>,
+    auto_fix_summary: Option<Arc<str>>,
     editor_text: Model<String>,
     editor_error: Option<Arc<str>>,
     stream_text: Model<String>,
@@ -286,6 +290,8 @@ impl MvuProgram for GenUiProgram {
             genui_state: app.models_mut().insert(seed),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
             auto_apply_standard_actions: app.models_mut().insert(true),
+            auto_fix_on_apply: app.models_mut().insert(true),
+            auto_fix_summary: None,
             editor_text: app.models_mut().insert(SPEC_JSON.to_string()),
             editor_error: None,
             stream_text: app.models_mut().insert(String::new()),
@@ -317,13 +323,25 @@ impl MvuProgram for GenUiProgram {
                     .unwrap_or_default();
                 match serde_json::from_str::<SpecV1>(&text) {
                     Ok(spec) => {
+                        let auto_fix = app
+                            .models()
+                            .get_copied(&state.auto_fix_on_apply)
+                            .unwrap_or(true);
+                        let (spec, fixups) = maybe_auto_fix_spec(auto_fix, &spec);
                         state.spec = spec;
                         state.editor_error = None;
+                        state.auto_fix_summary = summarize_fixups(auto_fix, &fixups);
                         let seed = state.spec.state.clone().unwrap_or(Value::Null);
                         let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
                         let _ = app
                             .models_mut()
                             .update(&state.action_queue, |q| q.invocations.clear());
+
+                        if auto_fix {
+                            let pretty = serde_json::to_string_pretty(&state.spec)
+                                .unwrap_or_else(|_| "<spec>".to_string());
+                            let _ = app.models_mut().update(&state.editor_text, |s| *s = pretty);
+                        }
                     }
                     Err(err) => {
                         state.editor_error = Some(Arc::<str>::from(err.to_string()));
@@ -335,6 +353,7 @@ impl MvuProgram for GenUiProgram {
                     .models_mut()
                     .update(&state.editor_text, |s| *s = SPEC_JSON.to_string());
                 state.editor_error = None;
+                state.auto_fix_summary = None;
             }
             Msg::ApplyStream => {
                 let text = app
@@ -377,9 +396,15 @@ impl MvuProgram for GenUiProgram {
                 let value = compiler.into_result();
                 match serde_json::from_value::<SpecV1>(value) {
                     Ok(spec) => {
+                        let auto_fix = app
+                            .models()
+                            .get_copied(&state.auto_fix_on_apply)
+                            .unwrap_or(true);
+                        let (spec, fixups) = maybe_auto_fix_spec(auto_fix, &spec);
                         state.spec = spec;
                         state.editor_error = None;
                         state.stream_error = None;
+                        state.auto_fix_summary = summarize_fixups(auto_fix, &fixups);
                         state.stream_summary = Some(Arc::<str>::from(format!(
                             "applied {} patches, saw {} text lines",
                             delta.patches.len(),
@@ -409,6 +434,7 @@ impl MvuProgram for GenUiProgram {
                     .update(&state.stream_patch_only, |v| *v = false);
                 state.stream_summary = None;
                 state.stream_error = None;
+                state.auto_fix_summary = None;
             }
         }
     }
@@ -443,6 +469,31 @@ fn view(
         .read(|_host, v| *v)
         .ok()
         .unwrap_or(true);
+
+    let auto_fix_model = st.auto_fix_on_apply.clone();
+    let auto_fix_enabled = cx
+        .watch_model(&st.auto_fix_on_apply)
+        .layout()
+        .read(|_host, v| *v)
+        .ok()
+        .unwrap_or(true);
+
+    let count_label: Arc<str> = cx
+        .watch_model(&st.genui_state)
+        .layout()
+        .read(|_host, v| {
+            let count = json_pointer::get_opt(v, "/count");
+            let s = match count {
+                Some(Value::Number(n)) => n.to_string(),
+                Some(Value::String(s)) => s.clone(),
+                Some(Value::Bool(b)) => b.to_string(),
+                Some(Value::Null) | None => "null".to_string(),
+                Some(other) => other.to_string(),
+            };
+            Arc::<str>::from(format!("count: {s}"))
+        })
+        .ok()
+        .unwrap_or_else(|| Arc::<str>::from("count: <unavailable>"));
 
     let queue_snapshot: Vec<Arc<str>> = cx
         .watch_model(&st.action_queue)
@@ -495,6 +546,19 @@ fn view(
             shadcn::Switch::new(auto_apply_model.clone())
                 .a11y_label("Auto-apply standard actions")
                 .into_element(cx),
+            ui::text(
+                cx,
+                Arc::<str>::from(format!(
+                    "auto-fix spec on apply: {}",
+                    if auto_fix_enabled { "on" } else { "off" }
+                )),
+            )
+            .text_sm()
+            .into_element(cx),
+            shadcn::Switch::new(auto_fix_model.clone())
+                .a11y_label("Auto-fix spec on apply")
+                .into_element(cx),
+            ui::text(cx, count_label.clone()).text_sm().into_element(cx),
             shadcn::Button::new("Clear queue")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(clear_cmd)
@@ -612,6 +676,7 @@ fn view(
 
     let editor_model = st.editor_text.clone();
     let editor_error = st.editor_error.clone();
+    let auto_fix_summary = st.auto_fix_summary.clone();
     let stream_model = st.stream_text.clone();
     let stream_patch_only_model = st.stream_patch_only.clone();
     let stream_patch_only = cx
@@ -723,6 +788,15 @@ fn view(
             .text_sm()
             .into_element(cx),
         );
+        if let Some(summary) = auto_fix_summary.clone() {
+            editor_children.push(
+                shadcn::Alert::new([
+                    shadcn::AlertTitle::new("Auto-fix summary").into_element(cx),
+                    shadcn::AlertDescription::new(summary).into_element(cx),
+                ])
+                .into_element(cx),
+            );
+        }
         editor_children.push(
             shadcn::Textarea::new(editor_model.clone())
                 .a11y_label("Spec editor")
@@ -807,6 +881,15 @@ fn view(
         if let Some(summary) = stream_summary {
             stream_children.push(ui::text(cx, summary).text_sm().into_element(cx));
         }
+        if let Some(summary) = auto_fix_summary {
+            stream_children.push(
+                shadcn::Alert::new([
+                    shadcn::AlertTitle::new("Auto-fix summary").into_element(cx),
+                    shadcn::AlertDescription::new(summary).into_element(cx),
+                ])
+                .into_element(cx),
+            );
+        }
         if let Some(err) = stream_error {
             stream_children.push(
                 shadcn::Alert::new([
@@ -873,4 +956,39 @@ fn view(
     .into_element(cx);
 
     vec![page].into()
+}
+
+fn maybe_auto_fix_spec(enabled: bool, spec: &SpecV1) -> (SpecV1, SpecFixups) {
+    if enabled {
+        auto_fix_spec(spec)
+    } else {
+        (spec.clone(), SpecFixups::default())
+    }
+}
+
+fn summarize_fixups(enabled: bool, fixups: &SpecFixups) -> Option<Arc<str>> {
+    if !enabled {
+        return None;
+    }
+
+    if fixups.fixes.is_empty() {
+        return Some(Arc::<str>::from("No auto-fix changes were applied."));
+    }
+
+    const MAX_LINES: usize = 12;
+    let mut lines = Vec::new();
+    lines.push(format!(
+        "Applied {} auto-fix change(s):",
+        fixups.fixes.len()
+    ));
+    for fix in fixups.fixes.iter().take(MAX_LINES) {
+        lines.push(format!("- {fix}"));
+    }
+    if fixups.fixes.len() > MAX_LINES {
+        lines.push(format!(
+            "... and {} more.",
+            fixups.fixes.len().saturating_sub(MAX_LINES)
+        ));
+    }
+    Some(Arc::<str>::from(lines.join("\n")))
 }
