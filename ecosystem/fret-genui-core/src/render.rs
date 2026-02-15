@@ -25,6 +25,7 @@ use crate::visibility::{RepeatScope, VisibilityContext};
 pub struct GenUiRenderScope {
     pub state: Option<Model<Value>>,
     pub action_queue: Option<Model<GenUiActionQueue>>,
+    pub auto_apply_standard_actions: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,12 @@ impl Default for RenderLimits {
 pub struct GenUiRuntime {
     pub state: Model<Value>,
     pub action_queue: Option<Model<GenUiActionQueue>>,
+    /// When enabled, apply recognized "standard actions" (see `crate::actions`) directly to
+    /// `state` at dispatch time (in addition to emitting into `action_queue` when present).
+    ///
+    /// This is intended for demos and simple apps that want immediate, deterministic updates
+    /// without building a separate executor loop. Default: `false`.
+    pub auto_apply_standard_actions: bool,
     pub limits: RenderLimits,
     pub catalog: Option<Arc<CatalogV1>>,
     pub catalog_validation: ValidationMode,
@@ -114,6 +121,7 @@ struct EventDispatcher {
     on: Option<BTreeMap<String, OnBindingV1>>,
     state: Model<Value>,
     queue: Option<Model<GenUiActionQueue>>,
+    auto_apply_standard_actions: bool,
     repeat_base_path: Option<Arc<str>>,
     repeat_index: Option<usize>,
 }
@@ -125,14 +133,11 @@ impl EventDispatcher {
         let event: Arc<str> = Arc::from(event);
         let state = self.state.clone();
         let queue = self.queue.clone();
+        let auto_apply_standard_actions = self.auto_apply_standard_actions;
         let repeat_base_path = self.repeat_base_path.clone();
         let repeat_index = self.repeat_index;
 
         Some(Arc::new(move |host, cx: ActionCx, _reason| {
-            let Some(queue) = queue.as_ref() else {
-                return;
-            };
-
             let state_snapshot: Value = host
                 .models_mut()
                 .read(&state, Clone::clone)
@@ -178,7 +183,22 @@ impl EventDispatcher {
                 });
             }
 
-            let _ = host.update_model(queue, |q| q.invocations.extend(invocations));
+            if let Some(queue) = queue.as_ref() {
+                let _ = host.update_model(queue, |q| q.invocations.extend(invocations.clone()));
+            }
+
+            if auto_apply_standard_actions {
+                let _ = host.update_model(&state, |st| {
+                    for inv in invocations.iter() {
+                        let _ = crate::actions::apply_standard_action(
+                            st,
+                            inv.action.as_ref(),
+                            &inv.params,
+                        );
+                    }
+                });
+            }
+
             host.request_redraw(cx.window);
         }))
     }
@@ -295,6 +315,7 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
             on: element.on.clone(),
             state: runtime.state.clone(),
             queue: runtime.action_queue.clone(),
+            auto_apply_standard_actions: runtime.auto_apply_standard_actions,
             repeat_base_path: repeat_base_path.clone(),
             repeat_index,
         };
@@ -302,6 +323,7 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
         cx.with_state(GenUiRenderScope::default, |st| {
             st.state = Some(runtime.state.clone());
             st.action_queue = runtime.action_queue.clone();
+            st.auto_apply_standard_actions = runtime.auto_apply_standard_actions;
         });
 
         let children = render_children(

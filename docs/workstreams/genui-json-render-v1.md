@@ -29,7 +29,7 @@ This workstream has an end-to-end MVP implementation in-tree:
   - Catalog: `ecosystem/fret-genui-shadcn/src/catalog.rs`
   - Resolver: `ecosystem/fret-genui-shadcn/src/resolver.rs`
 
-- Interactive demo (validates + renders + shows action queue; auto-applies standard actions): `apps/fret-examples/src/genui_demo.rs`
+- Interactive demo (validates + renders + shows action queue; auto-applies standard actions via `GenUiRuntime.auto_apply_standard_actions`): `apps/fret-examples/src/genui_demo.rs`
 
 Workstream tracking:
 

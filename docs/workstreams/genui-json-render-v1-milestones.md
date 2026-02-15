@@ -61,3 +61,18 @@ Candidate exit criteria:
 - Add an opt-in "spec auto-fixer" for common LLM mistakes (moved fields, missing defaults).
 - Add at least one end-to-end harness test for spec rendering + interaction.
 - Add lightweight in-app diagnostics panels (spec issues, state snapshot, action log) or integrate with existing devtools.
+
+## M7 — Adaptive layout primitives (strategy layer)
+
+Candidate exit criteria:
+
+- `ResponsiveGrid` exists in `fret-genui-shadcn` and uses container queries by default.
+- Demo spec includes a small section that visibly changes with window/panel resize.
+- Catalog types express breakpoint-driven props cleanly (no ad-hoc stringly-typed breakpoints).
+
+## M8 — Ingest utilities (mixed streams)
+
+Candidate exit criteria:
+
+- Mixed stream parser exists (text + JSONL patches) with deterministic behavior and small memory usage.
+- Apps can opt into "patch-only" strict mode vs "mixed" mode.

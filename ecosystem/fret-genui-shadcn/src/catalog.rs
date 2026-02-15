@@ -5,7 +5,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use fret_genui_core::catalog::{CatalogActionV1, CatalogComponentV1, CatalogPropV1, CatalogV1};
+use fret_genui_core::catalog::{
+    CatalogActionV1, CatalogComponentV1, CatalogPropV1, CatalogV1, CatalogValueTypeV1,
+};
+use serde_json::json;
 
 const SPACE_TOKENS: [&str; 15] = [
     "N0", "N0p5", "N1", "N1p5", "N2", "N2p5", "N3", "N3p5", "N4", "N5", "N6", "N8", "N10", "N11",
@@ -126,7 +129,47 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
             .build(),
     );
 
+    out.insert(
+        "ResponsiveGrid".to_string(),
+        component(
+            "Responsive grid layout: chunks children into rows based on container/viewport width.",
+        )
+        .prop(
+            "columns",
+            CatalogPropV1::one_of([CatalogValueTypeV1::Integer, breakpoint_columns_object_ty()])
+                .required(true),
+        )
+        .prop(
+            "query",
+            CatalogPropV1::enum_values(["container", "viewport"]).default_value(json!("container")),
+        )
+        .prop(
+            "gap",
+            CatalogPropV1::enum_values(SPACE_TOKENS).default_value(json!("N2")),
+        )
+        .prop(
+            "fillLastRow",
+            CatalogPropV1::boolean().default_value(json!(true)),
+        )
+        .build(),
+    );
+
     out
+}
+
+fn breakpoint_columns_object_ty() -> CatalogValueTypeV1 {
+    let mut fields = BTreeMap::new();
+    // Tailwind-compatible keys.
+    fields.insert("base".to_string(), CatalogPropV1::integer());
+    fields.insert("sm".to_string(), CatalogPropV1::integer());
+    fields.insert("md".to_string(), CatalogPropV1::integer());
+    fields.insert("lg".to_string(), CatalogPropV1::integer());
+    fields.insert("xl".to_string(), CatalogPropV1::integer());
+    fields.insert("xxl".to_string(), CatalogPropV1::integer());
+    CatalogValueTypeV1::Object {
+        fields,
+        additional: false,
+    }
 }
 
 fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
@@ -137,7 +180,10 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
         action("Write a JSON value at a JSON Pointer path.")
             .param(
                 "statePath",
-                desc(CatalogPropV1::string(), "JSON Pointer path (e.g. /name)"),
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "JSON Pointer path (e.g. /name)",
+                ),
             )
             .param("value", desc(CatalogPropV1::any(), "New value (any JSON)"))
             .build(),
@@ -147,7 +193,10 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
         action("Increment an integer field at a JSON Pointer path.")
             .param(
                 "statePath",
-                desc(CatalogPropV1::string(), "JSON Pointer path (e.g. /count)"),
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "JSON Pointer path (e.g. /count)",
+                ),
             )
             .param(
                 "delta",
@@ -161,14 +210,14 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
             .param(
                 "statePath",
                 desc(
-                    CatalogPropV1::string(),
+                    CatalogPropV1::string().required(true),
                     "JSON Pointer path to an array (e.g. /todos)",
                 ),
             )
             .param(
                 "value",
                 desc(
-                    CatalogPropV1::any(),
+                    CatalogPropV1::any().required(true),
                     "New item value (any JSON); use \"$id\" to generate ids",
                 ),
             )
@@ -187,14 +236,14 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
             .param(
                 "statePath",
                 desc(
-                    CatalogPropV1::string(),
+                    CatalogPropV1::string().required(true),
                     "JSON Pointer path to an array (e.g. /todos)",
                 ),
             )
             .param(
                 "index",
                 desc(
-                    CatalogPropV1::integer(),
+                    CatalogPropV1::integer().required(true),
                     "Array index (use {\"$index\": true} inside repeat)",
                 ),
             )

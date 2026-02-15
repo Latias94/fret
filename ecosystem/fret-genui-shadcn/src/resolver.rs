@@ -9,7 +9,8 @@ use fret_genui_core::spec::{ElementKey, ElementV1};
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::element::LayoutQueryRegionProps;
+use fret_ui::{ElementContext, Invalidation, UiHost};
 use serde_json::Value;
 
 #[derive(Debug, thiserror::Error)]
@@ -115,6 +116,14 @@ impl ShadcnResolver {
 
         // Preferred path: emit into the queue (app decides when/how to apply).
         if let Some(queue) = scope.action_queue.as_ref() {
+            if scope.auto_apply_standard_actions {
+                if let Some(state_model) = scope.state.as_ref() {
+                    let _ = cx.app.models_mut().update(state_model, |state| {
+                        actions::apply_standard_action(state, "setState", &params)
+                    });
+                }
+            }
+
             let inv = GenUiActionInvocation {
                 window: cx.window,
                 source: element_id,
@@ -172,6 +181,123 @@ impl ShadcnResolver {
         cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
         model
     }
+
+    fn parse_columns_spec(v: Option<&serde_json::Value>) -> ColumnsSpec {
+        let Some(v) = v else {
+            return ColumnsSpec::Fixed(1);
+        };
+        if let Some(i) = v.as_i64().and_then(|i| u8::try_from(i).ok()) {
+            return ColumnsSpec::Fixed(i.max(1));
+        }
+        if let Some(u) = v.as_u64().and_then(|i| u8::try_from(i).ok()) {
+            return ColumnsSpec::Fixed(u.max(1));
+        }
+        let Some(obj) = v.as_object() else {
+            return ColumnsSpec::Fixed(1);
+        };
+        let mut bp = BreakpointColumns::default();
+        bp.base = obj
+            .get("base")
+            .and_then(|v| v.as_u64())
+            .and_then(|i| u8::try_from(i).ok())
+            .or(bp.base);
+        bp.sm = obj
+            .get("sm")
+            .and_then(|v| v.as_u64())
+            .and_then(|i| u8::try_from(i).ok());
+        bp.md = obj
+            .get("md")
+            .and_then(|v| v.as_u64())
+            .and_then(|i| u8::try_from(i).ok());
+        bp.lg = obj
+            .get("lg")
+            .and_then(|v| v.as_u64())
+            .and_then(|i| u8::try_from(i).ok());
+        bp.xl = obj
+            .get("xl")
+            .and_then(|v| v.as_u64())
+            .and_then(|i| u8::try_from(i).ok());
+        bp.xxl = obj
+            .get("xxl")
+            .and_then(|v| v.as_u64())
+            .and_then(|i| u8::try_from(i).ok());
+        ColumnsSpec::Breakpoints(bp)
+    }
+
+    fn build_grid_rows(
+        cx: &mut ElementContext<'_, impl UiHost>,
+        columns: u8,
+        gap: fret_ui_kit::Space,
+        fill_last_row: bool,
+        children: Vec<AnyElement>,
+    ) -> AnyElement {
+        let cols = columns.max(1).min(12) as usize;
+        let mut rows: Vec<Vec<AnyElement>> = Vec::new();
+        let mut cur: Vec<AnyElement> = Vec::new();
+        for child in children {
+            cur.push(child);
+            if cur.len() >= cols {
+                rows.push(std::mem::take(&mut cur));
+            }
+        }
+        if !cur.is_empty() {
+            rows.push(cur);
+        }
+
+        fret_ui_kit::ui::v_flex(cx, move |cx| {
+            let mut out: Vec<AnyElement> = Vec::with_capacity(rows.len());
+            for row_children in rows {
+                let mut cells: Vec<AnyElement> = Vec::with_capacity(cols);
+                for child in row_children {
+                    let cell = fret_ui_kit::ui::container(cx, move |_cx| [child])
+                        .flex_1()
+                        .min_w_0()
+                        .into_element(cx);
+                    cells.push(cell);
+                }
+                if fill_last_row && cells.len() < cols {
+                    let missing = cols - cells.len();
+                    for _ in 0..missing {
+                        cells.push(
+                            fret_ui_kit::ui::container(cx, |_cx| Vec::<AnyElement>::new())
+                                .flex_1()
+                                .min_w_0()
+                                .into_element(cx),
+                        );
+                    }
+                }
+
+                out.push(
+                    fret_ui_kit::ui::h_flex(cx, move |_cx| cells)
+                        .gap(gap)
+                        .items_start()
+                        .w_full()
+                        .into_element(cx),
+                );
+            }
+            out
+        })
+        .gap(gap)
+        .items_start()
+        .w_full()
+        .into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ColumnsSpec {
+    Fixed(u8),
+    Breakpoints(BreakpointColumns),
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct BreakpointColumns {
+    base: Option<u8>,
+    sm: Option<u8>,
+    md: Option<u8>,
+    lg: Option<u8>,
+    xl: Option<u8>,
+    xxl: Option<u8>,
 }
 
 impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
@@ -450,6 +576,106 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                     .variant(variant)
                     .children(children)
                     .into_element(cx))
+            }
+            "ResponsiveGrid" => {
+                let gap =
+                    Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
+                let fill_last_row = resolved_props
+                    .get("fillLastRow")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+
+                let columns_spec = Self::parse_columns_spec(resolved_props.get("columns"));
+                let query = resolved_props
+                    .get("query")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("container");
+
+                match (query, columns_spec) {
+                    (_, ColumnsSpec::Fixed(cols)) => Ok(Self::build_grid_rows(
+                        cx,
+                        cols,
+                        gap,
+                        fill_last_row,
+                        children,
+                    )),
+                    ("viewport", ColumnsSpec::Breakpoints(bp)) => {
+                        let mut breakpoints: Vec<(fret_core::Px, u8)> = Vec::new();
+                        use fret_ui_kit::declarative::viewport_queries::tailwind as tw;
+                        if let Some(v) = bp.sm {
+                            breakpoints.push((tw::SM, v.max(1)));
+                        }
+                        if let Some(v) = bp.md {
+                            breakpoints.push((tw::MD, v.max(1)));
+                        }
+                        if let Some(v) = bp.lg {
+                            breakpoints.push((tw::LG, v.max(1)));
+                        }
+                        if let Some(v) = bp.xl {
+                            breakpoints.push((tw::XL, v.max(1)));
+                        }
+                        if let Some(v) = bp.xxl {
+                            breakpoints.push((tw::XXL, v.max(1)));
+                        }
+                        let base = bp.base.unwrap_or(1).max(1);
+                        let cols = fret_ui_kit::declarative::viewport_breakpoints(
+                            cx,
+                            Invalidation::Layout,
+                            base,
+                            &breakpoints,
+                            fret_ui_kit::declarative::viewport_queries::ViewportQueryHysteresis::default(),
+                        );
+                        Ok(Self::build_grid_rows(
+                            cx,
+                            cols,
+                            gap,
+                            fill_last_row,
+                            children,
+                        ))
+                    }
+                    (_, ColumnsSpec::Breakpoints(bp)) => {
+                        Ok(fret_ui_kit::declarative::container_query_region_with_id(
+                            cx,
+                            "genui.responsive_grid",
+                            LayoutQueryRegionProps::default(),
+                            |cx, region| {
+                                let mut breakpoints: Vec<(fret_core::Px, u8)> = Vec::new();
+                                use fret_ui_kit::declarative::container_queries::tailwind as tw;
+                                if let Some(v) = bp.sm {
+                                    breakpoints.push((tw::SM, v.max(1)));
+                                }
+                                if let Some(v) = bp.md {
+                                    breakpoints.push((tw::MD, v.max(1)));
+                                }
+                                if let Some(v) = bp.lg {
+                                    breakpoints.push((tw::LG, v.max(1)));
+                                }
+                                if let Some(v) = bp.xl {
+                                    breakpoints.push((tw::XL, v.max(1)));
+                                }
+                                if let Some(v) = bp.xxl {
+                                    breakpoints.push((tw::XXL, v.max(1)));
+                                }
+                                let base = bp.base.unwrap_or(1).max(1);
+                                let cols = fret_ui_kit::declarative::container_breakpoints(
+                                    cx,
+                                    region,
+                                    Invalidation::Layout,
+                                    base,
+                                    &breakpoints,
+                                    fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                                );
+                                [Self::build_grid_rows(
+                                    cx,
+                                    cols,
+                                    gap,
+                                    fill_last_row,
+                                    children,
+                                )]
+                            },
+                        ))
+                    }
+                }
             }
             other => Ok(self.unknown_component(cx, key, other)),
         }

@@ -1,8 +1,6 @@
-use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret::prelude::*;
-use fret_genui_core::actions;
 use fret_genui_core::catalog::CatalogV1;
 use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
 use fret_genui_core::spec::SpecV1;
@@ -67,7 +65,10 @@ const SPEC_JSON: &str = r#"
         "sep_2",
         "todos_title",
         "todo_add_row",
-        "todos_list"
+        "todos_list",
+        "sep_3",
+        "responsive_title",
+        "responsive_grid"
       ]
     },
     "bind_title": { "type": "Text", "props": { "text": "Bindings ($bindState demo)" }, "children": [] },
@@ -179,6 +180,38 @@ const SPEC_JSON: &str = r#"
       "props": { "label": "Remove" },
       "on": { "press": { "action": "removeState", "params": { "statePath": "/todos", "index": { "$index": true } } } },
       "children": []
+    },
+    "sep_3": { "type": "Separator", "props": {}, "children": [] },
+    "responsive_title": { "type": "Text", "props": { "text": "ResponsiveGrid (container query demo)" }, "children": [] },
+    "responsive_grid": {
+      "type": "ResponsiveGrid",
+      "props": {
+        "gap": "N2",
+        "query": "container",
+        "fillLastRow": true,
+        "columns": { "base": 1, "md": 2, "lg": 3 }
+      },
+      "children": [
+        "rg_card_1",
+        "rg_card_2",
+        "rg_card_3",
+        "rg_card_4",
+        "rg_card_5",
+        "rg_card_6"
+      ]
+    },
+    "rg_card_1": { "type": "Card", "props": {}, "children": ["rg_card_1_text"] },
+    "rg_card_1_text": { "type": "Text", "props": { "text": "Card 1" }, "children": [] },
+    "rg_card_2": { "type": "Card", "props": {}, "children": ["rg_card_2_text"] },
+    "rg_card_2_text": { "type": "Text", "props": { "text": "Card 2" }, "children": [] },
+    "rg_card_3": { "type": "Card", "props": {}, "children": ["rg_card_3_text"] },
+    "rg_card_3_text": { "type": "Text", "props": { "text": "Card 3" }, "children": [] },
+    "rg_card_4": { "type": "Card", "props": {}, "children": ["rg_card_4_text"] },
+    "rg_card_4_text": { "type": "Text", "props": { "text": "Card 4" }, "children": [] },
+    "rg_card_5": { "type": "Card", "props": {}, "children": ["rg_card_5_text"] },
+    "rg_card_5_text": { "type": "Text", "props": { "text": "Card 5" }, "children": [] },
+    "rg_card_6": { "type": "Card", "props": {}, "children": ["rg_card_6_text"] },
+    "rg_card_6_text": { "type": "Text", "props": { "text": "Card 6" }, "children": [] }
     }
   },
   "state": {
@@ -200,7 +233,6 @@ struct GenUiState {
     catalog: Arc<CatalogV1>,
     genui_state: Model<Value>,
     action_queue: Model<GenUiActionQueue>,
-    applied_upto: Model<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -223,7 +255,6 @@ impl MvuProgram for GenUiProgram {
             catalog: Arc::new(shadcn_catalog_v1()),
             genui_state: app.models_mut().insert(seed),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
-            applied_upto: app.models_mut().insert(0usize),
         }
     }
 
@@ -233,9 +264,6 @@ impl MvuProgram for GenUiProgram {
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
-                let _ = app
-                    .models_mut()
-                    .update(&state.applied_upto, |v| *v = 0usize);
             }
             Msg::ResetState => {
                 let seed = state.spec.state.clone().unwrap_or(Value::Null);
@@ -243,9 +271,6 @@ impl MvuProgram for GenUiProgram {
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
-                let _ = app
-                    .models_mut()
-                    .update(&state.applied_upto, |v| *v = 0usize);
             }
         }
     }
@@ -259,51 +284,11 @@ impl MvuProgram for GenUiProgram {
     }
 }
 
-fn apply_pending_actions(app: &mut App, st: &mut GenUiState) {
-    let applied_upto = app.models().get_copied(&st.applied_upto).unwrap_or(0usize);
-    let (queue_len, new_invocations) = app
-        .models()
-        .read(&st.action_queue, |q| {
-            let queue_len = q.invocations.len();
-            let new = q.invocations[applied_upto.min(queue_len)..]
-                .iter()
-                .cloned()
-                .collect::<Vec<_>>();
-            (queue_len, new)
-        })
-        .ok()
-        .unwrap_or((0usize, Vec::new()));
-
-    if new_invocations.is_empty() {
-        return;
-    }
-
-    let mut windows: BTreeSet<AppWindowId> = BTreeSet::new();
-    for inv in &new_invocations {
-        windows.insert(inv.window);
-    }
-
-    let _ = app.models_mut().update(&st.genui_state, |state| {
-        for inv in &new_invocations {
-            let _ = actions::apply_standard_action(state, inv.action.as_ref(), &inv.params);
-        }
-    });
-    let _ = app
-        .models_mut()
-        .update(&st.applied_upto, |v| *v = queue_len);
-
-    for window in windows {
-        app.request_redraw(window);
-    }
-}
-
 fn view(
     cx: &mut ElementContext<'_, App>,
     st: &mut GenUiState,
     msg: &mut MessageRouter<Msg>,
 ) -> Elements {
-    apply_pending_actions(cx.app, st);
-
     let theme = Theme::global(&*cx.app).snapshot();
 
     let clear_cmd = msg.cmd(Msg::ClearActions);
@@ -351,6 +336,7 @@ fn view(
     let runtime = GenUiRuntime {
         state: st.genui_state.clone(),
         action_queue: Some(st.action_queue.clone()),
+        auto_apply_standard_actions: true,
         limits: Default::default(),
         catalog: Some(st.catalog.clone()),
         catalog_validation: ValidationMode::Strict,

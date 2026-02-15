@@ -42,6 +42,7 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 ## P2 — Actions
 
 - [x] Implement action param resolution (including repeat-scoped path semantics for `$item/$bindItem/$index`).
+- [x] Add opt-in `GenUiRuntime.auto_apply_standard_actions` for demos/simple apps (still emits into the queue).
 - [ ] Add a first-class action handler interface + adapters for common app patterns (navigation, clipboard, downloads).
 - [ ] Add “confirm/onSuccess/onError” default executor helpers (optional; keep app-owned).
 
@@ -51,7 +52,19 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 - [x] Decide schema strategy: custom JSON Schema export (keep portable; no `schemars` dependency in v1).
 - [x] Add system prompt export from catalog.
 - [x] Add typed catalog guardrails for prop/param values (primitive types + enums + nullable + dynamic expressions).
+- [x] Expand catalog typing: object/array/oneOf + required/default metadata.
 - [x] Add SpecStream compiler (JSONL RFC6902 patch stream → in-progress spec JSON).
+
+## P4 — Adaptive layouts (strategy layer)
+
+- [x] Add `ResponsiveGrid` to `fret-genui-shadcn` (container-query driven).
+- [ ] Add `ResponsiveStack` (switches between HStack/VStack via queries).
+- [x] Add a resize-driven demo spec section to validate behavior by eye.
+
+## P4 — LLM ingest utilities (strategy/boundary layer)
+
+- [ ] Add mixed-stream parser utilities (text + JSONL patches) similar to `pipeJsonRender`.
+- [ ] Decide if/where to enable JSON repair (input boundary only; never for patch-only mode).
 
 ## Testing + gates
 
