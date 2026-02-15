@@ -42,10 +42,13 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
   - [x] run the fixture-driven wrap conformance suite under the Parley path,
   - [x] document any known gaps as explicit TODOs (avoid silent behavior drift).
 - [~] Performance guard:
-  - [~] ensure no O(n²) regressions on long paragraphs (Parley path is linear; add an explicit
-    long-paragraph perf probe if we see regressions),
-  - [~] keep resize jitter bounded (now dominated by Parley paragraph shaping; re-check with a
-    dedicated jitter test in `fretboard diag` when text diagnostics land).
+  - [~] ensure no O(n²) regressions on long paragraphs (Parley path is linear; keep a dedicated
+    long-paragraph probe in the wrapper test suite),
+  - [~] keep resize jitter bounded:
+    - add a diag perf script focused on `TextWrap::Word` under window resize jitter:
+      `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`
+    - optional catastrophic regression smoke gate:
+      `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py`
 - [x] Cleanup:
   - [x] delete the legacy wrapper implementation once the Parley path passes the gates above (no
     compatibility branch retained).

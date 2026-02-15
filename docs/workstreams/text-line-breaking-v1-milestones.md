@@ -82,6 +82,9 @@ Evidence anchors (expected):
 - Invariants and geometry query tests:
   - `crates/fret-render-wgpu/src/text/mod.rs` (caret/hit-test/selection tests)
   - `crates/fret-render-wgpu/src/text/mod.rs:6294` (trailing-whitespace selectable gate; do not regress)
+- Resize jitter perf/diag guard (catastrophic regression):
+  - `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`
+  - `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py`
 
 ## M3 — RTL + mixed-script staging
 
