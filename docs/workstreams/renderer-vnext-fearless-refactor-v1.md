@@ -165,6 +165,17 @@ python3 tools/perf/headless_svg_atlas_stress_gate.py
 
 Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
 
+### 2.2.4 Quad/material headless gate (variants + dash)
+
+This gate is focused on the quad shader hot paths (paint kinds + dash), and is intended to keep the
+pipeline-variant keyspace bounded and observable.
+
+```powershell
+python3 tools/perf/headless_quad_material_stress_gate.py
+```
+
+Baseline: `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
+
 ## 3) Proposed internal architecture (implementation, not contract)
 
 ## 3.0) Cost model checklist (design-time, not contracts)

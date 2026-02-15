@@ -2186,6 +2186,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-quad-material-stress"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-core",
+ "fret-render",
+ "pollster",
+ "wgpu",
+]
+
+[[package]]
 name = "fret-query"
 version = "0.1.0"
 dependencies = [

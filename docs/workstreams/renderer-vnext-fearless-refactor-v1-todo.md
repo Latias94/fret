@@ -137,10 +137,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M6 — Perf recovery follow-ups (evidence-driven)
 
-- [ ] REN-VNEXT-perf-001 Add a headless quad/material stress gate:
+- [x] REN-VNEXT-perf-001 Add a headless quad/material stress gate:
   - Target: quad shader hot paths (fill/border paint kinds, dash on/off, material sampled vs params-only).
   - Output: stable counters + baseline in `docs/workstreams/perf-baselines/`.
   - Motivation: keep pipeline-variant decisions bounded and justified.
+  - Evidence:
+    - `apps/fret-quad-material-stress/src/main.rs`
+    - `tools/perf/headless_quad_material_stress_gate.py`
+    - `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
 - [ ] REN-VNEXT-webgpu-004 If perf evidence warrants, add bounded `MaterialTileMode` pipeline variants:
   - Guardrail: keep the key space small and observable in perf snapshots (`pipeline_switches_*`).
 - [ ] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
