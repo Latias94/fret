@@ -13,8 +13,8 @@ use fret_docking::{
     create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    DevStateExport, DevStateHook, DevStateHooks, WindowCreateSpec, WinitAppDriver,
-    WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, WindowCreateSpec,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
@@ -2258,13 +2258,20 @@ impl WinitAppDriver for DockingArbitrationDriver {
                     .map(|rt| rt.on_window_created(app, request, new_window))
                     .unwrap_or(false);
                 let logical = self.alloc_floating_logical_window_id();
+                let logical_key = logical.clone();
                 self.logical_windows.insert(new_window, logical);
+                app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+                    reg.register(new_window, logical_key);
+                });
                 self.sync_dev_state_models(app);
                 DevStateHooks::export_all(app);
             }
             CreateWindowKind::DockRestore { logical_window_id } => {
                 self.logical_windows
                     .insert(new_window, logical_window_id.clone());
+                app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+                    reg.register(new_window, logical_window_id.clone());
+                });
                 self.sync_dev_state_models(app);
                 if let Some(restore) = self.restore.as_mut() {
                     restore.pending_logical_window_ids.remove(logical_window_id);
@@ -2281,6 +2288,9 @@ impl WinitAppDriver for DockingArbitrationDriver {
             }
         } else {
             self.logical_windows.remove(&window);
+            app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+                reg.unregister(window);
+            });
             self.sync_dev_state_models(app);
             DevStateHooks::export_all(app);
         }

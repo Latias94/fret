@@ -553,6 +553,13 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
 
                         #[cfg(feature = "dev-state")]
                         if self.dev_state.enabled() {
+                            let alive: std::collections::HashSet<fret_core::AppWindowId> =
+                                self.windows.keys().collect();
+                            self.dev_state
+                                .sync_window_keys_from_app(&self.app, |window| {
+                                    alive.contains(&window)
+                                });
+
                             let keys = self.dev_state.window_keys_snapshot();
                             for (window, key) in keys {
                                 let Some(state) = self.windows.get(window) else {

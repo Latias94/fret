@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use fret_app::App;
+use fret_core::AppWindowId;
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
@@ -18,6 +19,40 @@ pub enum DevStateExport {
 pub struct DevStateSnapshot {
     pub epoch: u64,
     pub data: HashMap<String, Value>,
+}
+
+#[derive(Debug, Default)]
+pub struct DevStateWindowKeyRegistry {
+    epoch: u64,
+    keys: HashMap<AppWindowId, String>,
+}
+
+impl DevStateWindowKeyRegistry {
+    pub fn epoch(&self) -> u64 {
+        self.epoch
+    }
+
+    pub fn snapshot(&self) -> Vec<(AppWindowId, String)> {
+        self.keys
+            .iter()
+            .map(|(window, key)| (*window, key.clone()))
+            .collect()
+    }
+
+    pub fn register(&mut self, window: AppWindowId, key: impl Into<String>) {
+        let key = key.into();
+        if self.keys.get(&window).is_some_and(|prev| prev == &key) {
+            return;
+        }
+        self.keys.insert(window, key);
+        self.epoch = self.epoch.saturating_add(1);
+    }
+
+    pub fn unregister(&mut self, window: AppWindowId) {
+        if self.keys.remove(&window).is_some() {
+            self.epoch = self.epoch.saturating_add(1);
+        }
+    }
 }
 
 #[derive(Debug)]

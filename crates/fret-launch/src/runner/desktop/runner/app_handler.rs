@@ -1829,6 +1829,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         ))]
         {
             if self.dev_state.enabled() {
+                let alive: std::collections::HashSet<fret_core::AppWindowId> =
+                    self.windows.keys().collect();
+                self.dev_state
+                    .sync_window_keys_from_app(&self.app, |window| alive.contains(&window));
                 self.dev_state.export_app_state(&mut self.app);
                 let keys = self.dev_state.window_keys_snapshot();
                 let mut observed: Vec<(

@@ -10,7 +10,7 @@ use fret_core::AppWindowId;
 
 use super::WindowCreateSpec;
 
-use crate::dev_state::{DevStateHooks, DevStateService};
+use crate::dev_state::{DevStateHooks, DevStateService, DevStateWindowKeyRegistry};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RestoreOutcome {
@@ -44,6 +44,7 @@ pub(crate) struct DevStateController {
     windows_state: std::collections::HashMap<String, MainWindowGeometry>,
     dirty_since: Option<Instant>,
     last_app_epoch: u64,
+    last_window_keys_epoch: u64,
 
     window_keys: std::collections::HashMap<AppWindowId, String>,
 }
@@ -136,6 +137,7 @@ impl DevStateController {
             windows_state,
             dirty_since: None,
             last_app_epoch: 0,
+            last_window_keys_epoch: 0,
             window_keys: std::collections::HashMap::new(),
         }
     }
@@ -150,6 +152,32 @@ impl DevStateController {
 
     pub(crate) fn enabled(&self) -> bool {
         self.enabled
+    }
+
+    pub(crate) fn sync_window_keys_from_app(
+        &mut self,
+        app: &App,
+        mut is_window_alive: impl FnMut(AppWindowId) -> bool,
+    ) {
+        if !self.enabled {
+            return;
+        }
+
+        let Some(reg) = app.global::<DevStateWindowKeyRegistry>() else {
+            return;
+        };
+        let epoch = reg.epoch();
+        if epoch == self.last_window_keys_epoch {
+            return;
+        }
+        self.last_window_keys_epoch = epoch;
+
+        for (window, key) in reg.snapshot() {
+            if !is_window_alive(window) {
+                continue;
+            }
+            self.register_window_key(window, key);
+        }
     }
 
     pub(crate) fn register_window_key(&mut self, window: AppWindowId, key: impl Into<String>) {
