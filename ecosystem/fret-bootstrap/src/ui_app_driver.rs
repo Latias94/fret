@@ -1320,12 +1320,14 @@ fn ui_app_handle_event<S>(
         if actionable {
             app.request_redraw(window);
             hotpatch_trace_log(&format!(
-                "dev_reload: window={window:?} theme_reload={} literals_reload={} assets_epoch={} theme_err={:?} literals_err={:?}",
+                "dev_reload: window={window:?} theme_reload={} literals_reload={} assets_epoch={} fonts_reload={} theme_err={:?} literals_err={:?} fonts_err={:?}",
                 tick.reloaded_theme,
                 tick.reloaded_literals,
                 tick.bumped_ui_assets_epoch,
+                tick.reloaded_fonts,
                 tick.theme_error,
                 tick.literals_error,
+                tick.fonts_error,
             ));
         }
         return;

@@ -8,6 +8,45 @@ use fret_ui::{Theme, ThemeConfig};
 
 use fret_ui_literals::HotLiterals;
 
+#[derive(Debug, Clone, Default)]
+struct FontsManifest {
+    fonts: Vec<PathBuf>,
+}
+
+fn parse_fonts_manifest(bytes: &[u8]) -> Result<FontsManifest, String> {
+    // Accept either:
+    // - `["path/to/font.ttf", ...]`
+    // - `{ "fonts": ["path/to/font.ttf", ...] }`
+    #[derive(serde::Deserialize)]
+    #[serde(untagged)]
+    enum Raw {
+        List(Vec<String>),
+        Obj { fonts: Vec<String> },
+    }
+
+    let raw: Raw =
+        serde_json::from_slice(bytes).map_err(|e| format!("invalid fonts manifest JSON: {e}"))?;
+
+    let list = match raw {
+        Raw::List(v) => v,
+        Raw::Obj { fonts } => fonts,
+    };
+
+    let fonts = list
+        .into_iter()
+        .filter_map(|s| {
+            let s = s.trim().to_string();
+            if s.is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(s))
+            }
+        })
+        .collect();
+
+    Ok(FontsManifest { fonts })
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct FileStamp {
     len: u64,
@@ -51,8 +90,10 @@ pub(crate) struct DevReloadTick {
     pub(crate) reloaded_theme: bool,
     pub(crate) reloaded_literals: bool,
     pub(crate) bumped_ui_assets_epoch: bool,
+    pub(crate) reloaded_fonts: bool,
     pub(crate) theme_error: Option<String>,
     pub(crate) literals_error: Option<String>,
+    pub(crate) fonts_error: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -63,9 +104,11 @@ pub(crate) struct DevReloadWatcher {
     theme_path: PathBuf,
     literals_path: PathBuf,
     ui_assets_trigger_path: PathBuf,
+    fonts_manifest_path: PathBuf,
     theme_stamp: Option<FileStamp>,
     literals_stamp: Option<FileStamp>,
     ui_assets_trigger_stamp: Option<FileStamp>,
+    fonts_manifest_stamp: Option<FileStamp>,
 }
 
 impl DevReloadWatcher {
@@ -101,6 +144,8 @@ impl DevReloadWatcher {
             "FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH",
             ".fret/ui_assets.touch",
         );
+        let fonts_manifest_path =
+            resolve_path(&root, "FRET_DEV_RELOAD_FONTS_PATH", ".fret/fonts.json");
 
         let existing = app.global::<DevReloadWatcher>().map(|w| {
             (
@@ -110,15 +155,24 @@ impl DevReloadWatcher {
                 w.theme_path.clone(),
                 w.literals_path.clone(),
                 w.ui_assets_trigger_path.clone(),
+                w.fonts_manifest_path.clone(),
             )
         });
-        if let Some((Some(_token), prev_interval, prev_root, prev_theme, prev_lits, prev_assets)) =
-            existing.as_ref()
+        if let Some((
+            Some(_token),
+            prev_interval,
+            prev_root,
+            prev_theme,
+            prev_lits,
+            prev_assets,
+            prev_fonts,
+        )) = existing.as_ref()
             && *prev_interval == poll_interval
             && prev_root == &root
             && prev_theme == &theme_path
             && prev_lits == &literals_path
             && prev_assets == &ui_assets_trigger_path
+            && prev_fonts == &fonts_manifest_path
         {
             return;
         }
@@ -142,9 +196,11 @@ impl DevReloadWatcher {
             theme_path,
             literals_path,
             ui_assets_trigger_path,
+            fonts_manifest_path,
             theme_stamp: None,
             literals_stamp: None,
             ui_assets_trigger_stamp: None,
+            fonts_manifest_stamp: None,
         });
     }
 
@@ -195,12 +251,54 @@ impl DevReloadWatcher {
         let assets_changed = next_assets_stamp != self.ui_assets_trigger_stamp;
         self.ui_assets_trigger_stamp = next_assets_stamp;
 
+        let next_fonts_manifest_stamp = file_stamp(&self.fonts_manifest_path);
+        let fonts_manifest_changed = next_fonts_manifest_stamp != self.fonts_manifest_stamp;
+        self.fonts_manifest_stamp = next_fonts_manifest_stamp;
+
         if assets_changed && self.ui_assets_trigger_stamp.is_some() {
             #[cfg(feature = "ui-assets")]
             {
                 fret_ui_assets::bump_ui_assets_reload_epoch(app);
                 app.request_redraw(window);
                 tick.bumped_ui_assets_epoch = true;
+            }
+        }
+
+        let should_reload_fonts = fonts_manifest_changed || tick.bumped_ui_assets_epoch;
+        if should_reload_fonts {
+            if let Some(_stamp) = self.fonts_manifest_stamp {
+                match std::fs::read(&self.fonts_manifest_path) {
+                    Ok(bytes) => match parse_fonts_manifest(&bytes) {
+                        Ok(manifest) => {
+                            let mut fonts: Vec<Vec<u8>> = Vec::new();
+                            let mut errors: Vec<String> = Vec::new();
+                            for p in manifest.fonts {
+                                let abs = if p.is_absolute() {
+                                    p
+                                } else {
+                                    self.root.join(p)
+                                };
+                                match std::fs::read(&abs) {
+                                    Ok(bytes) => fonts.push(bytes),
+                                    Err(e) => {
+                                        errors.push(format!("read failed: {}: {e}", abs.display()))
+                                    }
+                                }
+                            }
+
+                            if !errors.is_empty() {
+                                tick.fonts_error = Some(errors.join("; "));
+                            }
+
+                            if !fonts.is_empty() {
+                                app.push_effect(Effect::TextAddFonts { fonts });
+                                tick.reloaded_fonts = true;
+                            }
+                        }
+                        Err(e) => tick.fonts_error = Some(e),
+                    },
+                    Err(e) => tick.fonts_error = Some(format!("fonts manifest read failed: {e}")),
+                }
             }
         }
 
