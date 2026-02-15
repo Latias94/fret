@@ -1,7 +1,7 @@
 # Editor Component Surface (`fret-ui-editor`) v1
 
 Status: Proposed (workstream note; not an ADR)  
-Last updated: 2026-02-14
+Last updated: 2026-02-15
 
 ## Summary
 
@@ -216,6 +216,12 @@ We expect these controls to become “sticky” behaviors. The workstream should
   - `DragValue` (drag + modifiers + cancel/commit)
   - `PropertyGrid` (focus traversal + mixed values + reset)
 - At least one constrained viewport/DPI variant for geometry-sensitive pieces (popup/picker).
+
+### Run the proof demo
+
+- Native: `cargo run -p fret-demo --bin imui_editor_proof_demo`
+- Single-window degrade mode (PowerShell): `$env:FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW=\"1\"; cargo run -p fret-demo --bin imui_editor_proof_demo`
+- Single-window degrade mode (POSIX): `FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW=1 cargo run -p fret-demo --bin imui_editor_proof_demo`
 
 ### `test_id` conventions (recommended)
 

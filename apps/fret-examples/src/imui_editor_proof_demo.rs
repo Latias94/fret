@@ -19,7 +19,7 @@ use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, Prope
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
     EnumSelectOptions, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
-    NumericParseFn, NumericValidateFn, Vec3Edit,
+    NumericParseFn, NumericValidateFn, TransformEdit, TransformEditOptions, Vec3Edit,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -160,6 +160,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_shading_model = editor_demo_shading_model(cx);
     let editor_base_color_model = editor_demo_base_color_model(cx);
     let (editor_pos_x, editor_pos_y, editor_pos_z) = editor_demo_position_models(cx);
+    let (editor_rot_x, editor_rot_y, editor_rot_z) = editor_demo_rotation_models(cx);
+    let (editor_scl_x, editor_scl_y, editor_scl_z) = editor_demo_scale_models(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
 
@@ -259,6 +261,12 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                     let show_iterations = advanced_show_all || matches("iterations");
                     let show_position =
                         advanced_show_all || matches("position") || matches("pos");
+                    let show_transform = advanced_show_all
+                        || matches("transform")
+                        || matches("xform")
+                        || matches("rotation")
+                        || matches("rot")
+                        || matches("scale");
 
                     let any_match =
                         show_opacity
@@ -269,7 +277,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                             || show_alpha_clip
                             || show_cast_shadows
                             || show_iterations
-                            || show_position;
+                            || show_position
+                            || show_transform;
 
                     vec![cx.flex(
                         FlexProps {
@@ -684,6 +693,96 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                         ));
                                                     }
 
+                                                    if show_transform {
+                                                        let pos_x = editor_pos_x.clone();
+                                                        let pos_y = editor_pos_y.clone();
+                                                        let pos_z = editor_pos_z.clone();
+                                                        let rot_x = editor_rot_x.clone();
+                                                        let rot_y = editor_rot_y.clone();
+                                                        let rot_z = editor_rot_z.clone();
+                                                        let scl_x = editor_scl_x.clone();
+                                                        let scl_y = editor_scl_y.clone();
+                                                        let scl_z = editor_scl_z.clone();
+
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&pos_x, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&pos_y, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&pos_z, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&rot_x, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&rot_y, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&rot_z, |v| *v = 0.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&scl_x, |v| *v = 1.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&scl_y, |v| *v = 1.0);
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&scl_z, |v| *v = 1.0);
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new()
+                                                                .options(row_cx.row_options.clone())
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(on_reset)
+                                                                        .options(
+                                                                            fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                                test_id: Some(Arc::from("imui-editor-proof.editor.advanced.transform.reset")),
+                                                                                ..Default::default()
+                                                                            },
+                                                                        ),
+                                                                )),
+                                                            |cx| cx.text("Transform"),
+                                                            |cx| {
+                                                                TransformEdit::new(
+                                                                    (
+                                                                        editor_pos_x.clone(),
+                                                                        editor_pos_y.clone(),
+                                                                        editor_pos_z.clone(),
+                                                                    ),
+                                                                    (
+                                                                        editor_rot_x.clone(),
+                                                                        editor_rot_y.clone(),
+                                                                        editor_rot_z.clone(),
+                                                                    ),
+                                                                    (
+                                                                        editor_scl_x.clone(),
+                                                                        editor_scl_y.clone(),
+                                                                        editor_scl_z.clone(),
+                                                                    ),
+                                                                    fmt_f64.clone(),
+                                                                    parse_f64.clone(),
+                                                                )
+                                                                .options(TransformEditOptions {
+                                                                    test_id: Some(Arc::from("imui-editor-proof.editor.advanced.transform")),
+                                                                    link_test_id: Some(Arc::from("imui-editor-proof.editor.advanced.transform.link-scale")),
+                                                                    ..Default::default()
+                                                                })
+                                                                .into_element(cx)
+                                                            },
+                                                            |_cx| None,
+                                                        ));
+                                                    }
+
                                                     if show_iterations {
                                                         let model_for_reset =
                                                             editor_iterations_model.clone();
@@ -871,6 +970,58 @@ fn editor_demo_position_models<H: UiHost>(
             let x = cx.app.models_mut().insert(0.0_f64);
             let y = cx.app.models_mut().insert(1.0_f64);
             let z = cx.app.models_mut().insert(0.0_f64);
+            cx.with_state(
+                || None::<(Model<f64>, Model<f64>, Model<f64>)>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some((x.clone(), y.clone(), z.clone()));
+                    }
+                },
+            );
+            (x, y, z)
+        }
+    }
+}
+
+fn editor_demo_rotation_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<f64>, Model<f64>, Model<f64>) {
+    let models = cx.with_state(
+        || None::<(Model<f64>, Model<f64>, Model<f64>)>,
+        |st| st.clone(),
+    );
+    match models {
+        Some(models) => models,
+        None => {
+            let x = cx.app.models_mut().insert(0.0_f64);
+            let y = cx.app.models_mut().insert(0.0_f64);
+            let z = cx.app.models_mut().insert(0.0_f64);
+            cx.with_state(
+                || None::<(Model<f64>, Model<f64>, Model<f64>)>,
+                |st| {
+                    if st.is_none() {
+                        *st = Some((x.clone(), y.clone(), z.clone()));
+                    }
+                },
+            );
+            (x, y, z)
+        }
+    }
+}
+
+fn editor_demo_scale_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<f64>, Model<f64>, Model<f64>) {
+    let models = cx.with_state(
+        || None::<(Model<f64>, Model<f64>, Model<f64>)>,
+        |st| st.clone(),
+    );
+    match models {
+        Some(models) => models,
+        None => {
+            let x = cx.app.models_mut().insert(1.0_f64);
+            let y = cx.app.models_mut().insert(1.0_f64);
+            let z = cx.app.models_mut().insert(1.0_f64);
             cx.with_state(
                 || None::<(Model<f64>, Model<f64>, Model<f64>)>,
                 |st| {

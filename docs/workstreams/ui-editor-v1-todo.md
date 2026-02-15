@@ -1,7 +1,7 @@
 # `fret-ui-editor` v1 — TODO Tracker
 
 Status: Active tracker (workstream note; not an ADR)  
-Last updated: 2026-02-14
+Last updated: 2026-02-15
 
 Related:
 
@@ -126,9 +126,11 @@ Exit criteria:
   - [x] axis labels + axis color tokens
   - [x] per-axis reset hooks
   - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
-- [ ] `TransformEdit` (position/rotation/scale composite):
-  - [ ] layout variants (row/column)
-  - [ ] link scale toggle (optional)
+- [~] `TransformEdit` (position/rotation/scale composite):
+  - [x] layout variants (row/column)
+  - [x] link scale toggle (optional)
+  - [x] best-effort uniform scale sync when linked
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/transform_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - [~] `EnumSelect` (filterable select surface).
   - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - [ ] `AssetRefField` (UI shell):
