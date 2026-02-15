@@ -423,9 +423,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -434,7 +432,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -443,7 +441,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -454,7 +452,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -672,9 +670,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
         );
         let r0 = mat_rand01(cell, seed);
         let density = clamp(p.params2.y, 0.0, 1.0);
-        if (r0 > density) {
-          return base;
-        }
+        let enabled = r0 <= density;
         let rx = mat_rand01(cell, seed ^ 0x68bc21ebu);
         let ry = mat_rand01(cell, seed ^ 0x02e5be93u);
         let phase = mat_rand01(cell, seed ^ 0xa1b3c5d7u) * 6.2831853;
@@ -685,7 +681,8 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
         let cov = 1.0 - smoothstep(radius, radius + aa, d);
         let twinkle = 0.5 + 0.5 * sin(t * 2.0 + phase);
         let k = cov * twinkle;
-        return base * (1.0 - k) + fg * k;
+        let out = base * (1.0 - k) + fg * k;
+        return select(base, out, enabled);
       }
 
       // 7 ConicSweep (center in params2.xy, width in params2.z (turns), phase in params3.x (turns))
@@ -969,9 +966,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   // 1 = LinearGradient
   if (m.kind == 1u) {
@@ -981,7 +976,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   // 2 = RadialGradient
@@ -991,7 +986,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   // 3 = Image mask
@@ -1003,7 +998,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -3214,9 +3209,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -3225,7 +3218,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -3234,7 +3227,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -3245,7 +3238,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -3437,9 +3430,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -3448,7 +3439,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -3457,7 +3448,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -3468,7 +3459,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -3766,9 +3757,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -3777,7 +3766,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -3786,7 +3775,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -3797,7 +3786,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4050,9 +4039,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4061,7 +4048,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4070,7 +4057,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4081,7 +4068,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4367,9 +4354,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4378,7 +4363,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4387,7 +4372,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4398,7 +4383,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4654,9 +4639,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4665,7 +4648,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4674,7 +4657,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4685,7 +4668,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
@@ -4968,9 +4951,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   );
 
   let p = local_pos - m.bounds.xy;
-  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
-    return 1.0;
-  }
+  let in_bounds = p.x >= 0.0 && p.y >= 0.0 && p.x <= m.bounds.z && p.y <= m.bounds.w;
 
   if (m.kind == 1u) {
     let start = m.params0.xy;
@@ -4979,7 +4960,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 2u) {
@@ -4988,7 +4969,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let d = (local_pos - center) / radius;
     let t = length(d);
     let tt = clamp(t, 0.0, 1.0);
-    return mask_sample_stops(m, tt);
+    return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
   if (m.kind == 3u) {
@@ -4999,7 +4980,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let uv = mix(uv0, uv1, t);
     let s = textureSample(mask_image_texture, mask_image_sampler, uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
-    return clamp(cov, 0.0, 1.0);
+    return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
 
   return 1.0;
