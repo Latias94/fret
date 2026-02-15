@@ -75,6 +75,7 @@ This workstream is intentionally “fearless but gated”. Before and after each
   - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+  - `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
   - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
   - `crates/fret-render-wgpu/tests/materials_conformance.rs`
   - `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
@@ -105,6 +106,7 @@ cargo nextest run -p fret-render-wgpu --test viewport_surface_metadata_conforman
 cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance
 cargo nextest run -p fret-render-wgpu --test mask_gradient_conformance
 cargo nextest run -p fret-render-wgpu --test mask_image_conformance
+cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance
 cargo nextest run -p fret-render-wgpu --test composite_group_conformance
 cargo nextest run -p fret-render-wgpu --test materials_conformance
 cargo nextest run -p fret-render-wgpu --test materials_sampled_conformance
