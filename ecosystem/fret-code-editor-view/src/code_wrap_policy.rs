@@ -113,7 +113,13 @@ pub fn row_starts_for_code_wrap(
             }
 
             let next_ch = text.get(next_i..).and_then(|s| s.chars().next());
-            if let Some(strength) = preferred_break_after(prev_ch, ch, next_ch, policy.knobs) {
+            let next_next_ch = next_ch.and_then(|next_ch| {
+                let after_next = next_i.saturating_add(next_ch.len_utf8()).min(text.len());
+                text.get(after_next..).and_then(|s| s.chars().next())
+            });
+            if let Some(strength) =
+                preferred_break_after(prev_ch, ch, next_ch, next_next_ch, policy.knobs)
+            {
                 if fret_text_nav::is_grapheme_boundary(text, next_i) {
                     let cand = BreakCandidate {
                         byte: next_i,
@@ -184,6 +190,7 @@ fn preferred_break_after(
     prev: Option<char>,
     ch: char,
     next: Option<char>,
+    next_next: Option<char>,
     knobs: CodeWrapKnobs,
 ) -> Option<BreakStrength> {
     let Some(next) = next else {
@@ -195,6 +202,12 @@ fn preferred_break_after(
     }
 
     if knobs.break_around_operators {
+        if next == '-' && next_next == Some('>') {
+            return Some(BreakStrength::Operator);
+        }
+        if next == ':' && next_next == Some(':') {
+            return Some(BreakStrength::Operator);
+        }
         if prev == Some(':') && ch == ':' && next != ':' {
             return Some(BreakStrength::Operator);
         }

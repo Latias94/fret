@@ -103,9 +103,10 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - Evidence:
     - `ecosystem/fret-code-editor-view/tests/code_wrap_policy_fixtures.rs`
     - `ecosystem/fret-code-editor-view/tests/fixtures/code_wrap_policy_v1.json`
-  - [~] identifiers (snake/camel/digits),
-  - [~] paths/URLs,
-  - [x] emoji sequences (ZWJ/VS16) do not split inside clusters,
+  - [x] identifiers (snake/camel/digits),
+  - [x] paths/URLs,
+  - [x] punctuation (`.`) and operator tokens (`::`, `->`) avoid obviously-bad splits,
+  - [x] grapheme clusters (ZWJ/VS16/combining marks) do not split inside clusters,
   - [x] long tokens have a bounded emergency-break behavior.
 - [ ] Coordinate with `docs/workstreams/text-line-breaking-v1.md`:
   - UI wrap improvements must not change editor wrap policy implicitly.
