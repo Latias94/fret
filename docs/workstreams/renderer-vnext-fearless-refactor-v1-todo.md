@@ -179,3 +179,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Gate: `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
   - Landed: 2026-02-15, commit `49181551`.
+- [ ] REN-VNEXT-guard-005 Keep external texture imports perf baselines from regressing.
+  - Motivation: renderer refactors (uniformity/variants/pipelines) must not silently degrade the imported-frame contract path
+    (`RenderTargetId` + `SceneOp::ViewportSurface`), especially on wasm/WebGPU where copies can dominate.
+  - Tracking: `docs/workstreams/external-texture-imports-v1.md` (see `EXT-web-perf-131`).
+  - Gate (once stable): `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json` + baseline in `docs/workstreams/perf-baselines/`.
