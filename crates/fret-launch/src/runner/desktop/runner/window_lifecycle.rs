@@ -78,6 +78,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .window_create_spec(&mut self.app, request)
             .unwrap_or_else(|| self.config.default_window_spec());
 
+        #[cfg(feature = "dev-state")]
+        let dev_state_key: Option<String> = match &request.kind {
+            CreateWindowKind::DockRestore { logical_window_id } => Some(logical_window_id.clone()),
+            _ => None,
+        };
+
+        #[cfg(feature = "dev-state")]
+        if self.dev_state.enabled()
+            && let Some(key) = dev_state_key.as_deref()
+        {
+            self.dev_state.apply_window_spec(key, &mut spec);
+            self.dev_state.sanitize_window_spec_position(
+                key,
+                &mut spec,
+                event_loop
+                    .available_monitors()
+                    .filter_map(|m| Some((m.position()?, m.current_video_mode()?.size()))),
+            );
+        }
+
         if spec.position.is_none() {
             // For dock tear-off, initially place near the cursor; we will refine the position
             // after the OS window exists using its own decoration offset (ImGui-style).
@@ -142,7 +162,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             };
             context.create_surface(window.clone())?
         };
-        self.insert_window(window, accessibility, Some(surface))
+        let new_window = self.insert_window(window, accessibility, Some(surface))?;
+
+        #[cfg(feature = "dev-state")]
+        if self.dev_state.enabled()
+            && let Some(key) = dev_state_key
+        {
+            self.dev_state.register_window_key(new_window, key);
+        }
+
+        Ok(new_window)
     }
 
     pub(super) fn enqueue_window_front(
@@ -392,6 +421,28 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
+        #[cfg(feature = "dev-state")]
+        if check_before_close && self.dev_state.enabled() {
+            let alive: std::collections::HashSet<fret_core::AppWindowId> =
+                self.windows.keys().collect();
+            self.dev_state
+                .sync_window_keys_from_app(&self.app, |window| alive.contains(&window));
+
+            let key = self.dev_state.window_key(window).map(ToString::to_string);
+            if let Some(key) = key
+                && let Some(state) = self.windows.get(window)
+            {
+                let physical = state.window.surface_size();
+                let logical: winit::dpi::LogicalSize<f64> =
+                    physical.to_logical(state.window.scale_factor());
+                let position = state.window.outer_position().ok();
+                self.dev_state
+                    .observe_window_geometry_now(&key, logical, position);
+            }
+
+            self.dev_state.export_and_flush_now(&mut self.app);
+        }
+
         if self
             .dock_tearoff_follow
             .is_some_and(|f| f.window == window || f.source_window == window)
@@ -462,6 +513,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.remove(window) else {
             return false;
         };
+        #[cfg(feature = "dev-state")]
+        self.dev_state.unregister_window(window);
         self.windows_z_order.retain(|w| *w != window);
         #[cfg(windows)]
         windows_menu::unregister_window(state.window.as_ref());

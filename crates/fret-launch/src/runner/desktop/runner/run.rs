@@ -121,14 +121,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
             nv12_gpu: None,
+            #[cfg(feature = "dev-state")]
+            dev_state: super::dev_state::DevStateController::from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
             hot_reload_generation: 0,
+            watch_restart_trigger: super::restart_trigger::RestartTrigger::from_env(now),
+            watch_restart_requested: false,
 
             #[cfg(feature = "diag-screenshots")]
             diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
         };
+        #[cfg(feature = "dev-state")]
+        runner.dev_state.install_into_app(&mut runner.app);
+        #[cfg(feature = "dev-state")]
+        crate::dev_state::DevStateHooks::import_all(&mut runner.app);
         runner.publish_system_font_rescan_state();
         runner
     }
