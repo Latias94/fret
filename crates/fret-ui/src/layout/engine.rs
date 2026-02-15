@@ -347,6 +347,392 @@ impl TaffyLayoutEngine {
         Some(root_id)
     }
 
+    /// Compute multiple independent roots in a single Taffy solve when possible.
+    ///
+    /// This is primarily used by layout barriers (scroll/virtualization/etc.) that need to solve
+    /// many child roots. Solving them one-by-one can amplify fixed per-solve overhead into
+    /// tail-latency spikes (e.g. virtual list "jump to bottom").
+    ///
+    /// Safety: this batches roots only when all of the following hold:
+    /// - each root is a layout root in the engine (no recorded parent in `self.parent`)
+    /// - each root has a *definite* available size in both axes
+    /// - each root is not already solved for its `(available, scale_factor)` key
+    ///
+    /// When the preconditions do not hold, this falls back to per-root compute.
+    pub(crate) fn compute_independent_roots_with_measure_if_needed(
+        &mut self,
+        roots: &[(NodeId, LayoutSize<AvailableSpace>)],
+        scale_factor: f32,
+        mut measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
+    ) {
+        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
+            scale_factor
+        } else {
+            1.0
+        };
+
+        let mut pending: Vec<(NodeId, LayoutId, LayoutSize<AvailableSpace>)> =
+            Vec::with_capacity(roots.len());
+        let mut can_batch = true;
+        for &(root, available) in roots {
+            let Some(layout_id) = self.layout_id_for_node(root) else {
+                continue;
+            };
+
+            if self.root_is_solved_for(root, available, sf) {
+                continue;
+            }
+
+            // Only batch truly-independent roots. If the engine already knows about a parent,
+            // computing under a synthetic wrapper could interfere with the parent solve stamp.
+            if self.parent.get(root).is_some() {
+                can_batch = false;
+            }
+
+            // Batching relies on roots being sized via `build_viewport_flow_subtree`'s
+            // `root_override_size` (i.e. definite in both axes). If a caller needs unbounded
+            // (max-content) root sizing, fall back to per-root compute.
+            if !matches!(available.width, AvailableSpace::Definite(_))
+                || !matches!(available.height, AvailableSpace::Definite(_))
+            {
+                can_batch = false;
+            }
+
+            pending.push((root, layout_id, available));
+        }
+
+        if pending.is_empty() {
+            return;
+        }
+
+        if pending.len() == 1 || !can_batch {
+            for (root, _layout_id, available) in pending {
+                let _ = self.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    sf,
+                    |n, c| measure(n, c),
+                );
+            }
+            return;
+        }
+
+        let mut scratch_w_dp: f32 = 0.0;
+        let mut scratch_h_dp: f32 = 0.0;
+        for &(_root, _id, available) in &pending {
+            let (AvailableSpace::Definite(w), AvailableSpace::Definite(h)) =
+                (available.width, available.height)
+            else {
+                debug_assert!(
+                    false,
+                    "pending roots must be definite in both axes to batch"
+                );
+                return;
+            };
+            scratch_w_dp = scratch_w_dp.max(w.0.max(0.0) * sf);
+            scratch_h_dp += h.0.max(0.0) * sf;
+        }
+        // Avoid 0-sized synthetic roots; a tiny definite box is enough to make percent-sizing and
+        // alignment stable if any child happens to depend on its containing block.
+        scratch_w_dp = scratch_w_dp.max(1.0);
+        scratch_h_dp = scratch_h_dp.max(1.0);
+
+        let scratch_id = match self.tree.new_leaf_with_context(
+            Default::default(),
+            NodeContext {
+                node: NodeId::default(),
+                measured: false,
+            },
+        ) {
+            Ok(id) => id,
+            Err(err) => {
+                Self::warn_taffy_error_once("new_leaf_with_context(batch_root)", err);
+                // Fall back to per-root compute on allocation failure.
+                for (root, _layout_id, available) in pending {
+                    let _ = self.compute_root_for_node_with_measure_if_needed(
+                        root,
+                        available,
+                        sf,
+                        |n, c| measure(n, c),
+                    );
+                }
+                return;
+            }
+        };
+
+        let cleanup_scratch = |engine: &mut Self| {
+            let _ = engine.tree.set_children(scratch_id, &[]);
+            let _ = engine.tree.remove(scratch_id);
+        };
+
+        let scratch_style = taffy::Style {
+            display: taffy::style::Display::Flex,
+            flex_direction: taffy::style::FlexDirection::Column,
+            flex_wrap: taffy::style::FlexWrap::NoWrap,
+            size: taffy::geometry::Size {
+                width: taffy::style::Dimension::length(scratch_w_dp),
+                height: taffy::style::Dimension::length(scratch_h_dp),
+            },
+            max_size: taffy::geometry::Size {
+                width: taffy::style::Dimension::length(scratch_w_dp),
+                height: taffy::style::Dimension::length(scratch_h_dp),
+            },
+            ..Default::default()
+        };
+        if let Err(err) = self.tree.set_style(scratch_id, scratch_style) {
+            Self::warn_taffy_error_once("set_style(batch_root)", err);
+            cleanup_scratch(self);
+            for (root, _layout_id, available) in pending {
+                let _ = self.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    sf,
+                    |n, c| measure(n, c),
+                );
+            }
+            return;
+        }
+
+        let mut child_ids: Vec<TaffyNodeId> = pending.iter().map(|(_, id, _)| id.0).collect();
+        if let Err(err) = self.tree.set_children(scratch_id, &child_ids) {
+            Self::warn_taffy_error_once("set_children(batch_root)", err);
+            cleanup_scratch(self);
+            for (root, _layout_id, available) in pending {
+                let _ = self.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    sf,
+                    |n, c| measure(n, c),
+                );
+            }
+            return;
+        }
+
+        // Run a single solve on the synthetic root. We intentionally do NOT couple the solve stamp
+        // to the synthetic node; instead we stamp each real root independently below.
+        let started = Instant::now();
+        self.solve_scale_factor = sf;
+
+        let span = if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace_span!(
+                "fret.ui.layout_engine.solve",
+                root = tracing::field::Empty,
+                frame_id = self.frame_id.map(|f| f.0).unwrap_or(0),
+                scale_factor = sf,
+                elapsed_us = tracing::field::Empty,
+                measure_calls = tracing::field::Empty,
+                measure_cache_hits = tracing::field::Empty,
+                measure_us = tracing::field::Empty,
+            )
+        } else {
+            tracing::Span::none()
+        };
+        let _span_guard = span.enter();
+
+        let taffy_available = taffy::geometry::Size {
+            width: taffy::style::AvailableSpace::Definite(scratch_w_dp),
+            height: taffy::style::AvailableSpace::Definite(scratch_h_dp),
+        };
+
+        let mut measure_calls: u64 = 0;
+        let mut measure_cache_hits: u64 = 0;
+        self.measure_cache_scratch.clear();
+        let measure_cache = &mut self.measure_cache_scratch;
+        let enable_profile = self.measure_profiling_enabled;
+        let mut measure_time = Duration::default();
+
+        #[derive(Debug, Clone, Copy, Default)]
+        struct MeasureNodeProfile {
+            total_time: Duration,
+            calls: u64,
+            cache_hits: u64,
+        }
+
+        let mut by_node: Option<SecondaryMap<NodeId, MeasureNodeProfile>> =
+            enable_profile.then(SecondaryMap::new);
+        let result = self.tree.compute_layout_with_measure(
+            scratch_id,
+            taffy_available,
+            |known, avail, _id, ctx, _style| {
+                let Some(ctx) = ctx else {
+                    return taffy::geometry::Size::default();
+                };
+                if !ctx.measured {
+                    return taffy::geometry::Size::default();
+                }
+
+                measure_calls = measure_calls.saturating_add(1);
+                fn quantize_size_key_bits(value: f32) -> u32 {
+                    if !value.is_finite() || value <= 0.0 {
+                        return 0;
+                    }
+                    let quantum = 64.0f32;
+                    let quantized = (value * quantum).round() / quantum;
+                    quantized.to_bits()
+                }
+                fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
+                    match avail {
+                        taffy::style::AvailableSpace::Definite(v) => (0, quantize_size_key_bits(v)),
+                        taffy::style::AvailableSpace::MinContent => (1, 0),
+                        taffy::style::AvailableSpace::MaxContent => (2, 0),
+                    }
+                }
+
+                let key = LayoutMeasureKey {
+                    node: ctx.node,
+                    known_w: known.width.map(quantize_size_key_bits),
+                    known_h: known.height.map(quantize_size_key_bits),
+                    avail_w: avail_key(avail.width),
+                    avail_h: avail_key(avail.height),
+                };
+                if let Some(size) = measure_cache.get(&key) {
+                    measure_cache_hits = measure_cache_hits.saturating_add(1);
+                    if enable_profile && let Some(by_node) = by_node.as_mut() {
+                        if by_node.get(ctx.node).is_none() {
+                            by_node.insert(ctx.node, MeasureNodeProfile::default());
+                        }
+                        if let Some(profile) = by_node.get_mut(ctx.node) {
+                            profile.cache_hits = profile.cache_hits.saturating_add(1);
+                        }
+                    }
+                    return *size;
+                }
+
+                let constraints = LayoutConstraints::new(
+                    LayoutSize::new(
+                        known.width.map(|w| Px(w / sf)),
+                        known.height.map(|h| Px(h / sf)),
+                    ),
+                    LayoutSize::new(
+                        match avail.width {
+                            taffy::style::AvailableSpace::Definite(w) => {
+                                AvailableSpace::Definite(Px(w / sf))
+                            }
+                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+                        },
+                        match avail.height {
+                            taffy::style::AvailableSpace::Definite(h) => {
+                                AvailableSpace::Definite(Px(h / sf))
+                            }
+                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+                        },
+                    ),
+                );
+
+                let (s, elapsed) = if enable_profile {
+                    let measure_started = Instant::now();
+                    let size = measure(ctx.node, constraints);
+                    (size, measure_started.elapsed())
+                } else {
+                    (measure(ctx.node, constraints), Duration::default())
+                };
+
+                if enable_profile {
+                    measure_time += elapsed;
+                    if let Some(by_node) = by_node.as_mut() {
+                        if by_node.get(ctx.node).is_none() {
+                            by_node.insert(ctx.node, MeasureNodeProfile::default());
+                        }
+                        if let Some(profile) = by_node.get_mut(ctx.node) {
+                            profile.total_time += elapsed;
+                            profile.calls = profile.calls.saturating_add(1);
+                        } else {
+                            debug_assert!(
+                                false,
+                                "layout engine profiling: expected node profile to exist after insert"
+                            );
+                        }
+                    }
+                }
+
+                let out = taffy::geometry::Size {
+                    width: s.width.0 * sf,
+                    height: s.height.0 * sf,
+                };
+                measure_cache.insert(key, out);
+                out
+            },
+        );
+
+        self.last_solve_measure_calls = measure_calls;
+        self.last_solve_measure_cache_hits = measure_cache_hits;
+        self.last_solve_measure_time = measure_time;
+        if enable_profile {
+            const MAX_HOTSPOTS: usize = 8;
+            let mut hotspots: Vec<LayoutEngineMeasureHotspot> = by_node
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(node, p)| LayoutEngineMeasureHotspot {
+                    node,
+                    total_time: p.total_time,
+                    calls: p.calls,
+                    cache_hits: p.cache_hits,
+                })
+                .collect();
+            hotspots.sort_by_key(|h| std::cmp::Reverse(h.total_time));
+            hotspots.truncate(MAX_HOTSPOTS);
+            self.last_solve_measure_hotspots = hotspots;
+        } else {
+            self.last_solve_measure_hotspots.clear();
+        }
+
+        if let Err(err) = result {
+            Self::warn_taffy_error_once("compute_layout_with_measure(batch_root)", err);
+            cleanup_scratch(self);
+            self.last_solve_root = None;
+            self.last_solve_elapsed = started.elapsed();
+            span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
+            span.record("measure_calls", measure_calls);
+            span.record("measure_cache_hits", measure_cache_hits);
+            span.record("measure_us", measure_time.as_micros() as u64);
+            self.last_solve_time += self.last_solve_elapsed;
+            return;
+        }
+
+        self.solve_generation = self.solve_generation.saturating_add(1);
+        let stamp_root = pending[0].0;
+        span.record("root", tracing::field::debug(stamp_root));
+        self.last_solve_root = Some(stamp_root);
+
+        fn key_bits(axis: AvailableSpace) -> u64 {
+            match axis {
+                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
+                AvailableSpace::MinContent => 1u64 << 32,
+                AvailableSpace::MaxContent => 2u64 << 32,
+            }
+        }
+        if let Some(frame_id) = self.frame_id {
+            for &(root, _id, available) in &pending {
+                self.mark_solved_subtree(root);
+                self.root_solve_stamp.insert(
+                    root,
+                    RootSolveStamp {
+                        frame_id,
+                        key: RootSolveKey {
+                            width_bits: key_bits(available.width),
+                            height_bits: key_bits(available.height),
+                            scale_bits: self.solve_scale_factor.to_bits(),
+                        },
+                    },
+                );
+            }
+        }
+
+        self.last_solve_elapsed = started.elapsed();
+        span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
+        span.record("measure_calls", measure_calls);
+        span.record("measure_cache_hits", measure_cache_hits);
+        span.record("measure_us", measure_time.as_micros() as u64);
+        self.last_solve_time += self.last_solve_elapsed;
+
+        cleanup_scratch(self);
+        // Keep `child_ids` alive until after cleanup so we don't accidentally shrink and reallocate
+        // in tight loops when barriers repeatedly batch-solve.
+        child_ids.clear();
+    }
+
     pub(crate) fn mark_seen_subtree_from_cached_children(&mut self, root: NodeId) {
         if self.layout_id_for_node(root).is_none() {
             return;
@@ -1078,6 +1464,87 @@ mod tests {
             Some(a_after),
             "solved subtree rects should remain readable after solving an unrelated root"
         );
+    }
+
+    #[test]
+    fn barrier_batch_solve_stamps_multiple_roots_in_one_generation() {
+        let [root_a, root_b, child_a, child_b] = fresh_node_ids(4).try_into().unwrap();
+
+        let mut engine = TaffyLayoutEngine::default();
+        engine.begin_frame(FrameId(1));
+
+        engine.set_children(root_a, &[child_a]);
+        engine.set_children(root_b, &[child_b]);
+
+        engine.set_style(
+            root_a,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                size: taffy::geometry::Size {
+                    width: taffy::style::Dimension::length(100.0),
+                    height: taffy::style::Dimension::length(10.0),
+                },
+                ..Default::default()
+            },
+        );
+        engine.set_style(
+            root_b,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                size: taffy::geometry::Size {
+                    width: taffy::style::Dimension::length(200.0),
+                    height: taffy::style::Dimension::length(20.0),
+                },
+                ..Default::default()
+            },
+        );
+
+        let fill = taffy::Style {
+            display: taffy::style::Display::Block,
+            size: taffy::geometry::Size {
+                width: taffy::style::Dimension::percent(1.0),
+                height: taffy::style::Dimension::percent(1.0),
+            },
+            ..Default::default()
+        };
+        engine.set_style(child_a, fill.clone());
+        engine.set_style(child_b, fill);
+
+        let roots = [
+            (
+                root_a,
+                LayoutSize::new(
+                    AvailableSpace::Definite(Px(100.0)),
+                    AvailableSpace::Definite(Px(10.0)),
+                ),
+            ),
+            (
+                root_b,
+                LayoutSize::new(
+                    AvailableSpace::Definite(Px(200.0)),
+                    AvailableSpace::Definite(Px(20.0)),
+                ),
+            ),
+        ];
+
+        engine.compute_independent_roots_with_measure_if_needed(&roots, 1.0, |_node, _c| {
+            Size::default()
+        });
+        assert_eq!(engine.solve_count(), 1);
+
+        let a = engine.layout_rect(engine.layout_id_for_node(child_a).unwrap());
+        assert!((a.size.width.0 - 100.0).abs() < 0.01);
+        assert!((a.size.height.0 - 10.0).abs() < 0.01);
+
+        let b = engine.layout_rect(engine.layout_id_for_node(child_b).unwrap());
+        assert!((b.size.width.0 - 200.0).abs() < 0.01);
+        assert!((b.size.height.0 - 20.0).abs() < 0.01);
+
+        // Solving again for the same keys should be a no-op.
+        engine.compute_independent_roots_with_measure_if_needed(&roots, 1.0, |_node, _c| {
+            Size::default()
+        });
+        assert_eq!(engine.solve_count(), 1);
     }
 
     #[test]
