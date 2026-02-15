@@ -310,3 +310,13 @@ Exit criteria:
 
 - Web demo still runs (no uniformity regressions).
 - Headless perf gates remain green on the reference baseline.
+
+Progress record (Quad/material headless gate):
+
+- Date: 2026-02-15
+- Status: Landed (stable counter-based guardrail + baseline)
+- Commit: `dc4c816d`
+- Gate:
+  - `python3 tools/perf/headless_quad_material_stress_gate.py`
+- Baseline:
+  - `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
