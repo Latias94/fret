@@ -241,531 +241,540 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
+        // Important: key the internal state so multiple sliders don't share drag/typing state.
+        // Using an internal `scope()` here would otherwise collapse the callsite identity to this
+        // file, which can make multiple slider instances fight over one state slot.
+        let test_id = self.options.test_id.clone();
+        if let Some(test_id) = test_id.as_deref() {
+            cx.keyed(test_id, |cx| self.into_element_keyed(cx))
+        } else {
+            let model_id = self.model.id();
+            cx.keyed(model_id, |cx| self.into_element_keyed(cx))
+        }
+    }
 
-            let frame = resolve_editor_frame_chrome(
-                theme,
-                Size::Small,
-                &ChromeRefinement::default(),
-                InputTokenKeys {
-                    padding_x: Some("component.text_field.padding_x"),
-                    padding_y: Some("component.text_field.padding_y"),
-                    min_height: Some("component.text_field.min_height"),
-                    radius: Some("component.text_field.radius"),
-                    border_width: Some("component.text_field.border_width"),
-                    bg: Some("component.text_field.bg"),
-                    border: Some("component.text_field.border"),
-                    border_focus: Some("component.text_field.border_focus"),
-                    fg: Some("component.text_field.fg"),
-                    text_px: Some("component.text_field.text_px"),
-                    selection: Some("component.text_field.selection"),
-                },
-            );
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+        let density = EditorDensity::resolve(theme);
 
-            let track_h = theme
-                .metric_by_key(EditorTokenKeys::SLIDER_TRACK_HEIGHT)
-                .unwrap_or(Px(4.0));
-            let thumb_d = theme
-                .metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER)
-                .unwrap_or(Px(12.0));
+        let frame = resolve_editor_frame_chrome(
+            theme,
+            Size::Small,
+            &ChromeRefinement::default(),
+            InputTokenKeys {
+                padding_x: Some("component.text_field.padding_x"),
+                padding_y: Some("component.text_field.padding_y"),
+                min_height: Some("component.text_field.min_height"),
+                radius: Some("component.text_field.radius"),
+                border_width: Some("component.text_field.border_width"),
+                bg: Some("component.text_field.bg"),
+                border: Some("component.text_field.border"),
+                border_focus: Some("component.text_field.border_focus"),
+                fg: Some("component.text_field.fg"),
+                text_px: Some("component.text_field.text_px"),
+                selection: Some("component.text_field.selection"),
+            },
+        );
 
-            let track_h = Px(track_h.0.max(1.0));
-            let thumb_d = Px(thumb_d.0.max(track_h.0));
+        let track_h = theme
+            .metric_by_key(EditorTokenKeys::SLIDER_TRACK_HEIGHT)
+            .unwrap_or(Px(4.0));
+        let thumb_d = theme
+            .metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER)
+            .unwrap_or(Px(12.0));
 
-            let track_radius = Px(track_h.0 * 0.5);
-            let thumb_radius = Px(thumb_d.0 * 0.5);
+        let track_h = Px(track_h.0.max(1.0));
+        let thumb_d = Px(thumb_d.0.max(track_h.0));
 
-            let (min, max) = if self.min <= self.max {
-                (self.min, self.max)
-            } else {
-                (self.max, self.min)
-            };
+        let track_radius = Px(track_h.0 * 0.5);
+        let thumb_radius = Px(thumb_d.0 * 0.5);
 
-            let clamp = self.options.clamp;
-            let step = self.options.step;
+        let (min, max) = if self.min <= self.max {
+            (self.min, self.max)
+        } else {
+            (self.max, self.min)
+        };
 
-            let raw_value = cx
-                .get_model_copied(&self.model, Invalidation::Paint)
-                .unwrap_or_default();
-            let value_f = raw_value.to_f64();
-            let value_f = quantize_value(min, max, clamp, step, value_f);
-            let t = t_from_value(min, max, clamp, value_f);
+        let clamp = self.options.clamp;
+        let step = self.options.step;
 
-            let state: Arc<Mutex<SliderState>> = cx.with_state(
-                || Arc::new(Mutex::new(SliderState::default())),
-                |s| s.clone(),
-            );
+        let raw_value = cx
+            .get_model_copied(&self.model, Invalidation::Paint)
+            .unwrap_or_default();
+        let value_f = raw_value.to_f64();
+        let value_f = quantize_value(min, max, clamp, step, value_f);
+        let t = t_from_value(min, max, clamp, value_f);
 
-            let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
-            let typing = mode == SliderMode::Typing;
+        let state: Arc<Mutex<SliderState>> = cx.with_state(
+            || Arc::new(Mutex::new(SliderState::default())),
+            |s| s.clone(),
+        );
 
-            let enabled = self.options.enabled;
-            if !enabled && typing {
-                let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-                st.mode = SliderMode::Slide;
-                st.dragging = false;
-                st.pointer_id = None;
-            }
+        let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
+        let typing = mode == SliderMode::Typing;
 
-            let mut slider_layout = self.options.layout;
-            if typing {
-                slider_layout = hidden_layout(slider_layout);
-            }
+        let enabled = self.options.enabled;
+        if !enabled && typing {
+            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+            st.mode = SliderMode::Slide;
+            st.dragging = false;
+            st.pointer_id = None;
+        }
 
-            let mut input_layout = self.options.layout;
-            if !typing {
-                input_layout = hidden_layout(input_layout);
-            }
+        let mut slider_layout = self.options.layout;
+        if typing {
+            slider_layout = hidden_layout(slider_layout);
+        }
 
-            let model_for_change = self.model.clone();
-            let a11y_label = self.options.a11y_label.clone();
-            let show_value = self.options.show_value;
-            let value_width = self.options.value_width;
-            let allow_typing = self.options.allow_typing;
+        let mut input_layout = self.options.layout;
+        if !typing {
+            input_layout = hidden_layout(input_layout);
+        }
 
-            let interactive_enabled = enabled && !typing;
+        let model_for_change = self.model.clone();
+        let a11y_label = self.options.a11y_label.clone();
+        let show_value = self.options.show_value;
+        let value_width = self.options.value_width;
+        let allow_typing = self.options.allow_typing;
 
-            let mut layout = slider_layout;
-            if layout.size.min_height.is_none() {
-                layout.size.min_height = Some(density.row_height);
-            }
+        let interactive_enabled = enabled && !typing;
 
-            let format = self.format.clone();
-            let value_text = (format)(T::from_f64(value_f));
+        let mut layout = slider_layout;
+        if layout.size.min_height.is_none() {
+            layout.size.min_height = Some(density.row_height);
+        }
 
-            let state_for_slider = state.clone();
-            let mut slider_el = cx.pressable(
-                PressableProps {
-                    enabled: interactive_enabled,
-                    layout,
-                    a11y: PressableA11y {
-                        label: a11y_label,
-                        ..Default::default()
-                    },
+        let format = self.format.clone();
+        let value_text = (format)(T::from_f64(value_f));
+
+        let state_for_slider = state.clone();
+        let mut slider_el = cx.pressable(
+            PressableProps {
+                enabled: interactive_enabled,
+                layout,
+                a11y: PressableA11y {
+                    label: a11y_label,
                     ..Default::default()
                 },
-                move |cx, st| {
-                    let slider_id = cx.root_id();
-                    {
-                        let mut st = state_for_slider.lock().unwrap_or_else(|e| e.into_inner());
-                        st.slider_id = Some(slider_id);
+                ..Default::default()
+            },
+            move |cx, st| {
+                let slider_id = cx.root_id();
+                {
+                    let mut st = state_for_slider.lock().unwrap_or_else(|e| e.into_inner());
+                    st.slider_id = Some(slider_id);
+                }
+
+                let state_for_down = state_for_slider.clone();
+                let model_for_down = model_for_change.clone();
+                cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
+                    if !interactive_enabled {
+                        return PressablePointerDownResult::Continue;
                     }
-
-                    let state_for_down = state_for_slider.clone();
-                    let model_for_down = model_for_change.clone();
-                    cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
-                        if !interactive_enabled {
-                            return PressablePointerDownResult::Continue;
-                        }
-                        if allow_typing && down.button == MouseButton::Left && down.click_count >= 2
-                        {
-                            let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                            st.mode = SliderMode::Typing;
-                            st.dragging = false;
-                            st.pointer_id = None;
-                            if let Some(input_id) = st.input_id {
-                                host.request_focus(input_id);
-                            }
-                            host.request_redraw(action_cx.window);
-                            return PressablePointerDownResult::SkipDefaultAndStopPropagation;
-                        }
-
-                        if down.button != MouseButton::Left {
-                            return PressablePointerDownResult::Continue;
-                        }
-
-                        let bounds = host.bounds();
-                        let width = bounds.size.width.0 as f64;
-                        let inner_w =
-                            (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
-                                .max(0.0);
-                        let label_w = if show_value {
-                            value_width.0 as f64 + density.padding_x.0 as f64
-                        } else {
-                            0.0
-                        };
-                        let interactive_w = (inner_w - label_w).max(0.0);
-                        let inner_x = (down.position_local.x.0 as f64
-                            - frame.padding.left.0 as f64)
-                            .clamp(0.0, interactive_w);
-
-                        let next = value_from_x(
-                            min,
-                            max,
-                            clamp,
-                            step,
-                            inner_x,
-                            interactive_w,
-                            thumb_d.0 as f64,
-                        );
-                        let next_t = T::from_f64(next);
-                        let _ = host.models_mut().update(&model_for_down, |v| *v = next_t);
-                        host.request_redraw(action_cx.window);
-
-                        host.set_cursor_icon(CursorIcon::ColResize);
-
+                    if allow_typing && down.button == MouseButton::Left && down.click_count >= 2 {
                         let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                        st.dragging = true;
-                        st.pointer_id = Some(down.pointer_id);
-
-                        PressablePointerDownResult::Continue
-                    }));
-
-                    let state_for_move = state_for_slider.clone();
-                    let model_for_move = model_for_change.clone();
-                    cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
-                        let mut st_lock = state_for_move.lock().unwrap_or_else(|e| e.into_inner());
-                        if !st_lock.dragging || st_lock.pointer_id != Some(mv.pointer_id) {
-                            return false;
+                        st.mode = SliderMode::Typing;
+                        st.dragging = false;
+                        st.pointer_id = None;
+                        if let Some(input_id) = st.input_id {
+                            host.request_focus(input_id);
                         }
-
-                        // Best-effort cleanup when the pointer-up event is missed.
-                        if !mv.buttons.left {
-                            st_lock.dragging = false;
-                            st_lock.pointer_id = None;
-                            return false;
-                        }
-
-                        let bounds = host.bounds();
-                        let width = bounds.size.width.0 as f64;
-                        let inner_w =
-                            (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
-                                .max(0.0);
-                        let label_w = if show_value {
-                            value_width.0 as f64 + density.padding_x.0 as f64
-                        } else {
-                            0.0
-                        };
-                        let interactive_w = (inner_w - label_w).max(0.0);
-                        let inner_x = (mv.position_local.x.0 as f64 - frame.padding.left.0 as f64)
-                            .clamp(0.0, interactive_w);
-
-                        let next = value_from_x(
-                            min,
-                            max,
-                            clamp,
-                            step,
-                            inner_x,
-                            interactive_w,
-                            thumb_d.0 as f64,
-                        );
-                        let next_t = T::from_f64(next);
-                        let _ = host.models_mut().update(&model_for_move, |v| *v = next_t);
                         host.request_redraw(action_cx.window);
-                        true
-                    }));
+                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                    }
 
-                    let state_for_up = state_for_slider.clone();
-                    cx.pressable_add_on_pointer_up(Arc::new(move |_host, _action_cx, up| {
-                        let mut st = state_for_up.lock().unwrap_or_else(|e| e.into_inner());
-                        if st.pointer_id == Some(up.pointer_id) {
-                            st.dragging = false;
-                            st.pointer_id = None;
-                        }
-                        PressablePointerUpResult::Continue
-                    }));
+                    if down.button != MouseButton::Left {
+                        return PressablePointerDownResult::Continue;
+                    }
 
-                    let theme = Theme::global(&*cx.app);
-                    let hovered = st.hovered || st.hovered_raw;
-                    let pressed = st.pressed;
-                    let focused = st.focused;
+                    let bounds = host.bounds();
+                    let width = bounds.size.width.0 as f64;
+                    let inner_w =
+                        (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
+                            .max(0.0);
+                    let label_w = if show_value {
+                        value_width.0 as f64 + density.padding_x.0 as f64
+                    } else {
+                        0.0
+                    };
+                    let interactive_w = (inner_w - label_w).max(0.0);
+                    let inner_x = (down.position_local.x.0 as f64 - frame.padding.left.0 as f64)
+                        .clamp(0.0, interactive_w);
 
-                    let frame_visuals = editor_frame_visuals(
-                        theme,
-                        frame,
-                        EditorFrameState {
-                            enabled: interactive_enabled,
-                            hovered,
-                            pressed,
-                            focused,
-                            open: false,
-                        },
+                    let next = value_from_x(
+                        min,
+                        max,
+                        clamp,
+                        step,
+                        inner_x,
+                        interactive_w,
+                        thumb_d.0 as f64,
                     );
+                    let next_t = T::from_f64(next);
+                    let _ = host.models_mut().update(&model_for_down, |v| *v = next_t);
+                    host.request_redraw(action_cx.window);
 
-                    let accent = theme.color_token("accent");
-                    let disabled_alpha = if interactive_enabled { 1.0 } else { 0.55 };
+                    host.set_cursor_icon(CursorIcon::ColResize);
 
-                    let mut track_bg = theme
-                        .color_by_key("component.slider.track_bg")
-                        .or_else(|| theme.color_by_key("muted"))
-                        .unwrap_or_else(|| theme.color_token("muted"));
-                    let mut fill_bg = theme
-                        .color_by_key("component.slider.fill_bg")
-                        .or_else(|| theme.color_by_key("primary"))
-                        .unwrap_or_else(|| theme.color_token("primary"));
-                    let thumb_bg = theme
-                        .color_by_key("component.slider.thumb_bg")
-                        .unwrap_or_else(|| theme.color_token("background"));
-                    let thumb_border = theme
-                        .color_by_key("component.slider.thumb_border")
-                        .or_else(|| theme.color_by_key("border"))
-                        .unwrap_or_else(|| theme.color_token("foreground"));
+                    let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
+                    st.dragging = true;
+                    st.pointer_id = Some(down.pointer_id);
 
-                    if hovered && enabled {
-                        track_bg = mix(track_bg, accent, 0.06);
-                        fill_bg = mix(fill_bg, accent, 0.04);
-                    }
-                    if pressed && enabled {
-                        track_bg = mix(track_bg, accent, 0.10);
-                        fill_bg = mix(fill_bg, accent, 0.08);
+                    PressablePointerDownResult::Continue
+                }));
+
+                let state_for_move = state_for_slider.clone();
+                let model_for_move = model_for_change.clone();
+                cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                    let mut st_lock = state_for_move.lock().unwrap_or_else(|e| e.into_inner());
+                    if !st_lock.dragging || st_lock.pointer_id != Some(mv.pointer_id) {
+                        return false;
                     }
 
-                    track_bg = alpha_mul(track_bg, disabled_alpha);
-                    fill_bg = alpha_mul(fill_bg, disabled_alpha);
+                    // Best-effort cleanup when the pointer-up event is missed.
+                    if !mv.buttons.left {
+                        st_lock.dragging = false;
+                        st_lock.pointer_id = None;
+                        return false;
+                    }
 
-                    let thumb_bg = alpha_mul(thumb_bg, disabled_alpha);
-                    let thumb_border = alpha_mul(thumb_border, disabled_alpha);
+                    let bounds = host.bounds();
+                    let width = bounds.size.width.0 as f64;
+                    let inner_w =
+                        (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
+                            .max(0.0);
+                    let label_w = if show_value {
+                        value_width.0 as f64 + density.padding_x.0 as f64
+                    } else {
+                        0.0
+                    };
+                    let interactive_w = (inner_w - label_w).max(0.0);
+                    let inner_x = (mv.position_local.x.0 as f64 - frame.padding.left.0 as f64)
+                        .clamp(0.0, interactive_w);
 
-                    let left_grow = t.clamp(0.0, 1.0);
-                    let right_grow = (1.0 - left_grow).max(0.0);
+                    let next = value_from_x(
+                        min,
+                        max,
+                        clamp,
+                        step,
+                        inner_x,
+                        interactive_w,
+                        thumb_d.0 as f64,
+                    );
+                    let next_t = T::from_f64(next);
+                    let _ = host.models_mut().update(&model_for_move, |v| *v = next_t);
+                    host.request_redraw(action_cx.window);
+                    true
+                }));
 
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    min_height: Some(density.row_height),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Clip,
+                let state_for_up = state_for_slider.clone();
+                cx.pressable_add_on_pointer_up(Arc::new(move |_host, _action_cx, up| {
+                    let mut st = state_for_up.lock().unwrap_or_else(|e| e.into_inner());
+                    if st.pointer_id == Some(up.pointer_id) {
+                        st.dragging = false;
+                        st.pointer_id = None;
+                    }
+                    PressablePointerUpResult::Continue
+                }));
+
+                let theme = Theme::global(&*cx.app);
+                let hovered = st.hovered || st.hovered_raw;
+                let pressed = st.pressed;
+                let focused = st.focused;
+
+                let frame_visuals = editor_frame_visuals(
+                    theme,
+                    frame,
+                    EditorFrameState {
+                        enabled: interactive_enabled,
+                        hovered,
+                        pressed,
+                        focused,
+                        open: false,
+                    },
+                );
+
+                let accent = theme.color_token("accent");
+                let disabled_alpha = if interactive_enabled { 1.0 } else { 0.55 };
+
+                let mut track_bg = theme
+                    .color_by_key("component.slider.track_bg")
+                    .or_else(|| theme.color_by_key("muted"))
+                    .unwrap_or_else(|| theme.color_token("muted"));
+                let mut fill_bg = theme
+                    .color_by_key("component.slider.fill_bg")
+                    .or_else(|| theme.color_by_key("primary"))
+                    .unwrap_or_else(|| theme.color_token("primary"));
+                let thumb_bg = theme
+                    .color_by_key("component.slider.thumb_bg")
+                    .unwrap_or_else(|| theme.color_token("background"));
+                let thumb_border = theme
+                    .color_by_key("component.slider.thumb_border")
+                    .or_else(|| theme.color_by_key("border"))
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+
+                if hovered && enabled {
+                    track_bg = mix(track_bg, accent, 0.06);
+                    fill_bg = mix(fill_bg, accent, 0.04);
+                }
+                if pressed && enabled {
+                    track_bg = mix(track_bg, accent, 0.10);
+                    fill_bg = mix(fill_bg, accent, 0.08);
+                }
+
+                track_bg = alpha_mul(track_bg, disabled_alpha);
+                fill_bg = alpha_mul(fill_bg, disabled_alpha);
+
+                let thumb_bg = alpha_mul(thumb_bg, disabled_alpha);
+                let thumb_border = alpha_mul(thumb_border, disabled_alpha);
+
+                let left_grow = t.clamp(0.0, 1.0);
+                let right_grow = (1.0 - left_grow).max(0.0);
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                min_height: Some(density.row_height),
                                 ..Default::default()
                             },
-                            padding: frame.padding,
-                            background: Some(frame_visuals.bg),
-                            border: Edges::all(frame.border_width),
-                            border_color: Some(frame_visuals.border),
-                            focus_border_color: Some(frame.border_focus),
-                            corner_radii: Corners::all(frame.radius),
+                            overflow: Overflow::Clip,
                             ..Default::default()
                         },
-                        move |cx| {
-                            let track = cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        flex: FlexItemStyle {
-                                            grow: 1.0,
-                                            shrink: 1.0,
-                                            basis: Length::Px(Px(0.0)),
-                                            align_self: None,
-                                        },
+                        padding: frame.padding,
+                        background: Some(frame_visuals.bg),
+                        border: Edges::all(frame.border_width),
+                        border_color: Some(frame_visuals.border),
+                        focus_border_color: Some(frame.border_focus),
+                        corner_radii: Corners::all(frame.radius),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let track = cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
                                         ..Default::default()
                                     },
-                                    direction: Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
+                                    flex: FlexItemStyle {
+                                        grow: 1.0,
+                                        shrink: 1.0,
+                                        basis: Length::Px(Px(0.0)),
+                                        align_self: None,
+                                    },
+                                    ..Default::default()
                                 },
-                                move |cx| {
-                                    let mut seg_layout =
-                                        |grow: f32, bg: fret_core::Color, left: bool| {
-                                            cx.container(
-                                                ContainerProps {
-                                                    layout: LayoutStyle {
-                                                        size: SizeStyle {
-                                                            width: Length::Auto,
-                                                            height: Length::Px(track_h),
-                                                            ..Default::default()
-                                                        },
-                                                        flex: FlexItemStyle {
-                                                            grow,
-                                                            shrink: 1.0,
-                                                            basis: Length::Px(Px(0.0)),
-                                                            align_self: None,
-                                                        },
+                                direction: Axis::Horizontal,
+                                gap: Px(0.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |cx| {
+                                let mut seg_layout =
+                                    |grow: f32, bg: fret_core::Color, left: bool| {
+                                        cx.container(
+                                            ContainerProps {
+                                                layout: LayoutStyle {
+                                                    size: SizeStyle {
+                                                        width: Length::Auto,
+                                                        height: Length::Px(track_h),
                                                         ..Default::default()
                                                     },
-                                                    background: Some(bg),
-                                                    corner_radii: if left {
-                                                        Corners {
-                                                            top_left: track_radius,
-                                                            bottom_left: track_radius,
-                                                            top_right: Px(0.0),
-                                                            bottom_right: Px(0.0),
-                                                        }
-                                                    } else {
-                                                        Corners {
-                                                            top_left: Px(0.0),
-                                                            bottom_left: Px(0.0),
-                                                            top_right: track_radius,
-                                                            bottom_right: track_radius,
-                                                        }
+                                                    flex: FlexItemStyle {
+                                                        grow,
+                                                        shrink: 1.0,
+                                                        basis: Length::Px(Px(0.0)),
+                                                        align_self: None,
                                                     },
                                                     ..Default::default()
                                                 },
-                                                |_cx| vec![],
-                                            )
-                                        };
-
-                                    let left = seg_layout(left_grow, fill_bg, true);
-                                    let right = seg_layout(right_grow, track_bg, false);
-
-                                    let thumb = cx.container(
-                                        ContainerProps {
-                                            layout: LayoutStyle {
-                                                size: SizeStyle {
-                                                    width: Length::Px(thumb_d),
-                                                    height: Length::Px(thumb_d),
-                                                    ..Default::default()
-                                                },
-                                                flex: FlexItemStyle {
-                                                    grow: 0.0,
-                                                    shrink: 0.0,
-                                                    basis: Length::Px(thumb_d),
-                                                    align_self: None,
+                                                background: Some(bg),
+                                                corner_radii: if left {
+                                                    Corners {
+                                                        top_left: track_radius,
+                                                        bottom_left: track_radius,
+                                                        top_right: Px(0.0),
+                                                        bottom_right: Px(0.0),
+                                                    }
+                                                } else {
+                                                    Corners {
+                                                        top_left: Px(0.0),
+                                                        bottom_left: Px(0.0),
+                                                        top_right: track_radius,
+                                                        bottom_right: track_radius,
+                                                    }
                                                 },
                                                 ..Default::default()
                                             },
-                                            background: Some(thumb_bg),
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(thumb_border),
-                                            corner_radii: Corners::all(thumb_radius),
+                                            |_cx| vec![],
+                                        )
+                                    };
+
+                                let left = seg_layout(left_grow, fill_bg, true);
+                                let right = seg_layout(right_grow, track_bg, false);
+
+                                let thumb = cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Px(thumb_d),
+                                                height: Length::Px(thumb_d),
+                                                ..Default::default()
+                                            },
+                                            flex: FlexItemStyle {
+                                                grow: 0.0,
+                                                shrink: 0.0,
+                                                basis: Length::Px(thumb_d),
+                                                align_self: None,
+                                            },
                                             ..Default::default()
                                         },
-                                        |_cx| vec![],
-                                    );
+                                        background: Some(thumb_bg),
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: Some(thumb_border),
+                                        corner_radii: Corners::all(thumb_radius),
+                                        ..Default::default()
+                                    },
+                                    |_cx| vec![],
+                                );
 
-                                    vec![left, thumb, right]
+                                vec![left, thumb, right]
+                            },
+                        );
+
+                        let value_el = if show_value {
+                            Some(cx.text_props(TextProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Px(value_width),
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    flex: FlexItemStyle {
+                                        grow: 0.0,
+                                        shrink: 0.0,
+                                        basis: Length::Px(value_width),
+                                        align_self: None,
+                                    },
+                                    ..Default::default()
                                 },
-                            );
+                                text: value_text.clone(),
+                                style: Some(TextStyle {
+                                    size: frame.text_px,
+                                    line_height: Some(density.row_height),
+                                    ..Default::default()
+                                }),
+                                color: Some(frame_visuals.fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                                align: TextAlign::End,
+                            }))
+                        } else {
+                            None
+                        };
 
-                            let value_el = if show_value {
-                                Some(cx.text_props(TextProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Px(value_width),
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        flex: FlexItemStyle {
-                                            grow: 0.0,
-                                            shrink: 0.0,
-                                            basis: Length::Px(value_width),
-                                            align_self: None,
-                                        },
-                                        ..Default::default()
-                                    },
-                                    text: value_text.clone(),
-                                    style: Some(TextStyle {
-                                        size: frame.text_px,
-                                        line_height: Some(density.row_height),
-                                        ..Default::default()
-                                    }),
-                                    color: Some(frame_visuals.fg),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                    align: TextAlign::End,
-                                }))
-                            } else {
-                                None
-                            };
-
-                            let mut children = vec![track];
-                            if let Some(value_el) = value_el {
-                                children.push(value_el);
-                            }
-
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: if show_value {
-                                        density.padding_x
-                                    } else {
-                                        Px(0.0)
-                                    },
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |_cx| children,
-                            )]
-                        },
-                    )]
-                },
-            );
-
-            if let Some(test_id) = self.options.test_id.as_ref() {
-                slider_el = slider_el.test_id(test_id.clone());
-            }
-
-            let parse = self.parse.clone();
-            let format = self.format.clone();
-            let validate = self.validate.clone();
-
-            let parse_for_input: NumericParseFn<T> = Arc::new(move |s| {
-                let v = parse(s)?;
-                let next = quantize_value(min, max, clamp, step, v.to_f64());
-                Some(T::from_f64(next))
-            });
-
-            let validate_for_input: Option<NumericValidateFn<T>> = if clamp {
-                validate
-            } else {
-                let validate = validate.clone();
-                Some(Arc::new(move |v| {
-                    let f = v.to_f64();
-                    if f < min || f > max {
-                        return Some(Arc::from("Out of range"));
-                    }
-                    if let Some(validate) = validate.as_ref() {
-                        validate(v)
-                    } else {
-                        None
-                    }
-                }))
-            };
-
-            let state_for_input = state.clone();
-            let input = NumericInput::new(self.model.clone(), format, parse_for_input)
-                .validate(validate_for_input)
-                .options(NumericInputOptions {
-                    layout: input_layout,
-                    enabled: enabled && typing,
-                    focusable: enabled && typing,
-                    test_id: self.options.test_id.clone(),
-                    ..Default::default()
-                })
-                .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
-                    if matches!(
-                        outcome,
-                        NumericInputOutcome::Committed | NumericInputOutcome::Canceled
-                    ) {
-                        let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                        st.mode = SliderMode::Slide;
-                        st.dragging = false;
-                        st.pointer_id = None;
-                        if let Some(slider_id) = st.slider_id {
-                            host.request_focus(slider_id);
+                        let mut children = vec![track];
+                        if let Some(value_el) = value_el {
+                            children.push(value_el);
                         }
-                        host.request_redraw(action_cx.window);
+
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                direction: Axis::Horizontal,
+                                gap: if show_value {
+                                    density.padding_x
+                                } else {
+                                    Px(0.0)
+                                },
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |_cx| children,
+                        )]
+                    },
+                )]
+            },
+        );
+
+        if let Some(test_id) = self.options.test_id.as_ref() {
+            slider_el = slider_el.test_id(test_id.clone());
+        }
+
+        let parse = self.parse.clone();
+        let format = self.format.clone();
+        let validate = self.validate.clone();
+
+        let parse_for_input: NumericParseFn<T> = Arc::new(move |s| {
+            let v = parse(s)?;
+            let next = quantize_value(min, max, clamp, step, v.to_f64());
+            Some(T::from_f64(next))
+        });
+
+        let validate_for_input: Option<NumericValidateFn<T>> = if clamp {
+            validate
+        } else {
+            let validate = validate.clone();
+            Some(Arc::new(move |v| {
+                let f = v.to_f64();
+                if f < min || f > max {
+                    return Some(Arc::from("Out of range"));
+                }
+                if let Some(validate) = validate.as_ref() {
+                    validate(v)
+                } else {
+                    None
+                }
+            }))
+        };
+
+        let state_for_input = state.clone();
+        let input = NumericInput::new(self.model.clone(), format, parse_for_input)
+            .validate(validate_for_input)
+            .options(NumericInputOptions {
+                layout: input_layout,
+                enabled: enabled && typing,
+                focusable: enabled && typing,
+                test_id: self.options.test_id.clone(),
+                ..Default::default()
+            })
+            .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
+                if matches!(
+                    outcome,
+                    NumericInputOutcome::Committed | NumericInputOutcome::Canceled
+                ) {
+                    let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
+                    st.mode = SliderMode::Slide;
+                    st.dragging = false;
+                    st.pointer_id = None;
+                    if let Some(slider_id) = st.slider_id {
+                        host.request_focus(slider_id);
                     }
-                })))
-                .into_element(cx);
+                    host.request_redraw(action_cx.window);
+                }
+            })))
+            .into_element(cx);
 
-            {
-                let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-                st.input_id = Some(input.id);
-            }
+        {
+            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+            st.input_id = Some(input.id);
+        }
 
-            cx.container(Default::default(), move |_cx| vec![slider_el, input])
-        })
+        cx.container(Default::default(), move |_cx| vec![slider_el, input])
     }
 }
