@@ -609,6 +609,9 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub mod ui_app_driver;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+mod dev_reload;
+
 #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
 pub mod ui_diagnostics;
 

@@ -5,11 +5,14 @@
 
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
+use crate::UiAssetsReloadEpoch;
 use crate::image_asset_cache::ImageAssetKey;
 use crate::image_source::{
     ImageSource, ImageSourceOptions, ImageSourceState, register_asset_key_for_source,
     with_image_source_loader,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use crate::svg_file::{SvgFileSource, svg_source_from_file_cached};
 
 pub trait ImageSourceElementContextExt {
     fn use_image_source_state(&mut self, source: &ImageSource) -> ImageSourceState;
@@ -31,6 +34,10 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
         source: &ImageSource,
         options: ImageSourceOptions,
     ) -> ImageSourceState {
+        // ViewCache correctness for dev reloads: observe a global epoch that can be bumped when
+        // path-based assets should be reloaded (without restarting the app).
+        self.observe_global::<UiAssetsReloadEpoch>(Invalidation::Paint);
+
         // ViewCache correctness:
         //
         // - observe a per-request model that is updated when async decode completes (inbox drainer),
@@ -51,5 +58,18 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
         }
 
         crate::use_image_source_state_with_options(self.app, self.window, source, options)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub trait SvgFileElementContextExt {
+    fn svg_source_from_file(&mut self, source: &SvgFileSource) -> Option<fret_ui::SvgSource>;
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl<H: UiHost> SvgFileElementContextExt for ElementContext<'_, H> {
+    fn svg_source_from_file(&mut self, source: &SvgFileSource) -> Option<fret_ui::SvgSource> {
+        self.observe_global::<UiAssetsReloadEpoch>(Invalidation::Paint);
+        svg_source_from_file_cached(self.app, source).ok()
     }
 }

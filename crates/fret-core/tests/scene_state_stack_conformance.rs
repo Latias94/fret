@@ -6,6 +6,7 @@ use fret_core::{
 enum ClipKind {
     Rect,
     RRect,
+    Path,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -76,6 +77,12 @@ impl Interpreter {
                     pushed_transform: self.current_transform(),
                 });
             }
+            SceneOp::PushClipPath { .. } => {
+                self.clip_stack.push(ClipEntry {
+                    kind: ClipKind::Path,
+                    pushed_transform: self.current_transform(),
+                });
+            }
             SceneOp::PopClip => {
                 self.clip_stack.pop();
             }
@@ -88,6 +95,7 @@ impl Interpreter {
             | SceneOp::PushCompositeGroup { .. }
             | SceneOp::PopCompositeGroup
             | SceneOp::Quad { .. }
+            | SceneOp::StrokeRRect { .. }
             | SceneOp::Image { .. }
             | SceneOp::ImageRegion { .. }
             | SceneOp::MaskImage { .. }
