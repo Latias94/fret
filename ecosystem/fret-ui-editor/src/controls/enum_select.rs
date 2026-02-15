@@ -19,10 +19,14 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::popper;
+use fret_ui_kit::recipes::input::InputTokenKeys;
+use fret_ui_kit::{ChromeRefinement, Size};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
-use crate::primitives::icons::editor_icon;
+use crate::primitives::chrome::resolve_editor_frame_chrome;
+use crate::primitives::icons::editor_icon_with;
+use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -125,9 +129,27 @@ impl EnumSelect {
             .get_model_cloned(&self.model, Invalidation::Paint)
             .unwrap_or(None);
 
-        let (density, bg, border, fg, ring) = {
+        let (density, frame_chrome, ring, bg, border) = {
             let theme = Theme::global(&*cx.app);
             let density = EditorDensity::resolve(theme);
+            let frame_chrome = resolve_editor_frame_chrome(
+                theme,
+                Size::Small,
+                &ChromeRefinement::default(),
+                InputTokenKeys {
+                    padding_x: Some("component.text_field.padding_x"),
+                    padding_y: Some("component.text_field.padding_y"),
+                    min_height: Some("component.text_field.min_height"),
+                    radius: Some("component.text_field.radius"),
+                    border_width: Some("component.text_field.border_width"),
+                    bg: Some("component.input.bg"),
+                    border: Some("component.input.border"),
+                    border_focus: Some("component.input.border_focus"),
+                    fg: Some("component.input.fg"),
+                    text_px: Some("component.text_field.text_px"),
+                    ..InputTokenKeys::none()
+                },
+            );
             let bg = theme
                 .color_by_key("popover")
                 .or_else(|| theme.color_by_key("component.input.bg"))
@@ -136,13 +158,10 @@ impl EnumSelect {
                 .color_by_key("border")
                 .or_else(|| theme.color_by_key("component.input.border"))
                 .unwrap_or_else(|| theme.color_token("foreground"));
-            let fg = theme
-                .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_token("foreground"));
             let ring = theme
                 .color_by_key("ring")
                 .unwrap_or_else(|| theme.color_token("primary"));
-            (density, bg, border, fg, ring)
+            (density, frame_chrome, ring, bg, border)
         };
 
         let selected_label = selected_value
@@ -165,6 +184,7 @@ impl EnumSelect {
         let items_for_overlay = self.items.clone();
         let options_for_overlay = self.options.clone();
         let open_for_overlay = open.clone();
+        let enabled_for_paint = self.options.enabled;
 
         let trigger = cx.pressable(
             PressableProps {
@@ -183,11 +203,24 @@ impl EnumSelect {
                     offset: Px(2.0),
                     color: ring,
                     offset_color: None,
-                    corner_radii: Corners::all(Px(6.0)),
+                    corner_radii: Corners::all(frame_chrome.radius),
                 }),
                 ..Default::default()
             },
             move |cx, _st| {
+                let theme = Theme::global(&*cx.app);
+                let visuals = editor_frame_visuals(
+                    theme,
+                    frame_chrome,
+                    EditorFrameState {
+                        enabled: enabled_for_paint,
+                        hovered: _st.hovered,
+                        pressed: _st.pressed,
+                        focused: _st.focused,
+                        open: is_open,
+                    },
+                );
+
                 let open = open_for_overlay.clone();
                 let on_activate: OnActivate =
                     Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
@@ -213,11 +246,11 @@ impl EnumSelect {
                             },
                             ..Default::default()
                         },
-                        padding: Edges::symmetric(density.padding_x, density.padding_y),
-                        background: Some(bg),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(border),
-                        corner_radii: Corners::all(Px(6.0)),
+                        padding: frame_chrome.padding,
+                        background: Some(visuals.bg),
+                        border: Edges::all(frame_chrome.border_width),
+                        border_color: Some(visuals.border),
+                        corner_radii: Corners::all(frame_chrome.radius),
                         ..Default::default()
                     },
                     move |cx| {
@@ -255,7 +288,7 @@ impl EnumSelect {
                                             line_height: Some(density.row_height),
                                             ..Default::default()
                                         }),
-                                        color: Some(fg),
+                                        color: Some(visuals.fg),
                                         wrap: TextWrap::None,
                                         overflow: TextOverflow::Ellipsis,
                                         align: TextAlign::Start,
@@ -293,11 +326,14 @@ impl EnumSelect {
                                                     wrap: false,
                                                 },
                                                 move |cx| {
-                                                    vec![editor_icon(
+                                                    vec![editor_icon_with(
                                                         cx,
                                                         density,
                                                         caret_icon,
                                                         Some(Px(12.0)),
+                                                        Some(fret_ui_kit::ColorRef::Color(
+                                                            visuals.icon,
+                                                        )),
                                                     )]
                                                 },
                                             )]

@@ -143,13 +143,18 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
 Goal: close the largest usability/polish gaps identified in `ui-editor-egui-imgui-gap-v1.md` without
 adding new runtime contracts unless evidence demands it.
 
-- [ ] Define `EditorWidgetVisuals` (policy) analogous to `egui::Visuals::widgets`:
+- [~] Define `EditorWidgetVisuals` (policy) analogous to `egui::Visuals::widgets`:
   - inactive / hovered / active / open / disabled palettes
   - resolved from theme tokens + `editor.*` density defaults
   - consumed by all editor controls to avoid drift
-- [ ] Define a shared `EditorChrome` recipe (if not already done in M2.5):
+  - Evidence: `ecosystem/fret-ui-editor/src/primitives/visuals.rs`
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+  - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
+- [~] Define a shared `EditorChrome` recipe (if not already done in M2.5):
   - input-like frame chrome (bg/border/radius/padding) + state variants
   - icon sizing + spacing defaults
+  - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
 - [ ] Add an editor-facing `Slider<T>` control:
   - horizontal first; clamping policy; optional value typing; unit formatting hook
 - [ ] Add a reusable `TextField` control surface:

@@ -25,6 +25,7 @@ use crate::controls::numeric_input::{
 };
 use crate::primitives::chrome::resolve_editor_frame_chrome;
 use crate::primitives::drag_value_core::DragValueScalar;
+use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
 use crate::primitives::{DragValueCore, DragValueCoreOptions, EditorDensity};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,7 +166,7 @@ where
             let scrub = DragValueCore::new(value, on_change_live)
                 .a11y_label(value_text.clone())
                 .options(scrub_opts)
-                .into_element(cx, move |cx, _resp| {
+                .into_element(cx, move |cx, resp| {
                     // Record the scrub element id for focus restore from typing mode.
                     let scrub_id = cx.root_id();
                     let mut st = state_for_scrub_record
@@ -192,12 +193,18 @@ where
                         },
                     ));
 
-                    let is_focused = cx.is_focused_element(scrub_id);
-                    let border = if is_focused {
-                        scrub_chrome.border_focus
-                    } else {
-                        scrub_chrome.border
-                    };
+                    let theme = Theme::global(&*cx.app);
+                    let visuals = editor_frame_visuals(
+                        theme,
+                        scrub_chrome,
+                        EditorFrameState {
+                            enabled: true,
+                            hovered: resp.hovered,
+                            pressed: resp.dragging || resp.pressed,
+                            focused: resp.focused || cx.is_focused_element(scrub_id),
+                            open: false,
+                        },
+                    );
 
                     vec![cx.container(
                         ContainerProps {
@@ -211,9 +218,9 @@ where
                                 ..Default::default()
                             },
                             padding: scrub_chrome.padding,
-                            background: Some(scrub_chrome.bg),
+                            background: Some(visuals.bg),
                             border: Edges::all(scrub_chrome.border_width),
-                            border_color: Some(border),
+                            border_color: Some(visuals.border),
                             corner_radii: Corners::all(scrub_chrome.radius),
                             ..Default::default()
                         },
@@ -233,7 +240,7 @@ where
                                     line_height: Some(density.row_height),
                                     ..Default::default()
                                 }),
-                                color: Some(scrub_chrome.fg),
+                                color: Some(visuals.fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Ellipsis,
                                 align: TextAlign::Start,

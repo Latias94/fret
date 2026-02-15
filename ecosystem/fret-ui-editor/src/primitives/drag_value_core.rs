@@ -89,6 +89,9 @@ pub struct DragValueCoreResponse {
     pub dragging: bool,
     pub canceled: bool,
     pub committed: bool,
+    pub hovered: bool,
+    pub pressed: bool,
+    pub focused: bool,
 }
 
 #[derive(Debug)]
@@ -193,14 +196,6 @@ where
             let _ = st.session.commit();
         }
 
-        let response = {
-            let st = state.lock().unwrap_or_else(|e| e.into_inner());
-            DragValueCoreResponse {
-                dragging: st.dragging,
-                ..Default::default()
-            }
-        };
-
         let on_change_live = self.on_change_live.clone();
         let on_commit = self.on_commit.clone();
         let on_cancel = self.on_cancel.clone();
@@ -224,7 +219,7 @@ where
                 },
                 ..Default::default()
             },
-            move |cx, _st| {
+            move |cx, pressable| {
                 let state_for_down = state.clone();
                 cx.pressable_add_on_pointer_down(Arc::new(move |_host, _action_cx, down| {
                     if down.button != MouseButton::Left {
@@ -390,7 +385,17 @@ where
                     }),
                 );
 
-                children(cx, response)
+                let dragging = state.lock().unwrap_or_else(|e| e.into_inner()).dragging;
+                children(
+                    cx,
+                    DragValueCoreResponse {
+                        dragging,
+                        hovered: pressable.hovered,
+                        pressed: pressable.pressed,
+                        focused: pressable.focused,
+                        ..Default::default()
+                    },
+                )
             },
         );
 
