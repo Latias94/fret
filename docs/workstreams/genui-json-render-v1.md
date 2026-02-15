@@ -44,7 +44,7 @@ Workstream tracking:
 The current MVP matches the core **shape and semantics** (flat spec + catalog guardrails + streaming patches), but is missing some upstream ergonomics and toolchain pieces:
 
 - Spec auto-fixes: ✅ GenUI v1 includes an opt-in auto-fixer for common LLM mistakes (moving `visible/on/repeat` out of `props`); it is not enabled automatically by the renderer.
-- Action execution pipeline helpers: json-render has built-in helpers for `confirm`, `onSuccess`, `onError`, and async action execution; GenUI keeps these fields app-owned and does not ship a default executor.
+- Action execution pipeline helpers: ✅ GenUI v1 ships an opt-in executor (`GenUiActionExecutorV1`) with standard actions, portable effects, confirm gating, and `onSuccess`/`onError` chaining. Async execution, dialogs, permissions, and app-level policies remain app-owned.
 - Catalog type expressiveness: json-render uses Zod schemas (nested objects, arrays, unions, optional fields); GenUI v1 supports a growing typed surface (primitive + enum + nullable + object/array/oneOf + required/default metadata) plus dynamic expressions, but still lacks richer unions and deeper schema composition (e.g. nested optional/required modeling with strict repair hints).
 - Devtools/playground: json-render ships catalog display + interactive playground; GenUI v1 currently relies on the demo app (now includes a basic inspector) and existing Fret diagnostics.
 - Mixed stream transforms: ✅ GenUI v1 includes `mixed_stream` utilities (`MixedStreamParser`, `MixedSpecStreamCompiler`) with ```spec fence support, inspired by `pipeJsonRender`.
