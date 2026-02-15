@@ -2153,6 +2153,63 @@ mod display_map_tests {
     }
 
     #[test]
+    fn display_map_code_wrap_policy_does_not_split_arrow_operator_token() {
+        let doc = DocId::new();
+        let text = "left->right->tail";
+        let buf = TextBuffer::new(doc, text.to_string()).unwrap();
+
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        let map = DisplayMap::new_with_code_wrap_policy(&buf, Some(6), Some(policy));
+
+        let mut rows: Vec<String> = Vec::new();
+        for row in 0..map.row_count() {
+            rows.push(
+                map.materialize_display_row_text(&buf, row)
+                    .text
+                    .as_ref()
+                    .to_string(),
+            );
+        }
+        assert_eq!(rows.join(""), text);
+        for w in rows.windows(2) {
+            assert!(
+                !(w[0].ends_with('-') && w[1].starts_with('>')),
+                "expected `->` to not be split across a wrap boundary: rows={rows:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn display_map_code_wrap_policy_does_not_split_double_colon_operator_token() {
+        let doc = DocId::new();
+        let text = "std::path::Path";
+        let buf = TextBuffer::new(doc, text.to_string()).unwrap();
+
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        // Small enough to tempt a break between the two `:` characters.
+        let map = DisplayMap::new_with_code_wrap_policy(&buf, Some(4), Some(policy));
+
+        let mut rows: Vec<String> = Vec::new();
+        for row in 0..map.row_count() {
+            rows.push(
+                map.materialize_display_row_text(&buf, row)
+                    .text
+                    .as_ref()
+                    .to_string(),
+            );
+        }
+        assert_eq!(rows.join(""), text);
+        for w in rows.windows(2) {
+            assert!(
+                !(w[0].ends_with(':') && w[1].starts_with(':')),
+                "expected `::` to not be split across a wrap boundary: rows={rows:?}"
+            );
+        }
+    }
+
+    #[test]
     fn display_map_code_wrap_policy_with_inlays_keeps_inlay_atomic_and_prefers_identifier_breaks() {
         let doc = DocId::new();
         let buf = TextBuffer::new(doc, "abc_def_ghi".to_string()).unwrap();

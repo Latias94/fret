@@ -1,6 +1,7 @@
 use fret_code_editor_view::code_wrap_policy::{
     CodeWrapKnobs, CodeWrapPolicy, CodeWrapPreset, row_starts_for_code_wrap,
 };
+use fret_text_nav::is_grapheme_boundary;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -58,8 +59,10 @@ impl Knobs {
     }
 }
 
-fn rows(text: &str, wrap_cols: usize, policy: CodeWrapPolicy) -> Vec<String> {
-    let starts = row_starts_for_code_wrap(text, wrap_cols, policy);
+fn rows_from_starts(
+    text: &str,
+    starts: &[fret_code_editor_view::code_wrap_policy::CodeWrapRowStart],
+) -> Vec<String> {
     let mut out = Vec::<String>::new();
     for (idx, start) in starts.iter().enumerate() {
         let end = starts
@@ -87,7 +90,32 @@ fn code_wrap_policy_fixture_suite_v1() {
             policy.knobs = knobs.into_knobs();
         }
 
-        let got = rows(&case.text, case.wrap_cols, policy);
+        let starts = row_starts_for_code_wrap(&case.text, case.wrap_cols, policy);
+        assert!(
+            starts.first().is_some_and(|v| v.byte == 0),
+            "expected first row start to be at 0: id={}",
+            case.id
+        );
+        for (idx, start) in starts.iter().enumerate() {
+            assert!(
+                is_grapheme_boundary(&case.text, start.byte),
+                "expected row start to be a grapheme boundary: id={} byte={}",
+                case.id,
+                start.byte
+            );
+            let end = starts
+                .get(idx + 1)
+                .map(|v| v.byte)
+                .unwrap_or_else(|| case.text.len());
+            assert!(
+                is_grapheme_boundary(&case.text, end),
+                "expected row end to be a grapheme boundary: id={} byte={}",
+                case.id,
+                end
+            );
+        }
+
+        let got = rows_from_starts(&case.text, &starts);
         assert_eq!(
             got, case.expected_rows,
             "fixture case failed: id={}",
