@@ -414,6 +414,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
+        #[cfg(feature = "dev-state")]
+        if check_before_close && self.dev_state.enabled() {
+            let key = self.dev_state.window_key(window).map(ToString::to_string);
+            if let Some(key) = key
+                && let Some(state) = self.windows.get(window)
+            {
+                let physical = state.window.surface_size();
+                let logical: winit::dpi::LogicalSize<f64> =
+                    physical.to_logical(state.window.scale_factor());
+                let position = state.window.outer_position().ok();
+                self.dev_state
+                    .observe_window_geometry_now(&key, logical, position);
+            }
+
+            self.dev_state.export_and_flush_now(&mut self.app);
+        }
+
         if self
             .dock_tearoff_follow
             .is_some_and(|f| f.window == window || f.source_window == window)

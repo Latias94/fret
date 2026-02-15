@@ -159,6 +159,10 @@ impl DevStateController {
         self.window_keys.insert(window, key.into());
     }
 
+    pub(crate) fn window_key(&self, window: AppWindowId) -> Option<&str> {
+        self.window_keys.get(&window).map(|v| v.as_str())
+    }
+
     pub(crate) fn unregister_window(&mut self, window: AppWindowId) {
         if !self.enabled {
             return;
@@ -178,6 +182,37 @@ impl DevStateController {
             return;
         }
         DevStateHooks::export_all(app);
+    }
+
+    pub(crate) fn observe_window_geometry_now(
+        &mut self,
+        key: &str,
+        logical_size: LogicalSize<f64>,
+        position: Option<PhysicalPosition<i32>>,
+    ) {
+        if !self.enabled {
+            return;
+        }
+
+        let observed = MainWindowGeometry {
+            logical_size,
+            position,
+        };
+        if self.windows_state.get(key).copied() != Some(observed) {
+            self.windows_state.insert(key.to_string(), observed);
+        }
+    }
+
+    pub(crate) fn export_and_flush_now(&mut self, app: &mut App) {
+        if !self.enabled {
+            return;
+        }
+
+        self.export_app_state(app);
+        if let Err(err) = self.flush_file(app) {
+            warn!(path = %self.path.display(), error = %err, "dev_state: flush failed");
+        }
+        self.dirty_since = None;
     }
 
     pub(crate) fn apply_main_window_spec(&mut self, spec: &mut WindowCreateSpec) {
