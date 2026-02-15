@@ -121,7 +121,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] REN-VNEXT-webgpu-001 Make WGSL shaders satisfy WebGPU uniformity rules (Tint):
   - Derivative ops (`fwidth`, `dpdx`, `dpdy`) and sampling (`textureSample`) are not gated by non-uniform control flow.
   - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`mask_eval`, `paint_eval`, dashed border mask).
-- [~] REN-VNEXT-webgpu-002 Recover performance after uniformity fixes:
+- [x] REN-VNEXT-webgpu-002 Recover performance after uniformity fixes:
   - Avoid “evaluate all material patterns per pixel” in the quad shader on web/mobile.
   - Preferred direction: compile a small set of shader/pipeline variants keyed by stable (bounded) paint/material kinds.
   - Landed: quad pipeline variants keyed by `(fill_kind, border_kind, border_present, dash_enabled)` using WGSL `override` constants.
@@ -133,9 +133,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - goal: avoid material catalog `textureSample` on params-only paths.
     - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`material_eval(sample_catalog)`), `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (constants),
       `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (keying by `stop_count` aux channel).
-  - Next:
-    - Gate exists: `python3 tools/perf/headless_quad_material_stress_gate.py` (baseline in `docs/workstreams/perf-baselines/`).
-    - Consider further bounded variants (e.g. material-kind or tile-mode subsets) only if perf bundles show material sampling/derivative hotspots.
+  - Notes:
+    - Headless perf gate exists: `python3 tools/perf/headless_quad_material_stress_gate.py` (baseline in `docs/workstreams/perf-baselines/`).
+    - Any further variants are tracked as `REN-VNEXT-webgpu-004` and must be evidence-driven.
 - [x] REN-VNEXT-webgpu-003 Add a stronger guardrail for WebGPU shader portability:
   - Keep `renderer::tests::shaders_validate_for_webgpu` as a baseline (Naga),
   - and add an optional browser (Tint) compile gate to catch uniformity drift early.
@@ -179,8 +179,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Gate: `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
   - Landed: 2026-02-15, commit `49181551`.
-- [ ] REN-VNEXT-guard-005 Keep external texture imports perf baselines from regressing.
+- [~] REN-VNEXT-guard-005 Keep external texture imports perf baselines from regressing.
   - Motivation: renderer refactors (uniformity/variants/pipelines) must not silently degrade the imported-frame contract path
     (`RenderTargetId` + `SceneOp::ViewportSurface`), especially on wasm/WebGPU where copies can dominate.
   - Tracking: `docs/workstreams/external-texture-imports-v1.md` (see `EXT-web-perf-131`).
-  - Gate (once stable): `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json` + baseline in `docs/workstreams/perf-baselines/`.
+  - Gate (web copy path): `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+  - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json` (recorded 2026-02-15).

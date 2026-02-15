@@ -359,6 +359,10 @@ fn wait_for_bundle_dumped(
     let deadline = Instant::now() + timeout;
     let mut last_script_stage: Option<String> = None;
     let mut last_script_step_index: Option<u64> = None;
+    let mut bundle_dir: Option<String> = None;
+    let mut bundle_chunks: Vec<Option<String>> = Vec::new();
+    let mut bundle_chunks_received: usize = 0;
+    let mut bundle_chunk_count: Option<u32> = None;
 
     while Instant::now() < deadline {
         while let Some(msg) = client.try_recv() {
@@ -403,13 +407,64 @@ fn wait_for_bundle_dumped(
                         .map(|s| s.to_string())
                         .context("bundle.dumped missing dir")?;
 
-                    let bundle = msg
-                        .payload
-                        .get("bundle")
-                        .cloned()
-                        .context("bundle.dumped missing bundle payload")?;
+                    if let Some(bundle) = msg.payload.get("bundle").cloned() {
+                        return Ok((dir, bundle));
+                    }
 
-                    return Ok((dir, bundle));
+                    if bundle_dir.as_deref() != Some(dir.as_str()) {
+                        bundle_dir = Some(dir.clone());
+                        bundle_chunks.clear();
+                        bundle_chunks_received = 0;
+                        bundle_chunk_count = None;
+                    }
+
+                    let chunk = msg
+                        .payload
+                        .get("bundle_json_chunk")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    let chunk_index = msg
+                        .payload
+                        .get("bundle_json_chunk_index")
+                        .and_then(|v| v.as_u64())
+                        .map(|v| v as u32);
+                    let chunk_count = msg
+                        .payload
+                        .get("bundle_json_chunk_count")
+                        .and_then(|v| v.as_u64())
+                        .map(|v| v as u32);
+
+                    let (Some(chunk), Some(chunk_index), Some(chunk_count)) =
+                        (chunk, chunk_index, chunk_count)
+                    else {
+                        continue;
+                    };
+
+                    if chunk_index >= chunk_count {
+                        continue;
+                    }
+
+                    if bundle_chunk_count != Some(chunk_count) {
+                        bundle_chunk_count = Some(chunk_count);
+                        bundle_chunks = vec![None; chunk_count as usize];
+                        bundle_chunks_received = 0;
+                    }
+
+                    let slot = &mut bundle_chunks[chunk_index as usize];
+                    if slot.is_none() {
+                        bundle_chunks_received += 1;
+                    }
+                    *slot = Some(chunk);
+
+                    if bundle_chunks_received == chunk_count as usize {
+                        let mut json = String::new();
+                        for part in bundle_chunks.drain(..).flatten() {
+                            json.push_str(&part);
+                        }
+                        let v = serde_json::from_str::<serde_json::Value>(&json)
+                            .context("failed to parse reassembled bundle JSON")?;
+                        return Ok((dir, v));
+                    }
                 }
                 _ => {}
             }

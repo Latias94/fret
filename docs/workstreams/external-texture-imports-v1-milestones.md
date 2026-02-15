@@ -77,9 +77,14 @@ Evidence:
   - Evidence (native):
     - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-decoded-png-cpu-copy.windows-local.v1.json`
-- [ ] EXT-web-perf-131 Web GPU copy path perf baseline (when stable).
+- [x] EXT-web-perf-131 Web GPU copy path perf baseline (when stable).
   - Evidence:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
     - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)
     - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - Baseline record:
+    - Date: 2026-02-15
+    - Exports:
+      - `target/fret-diag-web-copy/exports/1771140829044-bundle`
+      - `target/fret-diag-web-copy/exports/1771140845261-bundle`

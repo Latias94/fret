@@ -329,3 +329,12 @@ Progress record (Quad/material headless gate):
   - `python3 tools/perf/headless_quad_material_stress_gate.py`
 - Baseline:
   - `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
+
+Progress record (External texture imports web copy perf baseline; guardrail):
+
+- Date: 2026-02-15
+- Status: Landed (baseline recorded; keep from regressing during renderer refactors)
+- Evidence:
+  - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+  - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - `docs/workstreams/external-texture-imports-v1-todo.md` (`EXT-web-perf-131`)
