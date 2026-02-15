@@ -7,6 +7,7 @@ Related:
 
 - Design / constraints: `docs/workstreams/ui-editor-v1.md`
 - Alignment inventory: `docs/workstreams/ui-editor-imgui-alignment-v1.md`
+- Gap matrix (egui/imgui): `docs/workstreams/ui-editor-egui-imgui-gap-v1.md`
 - Runtime boundary: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Unified authoring: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 
@@ -127,6 +128,7 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs` (disclosure chevrons)
     - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs` (caret)
     - Evidence: `ecosystem/fret-ui-editor/src/controls/mini_search_box.rs` (clear)
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/checkbox.rs` (check/mixed icons)
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (lucide pack install)
   - [x] Proof demo uses ui-kit-styled buttons for top-level actions (avoid bare text buttons).
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
@@ -135,6 +137,25 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence anchor: `apps/fret-examples/src/imui_editor_proof_demo.rs`
     - Implementation evidence: `ecosystem/fret-docking/src/dock/paint.rs`
     - Implementation evidence: `ecosystem/fret-docking/src/dock/space.rs` (tab title prep fallback + line-height)
+
+### M2.6 — Widget foundations parity (egui/imgui)
+
+Goal: close the largest usability/polish gaps identified in `ui-editor-egui-imgui-gap-v1.md` without
+adding new runtime contracts unless evidence demands it.
+
+- [ ] Define `EditorWidgetVisuals` (policy) analogous to `egui::Visuals::widgets`:
+  - inactive / hovered / active / open / disabled palettes
+  - resolved from theme tokens + `editor.*` density defaults
+  - consumed by all editor controls to avoid drift
+- [ ] Define a shared `EditorChrome` recipe (if not already done in M2.5):
+  - input-like frame chrome (bg/border/radius/padding) + state variants
+  - icon sizing + spacing defaults
+- [ ] Add an editor-facing `Slider<T>` control:
+  - horizontal first; clamping policy; optional value typing; unit formatting hook
+- [ ] Add a reusable `TextField` control surface:
+  - single-line + multi-line
+  - password mode (masking + copy policy)
+  - optional clear button + completion/history hook placeholders
 
 ### M3 — Core editor controls (Color / Vec / Transform / Asset refs)
 
