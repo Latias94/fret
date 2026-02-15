@@ -5,15 +5,15 @@
 
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, Point, Px, Rect, Size, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, Point, Px, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RingPlacement, RingStyle, SizeStyle, TextProps,
+    PressableProps, RingPlacement, RingStyle, SizeStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::ColorRef;
 use fret_ui_kit::primitives::checkbox::{
     CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool,
 };
@@ -131,11 +131,13 @@ impl Checkbox {
             }
         };
 
-        let glyph: Option<Arc<str>> = match checked_state {
-            CheckedState::Checked => Some(Arc::from("✓")),
-            CheckedState::Indeterminate => Some(Arc::from("—")),
+        let icon_id = match checked_state {
+            CheckedState::Checked => Some(fret_icons::ids::ui::CHECK),
+            CheckedState::Indeterminate => Some(fret_icons::ids::ui::MINUS),
             CheckedState::Unchecked => None,
         };
+
+        let icon_px = Px((checkbox_size.0 - 4.0).max(8.0));
 
         let mut layout = self.options.layout;
         if layout.size.width == Length::Auto {
@@ -227,8 +229,12 @@ impl Checkbox {
                         ..Default::default()
                     },
                     move |cx| {
-                        if let Some(glyph) = glyph.as_ref() {
-                            vec![cx.text_props(TextProps {
+                        let Some(icon) = icon_id else {
+                            return vec![];
+                        };
+
+                        vec![cx.flex(
+                            FlexProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
                                         width: Length::Fill,
@@ -237,20 +243,22 @@ impl Checkbox {
                                     },
                                     ..Default::default()
                                 },
-                                text: glyph.clone(),
-                                style: Some(TextStyle {
-                                    size: Px(12.0),
-                                    line_height: Some(checkbox_size),
-                                    ..Default::default()
-                                }),
-                                color: Some(alpha_mul(fg_checked, disabled_alpha)),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                                align: TextAlign::Center,
-                            })]
-                        } else {
-                            vec![]
-                        }
+                                direction: Axis::Horizontal,
+                                gap: Px(0.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Center,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |cx| {
+                                vec![fret_ui_kit::declarative::icon::icon_with(
+                                    cx,
+                                    icon,
+                                    Some(icon_px),
+                                    Some(ColorRef::Color(alpha_mul(fg_checked, disabled_alpha))),
+                                )]
+                            },
+                        )]
                     },
                 );
 
