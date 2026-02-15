@@ -168,6 +168,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed: quad shader skips inner-border SDF work when `FRET_BORDER_PRESENT=0` (compile-time override),
     keeping WebGPU uniformity rules satisfied while reducing waste in borderless variants.
   - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`fs_main`, `FRET_BORDER_PRESENT`)
+  - Landed: CPU encoding skips converting `border_paint` (and avoids material budgets/counters) when the border widths are zero.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (`encode_quad`, `border_present`)
 
 ## Always-run guardrails (before/after each milestone)
 
