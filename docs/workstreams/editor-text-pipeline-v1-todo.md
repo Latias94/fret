@@ -136,7 +136,7 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
       `materialize_display_row_text_replaces_range_with_preedit_unwrapped`)
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`platform_replace_and_mark_non_empty_range_replaces_in_composed_view_without_mutating_base`)
-- [ ] (Future) Decide cancel semantics for selection-replacing composition (restore vs keep deletion) and lock it behind tests/diagnostics.
+- [x] Decide cancel semantics for selection-replacing composition (restore selection + keep base buffer unchanged) and lock it behind tests.
   - Reference (Zed / GPUI): the platform bridge forwards composition end via `unmarkText()` on macOS,
     which calls the view's `unmark_text`; Zed's editor clears its composition highlight and drops the
     IME transaction on `unmark_text`.
@@ -144,6 +144,9 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - `repo-ref/zed/crates/editor/src/editor.rs` (`unmark_text`, `replace_and_mark_text_in_range`)
   - Hypothesis to validate: "cancel" often arrives as a `setMarkedText` with an empty string and a
     replacement range that deletes the current marked range, followed by `unmarkText`.
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_replace_and_mark_empty_text_cancels_and_restores_selection`)
 - [x] Observe `TextFontStackKey` and invalidate editor-local geometry caches so platform queries never use stale row geometry after font changes.
 
 ## M5 — Row geometry cache boundary (future fearless refactor)

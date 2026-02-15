@@ -123,10 +123,14 @@ Exit criteria:
 Evidence anchors:
 
 - Implementation:
-  - `crates/fret-ui/src/tree/mod.rs` (`text_input_region_platform_text_input_query`)
+  - `crates/fret-ui/src/tree/ui_tree_text_input.rs` (`text_input_region_platform_text_input_query`)
   - `crates/fret-ui/src/tree/paint.rs` (snapshot publishing)
 - Tests:
   - `crates/fret-ui/src/declarative/tests/semantics.rs` (`declarative_text_input_region_answers_platform_text_input_queries_in_utf16`)
+  - `crates/fret-ui/src/declarative/tests/semantics.rs`
+    (`declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_replace_and_mark_empty_text_cancels_and_restores_selection`)
 
 ## M5 — Row geometry cache boundary (future fearless refactor)
 
