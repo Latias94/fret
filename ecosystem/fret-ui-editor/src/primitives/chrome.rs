@@ -26,6 +26,16 @@ fn is_effectively_transparent(c: Color) -> bool {
     c.a <= 0.02
 }
 
+fn opaque_over(theme: &Theme, fg: Color) -> Color {
+    // Approximate the effective color a translucent surface would produce when rendered over the
+    // theme background, then make it opaque so cached layers don't leak stale pixels.
+    let bg = theme.color_token("background");
+    let t = fg.a;
+    let mut out = mix(bg, fg, t);
+    out.a = 1.0;
+    out
+}
+
 fn editor_fallback_input_bg(theme: &Theme) -> Color {
     // Shadcn themes sometimes set `component.input.bg` to fully transparent. For editor controls we
     // need a stable, non-transparent surface so frames are visible and we don't expose stale
@@ -41,10 +51,16 @@ fn editor_fallback_input_bg(theme: &Theme) -> Color {
 
 fn sanitize_editor_input_bg(theme: &Theme, bg: Color) -> Color {
     if is_effectively_transparent(bg) {
-        editor_fallback_input_bg(theme)
-    } else {
-        bg
+        return editor_fallback_input_bg(theme);
     }
+
+    // Even when not fully transparent (e.g. shadcn `bg-input/30`), keep editor input surfaces
+    // opaque to reduce ghosting/artifacts under paint caching and overlay reuse.
+    if bg.a < 0.98 {
+        return opaque_over(theme, bg);
+    }
+
+    bg
 }
 
 #[derive(Debug, Clone, Copy)]
