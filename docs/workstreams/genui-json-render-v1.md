@@ -27,9 +27,10 @@ This workstream has an end-to-end MVP implementation in-tree:
 
 - Shadcn-backed baseline resolver + catalog: `ecosystem/fret-genui-shadcn`
   - Catalog: `ecosystem/fret-genui-shadcn/src/catalog.rs`
-  - Resolver: `ecosystem/fret-genui-shadcn/src/resolver.rs`
+  - Resolver: `ecosystem/fret-genui-shadcn/src/resolver/mod.rs` (and submodules)
 
 - Interactive demo (validates + renders + inspector tabs for state/queue/issues/spec/schema/prompt/editor/stream; auto-applies standard actions via `GenUiRuntime.auto_apply_standard_actions`): `apps/fret-examples/src/genui_demo.rs`
+- Smoke gate (strict catalog validation; layout/typography/responsive sanity): `ecosystem/fret-genui-shadcn/tests/genui_layout_typography_smoke.rs`
 
 Workstream tracking:
 

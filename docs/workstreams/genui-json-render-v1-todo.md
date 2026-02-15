@@ -28,7 +28,7 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 - [x] Add minimal layout props to `VStack`/`HStack`: `p/items/justify/wrap` (typed + deterministic mapping).
 - [x] Extend stack layout props: `px/py`, `wFull/hFull`, `minW0/minH0` (and decide whether `flex1` belongs here).
 - [ ] Decide whether to add a generic `Box`/`Container` component (padding + sizing + alignment) vs growing per-component layout props.
-- [ ] Add a small typography surface: either `Text.variant` (enum) or separate components (`Heading`/`Paragraph`/`Code`).
+- [x] Add a small typography surface: `Text.variant` (enum) mapped deterministically in the shadcn resolver.
 - [x] Update demo specs to use layout props (visual sanity gates).
 
 ## P1 — State + expressions
@@ -84,4 +84,10 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 - [x] Add an end-to-end interaction test (press → queue → state via auto-apply).
 - [x] Add at least one end-to-end “spec renders a small dashboard” test using `fret-ui-kit`/shadcn resolver.
 - [x] Add regression test for identity stability across repeat reorder (key field vs index fallback).
-- [ ] Add a smoke spec that exercises layout props + responsive components (render + strict catalog validation; no visual assertions yet).
+- [x] Add a smoke spec that exercises layout props + responsive components (render + strict catalog validation; no visual assertions yet).
+
+## Next (proposed order)
+
+- [ ] Decide on a generic `Box`/`Container` component (padding + sizing + alignment) vs growing per-component layout props.
+- [ ] Normalize card content ergonomics in the spec examples (e.g. prefer `Card` → `CardContent` for padded content).
+- [ ] Add one more smoke spec focused on forms layout (labels, input widths, wrap, and alignment).
