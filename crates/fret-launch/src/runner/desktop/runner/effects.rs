@@ -416,6 +416,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                 }
             }
 
+            did_work |= self.poll_watch_restart_trigger(now);
             did_work |= self.poll_hotpatch_trigger(now);
             did_work |= !effects.is_empty();
             let mut window_state_dirty: HashSet<fret_core::AppWindowId> = HashSet::new();

@@ -11,7 +11,7 @@ use std::{
 #[cfg(feature = "hotpatch-subsecond")]
 mod hotpatch;
 
-use fret_app::{App, CreateWindowKind, CreateWindowRequest};
+use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Point, Px,
     Rect, Scene, Size, UiServices, WindowMetricsService,
@@ -99,6 +99,7 @@ mod macos_menu;
 mod no_services;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod renderdoc_capture;
+mod restart_trigger;
 #[cfg(windows)]
 mod windows_menu;
 
@@ -153,6 +154,7 @@ use macos_cursor::{
     macos_is_left_mouse_down,
 };
 use macos_cursor::{dock_tearoff_log, macos_window_log};
+use restart_trigger::RestartTrigger;
 use streaming_images::UploadedImageEntry;
 use window::{
     DockTearoffFollow, PendingFrontRequest, TimerEntry, WindowRuntime, bring_window_to_front,
@@ -245,6 +247,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     hotpatch: Option<HotpatchTrigger>,
     #[cfg(feature = "hotpatch-subsecond")]
     hot_reload_generation: u64,
+
+    watch_restart_trigger: Option<RestartTrigger>,
+    watch_restart_requested: bool,
 
     #[cfg(feature = "diag-screenshots")]
     diag_screenshots: Option<diag_screenshots::DiagScreenshotCapture>,
@@ -660,6 +665,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let _ = now;
             false
         }
+    }
+
+    fn poll_watch_restart_trigger(&mut self, now: Instant) -> bool {
+        let Some(trigger) = self.watch_restart_trigger.as_mut() else {
+            return false;
+        };
+        if self.watch_restart_requested {
+            return false;
+        }
+        if now < trigger.next_poll_at() {
+            return false;
+        }
+        if !trigger.poll(now) {
+            return false;
+        }
+
+        self.watch_restart_requested = true;
+        tracing::info!("watch_restart: trigger file changed (requesting quit)");
+        self.app.push_effect(Effect::QuitApp);
+        true
     }
 
     fn is_left_mouse_down_for_window(&self, window: fret_core::AppWindowId) -> bool {

@@ -127,6 +127,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
             hot_reload_generation: 0,
+            watch_restart_trigger: super::restart_trigger::RestartTrigger::from_env(now),
+            watch_restart_requested: false,
 
             #[cfg(feature = "diag-screenshots")]
             diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
