@@ -1,4 +1,4 @@
-use super::super::state::{EncodeState, transform_quad_points_px};
+use super::super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::super::*;
 use crate::images::AlphaMode;
 
@@ -33,6 +33,16 @@ pub(in super::super) fn encode_image(
     }
     let t_px = state.current_transform_px();
     let quad = transform_quad_points_px(t_px, x, y, w, h);
+    let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+    let Some(bounds_scissor) =
+        scissor_from_bounds_px(min_x, min_y, max_x, max_y, state.viewport_size)
+    else {
+        return;
+    };
+    let clipped_scissor = intersect_scissor(state.current_scissor, bounds_scissor);
+    if clipped_scissor.w == 0 || clipped_scissor.h == 0 {
+        return;
+    }
 
     let first_vertex = state.viewport_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
@@ -83,7 +93,7 @@ pub(in super::super) fn encode_image(
     ]);
 
     state.ordered_draws.push(OrderedDraw::Image(ImageDraw {
-        scissor: state.current_scissor,
+        scissor: clipped_scissor,
         uniform_index: state.current_uniform_index,
         first_vertex,
         vertex_count: 6,
@@ -116,6 +126,16 @@ pub(in super::super) fn encode_image_region(
     }
     let t_px = state.current_transform_px();
     let quad = transform_quad_points_px(t_px, x, y, w, h);
+    let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+    let Some(bounds_scissor) =
+        scissor_from_bounds_px(min_x, min_y, max_x, max_y, state.viewport_size)
+    else {
+        return;
+    };
+    let clipped_scissor = intersect_scissor(state.current_scissor, bounds_scissor);
+    if clipped_scissor.w == 0 || clipped_scissor.h == 0 {
+        return;
+    }
 
     let first_vertex = state.viewport_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
@@ -166,7 +186,7 @@ pub(in super::super) fn encode_image_region(
     ]);
 
     state.ordered_draws.push(OrderedDraw::Image(ImageDraw {
-        scissor: state.current_scissor,
+        scissor: clipped_scissor,
         uniform_index: state.current_uniform_index,
         first_vertex,
         vertex_count: 6,

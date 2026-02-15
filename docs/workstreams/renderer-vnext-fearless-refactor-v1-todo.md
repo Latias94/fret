@@ -170,6 +170,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`fs_main`, `FRET_BORDER_PRESENT`)
   - Landed: CPU encoding skips converting `border_paint` (and avoids material budgets/counters) when the border widths are zero.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (`encode_quad`, `border_present`)
+  - Landed: Image/mask/viewport surface draws now tighten the scissor to the transformed quad bounds (intersected with current scissor).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/image.rs`, `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/mask.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/viewport_surface.rs`
 
 ## Always-run guardrails (before/after each milestone)
 
