@@ -43,6 +43,24 @@ P0 commands:
 - `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 - `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 
+## Stress/jitter runs (tail hunting, not P0)
+
+The canonical `windows-rtx4090.v1` baselines were tuned for **P0** usage (`repeat=3`, aggregate = `max`).
+
+When you increase `repeat` (e.g. `repeat=7`), you are intentionally stress-testing stability. Expect
+occasional gate failures even when P0 is green; use this mode to find and explain tail spikes.
+
+Recommended stress command:
+
+- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+Workflow when it fails:
+
+- Read `target/fret-diag/check.perf_thresholds.json` and follow the bundle path printed as `worst overall`.
+- Attribute the worst bundle:
+  - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
+  - `target/release/fretboard.exe diag stats <bundle.json> --sort cpu_cycles --top 30`
+
 ## Failure triage (when a gate fails)
 
 1) Look at the generated perf check:
@@ -144,7 +162,15 @@ Preferred workflow:
 
 - Use `fretboard diag perf ... --json` and review `p50`/`p95` for the top metrics.
 - Use `diag stats --json` for within-bundle `p50` / `p95` (typical), `avg.*`, and `budget_pct.*`.
-- If you want a **typical-perf gate** (ignore rare max spikes), run with `--perf-threshold-agg p95`.
+- If you want a **typical-perf gate**, create a dedicated baseline seeded from percentiles and then
+  gate using `--perf-threshold-agg p95`.
+
+Example (local typical baseline; does not change the canonical baselines):
+
+- Create a p95-seeded baseline:
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 15 --warmup-frames 5 --perf-baseline-out .fret/perf.baseline.p95.json --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json --perf-baseline-seed this-suite@top_total_time_us=p95 --launch -- target/release/fret-ui-gallery.exe`
+- Gate typical perf (p95 aggregate):
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 15 --warmup-frames 5 --perf-threshold-agg p95 --perf-baseline .fret/perf.baseline.p95.json --launch -- target/release/fret-ui-gallery.exe`
 
 If a change improves p50/p95 but worsens max occasionally, treat it as “needs jitter work” (allocator,
 capacity management, background work scheduling).
