@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::prelude::*;
-use fret_genui_core::catalog::{CatalogActionV1, CatalogPropV1, CatalogV1};
+use fret_genui_core::catalog::{CatalogActionV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::form_validation::{
     ValidationIssueV1, ValidationRegistryV1, ValidationStateV1, validate_all,
@@ -397,19 +397,6 @@ impl MvuProgram for GenUiProgram {
         let spec: SpecV1 = serde_json::from_str(SPEC_JSON).expect("SPEC_JSON must parse");
         let seed = spec.state.clone().unwrap_or(Value::Null);
         let mut catalog = shadcn_catalog_v1();
-        {
-            let mut form_name = CatalogPropV1::string();
-            form_name.description = Some("Optional form name for UX/logging.".to_string());
-            let mut params = std::collections::BTreeMap::new();
-            params.insert("formName".to_string(), form_name);
-            catalog.actions.insert(
-                "formSubmit".to_string(),
-                CatalogActionV1 {
-                    description: Some("Submit a form (app-owned validation/policy).".to_string()),
-                    params,
-                },
-            );
-        }
         catalog.actions.insert(
             "demoUnimplemented".to_string(),
             CatalogActionV1 {

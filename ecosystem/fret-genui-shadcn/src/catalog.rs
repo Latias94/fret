@@ -614,6 +614,19 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
             .build(),
     );
 
+    out.insert(
+        "formSubmit".to_string(),
+        action("Submit a form (app-owned validation/policy).")
+            .param(
+                "formName",
+                desc(
+                    CatalogPropV1::string(),
+                    "Optional form name for UX/logging.",
+                ),
+            )
+            .build(),
+    );
+
     out
 }
 
