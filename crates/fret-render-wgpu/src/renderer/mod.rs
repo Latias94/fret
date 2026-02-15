@@ -22,6 +22,7 @@ mod fullscreen;
 mod intermediate_pool;
 mod pipelines;
 mod render_plan;
+mod render_plan_compiler;
 mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
@@ -216,6 +217,7 @@ pub struct Renderer {
     perf_svg_mask_atlas_entries_evicted: u64,
     perf: RenderPerfStats,
     last_frame_perf: Option<RenderPerfSnapshot>,
+    last_render_plan_segment_report: Option<Vec<RenderPlanSegmentReport>>,
     render_scene_frame_index: u64,
 
     path_msaa_samples: u32,
@@ -249,6 +251,15 @@ pub struct Renderer {
     materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
     material_paint_budget_per_frame: u64,
     material_distinct_budget_per_frame: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct RenderPlanSegmentReport {
+    draw_range: (usize, usize),
+    start_uniform_fingerprint: u64,
+    flags_mask: u8,
+    scene_draw_range_passes: u32,
+    path_msaa_batch_passes: u32,
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -563,6 +563,7 @@ impl Renderer {
             perf_svg_mask_atlas_entries_evicted: 0,
             perf: RenderPerfStats::default(),
             last_frame_perf: None,
+            last_render_plan_segment_report: None,
             render_scene_frame_index: 0,
             path_msaa_samples: 4,
             debug_offscreen_blit_enabled: false,

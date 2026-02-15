@@ -1,5 +1,6 @@
 use super::render_plan::{
-    BlurAxis, DebugPostprocess, MaskRef, PlanTarget, RenderPlan, RenderPlanPass, ScaleMode,
+    BlurAxis, DebugPostprocess, MaskRef, PlanTarget, RenderPlan, RenderPlanDegradation,
+    RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass, ScaleMode,
 };
 use super::{EffectMarker, EffectMarkerKind, ScissorRect};
 
@@ -425,6 +426,32 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
 }
 
 #[derive(Debug, serde::Serialize)]
+struct JsonDumpSegmentFlags {
+    has_quad: bool,
+    has_viewport: bool,
+    has_image: bool,
+    has_mask: bool,
+    has_text: bool,
+    has_path: bool,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpSegment {
+    id: usize,
+    draw_range: [usize; 2],
+    start_uniform_index: Option<u32>,
+    start_uniform_fingerprint: String,
+    flags: JsonDumpSegmentFlags,
+    pass_counts: JsonDumpSegmentPassCounts,
+}
+
+#[derive(Debug, serde::Serialize, Clone, Copy)]
+struct JsonDumpSegmentPassCounts {
+    scene_draw_range: usize,
+    path_msaa_batch: usize,
+}
+
+#[derive(Debug, serde::Serialize)]
 struct JsonDumpCounts {
     total: usize,
     scene: usize,
@@ -486,9 +513,40 @@ struct RenderPlanJsonDump {
     format: String,
     postprocess: JsonDumpDebugPostprocess,
     ordered_draws_len: usize,
+    segments: Vec<JsonDumpSegment>,
     effect_markers: Vec<JsonDumpEffectMarker>,
     pass_counts: JsonDumpCounts,
+    estimated_peak_intermediate_bytes: u64,
+    degradations: Vec<JsonDumpDegradation>,
     passes: Vec<JsonDumpPass>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpDegradation {
+    draw_ix: usize,
+    kind: String,
+    reason: String,
+}
+
+fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
+    let kind = match d.kind {
+        RenderPlanDegradationKind::BackdropEffectNoOp => "BackdropEffectNoOp",
+        RenderPlanDegradationKind::FilterContentDisabled => "FilterContentDisabled",
+        RenderPlanDegradationKind::ClipPathDisabled => "ClipPathDisabled",
+        RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver => {
+            "CompositeGroupBlendDegradedToOver"
+        }
+    };
+    let reason = match d.reason {
+        RenderPlanDegradationReason::BudgetZero => "BudgetZero",
+        RenderPlanDegradationReason::BudgetInsufficient => "BudgetInsufficient",
+        RenderPlanDegradationReason::TargetExhausted => "TargetExhausted",
+    };
+    JsonDumpDegradation {
+        draw_ix: d.draw_ix,
+        kind: kind.to_string(),
+        reason: reason.to_string(),
+    }
 }
 
 fn parse_env_u64(name: &str) -> Option<u64> {
@@ -544,22 +602,77 @@ pub(super) fn maybe_dump_render_plan_json(
         return;
     }
 
+    let mut segment_pass_counts: Vec<JsonDumpSegmentPassCounts> = vec![
+        JsonDumpSegmentPassCounts {
+            scene_draw_range: 0,
+            path_msaa_batch: 0,
+        };
+        plan.segments.len()
+    ];
+    for p in &plan.passes {
+        match p {
+            RenderPlanPass::SceneDrawRange(p) => {
+                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                    c.scene_draw_range += 1;
+                }
+            }
+            RenderPlanPass::PathMsaaBatch(p) => {
+                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                    c.path_msaa_batch += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
     let dir = dump_dir_from_env();
     let _ = std::fs::create_dir_all(&dir);
 
     let dump = RenderPlanJsonDump {
-        schema_version: 2,
+        schema_version: 5,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),
         postprocess: encode_debug_postprocess(postprocess),
         ordered_draws_len,
+        segments: plan
+            .segments
+            .iter()
+            .enumerate()
+            .map(|(ix, s)| JsonDumpSegment {
+                id: s.id.0,
+                draw_range: [s.draw_range.start, s.draw_range.end],
+                start_uniform_index: s.start_uniform_index,
+                start_uniform_fingerprint: format!("0x{:016x}", s.start_uniform_fingerprint),
+                flags: JsonDumpSegmentFlags {
+                    has_quad: s.flags.has_quad,
+                    has_viewport: s.flags.has_viewport,
+                    has_image: s.flags.has_image,
+                    has_mask: s.flags.has_mask,
+                    has_text: s.flags.has_text,
+                    has_path: s.flags.has_path,
+                },
+                pass_counts: segment_pass_counts.get(ix).cloned().unwrap_or(
+                    JsonDumpSegmentPassCounts {
+                        scene_draw_range: 0,
+                        path_msaa_batch: 0,
+                    },
+                ),
+            })
+            .collect(),
         effect_markers: effect_markers
             .iter()
             .copied()
             .map(encode_effect_marker)
             .collect(),
         pass_counts: pass_counts(plan),
+        estimated_peak_intermediate_bytes: plan.compile_stats.estimated_peak_intermediate_bytes,
+        degradations: plan
+            .degradations
+            .iter()
+            .copied()
+            .map(encode_degradation)
+            .collect(),
         passes: plan.passes.iter().map(encode_pass).collect(),
     };
 

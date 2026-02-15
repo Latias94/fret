@@ -1643,6 +1643,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-tracy",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
