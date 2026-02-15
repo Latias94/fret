@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use fret::prelude::*;
-use fret_launch::DevStateService;
+use fret_launch::{DevStateHook, DevStateHooks};
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
@@ -18,6 +18,32 @@ const TEST_ID_FILTER_COMPLETED: &str = "todo-filter-completed";
 const TEST_ID_REFRESH_TIP: &str = "todo-refresh-tip";
 
 const DEV_STATE_TODO_STATE_KEY: &str = "todo.demo.state.v1";
+
+#[derive(Debug, Default)]
+struct TodoDevStateIncoming {
+    snapshot: Option<TodoDevStateSnapshot>,
+}
+
+#[derive(Debug, Clone)]
+struct TodoDevStateSnapshot {
+    draft: String,
+    filter: TodoFilter,
+    todos: Vec<TodoDevStateTodo>,
+}
+
+#[derive(Debug, Clone)]
+struct TodoDevStateTodo {
+    id: u64,
+    done: bool,
+    text: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
+struct TodoDevStateModels {
+    todos: Model<Vec<TodoItem>>,
+    draft: Model<String>,
+    filter: Model<TodoFilter>,
+}
 
 fn todo_row_test_id(id: u64) -> Arc<str> {
     Arc::from(format!("todo-row-{id}"))
@@ -39,7 +65,6 @@ struct TodoState {
     draft: Model<String>,
     filter: Model<TodoFilter>,
     next_id: u64,
-    dev_state_last: Option<Value>,
 }
 
 #[derive(Debug, Clone)]
@@ -118,6 +143,23 @@ fn tip_policy() -> QueryPolicy {
 
 pub fn run() -> anyhow::Result<()> {
     fret::mvu::app::<TodoProgram>("todo-demo")?
+        .init_app(|app| {
+            app.with_global_mut_untracked(DevStateHooks::default, |hooks, _app| {
+                hooks.register(
+                    DevStateHook::new(DEV_STATE_TODO_STATE_KEY, |app| {
+                        let models = app.global::<TodoDevStateModels>()?;
+                        Some(export_todo_dev_state(app, models))
+                    })
+                    .with_import(|app, value| {
+                        let snapshot = parse_todo_dev_state(value)?;
+                        app.with_global_mut_untracked(TodoDevStateIncoming::default, |st, _app| {
+                            st.snapshot = Some(snapshot);
+                        });
+                        Ok(())
+                    }),
+                );
+            });
+        })
         .with_main_window("todo_demo", (560.0, 520.0))
         .run()?;
     Ok(())
@@ -147,53 +189,88 @@ impl MvuProgram for TodoProgram {
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
-    if let Some(restored) = restore_todo_state_from_dev_state(app) {
-        return restored;
-    }
+    let incoming =
+        app.with_global_mut_untracked(TodoDevStateIncoming::default, |st, _app| st.snapshot.take());
 
-    let done_1 = app.models_mut().insert(false);
-    let done_2 = app.models_mut().insert(true);
-    let done_3 = app.models_mut().insert(false);
-    let todos = app.models_mut().insert(vec![
-        TodoItem {
-            id: 1,
-            done: done_1,
-            text: Arc::from("Try the shadcn New York style"),
-        },
-        TodoItem {
-            id: 2,
-            done: done_2,
-            text: Arc::from("Validate selector derived state"),
-        },
-        TodoItem {
-            id: 3,
-            done: done_3,
-            text: Arc::from("Use query invalidation for async tips"),
-        },
-    ]);
+    let restored = incoming.map(|snapshot| {
+        let mut max_id = 0u64;
+        let todos_vec: Vec<TodoItem> = snapshot
+            .todos
+            .into_iter()
+            .map(|todo| {
+                max_id = max_id.max(todo.id);
+                TodoItem {
+                    id: todo.id,
+                    done: app.models_mut().insert(todo.done),
+                    text: todo.text,
+                }
+            })
+            .collect();
 
-    TodoState {
-        todos,
-        draft: app.models_mut().insert(String::new()),
-        filter: app.models_mut().insert(TodoFilter::All),
-        next_id: 4,
-        dev_state_last: None,
-    }
+        let todos = app.models_mut().insert(todos_vec);
+        let draft = app.models_mut().insert(snapshot.draft);
+        let filter = app.models_mut().insert(snapshot.filter);
+        let next_id = max_id.saturating_add(1).max(1);
+
+        TodoState {
+            todos,
+            draft,
+            filter,
+            next_id,
+        }
+    });
+
+    let state = if let Some(restored) = restored {
+        restored
+    } else {
+        let done_1 = app.models_mut().insert(false);
+        let done_2 = app.models_mut().insert(true);
+        let done_3 = app.models_mut().insert(false);
+        let todos = app.models_mut().insert(vec![
+            TodoItem {
+                id: 1,
+                done: done_1,
+                text: Arc::from("Try the shadcn New York style"),
+            },
+            TodoItem {
+                id: 2,
+                done: done_2,
+                text: Arc::from("Validate selector derived state"),
+            },
+            TodoItem {
+                id: 3,
+                done: done_3,
+                text: Arc::from("Use query invalidation for async tips"),
+            },
+        ]);
+
+        TodoState {
+            todos,
+            draft: app.models_mut().insert(String::new()),
+            filter: app.models_mut().insert(TodoFilter::All),
+            next_id: 4,
+        }
+    };
+
+    app.set_global(TodoDevStateModels {
+        todos: state.todos.clone(),
+        draft: state.draft.clone(),
+        filter: state.filter.clone(),
+    });
+
+    state
 }
 
-fn restore_todo_state_from_dev_state(app: &mut App) -> Option<TodoState> {
-    if app.global::<DevStateService>().is_none() {
-        return None;
-    }
-
-    let incoming = app.with_global_mut_untracked(DevStateService::default, |svc, _app| {
-        svc.take_incoming(DEV_STATE_TODO_STATE_KEY)
-    })?;
-
-    let obj = incoming.as_object()?;
-    let version = obj.get("version")?.as_u64()?;
+fn parse_todo_dev_state(incoming: Value) -> Result<TodoDevStateSnapshot, String> {
+    let Some(obj) = incoming.as_object() else {
+        return Err("expected object".to_string());
+    };
+    let version = obj
+        .get("version")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing version".to_string())?;
     if version != 1 {
-        return None;
+        return Err("unsupported version".to_string());
     }
 
     let draft = obj
@@ -208,10 +285,9 @@ fn restore_todo_state_from_dev_state(app: &mut App) -> Option<TodoState> {
         .and_then(parse_filter)
         .unwrap_or(TodoFilter::All);
 
-    let mut todos_vec: Vec<TodoItem> = Vec::new();
-    let mut max_id = 0u64;
-    if let Some(todos) = obj.get("todos").and_then(Value::as_array) {
-        for todo in todos {
+    let mut items: Vec<TodoDevStateTodo> = Vec::new();
+    if let Some(todos_arr) = obj.get("todos").and_then(Value::as_array) {
+        for todo in todos_arr {
             let Some(todo_obj) = todo.as_object() else {
                 continue;
             };
@@ -226,41 +302,19 @@ fn restore_todo_state_from_dev_state(app: &mut App) -> Option<TodoState> {
                 .get("text")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
-
-            max_id = max_id.max(id);
-            todos_vec.push(TodoItem {
+            items.push(TodoDevStateTodo {
                 id,
-                done: app.models_mut().insert(done),
+                done,
                 text: Arc::from(text),
             });
         }
     }
 
-    let next_id = obj
-        .get("next_id")
-        .and_then(Value::as_u64)
-        .unwrap_or(max_id.saturating_add(1))
-        .max(max_id.saturating_add(1));
-
-    let todos = app.models_mut().insert(todos_vec);
-    let draft = app.models_mut().insert(draft);
-    let filter = app.models_mut().insert(filter);
-
-    let mut state = TodoState {
-        todos,
+    Ok(TodoDevStateSnapshot {
         draft,
         filter,
-        next_id,
-        dev_state_last: None,
-    };
-
-    let snapshot = snapshot_todo_state(app, &state);
-    state.dev_state_last = Some(snapshot.clone());
-    app.with_global_mut_untracked(DevStateService::default, |svc, _app| {
-        svc.set_outgoing(DEV_STATE_TODO_STATE_KEY, snapshot);
-    });
-
-    Some(state)
+        todos: items,
+    })
 }
 
 fn parse_filter(raw: &str) -> Option<TodoFilter> {
@@ -272,10 +326,10 @@ fn parse_filter(raw: &str) -> Option<TodoFilter> {
     }
 }
 
-fn snapshot_todo_state(app: &App, state: &TodoState) -> Value {
+fn export_todo_dev_state(app: &App, models: &TodoDevStateModels) -> Value {
     let todos = app
         .models()
-        .read(&state.todos, Clone::clone)
+        .read(&models.todos, Clone::clone)
         .ok()
         .unwrap_or_default();
 
@@ -293,13 +347,13 @@ fn snapshot_todo_state(app: &App, state: &TodoState) -> Value {
 
     let draft = app
         .models()
-        .read(&state.draft, Clone::clone)
+        .read(&models.draft, Clone::clone)
         .ok()
         .unwrap_or_default();
 
     let filter = app
         .models()
-        .get_copied(&state.filter)
+        .get_copied(&models.filter)
         .unwrap_or(TodoFilter::All);
 
     let filter = match filter {
@@ -310,28 +364,10 @@ fn snapshot_todo_state(app: &App, state: &TodoState) -> Value {
 
     json!({
         "version": 1,
-        "next_id": state.next_id,
         "draft": draft,
         "filter": filter,
         "todos": todos,
     })
-}
-
-fn persist_todo_state_if_needed(app: &mut App, state: &mut TodoState) {
-    if app.global::<DevStateService>().is_none() {
-        return;
-    }
-
-    // Dev-only: best-effort state restore for fast rebuild+restart iteration.
-    let snapshot = snapshot_todo_state(app, state);
-    if state.dev_state_last.as_ref() == Some(&snapshot) {
-        return;
-    }
-    state.dev_state_last = Some(snapshot.clone());
-
-    app.with_global_mut_untracked(DevStateService::default, |svc, _app| {
-        svc.set_outgoing(DEV_STATE_TODO_STATE_KEY, snapshot);
-    });
 }
 
 fn view(
@@ -340,8 +376,6 @@ fn view(
     msg: &mut MessageRouter<Msg>,
 ) -> Elements {
     let theme = Theme::global(&*cx.app).snapshot();
-
-    persist_todo_state_if_needed(cx.app, st);
 
     let draft_value = cx.watch_model(&st.draft).layout().cloned_or_default();
 
@@ -758,6 +792,4 @@ fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
             });
         }
     }
-
-    persist_todo_state_if_needed(app, state);
 }
