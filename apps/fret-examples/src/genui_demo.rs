@@ -1,9 +1,13 @@
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_genui_core::actions;
+use fret_genui_core::catalog::CatalogV1;
 use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
 use fret_genui_core::spec::SpecV1;
+use fret_genui_core::validate::ValidationMode;
+use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use serde_json::Value;
 
@@ -193,6 +197,7 @@ const SPEC_JSON: &str = r#"
 
 struct GenUiState {
     spec: SpecV1,
+    catalog: Arc<CatalogV1>,
     genui_state: Model<Value>,
     action_queue: Model<GenUiActionQueue>,
     applied_upto: Model<usize>,
@@ -215,6 +220,7 @@ impl MvuProgram for GenUiProgram {
         let seed = spec.state.clone().unwrap_or(Value::Null);
         GenUiState {
             spec,
+            catalog: Arc::new(shadcn_catalog_v1()),
             genui_state: app.models_mut().insert(seed),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
             applied_upto: app.models_mut().insert(0usize),
@@ -272,6 +278,11 @@ fn apply_pending_actions(app: &mut App, st: &mut GenUiState) {
         return;
     }
 
+    let mut windows: BTreeSet<AppWindowId> = BTreeSet::new();
+    for inv in &new_invocations {
+        windows.insert(inv.window);
+    }
+
     let _ = app.models_mut().update(&st.genui_state, |state| {
         for inv in &new_invocations {
             let _ = actions::apply_standard_action(state, inv.action.as_ref(), &inv.params);
@@ -280,6 +291,10 @@ fn apply_pending_actions(app: &mut App, st: &mut GenUiState) {
     let _ = app
         .models_mut()
         .update(&st.applied_upto, |v| *v = queue_len);
+
+    for window in windows {
+        app.request_redraw(window);
+    }
 }
 
 fn view(
@@ -337,6 +352,8 @@ fn view(
         state: st.genui_state.clone(),
         action_queue: Some(st.action_queue.clone()),
         limits: Default::default(),
+        catalog: Some(st.catalog.clone()),
+        catalog_validation: ValidationMode::Strict,
     };
 
     let mut resolver = ShadcnResolver::new();

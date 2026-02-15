@@ -194,10 +194,18 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
                     .and_then(|v| v.as_bool())
                     .unwrap_or(true);
                 if wrap_content {
-                    Ok(fret_ui_shadcn::Card::new([
-                        fret_ui_shadcn::CardContent::new(children).into_element(cx)
-                    ])
-                    .into_element(cx))
+                    // Convenience mode: when the spec doesn't provide CardHeader/CardContent/CardFooter
+                    // explicitly, provide a reasonable padded body container.
+                    //
+                    // Note: `CardContent` is modeled after shadcn/ui's `p-6 pt-0`, which is intended to
+                    // follow a header. For "single-body" cards, we want top padding too.
+                    let body = fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+                        .gap(fret_ui_kit::Space::N0)
+                        .items_start()
+                        .w_full()
+                        .p(fret_ui_kit::Space::N6)
+                        .into_element(cx);
+                    Ok(fret_ui_shadcn::Card::new([body]).into_element(cx))
                 } else {
                     Ok(fret_ui_shadcn::Card::new(children).into_element(cx))
                 }

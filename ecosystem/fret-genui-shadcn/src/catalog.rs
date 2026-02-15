@@ -7,6 +7,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use fret_genui_core::catalog::{CatalogActionV1, CatalogComponentV1, CatalogPropV1, CatalogV1};
 
+const SPACE_TOKENS: [&str; 15] = [
+    "N0", "N0p5", "N1", "N1p5", "N2", "N2p5", "N3", "N3p5", "N4", "N5", "N6", "N8", "N10", "N11",
+    "N12",
+];
+
 pub fn shadcn_catalog_v1() -> CatalogV1 {
     let mut catalog = CatalogV1::new();
 
@@ -21,24 +26,26 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
 
     out.insert(
         "Text".to_string(),
-        component("Plain text").props(["text"]).build(),
+        component("Plain text")
+            .prop("text", CatalogPropV1::any())
+            .build(),
     );
     out.insert(
         "VStack".to_string(),
         component("Vertical stack (flex column)")
-            .props(["gap"])
+            .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
             .build(),
     );
     out.insert(
         "HStack".to_string(),
         component("Horizontal stack (flex row)")
-            .props(["gap"])
+            .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
             .build(),
     );
     out.insert(
         "Card".to_string(),
         component("Card container")
-            .props(["wrapContent"])
+            .prop("wrapContent", CatalogPropV1::boolean())
             .note("Default: wraps children with CardContent; set wrapContent=false to provide CardHeader/CardContent/CardFooter explicitly.")
             .build(),
     );
@@ -57,53 +64,65 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
     out.insert(
         "CardTitle".to_string(),
         component("Card title text")
-            .props(["text", "title"])
+            .prop("text", CatalogPropV1::any())
+            .prop("title", CatalogPropV1::any())
             .build(),
     );
     out.insert(
         "CardDescription".to_string(),
         component("Card description text")
-            .props(["text", "description"])
+            .prop("text", CatalogPropV1::any())
+            .prop("description", CatalogPropV1::any())
             .build(),
     );
     out.insert(
         "Button".to_string(),
         component("Button (clickable)")
-            .props(["label"])
+            .prop("label", CatalogPropV1::any())
             .events(["press"])
             .build(),
     );
     out.insert(
         "Badge".to_string(),
         component("Badge label")
-            .props(["label", "variant"])
+            .prop("label", CatalogPropV1::any())
+            .prop(
+                "variant",
+                CatalogPropV1::enum_values(["default", "secondary", "destructive", "outline"]),
+            )
             .note("variant: default|secondary|destructive|outline")
             .build(),
     );
     out.insert(
         "Input".to_string(),
         component("Single-line input")
-            .props(["placeholder", "value"])
+            .prop("placeholder", CatalogPropV1::string())
+            .prop("value", CatalogPropV1::string())
             .note("Use {\"$bindState\": \"/path\"} for two-way binding on `value`.")
             .build(),
     );
     out.insert(
         "Switch".to_string(),
         component("Boolean toggle")
-            .props(["checked"])
+            .prop("checked", CatalogPropV1::boolean())
             .note("Use {\"$bindState\": \"/path\"} for two-way binding on `checked`.")
             .build(),
     );
     out.insert(
         "Separator".to_string(),
         component("Divider line")
-            .props(["orientation", "flexStretchCrossAxis"])
+            .prop(
+                "orientation",
+                CatalogPropV1::enum_values(["horizontal", "vertical"]),
+            )
+            .prop("flexStretchCrossAxis", CatalogPropV1::boolean())
             .build(),
     );
     out.insert(
         "ScrollArea".to_string(),
         component("Scroll container")
-            .props(["axis", "showScrollbar"])
+            .prop("axis", CatalogPropV1::enum_values(["x", "y", "both"]))
+            .prop("showScrollbar", CatalogPropV1::boolean())
             .build(),
     );
 
@@ -115,41 +134,71 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
 
     out.insert(
         "setState".to_string(),
-        action("Write a JSON value at a JSON Pointer path.").params([
-            ("statePath", "JSON Pointer path (e.g. /name)"),
-            ("value", "New value (any JSON)"),
-        ]),
+        action("Write a JSON value at a JSON Pointer path.")
+            .param(
+                "statePath",
+                desc(CatalogPropV1::string(), "JSON Pointer path (e.g. /name)"),
+            )
+            .param("value", desc(CatalogPropV1::any(), "New value (any JSON)"))
+            .build(),
     );
     out.insert(
         "incrementState".to_string(),
-        action("Increment an integer field at a JSON Pointer path.").params([
-            ("statePath", "JSON Pointer path (e.g. /count)"),
-            ("delta", "Integer delta (defaults to 1)"),
-        ]),
+        action("Increment an integer field at a JSON Pointer path.")
+            .param(
+                "statePath",
+                desc(CatalogPropV1::string(), "JSON Pointer path (e.g. /count)"),
+            )
+            .param(
+                "delta",
+                desc(CatalogPropV1::integer(), "Integer delta (defaults to 1)"),
+            )
+            .build(),
     );
     out.insert(
         "pushState".to_string(),
-        action("Append an item to an array at a JSON Pointer path.").params([
-            ("statePath", "JSON Pointer path to an array (e.g. /todos)"),
-            (
+        action("Append an item to an array at a JSON Pointer path.")
+            .param(
+                "statePath",
+                desc(
+                    CatalogPropV1::string(),
+                    "JSON Pointer path to an array (e.g. /todos)",
+                ),
+            )
+            .param(
                 "value",
-                "New item value (any JSON); use \"$id\" to generate ids",
-            ),
-            (
+                desc(
+                    CatalogPropV1::any(),
+                    "New item value (any JSON); use \"$id\" to generate ids",
+                ),
+            )
+            .param(
                 "clearStatePath",
-                "Optional JSON Pointer path to clear after push",
-            ),
-        ]),
+                desc(
+                    CatalogPropV1::string(),
+                    "Optional JSON Pointer path to clear after push",
+                ),
+            )
+            .build(),
     );
     out.insert(
         "removeState".to_string(),
-        action("Remove an item from an array at a JSON Pointer path by index.").params([
-            ("statePath", "JSON Pointer path to an array (e.g. /todos)"),
-            (
+        action("Remove an item from an array at a JSON Pointer path by index.")
+            .param(
+                "statePath",
+                desc(
+                    CatalogPropV1::string(),
+                    "JSON Pointer path to an array (e.g. /todos)",
+                ),
+            )
+            .param(
                 "index",
-                "Array index (use {\"$index\": true} inside repeat)",
-            ),
-        ]),
+                desc(
+                    CatalogPropV1::integer(),
+                    "Array index (use {\"$index\": true} inside repeat)",
+                ),
+            )
+            .build(),
     );
 
     out
@@ -181,10 +230,8 @@ impl ComponentBuilder {
         self
     }
 
-    fn props<const N: usize>(mut self, names: [&'static str; N]) -> Self {
-        for name in names {
-            self.c.props.insert(name.to_string(), CatalogPropV1::new());
-        }
+    fn prop(mut self, name: &str, def: CatalogPropV1) -> Self {
+        self.c.props.insert(name.to_string(), def);
         self
     }
 
@@ -215,20 +262,19 @@ fn action(description: &str) -> ActionBuilder {
 }
 
 impl ActionBuilder {
-    fn params<const N: usize>(
-        mut self,
-        params: [(&'static str, &'static str); N],
-    ) -> CatalogActionV1 {
-        for (name, desc) in params {
-            self.a.params.insert(
-                name.to_string(),
-                CatalogPropV1 {
-                    description: Some(desc.to_string()),
-                },
-            );
-        }
+    fn param(mut self, name: &str, def: CatalogPropV1) -> Self {
+        self.a.params.insert(name.to_string(), def);
+        self
+    }
+
+    fn build(self) -> CatalogActionV1 {
         self.a
     }
+}
+
+fn desc(mut prop: CatalogPropV1, description: &str) -> CatalogPropV1 {
+    prop.description = Some(description.to_string());
+    prop
 }
 
 #[cfg(test)]
