@@ -1,4 +1,4 @@
-use super::super::state::{EncodeState, apply_transform_px};
+use super::super::state::{EncodeState, apply_transform_px, bounds_of_quad_points};
 use super::super::*;
 
 use crate::text::{GlyphQuadKind, TextDecorationKind};
@@ -82,6 +82,55 @@ pub(in super::super) fn encode_text(
     let mut active_kind: Option<TextDrawKind> = None;
     let mut active_page: u16 = 0;
     let mut group_first_vertex = state.text_vertices.len() as u32;
+    let mut group_bounds_px: Option<(f32, f32, f32, f32)> = None;
+
+    let flush_group = |state: &mut EncodeState<'_>,
+                       kind: Option<TextDrawKind>,
+                       page: u16,
+                       group_first_vertex: &mut u32,
+                       group_bounds_px: &mut Option<(f32, f32, f32, f32)>| {
+        let Some(kind) = kind else {
+            return;
+        };
+
+        let first = *group_first_vertex;
+        let vertex_count = (state.text_vertices.len() as u32).saturating_sub(first);
+        if vertex_count == 0 {
+            *group_bounds_px = None;
+            return;
+        }
+
+        let Some((min_x, min_y, max_x, max_y)) = *group_bounds_px else {
+            *group_bounds_px = None;
+            return;
+        };
+
+        let Some(bounds_scissor) =
+            scissor_from_bounds_px(min_x, min_y, max_x, max_y, state.viewport_size)
+        else {
+            state.text_vertices.truncate(first as usize);
+            *group_bounds_px = None;
+            return;
+        };
+        let clipped_scissor = intersect_scissor(state.current_scissor, bounds_scissor);
+        if clipped_scissor.w == 0 || clipped_scissor.h == 0 {
+            state.text_vertices.truncate(first as usize);
+            *group_bounds_px = None;
+            return;
+        }
+
+        state.push_text_draw(TextDraw {
+            scissor: clipped_scissor,
+            uniform_index: state.current_uniform_index,
+            first_vertex: first,
+            vertex_count,
+            kind,
+            atlas_page: page,
+        });
+
+        *group_bounds_px = None;
+        *group_first_vertex = state.text_vertices.len() as u32;
+    };
 
     for g in blob.shape.glyphs.as_ref() {
         let kind = match g.kind() {
@@ -95,20 +144,13 @@ pub(in super::super) fn encode_text(
         };
 
         if active_kind != Some(kind) || (active_kind.is_some() && active_page != atlas_page) {
-            if let Some(prev) = active_kind {
-                let vertex_count =
-                    (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
-                if vertex_count > 0 {
-                    state.push_text_draw(TextDraw {
-                        scissor: state.current_scissor,
-                        uniform_index: state.current_uniform_index,
-                        first_vertex: group_first_vertex,
-                        vertex_count,
-                        kind: prev,
-                        atlas_page: active_page,
-                    });
-                }
-            }
+            flush_group(
+                state,
+                active_kind,
+                active_page,
+                &mut group_first_vertex,
+                &mut group_bounds_px,
+            );
             active_kind = Some(kind);
             active_page = atlas_page;
             group_first_vertex = state.text_vertices.len() as u32;
@@ -139,6 +181,17 @@ pub(in super::super) fn encode_text(
             apply_transform_px(t_px, lx1, ly1),
             apply_transform_px(t_px, lx0, ly1),
         ];
+
+        let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+        group_bounds_px = Some(match group_bounds_px {
+            Some((gx0, gy0, gx1, gy1)) => (
+                gx0.min(min_x),
+                gy0.min(min_y),
+                gx1.max(max_x),
+                gy1.max(max_y),
+            ),
+            None => (min_x, min_y, max_x, max_y),
+        });
 
         let (u0, v0, u1, v1) = (uv[0], uv[1], uv[2], uv[3]);
 
@@ -176,19 +229,13 @@ pub(in super::super) fn encode_text(
         ]);
     }
 
-    if let Some(kind) = active_kind {
-        let vertex_count = (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
-        if vertex_count > 0 {
-            state.push_text_draw(TextDraw {
-                scissor: state.current_scissor,
-                uniform_index: state.current_uniform_index,
-                first_vertex: group_first_vertex,
-                vertex_count,
-                kind,
-                atlas_page: active_page,
-            });
-        }
-    }
+    flush_group(
+        state,
+        active_kind,
+        active_page,
+        &mut group_first_vertex,
+        &mut group_bounds_px,
+    );
 
     if !blob.decorations.is_empty() {
         for d in blob

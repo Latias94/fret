@@ -175,6 +175,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed: Image/mask/viewport surface draws now tighten the scissor to the transformed quad bounds (intersected with current scissor).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/image.rs`, `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/mask.rs`,
     `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/viewport_surface.rs`
+  - Landed: Text draws now tighten the scissor to the glyph-quad bounds per `(kind, atlas_page)` batch.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (`flush_group`, `bounds_of_quad_points`)
 
 ## Always-run guardrails (before/after each milestone)
 
