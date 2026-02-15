@@ -20,6 +20,7 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use crate::primitives::EditorDensity;
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::icons::editor_icon;
+use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 #[derive(Debug, Clone)]
 pub struct MiniSearchBoxOptions {
@@ -77,6 +78,7 @@ impl MiniSearchBox {
         let has_value = cx
             .read_model_ref(&self.model, Invalidation::Layout, |s| !s.is_empty())
             .unwrap_or(false);
+        let enabled_for_paint = self.options.enabled;
 
         let (density, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
@@ -133,7 +135,7 @@ impl MiniSearchBox {
             let model_for_clear = self.model.clone();
             let mut el = cx.pressable(
                 PressableProps {
-                    enabled: self.options.enabled,
+                    enabled: enabled_for_paint,
                     layout: LayoutStyle {
                         size: SizeStyle {
                             width: Length::Px(density.hit_thickness),
@@ -158,8 +160,16 @@ impl MiniSearchBox {
                     });
                     cx.pressable_add_on_activate(on_activate);
 
-                    vec![cx.flex(
-                        FlexProps {
+                    let theme = Theme::global(&*cx.app);
+                    let hovered = _st.hovered || _st.hovered_raw;
+                    let pressed = _st.pressed;
+                    let bg = editor_icon_button_bg(theme, enabled_for_paint, hovered, pressed);
+                    let border =
+                        editor_icon_button_border(theme, enabled_for_paint, hovered, pressed);
+                    let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+
+                    vec![cx.container(
+                        fret_ui::element::ContainerProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
@@ -168,19 +178,38 @@ impl MiniSearchBox {
                                 },
                                 ..Default::default()
                             },
-                            direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Center,
-                            align: CrossAlign::Center,
-                            wrap: false,
+                            background: bg,
+                            border: Edges::all(border_width),
+                            border_color: border,
+                            corner_radii: fret_core::Corners::all(Px(6.0)),
+                            ..Default::default()
                         },
                         move |cx| {
-                            vec![editor_icon(
-                                cx,
-                                density,
-                                fret_icons::ids::ui::CLOSE,
-                                Some(Px(12.0)),
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    direction: Axis::Horizontal,
+                                    gap: Px(0.0),
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |cx| {
+                                    vec![editor_icon(
+                                        cx,
+                                        density,
+                                        fret_icons::ids::ui::CLOSE,
+                                        Some(Px(12.0)),
+                                    )]
+                                },
                             )]
                         },
                     )]

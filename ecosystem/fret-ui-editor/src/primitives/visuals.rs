@@ -81,6 +81,48 @@ pub(crate) fn hover_overlay_border(
     out
 }
 
+pub(crate) fn editor_icon_button_bg(
+    theme: &Theme,
+    enabled: bool,
+    hovered: bool,
+    pressed: bool,
+) -> Option<Color> {
+    if !enabled {
+        return None;
+    }
+    if !hovered && !pressed {
+        return None;
+    }
+
+    Some(hover_overlay_bg(
+        theme,
+        theme.color_token("background"),
+        hovered,
+        pressed,
+    ))
+}
+
+pub(crate) fn editor_icon_button_border(
+    theme: &Theme,
+    enabled: bool,
+    hovered: bool,
+    pressed: bool,
+) -> Option<Color> {
+    if !enabled {
+        return None;
+    }
+    if !hovered && !pressed {
+        return None;
+    }
+
+    let base = theme
+        .color_by_key("border")
+        .or_else(|| theme.color_by_key("component.input.border"))
+        .unwrap_or_else(|| theme.color_token("foreground"));
+
+    Some(hover_overlay_border(theme, base, hovered, pressed))
+}
+
 /// Compute input-like frame visuals for the given interaction state.
 ///
 /// This is a small helper intended for editor controls built from `Container` + `Pressable`.

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, Px, TextAlign, TextStyle};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
@@ -11,6 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 pub type OnPropertyRowReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
@@ -164,7 +165,7 @@ impl PropertyRow {
                     },
                     ..Default::default()
                 },
-                move |cx, _st| {
+                move |cx, st| {
                     let on_activate: OnActivate = Arc::new({
                         let on_reset = on_reset.clone();
                         move |host, action_cx, _reason: ActivateReason| {
@@ -173,27 +174,53 @@ impl PropertyRow {
                     });
                     cx.pressable_add_on_activate(on_activate);
 
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
+                    let theme = Theme::global(&*cx.app);
+                    let hovered = st.hovered || st.hovered_raw;
+                    let pressed = st.pressed;
+                    let bg = editor_icon_button_bg(theme, true, hovered, pressed);
+                    let border = editor_icon_button_border(theme, true, hovered, pressed);
+                    let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
+                            background: bg,
+                            border: Edges::all(border_width),
+                            border_color: border,
+                            corner_radii: Corners::all(Px(6.0)),
                             ..Default::default()
                         },
-                        text: glyph.clone(),
-                        style: Some(TextStyle {
-                            // Keep this conservative: allow the theme's defaults to dominate.
-                            size: Px(12.0),
-                            line_height: Some(density.hit_thickness),
-                            ..Default::default()
-                        }),
-                        color: Some(reset_fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: TextAlign::Center,
-                    })]
+                        move |cx| {
+                            vec![cx.text_props(TextProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                text: glyph.clone(),
+                                style: Some(TextStyle {
+                                    // Keep this conservative: allow the theme's defaults to dominate.
+                                    size: Px(12.0),
+                                    line_height: Some(density.hit_thickness),
+                                    ..Default::default()
+                                }),
+                                color: Some(reset_fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                                align: TextAlign::Center,
+                            })]
+                        },
+                    )]
                 },
             );
 
