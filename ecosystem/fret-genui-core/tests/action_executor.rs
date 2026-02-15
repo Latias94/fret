@@ -4,8 +4,8 @@ use fret_app::App;
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::render::GenUiActionInvocation;
 use fret_runtime::Effect;
-use fret_ui::action::UiActionHostAdapter;
 use fret_ui::GlobalElementId;
+use fret_ui::action::UiActionHostAdapter;
 use serde_json::{Value, json};
 
 fn inv(action: &str, params: Value) -> GenUiActionInvocation {

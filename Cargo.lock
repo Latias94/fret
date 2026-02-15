@@ -2000,6 +2000,7 @@ dependencies = [
 name = "fret-genui-shadcn"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
  "fret-core",
  "fret-genui-core",
  "fret-runtime",
