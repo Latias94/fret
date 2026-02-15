@@ -32,10 +32,11 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - `ecosystem/fret-code-editor-view/src/row_spans.rs`
 - [~] Produce row-local spans from tree-sitter highlighting events:
   - [x] map base-buffer row ranges → composed display-row ranges (folds/inlays/preedit),
-  - [ ] clamp/normalize out-of-date ranges after edits (best-effort, deterministic),
+  - [x] clamp/normalize out-of-date ranges after edits (best-effort, deterministic),
   - [x] split spans at row boundaries (no cross-row spans) (row clip in paint).
   - Evidence:
     - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (row clip + `row_spans` mapping)
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_for_text`)
 - [x] Introduce a stable “highlight class → paint style” mapping:
   - [x] keep it paint-only (`TextPaintStyle`), do not set shaping-affecting fields for syntax.
   - Evidence:

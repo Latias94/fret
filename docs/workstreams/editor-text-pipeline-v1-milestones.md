@@ -68,6 +68,8 @@ Evidence anchors (expected):
   - `ecosystem/fret-code-editor-view/src/row_spans.rs`
 - Renderer integration for rich text rows:
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`rich_text_with_blob`)
+- Defensive span normalization (stale/out-of-date ranges):
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_for_text`)
 - Shaping-key stability gate:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
 
