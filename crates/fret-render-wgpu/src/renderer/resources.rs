@@ -473,7 +473,7 @@ impl Renderer {
             material_catalog_texture,
             material_catalog_uploaded: false,
             quad_pipeline_format: None,
-            quad_pipeline: None,
+            quad_pipelines: HashMap::new(),
             viewport_pipeline_format: None,
             viewport_pipeline: None,
             viewport_bind_group_layout,

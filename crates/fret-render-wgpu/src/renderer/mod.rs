@@ -79,7 +79,7 @@ pub struct Renderer {
     material_catalog_uploaded: bool,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
-    quad_pipeline: Option<wgpu::RenderPipeline>,
+    quad_pipelines: HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
 
     viewport_pipeline_format: Option<wgpu::TextureFormat>,
     viewport_pipeline: Option<wgpu::RenderPipeline>,

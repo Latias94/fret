@@ -501,11 +501,21 @@ impl SvgMaskAtlasPage {
     }
 }
 
-pub(super) struct DrawCall {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) struct QuadPipelineKey {
+    pub(super) fill_kind: u8,
+    pub(super) border_kind: u8,
+    pub(super) border_present: bool,
+    pub(super) dash_enabled: bool,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct QuadDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
     pub(super) first_instance: u32,
     pub(super) instance_count: u32,
+    pub(super) pipeline: QuadPipelineKey,
 }
 
 pub(super) struct ViewportDraw {
@@ -586,7 +596,7 @@ pub(super) struct PathIntermediate {
 }
 
 pub(super) enum OrderedDraw {
-    Quad(DrawCall),
+    Quad(QuadDraw),
     Viewport(ViewportDraw),
     Image(ImageDraw),
     Mask(MaskDraw),

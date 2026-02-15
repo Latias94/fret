@@ -112,7 +112,7 @@ impl Renderer {
         self.ensure_mask_image_identity_uploaded(queue);
 
         self.ensure_viewport_pipeline(device, format);
-        self.ensure_pipeline(device, format);
+        self.ensure_quad_pipelines(format);
         self.ensure_text_pipeline(device, format);
         self.ensure_text_color_pipeline(device, format);
         self.ensure_text_subpixel_pipeline(device, format);
@@ -921,10 +921,13 @@ impl Renderer {
                             Path,
                         }
 
-                        let quad_pipeline = self
-                            .quad_pipeline
-                            .as_ref()
-                            .expect("quad pipeline must exist");
+                        for item in &encoding.ordered_draws[scene_pass.draw_range.clone()] {
+                            let OrderedDraw::Quad(draw) = item else {
+                                continue;
+                            };
+                            let _ = self.quad_pipeline(device, format, draw.pipeline);
+                        }
+
                         let viewport_pipeline = self
                             .viewport_pipeline
                             .as_ref()
@@ -952,6 +955,7 @@ impl Renderer {
 
                         let mut active_pipeline = ActivePipeline::None;
                         let mut active_text_page: Option<u16> = None;
+                        let mut active_quad_pipeline: Option<QuadPipelineKey> = None;
 
                         fn begin_main_pass<'a>(
                             encoder: &'a mut wgpu::CommandEncoder,
@@ -992,7 +996,13 @@ impl Renderer {
                                         continue;
                                     }
 
-                                    if !matches!(active_pipeline, ActivePipeline::Quad) {
+                                    let quad_pipeline = self
+                                        .quad_pipelines
+                                        .get(&draw.pipeline)
+                                        .expect("quad pipeline must exist");
+                                    if !matches!(active_pipeline, ActivePipeline::Quad)
+                                        || active_quad_pipeline != Some(draw.pipeline)
+                                    {
                                         pass.set_pipeline(quad_pipeline);
                                         if perf_enabled {
                                             frame_perf.pipeline_switches =
@@ -1000,12 +1010,16 @@ impl Renderer {
                                             frame_perf.pipeline_switches_quad =
                                                 frame_perf.pipeline_switches_quad.saturating_add(1);
                                         }
-                                        pass.set_bind_group(1, &quad_instance_bind_group, &[]);
-                                        if perf_enabled {
-                                            frame_perf.bind_group_switches =
-                                                frame_perf.bind_group_switches.saturating_add(1);
+                                        if !matches!(active_pipeline, ActivePipeline::Quad) {
+                                            pass.set_bind_group(1, &quad_instance_bind_group, &[]);
+                                            if perf_enabled {
+                                                frame_perf.bind_group_switches = frame_perf
+                                                    .bind_group_switches
+                                                    .saturating_add(1);
+                                            }
+                                            active_pipeline = ActivePipeline::Quad;
                                         }
-                                        active_pipeline = ActivePipeline::Quad;
+                                        active_quad_pipeline = Some(draw.pipeline);
                                     }
 
                                     let uniform_offset = (u64::from(draw.uniform_index)

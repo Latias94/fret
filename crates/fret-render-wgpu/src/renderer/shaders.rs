@@ -117,6 +117,11 @@ struct MaskStack {
 
 const MAX_STOPS: u32 = 8u;
 
+override FRET_FILL_KIND: u32 = 0u;
+override FRET_BORDER_KIND: u32 = 0u;
+override FRET_BORDER_PRESENT: u32 = 1u;
+override FRET_DASH_ENABLED: u32 = 0u;
+
 struct Paint {
   kind: u32,
   tile_mode: u32,
@@ -540,34 +545,13 @@ fn mat_rot(v: vec2<f32>, a: f32) -> vec2<f32> {
   return vec2<f32>(c * v.x - s * v.y, s * v.x + c * v.y);
 }
 
-fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
-  // WebGPU/Tint uniformity rule: derivative ops (e.g. fwidth) must not be called from
-  // control flow that depends on non-uniform values (e.g. storage-buffer driven enums).
-  // Keep the evaluation branchless and select the final result by kind/tile_mode.
-
-  let kind = p.kind;
-
-  // 0 = Solid
-  let solid = p.params0;
-
-  // 1 = LinearGradient
-  let lg_start = p.params0.xy;
-  let lg_end = p.params0.zw;
-  let lg_dir = lg_end - lg_start;
-  let lg_len2 = dot(lg_dir, lg_dir);
-  let lg_t = select(0.0, dot(local_pos - lg_start, lg_dir) / lg_len2, lg_len2 > 1e-6);
-  let linear = paint_sample_stops(p, clamp(lg_t, 0.0, 1.0));
-
-  // 2 = RadialGradient
-  let rg_center = p.params0.xy;
-  let rg_radius = max(p.params0.zw, vec2<f32>(1e-6));
-  let rg_d = (local_pos - rg_center) / rg_radius;
-  let radial = paint_sample_stops(p, clamp(length(rg_d), 0.0, 1.0));
-
-  // 3 = Material (Tier B procedural patterns)
+fn material_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
   let base = p.params0;
   let fg = p.params1;
   let pos = local_pos + p.params3.zw;
+
+  // params2: primary (x/y), thickness/radius (z), seed (w)
+  // params3: time/phase (x), angle/softness (y), offset (z/w)
   let spacing = max(p.params2.x, 1.0);
   let spacing_y = max(p.params2.y, 1.0);
   let thickness = max(p.params2.z, 0.0);
@@ -694,12 +678,61 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
   material = select(material, mat5, tm5);
   material = select(material, mat6, tm6);
   material = select(material, mat7, tm7);
+  return material;
+}
 
-  var out = solid;
-  out = select(out, linear, kind == 1u);
-  out = select(out, radial, kind == 2u);
-  out = select(out, material, kind == 3u);
-  return select(vec4<f32>(0.0), out, kind <= 3u);
+fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (FRET_FILL_KIND == 0u) {
+    return p.params0;
+  }
+  if (FRET_FILL_KIND == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_FILL_KIND == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_FILL_KIND == 3u) {
+    return material_eval(p, local_pos);
+  }
+  return vec4<f32>(0.0);
+}
+
+fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (FRET_BORDER_KIND == 0u) {
+    return p.params0;
+  }
+  if (FRET_BORDER_KIND == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_BORDER_KIND == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_BORDER_KIND == 3u) {
+    return material_eval(p, local_pos);
+  }
+  return vec4<f32>(0.0);
 }
 
 @fragment
@@ -735,29 +768,32 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
   let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
-  let border_sum = input.border.x + input.border.y + input.border.z + input.border.w;
-  let border_present = border_sum > 0.0;
+  let border_present = FRET_BORDER_PRESENT != 0u;
 
   let alpha_fill = select(alpha_outer, alpha_inner, border_present);
   let border_cov_raw = saturate(alpha_outer - alpha_inner);
   let border_cov = select(0.0, border_cov_raw, border_present);
 
-  let fill = paint_eval(inst.fill_paint, input.local_pos) * alpha_fill;
-  let dash_enabled = inst.dash_params.w > 0.5 && border_present;
-  let dash = inst.dash_params.x;
-  let gap = inst.dash_params.y;
-  let phase = inst.dash_params.z;
-  let period = dash + gap;
-  let dash_valid = dash_enabled && period > 0.0 && dash > 0.0;
-  let period_safe = max(period, 1e-6);
-  let s = rrect_perimeter_s(input.local_pos, input.rect, input.corner_radii);
-  let tt = s + phase;
-  let m = tt - floor(tt / period_safe) * period_safe;
-  let aa = max(fwidth(s), 1e-4);
-  let on_start = smoothstep(0.0, aa, m);
-  let on_end = 1.0 - smoothstep(dash - aa, dash + aa, m);
-  let dash_mask = select(1.0, on_start * on_end, dash_valid);
-  let border = paint_eval(inst.border_paint, input.local_pos) * border_cov * dash_mask;
+  let fill = paint_eval_fill(inst.fill_paint, input.local_pos) * alpha_fill;
+  var border = vec4<f32>(0.0);
+  if (border_present) {
+    var dash_mask = 1.0;
+    if (FRET_DASH_ENABLED != 0u) {
+      let dash = inst.dash_params.x;
+      let gap = inst.dash_params.y;
+      let phase = inst.dash_params.z;
+      let period = dash + gap;
+      let period_safe = max(period, 1e-6);
+      let s = rrect_perimeter_s(input.local_pos, input.rect, input.corner_radii);
+      let tt = s + phase;
+      let m = tt - floor(tt / period_safe) * period_safe;
+      let aa = max(fwidth(s), 1e-4);
+      let on_start = smoothstep(0.0, aa, m);
+      let on_end = 1.0 - smoothstep(dash - aa, dash + aa, m);
+      dash_mask = on_start * on_end;
+    }
+    border = paint_eval_border(inst.border_paint, input.local_pos) * border_cov * dash_mask;
+  }
 
   let out = (fill + border) * clip * mask;
   return encode_output_premul(out);

@@ -54,7 +54,7 @@ pub(super) struct EncodeState<'a> {
 
     pub(super) current_uniform_index: u32,
 
-    pub(super) quad_batch: Option<(ScissorRect, u32, u32)>,
+    pub(super) quad_batch: Option<(ScissorRect, u32, QuadPipelineKey, u32)>,
 
     pub(super) transform_stack: Vec<Transform2D>,
     pub(super) opacity_stack: Vec<f32>,
@@ -157,14 +157,15 @@ impl<'a> EncodeState<'a> {
     }
 
     pub(super) fn flush_quad_batch(&mut self) {
-        if let Some((scissor, uniform_index, first_instance)) = self.quad_batch.take() {
+        if let Some((scissor, uniform_index, pipeline, first_instance)) = self.quad_batch.take() {
             let instance_count = (self.instances.len() as u32).saturating_sub(first_instance);
             if instance_count > 0 {
-                self.ordered_draws.push(OrderedDraw::Quad(DrawCall {
+                self.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
                     scissor,
                     uniform_index,
                     first_instance,
                     instance_count,
+                    pipeline,
                 }));
             }
         }
