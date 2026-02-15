@@ -25,7 +25,7 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 
 - [~] Define a row-local span model (ecosystem-owned):
   - [x] span ranges are **UTF-8 byte offsets** relative to the row `Arc<str>`,
-  - [x] ranges are char-boundary aligned (`is_char_boundary`) (best-effort clamps on mapping),
+  - [x] ranges are char-boundary aligned (`is_char_boundary`) and grapheme-safe for emoji clusters (best-effort clamps on mapping),
   - [x] spans are non-overlapping and cover the row text (gaps filled with default style).
   - Evidence:
     - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`materialize_row_rich_text`)
@@ -46,14 +46,14 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - [~] avoid per-span reshaping on paint-only changes (relies on renderer shape-key gates; add editor-level gate).
   - Evidence:
     - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`rich_text_with_blob`)
-- [ ] Regression gates:
-  - [ ] “paint-only span changes do not reshape”:
+- [x] Regression gates:
+  - [x] “paint-only span changes do not reshape”:
     - [x] assert `AttributedText::shaping_eq` holds across theme-only updates.
       - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_only_syntax_color_changes_do_not_affect_rich_text_shaping_eq`)
     - [x] add a `TextSystem` gate that shape-cache hits remain stable across paint-only edits for the
       same text + shaping style.
       - `crates/fret-render-wgpu/src/text/mod.rs` (`paint_only_changes_miss_blob_cache_but_hit_shape_cache`)
-  - [ ] span range correctness:
+  - [x] span range correctness:
     - [x] emoji ZWJ/VS16 sequences never split.
       - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`normalize_syntax_spans_does_not_split_zwj_or_vs16_graphemes`)
     - [x] mixed scripts + surrogate-pair UTF-16 ranges remain deterministic at platform boundaries.

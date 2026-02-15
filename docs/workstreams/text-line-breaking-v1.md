@@ -1,6 +1,6 @@
 # Workstream: Text Line Breaking v1 (Wrap Quality + Editor-Grade Rules)
 
-Status: M0 implemented (fixture-driven conformance harness); M1 implemented (Unicode break opportunities via `swash::text::analyze`, with small heuristic fallback); M2 planned (Parley line breaking).
+Status: M0 implemented (fixture-driven conformance harness); M1 implemented (Unicode break opportunities via `swash::text::analyze`, with small heuristic fallback); M2 implemented (Parley paragraph line breaking for `TextWrap::Word`).
 
 This document is **non-normative**. It complements:
 

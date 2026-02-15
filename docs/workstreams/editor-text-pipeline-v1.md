@@ -92,13 +92,22 @@ easy to audit.
 | Shaping engine | Parley shaping + metrics | Supported | `crates/fret-render-wgpu/src/text/parley_shaper.rs` |
 | OpenType features | `calt`/`liga`/`ssXX` etc via `TextShapingStyle.features` | Supported (best-effort) | Unknown tags are ignored by the resolved face; keep it deterministic via tests. |
 | Variable axes | `wght`/`wdth` etc via `TextShapingStyle.axes` | Supported (best-effort) | Same “best-effort” contract as features. |
+| Rich text shaping | per-span font/weight/slant/letter spacing overrides | Supported | `crates/fret-core/src/text/mod.rs` (`TextSpan.shaping`) |
 | Rich text paint | `fg`/`bg`/underline/strikethrough spans | Supported | `crates/fret-core/src/text/mod.rs` (`TextSpan`, `TextPaintStyle`) |
+| Per-span font size | per-span size overrides | Not supported (v1) | `TextStyle.size` is the only size input today; use separate `Text` nodes if you need mixed sizes. |
+| Per-span line height | per-span line height overrides | Not supported (v1) | `TextStyle.line_height` is a base-style override only. |
 | Wrap (UI) | `TextWrap::Word` with paragraph line breaking | Supported + gated | `docs/workstreams/text-line-breaking-v1.md` + fixtures |
 | Wrap (editor) | Editor-owned row segmentation (policy) | Supported (ecosystem) | Renderer wrap should be `TextWrap::None` per display row. |
 | Overflow | `TextOverflow::Ellipsis` (single-line) | Supported | Deterministic mapping is gated in text tests. |
 | Geometry queries | caret/hit-test/selection rects across wrap + RTL | Supported + gated | `crates/fret-render-wgpu/src/text/mod.rs` tests cover wrapped RTL/mixed scripts. |
 | Font system | family overrides + fallback injection + invalidation key | Supported + gated | `TextFontFamilyConfig`, `TextFontStackKey` invalidation; see font workstreams. |
 | Perf/diag guard | resize jitter catastrophic regression gate for word wrap | Supported | `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json` + `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py` |
+
+Notes:
+
+- OpenType features / axes are currently expressed via `AttributedText` spans (`TextSpan.shaping`).
+  There is no `TextStyle.features` field yet; consumers that need global feature toggles can wrap
+  plain text as a single-span `AttributedText` as a best-effort workaround.
 
 ### Ecosystem layer (editor pipeline)
 
