@@ -126,10 +126,10 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `ecosystem/fret-ui-editor/src/controls/checkbox.rs`
   - [x] Editor input surfaces remain visible even when the active theme uses transparent input backgrounds.
     - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
-  - [~] EnumSelect overlay dismissal is reliable (outside press / trigger press) and does not leave ghosting artifacts.
-  - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
-  - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs` (opaque editor input surfaces)
-  - Evidence: `tools/diag-scripts/imui-editor-proof-enum-select-dismiss-and-close.json`
+  - [x] EnumSelect overlay dismissal is reliable (outside press / trigger press) and does not leave ghosting artifacts.
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+    - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (invalidate base root on hide)
+    - Evidence: `tools/diag-scripts/imui-editor-proof-enum-select-dismiss-and-close.json`
   - [x] `PropertyGroup` header has a background and divider for visual grouping.
     - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
   - [x] Replace tofu-prone glyph chrome with SVG icons via semantic `fret-icons` IDs.
@@ -173,6 +173,8 @@ adding new runtime contracts unless evidence demands it.
   - [x] Key internal state per slider instance (avoid cross-widget drag/typing interference).
   - Evidence: `ecosystem/fret-ui-editor/src/controls/slider.rs`
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.material.roughness`, `imui-editor-proof.editor.material.metallic`)
+  - [x] Proof demo model helpers are keyed by stable names (avoid accidental model sharing across fields).
+    - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`named_demo_state`)
 - [~] Add a reusable `TextField` control surface:
   - single-line + multi-line
   - password mode (masking + copy policy)

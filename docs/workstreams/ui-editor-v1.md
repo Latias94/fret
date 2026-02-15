@@ -220,15 +220,18 @@ These are the highest-signal problems observed while using the editor proof harn
 They are tracked here to keep the workstream grounded in “what feels broken” vs adding more widgets.
 
 - **Overlay close artifacts (“ghosting”)**: menu-like overlays (e.g. enum select) can leave stale pixels after closing.
-  This suggests a damage/invalidation coverage gap when an overlay unmounts or transitions to non-present.
+  Mitigation landed by invalidating the base root when an overlay hides; see `ecosystem/fret-ui-kit/src/window_overlays/render.rs`.
+  Treat this as a mechanism gate until damage coverage is confidently correct across all overlay types.
   Owner: mechanisms (`crates/fret-ui` / renderer invalidation), with local repros in `ecosystem/fret-ui-editor`.
 - **Dismiss policy confidence**: outside-press dismissal should be reliable for mouse and touch; trigger press should
-  close menu overlays even when outside pointer events are disabled (`disableOutsidePointerEvents`-style policy).
+  close menu overlays without requiring “disable outside pointer events” occlusion policies.
+  EnumSelect now uses dismissible popover policy; see `ecosystem/fret-ui-editor/src/controls/enum_select.rs`.
   Owner: `fret-ui-kit` overlay substrates + editor policies.
 - **State keying discipline**: stateful controls must key their internal state per instance (stable key preference:
   explicit `id_source` then `(callsite, model.id())`), otherwise multiple widgets can fight over drag/typing state.
   `test_id` is for diagnostics/automation and must not be treated as widget identity.
-  This was a real failure mode for `Slider<T>` and is treated as a regression class.
+  This applies to demo harness state helpers too: any `with_state`-backed model helper must be `named/keyed`
+  (see `apps/fret-examples/src/imui_editor_proof_demo.rs`, `named_demo_state`).
 - **Visual cohesion**: editor controls are still missing a single, shared “widget visuals” resolver (hover/active/disabled)
   comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`. Without this, chrome and density drift across controls.
 
