@@ -167,6 +167,7 @@ adding new runtime contracts unless evidence demands it.
   - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
 - [x] Add an editor-facing `Slider<T>` control:
   - horizontal first; clamping + step policy
+  - value display + double-click typing mode (via `NumericInput`)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/slider.rs`
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.material.roughness`, `imui-editor-proof.editor.material.metallic`)
 - [~] Add a reusable `TextField` control surface:

@@ -4,20 +4,29 @@
 //! - pointer down sets the value (clamped / stepped),
 //! - pointer drag updates the value continuously (best-effort cleanup when pointer-up is missed),
 //! - visuals reuse the shared editor "frame" chrome policy to stay consistent with other controls.
+//! - optional value display and a typing mode (double-click).
 
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Corners, CursorIcon, Edges, PointerId, Px};
+use fret_core::text::{TextOverflow, TextWrap};
+use fret_core::{
+    Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign, TextStyle,
+};
 use fret_runtime::Model;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexItemStyle, LayoutStyle, Length, Overflow, PressableA11y,
-    PressableProps, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, InsetStyle, LayoutStyle,
+    Length, MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, SizeStyle,
+    TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::recipes::input::InputTokenKeys;
 use fret_ui_kit::{ChromeRefinement, Size};
 
+use crate::controls::numeric_input::{
+    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
+    NumericValidateFn,
+};
 use crate::primitives::chrome::resolve_editor_frame_chrome;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
@@ -87,8 +96,35 @@ fn value_from_x(
     quantize_value(min, max, clamp, step, v)
 }
 
+fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
+    layout.size = SizeStyle {
+        width: Length::Px(Px(0.0)),
+        height: Length::Px(Px(0.0)),
+        min_width: Some(Px(0.0)),
+        min_height: Some(Px(0.0)),
+        ..Default::default()
+    };
+    layout.position = PositionStyle::Absolute;
+    layout.inset = InsetStyle {
+        top: Some(Px(0.0)),
+        left: Some(Px(0.0)),
+        ..Default::default()
+    };
+    layout.overflow = Overflow::Clip;
+    layout
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SliderMode {
+    Slide,
+    Typing,
+}
+
 #[derive(Debug)]
 struct SliderState {
+    mode: SliderMode,
+    slider_id: Option<fret_ui::GlobalElementId>,
+    input_id: Option<fret_ui::GlobalElementId>,
     dragging: bool,
     pointer_id: Option<PointerId>,
 }
@@ -96,6 +132,9 @@ struct SliderState {
 impl Default for SliderState {
     fn default() -> Self {
         Self {
+            mode: SliderMode::Slide,
+            slider_id: None,
+            input_id: None,
             dragging: false,
             pointer_id: None,
         }
@@ -109,6 +148,9 @@ pub struct SliderOptions {
     pub clamp: bool,
     /// Quantize to a step size in value space (e.g. `0.01` for normalized floats).
     pub step: Option<f64>,
+    pub show_value: bool,
+    pub value_width: Px,
+    pub allow_typing: bool,
     pub test_id: Option<Arc<str>>,
     pub a11y_label: Option<Arc<str>>,
 }
@@ -132,6 +174,9 @@ impl Default for SliderOptions {
             enabled: true,
             clamp: true,
             step: None,
+            show_value: true,
+            value_width: Px(52.0),
+            allow_typing: true,
             test_id: None,
             a11y_label: None,
         }
@@ -143,6 +188,9 @@ pub struct Slider<T> {
     model: Model<T>,
     min: f64,
     max: f64,
+    format: NumericFormatFn<T>,
+    parse: NumericParseFn<T>,
+    validate: Option<NumericValidateFn<T>>,
     options: SliderOptions,
 }
 
@@ -151,12 +199,39 @@ where
     T: DragValueScalar + Default,
 {
     pub fn new(model: Model<T>, min: f64, max: f64) -> Self {
+        let format: NumericFormatFn<T> = Arc::new(|v| {
+            let f = v.to_f64();
+            if (f - f.round()).abs() <= 1e-6 {
+                Arc::from(format!("{}", f.round() as i64))
+            } else {
+                Arc::from(format!("{f:.3}"))
+            }
+        });
+        let parse: NumericParseFn<T> = Arc::new(|s| s.trim().parse::<f64>().ok().map(T::from_f64));
         Self {
             model,
             min,
             max,
+            format,
+            parse,
+            validate: None,
             options: SliderOptions::default(),
         }
+    }
+
+    pub fn format(mut self, format: NumericFormatFn<T>) -> Self {
+        self.format = format;
+        self
+    }
+
+    pub fn parse(mut self, parse: NumericParseFn<T>) -> Self {
+        self.parse = parse;
+        self
+    }
+
+    pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
+        self.validate = validate;
+        self
     }
 
     pub fn options(mut self, options: SliderOptions) -> Self {
@@ -223,19 +298,47 @@ where
                 |s| s.clone(),
             );
 
-            let model_for_change = self.model.clone();
-            let enabled = self.options.enabled;
-            let a11y_label = self.options.a11y_label.clone();
-            let opts = self.options.clone();
+            let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
+            let typing = mode == SliderMode::Typing;
 
-            let mut layout = opts.layout;
+            let enabled = self.options.enabled;
+            if !enabled && typing {
+                let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+                st.mode = SliderMode::Slide;
+                st.dragging = false;
+                st.pointer_id = None;
+            }
+
+            let mut slider_layout = self.options.layout;
+            if typing {
+                slider_layout = hidden_layout(slider_layout);
+            }
+
+            let mut input_layout = self.options.layout;
+            if !typing {
+                input_layout = hidden_layout(input_layout);
+            }
+
+            let model_for_change = self.model.clone();
+            let a11y_label = self.options.a11y_label.clone();
+            let show_value = self.options.show_value;
+            let value_width = self.options.value_width;
+            let allow_typing = self.options.allow_typing;
+
+            let interactive_enabled = enabled && !typing;
+
+            let mut layout = slider_layout;
             if layout.size.min_height.is_none() {
                 layout.size.min_height = Some(density.row_height);
             }
 
-            let mut el = cx.pressable(
+            let format = self.format.clone();
+            let value_text = (format)(T::from_f64(value_f));
+
+            let state_for_slider = state.clone();
+            let mut slider_el = cx.pressable(
                 PressableProps {
-                    enabled,
+                    enabled: interactive_enabled,
                     layout,
                     a11y: PressableA11y {
                         label: a11y_label,
@@ -244,13 +347,32 @@ where
                     ..Default::default()
                 },
                 move |cx, st| {
-                    let state_for_down = state.clone();
+                    let slider_id = cx.root_id();
+                    {
+                        let mut st = state_for_slider.lock().unwrap_or_else(|e| e.into_inner());
+                        st.slider_id = Some(slider_id);
+                    }
+
+                    let state_for_down = state_for_slider.clone();
                     let model_for_down = model_for_change.clone();
                     cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
-                        if !enabled {
+                        if !interactive_enabled {
                             return PressablePointerDownResult::Continue;
                         }
-                        if down.button != fret_core::MouseButton::Left {
+                        if allow_typing && down.button == MouseButton::Left && down.click_count >= 2
+                        {
+                            let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
+                            st.mode = SliderMode::Typing;
+                            st.dragging = false;
+                            st.pointer_id = None;
+                            if let Some(input_id) = st.input_id {
+                                host.request_focus(input_id);
+                            }
+                            host.request_redraw(action_cx.window);
+                            return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                        }
+
+                        if down.button != MouseButton::Left {
                             return PressablePointerDownResult::Continue;
                         }
 
@@ -259,12 +381,25 @@ where
                         let inner_w =
                             (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
                                 .max(0.0);
+                        let label_w = if show_value {
+                            value_width.0 as f64 + density.padding_x.0 as f64
+                        } else {
+                            0.0
+                        };
+                        let interactive_w = (inner_w - label_w).max(0.0);
                         let inner_x = (down.position_local.x.0 as f64
                             - frame.padding.left.0 as f64)
-                            .clamp(0.0, inner_w);
+                            .clamp(0.0, interactive_w);
 
-                        let next =
-                            value_from_x(min, max, clamp, step, inner_x, inner_w, thumb_d.0 as f64);
+                        let next = value_from_x(
+                            min,
+                            max,
+                            clamp,
+                            step,
+                            inner_x,
+                            interactive_w,
+                            thumb_d.0 as f64,
+                        );
                         let next_t = T::from_f64(next);
                         let _ = host.models_mut().update(&model_for_down, |v| *v = next_t);
                         host.request_redraw(action_cx.window);
@@ -278,7 +413,7 @@ where
                         PressablePointerDownResult::Continue
                     }));
 
-                    let state_for_move = state.clone();
+                    let state_for_move = state_for_slider.clone();
                     let model_for_move = model_for_change.clone();
                     cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
                         let mut st_lock = state_for_move.lock().unwrap_or_else(|e| e.into_inner());
@@ -298,18 +433,31 @@ where
                         let inner_w =
                             (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
                                 .max(0.0);
+                        let label_w = if show_value {
+                            value_width.0 as f64 + density.padding_x.0 as f64
+                        } else {
+                            0.0
+                        };
+                        let interactive_w = (inner_w - label_w).max(0.0);
                         let inner_x = (mv.position_local.x.0 as f64 - frame.padding.left.0 as f64)
-                            .clamp(0.0, inner_w);
+                            .clamp(0.0, interactive_w);
 
-                        let next =
-                            value_from_x(min, max, clamp, step, inner_x, inner_w, thumb_d.0 as f64);
+                        let next = value_from_x(
+                            min,
+                            max,
+                            clamp,
+                            step,
+                            inner_x,
+                            interactive_w,
+                            thumb_d.0 as f64,
+                        );
                         let next_t = T::from_f64(next);
                         let _ = host.models_mut().update(&model_for_move, |v| *v = next_t);
                         host.request_redraw(action_cx.window);
                         true
                     }));
 
-                    let state_for_up = state.clone();
+                    let state_for_up = state_for_slider.clone();
                     cx.pressable_add_on_pointer_up(Arc::new(move |_host, _action_cx, up| {
                         let mut st = state_for_up.lock().unwrap_or_else(|e| e.into_inner());
                         if st.pointer_id == Some(up.pointer_id) {
@@ -328,7 +476,7 @@ where
                         theme,
                         frame,
                         EditorFrameState {
-                            enabled,
+                            enabled: interactive_enabled,
                             hovered,
                             pressed,
                             focused,
@@ -337,7 +485,7 @@ where
                     );
 
                     let accent = theme.color_token("accent");
-                    let disabled_alpha = if enabled { 1.0 } else { 0.55 };
+                    let disabled_alpha = if interactive_enabled { 1.0 } else { 0.55 };
 
                     let mut track_bg = theme
                         .color_by_key("component.slider.track_bg")
@@ -394,21 +542,27 @@ where
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![cx.flex(
-                                fret_ui::element::FlexProps {
+                            let track = cx.flex(
+                                FlexProps {
                                     layout: LayoutStyle {
                                         size: SizeStyle {
                                             width: Length::Fill,
                                             height: Length::Fill,
                                             ..Default::default()
                                         },
+                                        flex: FlexItemStyle {
+                                            grow: 1.0,
+                                            shrink: 1.0,
+                                            basis: Length::Px(Px(0.0)),
+                                            align_self: None,
+                                        },
                                         ..Default::default()
                                     },
-                                    direction: fret_core::Axis::Horizontal,
+                                    direction: Axis::Horizontal,
                                     gap: Px(0.0),
                                     padding: Edges::all(Px(0.0)),
-                                    justify: fret_ui::element::MainAlign::Start,
-                                    align: fret_ui::element::CrossAlign::Center,
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Center,
                                     wrap: false,
                                 },
                                 move |cx| {
@@ -482,6 +636,66 @@ where
 
                                     vec![left, thumb, right]
                                 },
+                            );
+
+                            let value_el = if show_value {
+                                Some(cx.text_props(TextProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Px(value_width),
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
+                                        flex: FlexItemStyle {
+                                            grow: 0.0,
+                                            shrink: 0.0,
+                                            basis: Length::Px(value_width),
+                                            align_self: None,
+                                        },
+                                        ..Default::default()
+                                    },
+                                    text: value_text.clone(),
+                                    style: Some(TextStyle {
+                                        size: frame.text_px,
+                                        line_height: Some(density.row_height),
+                                        ..Default::default()
+                                    }),
+                                    color: Some(frame_visuals.fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    align: TextAlign::End,
+                                }))
+                            } else {
+                                None
+                            };
+
+                            let mut children = vec![track];
+                            if let Some(value_el) = value_el {
+                                children.push(value_el);
+                            }
+
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    direction: Axis::Horizontal,
+                                    gap: if show_value {
+                                        density.padding_x
+                                    } else {
+                                        Px(0.0)
+                                    },
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| children,
                             )]
                         },
                     )]
@@ -489,10 +703,69 @@ where
             );
 
             if let Some(test_id) = self.options.test_id.as_ref() {
-                el = el.test_id(test_id.clone());
+                slider_el = slider_el.test_id(test_id.clone());
             }
 
-            el
+            let parse = self.parse.clone();
+            let format = self.format.clone();
+            let validate = self.validate.clone();
+
+            let parse_for_input: NumericParseFn<T> = Arc::new(move |s| {
+                let v = parse(s)?;
+                let next = quantize_value(min, max, clamp, step, v.to_f64());
+                Some(T::from_f64(next))
+            });
+
+            let validate_for_input: Option<NumericValidateFn<T>> = if clamp {
+                validate
+            } else {
+                let validate = validate.clone();
+                Some(Arc::new(move |v| {
+                    let f = v.to_f64();
+                    if f < min || f > max {
+                        return Some(Arc::from("Out of range"));
+                    }
+                    if let Some(validate) = validate.as_ref() {
+                        validate(v)
+                    } else {
+                        None
+                    }
+                }))
+            };
+
+            let state_for_input = state.clone();
+            let input = NumericInput::new(self.model.clone(), format, parse_for_input)
+                .validate(validate_for_input)
+                .options(NumericInputOptions {
+                    layout: input_layout,
+                    enabled: enabled && typing,
+                    focusable: enabled && typing,
+                    test_id: self.options.test_id.clone(),
+                    ..Default::default()
+                })
+                .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
+                    if matches!(
+                        outcome,
+                        NumericInputOutcome::Committed | NumericInputOutcome::Canceled
+                    ) {
+                        let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
+                        st.mode = SliderMode::Slide;
+                        st.dragging = false;
+                        st.pointer_id = None;
+                        if let Some(slider_id) = st.slider_id {
+                            host.request_focus(slider_id);
+                        }
+                        host.request_redraw(action_cx.window);
+                    }
+                })))
+                .into_element(cx);
+
+            {
+                let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+                st.input_id = Some(input.id);
+            }
+
+            cx.container(Default::default(), move |_cx| vec![slider_el, input])
         })
     }
 }
