@@ -357,6 +357,63 @@ pub(super) fn caret_rect_for_selection(
     ))
 }
 
+pub(super) fn caret_rect_for_buffer_byte_boundary(
+    st: &CodeEditorState,
+    row_h: Px,
+    cell_w: Px,
+    bounds: Rect,
+    scroll_handle: &fret_ui::scroll::ScrollHandle,
+    byte: usize,
+) -> Option<Rect> {
+    let byte = byte.min(st.buffer.len_bytes());
+    let byte = st.buffer.clamp_to_char_boundary_left(byte);
+    let pt = st.display_map.byte_to_display_point(&st.buffer, byte);
+
+    let offset = scroll_handle.offset();
+    let row_y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
+
+    let caret_row = st
+        .display_map
+        .byte_to_display_point(&st.buffer, st.selection.caret().min(st.buffer.len_bytes()))
+        .row;
+    let row_has_preedit = st.preedit.is_some() && caret_row == pt.row;
+
+    let mut caret_top = Px(0.0);
+    let mut caret_h = row_h;
+    let mut x = None::<Px>;
+    if let Some((geom, _)) = st.row_geom_cache.get(&pt.row) {
+        if let (Some(top), Some(h)) = (geom.caret_rect_top, geom.caret_rect_height)
+            && h.0 > 0.0
+        {
+            caret_top = top;
+            caret_h = h;
+        }
+
+        if !geom.caret_stops.is_empty()
+            && byte >= geom.row_range.start
+            && geom.has_preedit == row_has_preedit
+        {
+            let mut local = byte.saturating_sub(geom.row_range.start);
+            if let Some(folds) = geom.fold_map.as_ref() {
+                local = folds.buffer_local_to_display_local(local);
+            }
+            let cx = caret_x_for_index(&geom.caret_stops, local);
+            x = Some(Px(bounds.origin.x.0 + cx.0));
+        }
+    }
+
+    let x = x.unwrap_or_else(|| {
+        let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+        Px(bounds.origin.x.0 + pt.col as f32 * cell_w.0)
+    });
+    let y = Px(row_y.0 + caret_top.0);
+
+    Some(Rect::new(
+        fret_core::Point::new(x, y),
+        Size::new(Px(1.0), caret_h),
+    ))
+}
+
 pub(super) fn preedit_cursor_offset_cols(preedit: &PreeditState) -> usize {
     let mut end = preedit
         .cursor

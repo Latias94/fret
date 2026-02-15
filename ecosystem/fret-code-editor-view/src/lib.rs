@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::Arc;
 
+pub mod code_wrap_policy;
 mod folds;
 mod inlays;
 
@@ -25,8 +26,20 @@ pub use inlays::{InlaySpan, InlaySpanError, apply_inlay_spans, validate_inlay_sp
 pub struct InlinePreedit {
     /// Anchor byte index in the underlying buffer.
     pub anchor: usize,
+    /// Optional replacement range in the underlying buffer (UTF-8 bytes).
+    ///
+    /// When set to a non-empty range, the preedit text replaces `replace_range` in the composed
+    /// display stream. When `None` or empty, the preedit behaves like an insertion at `anchor`.
+    pub replace_range: Option<Range<usize>>,
     /// Inline preedit text to be composed into the display stream.
     pub text: Arc<str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct InlinePreeditForLine {
+    start: usize,
+    end: usize,
+    cols: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,8 +102,13 @@ impl DisplayPoint {
 
 /// A minimal display mapping for v1 editor surfaces.
 ///
-/// Today this only supports an optional "wrap after N Unicode scalar columns" mode. This is not a
-/// substitute for pixel-accurate wrapping, but it provides a stable contract surface for:
+/// Today this supports:
+///
+/// - optional "wrap after N Unicode scalar columns" mode, and
+/// - an optional ecosystem-owned "code wrap policy" that can prefer deterministic breakpoints
+///   (identifiers/paths/URLs) while still falling back to grapheme-safe emergency breaks.
+///
+/// This is not a substitute for pixel-accurate wrapping, but it provides a stable contract surface for:
 ///
 /// - caret movement (byte ↔ display point),
 /// - selection geometry,
@@ -98,6 +116,7 @@ impl DisplayPoint {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DisplayMap {
     wrap_cols: Option<usize>,
+    code_wrap_policy: Option<code_wrap_policy::CodeWrapPolicy>,
     line_to_first_row: Vec<usize>,
     row_to_line: Vec<usize>,
     row_start_col: Vec<usize>,
@@ -115,6 +134,23 @@ impl DisplayMap {
         let empty_folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
         let empty_inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
         Self::new_with_decorations(buf, wrap_cols, &empty_folds, &empty_inlays)
+    }
+
+    pub fn new_with_code_wrap_policy(
+        buf: &TextBuffer,
+        wrap_cols: Option<usize>,
+        code_wrap_policy: Option<code_wrap_policy::CodeWrapPolicy>,
+    ) -> Self {
+        let empty_folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let empty_inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        Self::new_with_decorations_and_preedit_and_code_wrap_policy(
+            buf,
+            wrap_cols,
+            &empty_folds,
+            &empty_inlays,
+            None,
+            code_wrap_policy,
+        )
     }
 
     /// Build a display map from the current buffer state, including view-layer fold/inlay
@@ -143,6 +179,24 @@ impl DisplayMap {
         folds_by_line: &HashMap<usize, Arc<[FoldSpan]>>,
         inlays_by_line: &HashMap<usize, Arc<[InlaySpan]>>,
         preedit: Option<InlinePreedit>,
+    ) -> Self {
+        Self::new_with_decorations_and_preedit_and_code_wrap_policy(
+            buf,
+            wrap_cols,
+            folds_by_line,
+            inlays_by_line,
+            preedit,
+            None,
+        )
+    }
+
+    pub fn new_with_decorations_and_preedit_and_code_wrap_policy(
+        buf: &TextBuffer,
+        wrap_cols: Option<usize>,
+        folds_by_line: &HashMap<usize, Arc<[FoldSpan]>>,
+        inlays_by_line: &HashMap<usize, Arc<[InlaySpan]>>,
+        preedit: Option<InlinePreedit>,
+        code_wrap_policy: Option<code_wrap_policy::CodeWrapPolicy>,
     ) -> Self {
         let wrap_cols = wrap_cols.filter(|v| *v > 0);
 
@@ -177,6 +231,7 @@ impl DisplayMap {
 
             return Self {
                 wrap_cols,
+                code_wrap_policy,
                 line_to_first_row,
                 row_to_line,
                 row_start_col,
@@ -203,13 +258,25 @@ impl DisplayMap {
             });
 
             if folds.is_empty() && inlays.is_empty() && !line_has_preedit {
-                let cols = buf.line_char_count(line);
-                let rows_for_line = ((cols.max(1) + wrap - 1) / wrap).max(1);
-                for row_in_line in 0..rows_for_line {
-                    row_to_line.push(line);
-                    row_start_col.push(row_in_line * wrap);
+                if let Some(policy) = code_wrap_policy {
+                    let line_text_owned = buf.line_text(line).unwrap_or_default();
+                    let line_text = line_text_owned.as_str();
+                    let starts =
+                        code_wrap_policy::row_starts_for_code_wrap(line_text, wrap, policy);
+                    for s in starts {
+                        row_to_line.push(line);
+                        row_start_col.push(s.col);
+                    }
+                    continue;
+                } else {
+                    let cols = buf.line_char_count(line);
+                    let rows_for_line = ((cols.max(1) + wrap - 1) / wrap).max(1);
+                    for row_in_line in 0..rows_for_line {
+                        row_to_line.push(line);
+                        row_start_col.push(row_in_line * wrap);
+                    }
+                    continue;
                 }
-                continue;
             }
 
             let line_text_owned = buf.line_text(line).unwrap_or_default();
@@ -225,8 +292,14 @@ impl DisplayMap {
 
             let preedit_for_line =
                 inline_preedit_for_line(buf, line, line_text, folds, preedit.as_ref());
-            let starts =
-                compute_wrapped_row_start_cols(line_text, folds, inlays, preedit_for_line, wrap);
+            let starts = compute_wrapped_row_start_cols(
+                line_text,
+                folds,
+                inlays,
+                preedit_for_line,
+                wrap,
+                code_wrap_policy,
+            );
             for start in starts {
                 row_to_line.push(line);
                 row_start_col.push(start);
@@ -240,6 +313,7 @@ impl DisplayMap {
 
         Self {
             wrap_cols,
+            code_wrap_policy,
             line_to_first_row,
             row_to_line,
             row_start_col,
@@ -350,42 +424,107 @@ impl DisplayMap {
             .map(|v| v.as_ref())
             .unwrap_or(&[]);
 
-        let preedit_for_row = self.preedit.as_ref().and_then(|preedit| {
-            let anchor = preedit.anchor.min(buf.len_bytes());
-            let anchor_pt = self.byte_to_display_point(buf, anchor);
-            (anchor_pt.row == display_row && !preedit.text.is_empty()).then_some(preedit)
-        });
+        let preedit = self
+            .preedit
+            .as_ref()
+            .filter(|preedit| !preedit.text.is_empty());
+        let (preedit_range, show_preedit_text) = preedit
+            .map(|preedit| {
+                let anchor = preedit.anchor.min(buf.len_bytes());
+                let start = preedit
+                    .replace_range
+                    .as_ref()
+                    .map(|r| r.start)
+                    .unwrap_or(anchor)
+                    .min(buf.len_bytes());
+                let end = preedit
+                    .replace_range
+                    .as_ref()
+                    .map(|r| r.end)
+                    .unwrap_or(anchor)
+                    .min(buf.len_bytes())
+                    .max(start);
+                let anchor_pt = self.byte_to_display_point(buf, anchor);
+                (start..end, anchor_pt.row == display_row)
+            })
+            .unwrap_or_else(|| (0..0, false));
 
         if folds.is_empty() && inlays.is_empty() {
-            if let Some(preedit) = preedit_for_row {
-                let mut insert_at = preedit
-                    .anchor
-                    .min(buf.len_bytes())
-                    .saturating_sub(row_range.start);
-                insert_at = insert_at.min(base.len());
-                insert_at = clamp_to_char_boundary(base.as_str(), insert_at).min(base.len());
+            if let Some(preedit) = preedit {
+                if !preedit_range.is_empty() {
+                    let start = preedit_range.start.max(row_range.start).min(row_range.end);
+                    let end = preedit_range
+                        .end
+                        .max(row_range.start)
+                        .min(row_range.end)
+                        .max(start);
+                    if start < end {
+                        let mut local_start = start.saturating_sub(row_range.start).min(base.len());
+                        let mut local_end = end.saturating_sub(row_range.start).min(base.len());
+                        local_start =
+                            clamp_to_char_boundary(base.as_str(), local_start).min(base.len());
+                        local_end = clamp_to_char_boundary(base.as_str(), local_end)
+                            .min(base.len())
+                            .max(local_start);
 
-                let before = base.get(..insert_at).unwrap_or("");
-                let after = base.get(insert_at..).unwrap_or("");
-                let mut out =
-                    String::with_capacity(before.len() + preedit.text.len() + after.len());
-                out.push_str(before);
-                out.push_str(preedit.text.as_ref());
-                out.push_str(after);
+                        let before = base.get(..local_start).unwrap_or("");
+                        let after = base.get(local_end..).unwrap_or("");
+                        let inserted = show_preedit_text
+                            .then_some(preedit.text.as_ref())
+                            .unwrap_or("");
 
-                let pre_start = insert_at;
-                let pre_end = insert_at.saturating_add(preedit.text.len());
-                let spans = vec![DisplayRowSpan {
-                    buffer_range: insert_at..insert_at,
-                    display_range: pre_start..pre_end,
-                }];
+                        let mut out =
+                            String::with_capacity(before.len() + inserted.len() + after.len());
+                        out.push_str(before);
+                        out.push_str(inserted);
+                        out.push_str(after);
 
-                return MaterializedDisplayRow {
-                    row_range,
-                    text: Arc::<str>::from(out),
-                    spans,
-                    preedit_range: Some(pre_start..pre_end),
-                };
+                        let display_start = before.len();
+                        let display_end = display_start.saturating_add(inserted.len());
+                        let spans = vec![DisplayRowSpan {
+                            buffer_range: local_start..local_end,
+                            display_range: display_start..display_end,
+                        }];
+
+                        return MaterializedDisplayRow {
+                            row_range,
+                            text: Arc::<str>::from(out),
+                            spans,
+                            preedit_range: show_preedit_text.then_some(display_start..display_end),
+                        };
+                    }
+                }
+
+                if show_preedit_text {
+                    let mut insert_at = preedit
+                        .anchor
+                        .min(buf.len_bytes())
+                        .saturating_sub(row_range.start);
+                    insert_at = insert_at.min(base.len());
+                    insert_at = clamp_to_char_boundary(base.as_str(), insert_at).min(base.len());
+
+                    let before = base.get(..insert_at).unwrap_or("");
+                    let after = base.get(insert_at..).unwrap_or("");
+                    let mut out =
+                        String::with_capacity(before.len() + preedit.text.len() + after.len());
+                    out.push_str(before);
+                    out.push_str(preedit.text.as_ref());
+                    out.push_str(after);
+
+                    let pre_start = insert_at;
+                    let pre_end = insert_at.saturating_add(preedit.text.len());
+                    let spans = vec![DisplayRowSpan {
+                        buffer_range: insert_at..insert_at,
+                        display_range: pre_start..pre_end,
+                    }];
+
+                    return MaterializedDisplayRow {
+                        row_range,
+                        text: Arc::<str>::from(out),
+                        spans,
+                        preedit_range: Some(pre_start..pre_end),
+                    };
+                }
             }
 
             return MaterializedDisplayRow {
@@ -461,25 +600,62 @@ impl DisplayMap {
             });
         }
 
-        let preedit_insert_at = preedit_for_row.map(|preedit| {
-            let mut local = preedit
-                .anchor
-                .min(buf.len_bytes())
-                .saturating_sub(row_range.start)
-                .min(base.len());
-            local = clamp_to_char_boundary(base.as_str(), local).min(base.len());
-            for fold in row_folds.iter() {
-                let start = fold.range.start.min(base.len());
-                let end = fold.range.end.min(base.len()).max(start);
-                if start < local && local < end {
-                    local = start;
-                    break;
+        let mut preedit_event_start = None::<usize>;
+        let mut preedit_event_end = None::<usize>;
+        let mut preedit_event_inserts_text = false;
+        if let Some(preedit) = preedit {
+            if !preedit_range.is_empty() {
+                let start = preedit_range.start.max(row_range.start).min(row_range.end);
+                let end = preedit_range
+                    .end
+                    .max(row_range.start)
+                    .min(row_range.end)
+                    .max(start);
+                if start < end {
+                    let mut local_start = start.saturating_sub(row_range.start).min(base.len());
+                    let mut local_end = end.saturating_sub(row_range.start).min(base.len());
+                    local_start =
+                        clamp_to_char_boundary(base.as_str(), local_start).min(base.len());
+                    local_end = clamp_to_char_boundary(base.as_str(), local_end)
+                        .min(base.len())
+                        .max(local_start);
+                    for fold in row_folds.iter() {
+                        let start = fold.range.start.min(base.len());
+                        let end = fold.range.end.min(base.len()).max(start);
+                        if start < local_start && local_start < end {
+                            local_start = start;
+                        }
+                        if start < local_end && local_end < end {
+                            local_end = start;
+                        }
+                    }
+                    local_end = local_end.max(local_start);
+                    preedit_event_start = Some(local_start);
+                    preedit_event_end = Some(local_end);
+                    preedit_event_inserts_text = show_preedit_text;
                 }
+            } else if show_preedit_text {
+                let mut local = preedit
+                    .anchor
+                    .min(buf.len_bytes())
+                    .saturating_sub(row_range.start)
+                    .min(base.len());
+                local = clamp_to_char_boundary(base.as_str(), local).min(base.len());
+                for fold in row_folds.iter() {
+                    let start = fold.range.start.min(base.len());
+                    let end = fold.range.end.min(base.len()).max(start);
+                    if start < local && local < end {
+                        local = start;
+                        break;
+                    }
+                }
+                preedit_event_start = Some(local);
+                preedit_event_end = Some(local);
+                preedit_event_inserts_text = true;
             }
-            local
-        });
+        }
 
-        if row_folds.is_empty() && row_inlays.is_empty() && preedit_insert_at.is_none() {
+        if row_folds.is_empty() && row_inlays.is_empty() && preedit_event_start.is_none() {
             return MaterializedDisplayRow {
                 row_range,
                 text: Arc::<str>::from(base),
@@ -497,8 +673,10 @@ impl DisplayMap {
         for span in row_inlays.iter() {
             added = added.saturating_add(span.text.len());
         }
-        if let Some(preedit) = preedit_for_row {
-            added = added.saturating_add(preedit.text.len());
+        if let Some(preedit) = preedit {
+            if preedit_event_inserts_text {
+                added = added.saturating_add(preedit.text.len());
+            }
         }
 
         let cap = base
@@ -514,27 +692,33 @@ impl DisplayMap {
         let mut display_cursor = 0usize;
         let mut fold_idx = 0usize;
         let mut inlay_idx = 0usize;
-        let mut preedit_done = preedit_insert_at.is_none();
+        let mut preedit_done = preedit_event_start.is_none();
 
         while cursor < base.len()
             || fold_idx < row_folds.len()
             || inlay_idx < row_inlays.len()
             || !preedit_done
         {
-            if let (Some(preedit), Some(insert_at)) = (preedit_for_row, preedit_insert_at)
+            if let (Some(preedit), Some(start), Some(end)) =
+                (preedit, preedit_event_start, preedit_event_end)
                 && !preedit_done
-                && insert_at == cursor
+                && start == cursor
             {
                 let start = display_cursor;
-                let len = preedit.text.len();
-                out.push_str(preedit.text.as_ref());
+                let inserted = preedit_event_inserts_text
+                    .then_some(preedit.text.as_ref())
+                    .unwrap_or("");
+                let len = inserted.len();
+                out.push_str(inserted);
                 spans.push(DisplayRowSpan {
-                    buffer_range: cursor..cursor,
+                    buffer_range: cursor..end,
                     display_range: start..start.saturating_add(len),
                 });
-                preedit_range = Some(start..start.saturating_add(len));
+                preedit_range =
+                    preedit_event_inserts_text.then_some(start..start.saturating_add(len));
                 display_cursor = display_cursor.saturating_add(len);
                 preedit_done = true;
+                cursor = end;
                 continue;
             }
 
@@ -552,11 +736,11 @@ impl DisplayMap {
                 (None, None) => base.len(),
             }
             .min(base.len());
-            let next = if let Some(insert_at) = preedit_insert_at
+            let next = if let Some(start) = preedit_event_start
                 && !preedit_done
-                && insert_at >= cursor
+                && start >= cursor
             {
-                insert_at.min(next)
+                start.min(next)
             } else {
                 next
             };
@@ -569,9 +753,11 @@ impl DisplayMap {
                 continue;
             }
 
+            let mut inserted_inlay = false;
             while let Some(inlay) = row_inlays.get(inlay_idx)
                 && inlay.byte == cursor
             {
+                inserted_inlay = true;
                 let start = display_cursor;
                 let len = inlay.text.len();
                 out.push_str(inlay.text.as_ref());
@@ -581,6 +767,9 @@ impl DisplayMap {
                 });
                 display_cursor = display_cursor.saturating_add(len);
                 inlay_idx = inlay_idx.saturating_add(1);
+            }
+            if inserted_inlay {
+                continue;
             }
 
             if let Some(fold) = row_folds.get(fold_idx)
@@ -965,8 +1154,9 @@ fn compute_wrapped_row_start_cols(
     line_text: &str,
     folds: &[FoldSpan],
     inlays: &[InlaySpan],
-    preedit: Option<(usize, usize)>,
+    preedit: Option<InlinePreeditForLine>,
     wrap_cols: usize,
+    code_wrap_policy: Option<code_wrap_policy::CodeWrapPolicy>,
 ) -> Vec<usize> {
     let wrap_cols = wrap_cols.max(1);
     let mut starts = vec![0usize];
@@ -977,17 +1167,18 @@ fn compute_wrapped_row_start_cols(
     let mut cursor = 0usize;
     let mut fold_idx = 0usize;
     let mut inlay_idx = 0usize;
-    let mut preedit = preedit.filter(|(_, cols)| *cols > 0);
+    let mut preedit = preedit.filter(|p| p.cols > 0);
 
     while cursor < line_text.len()
         || fold_idx < folds.len()
         || inlay_idx < inlays.len()
         || preedit.is_some()
     {
-        if let Some((anchor, token_cols)) = preedit
-            && anchor == cursor
+        if let Some(p) = preedit
+            && p.start == cursor
         {
             // Atomic: never split preedit text across wrapped rows (ADR 0188).
+            let token_cols = p.cols;
             let remaining = wrap_cols.saturating_sub(in_row);
             if in_row > 0 && token_cols > remaining {
                 starts.push(col);
@@ -1007,6 +1198,7 @@ fn compute_wrapped_row_start_cols(
                 }
             }
 
+            cursor = p.end.min(line_text.len()).max(cursor);
             preedit = None;
             continue;
         }
@@ -1027,25 +1219,97 @@ fn compute_wrapped_row_start_cols(
         .min(line_text.len());
 
         if cursor < next {
-            // Buffer text is splittable at scalar boundaries.
-            let segment = &line_text[cursor..next];
-            let mut rem = segment.chars().count();
-            while rem > 0 {
+            // Buffer text is splittable, but the code editor can optionally prefer deterministic
+            // breakpoints (identifiers/paths/URLs) while preserving grapheme cluster safety.
+            //
+            // Note: `wrap_cols` still counts Unicode scalar values (v1 DisplayMap contract).
+            let mut segment_cursor = cursor;
+            while segment_cursor < next {
+                let segment = line_text.get(segment_cursor..next).unwrap_or("");
+                let segment_cols = segment.chars().count();
+                if segment_cols == 0 {
+                    segment_cursor = next;
+                    continue;
+                }
+
                 let remaining = wrap_cols.saturating_sub(in_row);
                 if remaining == 0 {
                     starts.push(col);
                     in_row = 0;
                     continue;
                 }
-                let take = remaining.min(rem);
-                rem = rem.saturating_sub(take);
-                col = col.saturating_add(take);
-                in_row = in_row.saturating_add(take);
-                if in_row == wrap_cols && rem > 0 {
+
+                if segment_cols <= remaining {
+                    col = col.saturating_add(segment_cols);
+                    in_row = in_row.saturating_add(segment_cols);
+                    segment_cursor = next;
+                    continue;
+                }
+
+                // Segment exceeds the remaining space in this row.
+                if in_row > 0 {
+                    // Start the segment on a fresh row to preserve a stable breakpoint choice.
                     starts.push(col);
                     in_row = 0;
+                    continue;
                 }
+
+                if let Some(policy) = code_wrap_policy {
+                    let local_starts =
+                        code_wrap_policy::row_starts_for_code_wrap(segment, wrap_cols, policy);
+                    if let Some(first_break) = local_starts.get(1).copied()
+                        && first_break.byte > 0
+                        && first_break.byte < segment.len()
+                        && first_break.col > 0
+                    {
+                        col = col.saturating_add(first_break.col);
+                        starts.push(col);
+                        in_row = 0;
+                        segment_cursor = segment_cursor.saturating_add(first_break.byte);
+                        continue;
+                    }
+                }
+
+                // Fallback: break at a grapheme boundary after up to `wrap_cols` scalar values.
+                let mut byte_limit = 0usize;
+                let mut cols = 0usize;
+                for ch in segment.chars() {
+                    if cols >= wrap_cols {
+                        break;
+                    }
+                    cols = cols.saturating_add(1);
+                    byte_limit = byte_limit.saturating_add(ch.len_utf8());
+                }
+                byte_limit = byte_limit.min(segment.len());
+
+                let mut break_byte =
+                    fret_text_nav::clamp_to_grapheme_boundary_down(segment, byte_limit);
+                if break_byte == 0 {
+                    break_byte = fret_text_nav::next_grapheme_boundary(segment, 0);
+                }
+
+                if break_byte >= segment.len() {
+                    // Unsplittable within the requested width (e.g. a single ZWJ cluster). Treat it
+                    // as an atomic token and allow overflow.
+                    col = col.saturating_add(segment_cols);
+                    starts.push(col);
+                    in_row = 0;
+                    segment_cursor = next;
+                    continue;
+                }
+
+                let take_cols = segment
+                    .get(..break_byte)
+                    .unwrap_or("")
+                    .chars()
+                    .count()
+                    .max(1);
+                col = col.saturating_add(take_cols);
+                starts.push(col);
+                in_row = 0;
+                segment_cursor = segment_cursor.saturating_add(break_byte);
             }
+
             cursor = next;
             continue;
         }
@@ -1199,7 +1463,7 @@ fn inline_preedit_for_line(
     line_text: &str,
     folds: &[FoldSpan],
     preedit: Option<&InlinePreedit>,
-) -> Option<(usize, usize)> {
+) -> Option<InlinePreeditForLine> {
     let preedit = preedit?;
     if preedit.text.is_empty() {
         return None;
@@ -1211,43 +1475,90 @@ fn inline_preedit_for_line(
     }
 
     let line_start = buf.line_start(line).unwrap_or(0);
-    let mut local = anchor.saturating_sub(line_start).min(line_text.len());
-    local = clamp_to_char_boundary(line_text, local);
+    let replace_start = preedit
+        .replace_range
+        .as_ref()
+        .map(|r| r.start)
+        .unwrap_or(anchor)
+        .min(buf.len_bytes());
+    let replace_end = preedit
+        .replace_range
+        .as_ref()
+        .map(|r| r.end)
+        .unwrap_or(anchor)
+        .min(buf.len_bytes())
+        .max(replace_start);
+    let Some(line_range) = buf.line_byte_range(line) else {
+        return None;
+    };
+    let replace_start = replace_start.max(line_range.start).min(line_range.end);
+    let replace_end = replace_end
+        .max(line_range.start)
+        .min(line_range.end)
+        .max(replace_start);
+
+    let mut local_start = replace_start
+        .saturating_sub(line_start)
+        .min(line_text.len());
+    let mut local_end = replace_end
+        .saturating_sub(line_start)
+        .min(line_text.len())
+        .max(local_start);
+    local_start = clamp_to_char_boundary(line_text, local_start).min(line_text.len());
+    local_end = clamp_to_char_boundary(line_text, local_end)
+        .min(line_text.len())
+        .max(local_start);
 
     // If the anchor lands inside a folded span, clamp to the fold start (ADR 0188).
     for fold in folds {
         let start = fold.range.start.min(line_text.len());
         let end = fold.range.end.min(line_text.len()).max(start);
-        if start < local && local < end {
-            local = start;
-            break;
+        if start < local_start && local_start < end {
+            local_start = start;
+        }
+        if start < local_end && local_end < end {
+            local_end = start;
         }
     }
+    local_end = local_end.max(local_start);
 
     let cols = preedit.text.chars().count();
-    Some((local, cols))
+    Some(InlinePreeditForLine {
+        start: local_start,
+        end: local_end,
+        cols,
+    })
 }
 
 fn decorated_byte_to_col_with_preedit(
     line_text: &str,
     folds: &[FoldSpan],
     inlays: &[InlaySpan],
-    preedit: Option<(usize, usize)>,
+    preedit: Option<InlinePreeditForLine>,
     byte: usize,
 ) -> usize {
-    let Some((anchor_local, preedit_cols)) = preedit else {
+    let Some(preedit) = preedit else {
         return decorated_byte_to_col(line_text, folds, inlays, byte);
     };
-    if preedit_cols == 0 {
+    if preedit.cols == 0 {
         return decorated_byte_to_col(line_text, folds, inlays, byte);
     }
 
-    let insert_col = decorated_byte_to_col(line_text, folds, inlays, anchor_local);
+    let start = preedit.start.min(line_text.len());
+    let end = preedit.end.min(line_text.len()).max(start);
+    let insert_col = decorated_byte_to_col(line_text, folds, inlays, start);
+    let end_col = decorated_byte_to_col(line_text, folds, inlays, end);
+    let removed_cols = end_col.saturating_sub(insert_col);
     let base_col = decorated_byte_to_col(line_text, folds, inlays, byte);
-    if base_col > insert_col {
-        base_col.saturating_add(preedit_cols)
+
+    if byte <= start {
+        base_col
+    } else if byte < end {
+        insert_col
     } else {
         base_col
+            .saturating_sub(removed_cols)
+            .saturating_add(preedit.cols)
     }
 }
 
@@ -1338,28 +1649,38 @@ fn decorated_col_to_byte_with_preedit(
     line_text: &str,
     folds: &[FoldSpan],
     inlays: &[InlaySpan],
-    preedit: Option<(usize, usize)>,
+    preedit: Option<InlinePreeditForLine>,
     col: usize,
 ) -> usize {
-    let Some((anchor_local, preedit_cols)) = preedit else {
+    let Some(preedit) = preedit else {
         return decorated_col_to_byte(line_text, folds, inlays, col);
     };
-    if preedit_cols == 0 {
+    if preedit.cols == 0 {
         return decorated_col_to_byte(line_text, folds, inlays, col);
     }
 
-    let insert_col = decorated_byte_to_col(line_text, folds, inlays, anchor_local);
+    let start = preedit.start.min(line_text.len());
+    let end = preedit.end.min(line_text.len()).max(start);
+    let insert_col = decorated_byte_to_col(line_text, folds, inlays, start);
+    let end_col = decorated_byte_to_col(line_text, folds, inlays, end);
+    let removed_cols = end_col.saturating_sub(insert_col);
     if col < insert_col {
         return decorated_col_to_byte(line_text, folds, inlays, col);
     }
 
-    let after_insert = insert_col.saturating_add(preedit_cols);
-    if col >= after_insert {
-        return decorated_col_to_byte(line_text, folds, inlays, col.saturating_sub(preedit_cols));
+    let after_insert = insert_col.saturating_add(preedit.cols);
+    if col < after_insert {
+        // Inside the injected preedit fragment: snap to its anchor.
+        return decorated_col_to_byte(line_text, folds, inlays, insert_col);
     }
 
-    // Inside the injected preedit fragment: snap to its anchor.
-    decorated_col_to_byte(line_text, folds, inlays, insert_col)
+    decorated_col_to_byte(
+        line_text,
+        folds,
+        inlays,
+        col.saturating_sub(preedit.cols)
+            .saturating_add(removed_cols),
+    )
 }
 
 /// Map a UTF-8 byte index in the buffer to a `(row, col)` display coordinate.
@@ -1753,6 +2074,7 @@ mod display_map_tests {
         let inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
         let preedit = InlinePreedit {
             anchor: 2,
+            replace_range: None,
             text: Arc::<str>::from("XY"),
         };
 
@@ -1783,6 +2105,7 @@ mod display_map_tests {
         let inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
         let preedit = InlinePreedit {
             anchor: 2,
+            replace_range: None,
             text: Arc::<str>::from("XY"),
         };
 
@@ -1800,6 +2123,98 @@ mod display_map_tests {
 
         assert_eq!(map.display_row_byte_range(&buf, 0), 0..2);
         assert_eq!(map.display_row_byte_range(&buf, 1), 2..6);
+    }
+
+    #[test]
+    fn display_map_code_wrap_policy_prefers_identifier_boundaries() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abc_def".to_string()).unwrap();
+
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        let map = DisplayMap::new_with_code_wrap_policy(&buf, Some(5), Some(policy));
+
+        assert_eq!(map.row_count(), 2);
+
+        let row0 = map.materialize_display_row_text(&buf, 0);
+        assert_eq!(row0.text.as_ref(), "abc_");
+
+        let row1 = map.materialize_display_row_text(&buf, 1);
+        assert_eq!(row1.text.as_ref(), "def");
+    }
+
+    #[test]
+    fn display_map_code_wrap_policy_with_inlays_keeps_inlay_atomic_and_prefers_identifier_breaks() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abc_def_ghi".to_string()).unwrap();
+
+        let folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let mut inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        inlays.insert(
+            0,
+            Arc::<[InlaySpan]>::from([InlaySpan {
+                byte: 3,
+                text: Arc::<str>::from("X"),
+            }]),
+        );
+
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        let map = DisplayMap::new_with_decorations_and_preedit_and_code_wrap_policy(
+            &buf,
+            Some(5),
+            &folds,
+            &inlays,
+            None,
+            Some(policy),
+        );
+
+        assert!(map.row_count() >= 2);
+
+        let mut joined = String::new();
+        let mut rows_dbg: Vec<(std::ops::Range<usize>, String, String)> = Vec::new();
+        for row in 0..map.row_count() {
+            let range = map.display_row_byte_range(&buf, row);
+            let row_text = map.materialize_display_row_text(&buf, row).text;
+            let base = buf
+                .slice_to_string(range.clone())
+                .unwrap_or_else(|| "<None>".to_string());
+            rows_dbg.push((range, base, row_text.as_ref().to_string()));
+            joined.push_str(row_text.as_ref());
+        }
+
+        assert_eq!(joined.as_str(), "abcX_def_ghi", "rows={rows_dbg:?}");
+        assert_eq!(joined.chars().filter(|c| *c == 'X').count(), 1);
+    }
+
+    #[test]
+    fn display_map_wrapped_rows_do_not_split_fold_placeholders() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdefghij".to_string()).unwrap();
+
+        let mut folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        folds.insert(
+            0,
+            Arc::<[FoldSpan]>::from([FoldSpan {
+                range: 2..8,
+                placeholder: Arc::<str>::from("XXXX"),
+            }]),
+        );
+        let inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+
+        let map =
+            DisplayMap::new_with_decorations_and_preedit(&buf, Some(3), &folds, &inlays, None);
+
+        assert_eq!(map.row_count(), 3);
+
+        let row0 = map.materialize_display_row_text(&buf, 0);
+        assert_eq!(row0.text.as_ref(), "ab");
+
+        let row1 = map.materialize_display_row_text(&buf, 1);
+        assert_eq!(row1.text.as_ref(), "XXXX");
+
+        let row2 = map.materialize_display_row_text(&buf, 2);
+        assert_eq!(row2.text.as_ref(), "ij");
     }
 
     #[test]
@@ -2036,6 +2451,7 @@ mod display_map_tests {
 
         let preedit = InlinePreedit {
             anchor: 4,
+            replace_range: None,
             text: Arc::<str>::from("XY"),
         };
 
@@ -2079,6 +2495,7 @@ mod display_map_tests {
         let inlays_by_line: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
         let preedit = InlinePreedit {
             anchor: 2,
+            replace_range: None,
             text: Arc::<str>::from("XY"),
         };
 
@@ -2107,5 +2524,50 @@ mod display_map_tests {
         assert_eq!(row1.text.as_ref(), "cdef");
         assert_eq!(row1.preedit_range, None);
         assert!(row1.spans.is_empty());
+    }
+
+    #[test]
+    fn materialize_display_row_text_replaces_range_with_preedit_unwrapped() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "hello world".to_string()).unwrap();
+
+        let folds_by_line: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let inlays_by_line: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        let preedit = InlinePreedit {
+            anchor: 6,
+            replace_range: Some(6..11),
+            text: Arc::<str>::from("X"),
+        };
+
+        let map = DisplayMap::new_with_decorations_and_preedit(
+            &buf,
+            None,
+            &folds_by_line,
+            &inlays_by_line,
+            Some(preedit),
+        );
+
+        let row = map.materialize_display_row_text(&buf, 0);
+        assert_eq!(row.row_range, 0..buf.len_bytes());
+        assert_eq!(row.text.as_ref(), "hello X");
+        assert_eq!(row.preedit_range, Some(6..7));
+        assert_eq!(
+            row.spans,
+            vec![DisplayRowSpan {
+                buffer_range: 6..11,
+                display_range: 6..7,
+            }]
+        );
+
+        assert_eq!(
+            map.byte_to_display_point(&buf, 8),
+            DisplayPoint::new(0, 6),
+            "expected bytes inside the replaced region to clamp to the replacement start"
+        );
+        assert_eq!(
+            map.display_point_to_byte(&buf, DisplayPoint::new(0, 7)),
+            11,
+            "expected the composed line end to map to the end of the replaced range"
+        );
     }
 }

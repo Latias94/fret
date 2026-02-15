@@ -8,6 +8,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
+use fret_code_editor_view::code_wrap_policy::{CodeWrapPolicy, CodeWrapPreset};
 use fret_code_editor_view::{
     DisplayMap, DisplayPoint, FoldSpan, InlaySpan, InlinePreedit, move_word_left_in_buffer,
     move_word_right_in_buffer, select_word_range_in_buffer,
@@ -18,6 +19,7 @@ use fret_core::{
     TextPaintStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode, TimerToken};
+use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, KeyDownCx, OnTimer, UiActionHost, UiPointerActionHost};
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::AnyElement;
@@ -41,10 +43,7 @@ mod paint;
 #[cfg(test)]
 mod tests;
 
-use a11y::{
-    a11y_composed_text_window, a11y_text_window_bounds, map_a11y_offset_to_buffer,
-    map_a11y_offset_to_buffer_with_preedit, map_a11y_offsets_to_buffer_composed,
-};
+use a11y::{a11y_composed_text_window, map_a11y_offsets_to_buffer_composed};
 #[cfg(test)]
 use geom::caret_rect_for_selection;
 use geom::{
@@ -54,6 +53,120 @@ use geom::{
 };
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
+
+pub(super) fn preedit_cursor_bytes_for_marked_range_utf16(
+    insertion_start_utf16: u32,
+    marked: fret_runtime::Utf16Range,
+    text: &str,
+) -> (usize, usize) {
+    let text_len_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        text,
+        text.len(),
+        fret_core::utf::UtfIndexClamp::Down,
+    );
+
+    let base = usize::try_from(insertion_start_utf16).unwrap_or(usize::MAX);
+    let marked = marked.normalized();
+    let rel_start = usize::try_from(marked.start)
+        .unwrap_or(usize::MAX)
+        .saturating_sub(base)
+        .min(text_len_utf16);
+    let rel_end = usize::try_from(marked.end)
+        .unwrap_or(usize::MAX)
+        .saturating_sub(base)
+        .min(text_len_utf16);
+
+    fret_core::utf::utf16_range_to_utf8_byte_range(text, rel_start, rel_end)
+}
+
+fn platform_replace_and_mark_text_in_range_utf16(
+    st: &mut CodeEditorState,
+    text_cache_max_entries: usize,
+    value: &str,
+    range: fret_runtime::Utf16Range,
+    text: &str,
+    marked: Option<fret_runtime::Utf16Range>,
+) -> bool {
+    if !st.interaction.enabled || !st.interaction.editable {
+        st.set_preedit(None);
+        st.undo_group = None;
+        return false;
+    }
+
+    let range = range.normalized();
+    let (start_byte, end_byte) = fret_core::utf::utf16_range_to_utf8_byte_range(
+        value,
+        usize::try_from(range.start).unwrap_or(usize::MAX),
+        usize::try_from(range.end).unwrap_or(usize::MAX),
+    );
+    let start_offset = u32::try_from(start_byte.min(value.len())).unwrap_or(u32::MAX);
+    let end_offset = u32::try_from(end_byte.min(value.len())).unwrap_or(u32::MAX);
+
+    let start =
+        a11y::map_a11y_offset_to_buffer_in_current_window(st, text_cache_max_entries, start_offset);
+    let end =
+        a11y::map_a11y_offset_to_buffer_in_current_window(st, text_cache_max_entries, end_offset);
+    let start = start.min(st.buffer.len_bytes());
+    let end = end.min(st.buffer.len_bytes());
+
+    if marked.is_none() {
+        let start = start.min(end);
+        let end = start.max(end);
+
+        st.preedit_replace_range = None;
+        let caret = start.saturating_add(text.len()).min(st.buffer.len_bytes());
+        return input::apply_and_record_edit(
+            st,
+            UndoGroupKind::Typing,
+            Edit::Replace {
+                range: start..end,
+                text: text.to_string(),
+            },
+            Selection {
+                anchor: caret,
+                focus: caret,
+            },
+        )
+        .is_some();
+    }
+
+    let start = start.min(end);
+    let end = start.max(end);
+
+    let mut did = false;
+    st.undo_group = None;
+
+    let next_replace = (start != end).then_some(start..end);
+    if st.preedit_replace_range != next_replace {
+        st.preedit_replace_range = next_replace;
+        did = true;
+    }
+
+    let target = Selection {
+        anchor: start,
+        focus: start,
+    };
+    if st.selection != target {
+        st.selection = target;
+        did = true;
+    }
+
+    let Some(marked) = marked else {
+        return did;
+    };
+
+    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(range.start, marked, text);
+    let next = (!text.is_empty()).then_some(PreeditState {
+        text: text.to_string(),
+        cursor: Some((bs, be)),
+    });
+    if st.preedit != next {
+        did = true;
+    }
+    st.set_preedit(next);
+
+    did
+}
 
 fn scale_vertical_mouse_autoscroll_delta(delta_px: f32) -> f32 {
     (delta_px.max(0.0).powf(1.2) / 100.0).min(3.0)
@@ -412,6 +525,8 @@ struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    preedit_replace_range: Option<Range<usize>>,
+    font_stack_key: fret_runtime::TextFontStackKey,
     allow_decorations_under_inline_preedit: bool,
     compose_inline_preedit: bool,
     interaction: CodeEditorInteractionOptions,
@@ -419,6 +534,7 @@ struct CodeEditorState {
     text_boundary_mode_override: Option<TextBoundaryMode>,
     active_text_boundary_mode: TextBoundaryMode,
     display_wrap_cols: Option<usize>,
+    code_wrap_policy: Option<CodeWrapPolicy>,
     display_map: DisplayMap,
     caret_preferred_x: Option<Px>,
     undo: UndoHistory<CodeEditorTx>,
@@ -501,6 +617,20 @@ struct RowRichCacheEntry {
 }
 
 impl CodeEditorState {
+    fn update_font_stack_key(&mut self, next: fret_runtime::TextFontStackKey) {
+        if self.font_stack_key == next {
+            return;
+        }
+        self.font_stack_key = next;
+
+        // Font stack changes can affect shaping and therefore caret/selection geometry. Ensure we
+        // never answer platform geometry queries from stale cached row geometry.
+        self.row_geom_cache_tick = 0;
+        self.row_geom_cache.clear();
+        self.row_geom_cache_queue.clear();
+        self.baseline_measure_cache = None;
+    }
+
     fn invalidate_row_caches(&mut self) {
         self.row_text_cache_tick = 0;
         self.row_text_cache.clear();
@@ -523,36 +653,55 @@ impl CodeEditorState {
         // decorations enabled under inline preedit even when wrapped. This keeps row-breaking
         // stable (still based on fold/inlay composition only) while we migrate toward a fragment-
         // composed DisplayMap (ADR 0188).
-        let suppress_decorations = !self.compose_inline_preedit
+        let force_inline_preedit = self
+            .preedit_replace_range
+            .as_ref()
+            .is_some_and(|r| !r.is_empty());
+        let compose_inline_preedit = self.compose_inline_preedit || force_inline_preedit;
+
+        let suppress_decorations = !compose_inline_preedit
             && self.preedit.is_some()
             && self.display_wrap_cols.is_some()
             && !self.allow_decorations_under_inline_preedit;
 
-        let preedit = self
-            .compose_inline_preedit
+        let code_wrap_policy = self
+            .display_wrap_cols
+            .is_some()
+            .then_some(self.code_wrap_policy)
+            .flatten();
+
+        let preedit = compose_inline_preedit
             .then_some(())
             .and_then(|_| self.preedit.as_ref())
             .map(|p| InlinePreedit {
                 anchor: self.selection.caret().min(self.buffer.len_bytes()),
+                replace_range: self.preedit_replace_range.clone(),
                 text: Arc::<str>::from(p.text.as_str()),
             });
 
         self.display_map = if suppress_decorations {
-            DisplayMap::new(&self.buffer, self.display_wrap_cols)
-        } else if self.compose_inline_preedit {
-            DisplayMap::new_with_decorations_and_preedit(
+            DisplayMap::new_with_code_wrap_policy(
+                &self.buffer,
+                self.display_wrap_cols,
+                code_wrap_policy,
+            )
+        } else if compose_inline_preedit {
+            DisplayMap::new_with_decorations_and_preedit_and_code_wrap_policy(
                 &self.buffer,
                 self.display_wrap_cols,
                 &self.line_folds,
                 &self.line_inlays,
                 preedit,
+                code_wrap_policy,
             )
         } else {
-            DisplayMap::new_with_decorations(
+            DisplayMap::new_with_decorations_and_preedit_and_code_wrap_policy(
                 &self.buffer,
                 self.display_wrap_cols,
                 &self.line_folds,
                 &self.line_inlays,
+                None,
+                code_wrap_policy,
             )
         };
     }
@@ -579,6 +728,9 @@ impl CodeEditorState {
     fn set_preedit(&mut self, preedit: Option<PreeditState>) {
         if self.preedit == preedit {
             return;
+        }
+        if preedit.is_none() {
+            self.preedit_replace_range = None;
         }
         self.preedit = preedit;
         self.refresh_display_map();
@@ -640,6 +792,8 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                preedit_replace_range: None,
+                font_stack_key: fret_runtime::TextFontStackKey::default(),
                 allow_decorations_under_inline_preedit: false,
                 compose_inline_preedit: false,
                 interaction: CodeEditorInteractionOptions::default(),
@@ -647,6 +801,7 @@ impl CodeEditorHandle {
                 text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
                 active_text_boundary_mode: TextBoundaryMode::Identifier,
                 display_wrap_cols: None,
+                code_wrap_policy: Some(CodeWrapPolicy::preset(CodeWrapPreset::Balanced)),
                 display_map,
                 caret_preferred_x: None,
                 undo: UndoHistory::with_limit(512),
@@ -1046,6 +1201,29 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
     }
+
+    /// v1 code-wrap seam (ecosystem policy).
+    ///
+    /// This policy is only applied when soft wrap is enabled (`set_soft_wrap_cols(Some(_))`).
+    pub fn set_code_wrap_policy(&self, policy: Option<CodeWrapPolicy>) {
+        let mut st = self.state.borrow_mut();
+        if st.code_wrap_policy == policy {
+            return;
+        }
+        st.code_wrap_policy = policy;
+        if st.display_wrap_cols.is_some() {
+            st.refresh_display_map();
+            input::clamp_selection_out_of_folds(&mut st);
+            st.caret_preferred_x = None;
+            st.row_geom_cache_rev = st.buffer.revision();
+            st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+            st.row_geom_cache_folds_epoch = st.folds_epoch;
+            st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+            st.row_geom_cache_tick = 0;
+            st.row_geom_cache.clear();
+            st.row_geom_cache_queue.clear();
+        }
+    }
 }
 
 pub struct CodeEditor {
@@ -1174,6 +1352,13 @@ impl CodeEditor {
                 .saturating_add(128)
                 .clamp(256, 8_192);
 
+            cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+            let font_stack_key = cx
+                .app
+                .global::<fret_runtime::TextFontStackKey>()
+                .copied()
+                .unwrap_or_default();
+
             let (
                 content_len,
                 boundary_mode,
@@ -1187,6 +1372,7 @@ impl CodeEditor {
                     handle.set_interaction(interaction);
                 }
                 let mut st = editor_state.borrow_mut();
+                st.update_font_stack_key(font_stack_key);
                 let content_len = st.display_map.row_count();
                 let inherited_mode = cx
                     .app
@@ -1464,6 +1650,190 @@ impl CodeEditor {
                 // will never attach to the focused text region.
                 let region_id = cx.root_id();
                 editor_state.borrow_mut().region_id = Some(region_id);
+
+                let platform_query_state = editor_state.clone();
+                let platform_query_scroll = scroll_handle.clone();
+                let platform_query_cell_w = cell_w.clone();
+                cx.text_input_region_on_platform_text_input_query(std::sync::Arc::new(
+                    move |_host,
+                          _action_cx,
+                          _services,
+                          bounds,
+                          _scale_factor,
+                          props,
+                          query| {
+                        let Some(value) = props.a11y_value.as_deref() else {
+                            return None;
+                        };
+
+                        match query {
+                            fret_runtime::PlatformTextInputQuery::BoundsForRange { range } => {
+                                let range = range.normalized();
+                                let (_, end) = fret_core::utf::utf16_range_to_utf8_byte_range(
+                                    value,
+                                    usize::try_from(range.start).unwrap_or(usize::MAX),
+                                    usize::try_from(range.end).unwrap_or(usize::MAX),
+                                );
+                                let end = u32::try_from(end.min(value.len())).unwrap_or(u32::MAX);
+
+                                let mut st = platform_query_state.borrow_mut();
+                                let byte = a11y::map_a11y_offset_to_buffer_in_current_window(
+                                    &mut st,
+                                    text_cache_max_entries,
+                                    end,
+                                );
+
+                                let cell_w = platform_query_cell_w.get();
+                                let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+                                let rect = geom::caret_rect_for_buffer_byte_boundary(
+                                    &st,
+                                    row_h,
+                                    cell_w,
+                                    bounds,
+                                    &platform_query_scroll,
+                                    byte,
+                                );
+                                Some(fret_runtime::PlatformTextInputQueryResult::Bounds(rect))
+                            }
+                            fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint { point } => {
+                                if row_h.0 <= 0.0 {
+                                    return Some(fret_runtime::PlatformTextInputQueryResult::Index(
+                                        None,
+                                    ));
+                                }
+
+                                let mut st = platform_query_state.borrow_mut();
+                                let offset = platform_query_scroll.offset();
+                                let local_y =
+                                    (point.y.0 - bounds.origin.y.0 + offset.y.0).max(0.0);
+                                let row = (local_y / row_h.0).floor().max(0.0) as usize;
+                                let row_count = st.display_map.row_count().max(1);
+                                let row = row.min(row_count.saturating_sub(1));
+
+                                let cell_w = platform_query_cell_w.get();
+                                let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+                                let caret =
+                                    geom::caret_for_pointer(&mut st, row, bounds, *point, cell_w);
+
+                                let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(
+                                    &mut st,
+                                    text_cache_max_entries,
+                                    caret,
+                                );
+                                let idx = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+                                    value,
+                                    usize::try_from(a11y_offset).unwrap_or(usize::MAX),
+                                    fret_core::utf::UtfIndexClamp::Down,
+                                );
+                                let idx = u32::try_from(idx).unwrap_or(u32::MAX);
+                                Some(fret_runtime::PlatformTextInputQueryResult::Index(Some(idx)))
+                            }
+                            _ => None,
+                        }
+                    },
+                ));
+
+                let platform_replace_state = editor_state.clone();
+                let platform_replace_scroll = scroll_handle.clone();
+                cx.text_input_region_on_platform_text_input_replace_text_in_range_utf16(
+                    std::sync::Arc::new(
+                        move |host,
+                              action_cx,
+                              _services,
+                              _bounds,
+                              _scale_factor,
+                              props,
+                              range,
+                              text| {
+                            let mut st = platform_replace_state.borrow_mut();
+                            if !st.interaction.enabled || !st.interaction.editable {
+                                st.set_preedit(None);
+                                st.undo_group = None;
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                return false;
+                            }
+
+                            let Some(value) = props.a11y_value.as_deref() else {
+                                return false;
+                            };
+
+                            let range = range.normalized();
+                            let (start, end) = fret_core::utf::utf16_range_to_utf8_byte_range(
+                                value,
+                                usize::try_from(range.start).unwrap_or(usize::MAX),
+                                usize::try_from(range.end).unwrap_or(usize::MAX),
+                            );
+                            let start =
+                                u32::try_from(start.min(value.len())).unwrap_or(u32::MAX);
+                            let end = u32::try_from(end.min(value.len())).unwrap_or(u32::MAX);
+
+                            let start = a11y::map_a11y_offset_to_buffer_in_current_window(
+                                &mut st,
+                                text_cache_max_entries,
+                                start,
+                            );
+                            let end = a11y::map_a11y_offset_to_buffer_in_current_window(
+                                &mut st,
+                                text_cache_max_entries,
+                                end,
+                            );
+
+                            st.set_preedit(None);
+                            st.selection = Selection {
+                                anchor: start,
+                                focus: end,
+                            };
+
+                            let did =
+                                input::insert_text_with_kind(&mut st, text, UndoGroupKind::Typing)
+                                    .is_some();
+                            if did {
+                                input::scroll_caret_into_view(&st, row_h, &platform_replace_scroll);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            }
+                            did
+                        },
+                    ),
+                );
+
+                let platform_mark_state = editor_state.clone();
+                let platform_mark_scroll = scroll_handle.clone();
+                cx.text_input_region_on_platform_text_input_replace_and_mark_text_in_range_utf16(
+                    std::sync::Arc::new(
+                        move |host,
+                              action_cx,
+                              _services,
+                              _bounds,
+                              _scale_factor,
+                              props,
+                              range,
+                              text,
+                              marked| {
+                            let mut st = platform_mark_state.borrow_mut();
+                            let Some(value) = props.a11y_value.as_deref() else {
+                                return false;
+                            };
+
+                            let did = platform_replace_and_mark_text_in_range_utf16(
+                                &mut st,
+                                text_cache_max_entries,
+                                value,
+                                range,
+                                text,
+                                marked,
+                            );
+
+                            if did {
+                                input::scroll_caret_into_view(&st, row_h, &platform_mark_scroll);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            }
+                            did
+                        },
+                    ),
+                );
 
                 let key_state = editor_state.clone();
                 let key_scroll = scroll_handle.clone();
@@ -1944,6 +2314,7 @@ impl CodeEditor {
                                 st.set_preedit(None);
                             }
                             fret_core::ImeEvent::Preedit { text, cursor } => {
+                                st.preedit_replace_range = None;
                                 let preedit = (!text.is_empty()).then_some(PreeditState {
                                     text: text.clone(),
                                     cursor: *cursor,
@@ -2002,9 +2373,6 @@ impl CodeEditor {
                 cx.text_input_region_on_set_selection(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, anchor, focus| {
                         let mut st = sel_state.borrow_mut();
-                        let caret = st
-                            .buffer
-                            .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
 
                         let (new_anchor, new_focus) = if st.compose_inline_preedit {
                             map_a11y_offsets_to_buffer_composed(
@@ -2014,33 +2382,18 @@ impl CodeEditor {
                                 focus,
                             )
                         } else {
-                            let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
-                            if let Some(preedit) = st.preedit.as_ref() {
-                                let preedit_len = preedit.text.len();
-                                (
-                                    map_a11y_offset_to_buffer_with_preedit(
-                                        &st.buffer,
-                                        start,
-                                        end,
-                                        caret,
-                                        preedit_len,
-                                        anchor,
-                                    ),
-                                    map_a11y_offset_to_buffer_with_preedit(
-                                        &st.buffer,
-                                        start,
-                                        end,
-                                        caret,
-                                        preedit_len,
-                                        focus,
-                                    ),
-                                )
-                            } else {
-                                (
-                                    map_a11y_offset_to_buffer(&st.buffer, start, end, anchor),
-                                    map_a11y_offset_to_buffer(&st.buffer, start, end, focus),
-                                )
-                            }
+                            (
+                                a11y::map_a11y_offset_to_buffer_in_current_window(
+                                    &mut st,
+                                    text_cache_max_entries,
+                                    anchor,
+                                ),
+                                a11y::map_a11y_offset_to_buffer_in_current_window(
+                                    &mut st,
+                                    text_cache_max_entries,
+                                    focus,
+                                ),
+                            )
                         };
 
                         st.set_preedit(None);

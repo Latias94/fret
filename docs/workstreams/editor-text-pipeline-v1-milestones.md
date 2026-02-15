@@ -54,6 +54,10 @@ Exit criteria:
 - Editor view model drives wrap segmentation for code.
 - Renderer wrapper is not relied on for editor row segmentation.
 - Cursor movement / selection semantics match the display-row segmentation (no drift).
+- A stable, auditable ecosystem policy surface exists:
+  - presets exist (at least `Conservative` / `Balanced` / `Aggressive`),
+  - a small set of common knobs is supported for app-specific tuning (paths/URLs, identifiers),
+  - behavior is deterministic and covered by fixture-driven conformance tests.
 
 ## M4 — Platform text input interop (TextInputRegion UTF-16)
 
@@ -66,7 +70,22 @@ Exit criteria:
   - `text_len_utf16`, `selection_utf16`, `marked_utf16` derived from the composed view.
   - `ime_cursor_area` forwarded from data-only props when provided (editor-owned geometry).
 - Non-goals for the mechanism layer (stage later):
-  - `BoundsForRange`, `CharacterIndexForPoint`, and `replace_*` are left unimplemented.
+  - `BoundsForRange`, `CharacterIndexForPoint`, and `replace_*` are not implemented by default in
+    `fret-ui`.
+  - Ecosystem/editor surfaces may answer `BoundsForRange` / `CharacterIndexForPoint` via
+    `TextInputRegionActionHooks.on_platform_text_input_query` while keeping `fret-ui` as a
+    routing-only mechanism.
+ - Ecosystem/editor surfaces may implement platform replace-by-range (`replace_*`) via
+   `TextInputRegionActionHooks` replace handlers while keeping `fret-ui` as a routing-only
+   mechanism.
+  - Font changes invalidate editor geometry:
+    - editor surfaces observe `TextFontStackKey` and clear any cached row geometry used to answer
+      platform geometry queries (bounds/hit-test), preventing stale caret/selection rectangles.
+  - Staging: selection-replacing preedit is represented in the platform-facing composed view and
+    in the display-row text composition so shaping/paint do not drift during IME composition.
+    - Evidence:
+      - `ecosystem/fret-code-editor-view/src/lib.rs`
+      - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
 
 Evidence anchors:
 

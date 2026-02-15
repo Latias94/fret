@@ -147,6 +147,67 @@ implicitly assumed by the renderer wrapper.
 Renderer still needs a high-quality wrap implementation (for generic UI), but editor-grade wrapping
 should be driven from the editor view model to keep cursor movement and visual segmentation aligned.
 
+#### Recommended “code wrap policy” surface (ecosystem-owned)
+
+To keep the system engineering-friendly, the policy surface should:
+
+- be a pure, deterministic function from `(row_text, wrap_width, policy)` → `row_breaks`,
+- be auditable via fixtures (inputs + expected breakpoints),
+- provide both:
+  - presets for common editor behavior, and
+  - a small set of knobs for apps that need tuning.
+
+Suggested presets (names are illustrative; keep them stable once adopted):
+
+- `Conservative`: prefer whitespace and obvious punctuation; avoid surprising mid-identifier breaks.
+- `Balanced`: add identifier boundaries (snake/camel/digit transitions) and path/URL separators.
+- `Aggressive`: prefer more break opportunities, while still preserving grapheme/cluster safety.
+
+Suggested knobs (keep the list short; avoid “tweak fatigue”):
+
+- Path/URL separators: allow breaks after `/`, `\\`, `?`, `&`, `#`, `=`.
+- Punctuation runs: allow breaks after `.`, `,`, `:`, `;` (avoid starting a line with a forbidden
+  closing punctuation where possible).
+- Identifier boundaries:
+  - snake `_`,
+  - camelCase transitions (lower→upper, letter↔digit).
+- Emergency behavior: when no preferred breakpoint fits, fall back to grapheme-safe breaks (matching
+  the editor baseline for long tokens and CJK).
+
+Proposed Rust surface (v1, ecosystem-owned):
+
+```rust
+pub enum CodeWrapPreset { Conservative, Balanced, Aggressive }
+
+pub struct CodeWrapKnobs {
+    pub break_after_path_separators: bool,
+    pub break_after_url_separators: bool,
+    pub break_after_punctuation: bool,
+    pub break_at_identifier_boundaries: bool,
+    pub break_around_operators: bool,
+}
+
+pub struct CodeWrapPolicy { pub preset: CodeWrapPreset, pub knobs: CodeWrapKnobs }
+
+pub struct CodeWrapRowStart { pub byte: usize, pub col: usize }
+
+// Deterministic: returns row starts for `text`.
+// - `byte` is a UTF-8 byte index (char boundary) for slicing.
+// - `col` is a Unicode-scalar column index for display-map bookkeeping.
+// Outputs must be grapheme-safe (never split inside a grapheme cluster).
+pub fn row_starts_for_code_wrap(text: &str, wrap_cols: usize, policy: CodeWrapPolicy) -> Vec<CodeWrapRowStart>;
+```
+
+Important: do not push code-specific wrap heuristics into the renderer wrapper. The renderer-owned
+`TextWrap::Word` should remain a general UI facility; editor-grade wrap policy should be expressed
+via display-row segmentation so caret/selection semantics cannot drift.
+
+Implementation note:
+
+- Once the editor has segmented display rows, each row should be shaped/painted with
+  `TextWrap::None` (renderer wrap disabled). Otherwise the renderer may re-wrap and reintroduce
+  cursor/selection drift.
+
 ## Regression Gates
 
 Unit tests:
@@ -154,6 +215,9 @@ Unit tests:
 - mapping: buffer byte ↔ display point ↔ row-local byte
 - wrapping stability under resize jitter
 - highlight span stability across edits (no off-by-one at UTF-8 boundaries)
+- font invalidation:
+  - `TextFontStackKey` changes must not allow stale row-geometry to answer platform queries
+    (bounds/hit-test) for a focused editor surface.
 - platform text input interop (UTF-16 over composed view):
   - `TextInputRegion` should answer `PlatformTextInputQuery` deterministically from its
     `a11y_value`/ranges (surrogate pairs, clamping inside scalars).
@@ -196,3 +260,59 @@ Staging plan:
    (folds/inlays/preedit), then publish the composed view + ranges as data-only props.
 3) Later, if needed, introduce a richer ecosystem-owned adapter that can answer bounds/replace
    queries using cached row geometry, while keeping `fret-ui` as a mechanism-only router.
+
+### Ecosystem adapter notes (Bounds/Hit-test)
+
+`fret-ui` intentionally does not implement `BoundsForRange` / `CharacterIndexForPoint` for
+`TextInputRegion` by default. Instead, editor-grade surfaces can opt into these queries by
+installing an ecosystem-owned handler via:
+
+- `TextInputRegionActionHooks.on_platform_text_input_query`
+
+The code editor uses this hook to answer:
+
+- `PlatformTextInputQuery::BoundsForRange` (best-effort caret rect at the range end), and
+- `PlatformTextInputQuery::CharacterIndexForPoint` (hit-test using cached row geometry + fallbacks),
+
+by mapping:
+
+- UTF-16 query indices → UTF-8 byte offsets within `a11y_value`,
+- `a11y_value` byte offsets → buffer byte offsets in the current display window,
+- buffer byte offsets → caret rect / pointer hit-test results.
+
+This keeps the mechanism layer routing-only while still allowing editor-grade IME/candidate window
+positioning and pointer hit-testing to converge on the same geometry/cache contracts.
+
+### Ecosystem adapter notes (Replace-by-range)
+
+For platform text input clients that apply edits by requesting replacement (ADR 0261), editor-grade
+surfaces can also opt into:
+
+- `platform_text_input_replace_text_in_range_utf16`
+- `platform_text_input_replace_and_mark_text_in_range_utf16`
+
+via `TextInputRegionActionHooks` replace handlers.
+
+The code editor implements a best-effort v1 surface:
+
+- `replace_text_in_range_utf16` applies a buffer edit after mapping the UTF-16 composed-view range
+   into the current a11y window and then into buffer byte indices.
+- `replace_and_mark_text_in_range_utf16` is supported for caret-only composition (`range` empty),
+   updating the editor preedit state without mutating the base buffer with the composing string.
+
+In addition, when a composing operation specifies a non-empty range (selection replacement), the
+editor applies a best-effort behavior:
+
+- it represents the replacement purely in the composed view (semantics value + range mapping), and
+- continues to treat the composing text itself as preedit-only (not inserted into the base buffer
+  until commit).
+
+Staging note:
+
+- Selection-replacing preedit is represented in the platform-facing composed window via
+  `CodeEditorState.preedit_replace_range`, and is also reflected in the display-row composition via
+  `InlinePreedit { anchor, replace_range, text }` so shaping/paint can converge with platform
+  queries during composition.
+- Known gap (staging): replacement ranges that span newlines are currently clamped to the anchor
+  logical line in the view display map. Keep it behind tests and revisit if multi-line composition
+  becomes a required input mode.

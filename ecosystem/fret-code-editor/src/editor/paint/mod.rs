@@ -139,9 +139,14 @@ pub(super) fn paint_row(
     let mut row_preedit = None::<RowPreeditMapping>;
     let mut row_blob = None::<fret_core::TextBlobId>;
     let mut row_blob_metrics = None::<TextMetrics>;
+    let compose_inline_preedit = st.compose_inline_preedit
+        || st
+            .preedit_replace_range
+            .as_ref()
+            .is_some_and(|r| !r.is_empty());
 
     if let Some(preedit) = &st.preedit {
-        if st.compose_inline_preedit {
+        if compose_inline_preedit {
             if let Some(range) = row_preedit_range.clone() {
                 let rich = materialize_preedit_rich_text_for_range(
                     Arc::clone(&line),
@@ -215,7 +220,7 @@ pub(super) fn paint_row(
         }
     }
     let row_has_preedit = st.preedit.is_some()
-        && if st.compose_inline_preedit {
+        && if compose_inline_preedit {
             row_preedit_range.is_some()
         } else {
             row_preedit.is_some()
