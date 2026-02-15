@@ -38,6 +38,8 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         component("Vertical stack (flex column)")
             .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
             .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("px", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("py", CatalogPropV1::enum_values(SPACE_TOKENS))
             .prop(
                 "items",
                 CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
@@ -47,6 +49,19 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 CatalogPropV1::enum_values(["start", "center", "end", "between"]),
             )
             .prop("wrap", CatalogPropV1::boolean())
+            .prop("wFull", CatalogPropV1::boolean().default_value(json!(true)))
+            .prop(
+                "hFull",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minW0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minH0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
             .build(),
     );
     out.insert(
@@ -54,6 +69,8 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         component("Horizontal stack (flex row)")
             .prop("gap", CatalogPropV1::enum_values(SPACE_TOKENS))
             .prop("p", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("px", CatalogPropV1::enum_values(SPACE_TOKENS))
+            .prop("py", CatalogPropV1::enum_values(SPACE_TOKENS))
             .prop(
                 "items",
                 CatalogPropV1::enum_values(["start", "center", "end", "stretch"]),
@@ -63,6 +80,19 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 CatalogPropV1::enum_values(["start", "center", "end", "between"]),
             )
             .prop("wrap", CatalogPropV1::boolean())
+            .prop("wFull", CatalogPropV1::boolean().default_value(json!(true)))
+            .prop(
+                "hFull",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minW0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minH0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
             .build(),
     );
     out.insert(

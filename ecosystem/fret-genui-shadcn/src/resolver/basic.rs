@@ -100,16 +100,32 @@ impl ShadcnResolver {
     ) -> AnyElement {
         let gap = Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
         let p = Self::parse_space(resolved_props.get("p"));
+        let px = Self::parse_space(resolved_props.get("px"));
+        let py = Self::parse_space(resolved_props.get("py"));
         let items = resolved_props.get("items").and_then(|v| v.as_str());
         let justify = resolved_props.get("justify").and_then(|v| v.as_str());
         let wrap = resolved_props
             .get("wrap")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
+        let w_full = resolved_props
+            .get("wFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let h_full = resolved_props
+            .get("hFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_w_0 = resolved_props
+            .get("minW0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_h_0 = resolved_props
+            .get("minH0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
-        let mut v = fret_ui_kit::ui::v_flex(cx, move |_cx| children)
-            .gap(gap)
-            .w_full();
+        let mut v = fret_ui_kit::ui::v_flex(cx, move |_cx| children).gap(gap);
         v = match items {
             Some("center") => v.items_center(),
             Some("end") => v.items_end(),
@@ -125,8 +141,26 @@ impl ShadcnResolver {
         if wrap {
             v = v.wrap();
         }
+        if w_full {
+            v = v.w_full();
+        }
+        if h_full {
+            v = v.h_full();
+        }
+        if min_w_0 {
+            v = v.min_w_0();
+        }
+        if min_h_0 {
+            v = v.min_h_0();
+        }
         if let Some(p) = p {
             v = v.p(p);
+        }
+        if let Some(px) = px {
+            v = v.px(px);
+        }
+        if let Some(py) = py {
+            v = v.py(py);
         }
         v.into_element(cx)
     }
@@ -139,16 +173,32 @@ impl ShadcnResolver {
     ) -> AnyElement {
         let gap = Self::parse_space(resolved_props.get("gap")).unwrap_or(fret_ui_kit::Space::N2);
         let p = Self::parse_space(resolved_props.get("p"));
+        let px = Self::parse_space(resolved_props.get("px"));
+        let py = Self::parse_space(resolved_props.get("py"));
         let items = resolved_props.get("items").and_then(|v| v.as_str());
         let justify = resolved_props.get("justify").and_then(|v| v.as_str());
         let wrap = resolved_props
             .get("wrap")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
+        let w_full = resolved_props
+            .get("wFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let h_full = resolved_props
+            .get("hFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_w_0 = resolved_props
+            .get("minW0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_h_0 = resolved_props
+            .get("minH0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
-        let mut h = fret_ui_kit::ui::h_flex(cx, move |_cx| children)
-            .gap(gap)
-            .w_full();
+        let mut h = fret_ui_kit::ui::h_flex(cx, move |_cx| children).gap(gap);
         h = match items {
             Some("start") => h.items_start(),
             Some("end") => h.items_end(),
@@ -164,8 +214,26 @@ impl ShadcnResolver {
         if wrap {
             h = h.wrap();
         }
+        if w_full {
+            h = h.w_full();
+        }
+        if h_full {
+            h = h.h_full();
+        }
+        if min_w_0 {
+            h = h.min_w_0();
+        }
+        if min_h_0 {
+            h = h.min_h_0();
+        }
         if let Some(p) = p {
             h = h.p(p);
+        }
+        if let Some(px) = px {
+            h = h.px(px);
+        }
+        if let Some(py) = py {
+            h = h.py(py);
         }
         h.into_element(cx)
     }
