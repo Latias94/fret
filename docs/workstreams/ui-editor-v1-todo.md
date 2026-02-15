@@ -36,6 +36,7 @@ Related:
 - [x] Demo gate wiring plan:
   - [x] identify an existing harness target (preferred: `imui_editor_proof_demo`)
   - [x] define initial `test_id` anchor(s) for scripted repro
+  - Evidence: `apps/fret-demo/src/bin/imui_editor_proof_demo.rs` (runnable bin target)
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.drag-value-demo`)
 
 Feature intent matrix (recommended):
@@ -168,6 +169,7 @@ adding new runtime contracts unless evidence demands it.
 - [x] Add an editor-facing `Slider<T>` control:
   - horizontal first; clamping + step policy
   - value display + double-click typing mode (via `NumericInput`)
+  - [x] Key internal state per slider instance (avoid cross-widget drag/typing interference).
   - Evidence: `ecosystem/fret-ui-editor/src/controls/slider.rs`
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.material.roughness`, `imui-editor-proof.editor.material.metallic`)
 - [~] Add a reusable `TextField` control surface:

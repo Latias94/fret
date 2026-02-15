@@ -214,6 +214,23 @@ Proof harness (native):
 - Run: `cargo run -p fret-demo --bin imui_editor_proof_demo`
 - Single-window mode (no tear-off): `$env:FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW="1"; cargo run -p fret-demo --bin imui_editor_proof_demo`
 
+## Current usability issues (observed)
+
+These are the highest-signal problems observed while using the editor proof harness on Windows.
+They are tracked here to keep the workstream grounded in “what feels broken” vs adding more widgets.
+
+- **Overlay close artifacts (“ghosting”)**: menu-like overlays (e.g. enum select) can leave stale pixels after closing.
+  This suggests a damage/invalidation coverage gap when an overlay unmounts or transitions to non-present.
+  Owner: mechanisms (`crates/fret-ui` / renderer invalidation), with local repros in `ecosystem/fret-ui-editor`.
+- **Dismiss policy confidence**: outside-press dismissal should be reliable for mouse and touch; trigger press should
+  close menu overlays even when outside pointer events are disabled (`disableOutsidePointerEvents`-style policy).
+  Owner: `fret-ui-kit` overlay substrates + editor policies.
+- **State keying discipline**: stateful controls must key their internal state per instance (stable key preference:
+  `test_id` then `model.id()`), otherwise multiple widgets can fight over drag/typing state.
+  This was a real failure mode for `Slider<T>` and is treated as a regression class.
+- **Visual cohesion**: editor controls are still missing a single, shared “widget visuals” resolver (hover/active/disabled)
+  comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`. Without this, chrome and density drift across controls.
+
 ## Interaction contracts (v1)
 
 ### Numeric edit session
