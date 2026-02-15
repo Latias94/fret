@@ -145,6 +145,14 @@ Notes:
 - Keep the run duration and flags stable (e.g. 600 frames) so future diffs are meaningful.
 - Capture both `renderer_perf:` and `renderer_perf_pipelines:` lines if enabled.
 
+Headless gate (stable counters + thresholds):
+
+```powershell
+python3 tools/perf/headless_svg_atlas_stress_gate.py
+```
+
+Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
 ## 3) Proposed internal architecture (implementation, not contract)
 
 ## 3.0) Cost model checklist (design-time, not contracts)

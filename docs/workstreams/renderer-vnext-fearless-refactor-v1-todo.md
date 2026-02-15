@@ -142,3 +142,6 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
   - Last capture: 2026-02-15 (post M5 plumbing), commit `e6d518c4`.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).
+- [~] REN-VNEXT-guard-004 Keep a cheap headless perf gate green (stable counters).
+  - Gate: `python3 tools/perf/headless_svg_atlas_stress_gate.py`
+  - Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
