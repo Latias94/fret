@@ -114,6 +114,7 @@ fn platform_replace_and_mark_text_in_range_utf16(
         let end = start.max(end);
 
         st.preedit_replace_range = None;
+        st.preedit_saved_selection = None;
         let caret = start.saturating_add(text.len()).min(st.buffer.len_bytes());
         return input::apply_and_record_edit(
             st,
@@ -135,6 +136,32 @@ fn platform_replace_and_mark_text_in_range_utf16(
 
     let mut did = false;
     st.undo_group = None;
+
+    if st.preedit_saved_selection.is_none() {
+        st.preedit_saved_selection = Some(st.selection);
+        did = true;
+    }
+
+    // Treat an empty composition update as a cancel/unmark event (best-effort).
+    // Restore the selection that existed when composition began.
+    if text.is_empty() {
+        let had_preedit_state = st.preedit.is_some()
+            || st
+                .preedit_replace_range
+                .as_ref()
+                .is_some_and(|r| !r.is_empty())
+            || st.preedit_saved_selection.is_some();
+        let restore = st.preedit_saved_selection.unwrap_or(Selection {
+            anchor: start,
+            focus: end,
+        });
+        if st.selection != restore {
+            st.selection = restore;
+            did = true;
+        }
+        st.set_preedit(None);
+        return did || had_preedit_state;
+    }
 
     let next_replace = (start != end).then_some(start..end);
     if st.preedit_replace_range != next_replace {
@@ -526,6 +553,7 @@ struct CodeEditorState {
     selection: Selection,
     preedit: Option<PreeditState>,
     preedit_replace_range: Option<Range<usize>>,
+    preedit_saved_selection: Option<Selection>,
     font_stack_key: fret_runtime::TextFontStackKey,
     allow_decorations_under_inline_preedit: bool,
     compose_inline_preedit: bool,
@@ -728,11 +756,18 @@ impl CodeEditorState {
     }
 
     fn set_preedit(&mut self, preedit: Option<PreeditState>) {
-        if self.preedit == preedit {
-            return;
-        }
+        let same = self.preedit == preedit;
+        let mut cleared = false;
         if preedit.is_none() {
-            self.preedit_replace_range = None;
+            if self.preedit_replace_range.take().is_some() {
+                cleared = true;
+            }
+            if self.preedit_saved_selection.take().is_some() {
+                cleared = true;
+            }
+        }
+        if same && !cleared {
+            return;
         }
         self.preedit = preedit;
         self.refresh_display_map();
@@ -795,6 +830,7 @@ impl CodeEditorHandle {
                 selection: Selection::default(),
                 preedit: None,
                 preedit_replace_range: None,
+                preedit_saved_selection: None,
                 font_stack_key: fret_runtime::TextFontStackKey::default(),
                 allow_decorations_under_inline_preedit: false,
                 compose_inline_preedit: false,

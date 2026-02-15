@@ -1085,6 +1085,123 @@ fn platform_replace_and_mark_non_empty_range_replaces_in_composed_view_without_m
 }
 
 #[test]
+fn platform_replace_and_mark_empty_text_cancels_and_restores_selection() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 4,
+        };
+        st.preedit = None;
+        st.preedit_replace_range = None;
+        st.preedit_saved_selection = None;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 4),
+        "XY",
+        Some(fret_runtime::Utf16Range::new(1, 3)),
+    );
+    assert!(did);
+    assert_eq!(st.buffer.text_string(), "hello");
+    assert!(st.preedit.is_some());
+    assert!(st.preedit_replace_range.is_some());
+
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "hXYo");
+    assert_eq!(composition, Some((1, 3)));
+    assert_eq!(selection, Some((1, 3)));
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 3),
+        "",
+        Some(fret_runtime::Utf16Range::new(1, 1)),
+    );
+    assert!(did, "cancel must update state");
+    assert_eq!(
+        st.buffer.text_string(),
+        "hello",
+        "cancel must not mutate base buffer"
+    );
+    assert_eq!(st.preedit, None);
+    assert!(st.preedit_replace_range.is_none());
+    assert!(st.preedit_saved_selection.is_none());
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 1,
+            focus: 4
+        },
+        "cancel must restore the pre-composition selection"
+    );
+
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "hello");
+    assert_eq!(composition, None);
+    assert_eq!(selection, Some((1, 4)));
+}
+
+#[test]
+fn platform_replace_and_mark_empty_text_cancels_and_restores_caret() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+        st.preedit = None;
+        st.preedit_replace_range = None;
+        st.preedit_saved_selection = None;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(2, 2),
+        "Z",
+        Some(fret_runtime::Utf16Range::new(2, 3)),
+    );
+    assert!(did);
+    assert!(st.preedit.is_some());
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(2, 3),
+        "",
+        Some(fret_runtime::Utf16Range::new(2, 2)),
+    );
+    assert!(did);
+    assert_eq!(st.preedit, None);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 2,
+            focus: 2
+        },
+        "cancel must restore the pre-composition caret"
+    );
+}
+
+#[test]
 fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
     let handle = CodeEditorHandle::new("hello");
     {
@@ -1097,6 +1214,7 @@ fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
             text: "AB".to_string(),
             cursor: Some((0, 2)),
         });
+        st.preedit_saved_selection = None;
     }
 
     let mut st = handle.state.borrow_mut();
