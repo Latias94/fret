@@ -521,6 +521,8 @@ pub(super) enum BundleStatsSort {
     #[default]
     Invalidation,
     Time,
+    UiThreadCpuTime,
+    UiThreadCpuCycles,
     Dispatch,
     HitTest,
     RendererEncodeScene,
@@ -551,6 +553,8 @@ impl BundleStatsSort {
         match s.trim() {
             "invalidation" => Ok(Self::Invalidation),
             "time" => Ok(Self::Time),
+            "cpu_time" | "cpu_us" | "ui_thread_cpu_time" => Ok(Self::UiThreadCpuTime),
+            "cpu_cycles" | "cycles" | "ui_thread_cpu_cycles" => Ok(Self::UiThreadCpuCycles),
             "dispatch" => Ok(Self::Dispatch),
             "hit_test" => Ok(Self::HitTest),
             "encode_scene" | "encode" | "renderer_encode_scene" => Ok(Self::RendererEncodeScene),
@@ -617,7 +621,7 @@ impl BundleStatsSort {
                 Ok(Self::RendererIntermediatePoolFreeTextures)
             }
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
+                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
             )),
         }
     }
@@ -626,6 +630,8 @@ impl BundleStatsSort {
         match self {
             Self::Invalidation => "invalidation",
             Self::Time => "time",
+            Self::UiThreadCpuTime => "cpu_time",
+            Self::UiThreadCpuCycles => "cpu_cycles",
             Self::Dispatch => "dispatch",
             Self::HitTest => "hit_test",
             Self::RendererEncodeScene => "encode_scene",
@@ -1295,11 +1301,13 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} cpu.us={} cpu.cycles={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
                 ts,
+                row.ui_thread_cpu_time_us,
+                row.ui_thread_cpu_cycle_time_delta_cycles,
                 row.total_time_us,
                 row.layout_time_us,
                 row.prepaint_time_us,
@@ -9814,6 +9822,27 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows.sort_by(|a, b| {
                 b.total_time_us
                     .cmp(&a.total_time_us)
+                    .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
+                    .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::UiThreadCpuTime => {
+            rows.sort_by(|a, b| {
+                b.ui_thread_cpu_time_us
+                    .cmp(&a.ui_thread_cpu_time_us)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+                    .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
+                    .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::UiThreadCpuCycles => {
+            rows.sort_by(|a, b| {
+                b.ui_thread_cpu_cycle_time_delta_cycles
+                    .cmp(&a.ui_thread_cpu_cycle_time_delta_cycles)
+                    .then_with(|| b.ui_thread_cpu_time_us.cmp(&a.ui_thread_cpu_time_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
                     .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
                     .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
                     .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))

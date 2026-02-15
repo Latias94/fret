@@ -326,7 +326,8 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         );
     }
 
-    let effective_watch = watch.unwrap_or(hotpatch && !dx_available && hotpatch_devserver_ws.is_none());
+    let effective_watch =
+        watch.unwrap_or(hotpatch && !dx_available && hotpatch_devserver_ws.is_none());
     let effective_watch_poll = Duration::from_millis(watch_poll_ms.unwrap_or(800));
 
     // In reload-boundary/devserver mode, `cargo run` is the supervisor. If the app crashes,
@@ -500,7 +501,9 @@ struct WorkspaceWatchOptions {
 struct CapturedEnv(Vec<(std::ffi::OsString, std::ffi::OsString)>);
 
 fn capture_command_env(cmd: &Command) -> CapturedEnv {
-    let pairs = cmd.get_envs().filter_map(|(k, v)| Some((k.to_os_string(), v?.to_os_string())));
+    let pairs = cmd
+        .get_envs()
+        .filter_map(|(k, v)| Some((k.to_os_string(), v?.to_os_string())));
     CapturedEnv(pairs.collect())
 }
 
@@ -680,11 +683,7 @@ impl WorkspaceWatch {
                 let file_name = entry.file_name();
                 let file_name = file_name.to_string_lossy();
 
-                if entry
-                    .file_type()
-                    .map(|t| t.is_dir())
-                    .unwrap_or(false)
-                {
+                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
                     if file_name == "target"
                         || file_name == ".git"
                         || file_name == ".fret"
@@ -754,7 +753,10 @@ struct RestartSupervisorOptions {
     crash_threshold: Duration,
 }
 
-fn run_with_restart_supervisor(mut cmd: Command, opts: RestartSupervisorOptions) -> Result<(), String> {
+fn run_with_restart_supervisor(
+    mut cmd: Command,
+    opts: RestartSupervisorOptions,
+) -> Result<(), String> {
     let mut crash_times: std::collections::VecDeque<Instant> = std::collections::VecDeque::new();
     let mut restarts = 0usize;
 
@@ -828,10 +830,14 @@ fn print_repeated_crash_guidance(opts: &RestartSupervisorOptions, reason: &str) 
     }
 
     if opts.hotpatch_enabled && !cfg!(windows) {
-        eprintln!("  try: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct (disables view-level hotpatching)");
+        eprintln!(
+            "  try: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct (disables view-level hotpatching)"
+        );
     }
 
-    eprintln!("  fallback: do a full rebuild/restart (hotpatch is best-effort; structural changes require rebuild)");
+    eprintln!(
+        "  fallback: do a full rebuild/restart (hotpatch is best-effort; structural changes require rebuild)"
+    );
 }
 
 fn dx_available() -> bool {

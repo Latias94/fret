@@ -93,6 +93,11 @@ When ETW/WPR is unavailable:
 Consumers should surface CPU deltas next to wall/phase time so "thread didn't run" vs "real work"
 is visible.
 
+In practice, this should be a one-command workflow:
+
+- `diag stats --sort time` to find the worst wall-time frames
+- `diag stats --sort cpu_cycles` (Windows) / `--sort cpu_time` (fallback) to find frames where the UI thread actually ran
+
 ## Work plan (incremental, fearless)
 
 1) Land additive per-frame CPU signals (time + cycles) and surface them in:

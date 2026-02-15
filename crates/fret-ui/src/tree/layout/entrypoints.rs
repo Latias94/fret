@@ -992,7 +992,9 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(16);
+        // If both an ancestor and a descendant cache root are invalidated in the same frame, only
+        // relayout the ancestor; it will already relayout the subtree.
+        let mut candidates: Vec<NodeId> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled || !node.view_cache.contained_layout {
                 continue;
@@ -1000,6 +1002,33 @@ impl<H: UiHost> UiTree<H> {
             if !node.invalidation.layout {
                 continue;
             }
+            candidates.push(id);
+        }
+
+        if candidates.is_empty() {
+            return;
+        }
+
+        let candidate_set: std::collections::HashSet<NodeId> = candidates.iter().copied().collect();
+
+        let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(candidates.len());
+        for id in candidates {
+            let mut skip = false;
+            let mut parent = self.nodes.get(id).and_then(|n| n.parent);
+            while let Some(p) = parent {
+                if candidate_set.contains(&p) {
+                    skip = true;
+                    break;
+                }
+                parent = self.nodes.get(p).and_then(|n| n.parent);
+            }
+            if skip {
+                continue;
+            }
+
+            let Some(node) = self.nodes.get(id) else {
+                continue;
+            };
 
             // Contained relayouts run after the main layout pass. If a cache root was newly
             // mounted (or skipped by an engine-backed parent) its retained bounds can still be
