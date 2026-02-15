@@ -36,6 +36,17 @@ const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
 const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
 
+const DOCK_TAB_CLOSE_SVG: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M6 6L18 18M18 6L6 18" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round"/>
+</svg>"#;
+
+const DOCK_TAB_OVERFLOW_SVG: &[u8] =
+    br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <circle cx="6.5" cy="12" r="1.6" fill="black"/>
+  <circle cx="12" cy="12" r="1.6" fill="black"/>
+  <circle cx="17.5" cy="12" r="1.6" fill="black"/>
+</svg>"#;
+
 fn dock_graph_stats_for_window(
     graph: &DockGraph,
     window: fret_core::AppWindowId,
@@ -252,6 +263,8 @@ pub struct DockSpace {
     tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_overflow_glyph: Option<PreparedTabTitle>,
+    tab_close_svg: Option<fret_core::SvgId>,
+    tab_overflow_svg: Option<fret_core::SvgId>,
     float_zone_glyph: Option<PreparedTabTitle>,
     float_zone_tooltip: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
@@ -348,6 +361,8 @@ impl DockSpace {
             tab_widths: HashMap::new(),
             tab_close_glyph: None,
             tab_overflow_glyph: None,
+            tab_close_svg: None,
+            tab_overflow_svg: None,
             float_zone_glyph: None,
             float_zone_tooltip: None,
             tab_text_style: TextStyle {
@@ -674,6 +689,13 @@ impl DockSpace {
         }
         if let Some(glyph) = self.tab_overflow_glyph.take() {
             services.text().release(glyph.blob);
+        }
+
+        if self.tab_close_svg.is_none() {
+            self.tab_close_svg = Some(services.svg().register_svg(DOCK_TAB_CLOSE_SVG));
+        }
+        if self.tab_overflow_svg.is_none() {
+            self.tab_overflow_svg = Some(services.svg().register_svg(DOCK_TAB_OVERFLOW_SVG));
         }
 
         let pad_x = theme.metric_token("metric.padding.md");
@@ -1268,6 +1290,34 @@ impl<H: UiHost> Widget<H> for DockSpace {
         cx.set_role(SemanticsRole::Panel);
         if let Some(id) = self.semantics_test_id {
             cx.set_test_id(id);
+        }
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        for (_, title) in self.tab_titles.drain() {
+            services.text().release(title.blob);
+        }
+        if let Some(title) = self.tab_close_glyph.take() {
+            services.text().release(title.blob);
+        }
+        if let Some(title) = self.tab_overflow_glyph.take() {
+            services.text().release(title.blob);
+        }
+        if let Some(title) = self.float_zone_glyph.take() {
+            services.text().release(title.blob);
+        }
+        if let Some(title) = self.float_zone_tooltip.take() {
+            services.text().release(title.blob);
+        }
+        if let Some(title) = self.empty_state.take() {
+            services.text().release(title.blob);
+        }
+
+        if let Some(svg) = self.tab_close_svg.take() {
+            let _ = services.svg().unregister_svg(svg);
+        }
+        if let Some(svg) = self.tab_overflow_svg.take() {
+            let _ = services.svg().unregister_svg(svg);
         }
     }
 
@@ -4865,7 +4915,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let drag_tab_title = dock_drag_panel
                 .as_ref()
                 .and_then(|panel| self.tab_titles.get(panel).copied());
-            let close_glyph_present = self.tab_close_glyph.is_some();
+            let close_glyph_present =
+                self.tab_close_glyph.is_some() || self.tab_close_svg.is_some();
             self.tab_widths.clear();
             for (&node_id, &_rect) in layout_all.iter() {
                 let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
@@ -4874,7 +4925,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 if tabs.is_empty() {
                     continue;
                 }
-                let close_glyph_present = self.tab_close_glyph.is_some();
                 let widths: Vec<Px> = tabs
                     .iter()
                     .map(|panel| {
@@ -4933,6 +4983,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tab_scroll: &self.tab_scroll,
                     tab_close_glyph: self.tab_close_glyph,
                     tab_overflow_glyph: self.tab_overflow_glyph,
+                    tab_close_svg: self.tab_close_svg,
+                    tab_overflow_svg: self.tab_overflow_svg,
                     tab_overflow_menu: self.tab_overflow_menu,
                 },
                 overlay_hooks.as_deref(),
@@ -4993,17 +5045,37 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     });
                 }
 
-                if let Some(glyph) = self.tab_close_glyph {
+                let color = if close_hovered || close_pressed {
+                    fg
+                } else {
+                    fg_muted
+                };
+                if let Some(svg) = self.tab_close_svg {
+                    let pad = Px(1.0);
+                    let rect = Rect {
+                        origin: Point::new(
+                            Px(chrome.close_button.origin.x.0 + pad.0),
+                            Px(chrome.close_button.origin.y.0 + pad.0),
+                        ),
+                        size: Size::new(
+                            Px((chrome.close_button.size.width.0 - pad.0 * 2.0).max(1.0)),
+                            Px((chrome.close_button.size.height.0 - pad.0 * 2.0).max(1.0)),
+                        ),
+                    };
+                    scene.push(SceneOp::SvgMaskIcon {
+                        order: fret_core::DrawOrder(3),
+                        rect,
+                        svg,
+                        fit: fret_core::SvgFit::Contain,
+                        color,
+                        opacity: 1.0,
+                    });
+                } else if let Some(glyph) = self.tab_close_glyph {
                     let text_x = Px(chrome.close_button.origin.x.0
                         + (chrome.close_button.size.width.0 - glyph.metrics.size.width.0) * 0.5);
                     let inner_y = chrome.close_button.origin.y.0
                         + ((chrome.close_button.size.height.0 - glyph.metrics.size.height.0) * 0.5);
                     let text_y = Px(inner_y + glyph.metrics.baseline.0);
-                    let color = if close_hovered || close_pressed {
-                        fg
-                    } else {
-                        fg_muted
-                    };
                     scene.push(SceneOp::Text {
                         order: fret_core::DrawOrder(3),
                         origin: Point::new(text_x, text_y),
@@ -5030,6 +5102,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         tab_scroll: &self.tab_scroll,
                         tab_close_glyph: self.tab_close_glyph,
                         tab_overflow_glyph: self.tab_overflow_glyph,
+                        tab_close_svg: self.tab_close_svg,
+                        tab_overflow_svg: self.tab_overflow_svg,
                         tab_overflow_menu: self.tab_overflow_menu,
                     },
                     overlay_hooks.as_deref(),
