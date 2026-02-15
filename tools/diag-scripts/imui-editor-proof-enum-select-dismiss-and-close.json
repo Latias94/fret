@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.material.shading-model" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.material.shading-model" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.material.shading-model.list"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.material.shading-model" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.material.shading-model.list"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.material.shading-model" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.material.shading-model.list"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.material.roughness" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.material.shading-model.list"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_screenshot", "label": "imui-editor-proof.enum-select-dismiss" },
+    { "type": "capture_bundle", "label": "imui-editor-proof.enum-select-dismiss" }
+  ]
+}
+

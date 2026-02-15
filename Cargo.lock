@@ -1919,6 +1919,7 @@ dependencies = [
  "fret-executor",
  "fret-gizmo",
  "fret-icons",
+ "fret-icons-lucide",
  "fret-imui",
  "fret-launch",
  "fret-markdown",
@@ -1934,6 +1935,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-app",
  "fret-ui-assets",
+ "fret-ui-editor",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
@@ -2458,6 +2460,23 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "fret-ui-editor"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-authoring",
+ "fret-core",
+ "fret-icons",
+ "fret-query",
+ "fret-runtime",
+ "fret-selector",
+ "fret-ui",
+ "fret-ui-headless",
+ "fret-ui-kit",
+ "fret-undo",
 ]
 
 [[package]]
