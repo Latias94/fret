@@ -33,10 +33,15 @@ const SPEC_JSON: &str = r#"
   "elements": {
     "root": {
       "type": "VStack",
-      "props": { "gap": "N3" },
-      "children": ["header", "card"]
+      "props": { "gap": "N3", "minW0": true },
+      "children": ["header", "content_box"]
     },
     "header": { "type": "Text", "props": { "text": "GenUI Demo (json-render-inspired)", "variant": "h3" }, "children": [] },
+    "content_box": {
+      "type": "Box",
+      "props": { "p": "N3", "wFull": true, "minW0": true },
+      "children": ["card"]
+    },
     "card": {
       "type": "Card",
       "props": { "wrapContent": false },
@@ -71,9 +76,9 @@ const SPEC_JSON: &str = r#"
         "todos_list",
         "sep_3",
         "responsive_title",
-        "responsive_grid",
+        "responsive_grid_box",
         "responsive_stack_title",
-        "responsive_stack"
+        "responsive_stack_box"
       ]
     },
     "bind_title": { "type": "Text", "props": { "text": "Bindings ($bindState demo)", "variant": "large" }, "children": [] },
@@ -188,6 +193,11 @@ const SPEC_JSON: &str = r#"
     },
     "sep_3": { "type": "Separator", "props": {}, "children": [] },
     "responsive_title": { "type": "Text", "props": { "text": "ResponsiveGrid (container query demo)", "variant": "large" }, "children": [] },
+    "responsive_grid_box": {
+      "type": "Box",
+      "props": { "p": "N2", "wFull": true, "minW0": true },
+      "children": ["responsive_grid"]
+    },
     "responsive_grid": {
       "type": "ResponsiveGrid",
       "props": {
@@ -219,6 +229,11 @@ const SPEC_JSON: &str = r#"
     "rg_card_6_text": { "type": "Text", "props": { "text": "Card 6" }, "children": [] },
 
     "responsive_stack_title": { "type": "Text", "props": { "text": "ResponsiveStack (container query demo)", "variant": "large" }, "children": [] },
+    "responsive_stack_box": {
+      "type": "Box",
+      "props": { "p": "N2", "wFull": true, "minW0": true },
+      "children": ["responsive_stack"]
+    },
     "responsive_stack": {
       "type": "ResponsiveStack",
       "props": {
