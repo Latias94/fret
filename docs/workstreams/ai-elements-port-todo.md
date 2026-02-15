@@ -38,6 +38,14 @@ Each TODO is labeled:
 - [x] AIEL-MVP7-workflow-001 Add an engine-backed workflow demo (reuse `fret-node`) gated via diag.
   - Demo: `apps/fret-ui-gallery` page `ai_workflow_node_graph_demo`
   - Gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
+- [x] AIEL-MVP8-gallery-001 Add missing UI Gallery detail pages for core AI Elements surfaces.
+  - Pages: `ai_conversation_demo`, `ai_message_demo`, `ai_inline_citation_demo`, `ai_sources_demo`, `ai_snippet_demo`, `ai_image_demo`
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs`
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/*.rs`
+- [x] AIEL-MVP8-gallery-002 Add UI Gallery detail pages for workflow chrome subcomponents (docs parity with upstream).
+  - Pages: `ai_workflow_canvas_demo`, `ai_workflow_node_demo`, `ai_workflow_edge_demo`, `ai_workflow_connection_demo`, `ai_workflow_controls_demo`, `ai_workflow_panel_demo`, `ai_workflow_toolbar_demo`
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs`
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_*_demo.rs`
 
 ## Post-port (optional): XYFlow parity gaps
 
