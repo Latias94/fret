@@ -76,6 +76,7 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 
 - [x] Add mixed-stream parser utilities (text + JSONL patches) similar to `pipeJsonRender`.
 - [x] Add a demo “playground” inspector (tabs for state/queue/issues/spec/schema/prompt/editor/stream).
+- [x] Add an opt-in spec auto-fixer for common LLM mistakes (move `visible/on/repeat` out of `props`) and expose it in the demo.
 - [ ] Decide if/where to enable JSON repair (input boundary only; never for patch-only mode).
 
 ## Testing + gates
