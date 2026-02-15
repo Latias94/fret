@@ -166,6 +166,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       - or real app perf snapshots show unacceptable regression under WebGPU with no alternative mitigation.
   - Guardrail: keep the key space small and observable in perf snapshots (`pipeline_switches_*`), and update headless baselines
     if (and only if) the added variants are justified.
+  - Status note (2026-02-15): `diag perf ui-gallery-steady` shows renderer encode is not a dominant contributor on the native Vulkan path
+    (see `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`). Keep this item pending until a WebGPU-specific bundle/profiler
+    shows `material_eval` dominates and the existing bounded variants are insufficient.
 - [x] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
   - Landed: quad shader skips inner-border SDF work when `FRET_BORDER_PRESENT=0` (compile-time override),
     keeping WebGPU uniformity rules satisfied while reducing waste in borderless variants.

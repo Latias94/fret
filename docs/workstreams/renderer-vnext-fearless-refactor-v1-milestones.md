@@ -306,6 +306,21 @@ Perf snapshot (post scissor tightening for textured draws):
   - `headless_renderer_perf: frames=600 encode=0.05ms prepare_svg=12.69ms prepare_text=0.09ms draws=27000 ... pipelines=1200 binds=27600 ...`
   - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
 
+Diag perf record (ui-gallery-steady; time-sorted):
+
+- Date: 2026-02-15
+- Commit: `c4f08adb`
+- Command (exact):
+  - `cargo run -q -p fretboard -- diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --sort time --top 5 --json --dir target/fret-diag-perf/ui-gallery-steady --env FRET_RENDERER_PERF_PIPELINES=1 --launch -- cargo run -q -p fret-ui-gallery --release`
+- Outputs (worst overall):
+  - Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - Bundle: `target/fret-diag-perf/ui-gallery-steady/1771144430419-ui-gallery-window-resize-stress-steady/bundle.json`
+  - `top_total_time_us`: `18764` (p50=`18487`, p95=`18764`)
+  - Phase p95 (us): layout=`11692`, solve=`2948`, paint=`6855`
+  - Renderer p95 (us): encode_scene=`408`, prepare_text=`372`
+  - Renderer p95 counters: draw_calls=`137`, pipeline_switches=`88`, bind_group_switches=`130`
+  - Note: this run is native Vulkan (RTX 4090); it is intended as a stable “macro” datapoint for refactors, not a WebGPU-specific measure.
+
 Progress record (Material sampled split in quad variants):
 
 - Date: 2026-02-15
