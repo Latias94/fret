@@ -2104,7 +2104,14 @@ impl<H: UiHost> UiTree<H> {
         }
         // View-cache reuse is an authoring-level "skip re-render" decision, not a "skip repaint"
         // decision: paint invalidations (e.g. hover/focus) should not force a child render pass.
-        !n.invalidation.layout
+        //
+        // Layout invalidations are only safe to ignore for cache roots that opt into contained
+        // layout behavior, because those roots can reliably map "real rerender needs" onto the
+        // `view_cache_needs_rerender` flag.
+        if n.invalidation.layout && !n.view_cache.contained_layout {
+            return false;
+        }
+        true
     }
 
     pub(crate) fn view_cache_node_needs_rerender(&self, node: NodeId) -> bool {
