@@ -76,6 +76,11 @@ const SPEC_JSON: &str = r#"
         "todo_add_row",
         "todos_list",
         "sep_3",
+        "executor_title",
+        "executor_desc",
+        "executor_row",
+        "executor_result_row",
+        "sep_4",
         "responsive_title",
         "responsive_grid_box",
         "responsive_stack_title",
@@ -193,6 +198,53 @@ const SPEC_JSON: &str = r#"
       "children": []
     },
     "sep_3": { "type": "Separator", "props": {}, "children": [] },
+
+    "executor_title": { "type": "Text", "props": { "text": "Executor (confirm policy + chains)", "variant": "large" }, "children": [] },
+    "executor_desc": { "type": "Text", "props": { "text": "Turn auto-apply off, press buttons to enqueue actions, then use “Apply queue (executor)”. In this demo, confirm=true actions require Enabled=true (app-owned confirm policy hook).", "variant": "muted" }, "children": [] },
+    "executor_row": {
+      "type": "HStack",
+      "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true, "minW0": true },
+      "children": ["ex_inc_confirm_false", "ex_inc_confirm_true", "ex_open_url", "ex_unknown_action"]
+    },
+    "ex_inc_confirm_false": {
+      "type": "Button",
+      "props": { "label": "Inc (confirm=false)" },
+      "on": { "press": { "action": "incrementState", "params": { "statePath": "/count", "delta": 1 }, "confirm": false } },
+      "children": []
+    },
+    "ex_inc_confirm_true": {
+      "type": "Button",
+      "props": { "label": "Inc (confirm=true)" },
+      "on": { "press": { "action": "incrementState", "params": { "statePath": "/count", "delta": 1 }, "confirm": true, "onSuccess": [
+        { "action": "setState", "params": { "statePath": "/lastResult", "value": "increment ok" } },
+        { "action": "clipboardSetText", "params": { "text": "increment ok" } }
+      ] } },
+      "children": []
+    },
+    "ex_open_url": {
+      "type": "Button",
+      "props": { "label": "Open URL" },
+      "on": { "press": { "action": "openUrl", "params": { "url": "https://example.com" }, "confirm": true, "onSuccess": { "action": "setState", "params": { "statePath": "/lastResult", "value": "openUrl queued" } } } },
+      "children": []
+    },
+    "ex_unknown_action": {
+      "type": "Button",
+      "props": { "label": "Unknown action" },
+      "on": { "press": { "action": "nope", "params": {}, "confirm": true, "onError": [
+        { "action": "setState", "params": { "statePath": "/lastResult", "value": "unknown action error" } },
+        { "action": "clipboardSetText", "params": { "text": "unknown action error" } }
+      ] } },
+      "children": []
+    },
+    "executor_result_row": {
+      "type": "HStack",
+      "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true, "minW0": true },
+      "children": ["executor_result_label", "executor_result_value"]
+    },
+    "executor_result_label": { "type": "Text", "props": { "text": "lastResult:", "variant": "small" }, "children": [] },
+    "executor_result_value": { "type": "Badge", "props": { "label": { "$state": "/lastResult" }, "variant": "secondary" }, "children": [] },
+
+    "sep_4": { "type": "Separator", "props": {}, "children": [] },
     "responsive_title": { "type": "Text", "props": { "text": "ResponsiveGrid (container query demo)", "variant": "large" }, "children": [] },
     "responsive_grid_box": {
       "type": "Box",
@@ -260,7 +312,8 @@ const SPEC_JSON: &str = r#"
       { "id": "a", "label": "Keep runtime mechanism-only (ADR 0066)" },
       { "id": "b", "label": "Render from a flat spec + catalog" },
       { "id": "c", "label": "Repeat scopes with stable keys" }
-    ]
+    ],
+    "lastResult": ""
   }
 }
 "#;
@@ -347,7 +400,39 @@ impl MvuProgram for GenUiProgram {
                 }
 
                 let mut host = fret_ui::action::UiActionHostAdapter { app };
-                let mut executor = GenUiActionExecutorV1::new(state.genui_state.clone())
+                let state_model = state.genui_state.clone();
+                let mut executor = GenUiActionExecutorV1::new(state_model.clone())
+                    .confirm_policy(Box::new(move |host, _inv, confirm| {
+                        let requires_confirm = match confirm {
+                            Value::Bool(v) => *v,
+                            _ => true,
+                        };
+                        if !requires_confirm {
+                            return true;
+                        }
+
+                        let enabled = host
+                            .models_mut()
+                            .read(&state_model, |v| {
+                                json_pointer::get_opt(v, "/enabled")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(true)
+                            })
+                            .ok()
+                            .unwrap_or(true);
+                        if enabled {
+                            return true;
+                        }
+
+                        let _ = host.models_mut().update(&state_model, |v| {
+                            let _ = json_pointer::set(
+                                v,
+                                "/lastResult",
+                                Value::String("confirm denied (enabled=false)".to_string()),
+                            );
+                        });
+                        false
+                    }))
                     .with_standard_actions()
                     .with_portable_effect_actions();
 
