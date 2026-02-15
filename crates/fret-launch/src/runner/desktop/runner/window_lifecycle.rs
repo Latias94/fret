@@ -89,6 +89,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             && let Some(key) = dev_state_key.as_deref()
         {
             self.dev_state.apply_window_spec(key, &mut spec);
+            self.dev_state.sanitize_window_spec_position(
+                key,
+                &mut spec,
+                event_loop
+                    .available_monitors()
+                    .filter_map(|m| Some((m.position()?, m.current_video_mode()?.size()))),
+            );
         }
 
         if spec.position.is_none() {

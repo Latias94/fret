@@ -614,7 +614,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         {
             let mut spec = self.config.main_window_spec();
             #[cfg(feature = "dev-state")]
-            self.dev_state.apply_main_window_spec(&mut spec);
+            {
+                self.dev_state.apply_main_window_spec(&mut spec);
+                self.dev_state.sanitize_window_spec_position(
+                    "main",
+                    &mut spec,
+                    event_loop
+                        .available_monitors()
+                        .filter_map(|m| Some((m.position()?, m.current_video_mode()?.size()))),
+                );
+            }
             let window = match self.create_os_window(
                 event_loop,
                 spec,

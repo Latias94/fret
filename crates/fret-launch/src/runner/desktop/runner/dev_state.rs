@@ -3,7 +3,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
-use winit::dpi::{LogicalSize, PhysicalPosition, Position};
+use winit::dpi::{LogicalSize, PhysicalPosition, PhysicalSize, Position};
 
 use fret_app::App;
 use fret_core::AppWindowId;
@@ -11,6 +11,32 @@ use fret_core::AppWindowId;
 use super::WindowCreateSpec;
 
 use crate::dev_state::{DevStateHooks, DevStateService, DevStateWindowKeyRegistry};
+
+#[derive(Debug, Clone, Copy)]
+struct MonitorRect {
+    origin: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+}
+
+impl MonitorRect {
+    fn contains_point_with_margin(self, pos: PhysicalPosition<i32>, margin: i32) -> bool {
+        let x0 = self.origin.x.saturating_sub(margin) as i64;
+        let y0 = self.origin.y.saturating_sub(margin) as i64;
+        let x1 = self.origin.x as i64 + self.size.width as i64 + margin as i64;
+        let y1 = self.origin.y as i64 + self.size.height as i64 + margin as i64;
+        let x = pos.x as i64;
+        let y = pos.y as i64;
+        x >= x0 && x <= x1 && y >= y0 && y <= y1
+    }
+}
+
+fn window_pos_is_visible(pos: PhysicalPosition<i32>, monitors: &[MonitorRect]) -> bool {
+    const MARGIN: i32 = 96;
+    monitors
+        .iter()
+        .copied()
+        .any(|m| m.contains_point_with_margin(pos, MARGIN))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RestoreOutcome {
@@ -330,6 +356,40 @@ impl DevStateController {
         }
     }
 
+    pub(crate) fn sanitize_window_spec_position(
+        &mut self,
+        key: &str,
+        spec: &mut WindowCreateSpec,
+        monitors: impl IntoIterator<Item = (PhysicalPosition<i32>, PhysicalSize<u32>)>,
+    ) {
+        if !self.enabled {
+            return;
+        }
+        let Some(Position::Physical(pos)) = spec.position else {
+            return;
+        };
+
+        let monitors: Vec<MonitorRect> = monitors
+            .into_iter()
+            .map(|(origin, size)| MonitorRect { origin, size })
+            .collect();
+        if monitors.is_empty() {
+            return;
+        }
+
+        if window_pos_is_visible(pos, &monitors) {
+            return;
+        }
+
+        debug!(
+            key = %key,
+            x = pos.x,
+            y = pos.y,
+            "dev_state: restored window position is off-screen; dropping position"
+        );
+        spec.position = None;
+    }
+
     pub(crate) fn observe_windows(
         &mut self,
         now: Instant,
@@ -591,5 +651,21 @@ mod tests {
         let _ = std::fs::write(&tmp, json);
         let file = load_dev_state_file(&tmp).expect("read").expect("present");
         assert!(file.app.contains_key("docking.layout"));
+    }
+
+    #[test]
+    fn drops_offscreen_window_positions() {
+        let monitors = [MonitorRect {
+            origin: PhysicalPosition::new(0, 0),
+            size: PhysicalSize::new(1920, 1080),
+        }];
+        assert!(window_pos_is_visible(
+            PhysicalPosition::new(40, 40),
+            &monitors
+        ));
+        assert!(!window_pos_is_visible(
+            PhysicalPosition::new(99999, 99999),
+            &monitors
+        ));
     }
 }
