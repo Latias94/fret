@@ -489,6 +489,7 @@ fn mask_layer_is_paint_only_for_hit_testing_by_default() {
         let mask = fret_core::scene::Mask::Image {
             image: fret_core::ImageId::default(),
             uv: fret_core::scene::UvRect::FULL,
+            sampling: fret_core::scene::ImageSamplingHint::Default,
         };
 
         let root = render_root(ui, app, services, window, bounds, test_id, |cx| {

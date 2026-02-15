@@ -47,24 +47,23 @@ impl<H: UiHost> UiTree<H> {
 
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
-        if let Some(window) = self.window
-            && let Some(crate::declarative::ElementRecord {
-                element,
-                instance,
-                ..
-            }) = crate::declarative::element_record_for_node(app, window, focus)
-            && let crate::declarative::ElementInstance::TextInputRegion(props) = instance
-        {
-            return text_input_region_platform_text_input_query_with_hooks(
-                app,
-                services,
-                window,
-                element,
-                bounds,
-                scale_factor,
-                &props,
-                query,
-            );
+        if let Some(window) = self.window {
+            if let Some(record) = crate::declarative::element_record_for_node(app, window, focus) {
+                let element = record.element;
+                if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance
+                {
+                    return text_input_region_platform_text_input_query_with_hooks(
+                        app,
+                        services,
+                        window,
+                        element,
+                        bounds,
+                        scale_factor,
+                        &props,
+                        query,
+                    );
+                }
+            }
         }
 
         match query {
@@ -139,30 +138,30 @@ impl<H: UiHost> UiTree<H> {
         };
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
-        if let Some(window) = self.window
-            && let Some(crate::declarative::ElementRecord {
-                element,
-                instance,
-                ..
-            }) = crate::declarative::element_record_for_node(app, window, focus)
-            && let crate::declarative::ElementInstance::TextInputRegion(props) = instance
-        {
-            let changed = text_input_region_platform_text_input_replace_text_in_range_utf16_with_hooks(
-                app,
-                services,
-                window,
-                element,
-                bounds,
-                scale_factor,
-                &props,
-                range,
-                text,
-            );
-            if changed {
-                self.invalidate(focus, Invalidation::Layout);
-                self.request_redraw_coalesced(app);
+        if let Some(window) = self.window {
+            if let Some(record) = crate::declarative::element_record_for_node(app, window, focus) {
+                let element = record.element;
+                if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance
+                {
+                    let changed =
+                        text_input_region_platform_text_input_replace_text_in_range_utf16_with_hooks(
+                            app,
+                            services,
+                            window,
+                            element,
+                            bounds,
+                            scale_factor,
+                            &props,
+                            range,
+                            text,
+                        );
+                    if changed {
+                        self.invalidate(focus, Invalidation::Layout);
+                        self.request_redraw_coalesced(app);
+                    }
+                    return changed;
+                }
             }
-            return changed;
         }
 
         let changed = self.with_widget_mut(focus, |w, _tree| {
@@ -200,31 +199,31 @@ impl<H: UiHost> UiTree<H> {
         };
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
-        if let Some(window) = self.window
-            && let Some(crate::declarative::ElementRecord {
-                element,
-                instance,
-                ..
-            }) = crate::declarative::element_record_for_node(app, window, focus)
-            && let crate::declarative::ElementInstance::TextInputRegion(props) = instance
-        {
-            let changed = text_input_region_platform_text_input_replace_and_mark_text_in_range_utf16_with_hooks(
-                app,
-                services,
-                window,
-                element,
-                bounds,
-                scale_factor,
-                &props,
-                range,
-                text,
-                marked,
-            );
-            if changed {
-                self.invalidate(focus, Invalidation::Layout);
-                self.request_redraw_coalesced(app);
+        if let Some(window) = self.window {
+            if let Some(record) = crate::declarative::element_record_for_node(app, window, focus) {
+                let element = record.element;
+                if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance
+                {
+                    let changed =
+                        text_input_region_platform_text_input_replace_and_mark_text_in_range_utf16_with_hooks(
+                            app,
+                            services,
+                            window,
+                            element,
+                            bounds,
+                            scale_factor,
+                            &props,
+                            range,
+                            text,
+                            marked,
+                        );
+                    if changed {
+                        self.invalidate(focus, Invalidation::Layout);
+                        self.request_redraw_coalesced(app);
+                    }
+                    return changed;
+                }
             }
-            return changed;
         }
 
         let changed = self.with_widget_mut(focus, |w, _tree| {
@@ -292,7 +291,10 @@ pub(in crate::tree) fn text_input_region_platform_text_input_snapshot(
             usize::try_from(start).unwrap_or(usize::MAX),
             usize::try_from(end).unwrap_or(usize::MAX),
         );
-        (u32::try_from(s).unwrap_or(u32::MAX), u32::try_from(e).unwrap_or(u32::MAX))
+        (
+            u32::try_from(s).unwrap_or(u32::MAX),
+            u32::try_from(e).unwrap_or(u32::MAX),
+        )
     });
 
     fret_runtime::WindowTextInputSnapshot {
