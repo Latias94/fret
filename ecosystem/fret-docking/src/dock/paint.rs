@@ -173,7 +173,12 @@ pub(super) fn paint_dock(
                 (
                     hover_bg,
                     Edges::all(Px(0.0)),
-                    fret_core::Corners::all(Px(0.0)),
+                    fret_core::Corners {
+                        top_left: radius_sm,
+                        top_right: radius_sm,
+                        bottom_left: Px(0.0),
+                        bottom_right: Px(0.0),
+                    },
                 )
             } else {
                 (
