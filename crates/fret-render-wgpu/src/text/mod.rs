@@ -6957,6 +6957,105 @@ mod tests {
     }
 
     #[test]
+    fn paint_only_changes_miss_blob_cache_but_hit_shape_cache() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        text.begin_frame_diagnostics();
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(200.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let base = TextStyle::default();
+        let content: Arc<str> = Arc::<str>::from("let x = 1;");
+
+        let mk_rich = |kw: Color, ident: Color| {
+            let spans = vec![
+                TextSpan {
+                    len: "let".len(),
+                    shaping: Default::default(),
+                    paint: TextPaintStyle {
+                        fg: Some(kw),
+                        ..Default::default()
+                    },
+                },
+                TextSpan::new(" ".len()),
+                TextSpan {
+                    len: "x".len(),
+                    shaping: Default::default(),
+                    paint: TextPaintStyle {
+                        fg: Some(ident),
+                        ..Default::default()
+                    },
+                },
+                TextSpan::new(" = 1;".len()),
+            ];
+            fret_core::AttributedText::new(Arc::clone(&content), Arc::<[TextSpan]>::from(spans))
+        };
+
+        let rich_a = mk_rich(
+            Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+            Color {
+                r: 0.0,
+                g: 1.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        );
+        let rich_b = mk_rich(
+            Color {
+                r: 0.2,
+                g: 0.2,
+                b: 1.0,
+                a: 1.0,
+            },
+            Color {
+                r: 0.8,
+                g: 0.8,
+                b: 0.0,
+                a: 1.0,
+            },
+        );
+
+        let _ = text.prepare_attributed(&rich_a, &base, constraints);
+        let _ = text.prepare_attributed(&rich_b, &base, constraints);
+
+        let snap = text.diagnostics_snapshot(fret_core::FrameId(1));
+        assert_eq!(
+            snap.frame_blob_cache_hits, 0,
+            "expected paint-only changes to miss the blob cache"
+        );
+        assert_eq!(
+            snap.frame_blob_cache_misses, 2,
+            "expected two distinct blob keys for different paint"
+        );
+        assert_eq!(
+            snap.frame_shape_cache_misses, 1,
+            "expected the first prepare to shape"
+        );
+        assert_eq!(
+            snap.frame_shape_cache_hits, 1,
+            "expected the second prepare to reuse the shaped layout"
+        );
+    }
+
+    #[test]
     fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
         // Use a small variable-font subset as a deterministic fixture.
         const ROBOTO_FLEX_SUBSET: &[u8] = include_bytes!(concat!(
