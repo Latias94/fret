@@ -23,10 +23,34 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 
 ## M2 — Syntax spans per row
 
-- [ ] Produce row-local spans from tree-sitter highlighting events.
-- [ ] Pass `AttributedText` into the renderer (avoid per-span reshaping on paint-only changes).
+- [ ] Define a row-local span model (ecosystem-owned):
+  - [ ] span ranges are **UTF-8 byte offsets** relative to the row `Arc<str>`,
+  - [ ] ranges must be char-boundary aligned (`is_char_boundary`),
+  - [ ] spans are non-overlapping and cover the row text (or a documented "default style" gap
+        policy).
+- [ ] Produce row-local spans from tree-sitter highlighting events:
+  - [ ] map tree-sitter global buffer ranges → display-window ranges (folds/inlays/preedit),
+  - [ ] clamp/normalize out-of-date ranges after edits (best-effort, deterministic),
+  - [ ] split spans at row boundaries (no cross-row spans).
+- [ ] Introduce a stable “highlight class → paint style” mapping:
+  - [ ] keep it paint-only (`TextPaintStyle`), do not set shaping-affecting fields for syntax.
+- [ ] Pass `AttributedText` into the renderer:
+  - [ ] per row, call `TextSystem::prepare_attributed` with `TextWrap::None`,
+  - [ ] avoid per-span reshaping on paint-only changes (cache should reuse shaping/layout).
+- [ ] Regression gates:
+  - [ ] “paint-only span changes do not reshape”:
+    - assert `AttributedText::shaping_eq` holds across theme-only updates,
+    - add a `TextSystem` gate that shape-cache hits remain stable across paint-only edits for the
+      same text + shaping style.
+  - [ ] span range correctness:
+    - emoji ZWJ/VS16 sequences never split,
+    - mixed scripts + surrogate-pair UTF-16 ranges remain deterministic at platform boundaries.
 - [x] Add a test that theme-only changes do not affect shaping keys.
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
+ - [ ] Add an editor-focused test suite (ecosystem) that:
+   - produces row-local spans for a small highlighted snippet,
+   - verifies row segmentation + span mapping agree on byte boundaries,
+   - verifies paint-only changes do not invalidate row shaping.
 
 ## M3 — Wrap policy separation
 
@@ -98,3 +122,18 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
       (`platform_replace_and_mark_non_empty_range_replaces_in_composed_view_without_mutating_base`)
 - [ ] (Future) Decide cancel semantics for selection-replacing composition (restore vs keep deletion) and lock it behind tests/diagnostics.
 - [x] Observe `TextFontStackKey` and invalidate editor-local geometry caches so platform queries never use stale row geometry after font changes.
+
+## M5 — Row geometry cache boundary (future fearless refactor)
+
+Goal: make editor geometry queries (caret/hit-test/IME bounds) **cache-stable and auditable** under:
+folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
+
+- [ ] Define the stable cache key for row geometry:
+  - [ ] text revision + display window mapping epoch,
+  - [ ] shaping-relevant style key (font/axes/features/letter spacing),
+  - [ ] constraints key (wrap width bucket, scale factor),
+  - [ ] `TextFontStackKey` revision.
+- [ ] Ensure paint-only changes never invalidate row geometry caches.
+- [ ] Add a catastrophic regression guard for “resize jitter + visible viewport”:
+  - reuse the UI wrap smoke gate as a baseline,
+  - add a code-editor-specific diag perf script once the row spans pipeline is in place.

@@ -47,6 +47,30 @@ Exit criteria:
 - Paint-only changes do not trigger reshaping/wrapping.
 - A regression test exists for “theme color change” not affecting shaping keys.
 
+Implementation notes (expected):
+
+- Spans are expressed in row-local UTF-8 byte ranges:
+  - ranges are char-boundary aligned,
+  - spans do not cross row boundaries.
+- Syntax highlighting is paint-only:
+  - `TextPaintStyle` is set,
+  - `TextShapingStyle` remains unchanged for syntax (no accidental reshaping).
+
+Evidence checklist:
+
+- `cargo nextest run -p fret-code-editor-view -p fret-code-editor`
+- `cargo nextest run -p fret-render-wgpu`
+
+Evidence anchors (expected):
+
+- Row-local span construction:
+  - `ecosystem/fret-code-editor-view/src/lib.rs`
+  - `ecosystem/fret-code-editor-view/src/...` (row spans module)
+- Renderer integration for rich text rows:
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`rich_text_with_blob`)
+- Shaping-key stability gate:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
+
 ## M3 — Code wrap policy separation
 
 Exit criteria:
@@ -94,3 +118,17 @@ Evidence anchors:
   - `crates/fret-ui/src/tree/paint.rs` (snapshot publishing)
 - Tests:
   - `crates/fret-ui/src/declarative/tests/semantics.rs` (`declarative_text_input_region_answers_platform_text_input_queries_in_utf16`)
+
+## M5 — Row geometry cache boundary (future fearless refactor)
+
+Exit criteria:
+
+- Editor geometry caches have an explicit, stable key that includes:
+  - shaping-relevant style,
+  - wrap/constraints buckets,
+  - scale factor,
+  - `TextFontStackKey` revision.
+- Paint-only (theme) changes do not invalidate row geometry caches.
+- Regression gates exist for:
+  - resize jitter stability,
+  - font stack invalidation (no stale geometry answers).
