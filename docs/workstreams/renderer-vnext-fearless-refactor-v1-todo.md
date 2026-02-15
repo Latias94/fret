@@ -136,7 +136,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ## Always-run guardrails (before/after each milestone)
 
 - [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-  - Last run: 2026-02-15 (post WebGPU uniformity closure), commit `6340d4d4`.
+  - Last run: 2026-02-15 (post quad pipeline variants), commit `6f092733`.
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
   - Status: satisfied through M5 (sampling hints conformance gate landed).
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
