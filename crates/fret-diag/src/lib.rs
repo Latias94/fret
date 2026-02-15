@@ -7386,6 +7386,18 @@ See: `docs/tracy.md`.\n";
                         let top_renderer_scene_encoding_cache_misses = top
                             .map(|r| r.renderer_scene_encoding_cache_misses)
                             .unwrap_or(0);
+                        let top_renderer_material_quad_ops =
+                            top.map(|r| r.renderer_material_quad_ops).unwrap_or(0);
+                        let top_renderer_material_sampled_quad_ops = top
+                            .map(|r| r.renderer_material_sampled_quad_ops)
+                            .unwrap_or(0);
+                        let top_renderer_material_distinct =
+                            top.map(|r| r.renderer_material_distinct).unwrap_or(0);
+                        let top_renderer_material_unknown_ids =
+                            top.map(|r| r.renderer_material_unknown_ids).unwrap_or(0);
+                        let top_renderer_material_degraded_due_to_budget = top
+                            .map(|r| r.renderer_material_degraded_due_to_budget)
+                            .unwrap_or(0);
                         let top_renderer_text_atlas_upload_bytes =
                             top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
                         let top_renderer_text_atlas_evicted_pages = top
@@ -7513,6 +7525,11 @@ See: `docs/tracy.md`.\n";
                                 "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
                                 "top_renderer_scissor_sets": top_renderer_scissor_sets,
                                 "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
+                                "top_renderer_material_quad_ops": top_renderer_material_quad_ops,
+                                "top_renderer_material_sampled_quad_ops": top_renderer_material_sampled_quad_ops,
+                                "top_renderer_material_distinct": top_renderer_material_distinct,
+                                "top_renderer_material_unknown_ids": top_renderer_material_unknown_ids,
+                                "top_renderer_material_degraded_due_to_budget": top_renderer_material_degraded_due_to_budget,
                                 "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
                                 "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
                                 "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
@@ -8146,6 +8163,18 @@ See: `docs/tracy.md`.\n";
                     let top_renderer_scene_encoding_cache_misses = top
                         .map(|r| r.renderer_scene_encoding_cache_misses)
                         .unwrap_or(0);
+                    let top_renderer_material_quad_ops =
+                        top.map(|r| r.renderer_material_quad_ops).unwrap_or(0);
+                    let top_renderer_material_sampled_quad_ops = top
+                        .map(|r| r.renderer_material_sampled_quad_ops)
+                        .unwrap_or(0);
+                    let top_renderer_material_distinct =
+                        top.map(|r| r.renderer_material_distinct).unwrap_or(0);
+                    let top_renderer_material_unknown_ids =
+                        top.map(|r| r.renderer_material_unknown_ids).unwrap_or(0);
+                    let top_renderer_material_degraded_due_to_budget = top
+                        .map(|r| r.renderer_material_degraded_due_to_budget)
+                        .unwrap_or(0);
                     let top_renderer_text_atlas_upload_bytes =
                         top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
                     let top_renderer_text_atlas_evicted_pages = top
@@ -8304,6 +8333,11 @@ See: `docs/tracy.md`.\n";
                         "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
                         "top_renderer_scissor_sets": top_renderer_scissor_sets,
                         "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
+                        "top_renderer_material_quad_ops": top_renderer_material_quad_ops,
+                        "top_renderer_material_sampled_quad_ops": top_renderer_material_sampled_quad_ops,
+                        "top_renderer_material_distinct": top_renderer_material_distinct,
+                        "top_renderer_material_unknown_ids": top_renderer_material_unknown_ids,
+                        "top_renderer_material_degraded_due_to_budget": top_renderer_material_degraded_due_to_budget,
                         "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
                         "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
                         "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
@@ -8387,6 +8421,16 @@ See: `docs/tracy.md`.\n";
                         let mut top_renderer_bind_group_switches: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_renderer_scene_encoding_cache_misses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_material_quad_ops: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_material_sampled_quad_ops: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_material_distinct: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_material_unknown_ids: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_material_degraded_due_to_budget: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_renderer_text_atlas_upload_bytes: Vec<u64> =
                             Vec::with_capacity(repeat);
@@ -8537,6 +8581,31 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_material_quad_ops.push(
+                                run.get("top_renderer_material_quad_ops")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_material_sampled_quad_ops.push(
+                                run.get("top_renderer_material_sampled_quad_ops")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_material_distinct.push(
+                                run.get("top_renderer_material_distinct")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_material_unknown_ids.push(
+                                run.get("top_renderer_material_unknown_ids")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_material_degraded_due_to_budget.push(
+                                run.get("top_renderer_material_degraded_due_to_budget")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                             top_renderer_text_atlas_upload_bytes.push(
                                 run.get("top_renderer_text_atlas_upload_bytes")
                                     .and_then(|v| v.as_u64())
@@ -8671,6 +8740,11 @@ See: `docs/tracy.md`.\n";
 	                                "top_renderer_pipeline_switches": summarize_times_us(&top_renderer_pipeline_switches),
 	                                "top_renderer_bind_group_switches": summarize_times_us(&top_renderer_bind_group_switches),
 	                                "top_renderer_scene_encoding_cache_misses": summarize_times_us(&top_renderer_scene_encoding_cache_misses),
+	                                "top_renderer_material_quad_ops": summarize_times_us(&top_renderer_material_quad_ops),
+	                                "top_renderer_material_sampled_quad_ops": summarize_times_us(&top_renderer_material_sampled_quad_ops),
+	                                "top_renderer_material_distinct": summarize_times_us(&top_renderer_material_distinct),
+	                                "top_renderer_material_unknown_ids": summarize_times_us(&top_renderer_material_unknown_ids),
+	                                "top_renderer_material_degraded_due_to_budget": summarize_times_us(&top_renderer_material_degraded_due_to_budget),
 	                                "top_renderer_text_atlas_upload_bytes": summarize_times_us(&top_renderer_text_atlas_upload_bytes),
 	                                "top_renderer_text_atlas_evicted_pages": summarize_times_us(&top_renderer_text_atlas_evicted_pages),
 	                                "top_renderer_svg_upload_bytes": summarize_times_us(&top_renderer_svg_upload_bytes),
