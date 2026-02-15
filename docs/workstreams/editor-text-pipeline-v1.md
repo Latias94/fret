@@ -107,24 +107,32 @@ easy to audit.
 | Buffer | rope-backed editor buffer (`ropey::Rope`) | Supported | `ecosystem/fret-code-editor-buffer/src/lib.rs` |
 | Display rows | `DisplayMap` + row-local text materialization | Supported (baseline) | `ecosystem/fret-code-editor-view/src/lib.rs` |
 | Row text caching | visible-row `Arc<str>` cache keyed by revision + row + wrap | Supported (baseline) | `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range`) |
+| Syntax spans | per-row `AttributedText` spans (paint-only for syntax) | Supported (baseline) | `ecosystem/fret-code-editor-view/src/row_spans.rs` + `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`materialize_row_rich_text`) |
 | Code wrap policy | presets + knobs, ecosystem-owned | Supported (baseline) | `ecosystem/fret-code-editor-view/src/code_wrap_policy.rs` |
 | Platform text input | composed-view UTF-16 query + snapshot via `TextInputRegion` | Supported (baseline) | `TextInputRegionProps.a11y_value` + UTF-8 ranges → UTF-16 answers |
 | Bounds/hit-test queries | `BoundsForRange` / `CharacterIndexForPoint` via hooks | Supported (opt-in) | Install `TextInputRegionActionHooks.on_platform_text_input_query` |
 | Replace-by-range edits | `replace_*_utf16` via hooks | Supported (opt-in) | Install `TextInputRegionActionHooks` replace handlers; keep limitations explicit. |
+| Row geometry caching | stable `RowGeomKey` (ignores paint-only changes; buckets width) | Supported (baseline) | `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`) + tests |
+| Perf/diag guard | resize jitter catastrophic guard for code editor | Supported | `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json` + `tools/perf/diag_code_editor_resize_jitter_smoke_gate.py` |
 
 ### Key gaps (what to build next)
 
-1) **Row-local attributed spans** for syntax highlighting (tree-sitter → per-row spans), with
-   regression gates that paint-only changes do not trigger reshaping.
-2) **Mapping contracts** for editor surfaces:
+1) **Mapping contracts** for editor surfaces:
    buffer byte ↔ composed a11y window byte ↔ row-local byte ↔ geometry, under folds/inlays/preedit.
-3) **Allocation/perf gates** for large documents:
+2) **Allocation/perf gates** for large documents:
    prevent per-frame `to_string()` churn, ensure shaping/raster work is bounded to visible rows, and
    keep resize jitter stable under width oscillations.
-4) **IME-quality gates** for editor composition flows:
+3) **IME-quality gates** for editor composition flows:
    cursor area (`ime_cursor_area`) stability, surrogate pairs, and deterministic UTF-8↔UTF-16 clamps.
-5) **Calibrated perf baselines** (optional after the catastrophic smoke gate):
+4) **Calibrated perf baselines** (optional after the catastrophic smoke gate):
    record stable per-scenario budgets with attribution bundles.
+
+### Catastrophic perf guards (recommended)
+
+- UI text wrap resize jitter smoke gate:
+  - `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py`
+- Code editor resize jitter smoke gate:
+  - `tools/perf/diag_code_editor_resize_jitter_smoke_gate.py`
 
 ## Proposed Architecture
 

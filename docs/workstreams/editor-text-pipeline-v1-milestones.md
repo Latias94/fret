@@ -140,3 +140,10 @@ Evidence anchors (initial):
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
 - Paint-only stability gate:
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
+
+Resize jitter catastrophic guard (code editor):
+
+- Script:
+  - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+- Smoke gate:
+  - `tools/perf/diag_code_editor_resize_jitter_smoke_gate.py`
