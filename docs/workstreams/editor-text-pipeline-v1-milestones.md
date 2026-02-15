@@ -65,7 +65,7 @@ Evidence anchors (expected):
 
 - Row-local span construction:
   - `ecosystem/fret-code-editor-view/src/lib.rs`
-  - `ecosystem/fret-code-editor-view/src/...` (row spans module)
+  - `ecosystem/fret-code-editor-view/src/row_spans.rs`
 - Renderer integration for rich text rows:
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`rich_text_with_blob`)
 - Shaping-key stability gate:

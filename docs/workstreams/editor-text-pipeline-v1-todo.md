@@ -23,34 +23,44 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 
 ## M2 — Syntax spans per row
 
-- [ ] Define a row-local span model (ecosystem-owned):
-  - [ ] span ranges are **UTF-8 byte offsets** relative to the row `Arc<str>`,
-  - [ ] ranges must be char-boundary aligned (`is_char_boundary`),
-  - [ ] spans are non-overlapping and cover the row text (or a documented "default style" gap
-        policy).
-- [ ] Produce row-local spans from tree-sitter highlighting events:
-  - [ ] map tree-sitter global buffer ranges → display-window ranges (folds/inlays/preedit),
+- [~] Define a row-local span model (ecosystem-owned):
+  - [x] span ranges are **UTF-8 byte offsets** relative to the row `Arc<str>`,
+  - [x] ranges are char-boundary aligned (`is_char_boundary`) (best-effort clamps on mapping),
+  - [x] spans are non-overlapping and cover the row text (gaps filled with default style).
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`materialize_row_rich_text`)
+    - `ecosystem/fret-code-editor-view/src/row_spans.rs`
+- [~] Produce row-local spans from tree-sitter highlighting events:
+  - [x] map base-buffer row ranges → composed display-row ranges (folds/inlays/preedit),
   - [ ] clamp/normalize out-of-date ranges after edits (best-effort, deterministic),
-  - [ ] split spans at row boundaries (no cross-row spans).
-- [ ] Introduce a stable “highlight class → paint style” mapping:
-  - [ ] keep it paint-only (`TextPaintStyle`), do not set shaping-affecting fields for syntax.
-- [ ] Pass `AttributedText` into the renderer:
-  - [ ] per row, call `TextSystem::prepare_attributed` with `TextWrap::None`,
-  - [ ] avoid per-span reshaping on paint-only changes (cache should reuse shaping/layout).
+  - [x] split spans at row boundaries (no cross-row spans) (row clip in paint).
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (row clip + `row_spans` mapping)
+- [x] Introduce a stable “highlight class → paint style” mapping:
+  - [x] keep it paint-only (`TextPaintStyle`), do not set shaping-affecting fields for syntax.
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`syntax_color`)
+- [x] Pass `AttributedText` into the renderer:
+  - [x] per row, call the renderer's attributed-text preparation with `TextWrap::None` (editor-owned wrapping),
+  - [~] avoid per-span reshaping on paint-only changes (relies on renderer shape-key gates; add editor-level gate).
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`rich_text_with_blob`)
 - [ ] Regression gates:
   - [ ] “paint-only span changes do not reshape”:
     - assert `AttributedText::shaping_eq` holds across theme-only updates,
-    - add a `TextSystem` gate that shape-cache hits remain stable across paint-only edits for the
+    - [x] add a `TextSystem` gate that shape-cache hits remain stable across paint-only edits for the
       same text + shaping style.
+      - `crates/fret-render-wgpu/src/text/mod.rs` (`paint_only_changes_miss_blob_cache_but_hit_shape_cache`)
   - [ ] span range correctness:
     - emoji ZWJ/VS16 sequences never split,
     - mixed scripts + surrogate-pair UTF-16 ranges remain deterministic at platform boundaries.
 - [x] Add a test that theme-only changes do not affect shaping keys.
   - `crates/fret-render-wgpu/src/text/mod.rs` (`multispan_paint_changes_do_not_affect_shape_key`)
- - [ ] Add an editor-focused test suite (ecosystem) that:
-   - produces row-local spans for a small highlighted snippet,
-   - verifies row segmentation + span mapping agree on byte boundaries,
-   - verifies paint-only changes do not invalidate row shaping.
+ - [~] Add an editor-focused test suite (ecosystem) that:
+   - [x] validates row-local mapping under fold/inlay/preedit composition,
+   - [ ] verifies paint-only changes do not invalidate row shaping.
+   - Evidence:
+     - `ecosystem/fret-code-editor-view/src/row_spans.rs` (end-to-end mapping tests)
 
 ## M3 — Wrap policy separation
 
@@ -121,6 +131,13 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`platform_replace_and_mark_non_empty_range_replaces_in_composed_view_without_mutating_base`)
 - [ ] (Future) Decide cancel semantics for selection-replacing composition (restore vs keep deletion) and lock it behind tests/diagnostics.
+  - Reference (Zed / GPUI): the platform bridge forwards composition end via `unmarkText()` on macOS,
+    which calls the view's `unmark_text`; Zed's editor clears its composition highlight and drops the
+    IME transaction on `unmark_text`.
+    - `repo-ref/zed/crates/gpui/src/platform/mac/window.rs` (`unmark_text`)
+    - `repo-ref/zed/crates/editor/src/editor.rs` (`unmark_text`, `replace_and_mark_text_in_range`)
+  - Hypothesis to validate: "cancel" often arrives as a `setMarkedText` with an empty string and a
+    replacement range that deletes the current marked range, followed by `unmarkText`.
 - [x] Observe `TextFontStackKey` and invalidate editor-local geometry caches so platform queries never use stale row geometry after font changes.
 
 ## M5 — Row geometry cache boundary (future fearless refactor)
