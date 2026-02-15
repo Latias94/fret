@@ -1,5 +1,11 @@
 # Hotpatch Devloop Alignment v1 — Milestones
 
+Current status (2026-02-15):
+
+- M0: Achieved (baseline UX + observability shipped)
+- M1: In progress (fallback ladder mostly in place; crash-driven restart UX still open)
+- M2/M3/M4: Achieved (theme/assets/literals no-compile channels shipped; fonts apply included)
+
 ## M0 — Baseline UX + observability (short)
 
 Deliverables:
@@ -15,6 +21,12 @@ Exit criteria:
 
 - A user can answer “am I actually hotpatching Rust code?” from the first 10 lines of output.
 
+Evidence anchors:
+
+- `apps/fretboard/src/dev.rs` (startup Hotpatch Summary)
+- `apps/fretboard/src/hotpatch.rs` (`fretboard hotpatch status`)
+- `.fret/hotpatch_runner.log`, `.fret/hotpatch_bootstrap.log` (stable log locations)
+
 ## M1 — Predictable fallback ladder (time-boxed)
 
 Deliverables:
@@ -28,6 +40,11 @@ Exit criteria:
 
 - Windows “patched view crash” does not present as a silent failure; the user gets a clear next action.
 
+Evidence anchors:
+
+- `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md` (Windows known issue)
+- `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (view call strategy; Windows safety default)
+
 ## M2 — Theme reload (no compile) (time-boxed)
 
 Deliverables:
@@ -39,6 +56,10 @@ Exit criteria:
 
 - Change a theme token file and see UI update without rebuilding.
 
+Evidence anchors:
+
+- `ecosystem/fret-bootstrap/src/dev_reload.rs` (theme watcher + apply)
+
 ## M3 — Asset reload (no compile) (time-boxed)
 
 Deliverables:
@@ -48,6 +69,13 @@ Deliverables:
 Exit criteria:
 
 - Replace an asset file and see UI update without rebuilding.
+
+Evidence anchors:
+
+- `ecosystem/fret-ui-assets/src/reload.rs` (`UiAssetsReloadEpoch`)
+- `ecosystem/fret-ui-assets/src/image_source.rs` (epoch in cache keys)
+- `ecosystem/fret-ui-assets/src/svg_file.rs` (epoch-gated SVG file bytes)
+- `ecosystem/fret-bootstrap/src/dev_reload.rs` (trigger file watcher)
 
 ## M4 — Hot literals (no compile) (time-boxed)
 
@@ -59,3 +87,7 @@ Exit criteria:
 
 - Update a label/tooltip via a data file and see UI update without rebuilding.
 
+Evidence anchors:
+
+- `ecosystem/fret-ui-literals/src/lib.rs`
+- `ecosystem/fret-bootstrap/src/dev_reload.rs`
