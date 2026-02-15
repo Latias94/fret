@@ -11,8 +11,8 @@ use fret_docking::{
     render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    DevStateService, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
@@ -27,6 +27,7 @@ const DOCKING_DEMO_TAB_BAR_H: Px = Px(28.0);
 const DOCKING_DEMO_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 
 const CMD_DOCK_DEMO_SPLIT_TOGGLE: &str = "dock_demo.split.toggle";
+const DEV_STATE_DOCKING_LAYOUT_KEY: &str = "docking.layout";
 
 struct DockingDemoDragAnchor {
     test_id: &'static str,
@@ -249,6 +250,7 @@ struct DockingDemoWindowState {
 #[derive(Default)]
 struct DockingDemoDriver {
     docking_runtime: Option<DockingRuntime>,
+    main_window: Option<AppWindowId>,
 }
 
 impl DockingDemoDriver {
@@ -267,6 +269,13 @@ impl DockingDemoDriver {
     fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
         use fret_core::{Axis, DockNode, PanelKey};
 
+        let incoming_layout: Option<fret_core::DockLayout> =
+            app.with_global_mut(DevStateService::default, |svc, _app| {
+                svc.take_incoming(DEV_STATE_DOCKING_LAYOUT_KEY)
+                    .and_then(|v| serde_json::from_value(v).ok())
+            });
+
+        let mut created_or_restored = false;
         app.with_global_mut(DockManager::default, |dock, _app| {
             dock.ensure_panel(&PanelKey::new("core.hierarchy"), || DockPanel {
                 title: "Hierarchy".to_string(),
@@ -283,6 +292,14 @@ impl DockingDemoDriver {
                 return;
             }
 
+            if let Some(layout) = incoming_layout.as_ref() {
+                let windows = [(window, "main".to_string())];
+                if dock.graph.import_layout_for_windows(layout, &windows) {
+                    created_or_restored = true;
+                    return;
+                }
+            }
+
             let left = dock.graph.insert_node(DockNode::Tabs {
                 tabs: vec![PanelKey::new("core.hierarchy")],
                 active: 0,
@@ -297,6 +314,28 @@ impl DockingDemoDriver {
                 fractions: vec![0.5, 0.5],
             });
             dock.graph.set_window_root(window, split);
+            created_or_restored = true;
+        });
+
+        if created_or_restored {
+            Self::persist_dock_layout(app, window);
+        }
+    }
+
+    fn persist_dock_layout(app: &mut App, window: AppWindowId) {
+        let Some(layout) = app
+            .global::<DockManager>()
+            .map(|dock| dock.graph.export_layout(&[(window, "main".to_string())]))
+        else {
+            return;
+        };
+
+        let Ok(value) = serde_json::to_value(layout) else {
+            return;
+        };
+
+        app.with_global_mut(DevStateService::default, |svc, _app| {
+            svc.set_outgoing(DEV_STATE_DOCKING_LAYOUT_KEY, value);
         });
     }
 
@@ -349,6 +388,7 @@ impl WinitAppDriver for DockingDemoDriver {
 
     fn init(&mut self, _app: &mut App, main_window: AppWindowId) {
         self.docking_runtime = Some(DockingRuntime::new(main_window));
+        self.main_window = Some(main_window);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -432,13 +472,16 @@ impl WinitAppDriver for DockingDemoDriver {
             };
 
             let target = if first_fraction < 0.2 { 0.5 } else { 0.12 };
-            let _ = rt.on_dock_op(
+            let changed = rt.on_dock_op(
                 app,
                 fret_core::DockOp::SetSplitFractionTwo {
                     split,
                     first_fraction: target,
                 },
             );
+            if changed {
+                Self::persist_dock_layout(app, window);
+            }
             return;
         }
         if command.as_str() == "dock_demo.close" {
@@ -475,11 +518,14 @@ impl WinitAppDriver for DockingDemoDriver {
     }
 
     fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
-        let _ = self
+        let changed = self
             .docking_runtime
             .as_ref()
             .map(|rt| rt.on_dock_op(app, op))
             .unwrap_or(false);
+        if changed && let Some(main_window) = self.main_window {
+            Self::persist_dock_layout(app, main_window);
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -614,19 +660,25 @@ impl WinitAppDriver for DockingDemoDriver {
         request: &fret_app::CreateWindowRequest,
         new_window: AppWindowId,
     ) {
-        let _ = self
+        let changed = self
             .docking_runtime
             .as_ref()
             .map(|rt| rt.on_window_created(app, request, new_window))
             .unwrap_or(false);
+        if changed && let Some(main_window) = self.main_window {
+            Self::persist_dock_layout(app, main_window);
+        }
     }
 
     fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
-        let _ = self
+        let changed = self
             .docking_runtime
             .as_ref()
             .map(|rt| rt.before_close_window(app, window))
             .unwrap_or(false);
+        if changed && let Some(main_window) = self.main_window {
+            Self::persist_dock_layout(app, main_window);
+        }
         true
     }
 
