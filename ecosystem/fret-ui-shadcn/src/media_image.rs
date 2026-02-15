@@ -1,3 +1,4 @@
+use fret_core::scene::ImageSamplingHint;
 use fret_core::{ImageId, ViewportFit};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ImageProps, LayoutStyle, Length, Overflow, SizeStyle};
@@ -18,6 +19,7 @@ use crate::Skeleton;
 pub struct MediaImage {
     source: MediaImageSource,
     fit: ViewportFit,
+    sampling: ImageSamplingHint,
     opacity: f32,
     loading: bool,
     intrinsic_aspect_ratio_from_metadata: bool,
@@ -49,6 +51,7 @@ impl MediaImage {
         Self {
             source: MediaImageSource::Ready(image),
             fit: ViewportFit::Cover,
+            sampling: ImageSamplingHint::Default,
             opacity: 1.0,
             loading: false,
             intrinsic_aspect_ratio_from_metadata: false,
@@ -75,6 +78,11 @@ impl MediaImage {
 
     pub fn fit(mut self, fit: ViewportFit) -> Self {
         self.fit = fit;
+        self
+    }
+
+    pub fn sampling_hint(mut self, sampling: ImageSamplingHint) -> Self {
+        self.sampling = sampling;
         self
     }
 
@@ -155,6 +163,7 @@ impl MediaImage {
         );
 
         let fit = self.fit;
+        let sampling = self.sampling;
         let opacity = self.opacity.clamp(0.0, 1.0);
         let loading = self.loading;
         let loading_slot = self.loading_slot;
@@ -174,13 +183,18 @@ impl MediaImage {
                                 height: Length::Fill,
                                 ..Default::default()
                             };
-                            vec![cx.image_props(ImageProps {
-                                layout: image_layout,
-                                image,
-                                fit,
-                                opacity,
-                                uv: None,
-                            })]
+                            vec![
+                                cx.image_props(
+                                    ImageProps {
+                                        layout: image_layout,
+                                        fit,
+                                        opacity,
+                                        uv: None,
+                                        ..ImageProps::new(image)
+                                    }
+                                    .sampling(sampling),
+                                ),
+                            ]
                         } else if loading {
                             if let Some(slot) = loading_slot {
                                 vec![slot]
@@ -224,13 +238,18 @@ impl MediaImage {
                             height: Length::Fill,
                             ..Default::default()
                         };
-                        vec![cx.image_props(ImageProps {
-                            layout: image_layout,
-                            image,
-                            fit,
-                            opacity,
-                            uv: None,
-                        })]
+                        vec![
+                            cx.image_props(
+                                ImageProps {
+                                    layout: image_layout,
+                                    fit,
+                                    opacity,
+                                    uv: None,
+                                    ..ImageProps::new(image)
+                                }
+                                .sampling(sampling),
+                            ),
+                        ]
                     } else if loading {
                         if let Some(slot) = loading_slot {
                             vec![slot]
