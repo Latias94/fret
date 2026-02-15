@@ -16,6 +16,33 @@ use super::tab_overflow::{
 use fret_ui::retained_bridge::ResizeHandle;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
+fn tab_title_clip_rect(
+    theme: fret_ui::ThemeSnapshot,
+    tab_rect: Rect,
+    close_glyph_present: bool,
+) -> Rect {
+    let pad_x = theme.metric_token("metric.padding.md").0.max(0.0);
+    let pad_sm = theme.metric_token("metric.padding.sm").0.max(0.0);
+    let reserve = if close_glyph_present {
+        DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0 + pad_sm
+    } else {
+        0.0
+    };
+
+    // Keep at least a 1px content span so text doesn't disappear entirely under theme metric
+    // misconfiguration (e.g. overly large padding).
+    let max_pad = (tab_rect.size.width.0 - reserve - 1.0).max(0.0);
+    let pad_x = pad_x.clamp(0.0, max_pad);
+
+    Rect {
+        origin: Point::new(Px(tab_rect.origin.x.0 + pad_x), tab_rect.origin.y),
+        size: Size::new(
+            Px((tab_rect.size.width.0 - pad_x - reserve).max(1.0)),
+            tab_rect.size.height,
+        ),
+    }
+}
+
 pub(super) struct PaintDockParams<'a> {
     pub(super) window: fret_core::AppWindowId,
     pub(super) layout: &'a std::collections::HashMap<DockNodeId, Rect>,
@@ -181,8 +208,8 @@ pub(super) fn paint_dock(
             }
 
             if let Some(title) = tab_titles.get(panel) {
-                let pad_x = pad_md;
-                let text_x = Px(tab_rect.origin.x.0 + pad_x.0);
+                let clip = tab_title_clip_rect(theme, tab_rect, tab_close_glyph.is_some());
+                let text_x = clip.origin.x;
                 let inner_y = tab_rect.origin.y.0
                     + ((tab_rect.size.height.0 - title.metrics.size.height.0) * 0.5);
                 let text_y = Px(inner_y + title.metrics.baseline.0);
@@ -192,7 +219,7 @@ pub(super) fn paint_dock(
                     fg_muted
                 };
 
-                scene.push(SceneOp::PushClipRect { rect: tab_rect });
+                scene.push(SceneOp::PushClipRect { rect: clip });
                 scene.push(SceneOp::Text {
                     order: fret_core::DrawOrder(4),
                     origin: Point::new(text_x, text_y),
