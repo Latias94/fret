@@ -580,6 +580,40 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
             .build(),
     );
 
+    out.insert(
+        "openUrl".to_string(),
+        action("Open a URL (portable effect; app-owned policy).")
+            .param(
+                "url",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "URL to open (e.g. https://example.com).",
+                ),
+            )
+            .param(
+                "target",
+                desc(CatalogPropV1::string(), "Optional target (web-only)."),
+            )
+            .param(
+                "rel",
+                desc(CatalogPropV1::string(), "Optional rel (web-only)."),
+            )
+            .build(),
+    );
+
+    out.insert(
+        "clipboardSetText".to_string(),
+        action("Set clipboard text (portable effect; app-owned policy).")
+            .param(
+                "text",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Text to copy to clipboard.",
+                ),
+            )
+            .build(),
+    );
+
     out
 }
 

@@ -92,6 +92,6 @@ Candidate exit criteria:
 
 Candidate exit criteria:
 
-- A validation state model exists (issues keyed by JSON Pointer paths).
-- At least one submit-like action is gated by `validate_all()` via the app-owned executor.
-- Demo shows validation failures deterministically (no silent accept) and exposes issues in the inspector.
+- ✅ A validation state model exists (issues keyed by JSON Pointer paths).
+- ✅ At least one submit-like action is gated by `validate_all()` via the app-owned executor.
+- ✅ Demo shows validation failures deterministically (no silent accept) and exposes issues in the inspector.

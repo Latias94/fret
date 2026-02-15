@@ -59,9 +59,9 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 
 ## P2.5 — Validation loop (forms, app-owned)
 
-- [ ] Decide v1 validation contract: issues keyed by JSON Pointer paths (e.g. `/form/email`), plus a stable issue shape for UI rendering.
-- [ ] Add a small validation helper (ecosystem-first): `ValidationState` model + `validate_all()` (spec/state + validator registry).
-- [ ] Wire `validate_all()` into submit-like actions via the app-owned executor (gate submit; record issues; keep UI policy app-owned).
+- [x] Decide v1 validation contract: issues keyed by JSON Pointer paths (e.g. `/form/email`), plus a stable issue shape for UI rendering.
+- [x] Add a small validation helper (ecosystem-first): `ValidationStateV1` + `validate_all()` (validator registry).
+- [x] Wire `validate_all()` into submit-like actions via the app-owned executor (gate submit; record issues; keep UI policy app-owned). Demo: `apps/fret-examples/src/genui_demo.rs`.
 
 ## P3 — Schema export for LLM structured outputs
 

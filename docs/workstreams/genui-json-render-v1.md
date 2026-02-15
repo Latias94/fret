@@ -31,6 +31,7 @@ This workstream has an end-to-end MVP implementation in-tree:
   - Resolver: `ecosystem/fret-genui-shadcn/src/resolver/mod.rs` (and submodules)
 
 - Interactive demo (validates + renders + inspector tabs for state/queue/issues/spec/schema/prompt/editor/stream; supports optional spec auto-fix on apply; auto-applies standard actions via `GenUiRuntime.auto_apply_standard_actions`): `apps/fret-examples/src/genui_demo.rs`
+- Demo validation loop (app-owned): a minimal `validate_all()` helper and an executor-gated `formSubmit` handler with inspector visibility: `apps/fret-examples/src/genui_demo.rs`
 - Smoke gate (strict catalog validation; layout/typography/responsive sanity): `ecosystem/fret-genui-shadcn/tests/genui_layout_typography_smoke.rs`
 
 Workstream tracking:

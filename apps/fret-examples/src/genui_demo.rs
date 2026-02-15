@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use fret::prelude::*;
-use fret_genui_core::catalog::CatalogV1;
+use fret_genui_core::catalog::{CatalogActionV1, CatalogPropV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
+use fret_genui_core::form_validation::{
+    ValidationIssueV1, ValidationRegistryV1, ValidationStateV1, validate_all,
+};
 use fret_genui_core::json_pointer;
 use fret_genui_core::mixed_stream::{MixedSpecStreamCompiler, MixedStreamMode, MixedStreamOptions};
 use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
@@ -81,6 +84,11 @@ const SPEC_JSON: &str = r#"
         "executor_row",
         "executor_result_row",
         "sep_4",
+        "validation_title",
+        "validation_desc",
+        "email_row",
+        "submit_row",
+        "sep_5",
         "responsive_title",
         "responsive_grid_box",
         "responsive_stack_title",
@@ -230,7 +238,7 @@ const SPEC_JSON: &str = r#"
     "ex_unknown_action": {
       "type": "Button",
       "props": { "label": "Unknown action" },
-      "on": { "press": { "action": "nope", "params": {}, "confirm": true, "onError": [
+      "on": { "press": { "action": "demoUnimplemented", "params": {}, "confirm": true, "onError": [
         { "action": "setState", "params": { "statePath": "/lastResult", "value": "unknown action error" } },
         { "action": "clipboardSetText", "params": { "text": "unknown action error" } }
       ] } },
@@ -245,6 +253,37 @@ const SPEC_JSON: &str = r#"
     "executor_result_value": { "type": "Badge", "props": { "label": { "$state": "/lastResult" }, "variant": "secondary" }, "children": [] },
 
     "sep_4": { "type": "Separator", "props": {}, "children": [] },
+
+    "validation_title": { "type": "Text", "props": { "text": "Validation loop (submit is executor-gated)", "variant": "large" }, "children": [] },
+    "validation_desc": { "type": "Text", "props": { "text": "Try submitting with an invalid email. The app-owned formSubmit handler runs validate_all(), records issues into devtools state, and fails fast (onError chain).", "variant": "muted" }, "children": [] },
+    "email_row": {
+      "type": "HStack",
+      "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true, "minW0": true },
+      "children": ["email_label", "email_input", "email_value"]
+    },
+    "email_label": { "type": "Text", "props": { "text": "Email:" }, "children": [] },
+    "email_input": {
+      "type": "Input",
+      "props": { "placeholder": "you@example.com", "value": { "$bindState": "/form/email" }, "flex1": true, "minW0": true },
+      "children": []
+    },
+    "email_value": { "type": "Text", "props": { "text": { "$state": "/form/email" }, "variant": "small" }, "children": [] },
+    "submit_row": {
+      "type": "HStack",
+      "props": { "gap": "N2", "wrap": true, "items": "center" },
+      "children": ["submit_btn"]
+    },
+    "submit_btn": {
+      "type": "Button",
+      "props": { "label": "Submit form" },
+      "on": { "press": { "action": "formSubmit", "params": { "formName": "Demo" }, "confirm": true,
+        "onSuccess": { "action": "setState", "params": { "statePath": "/lastResult", "value": "submit ok" } },
+        "onError": { "action": "setState", "params": { "statePath": "/lastResult", "value": "submit failed (see Validation tab)" } }
+      } },
+      "children": []
+    },
+
+    "sep_5": { "type": "Separator", "props": {}, "children": [] },
     "responsive_title": { "type": "Text", "props": { "text": "ResponsiveGrid (container query demo)", "variant": "large" }, "children": [] },
     "responsive_grid_box": {
       "type": "Box",
@@ -313,7 +352,8 @@ const SPEC_JSON: &str = r#"
       { "id": "b", "label": "Render from a flat spec + catalog" },
       { "id": "c", "label": "Repeat scopes with stable keys" }
     ],
-    "lastResult": ""
+    "lastResult": "",
+    "form": { "email": "" }
   }
 }
 "#;
@@ -322,6 +362,7 @@ struct GenUiState {
     spec: SpecV1,
     catalog: Arc<CatalogV1>,
     genui_state: Model<Value>,
+    validation_state: Model<ValidationStateV1>,
     action_queue: Model<GenUiActionQueue>,
     queue_summary: Option<Arc<str>>,
     auto_apply_standard_actions: Model<bool>,
@@ -355,10 +396,35 @@ impl MvuProgram for GenUiProgram {
     fn init(app: &mut App, _window: AppWindowId) -> Self::State {
         let spec: SpecV1 = serde_json::from_str(SPEC_JSON).expect("SPEC_JSON must parse");
         let seed = spec.state.clone().unwrap_or(Value::Null);
+        let mut catalog = shadcn_catalog_v1();
+        {
+            let mut form_name = CatalogPropV1::string();
+            form_name.description = Some("Optional form name for UX/logging.".to_string());
+            let mut params = std::collections::BTreeMap::new();
+            params.insert("formName".to_string(), form_name);
+            catalog.actions.insert(
+                "formSubmit".to_string(),
+                CatalogActionV1 {
+                    description: Some("Submit a form (app-owned validation/policy).".to_string()),
+                    params,
+                },
+            );
+        }
+        catalog.actions.insert(
+            "demoUnimplemented".to_string(),
+            CatalogActionV1 {
+                description: Some(
+                    "Demo-only action. Intentionally unimplemented to exercise executor error paths."
+                        .to_string(),
+                ),
+                params: Default::default(),
+            },
+        );
         GenUiState {
             spec,
-            catalog: Arc::new(shadcn_catalog_v1()),
+            catalog: Arc::new(catalog),
             genui_state: app.models_mut().insert(seed),
+            validation_state: app.models_mut().insert(ValidationStateV1::default()),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
             queue_summary: None,
             auto_apply_standard_actions: app.models_mut().insert(true),
@@ -401,13 +467,39 @@ impl MvuProgram for GenUiProgram {
 
                 let mut host = fret_ui::action::UiActionHostAdapter { app };
                 let state_model = state.genui_state.clone();
+                let validation_model = state.validation_state.clone();
+                let validation_registry =
+                    Arc::new(ValidationRegistryV1::new().with_validator(Arc::new(|st| {
+                        let mut issues: Vec<ValidationIssueV1> = Vec::new();
+                        let email = json_pointer::get_opt(st, "/form/email")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .trim();
+                        if email.is_empty() {
+                            issues.push(ValidationIssueV1 {
+                                path: "/form/email".to_string(),
+                                code: "required".to_string(),
+                                message: "Email is required.".to_string(),
+                            });
+                        } else if !email.contains('@') || !email.contains('.') {
+                            issues.push(ValidationIssueV1 {
+                                path: "/form/email".to_string(),
+                                code: "format".to_string(),
+                                message: "Email must look like an email address.".to_string(),
+                            });
+                        }
+                        issues
+                    })));
                 let mut executor = GenUiActionExecutorV1::new(state_model.clone())
-                    .confirm_policy(Box::new(move |host, _inv, confirm| {
+                    .confirm_policy(Box::new(move |host, inv, confirm| {
                         let requires_confirm = match confirm {
                             Value::Bool(v) => *v,
                             _ => true,
                         };
                         if !requires_confirm {
+                            return true;
+                        }
+                        if inv.action.as_ref() == "formSubmit" {
                             return true;
                         }
 
@@ -435,6 +527,29 @@ impl MvuProgram for GenUiProgram {
                     }))
                     .with_standard_actions()
                     .with_portable_effect_actions();
+                {
+                    let validation_registry = validation_registry.clone();
+                    executor.register_handler(
+                        "formSubmit",
+                        Arc::new(move |host, state, _inv| {
+                            let current = host
+                                .models_mut()
+                                .read(state, Clone::clone)
+                                .ok()
+                                .unwrap_or(Value::Null);
+                            let out = validate_all(&current, &validation_registry);
+                            let ok = out.is_ok();
+                            let _ = host.models_mut().update(&validation_model, |v| *v = out);
+                            if ok {
+                                Ok(())
+                            } else {
+                                Err(fret_genui_core::executor::GenUiExecError::HandlerFailed {
+                                    message: "validation failed".to_string(),
+                                })
+                            }
+                        }),
+                    );
+                }
 
                 let mut applied: usize = 0;
                 let mut skipped: usize = 0;
@@ -456,6 +571,9 @@ impl MvuProgram for GenUiProgram {
             Msg::ResetState => {
                 let seed = state.spec.state.clone().unwrap_or(Value::Null);
                 let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
+                let _ = app.models_mut().update(&state.validation_state, |v| {
+                    *v = ValidationStateV1::default()
+                });
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
@@ -479,6 +597,9 @@ impl MvuProgram for GenUiProgram {
                         state.auto_fix_summary = summarize_fixups(auto_fix, &fixups);
                         let seed = state.spec.state.clone().unwrap_or(Value::Null);
                         let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
+                        let _ = app.models_mut().update(&state.validation_state, |v| {
+                            *v = ValidationStateV1::default()
+                        });
                         let _ = app
                             .models_mut()
                             .update(&state.action_queue, |q| q.invocations.clear());
@@ -561,6 +682,9 @@ impl MvuProgram for GenUiProgram {
 
                         let seed = state.spec.state.clone().unwrap_or(Value::Null);
                         let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
+                        let _ = app.models_mut().update(&state.validation_state, |v| {
+                            *v = ValidationStateV1::default()
+                        });
                         let _ = app
                             .models_mut()
                             .update(&state.action_queue, |q| q.invocations.clear());
@@ -679,6 +803,26 @@ fn view(
         .ok()
         .unwrap_or_else(|| vec![Arc::<str>::from("null")]);
     let state_lines: Vec<AnyElement> = state_snapshot
+        .into_iter()
+        .map(|line| ui::text(cx, line).text_sm().into_element(cx))
+        .collect();
+
+    let (validation_issue_count, validation_snapshot): (usize, Vec<Arc<str>>) = cx
+        .watch_model(&st.validation_state)
+        .layout()
+        .read(|_host, v| {
+            let pretty =
+                serde_json::to_string_pretty(v).unwrap_or_else(|_| "<validation>".to_string());
+            (
+                v.count(),
+                pretty
+                    .lines()
+                    .map(|line| Arc::<str>::from(line.to_string()))
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .unwrap_or_else(|_| (0, vec![Arc::<str>::from("<validation unavailable>")]));
+    let validation_lines: Vec<AnyElement> = validation_snapshot
         .into_iter()
         .map(|line| ui::text(cx, line).text_sm().into_element(cx))
         .collect();
@@ -919,6 +1063,16 @@ fn view(
         .h_full()
         .into_element(cx);
 
+        let validation_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| validation_lines)
+            .gap(Space::N0)
+            .w_full()
+            .items_start()
+            .into_element(cx)])
+        .ui()
+        .w_full()
+        .h_full()
+        .into_element(cx);
+
         let spec_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| spec_lines)
             .gap(Space::N0)
             .w_full()
@@ -1106,6 +1260,11 @@ fn view(
                     "issues",
                     format!("Issues ({spec_issue_count})"),
                     [issues_scroll],
+                ),
+                shadcn::TabsItem::new(
+                    "validation",
+                    format!("Validation ({validation_issue_count})"),
+                    [validation_scroll],
                 ),
                 shadcn::TabsItem::new("spec", "Spec", [spec_scroll]),
                 shadcn::TabsItem::new("schema", "Schema", [schema_scroll]),
