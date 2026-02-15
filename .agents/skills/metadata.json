@@ -33,11 +33,15 @@
     },
     "measure_or_gate_performance": {
       "primary": "fret-diag-workflow",
-      "also_consider": ["fret-ui-review"]
+      "also_consider": ["fret-perf-optimization", "fret-ui-review"]
     },
     "attribute_perf_hitches": {
       "primary": "fret-diag-workflow",
-      "also_consider": ["fret-ui-review"]
+      "also_consider": ["fret-perf-optimization", "fret-ui-review"]
+    },
+    "optimize_performance": {
+      "primary": "fret-perf-optimization",
+      "also_consider": ["fret-diag-workflow", "fret-ui-review", "fret-boundary-checks"]
     },
     "align_with_upstream_shadcn_radix": {
       "primary": "fret-shadcn-source-alignment",
@@ -60,7 +64,8 @@
     ],
     "framework": ["fret-framework-maintainer-guide", "fret-mobile-real-device-debug"],
     "ui": ["fret-app-ui-builder", "fret-ui-review"],
-    "diagnostics": ["fret-diag-workflow"],
+    "diagnostics": ["fret-diag-workflow", "fret-perf-optimization"],
+    "performance": ["fret-perf-optimization", "fret-diag-workflow"],
     "parity": ["fret-shadcn-source-alignment"],
     "quality": [
       "fret-crate-audits",
@@ -316,7 +321,7 @@
     "local_snapshots": "Local upstream snapshots are optional and are not part of the published skills bundle."
   },
   "profiles": {
-    "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow"],
+    "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow", "fret-perf-optimization"],
     "framework-dev": [
       "fret-repo-orientation",
       "fret-skills-playbook",
@@ -326,6 +331,7 @@
       "fret-app-ui-builder",
       "fret-ui-review",
       "fret-diag-workflow",
+      "fret-perf-optimization",
       "fret-shadcn-source-alignment",
       "fret-crate-audits",
       "fret-boundary-checks",
