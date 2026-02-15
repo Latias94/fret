@@ -371,7 +371,49 @@ fn section_row<H: UiHost>(
                     if let Some(test_id) = test_id.as_ref() {
                         el = el.test_id(test_id.clone());
                     }
-                    out.push(el);
+                    out.push(cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Auto,
+                                    height: Length::Px(density.row_height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: Axis::Horizontal,
+                            gap: Px(4.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            vec![
+                                el,
+                                cx.text_props(TextProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Auto,
+                                            height: Length::Auto,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    text: Arc::from("Link"),
+                                    style: Some(TextStyle {
+                                        size: Px(10.0),
+                                        line_height: Some(density.row_height),
+                                        ..Default::default()
+                                    }),
+                                    color: Some(label_fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    align: TextAlign::Start,
+                                }),
+                            ]
+                        },
+                    ));
                 }
             }
 
@@ -447,22 +489,91 @@ fn section_col_with_link<H: UiHost>(
 ) -> AnyElement {
     let mut col = section_col(cx, label, content);
     if show_link {
-        col = cx.container(Default::default(), move |cx| {
-            let mut out = vec![col];
-            let mut el = Checkbox::new(linked_scale)
-                .options(CheckboxOptions {
-                    a11y_label: Some(Arc::from("Link scale")),
-                    focusable: true,
-                    enabled: true,
+        let theme = Theme::global(&*cx.app);
+        let label_fg = theme
+            .color_by_key("muted-foreground")
+            .or_else(|| theme.color_by_key("muted_foreground"))
+            .unwrap_or_else(|| theme.color_token("foreground"));
+
+        col = cx.flex(
+            FlexProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
                     ..Default::default()
-                })
-                .into_element(cx);
-            if let Some(test_id) = link_test_id.as_ref() {
-                el = el.test_id(test_id.clone());
-            }
-            out.push(el);
-            out
-        });
+                },
+                direction: Axis::Vertical,
+                gap: Px(4.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
+            move |cx| {
+                let mut out = vec![col];
+
+                let mut el = Checkbox::new(linked_scale)
+                    .options(CheckboxOptions {
+                        a11y_label: Some(Arc::from("Link scale")),
+                        focusable: true,
+                        enabled: true,
+                        ..Default::default()
+                    })
+                    .into_element(cx);
+                if let Some(test_id) = link_test_id.as_ref() {
+                    el = el.test_id(test_id.clone());
+                }
+
+                out.push(cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        direction: Axis::Horizontal,
+                        gap: Px(4.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        vec![
+                            el,
+                            cx.text_props(TextProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Auto,
+                                        height: Length::Auto,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                text: Arc::from("Uniform"),
+                                style: Some(TextStyle {
+                                    size: Px(10.0),
+                                    line_height: Some(Px(12.0)),
+                                    ..Default::default()
+                                }),
+                                color: Some(label_fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                                align: TextAlign::Start,
+                            }),
+                        ]
+                    },
+                ));
+
+                out
+            },
+        );
     }
     col
 }
