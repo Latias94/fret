@@ -7,6 +7,7 @@
 //! - cancels (reverts to formatted current value) on Escape,
 //! - renders an inline error message when commit is rejected.
 
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -28,6 +29,12 @@ pub struct NumericInputOptions {
     pub layout: LayoutStyle,
     pub size: Size,
     pub placeholder: Option<Arc<str>>,
+    /// Explicit identity source for internal state (draft/error models).
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when a helper function builds multiple numeric inputs from the same callsite and
+    /// you need stable, per-instance state separation.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub enabled: bool,
     pub focusable: bool,
@@ -46,6 +53,7 @@ impl Default for NumericInputOptions {
             },
             size: Size::default(),
             placeholder: None,
+            id_source: None,
             test_id: None,
             enabled: true,
             focusable: true,
@@ -108,6 +116,24 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let model_id = self.model.id();
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+        let id_source = self.options.id_source.clone();
+
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(
+                ("fret-ui-editor.numeric_input", id_source, model_id),
+                |cx| self.into_element_keyed(cx),
+            )
+        } else {
+            cx.keyed(("fret-ui-editor.numeric_input", callsite, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let draft = draft_model(cx);
         let error = error_model(cx);
         let current_value = cx

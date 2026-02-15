@@ -5,6 +5,7 @@
 //! - and `fret-ui-kit` infrastructure (overlay controller + popper placement),
 //! - without depending on any design-system crate.
 
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -52,6 +53,12 @@ pub struct EnumSelectOptions {
     pub none_label: Arc<str>,
     pub max_list_height: Option<Px>,
     pub a11y_label: Option<Arc<str>>,
+    /// Explicit identity source for internal state (open/filter models, overlay root ids).
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when a helper function builds multiple enum selects from the same callsite and
+    /// you need stable, per-instance state separation.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub list_test_id: Option<Arc<str>>,
     pub search_test_id: Option<Arc<str>>,
@@ -75,6 +82,7 @@ impl Default for EnumSelectOptions {
             none_label: Arc::from("Mixed"),
             max_list_height: None,
             a11y_label: None,
+            id_source: None,
             test_id: None,
             list_test_id: None,
             search_test_id: None,
@@ -105,6 +113,23 @@ impl EnumSelect {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let model_id = self.model.id();
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+        let id_source = self.options.id_source.clone();
+
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.enum_select", id_source, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.enum_select", callsite, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = open_model(cx);
         let filter = filter_model(cx);
 

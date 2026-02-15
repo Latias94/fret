@@ -5,6 +5,7 @@
 //! - it optionally provides a "link scale" toggle,
 //! - it can (best-effort) keep scale axes in sync while linked.
 
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -41,6 +42,12 @@ pub struct TransformEditOptions {
     /// If `None`, an internal per-element model is used.
     pub linked_scale: Option<Model<bool>>,
     pub default_linked_scale: bool,
+    /// Explicit identity source for internal state (linked-scale model, uniform-scale memory).
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when a helper function builds multiple transform edits from the same callsite and
+    /// you need stable, per-instance state separation.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub link_test_id: Option<Arc<str>>,
 }
@@ -61,6 +68,7 @@ impl Default for TransformEditOptions {
             show_link_scale_toggle: true,
             linked_scale: None,
             default_linked_scale: false,
+            id_source: None,
             test_id: None,
             link_test_id: None,
         }
@@ -121,6 +129,36 @@ impl TransformEdit {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+        let id_source = self.options.id_source.clone();
+
+        let model_ids = (
+            self.pos_x.id(),
+            self.pos_y.id(),
+            self.pos_z.id(),
+            self.rot_x.id(),
+            self.rot_y.id(),
+            self.rot_z.id(),
+            self.scale_x.id(),
+            self.scale_y.id(),
+            self.scale_z.id(),
+        );
+
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(
+                ("fret-ui-editor.transform_edit", id_source, model_ids),
+                |cx| self.into_element_keyed(cx),
+            )
+        } else {
+            cx.keyed(
+                ("fret-ui-editor.transform_edit", callsite, model_ids),
+                |cx| self.into_element_keyed(cx),
+            )
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let density = EditorDensity::resolve(theme);
 

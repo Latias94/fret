@@ -4,6 +4,7 @@
 //! - hex input for `#RRGGBB` (and optionally `#RRGGBBAA`)
 //! - swatch button that can open a popup (picker TBD)
 
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -28,6 +29,12 @@ pub struct ColorEditOptions {
     pub enabled: bool,
     pub focusable: bool,
     pub show_alpha: bool,
+    /// Explicit identity source for internal state (draft/error/open models, overlay root ids).
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when a helper function builds multiple color edits from the same callsite and
+    /// you need stable, per-instance state separation.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub swatch_test_id: Option<Arc<str>>,
     pub input_test_id: Option<Arc<str>>,
@@ -48,6 +55,7 @@ impl Default for ColorEditOptions {
             enabled: true,
             focusable: true,
             show_alpha: false,
+            id_source: None,
             test_id: None,
             swatch_test_id: None,
             input_test_id: None,
@@ -77,6 +85,23 @@ impl ColorEdit {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let model_id = self.model.id();
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+        let id_source = self.options.id_source.clone();
+
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.color_edit", id_source, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.color_edit", callsite, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = popup_open_model(cx);
         let draft = draft_model(cx);
         let error = error_model(cx);

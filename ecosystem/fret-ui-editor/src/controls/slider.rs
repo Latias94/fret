@@ -263,7 +263,7 @@ where
 
         let id_source = self.options.id_source.clone();
         if let Some(id_source) = id_source.as_deref() {
-            cx.keyed(("fret-ui-editor.slider", id_source), |cx| {
+            cx.keyed(("fret-ui-editor.slider", id_source, model_id), |cx| {
                 self.into_element_keyed(cx)
             })
         } else {

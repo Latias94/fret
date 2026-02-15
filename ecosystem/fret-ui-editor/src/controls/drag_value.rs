@@ -5,6 +5,7 @@
 //! - double-click to switch into a typing mode,
 //! - Escape cancels scrub to the pre-edit value (handled by `DragValueCore`).
 
+use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -54,6 +55,12 @@ impl Default for DragValueState {
 #[derive(Debug, Clone)]
 pub struct DragValueOptions {
     pub layout: LayoutStyle,
+    /// Explicit identity source for internal state (scrub/typing focus restore).
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when a helper function builds multiple drag values from the same callsite and
+    /// you need stable, per-instance state separation.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
 }
 
@@ -73,6 +80,7 @@ impl Default for DragValueOptions {
                 },
                 ..Default::default()
             },
+            id_source: None,
             test_id: None,
         }
     }
@@ -113,181 +121,195 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        cx.scope(|cx| {
-            let state: Arc<Mutex<DragValueState>> = cx.with_state(
-                || Arc::new(Mutex::new(DragValueState::default())),
-                |s| s.clone(),
+        let model_id = self.model.id();
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+        let id_source = self.options.id_source.clone();
+
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.drag_value", id_source, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.drag_value", callsite, model_id), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let state: Arc<Mutex<DragValueState>> = cx.with_state(
+            || Arc::new(Mutex::new(DragValueState::default())),
+            |s| s.clone(),
+        );
+
+        let value = cx
+            .get_model_copied(&self.model, Invalidation::Paint)
+            .unwrap_or_default();
+        let value_text = (self.format)(value);
+
+        let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
+
+        let typing = mode == DragValueMode::Typing;
+
+        let (density, scrub_chrome) = {
+            let theme = Theme::global(&*cx.app);
+            let density = EditorDensity::resolve(theme);
+            let resolved = resolve_editor_frame_chrome(
+                theme,
+                Size::Small,
+                &ChromeRefinement::default(),
+                InputTokenKeys {
+                    bg: Some("component.input.bg"),
+                    border: Some("component.input.border"),
+                    border_focus: Some("component.input.border_focus"),
+                    fg: Some("component.input.fg"),
+                    ..InputTokenKeys::none()
+                },
             );
+            (density, resolved)
+        };
 
-            let value = cx
-                .get_model_copied(&self.model, Invalidation::Paint)
-                .unwrap_or_default();
-            let value_text = (self.format)(value);
+        let model_for_change = self.model.clone();
+        let on_change_live: Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, T) + 'static> =
+            Arc::new(move |host, action_cx, next| {
+                let _ = host.models_mut().update(&model_for_change, |v| *v = next);
+                host.request_redraw(action_cx.window);
+            });
 
-            let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
+        let mut scrub_opts = DragValueCoreOptions::default();
+        scrub_opts.layout = if typing {
+            hidden_layout(self.options.layout)
+        } else {
+            self.options.layout
+        };
+        scrub_opts.enabled = mode == DragValueMode::Scrub;
+        scrub_opts.scrub_on_double_click = false;
 
-            let typing = mode == DragValueMode::Typing;
+        let state_for_scrub_record = state.clone();
+        let scrub = DragValueCore::new(value, on_change_live)
+            .a11y_label(value_text.clone())
+            .options(scrub_opts)
+            .into_element(cx, move |cx, resp| {
+                // Record the scrub element id for focus restore from typing mode.
+                let scrub_id = cx.root_id();
+                let mut st = state_for_scrub_record
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                st.scrub_id = Some(scrub_id);
 
-            let (density, scrub_chrome) = {
+                let state_for_double_click = state_for_scrub_record.clone();
+                cx.pressable_add_on_pointer_down(Arc::new(
+                    move |host, action_cx, down: PointerDownCx| {
+                        if down.click_count < 2 {
+                            return PressablePointerDownResult::Continue;
+                        }
+
+                        let mut st = state_for_double_click
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        st.mode = DragValueMode::Typing;
+                        if let Some(input_id) = st.input_id {
+                            host.request_focus(input_id);
+                        }
+                        host.request_redraw(action_cx.window);
+                        PressablePointerDownResult::SkipDefaultAndStopPropagation
+                    },
+                ));
+
                 let theme = Theme::global(&*cx.app);
-                let density = EditorDensity::resolve(theme);
-                let resolved = resolve_editor_frame_chrome(
+                let visuals = editor_frame_visuals(
                     theme,
-                    Size::Small,
-                    &ChromeRefinement::default(),
-                    InputTokenKeys {
-                        bg: Some("component.input.bg"),
-                        border: Some("component.input.border"),
-                        border_focus: Some("component.input.border_focus"),
-                        fg: Some("component.input.fg"),
-                        ..InputTokenKeys::none()
+                    scrub_chrome,
+                    EditorFrameState {
+                        enabled: true,
+                        hovered: resp.hovered,
+                        pressed: resp.dragging || resp.pressed,
+                        focused: resp.focused || cx.is_focused_element(scrub_id),
+                        open: false,
                     },
                 );
-                (density, resolved)
-            };
 
-            let model_for_change = self.model.clone();
-            let on_change_live: Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, T) + 'static> =
-                Arc::new(move |host, action_cx, next| {
-                    let _ = host.models_mut().update(&model_for_change, |v| *v = next);
-                    host.request_redraw(action_cx.window);
-                });
-
-            let mut scrub_opts = DragValueCoreOptions::default();
-            scrub_opts.layout = if typing {
-                hidden_layout(self.options.layout)
-            } else {
-                self.options.layout
-            };
-            scrub_opts.enabled = mode == DragValueMode::Scrub;
-            scrub_opts.scrub_on_double_click = false;
-
-            let state_for_scrub_record = state.clone();
-            let scrub = DragValueCore::new(value, on_change_live)
-                .a11y_label(value_text.clone())
-                .options(scrub_opts)
-                .into_element(cx, move |cx, resp| {
-                    // Record the scrub element id for focus restore from typing mode.
-                    let scrub_id = cx.root_id();
-                    let mut st = state_for_scrub_record
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner());
-                    st.scrub_id = Some(scrub_id);
-
-                    let state_for_double_click = state_for_scrub_record.clone();
-                    cx.pressable_add_on_pointer_down(Arc::new(
-                        move |host, action_cx, down: PointerDownCx| {
-                            if down.click_count < 2 {
-                                return PressablePointerDownResult::Continue;
-                            }
-
-                            let mut st = state_for_double_click
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            st.mode = DragValueMode::Typing;
-                            if let Some(input_id) = st.input_id {
-                                host.request_focus(input_id);
-                            }
-                            host.request_redraw(action_cx.window);
-                            PressablePointerDownResult::SkipDefaultAndStopPropagation
+                vec![cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                min_height: Some(density.row_height),
+                                ..Default::default()
+                            },
+                            ..Default::default()
                         },
-                    ));
-
-                    let theme = Theme::global(&*cx.app);
-                    let visuals = editor_frame_visuals(
-                        theme,
-                        scrub_chrome,
-                        EditorFrameState {
-                            enabled: true,
-                            hovered: resp.hovered,
-                            pressed: resp.dragging || resp.pressed,
-                            focused: resp.focused || cx.is_focused_element(scrub_id),
-                            open: false,
-                        },
-                    );
-
-                    vec![cx.container(
-                        ContainerProps {
+                        padding: scrub_chrome.padding,
+                        background: Some(visuals.bg),
+                        border: Edges::all(scrub_chrome.border_width),
+                        border_color: Some(visuals.border),
+                        corner_radii: Corners::all(scrub_chrome.radius),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.text_props(TextProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
-                                    height: Length::Fill,
-                                    min_height: Some(density.row_height),
+                                    height: Length::Auto,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
-                            padding: scrub_chrome.padding,
-                            background: Some(visuals.bg),
-                            border: Edges::all(scrub_chrome.border_width),
-                            border_color: Some(visuals.border),
-                            corner_radii: Corners::all(scrub_chrome.radius),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.text_props(TextProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Auto,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                text: value_text.clone(),
-                                style: Some(TextStyle {
-                                    size: scrub_chrome.text_px,
-                                    line_height: Some(density.row_height),
-                                    ..Default::default()
-                                }),
-                                color: Some(visuals.fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Ellipsis,
-                                align: TextAlign::Start,
-                            })]
-                        },
-                    )]
-                });
+                            text: value_text.clone(),
+                            style: Some(TextStyle {
+                                size: scrub_chrome.text_px,
+                                line_height: Some(density.row_height),
+                                ..Default::default()
+                            }),
+                            color: Some(visuals.fg),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Ellipsis,
+                            align: TextAlign::Start,
+                        })]
+                    },
+                )]
+            });
 
-            let mut input_layout = self.options.layout;
-            if !typing {
-                input_layout = hidden_layout(input_layout);
-            }
+        let mut input_layout = self.options.layout;
+        if !typing {
+            input_layout = hidden_layout(input_layout);
+        }
 
-            let state_for_input = state.clone();
-            let input =
-                NumericInput::new(self.model.clone(), self.format.clone(), self.parse.clone())
-                    .validate(self.validate.clone())
-                    .options(NumericInputOptions {
-                        layout: input_layout,
-                        enabled: typing,
-                        focusable: typing,
-                        test_id: self.options.test_id.clone(),
-                        ..Default::default()
-                    })
-                    .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
-                        let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                        match outcome {
-                            NumericInputOutcome::Committed | NumericInputOutcome::Canceled => {
-                                st.mode = DragValueMode::Scrub;
-                                if let Some(scrub_id) = st.scrub_id {
-                                    host.request_focus(scrub_id);
-                                }
-                                host.request_redraw(action_cx.window);
-                            }
+        let state_for_input = state.clone();
+        let input = NumericInput::new(self.model.clone(), self.format.clone(), self.parse.clone())
+            .validate(self.validate.clone())
+            .options(NumericInputOptions {
+                layout: input_layout,
+                enabled: typing,
+                focusable: typing,
+                test_id: self.options.test_id.clone(),
+                ..Default::default()
+            })
+            .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
+                let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
+                match outcome {
+                    NumericInputOutcome::Committed | NumericInputOutcome::Canceled => {
+                        st.mode = DragValueMode::Scrub;
+                        if let Some(scrub_id) = st.scrub_id {
+                            host.request_focus(scrub_id);
                         }
-                    })))
-                    .into_element(cx);
+                        host.request_redraw(action_cx.window);
+                    }
+                }
+            })))
+            .into_element(cx);
 
-            {
-                let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-                st.input_id = Some(input.id);
-            }
+        {
+            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+            st.input_id = Some(input.id);
+        }
 
-            // Render both: scrub stays mounted so focus can restore, input stays mounted so focus
-            // requests have a stable target.
-            cx.container(Default::default(), move |_cx| vec![scrub, input])
-        })
+        // Render both: scrub stays mounted so focus can restore, input stays mounted so focus
+        // requests have a stable target.
+        cx.container(Default::default(), move |_cx| vec![scrub, input])
     }
 }
 
