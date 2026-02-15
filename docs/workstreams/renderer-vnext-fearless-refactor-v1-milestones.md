@@ -235,3 +235,5 @@ Progress record (Sampling hints v1):
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance`
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
+  - `python3 tools/check_layering.py`
+  - `$env:CARGO_TARGET_DIR='F:\\ct'; cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance --test mask_image_conformance`

@@ -116,6 +116,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## Always-run guardrails (before/after each milestone)
 
-- [ ] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-- [ ] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
-- [ ] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
+- [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
+  - Last run: 2026-02-15 (post M5 sampling opt-in).
+- [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
+  - Status: satisfied through M5 (sampling hints conformance gate landed).
+- [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
+  - Next: re-capture perf snapshot after M5 adoption plumbing (optional but recommended).
