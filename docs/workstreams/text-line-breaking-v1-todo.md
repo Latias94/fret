@@ -28,14 +28,39 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 
 ## M2 — Parley line breaking integration
 
-- [ ] Prototype a new Parley shaper entry point:
-  - [ ] “shape paragraph with wrap width” returning multiple lines + cluster mapping.
-- [ ] Stage rollout:
-  - [ ] LTR-only first,
-  - [ ] keep compatibility wrapper for RTL.
-- [ ] Update caret/selection/hit-test tests to exercise the new path.
+- [x] Replace the legacy wrapper with Parley-driven paragraph line breaking:
+  - [x] Add a shaper entry point: “shape paragraph with wrap width” returning:
+    - multiple lines,
+    - cluster/glyph mapping sufficient for geometry queries.
+  - [x] Wire it through the renderer wrapper for `TextWrap::Word` (keep newline splitting as an
+    outer paragraph boundary).
+- [x] Regression gates (must hold under the Parley path):
+  - [x] measurement/paint agree on wrap inputs (no layout drift under intrinsic sizing),
+  - [x] “soft wrap trailing whitespace is selectable” invariant remains true,
+  - [x] caret/hit-test/selection rects remain deterministic across wrap boundaries.
+- [x] Conformance coverage:
+  - [x] run the fixture-driven wrap conformance suite under the Parley path,
+  - [x] document any known gaps as explicit TODOs (avoid silent behavior drift).
+- [~] Performance guard:
+  - [~] ensure no O(n²) regressions on long paragraphs (Parley path is linear; add an explicit
+    long-paragraph perf probe if we see regressions),
+  - [~] keep resize jitter bounded (now dominated by Parley paragraph shaping; re-check with a
+    dedicated jitter test in `fretboard diag` when text diagnostics land).
+- [x] Cleanup:
+  - [x] delete the legacy wrapper implementation once the Parley path passes the gates above (no
+    compatibility branch retained).
+
+## Customization seam (recommended)
+
+- [x] Define and document the supported customization approach:
+  - [x] general UI uses `TextWrap` + future narrow knobs (if needed),
+  - [x] editor/code surfaces should own row segmentation and thus “wrap policy” at the ecosystem
+    layer (do not push code wrap heuristics into the renderer).
 
 ## Open questions
 
-- [ ] Which Unicode line-breaking implementation should we standardize on for M1 (if not Parley)?
-- [ ] Do we want a dedicated “code wrap mode” distinct from UI `TextWrap::Word`?
+- [x] Which Unicode line-breaking implementation should we standardize on for M1 (if not Parley)?
+  - Answer: Parley paragraph line breaking is the baseline for UI `TextWrap::Word`.
+- [x] Do we want a dedicated “code wrap mode” distinct from UI `TextWrap::Word`?
+  - Answer: yes, but it lives in the ecosystem/editor layer via display-row segmentation
+    (`CodeWrapPolicy`), not in the renderer wrapper.

@@ -1,8 +1,6 @@
 use super::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineLayout};
 use fret_core::{CaretAffinity, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextWrap};
 use std::ops::Range;
-use std::sync::OnceLock;
-use swash::text::{WordBreakStrength, analyze};
 use unicode_segmentation::UnicodeSegmentation;
 
 const ELLIPSIS: &str = "\u{2026}";
@@ -13,15 +11,6 @@ pub(crate) struct WrappedLayout {
     pub kept_end: usize,
     pub line_ranges: Vec<Range<usize>>,
     pub lines: Vec<ShapedLineLayout>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct WrappedLineSliceFromUnwrappedLtr {
-    pub(crate) range: Range<usize>,
-    pub(crate) cluster_range: Range<usize>,
-    pub(crate) glyph_range: Range<usize>,
-    pub(crate) line_start_x: f32,
-    pub(crate) width_px: f32,
 }
 
 impl WrappedLayout {
@@ -41,126 +30,6 @@ impl WrappedLayout {
         }
         (idx, affinity)
     }
-}
-
-pub(crate) fn wrap_word_slices_from_unwrapped_ltr(
-    text: &str,
-    full: &ShapedLineLayout,
-    max_width_px: f32,
-) -> Option<Vec<WrappedLineSliceFromUnwrappedLtr>> {
-    // Be conservative: only enable this path for LTR text. RTL runs can reorder visual clusters
-    // and make glyph slicing ambiguous without additional mapping.
-    if full.clusters.iter().any(|c| c.is_rtl) || full.glyphs.iter().any(|g| g.is_rtl) {
-        return None;
-    }
-
-    if full.width <= max_width_px + 0.5 {
-        return Some(vec![WrappedLineSliceFromUnwrappedLtr {
-            range: 0..text.len(),
-            cluster_range: 0..full.clusters.len(),
-            glyph_range: 0..full.glyphs.len(),
-            line_start_x: 0.0,
-            width_px: full.width.max(0.0),
-        }]);
-    }
-
-    let mut out: Vec<WrappedLineSliceFromUnwrappedLtr> = Vec::new();
-
-    let mut line_start_byte: usize = 0;
-    let mut cluster_idx: usize = 0;
-    let mut glyph_idx: usize = 0;
-    let breaks = line_break_positions(text, WordBreakStrength::Normal);
-
-    while line_start_byte < text.len() && cluster_idx < full.clusters.len() {
-        while cluster_idx < full.clusters.len()
-            && full.clusters[cluster_idx].text_range.end <= line_start_byte
-        {
-            cluster_idx = cluster_idx.saturating_add(1);
-        }
-        while glyph_idx < full.glyphs.len()
-            && full.glyphs[glyph_idx].text_range.end <= line_start_byte
-        {
-            glyph_idx = glyph_idx.saturating_add(1);
-        }
-        if cluster_idx >= full.clusters.len() {
-            break;
-        }
-
-        let cluster_start_idx = cluster_idx;
-        let glyph_start_idx = glyph_idx;
-
-        let line_start_x = full.clusters[cluster_start_idx].x0;
-        let cut_end = wrap_word_cut_end_from(
-            text,
-            &full.clusters,
-            cluster_start_idx,
-            line_start_byte,
-            line_start_x,
-            max_width_px,
-            &breaks,
-        );
-
-        let mut line_end_byte = clamp_to_char_boundary(text, cut_end.min(text.len()));
-        if line_end_byte <= line_start_byte {
-            line_end_byte = first_cluster_end(
-                &text[line_start_byte..],
-                &full.clusters[cluster_start_idx..],
-            )
-            .saturating_add(line_start_byte);
-            line_end_byte = clamp_to_char_boundary(text, line_end_byte.min(text.len()));
-        }
-        if line_end_byte <= line_start_byte {
-            let first = text[line_start_byte..]
-                .chars()
-                .next()
-                .map(|c| c.len_utf8())
-                .unwrap_or(0);
-            line_end_byte = clamp_to_char_boundary(
-                text,
-                line_start_byte.saturating_add(first.max(1)).min(text.len()),
-            );
-        }
-        if line_end_byte <= line_start_byte {
-            break;
-        }
-
-        let mut cluster_end_idx = cluster_start_idx;
-        while cluster_end_idx < full.clusters.len()
-            && full.clusters[cluster_end_idx].text_range.start < line_end_byte
-        {
-            cluster_end_idx = cluster_end_idx.saturating_add(1);
-        }
-
-        let mut glyph_end_idx = glyph_start_idx;
-        while glyph_end_idx < full.glyphs.len() {
-            let g = &full.glyphs[glyph_end_idx];
-            if g.text_range.start >= line_end_byte {
-                break;
-            }
-            glyph_end_idx = glyph_end_idx.saturating_add(1);
-        }
-
-        if cluster_end_idx <= cluster_start_idx {
-            break;
-        }
-
-        let width_px =
-            (full.clusters[cluster_end_idx.saturating_sub(1)].x1 - line_start_x).max(0.0);
-
-        out.push(WrappedLineSliceFromUnwrappedLtr {
-            range: line_start_byte..line_end_byte,
-            cluster_range: cluster_start_idx..cluster_end_idx,
-            glyph_range: glyph_start_idx..glyph_end_idx,
-            line_start_x,
-            width_px,
-        });
-
-        line_start_byte = line_end_byte;
-        cluster_idx = cluster_end_idx;
-        glyph_idx = glyph_end_idx;
-    }
-
-    if out.is_empty() { None } else { Some(out) }
 }
 
 pub(crate) fn wrap_with_constraints(
@@ -777,8 +646,6 @@ fn wrap_word_range(
     max_width_px: f32,
     scale: f32,
 ) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
-    const WRAP_WORD_PROBE_MIN_BYTES: usize = 256;
-
     let start = range.start.min(text.len());
     let end = range.end.min(text.len());
 
@@ -789,347 +656,31 @@ fn wrap_word_range(
         );
     }
 
-    if spans.is_none()
-        && shape_once_word_wrap_enabled(end.saturating_sub(start))
-        && let Some(out) =
-            wrap_word_range_plain_shape_once(shaper, text, base, start..end, max_width_px, scale)
-    {
-        return out;
-    }
-
-    let mut lines: Vec<ShapedLineLayout> = Vec::new();
-    let mut line_ranges: Vec<Range<usize>> = Vec::new();
-
-    let mut offset = start;
-    while offset < end {
-        // Avoid shaping the full remaining paragraph on each line (O(n^2) behavior for long text).
-        // Instead, shape a prefix probe that is large enough to exceed `max_width_px`, then cut.
-        let slice_all = &text[offset..end];
-
-        let mut probe_rel = WRAP_WORD_PROBE_MIN_BYTES.min(slice_all.len());
-        probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
-        if probe_rel == 0 {
-            let first = slice_all.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
-            probe_rel = first.max(1).min(slice_all.len());
-            probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
-        }
-
-        let (probe_end, probe) = loop {
-            let probe_end = offset.saturating_add(probe_rel).min(end);
-            let shaped = shape_slice(shaper, text, base, spans, offset..probe_end, scale);
-
-            // If the shaped prefix doesn't exceed the width yet, grow the probe (up to the end).
-            if shaped.width <= max_width_px + 0.5 && probe_end < end {
-                let next_rel = (probe_rel.saturating_mul(2)).min(slice_all.len());
-                if next_rel == probe_rel {
-                    return (line_ranges, lines);
-                }
-                probe_rel = clamp_to_char_boundary(slice_all, next_rel);
-                if probe_rel == 0 || probe_rel == next_rel {
-                    probe_rel = next_rel;
-                }
-                continue;
-            }
-
-            break (probe_end, shaped);
-        };
-
-        // If the remaining text fits in a single line, we're done.
-        if probe.width <= max_width_px + 0.5 && probe_end == end {
-            lines.push(probe);
-            line_ranges.push(offset..end);
-            break;
-        }
-
-        let slice = &text[offset..probe_end];
-        let mut cut_end = wrap_word_cut_end(slice, &probe.clusters, max_width_px);
-        cut_end = clamp_to_char_boundary(slice, cut_end);
-
-        if cut_end == 0 {
-            cut_end = first_cluster_end(slice, &probe.clusters);
-            cut_end = clamp_to_char_boundary(slice, cut_end);
-        }
-        if cut_end == 0 {
-            let first = slice.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
-            cut_end = first.max(1).min(slice.len());
-            cut_end = clamp_to_char_boundary(slice, cut_end);
-        }
-
-        let mut kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
-        if kept.width > max_width_px + 0.5 && cut_end > 0 {
-            let cut2 = cut_end_for_available(&slice[..cut_end], &kept.clusters, max_width_px);
-            if cut2 > 0 && cut2 < cut_end {
-                cut_end = clamp_to_char_boundary(slice, cut2);
-                kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
-            }
-        }
-
-        if cut_end == 0 {
-            break;
-        }
-
-        lines.push(kept);
-        line_ranges.push(offset..(offset + cut_end));
-        offset = offset.saturating_add(cut_end);
-    }
-
-    (line_ranges, lines)
-}
-
-fn shape_once_word_wrap_enabled(text_len_bytes: usize) -> bool {
-    const DEFAULT_MIN_BYTES: usize = 256;
-
-    static OVERRIDE: OnceLock<Option<bool>> = OnceLock::new();
-    let override_value = *OVERRIDE.get_or_init(|| {
-        std::env::var("FRET_TEXT_WORD_WRAP_SHAPE_ONCE")
-            .ok()
-            .and_then(|v| {
-                let v = v.trim();
-                match v {
-                    "1" => Some(true),
-                    "0" => Some(false),
-                    _ if v.eq_ignore_ascii_case("true") => Some(true),
-                    _ if v.eq_ignore_ascii_case("false") => Some(false),
-                    _ => None,
-                }
-            })
-    });
-
-    // Default: enable only for long plain-text paragraphs where the per-line shaping strategy
-    // tends to show O(n^2) behavior.
-    override_value.unwrap_or(text_len_bytes >= DEFAULT_MIN_BYTES)
-}
-
-fn wrap_word_range_plain_shape_once(
-    shaper: &mut ParleyShaper,
-    text: &str,
-    base: &fret_core::TextStyle,
-    range: Range<usize>,
-    max_width_px: f32,
-    scale: f32,
-) -> Option<(Vec<Range<usize>>, Vec<ShapedLineLayout>)> {
-    let start = range.start.min(text.len());
-    let end = range.end.min(text.len());
-    if start >= end {
-        return None;
-    }
-
-    // Shape the whole slice once and slice the shaped clusters/glyphs into per-line layouts.
-    // This avoids per-line shaping during resize-drag width jitter (which can dominate frame time).
     let slice = &text[start..end];
-    let full = shaper.shape_single_line(TextInputRef::plain(slice, base), scale);
+    let spans = spans.map(|spans| slice_spans(spans, start, end));
 
-    // Be conservative: only enable this path for LTR text. RTL runs can reorder visual clusters
-    // and make glyph slicing ambiguous without additional mapping.
-    if full.clusters.iter().any(|c| c.is_rtl) || full.glyphs.iter().any(|g| g.is_rtl) {
-        return None;
-    }
-
-    if full.width <= max_width_px + 0.5 {
-        return Some((vec![Range { start, end }], vec![full]));
-    }
-
-    let mut lines: Vec<ShapedLineLayout> = Vec::new();
-    let mut line_ranges: Vec<Range<usize>> = Vec::new();
-
-    let mut line_start_byte: usize = 0;
-    let mut cluster_idx: usize = 0;
-    let mut glyph_idx: usize = 0;
-    let breaks = line_break_positions(slice, WordBreakStrength::Normal);
-
-    while line_start_byte < slice.len() && cluster_idx < full.clusters.len() {
-        while cluster_idx < full.clusters.len()
-            && full.clusters[cluster_idx].text_range.end <= line_start_byte
-        {
-            cluster_idx = cluster_idx.saturating_add(1);
-        }
-        while glyph_idx < full.glyphs.len()
-            && full.glyphs[glyph_idx].text_range.end <= line_start_byte
-        {
-            glyph_idx = glyph_idx.saturating_add(1);
-        }
-        if cluster_idx >= full.clusters.len() {
-            break;
-        }
-
-        let line_start_x = full.clusters[cluster_idx].x0;
-        let cut_end = wrap_word_cut_end_from(
-            slice,
-            &full.clusters,
-            cluster_idx,
-            line_start_byte,
-            line_start_x,
+    let shaped = match spans.as_ref() {
+        Some(spans) => shaper.shape_paragraph_word_wrap(
+            TextInputRef::Attributed {
+                text: slice,
+                base,
+                spans: spans.as_slice(),
+            },
             max_width_px,
-            &breaks,
-        );
-
-        let mut line_end_byte = clamp_to_char_boundary(slice, cut_end.min(slice.len()));
-        if line_end_byte <= line_start_byte {
-            line_end_byte =
-                first_cluster_end(&slice[line_start_byte..], &full.clusters[cluster_idx..])
-                    .saturating_add(line_start_byte);
-            line_end_byte = clamp_to_char_boundary(slice, line_end_byte.min(slice.len()));
+            scale,
+        ),
+        None => {
+            shaper.shape_paragraph_word_wrap(TextInputRef::plain(slice, base), max_width_px, scale)
         }
-        if line_end_byte <= line_start_byte {
-            let first = slice[line_start_byte..]
-                .chars()
-                .next()
-                .map(|c| c.len_utf8())
-                .unwrap_or(0);
-            line_end_byte = clamp_to_char_boundary(
-                slice,
-                line_start_byte
-                    .saturating_add(first.max(1))
-                    .min(slice.len()),
-            );
-        }
-        if line_end_byte <= line_start_byte {
-            break;
-        }
-
-        let mut cluster_end_idx = cluster_idx;
-        while cluster_end_idx < full.clusters.len()
-            && full.clusters[cluster_end_idx].text_range.start < line_end_byte
-        {
-            cluster_end_idx = cluster_end_idx.saturating_add(1);
-        }
-
-        let mut line_clusters: Vec<ShapedCluster> = Vec::new();
-        line_clusters.extend(full.clusters[cluster_idx..cluster_end_idx].iter().map(|c| {
-            ShapedCluster {
-                text_range: (c.text_range.start.saturating_sub(line_start_byte))
-                    ..(c.text_range.end.saturating_sub(line_start_byte)),
-                x0: c.x0 - line_start_x,
-                x1: c.x1 - line_start_x,
-                is_rtl: false,
-            }
-        }));
-
-        let mut line_glyphs: Vec<ParleyGlyph> = Vec::new();
-        while glyph_idx < full.glyphs.len() {
-            let g = &full.glyphs[glyph_idx];
-            if g.text_range.start >= line_end_byte {
-                break;
-            }
-            if g.text_range.end <= line_start_byte {
-                glyph_idx = glyph_idx.saturating_add(1);
-                continue;
-            }
-            let mut g2 = g.clone();
-            g2.x -= line_start_x;
-            g2.text_range = (g2.text_range.start.saturating_sub(line_start_byte))
-                ..(g2.text_range.end.saturating_sub(line_start_byte));
-            g2.is_rtl = false;
-            line_glyphs.push(g2);
-            glyph_idx = glyph_idx.saturating_add(1);
-        }
-
-        let line_width = line_clusters.last().map(|c| c.x1.max(0.0)).unwrap_or(0.0);
-
-        lines.push(ShapedLineLayout {
-            width: line_width,
-            ascent: full.ascent,
-            descent: full.descent,
-            baseline: full.baseline,
-            line_height: full.line_height,
-            glyphs: line_glyphs,
-            clusters: line_clusters,
-        });
-        line_ranges.push((start + line_start_byte)..(start + line_end_byte));
-
-        line_start_byte = line_end_byte;
-        cluster_idx = cluster_end_idx;
-    }
-
-    if line_ranges.is_empty() || lines.is_empty() {
-        return None;
-    }
-    Some((line_ranges, lines))
-}
-
-fn wrap_word_cut_end_from(
-    text: &str,
-    clusters: &[ShapedCluster],
-    cluster_idx: usize,
-    line_start_byte: usize,
-    line_start_x: f32,
-    max_width_px: f32,
-    breaks: &[usize],
-) -> usize {
-    wrap_word_cut_end_from_with_kind(
-        text,
-        clusters,
-        cluster_idx,
-        line_start_byte,
-        line_start_x,
-        max_width_px,
-        breaks,
-    )
-    .0
-}
-
-fn wrap_word_cut_end_from_with_kind(
-    text: &str,
-    clusters: &[ShapedCluster],
-    cluster_idx: usize,
-    line_start_byte: usize,
-    line_start_x: f32,
-    max_width_px: f32,
-    breaks: &[usize],
-) -> (usize, bool) {
-    let mut last_candidate: usize = line_start_byte;
-    let mut last_fit_end: usize = line_start_byte;
-    let mut first_non_whitespace: Option<usize> = None;
-    let mut prev_ch: char = '\0';
-    let mut break_ix: usize = match breaks.binary_search(&line_start_byte) {
-        Ok(ix) | Err(ix) => ix,
     };
 
-    for c in clusters.iter().skip(cluster_idx) {
-        if c.text_range.start >= text.len() {
-            continue;
-        }
-
-        let w = c.x1 - line_start_x;
-        if w > max_width_px + 0.5 {
-            break;
-        }
-
-        last_fit_end = last_fit_end.max(c.text_range.end.min(text.len()));
-
-        let Some(ch) = text[c.text_range.start..].chars().next() else {
-            continue;
-        };
-
-        if ch != ' ' && first_non_whitespace.is_none() {
-            first_non_whitespace = Some(c.text_range.start);
-        }
-
-        if first_non_whitespace.is_some() {
-            while break_ix < breaks.len() && breaks[break_ix] < c.text_range.start {
-                break_ix = break_ix.saturating_add(1);
-            }
-
-            let is_uax_candidate =
-                break_ix < breaks.len() && breaks[break_ix] == c.text_range.start && ch != ' ';
-            let is_heuristic_candidate =
-                (prev_ch == ' ' && ch != ' ') || (!is_word_char(ch) && ch != ' ');
-
-            let allowed = !is_forbidden_line_start_char(ch) && !is_forbidden_line_end_char(prev_ch);
-
-            if allowed && (is_uax_candidate || is_heuristic_candidate) {
-                last_candidate = c.text_range.start;
-            }
-        }
-
-        prev_ch = ch;
+    let mut line_ranges: Vec<Range<usize>> = Vec::with_capacity(shaped.len().max(1));
+    let mut lines: Vec<ShapedLineLayout> = Vec::with_capacity(shaped.len().max(1));
+    for (r, line) in shaped {
+        line_ranges.push((start + r.start)..(start + r.end));
+        lines.push(line);
     }
-
-    if last_candidate > line_start_byte {
-        return (last_candidate, true);
-    }
-
-    (last_fit_end, false)
+    (line_ranges, lines)
 }
 
 fn wrap_word_range_measure_only(
@@ -1141,8 +692,6 @@ fn wrap_word_range_measure_only(
     max_width_px: f32,
     scale: f32,
 ) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
-    const WRAP_WORD_PROBE_MIN_BYTES: usize = 256;
-
     let start = range.start.min(text.len());
     let end = range.end.min(text.len());
 
@@ -1160,87 +709,32 @@ fn wrap_word_range_measure_only(
         );
     }
 
-    let mut lines: Vec<ShapedLineLayout> = Vec::new();
-    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+    let slice = &text[start..end];
+    let spans = spans.map(|spans| slice_spans(spans, start, end));
 
-    let mut offset = start;
-    while offset < end {
-        let slice_all = &text[offset..end];
+    let shaped = match spans.as_ref() {
+        Some(spans) => shaper.shape_paragraph_word_wrap_metrics(
+            TextInputRef::Attributed {
+                text: slice,
+                base,
+                spans: spans.as_slice(),
+            },
+            max_width_px,
+            scale,
+        ),
+        None => shaper.shape_paragraph_word_wrap_metrics(
+            TextInputRef::plain(slice, base),
+            max_width_px,
+            scale,
+        ),
+    };
 
-        let mut probe_rel = WRAP_WORD_PROBE_MIN_BYTES.min(slice_all.len());
-        probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
-        if probe_rel == 0 {
-            let first = slice_all.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
-            probe_rel = first.max(1).min(slice_all.len());
-            probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
-        }
-
-        let (probe_end, probe) = loop {
-            let probe_end = offset.saturating_add(probe_rel).min(end);
-            let shaped =
-                shape_slice_measure_only(shaper, text, base, spans, offset..probe_end, scale);
-
-            if shaped.width <= max_width_px + 0.5 && probe_end < end {
-                let next_rel = (probe_rel.saturating_mul(2)).min(slice_all.len());
-                if next_rel == probe_rel {
-                    return (line_ranges, lines);
-                }
-                probe_rel = clamp_to_char_boundary(slice_all, next_rel);
-                if probe_rel == 0 || probe_rel == next_rel {
-                    probe_rel = next_rel;
-                }
-                continue;
-            }
-
-            break (probe_end, shaped);
-        };
-
-        if probe.width <= max_width_px + 0.5 && probe_end == end {
-            lines.push(probe);
-            line_ranges.push(offset..end);
-            break;
-        }
-
-        let slice = &text[offset..probe_end];
-        let mut cut_end = wrap_word_cut_end(slice, &probe.clusters, max_width_px);
-        cut_end = clamp_to_char_boundary(slice, cut_end);
-
-        if cut_end == 0 {
-            cut_end = first_cluster_end(slice, &probe.clusters);
-            cut_end = clamp_to_char_boundary(slice, cut_end);
-        }
-        if cut_end == 0 {
-            let first = slice.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
-            cut_end = first.max(1).min(slice.len());
-            cut_end = clamp_to_char_boundary(slice, cut_end);
-        }
-
-        let mut kept =
-            shape_slice_measure_only(shaper, text, base, spans, offset..(offset + cut_end), scale);
-        if kept.width > max_width_px + 0.5 && cut_end > 0 {
-            let cut2 = cut_end_for_available(&slice[..cut_end], &kept.clusters, max_width_px);
-            if cut2 > 0 && cut2 < cut_end {
-                cut_end = clamp_to_char_boundary(slice, cut2);
-                kept = shape_slice_measure_only(
-                    shaper,
-                    text,
-                    base,
-                    spans,
-                    offset..(offset + cut_end),
-                    scale,
-                );
-            }
-        }
-
-        if cut_end == 0 {
-            break;
-        }
-
-        lines.push(kept);
-        line_ranges.push(offset..(offset + cut_end));
-        offset = offset.saturating_add(cut_end);
+    let mut line_ranges: Vec<Range<usize>> = Vec::with_capacity(shaped.len().max(1));
+    let mut lines: Vec<ShapedLineLayout> = Vec::with_capacity(shaped.len().max(1));
+    for (r, line) in shaped {
+        line_ranges.push((start + r.start)..(start + r.end));
+        lines.push(line);
     }
-
     (line_ranges, lines)
 }
 
@@ -1372,77 +866,6 @@ fn slice_spans(spans: &[TextSpan], start: usize, end: usize) -> Vec<TextSpan> {
     out
 }
 
-fn line_break_positions(text: &str, strength: WordBreakStrength) -> Vec<usize> {
-    use swash::text::cluster::Boundary;
-
-    let mut analysis = analyze(text.chars());
-    analysis.set_break_strength(strength);
-
-    let mut out: Vec<usize> = Vec::new();
-    for (byte_ix, _ch) in text.char_indices() {
-        let Some((_props, boundary)) = analysis.next() else {
-            break;
-        };
-        if matches!(boundary, Boundary::Line | Boundary::Mandatory)
-            && byte_ix > 0
-            && byte_ix < text.len()
-        {
-            out.push(byte_ix);
-        }
-    }
-    out
-}
-
-fn wrap_word_cut_end(text: &str, clusters: &[ShapedCluster], max_width_px: f32) -> usize {
-    let mut last_candidate: usize = 0;
-    let mut first_non_whitespace: Option<usize> = None;
-    let mut prev_ch: char = '\0';
-    let breaks = line_break_positions(text, WordBreakStrength::Normal);
-    let mut break_ix: usize = 0;
-
-    for c in clusters {
-        if c.text_range.start >= text.len() {
-            continue;
-        }
-        if c.x1 > max_width_px + 0.5 {
-            break;
-        }
-
-        let Some(ch) = text[c.text_range.start..].chars().next() else {
-            continue;
-        };
-
-        if ch != ' ' && first_non_whitespace.is_none() {
-            first_non_whitespace = Some(c.text_range.start);
-        }
-
-        if first_non_whitespace.is_some() {
-            while break_ix < breaks.len() && breaks[break_ix] < c.text_range.start {
-                break_ix = break_ix.saturating_add(1);
-            }
-
-            let is_uax_candidate =
-                break_ix < breaks.len() && breaks[break_ix] == c.text_range.start && ch != ' ';
-            let is_heuristic_candidate =
-                (prev_ch == ' ' && ch != ' ') || (!is_word_char(ch) && ch != ' ');
-
-            let allowed = !is_forbidden_line_start_char(ch) && !is_forbidden_line_end_char(prev_ch);
-
-            if allowed && (is_uax_candidate || is_heuristic_candidate) {
-                last_candidate = c.text_range.start;
-            }
-        }
-
-        prev_ch = ch;
-    }
-
-    if last_candidate > 0 {
-        return last_candidate;
-    }
-
-    cut_end_for_available(text, clusters, max_width_px)
-}
-
 fn wrap_grapheme_cut_end(text: &str, clusters: &[ShapedCluster], max_width_px: f32) -> usize {
     let mut cut_end = 0usize;
     for c in clusters {
@@ -1472,67 +895,6 @@ fn first_grapheme_end(text: &str) -> usize {
         .next()
         .map(|(start, g)| start + g.len())
         .unwrap_or(0)
-}
-
-fn is_word_char(c: char) -> bool {
-    if is_cjk_char(c) {
-        return false;
-    }
-
-    c.is_alphanumeric()
-        || matches!(c, '\u{0300}'..='\u{036F}')
-        || matches!(
-            c,
-            '-' | '_' | '.' | '\'' | '$' | '%' | '@' | '#' | '^' | '~' | ',' | '=' | ':' | '?'
-        )
-}
-
-fn is_forbidden_line_start_char(c: char) -> bool {
-    // Minimal “kinsoku”-style set: avoid starting a line with closing punctuation in CJK text.
-    // Keep this conservative; conformance fixtures can expand it as needed.
-    matches!(
-        c,
-        '，' | '。'
-            | '、'
-            | '：'
-            | '；'
-            | '！'
-            | '？'
-            | '）'
-            | '】'
-            | '》'
-            | '〉'
-            | '」'
-            | '』'
-            | '〕'
-            | '］'
-            | '｝'
-            | '’'
-            | '”'
-    )
-}
-
-fn is_forbidden_line_end_char(c: char) -> bool {
-    // Avoid ending a line with opening punctuation in CJK text.
-    matches!(
-        c,
-        '（' | '【' | '《' | '〈' | '「' | '『' | '〔' | '［' | '｛' | '‘' | '“'
-    )
-}
-
-fn is_cjk_char(c: char) -> bool {
-    matches!(
-        c,
-        '\u{2E80}'..='\u{2EFF}'
-            | '\u{2F00}'..='\u{2FDF}'
-            | '\u{3000}'..='\u{303F}'
-            | '\u{3040}'..='\u{30FF}'
-            | '\u{31F0}'..='\u{31FF}'
-            | '\u{3400}'..='\u{4DBF}'
-            | '\u{4E00}'..='\u{9FFF}'
-            | '\u{AC00}'..='\u{D7AF}'
-            | '\u{F900}'..='\u{FAFF}'
-    )
 }
 
 fn cut_end_for_available(text: &str, clusters: &[ShapedCluster], available: f32) -> usize {
@@ -1659,60 +1021,37 @@ mod tests {
         shaper
     }
 
-    #[test]
-    fn is_word_char_includes_arabic_and_hebrew() {
-        assert!(is_word_char('ت'));
-        assert!(is_word_char('א'));
+    fn is_forbidden_line_start_char(c: char) -> bool {
+        // Minimal “kinsoku”-style set: avoid starting a line with closing punctuation in CJK text.
+        // Keep this conservative; conformance fixtures can expand it as needed.
+        matches!(
+            c,
+            '，' | '。'
+                | '、'
+                | '：'
+                | '；'
+                | '！'
+                | '？'
+                | '）'
+                | '】'
+                | '》'
+                | '〉'
+                | '」'
+                | '』'
+                | '〕'
+                | '］'
+                | '｝'
+                | '’'
+                | '”'
+        )
     }
 
-    #[test]
-    fn is_word_char_excludes_cjk() {
-        assert!(!is_word_char('你'));
-        assert!(!is_word_char('あ'));
-    }
-
-    #[test]
-    fn shape_once_word_wrap_handles_long_plain_paragraph_under_resize_jitter() {
-        let mut shaper = shaper_with_bundled_fonts();
-        let base = TextStyle {
-            font: FontId::family("Fira Mono"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        let mut text = String::new();
-        for i in 0..400 {
-            if i > 0 {
-                text.push(' ');
-            }
-            text.push_str("word");
-            text.push_str(&(i % 97).to_string());
-        }
-        assert!(text.len() >= 256, "expected long paragraph");
-
-        let widths = [60.0, 80.0, 120.0, 90.0, 70.0, 140.0, 60.0];
-        for w in widths {
-            let (ranges, lines) =
-                wrap_word_range_plain_shape_once(&mut shaper, &text, &base, 0..text.len(), w, 1.0)
-                    .unwrap_or_else(|| panic!("expected shape-once path for width={w}"));
-
-            assert_eq!(ranges.len(), lines.len());
-            assert!(!ranges.is_empty());
-            assert_eq!(ranges[0].start, 0);
-            assert_eq!(ranges.last().unwrap().end, text.len());
-
-            for r in &ranges {
-                assert!(text.is_char_boundary(r.start));
-                assert!(text.is_char_boundary(r.end));
-                assert!(r.start < r.end, "expected non-empty line range");
-            }
-            for win in ranges.windows(2) {
-                assert_eq!(
-                    win[0].end, win[1].start,
-                    "expected contiguous coverage for a single-paragraph plain text wrap"
-                );
-            }
-        }
+    fn is_forbidden_line_end_char(c: char) -> bool {
+        // Avoid ending a line with opening punctuation in CJK text.
+        matches!(
+            c,
+            '（' | '【' | '《' | '〈' | '「' | '『' | '〔' | '［' | '｛'
+        )
     }
 
     #[test]

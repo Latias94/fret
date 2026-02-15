@@ -6,7 +6,7 @@ use parley::LayoutContext;
 use parley::fontique::{FamilyId, GenericFamily};
 use parley::style::{
     FontFeature, FontSettings, FontStyle, FontVariation, FontWeight as ParleyFontWeight,
-    StyleProperty, TextStyle as ParleyTextStyle,
+    OverflowWrap, StyleProperty, TextStyle as ParleyTextStyle, TextWrapMode, WordBreakStrength,
 };
 use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
@@ -600,6 +600,40 @@ impl ParleyShaper {
         }
     }
 
+    pub fn shape_paragraph_word_wrap(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: f32,
+        scale: f32,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        self.shape_paragraph_with_wrap(
+            input,
+            Some(max_width_px),
+            WordBreakStrength::Normal,
+            OverflowWrap::BreakWord,
+            TextWrapMode::Wrap,
+            scale,
+            false,
+        )
+    }
+
+    pub fn shape_paragraph_word_wrap_metrics(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: f32,
+        scale: f32,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        self.shape_paragraph_with_wrap(
+            input,
+            Some(max_width_px),
+            WordBreakStrength::Normal,
+            OverflowWrap::BreakWord,
+            TextWrapMode::Wrap,
+            scale,
+            true,
+        )
+    }
+
     pub fn shape_single_line_metrics(
         &mut self,
         input: TextInputRef<'_>,
@@ -702,6 +736,174 @@ impl ParleyShaper {
             glyphs: Vec::new(),
             clusters,
         }
+    }
+
+    fn shape_paragraph_with_wrap(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: Option<f32>,
+        word_break: WordBreakStrength,
+        overflow_wrap: OverflowWrap,
+        text_wrap_mode: TextWrapMode,
+        scale: f32,
+        metrics_only: bool,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        let (text, base_style, spans) = match input {
+            TextInputRef::Plain { text, style } => (text, style, &[][..]),
+            TextInputRef::Attributed { text, base, spans } => (text, base, spans),
+        };
+
+        if text.is_empty() {
+            let fallback = if metrics_only {
+                self.shape_single_line_metrics(TextInputRef::plain(" ", base_style), scale)
+            } else {
+                self.shape_single_line(TextInputRef::plain(" ", base_style), scale)
+            };
+            return vec![(
+                0..0,
+                ShapedLineLayout {
+                    width: 0.0,
+                    ascent: fallback.ascent,
+                    descent: fallback.descent,
+                    baseline: fallback.baseline,
+                    line_height: fallback.line_height,
+                    glyphs: Vec::new(),
+                    clusters: Vec::new(),
+                },
+            )];
+        }
+
+        let mut root_style = ParleyTextStyle::default();
+        root_style.word_break = word_break;
+        root_style.overflow_wrap = overflow_wrap;
+        root_style.text_wrap_mode = text_wrap_mode;
+
+        let mut builder = self
+            .lcx
+            .tree_builder(&mut self.fcx, scale, true, &root_style);
+
+        let mut base = base_parley_style(
+            base_style,
+            self.default_locale.as_deref(),
+            &self.common_fallback_stack_suffix,
+        );
+        base.word_break = word_break;
+        base.overflow_wrap = overflow_wrap;
+        base.text_wrap_mode = text_wrap_mode;
+        builder.push_style_span(base);
+
+        if let Some(span_ranges) = resolve_span_ranges(text, spans) {
+            for (range, span) in span_ranges {
+                let chunk = &text[range.clone()];
+                if let Some(props) = shaping_properties_for_span(
+                    base_style,
+                    span,
+                    &self.common_fallback_stack_suffix,
+                ) {
+                    builder.push_style_modification_span(props.iter());
+                    builder.push_text(chunk);
+                    builder.pop_style_span();
+                } else {
+                    builder.push_text(chunk);
+                }
+            }
+        } else {
+            builder.push_text(text);
+        }
+
+        builder.pop_style_span();
+        let _built_text = builder.build_into(&mut self.layout);
+        self.layout.break_all_lines(max_width_px);
+
+        let mut out: Vec<(Range<usize>, ShapedLineLayout)> = Vec::new();
+
+        for line in self.layout.lines() {
+            let line_range = line.text_range();
+            let line_start = line_range.start;
+            let metrics = *line.metrics();
+
+            let mut line_height = metrics.line_height.max(0.0);
+            line_height =
+                line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
+            if let Some(requested) = base_style.line_height {
+                line_height = line_height.max((requested.0 * scale).max(0.0));
+            }
+
+            let mut glyphs: Vec<ParleyGlyph> = Vec::new();
+            let mut clusters: Vec<ShapedCluster> = Vec::new();
+
+            let mut run_x = metrics.offset;
+            for run in line.runs() {
+                let font = run.font();
+                let font_data = font.clone();
+                let font_size = run.font_size();
+                let normalized_coords: Arc<[i16]> = Arc::from(run.normalized_coords());
+                let synthesis = run.synthesis();
+
+                for cluster in run.visual_clusters() {
+                    let cluster_range = cluster.text_range();
+                    let cluster_x0 = run_x;
+
+                    let adjusted_range = (cluster_range.start.saturating_sub(line_start))
+                        ..(cluster_range.end.saturating_sub(line_start));
+
+                    if !metrics_only {
+                        let mut glyph_x = cluster_x0;
+                        for mut g in cluster.glyphs() {
+                            g.x += glyph_x;
+                            glyph_x += g.advance;
+
+                            glyphs.push(ParleyGlyph {
+                                id: g.id,
+                                x: g.x,
+                                y: g.y,
+                                advance: g.advance,
+                                font: font_data.clone(),
+                                font_size,
+                                normalized_coords: normalized_coords.clone(),
+                                synthesis,
+                                text_range: adjusted_range.clone(),
+                                is_rtl: cluster.is_rtl(),
+                            });
+                        }
+                    }
+
+                    run_x = cluster_x0 + cluster.advance();
+                    clusters.push(ShapedCluster {
+                        text_range: adjusted_range,
+                        x0: cluster_x0,
+                        x1: run_x,
+                        is_rtl: cluster.is_rtl(),
+                    });
+                }
+            }
+
+            out.push((
+                line_range.clone(),
+                ShapedLineLayout {
+                    width: metrics.advance,
+                    ascent: metrics.ascent,
+                    descent: metrics.descent,
+                    baseline: metrics.baseline,
+                    line_height,
+                    glyphs,
+                    clusters,
+                },
+            ));
+        }
+
+        if out.is_empty() {
+            out.push((
+                0..text.len(),
+                if metrics_only {
+                    self.shape_single_line_metrics(input, scale)
+                } else {
+                    self.shape_single_line(input, scale)
+                },
+            ));
+        }
+
+        out
     }
 }
 

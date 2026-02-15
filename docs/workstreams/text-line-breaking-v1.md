@@ -116,8 +116,9 @@ Stage the work as:
 1) M0: Expand conformance tests and make failures visible (baseline harness is landed).
 2) M1: Improve the wrapper cut-point selection (Option B) for better results immediately (initial
    Unicode break opportunities are landed; keep iterating with fixtures + perf gates).
-3) M2: Introduce Parley-driven line breaking behind a controlled switch and migrate (Option A),
-   keeping the wrapper as a compatibility layer for cases not yet covered (RTL staging).
+3) M2: Replace the legacy wrapper with Parley-driven paragraph line breaking (Option A). Do not
+   retain a long-lived compatibility wrapper: rely on conformance + invariants to keep the behavior
+   auditable, and keep code wrap policy in the ecosystem/editor layer.
 
 This sequencing keeps risk bounded while still converging on a simpler, more correct architecture.
 

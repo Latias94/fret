@@ -24,7 +24,7 @@
       "font_family": "Fira Mono",
       "wrap": "word",
       "max_width_px": 80.0,
-      "expected_line_ranges": [[0, 8], [8, 16], [16, 24], [24, 32], [32, 33], [33, 41], [41, 49], [49, 57], [57, 65]]
+      "expected_line_ranges": [[0, 8], [8, 16], [16, 24], [24, 33], [33, 41], [41, 49], [49, 57], [57, 65]]
     },
     {
       "id": "identifier_snake_and_camel_grapheme_wrap",
@@ -57,7 +57,7 @@
       "wrap": "word",
       "max_width_px": 60.0,
       "assert_no_forbidden_punct": true,
-      "expected_line_ranges": [[0, 3], [3, 9], [9, 12], [12, 18], [18, 21], [21, 27], [27, 30], [30, 36], [36, 39], [39, 45], [45, 54]]
+      "expected_line_ranges": [[0, 9], [9, 18], [18, 27], [27, 36], [36, 45], [45, 54]]
     },
     {
       "id": "newline_paragraphs_word_wrap",
@@ -82,7 +82,7 @@
       "wrap": "word",
       "max_width_px": 60.0,
       "assert_no_forbidden_punct": true,
-      "expected_line_ranges": [[0, 6], [6, 12], [12, 18], [18, 24], [24, 30], [30, 36], [36, 42], [42, 48], [48, 54]]
+      "expected_line_ranges": [[0, 6], [6, 12], [12, 21], [21, 30], [30, 39], [39, 48], [48, 54]]
     },
     {
       "id": "cjk_quotes_word_wrap",
@@ -91,7 +91,7 @@
       "wrap": "word",
       "max_width_px": 60.0,
       "assert_no_forbidden_punct": true,
-      "expected_line_ranges": [[0, 6], [6, 15], [15, 18], [18, 24], [24, 30], [30, 39], [39, 48]]
+      "expected_line_ranges": [[0, 6], [6, 15], [15, 18], [18, 27], [27, 30], [30, 39], [39, 48]]
     },
     {
       "id": "emoji_zwj_sequence_grapheme_wrap",
