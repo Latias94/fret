@@ -357,12 +357,54 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
 
     out.insert("primary".to_string(), colors.accent);
     out.insert("primary-foreground".to_string(), colors.text_primary);
+    // shadcn recipe convenience: `hover:bg-primary/90`.
+    out.insert(
+        "primary.hover.background".to_string(),
+        with_alpha(colors.accent, 0.9),
+    );
 
     out.insert("secondary".to_string(), colors.panel_background);
     out.insert("secondary-foreground".to_string(), colors.text_primary);
 
     out.insert("destructive".to_string(), colors.viewport_gizmo_x);
     out.insert("destructive-foreground".to_string(), colors.text_primary);
+
+    // shadcn/new-york v4 extended palette.
+    //
+    // These are optional in upstream theme presets, but shadcn recipes and our chart ports expect
+    // the keys to exist. Keep defaults stable (theme-overridable via JSON configs).
+    out.insert(
+        "chart-1".to_string(),
+        parse_default_theme_hex_color("chart-1", "#93C5FD"),
+    );
+    out.insert(
+        "chart-2".to_string(),
+        parse_default_theme_hex_color("chart-2", "#3B82F6"),
+    );
+    out.insert(
+        "chart-3".to_string(),
+        parse_default_theme_hex_color("chart-3", "#2563EB"),
+    );
+    out.insert(
+        "chart-4".to_string(),
+        parse_default_theme_hex_color("chart-4", "#1D4ED8"),
+    );
+    out.insert(
+        "chart-5".to_string(),
+        parse_default_theme_hex_color("chart-5", "#1E40AF"),
+    );
+
+    out.insert("sidebar".to_string(), colors.panel_background);
+    out.insert("sidebar-foreground".to_string(), colors.text_primary);
+    out.insert("sidebar-primary".to_string(), colors.accent);
+    out.insert(
+        "sidebar-primary-foreground".to_string(),
+        colors.text_primary,
+    );
+    out.insert("sidebar-accent".to_string(), colors.hover_background);
+    out.insert("sidebar-accent-foreground".to_string(), colors.text_primary);
+    out.insert("sidebar-border".to_string(), colors.panel_border);
+    out.insert("sidebar-ring".to_string(), colors.focus_ring);
 
     // Common non-core semantic keys used by recipes (kept for the migration window).
     out.insert(
@@ -373,6 +415,11 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
     out.insert("input.foreground".to_string(), colors.text_primary);
     out.insert("caret".to_string(), colors.text_primary);
     out.insert("scrollbar.background".to_string(), colors.scrollbar_track);
+    // Historic/compat key used by some UI kit ports.
+    out.insert(
+        "scrollbar.track.background".to_string(),
+        colors.scrollbar_track,
+    );
     out.insert(
         "scrollbar.thumb.background".to_string(),
         colors.scrollbar_thumb,
@@ -430,6 +477,14 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
         metrics.font_line_height,
     );
     out.insert(
+        "component.text.xs_px".to_string(),
+        Px((metrics.font_size.0 - 1.0).max(1.0)),
+    );
+    out.insert(
+        "component.text.xs_line_height".to_string(),
+        metrics.font_line_height,
+    );
+    out.insert(
         "component.text.base_px".to_string(),
         Px(metrics.font_size.0 + 1.0),
     );
@@ -437,6 +492,20 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
         "component.text.base_line_height".to_string(),
         metrics.font_line_height,
     );
+    out.insert(
+        "component.text.prose_px".to_string(),
+        Px(metrics.font_size.0 + 3.0),
+    );
+    out.insert(
+        "component.text.prose_line_height".to_string(),
+        Px((metrics.font_line_height.0 + 8.0).max(metrics.font_size.0 + 10.0)),
+    );
+
+    // Common spacing and sizing tokens used by ecosystem widgets.
+    out.insert("metric.gap.sm".to_string(), metrics.padding_sm);
+    out.insert("component.size.sm.icon_button.size".to_string(), Px(32.0));
+    out.insert("component.size.md.icon_button.size".to_string(), Px(36.0));
+    out.insert("component.size.lg.icon_button.size".to_string(), Px(40.0));
 
     // Legacy generic size tokens used by some shadcn ports/tests.
     // Prefer `component.size.*` tokens in new code.
@@ -2133,6 +2202,34 @@ mod tests {
             "popover.foreground",
             "popover-foreground",
             "popover.border",
+            // shadcn/new-york v4 extended palette + legacy aliases.
+            "chart-1",
+            "chart-2",
+            "chart-3",
+            "chart-4",
+            "chart-5",
+            "chart.1",
+            "chart.2",
+            "chart.3",
+            "chart.4",
+            "chart.5",
+            "sidebar",
+            "sidebar.background",
+            "sidebar-background",
+            "sidebar-foreground",
+            "sidebar.foreground",
+            "sidebar-primary",
+            "sidebar.primary",
+            "sidebar-primary-foreground",
+            "sidebar.primary.foreground",
+            "sidebar-accent",
+            "sidebar.accent",
+            "sidebar-accent-foreground",
+            "sidebar.accent.foreground",
+            "sidebar-border",
+            "sidebar.border",
+            "sidebar-ring",
+            "sidebar.ring",
         ] {
             assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
         }
