@@ -4,6 +4,7 @@
 
 pub mod actions;
 pub mod catalog;
+pub mod executor;
 pub mod json_pointer;
 pub mod mixed_stream;
 pub mod props;

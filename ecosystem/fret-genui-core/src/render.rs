@@ -73,6 +73,13 @@ pub struct GenUiActionInvocation {
     pub event: Arc<str>,
     pub action: Arc<str>,
     pub params: Value,
+    /// App-owned forward-compat fields (mirrors `spec::ActionBindingV1`).
+    pub confirm: Option<Value>,
+    pub on_success: Option<Value>,
+    pub on_error: Option<Value>,
+    /// Repeat scope metadata (when dispatched from inside `repeat`).
+    pub repeat_base_path: Option<Arc<str>>,
+    pub repeat_index: Option<usize>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -180,6 +187,11 @@ impl EventDispatcher {
                     event: event.clone(),
                     action: Arc::from(b.action.as_str()),
                     params,
+                    confirm: b.confirm.clone(),
+                    on_success: b.on_success.clone(),
+                    on_error: b.on_error.clone(),
+                    repeat_base_path: repeat_base_path.clone(),
+                    repeat_index,
                 });
             }
 

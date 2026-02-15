@@ -43,8 +43,8 @@ Design doc: `docs/workstreams/genui-json-render-v1.md`
 
 - [x] Implement action param resolution (including repeat-scoped path semantics for `$item/$bindItem/$index`).
 - [x] Add opt-in `GenUiRuntime.auto_apply_standard_actions` for demos/simple apps (still emits into the queue).
-- [ ] Add a first-class action handler interface + adapters for common app patterns (navigation, clipboard, downloads).
-- [ ] Add “confirm/onSuccess/onError” default executor helpers (optional; keep app-owned).
+- [x] Add a first-class action handler interface + executor (`GenUiActionExecutorV1`) with standard actions and portable effect actions (`openUrl`, `clipboardSetText`).
+- [x] Add “confirm/onSuccess/onError” executor helpers (opt-in confirm policy; best-effort chaining; bounded recursion).
 
 ## P3 — Schema export for LLM structured outputs
 

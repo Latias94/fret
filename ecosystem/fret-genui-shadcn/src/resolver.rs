@@ -131,6 +131,11 @@ impl ShadcnResolver {
                 event: Arc::from(event),
                 action: Arc::from("setState"),
                 params,
+                confirm: None,
+                on_success: None,
+                on_error: None,
+                repeat_base_path: None,
+                repeat_index: None,
             };
 
             let _ = cx
