@@ -170,6 +170,18 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         "Button".to_string(),
         component("Button (clickable)")
             .prop("label", CatalogPropV1::any())
+            .prop(
+                "wFull",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "flex1",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minW0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
             .events(["press"])
             .build(),
     );
@@ -189,6 +201,18 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         component("Single-line input")
             .prop("placeholder", CatalogPropV1::string())
             .prop("value", CatalogPropV1::string())
+            .prop(
+                "wFull",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "flex1",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
+            .prop(
+                "minW0",
+                CatalogPropV1::boolean().default_value(json!(false)),
+            )
             .note("Use {\"$bindState\": \"/path\"} for two-way binding on `value`.")
             .build(),
     );

@@ -69,7 +69,32 @@ impl ShadcnResolver {
         if let Some(placeholder) = placeholder {
             input = input.placeholder(placeholder);
         }
+        let w_full = resolved_props
+            .get("wFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let flex_1 = resolved_props
+            .get("flex1")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_w_0 = resolved_props
+            .get("minW0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut layout = fret_ui_kit::LayoutRefinement::default();
+        if w_full {
+            layout = layout.w_full();
+        }
+        if flex_1 {
+            layout = layout.flex_1();
+        }
+        if min_w_0 {
+            layout = layout.min_w_0();
+        }
+
         input = input.a11y_role(fret_core::SemanticsRole::TextField);
+        input = input.refine_layout(layout);
 
         let input = input.into_element(cx);
         if children.is_empty() {

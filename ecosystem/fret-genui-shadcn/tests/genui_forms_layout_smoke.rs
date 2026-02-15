@@ -74,7 +74,7 @@ fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
                 "children": ["name_label", "name_input", "name_value"]
             },
             "name_label": { "type": "Text", "props": { "text": "Name:", "variant": "small" }, "children": [] },
-            "name_input": { "type": "Input", "props": { "placeholder": "Type…", "value": { "$bindState": "/name" } }, "children": [] },
+            "name_input": { "type": "Input", "props": { "placeholder": "Type…", "value": { "$bindState": "/name" }, "flex1": true, "minW0": true }, "children": [] },
             "name_value": { "type": "Badge", "props": { "label": { "$state": "/name" }, "variant": "secondary" }, "children": [] },
 
             "row_enabled": {

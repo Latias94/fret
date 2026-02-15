@@ -365,7 +365,33 @@ impl ShadcnResolver {
         on_event: &dyn Fn(&str) -> Option<OnActivate>,
     ) -> AnyElement {
         let label = Self::json_to_label(resolved_props.get("label"));
-        let mut button = fret_ui_shadcn::Button::new(label).children(children);
+        let w_full = resolved_props
+            .get("wFull")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let flex_1 = resolved_props
+            .get("flex1")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let min_w_0 = resolved_props
+            .get("minW0")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut layout = fret_ui_kit::LayoutRefinement::default();
+        if w_full {
+            layout = layout.w_full();
+        }
+        if flex_1 {
+            layout = layout.flex_1();
+        }
+        if min_w_0 {
+            layout = layout.min_w_0();
+        }
+
+        let mut button = fret_ui_shadcn::Button::new(label)
+            .children(children)
+            .refine_layout(layout);
         if let Some(on_activate) = on_event("press") {
             button = button.on_activate(on_activate);
         }

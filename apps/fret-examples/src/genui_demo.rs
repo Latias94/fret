@@ -114,7 +114,7 @@ const SPEC_JSON: &str = r#"
     "name_label": { "type": "Text", "props": { "text": "Name:" }, "children": [] },
     "name_input": {
       "type": "Input",
-      "props": { "placeholder": "Type your name…", "value": { "$bindState": "/name" } },
+      "props": { "placeholder": "Type your name…", "value": { "$bindState": "/name" }, "flex1": true, "minW0": true },
       "children": []
     },
     "name_value": { "type": "Text", "props": { "text": { "$state": "/name" } }, "children": [] },
@@ -169,7 +169,7 @@ const SPEC_JSON: &str = r#"
     },
     "todo_input": {
       "type": "Input",
-      "props": { "placeholder": "New todo…", "value": { "$bindState": "/newTodoText" } },
+      "props": { "placeholder": "New todo…", "value": { "$bindState": "/newTodoText" }, "flex1": true, "minW0": true },
       "children": []
     },
     "todo_add_btn": {
