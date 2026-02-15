@@ -31,6 +31,22 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         "Text".to_string(),
         component("Plain text")
             .prop("text", CatalogPropV1::any())
+            .prop(
+                "variant",
+                CatalogPropV1::enum_values([
+                    "body",
+                    "muted",
+                    "small",
+                    "lead",
+                    "large",
+                    "h1",
+                    "h2",
+                    "h3",
+                    "h4",
+                    "inlineCode",
+                ])
+                .default_value(json!("body")),
+            )
             .build(),
     );
     out.insert(

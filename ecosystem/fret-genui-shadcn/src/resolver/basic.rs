@@ -89,7 +89,23 @@ impl ShadcnResolver {
         resolved_props: &serde_json::Map<String, serde_json::Value>,
     ) -> AnyElement {
         let text = Self::json_to_label(resolved_props.get("text"));
-        fret_ui_kit::ui::text(cx, text).into_element(cx)
+        match resolved_props
+            .get("variant")
+            .and_then(|v| v.as_str())
+            .unwrap_or("body")
+        {
+            "body" => fret_ui_shadcn::typography::p(cx, text),
+            "muted" => fret_ui_shadcn::typography::muted(cx, text),
+            "small" => fret_ui_shadcn::typography::small(cx, text),
+            "lead" => fret_ui_shadcn::typography::lead(cx, text),
+            "large" => fret_ui_shadcn::typography::large(cx, text),
+            "h1" => fret_ui_shadcn::typography::h1(cx, text),
+            "h2" => fret_ui_shadcn::typography::h2(cx, text),
+            "h3" => fret_ui_shadcn::typography::h3(cx, text),
+            "h4" => fret_ui_shadcn::typography::h4(cx, text),
+            "inlineCode" => fret_ui_shadcn::typography::inline_code(cx, text),
+            _ => fret_ui_kit::ui::text(cx, text).into_element(cx),
+        }
     }
 
     pub(super) fn render_vstack<H: UiHost>(
