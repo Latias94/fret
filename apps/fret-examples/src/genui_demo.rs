@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::prelude::*;
+use fret_genui_core::actions;
 use fret_genui_core::catalog::CatalogV1;
 use fret_genui_core::json_pointer;
 use fret_genui_core::mixed_stream::{MixedSpecStreamCompiler, MixedStreamMode, MixedStreamOptions};
@@ -283,6 +284,7 @@ struct GenUiState {
 #[derive(Debug, Clone)]
 enum Msg {
     ClearActions,
+    ApplyQueuedStandardActions,
     ResetState,
     ApplyEditorSpec,
     ResetEditor,
@@ -319,6 +321,22 @@ impl MvuProgram for GenUiProgram {
     fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
         match message {
             Msg::ClearActions => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.action_queue, |q| q.invocations.clear());
+            }
+            Msg::ApplyQueuedStandardActions => {
+                let invocations = app
+                    .models()
+                    .read(&state.action_queue, |q| q.invocations.clone())
+                    .ok()
+                    .unwrap_or_default();
+                let _ = app.models_mut().update(&state.genui_state, |st| {
+                    for inv in invocations.iter() {
+                        let _ =
+                            actions::apply_standard_action(st, inv.action.as_ref(), &inv.params);
+                    }
+                });
                 let _ = app
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
@@ -471,6 +489,7 @@ fn view(
     let theme = Theme::global(&*cx.app).snapshot();
 
     let clear_cmd = msg.cmd(Msg::ClearActions);
+    let apply_queue_cmd = msg.cmd(Msg::ApplyQueuedStandardActions);
     let reset_cmd = msg.cmd(Msg::ResetState);
     let apply_editor_cmd = msg.cmd(Msg::ApplyEditorSpec);
     let reset_editor_cmd = msg.cmd(Msg::ResetEditor);
@@ -578,6 +597,10 @@ fn view(
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(clear_cmd)
                 .into_element(cx),
+            shadcn::Button::new("Apply queue (standard)")
+                .variant(shadcn::ButtonVariant::Outline)
+                .on_click(apply_queue_cmd)
+                .into_element(cx),
             shadcn::Button::new("Reset state")
                 .variant(shadcn::ButtonVariant::Outline)
                 .on_click(reset_cmd)
@@ -622,6 +645,18 @@ fn view(
     let left = {
         let mut body: Vec<AnyElement> = Vec::new();
         body.push(toolbar);
+        if !auto_apply_enabled {
+            body.push(
+                shadcn::Alert::new([
+                    shadcn::AlertTitle::new("Queue-only mode").into_element(cx),
+                    shadcn::AlertDescription::new(
+                        "Auto-apply is off: pressing buttons will only append action invocations to the queue. Use “Apply queue (standard)” or turn auto-apply on to update state.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            );
+        }
         if spec_issue_count != 0 {
             body.push(
                 shadcn::Alert::new([
