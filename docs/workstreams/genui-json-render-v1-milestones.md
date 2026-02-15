@@ -95,3 +95,11 @@ Candidate exit criteria:
 - ✅ A validation state model exists (issues keyed by JSON Pointer paths).
 - ✅ At least one submit-like action is gated by `validate_all()` via the app-owned executor.
 - ✅ Demo shows validation failures deterministically (no silent accept) and exposes issues in the inspector.
+
+## M10 — v1 “shippable demo” polish (no contract changes)
+
+Candidate exit criteria:
+
+- Demo clearly communicates auto-apply vs queue-only mode (no “why doesn’t it change?” confusion).
+- Demo spec examples consistently avoid “glued-to-edge” layouts via `Box.p` + `VStack/HStack.gap`.
+- At least one end-to-end smoke test covers validation issue presentation via repeat + `$item` (strict catalog validation).

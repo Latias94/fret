@@ -99,3 +99,13 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 - [x] Improve catalog prompt hints for layout patterns (Box boundaries, HStack + Input `flex1 + minW0`).
 - [x] Normalize card content ergonomics in the spec examples (see Card ergonomics section and demo specs).
 - [x] Add one more smoke spec focused on forms layout (labels, input widths, wrap, and alignment).
+
+## Next (v1.1 polish — keep contracts stable)
+
+Goal: reduce “demo confusion” and make the shadcn catalog output more consistently good-looking without changing the SpecV1 grammar.
+
+- [ ] Demo UX: make queue-only vs auto-apply mode impossible to miss (copy + affordances + “why didn’t my counter change?” hints).
+- [ ] Demo spec ergonomics: add a small “Card as body” example and a “Box boundaries” example that LLMs can copy.
+- [ ] Validation presentation: add a second spec snippet that renders multiple issues per field (repeat + filter) with consistent spacing.
+- [ ] Catalog prompting: add one or two shadcn-specific notes that steer output away from “glued-to-edge” layouts (prefer `Box.p` + `VStack.gap`).
+- [ ] Gates: add an e2e smoke test that asserts validation issues appear/disappear deterministically (no visual assertions).
