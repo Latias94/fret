@@ -62,6 +62,7 @@ const SPEC_JSON: &str = r#"
         "counter_row",
         "sep_2",
         "todos_title",
+        "todo_add_row",
         "todos_list"
       ]
     },
@@ -145,18 +146,42 @@ const SPEC_JSON: &str = r#"
     },
     "sep_2": { "type": "Separator", "props": {}, "children": [] },
     "todos_title": { "type": "Text", "props": { "text": "Todos (repeat demo)" }, "children": [] },
+    "todo_add_row": {
+      "type": "HStack",
+      "props": { "gap": "N2" },
+      "children": ["todo_input", "todo_add_btn"]
+    },
+    "todo_input": {
+      "type": "Input",
+      "props": { "placeholder": "New todo…", "value": { "$bindState": "/newTodoText" } },
+      "children": []
+    },
+    "todo_add_btn": {
+      "type": "Button",
+      "props": { "label": "Add" },
+      "on": { "press": { "action": "pushState", "params": { "statePath": "/todos", "value": { "id": "$id", "label": { "$state": "/newTodoText" } }, "clearStatePath": "/newTodoText" } } },
+      "children": []
+    },
     "todos_list": {
       "type": "VStack",
       "props": { "gap": "N1" },
       "repeat": { "statePath": "/todos", "key": "id" },
       "children": ["todo_item"]
     },
-    "todo_item": { "type": "Text", "props": { "text": { "$item": "label" } }, "children": [] }
+    "todo_item": { "type": "HStack", "props": { "gap": "N2" }, "children": ["todo_label", "todo_remove"] },
+    "todo_label": { "type": "Text", "props": { "text": { "$item": "label" } }, "children": [] },
+    "todo_remove": {
+      "type": "Button",
+      "props": { "label": "Remove" },
+      "on": { "press": { "action": "removeState", "params": { "statePath": "/todos", "index": { "$index": true } } } },
+      "children": []
+    }
   },
   "state": {
     "name": "Ada",
     "enabled": true,
     "count": 0,
+    "newTodoText": "",
     "todos": [
       { "id": "a", "label": "Keep runtime mechanism-only (ADR 0066)" },
       { "id": "b", "label": "Render from a flat spec + catalog" },

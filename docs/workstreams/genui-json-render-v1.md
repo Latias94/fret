@@ -177,6 +177,8 @@ Standard actions:
 
 - `setState`: update the JSON state model via JSON Pointer (`/path`) with a new `value`.
 - `incrementState`: increment a numeric JSON state field (`/path`) by an integer `delta` (defaults to `1`).
+- `pushState`: append an item to an array at `statePath`; expands `"$id"` string placeholders inside the pushed value.
+- `removeState`: remove an array item at `statePath` by `index` (often sourced from `{ "$index": true }` in repeat scopes).
 - `fret-genui-core` provides a small helper (`fret_genui_core::actions::apply_standard_action`) so
   apps can opt into these semantics without embedding them in the renderer.
 

@@ -127,6 +127,30 @@ fn shadcn_actions_v1() -> BTreeMap<String, CatalogActionV1> {
             ("delta", "Integer delta (defaults to 1)"),
         ]),
     );
+    out.insert(
+        "pushState".to_string(),
+        action("Append an item to an array at a JSON Pointer path.").params([
+            ("statePath", "JSON Pointer path to an array (e.g. /todos)"),
+            (
+                "value",
+                "New item value (any JSON); use \"$id\" to generate ids",
+            ),
+            (
+                "clearStatePath",
+                "Optional JSON Pointer path to clear after push",
+            ),
+        ]),
+    );
+    out.insert(
+        "removeState".to_string(),
+        action("Remove an item from an array at a JSON Pointer path by index.").params([
+            ("statePath", "JSON Pointer path to an array (e.g. /todos)"),
+            (
+                "index",
+                "Array index (use {\"$index\": true} inside repeat)",
+            ),
+        ]),
+    );
 
     out
 }
