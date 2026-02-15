@@ -125,6 +125,9 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `ecosystem/fret-ui-editor/src/controls/checkbox.rs`
   - [x] Editor input surfaces remain visible even when the active theme uses transparent input backgrounds.
     - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
+  - [~] EnumSelect overlay dismissal is reliable (outside press / trigger press) and does not leave ghosting artifacts.
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+    - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs` (opaque editor input surfaces)
   - [x] `PropertyGroup` header has a background and divider for visual grouping.
     - Evidence: `ecosystem/fret-ui-editor/src/composites/property_group.rs`
   - [x] Replace tofu-prone glyph chrome with SVG icons via semantic `fret-icons` IDs.
