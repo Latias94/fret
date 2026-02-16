@@ -1,41 +1,8 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(560.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
     let icon_item = |cx: &mut ElementContext<'_, App>, value: &'static str, label: &'static str| {
         shadcn::ToggleGroupItem::new(
             value,
@@ -55,7 +22,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         shadcn::ToggleGroupItem::new(value, [cx.text(label)]).a11y_label(format!("Toggle {label}"))
     };
 
-    let demo_group = shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
+    let demo = shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
         .variant(shadcn::ToggleVariant::Outline)
         .items([
             icon_item(cx, "bold", "Toggle bold"),
@@ -64,12 +31,8 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-demo");
-    let demo = {
-        let body = centered(cx, demo_group);
-        section(cx, "Demo", body)
-    };
 
-    let outline_group = shadcn::ToggleGroup::multiple_uncontrolled(["left"])
+    let outline = shadcn::ToggleGroup::multiple_uncontrolled(["left"])
         .variant(shadcn::ToggleVariant::Outline)
         .items([
             text_item(cx, "left", "Left"),
@@ -78,12 +41,8 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-outline");
-    let outline = {
-        let body = centered(cx, outline_group);
-        section(cx, "Outline", body)
-    };
 
-    let size_row = {
+    let size = {
         let sm = shadcn::ToggleGroup::single_uncontrolled(Some("left"))
             .variant(shadcn::ToggleVariant::Outline)
             .size(shadcn::ToggleSize::Sm)
@@ -128,12 +87,8 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         )
         .test_id("ui-gallery-toggle-group-size")
     };
-    let size = {
-        let body = centered(cx, size_row);
-        section(cx, "Size", body)
-    };
 
-    let spacing_group = shadcn::ToggleGroup::single_uncontrolled(Some("top"))
+    let spacing = shadcn::ToggleGroup::single_uncontrolled(Some("top"))
         .variant(shadcn::ToggleVariant::Outline)
         .size(shadcn::ToggleSize::Sm)
         .spacing(Space::N2)
@@ -145,12 +100,8 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-spacing");
-    let spacing = {
-        let body = centered(cx, spacing_group);
-        section(cx, "Spacing", body)
-    };
 
-    let vertical_group = shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
+    let vertical = shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
         .orientation(fret_ui_kit::primitives::toggle_group::ToggleGroupOrientation::Vertical)
         .spacing(Space::N1)
         .items([
@@ -160,12 +111,8 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-vertical");
-    let vertical = {
-        let body = centered(cx, vertical_group);
-        section(cx, "Vertical", body)
-    };
 
-    let disabled_group = shadcn::ToggleGroup::multiple_uncontrolled(["bold"])
+    let disabled = shadcn::ToggleGroup::multiple_uncontrolled(["bold"])
         .disabled(true)
         .variant(shadcn::ToggleVariant::Outline)
         .items([
@@ -175,12 +122,8 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-disabled");
-    let disabled = {
-        let body = centered(cx, disabled_group);
-        section(cx, "Disabled", body)
-    };
 
-    let rtl_group = fret_ui_kit::primitives::direction::with_direction_provider(
+    let rtl = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
         fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
         |cx| {
@@ -195,84 +138,18 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         },
     )
     .test_id("ui-gallery-toggle-group-rtl");
-    let rtl = {
-        let body = centered(cx, rtl_group);
-        section(cx, "RTL", body)
-    };
-
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Toggle Group docs order for quick visual lookup.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                outline,
-                size,
-                spacing,
-                vertical,
-                disabled,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-toggle-group-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Demo",
-                    "ToggleGroup::multiple_uncontrolled([\"bold\", \"italic\"])\n    .variant(ToggleVariant::Outline)\n    .item(ToggleGroupItem::new(\"bold\", [icon(\"lucide.bold\")]))",
-                ),
-                code_block(
-                    cx,
-                    "Size / Spacing",
-                    "ToggleGroup::single_uncontrolled(Some(\"left\"))\n    .size(ToggleSize::Sm | Default | Lg)\n    .spacing(Space::N2)",
-                ),
-                code_block(
-                    cx,
-                    "Vertical / RTL",
-                    "ToggleGroup::multiple_uncontrolled([\"bold\"])\n    .orientation(ToggleGroupOrientation::Vertical)\nwith_direction_provider(LayoutDirection::Rtl, ...)",
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/toggle_group.rs` and `ecosystem/fret-ui-shadcn/src/toggle.rs`.",
+                ),
                 shadcn::typography::muted(
                     cx,
                     "Use Single mode for mutually-exclusive options (alignment, list/grid/cards).",
@@ -287,18 +164,54 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "For icon-only groups, keep explicit a11y labels for assistive technologies.",
+                    "For icon-only groups, keep explicit `a11y_label` for assistive technologies.",
                 ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-toggle-group",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Toggle Group docs order: Demo, Outline, Size, Spacing, Vertical, Disabled, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Multiple selection with icon-only items.")
+                .max_w(Px(560.0))
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
+    .variant(shadcn::ToggleVariant::Outline)
+    .items([
+        shadcn::ToggleGroupItem::new("bold", [shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bold"))]),
+        shadcn::ToggleGroupItem::new("italic", [shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.italic"))]),
+    ])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Outline", outline)
+                .description("Text items with outline chrome.")
+                .max_w(Px(560.0)),
+            DocSection::new("Size", size)
+                .description("Size presets for toolbar density.")
+                .max_w(Px(560.0)),
+            DocSection::new("Spacing", spacing)
+                .description("Explicit spacing between items to reduce mis-clicks.")
+                .max_w(Px(560.0)),
+            DocSection::new("Vertical", vertical)
+                .description("Vertical orientation for side panels / inspectors.")
+                .max_w(Px(560.0)),
+            DocSection::new("Disabled", disabled)
+                .description("Disabled groups keep layout but block interaction.")
+                .max_w(Px(560.0)),
+            DocSection::new("RTL", rtl)
+                .description("Item ordering and pressed visuals under RTL.")
+                .max_w(Px(560.0)),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and authoring notes.")
+                .max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-toggle-group")]
 }

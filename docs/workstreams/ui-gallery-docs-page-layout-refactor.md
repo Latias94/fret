@@ -68,8 +68,8 @@ Legend:
 | Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|---|
 | Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Keeps existing section-title `test_id`s for single-line heading gates. |
-| Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | None yet | Candidate: state matrix sections. |
-| Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | None yet | Candidate: single/multi + orientation. |
+| Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | None yet | Keeps `ui-gallery-toggle-*` test IDs stable for future diag scripts. |
+| Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | None yet | Keeps `ui-gallery-toggle-group-*` test IDs stable for future diag scripts. |
 | Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Examples Partial / API ✅ | Partial | Tab-only | None yet | Candidate: sections per token preset + truncation/wrap behavior. |
 | Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-kbd-docs-smoke.json` (1) | Keeps existing `test_id`s for demo/group/button/input-group. |
 | Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | None yet | Candidate: list item patterns + icons + truncation. |
