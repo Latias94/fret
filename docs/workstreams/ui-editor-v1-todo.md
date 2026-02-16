@@ -70,6 +70,7 @@ Deliverables:
   - [x] validation/error affordance slot
   - [x] joined input-group chrome (matches `TextField` / `MiniSearchBox`)
   - [x] error state tints the joined frame border/bg (tokens)
+  - [x] configurable error presentation (inline text vs trailing status icon)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/numeric_input.rs`
 - [~] `DragValue<T>` control:
   - [x] scalar abstraction (`DragValueScalar` for `f32`/`f64`/`i32`)

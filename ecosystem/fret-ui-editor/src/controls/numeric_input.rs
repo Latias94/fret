@@ -24,7 +24,7 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_joined_input_frame_with_overrides,
+    EditorInputGroupFrameOverrides, editor_icon_segment, editor_joined_input_frame_with_overrides,
 };
 use crate::primitives::style::EditorStyle;
 
@@ -42,6 +42,7 @@ pub struct NumericInputOptions {
     pub test_id: Option<Arc<str>>,
     pub enabled: bool,
     pub focusable: bool,
+    pub error_display: NumericInputErrorDisplay,
 }
 
 impl Default for NumericInputOptions {
@@ -61,8 +62,17 @@ impl Default for NumericInputOptions {
             test_id: None,
             enabled: true,
             focusable: true,
+            error_display: NumericInputErrorDisplay::InlineTextAndIcon,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NumericInputErrorDisplay {
+    None,
+    InlineText,
+    TrailingIcon,
+    InlineTextAndIcon,
 }
 
 pub type NumericFormatFn<T> = Arc<dyn Fn(T) -> Arc<str> + Send + Sync + 'static>;
@@ -179,9 +189,11 @@ where
         let enabled_for_paint = options.enabled;
         let error_for_field = error.clone();
         let error_for_frame = error.clone();
+        let error_for_trailing = error.clone();
         let text_style_for_field = text_style.clone();
         let placeholder = options.placeholder.clone();
         let focusable = options.focusable;
+        let error_display = options.error_display;
 
         let frame_bg = frame_chrome.bg;
         let field = editor_joined_input_frame_with_overrides(
@@ -354,7 +366,37 @@ where
 
                 input
             },
-            |_cx| Vec::new(),
+            move |cx| {
+                let show_icon = matches!(
+                    error_display,
+                    NumericInputErrorDisplay::TrailingIcon
+                        | NumericInputErrorDisplay::InlineTextAndIcon
+                );
+                if !show_icon {
+                    return Vec::new();
+                }
+
+                let error_msg = cx
+                    .get_model_cloned(&error_for_trailing, Invalidation::Paint)
+                    .unwrap_or(None);
+                if error_msg.is_none() {
+                    return Vec::new();
+                }
+
+                let theme = Theme::global(&*cx.app);
+                let error_border = theme
+                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
+                    .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+                    .unwrap_or_else(|| theme.color_token("destructive"));
+
+                vec![editor_icon_segment(
+                    cx,
+                    density,
+                    fret_icons::ids::ui::STATUS_FAILED,
+                    Some(Px(12.0)),
+                    Some(fret_ui_kit::ColorRef::Color(error_border)),
+                )]
+            },
         );
 
         let error_msg = cx
@@ -367,26 +409,33 @@ where
                 .color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG)
                 .unwrap_or_else(|| theme.color_token("destructive"))
         };
-        let error_el = error_msg.map(|msg| {
-            cx.text_props(TextProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
+        let show_inline_error = matches!(
+            error_display,
+            NumericInputErrorDisplay::InlineText | NumericInputErrorDisplay::InlineTextAndIcon
+        );
+
+        let error_el = (show_inline_error).then_some(()).and_then(|_| {
+            error_msg.map(|msg| {
+                cx.text_props(TextProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                text: msg,
-                style: Some(TextStyle {
-                    size: text_style.size,
-                    line_height: text_style.line_height,
-                    ..Default::default()
-                }),
-                color: Some(error_color),
-                wrap: TextWrap::Word,
-                overflow: TextOverflow::Clip,
-                align: TextAlign::Start,
+                    text: msg,
+                    style: Some(TextStyle {
+                        size: text_style.size,
+                        line_height: text_style.line_height,
+                        ..Default::default()
+                    }),
+                    color: Some(error_color),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    align: TextAlign::Start,
+                })
             })
         });
 

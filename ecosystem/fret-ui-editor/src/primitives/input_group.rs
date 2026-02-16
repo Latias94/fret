@@ -13,10 +13,11 @@ use fret_ui::element::{
     MainAlign, PointerRegionProps, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::ColorRef;
 
 use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
-use super::icons::editor_icon;
+use super::icons::{editor_icon, editor_icon_with};
 use super::visuals::{EditorFrameState, EditorWidgetVisuals};
 use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
@@ -261,6 +262,58 @@ pub(crate) fn editor_clear_button_segment<H: UiHost>(
         Some(Px(12.0)),
         test_id,
         on_activate,
+    )
+}
+
+pub(crate) fn editor_icon_segment<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    icon: fret_icons::IconId,
+    icon_size: Option<Px>,
+    color: Option<ColorRef>,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Px(density.hit_thickness),
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            padding: Edges::all(Px(0.0)),
+            ..Default::default()
+        },
+        move |cx| {
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    vec![editor_icon_with(
+                        cx,
+                        density,
+                        icon,
+                        icon_size,
+                        color.clone(),
+                    )]
+                },
+            )]
+        },
     )
 }
 
