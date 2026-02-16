@@ -196,6 +196,11 @@ folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
   - Evidence:
     - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
     - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
+    - pointer / hit-test mapping across folds/inlays/preedit:
+      - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+        (`caret_for_pointer_snaps_inside_inlay_only_row_to_insertion_point_under_soft_wrap`)
+      - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+        (`caret_for_pointer_snaps_inside_preedit_replacement_span_under_wrap_and_code_wrap_policy`)
 - [x] Ensure paint-only changes never invalidate row geometry caches.
   - Regression gate:
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
