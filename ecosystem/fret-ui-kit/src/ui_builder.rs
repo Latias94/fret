@@ -49,6 +49,23 @@ pub trait UiIntoElement: Sized {
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
 
+impl UiIntoElement for AnyElement {
+    #[track_caller]
+    fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self
+    }
+}
+
+impl<T> UiIntoElement for UiBuilder<T>
+where
+    T: UiPatchTarget + UiIntoElement,
+{
+    #[track_caller]
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
 /// The main fluent authoring surface: `value.ui().px_2().w_full().into_element(cx)`.
 #[derive(Debug, Clone)]
 pub struct UiBuilder<T> {

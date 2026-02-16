@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+pub use crate::children;
+
 use fret_core::{Axis, Edges, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, LayoutStyle, Length, Overflow,

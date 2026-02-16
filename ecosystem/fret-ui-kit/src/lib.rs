@@ -7,6 +7,21 @@
 //! Note: This crate is declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface.
 
+/// Build a heterogeneous `Vec<AnyElement>` without repetitive `.into_element(cx)` boilerplate.
+///
+/// Intended for ergonomic authoring inside layout builders, e.g.:
+/// `ui::h_flex(cx, |cx| ui::children![cx; Button::new("OK").ui(), cx.text("...")])`.
+#[macro_export]
+macro_rules! children {
+    ($cx:expr;) => {
+        ::std::vec::Vec::new()
+    };
+    ($cx:expr; $($child:expr),+ $(,)?) => {{
+        let cx = $cx;
+        ::std::vec![ $( $crate::UiIntoElement::into_element($child, cx) ),+ ]
+    }};
+}
+
 pub mod command;
 mod corners4;
 pub mod declarative;

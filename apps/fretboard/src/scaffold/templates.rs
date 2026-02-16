@@ -67,6 +67,53 @@ fret-selector = {{ path = "{fret_selector_path}", features = ["ui"] }}
     )
 }
 
+pub(super) fn simple_todo_template_cargo_toml(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    workspace_prefix: &str,
+) -> String {
+    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics", "shadcn"];
+    if opts.command_palette {
+        kit_features.push("command-palette");
+    }
+    if opts.ui_assets {
+        kit_features.push("ui-assets");
+    }
+    match opts.icon_pack {
+        IconPack::Lucide => {
+            kit_features.push("icons-lucide");
+            kit_features.push("preload-icon-svgs");
+        }
+        IconPack::Radix => {
+            kit_features.push("icons-radix");
+            kit_features.push("preload-icon-svgs");
+        }
+        IconPack::None => {}
+    }
+
+    let kit_features = kit_features
+        .into_iter()
+        .map(|f| format!("\"{f}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
+
+    format!(
+        r#"[package]
+name = "{package_name}"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
+
+[workspace]
+"#
+    )
+}
+
 pub(super) fn empty_template_cargo_toml(package_name: &str) -> String {
     format!(
         r#"[package]
@@ -642,6 +689,308 @@ fn main() -> anyhow::Result<()> {{
     .replace("__PALETTE_BUTTON__", palette_button)
 }
 
+pub(super) fn simple_todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) -> String {
+    // Radix doesn't currently ship plus/trash icons in our curated set; keep the template
+    // functional by falling back to text buttons when Lucide isn't selected.
+    let has_action_icons = matches!(opts.icon_pack, IconPack::Lucide);
+
+    let add_btn_def = if has_action_icons {
+        r#"    let add_btn = shadcn::Button::new("")
+        .size(shadcn::ButtonSize::Icon)
+        .disabled(!add_enabled)
+        .on_click(add_cmd.clone())
+        .children(ui::children![cx; icon::icon(cx, IconId::new("lucide.plus"))])
+        .ui()
+        .rounded_md();
+"#
+    } else {
+        r#"    let add_btn = shadcn::Button::new("Add")
+        .disabled(!add_enabled)
+        .on_click(add_cmd.clone())
+        .ui()
+        .rounded_md();
+"#
+    };
+
+    let remove_btn_def = if has_action_icons {
+        r#"    let remove_btn = shadcn::Button::new("")
+        .size(shadcn::ButtonSize::IconSm)
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(remove_cmd)
+        .children(ui::children![cx; icon::icon(cx, IconId::new("lucide.trash"))])
+        .ui()
+        .rounded_md();
+"#
+    } else {
+        r#"    let remove_btn = shadcn::Button::new("Remove")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(remove_cmd)
+        .ui()
+        .rounded_md();
+"#
+    };
+
+    const TEMPLATE: &str = r#"use std::sync::Arc;
+
+use fret::prelude::*;
+
+#[derive(Clone)]
+struct TodoItem {
+    id: u64,
+    done: Model<bool>,
+    text: Arc<str>,
+}
+
+struct TodoState {
+    todos: Model<Vec<TodoItem>>,
+    draft: Model<String>,
+    next_id: u64,
+}
+
+#[derive(Debug, Clone)]
+enum Msg {
+    Add,
+    ClearDone,
+    Remove(u64),
+}
+
+struct TodoProgram;
+
+impl MvuProgram for TodoProgram {
+    type State = TodoState;
+    type Message = Msg;
+
+    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+        init_window(app, window)
+    }
+
+    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
+        update(app, state, message);
+    }
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        state: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {
+        view(cx, state, msg)
+    }
+}
+
+fn main() -> anyhow::Result<()> {
+    fret::mvu::app::<TodoProgram>("simple-todo")?
+        .with_main_window("simple-todo", (560.0, 520.0))
+        .run()?;
+    Ok(())
+}
+
+fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
+    let done_1 = app.models_mut().insert(false);
+    let done_2 = app.models_mut().insert(true);
+    let todos = app.models_mut().insert(vec![
+        TodoItem {
+            id: 1,
+            done: done_1,
+            text: Arc::from("Use keyed rows for dynamic lists"),
+        },
+        TodoItem {
+            id: 2,
+            done: done_2,
+            text: Arc::from("Try the shadcn theme tokens"),
+        },
+    ]);
+    let draft = app.models_mut().insert(String::new());
+
+    TodoState {
+        todos,
+        draft,
+        next_id: 3,
+    }
+}
+
+fn update(app: &mut App, st: &mut TodoState, msg: Msg) {
+    match msg {
+        Msg::Add => {
+            let text = app
+                .models()
+                .read(&st.draft, |v| v.trim().to_string())
+                .ok()
+                .unwrap_or_default();
+            if text.is_empty() {
+                return;
+            }
+
+            let done = app.models_mut().insert(false);
+            let id = st.next_id;
+            st.next_id = st.next_id.saturating_add(1);
+
+            let _ = app.models_mut().update(&st.todos, |todos| {
+                todos.push(TodoItem {
+                    id,
+                    done,
+                    text: Arc::from(text),
+                });
+            });
+            let _ = app.models_mut().update(&st.draft, |v| v.clear());
+        }
+        Msg::ClearDone => {
+            let mut remove_ids = Vec::new();
+            let todos = app
+                .models()
+                .read(&st.todos, |v| v.clone())
+                .ok()
+                .unwrap_or_default();
+            for t in &todos {
+                let done = app.models().read(&t.done, |v| *v).ok().unwrap_or(false);
+                if done {
+                    remove_ids.push(t.id);
+                }
+            }
+            if remove_ids.is_empty() {
+                return;
+            }
+            let _ = app.models_mut().update(&st.todos, |todos| {
+                todos.retain(|t| !remove_ids.contains(&t.id));
+            });
+        }
+        Msg::Remove(id) => {
+            let _ = app.models_mut().update(&st.todos, |todos| {
+                todos.retain(|t| t.id != id);
+            });
+        }
+    }
+}
+
+fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState, msg: &mut MessageRouter<Msg>) -> Elements {
+    let theme = Theme::global(&*cx.app).snapshot();
+
+    let todos = cx.watch_model(&st.todos).layout().cloned_or_default();
+    let draft_value = cx.watch_model(&st.draft).paint().cloned_or_default();
+
+    let mut done_count = 0usize;
+    for t in &todos {
+        if cx.watch_model(&t.done).paint().copied_or_default() {
+            done_count += 1;
+        }
+    }
+    let total_count = todos.len();
+
+    let add_enabled = !draft_value.trim().is_empty();
+    let add_cmd = msg.cmd(Msg::Add);
+    let clear_done_cmd = msg.cmd(Msg::ClearDone);
+
+    let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
+        .variant(shadcn::BadgeVariant::Secondary);
+
+    let clear_done_btn = shadcn::Button::new("Clear done")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .disabled(done_count == 0)
+        .on_click(clear_done_cmd)
+        .ui()
+        .rounded_md();
+
+    let header_actions = ui::h_flex(cx, |cx| ui::children![cx; progress, clear_done_btn])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
+
+__ADD_BTN_DEF__
+
+    let input = shadcn::Input::new(st.draft.clone())
+        .placeholder("Add a task…")
+        .submit_command(add_cmd.clone());
+
+    let input_row = ui::h_flex(cx, |cx| ui::children![cx; input, add_btn])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
+        .into_element(cx);
+
+    let rows = ui::v_flex_build(cx, |cx, out| {
+        for t in &todos {
+            let remove_cmd = msg.cmd(Msg::Remove(t.id));
+            out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t, remove_cmd.clone())));
+        }
+    })
+    .gap(Space::N3)
+    .w_full()
+    .into_element(cx);
+
+    let content = ui::v_flex(cx, |cx| ui::children![cx; input_row, rows])
+        .gap(Space::N4)
+        .w_full()
+        .into_element(cx);
+
+    let card = shadcn::Card::new(ui::children![cx;
+        shadcn::CardHeader::new(ui::children![cx;
+            shadcn::CardTitle::new("Simple Todo"),
+            shadcn::CardDescription::new("Model + MVU messages + keyed lists (no selector/query)."),
+            header_actions,
+        ]),
+        shadcn::CardContent::new(ui::children![cx; content]),
+    ])
+    .ui()
+    .bg(ColorRef::Color(theme.color_token("background")))
+    .rounded(Radius::Lg)
+    .border_1()
+    .border_color(ColorRef::Color(theme.color_token("border")))
+    .w_full()
+    .max_w(Px(520.0))
+    .into_element(cx);
+
+    let page = ui::container(cx, |cx| {
+        ui::children![cx;
+            ui::v_flex(cx, |cx| ui::children![cx; card])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+                .into_element(cx),
+        ]
+    })
+    .bg(ColorRef::Color(theme.color_token("muted")))
+    .p(Space::N6)
+    .w_full()
+    .h_full()
+    .into_element(cx);
+
+    page.into()
+}
+
+fn todo_row(
+    cx: &mut ElementContext<'_, App>,
+    theme: ThemeSnapshot,
+    item: &TodoItem,
+    remove_cmd: CommandId,
+) -> AnyElement {
+    let done = cx.watch_model(&item.done).paint().copied_or_default();
+
+    let checkbox = shadcn::Checkbox::new(item.done.clone());
+
+    let text = ui::raw_text(cx, item.text.clone())
+        .truncate()
+        .text_sm()
+        .text_color(ColorRef::Color(if done {
+            theme.color_token("muted-foreground")
+        } else {
+            theme.color_token("foreground")
+        }));
+
+__REMOVE_BTN_DEF__
+
+    ui::h_flex(cx, |cx| ui::children![cx; checkbox, text, remove_btn])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
+        .into_element(cx)
+}
+"#;
+
+    TEMPLATE
+        .replace("__ADD_BTN_DEF__", add_btn_def)
+        .replace("__REMOVE_BTN_DEF__", remove_btn_def)
+}
+
 pub(super) fn empty_template_main_rs() -> &'static str {
     r#"fn main() -> anyhow::Result<()> {
     println!("Hello from Fret!");
@@ -754,6 +1103,58 @@ cargo run --release
     )
 }
 
+pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
+    let ui_assets_line = if opts.ui_assets {
+        "- UI assets: enabled (`fret/ui-assets`)\n"
+    } else {
+        "- UI assets: disabled (use `fretboard new simple-todo --ui-assets` if you need images/SVG caches)\n"
+    };
+
+    let icons_line = match opts.icon_pack {
+        IconPack::Lucide => "- Icons: Lucide (`fret/icons-lucide`)\n",
+        IconPack::Radix => "- Icons: Radix (`fret/icons-radix`)\n",
+        IconPack::None => "- Icons: disabled\n",
+    };
+
+    let palette_line = if opts.command_palette {
+        "- Command palette: enabled (Cmd/Ctrl+Shift+P)\n"
+    } else {
+        "- Command palette: disabled\n"
+    };
+
+    format!(
+        r#"# {package_name}
+
+Generated by `fretboard new simple-todo`.
+
+## Run
+
+```bash
+cargo run
+```
+
+## Common commands
+
+```bash
+cargo fmt
+cargo clippy -- -D warnings
+cargo run --release
+```
+
+## Notes
+
+- Theme: shadcn new-york-v4 (Slate / Light)
+{icons_line}{palette_line}
+{ui_assets_line}
+## Next steps
+
+- Edit UI in `src/main.rs`
+- Use `ui::children![cx; ...]` to build heterogeneous child lists without call-site `.into_element(cx)` noise.
+- When rendering dynamic lists, prefer `cx.keyed(id, |cx| ...)` to keep identity stable.
+"#
+    )
+}
+
 pub(super) fn hello_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let icons_line = match opts.icon_pack {
         IconPack::Lucide => "- Icons: Lucide (`fret/icons-lucide`)\n",
@@ -852,5 +1253,27 @@ mod tests {
         assert!(src.contains("ui::v_flex("));
         assert!(src.contains(".into_element(cx)"));
         assert!(!src.contains("decl_style::container_props"));
+    }
+
+    #[test]
+    fn simple_todo_template_has_low_adapter_noise_and_no_query_selector() {
+        let src = simple_todo_template_main_rs("simple-todo-app", opts());
+        assert!(src.contains("ui::children!["));
+        assert!(src.contains("cx.keyed("));
+        assert!(!src.contains("fret_query"));
+        assert!(!src.contains("fret_selector"));
+
+        let into_element_count = src.matches(".into_element(cx)").count();
+        assert!(
+            into_element_count <= 10,
+            "expected <= 10 explicit `.into_element(cx)` calls, got {into_element_count}"
+        );
+    }
+
+    #[test]
+    fn simple_todo_template_cargo_toml_has_no_query_selector_deps() {
+        let toml = simple_todo_template_cargo_toml("simple-todo-app", opts(), ".");
+        assert!(!toml.contains("fret-query"));
+        assert!(!toml.contains("fret-selector"));
     }
 }
