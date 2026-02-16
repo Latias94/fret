@@ -14,6 +14,20 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
+type TypeaheadLabelAt<TData> = dyn Fn(&TData, usize) -> Arc<str> + Send + Sync;
+type CopyTextAtFn = dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync;
+type RowKeyAt<TData> = dyn Fn(&TData, usize) -> RowKey;
+type HeaderLabelAt<TData> = dyn Fn(&ColumnDef<TData>) -> Arc<str>;
+type HeaderAccessoryAt<H, TData> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, &ColumnDef<TData>) -> AnyElement;
+type CellAt<H, TData> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, &ColumnDef<TData>, &TData) -> AnyElement;
+type GroupAggsU64 = std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>;
+type GroupAggsAny = std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>;
+type GroupAggsText = std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>;
+type SorterFn<TData> = dyn Fn(&TData, &TData) -> std::cmp::Ordering;
+type SorterSpec<TData> = (SortSpec, Arc<SorterFn<TData>>);
+
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
@@ -523,7 +537,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,
@@ -629,7 +643,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,
@@ -780,11 +794,13 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(320.0), Px(240.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
-        let mut props = TableViewProps::default();
-        props.draw_frame = false;
-        props.row_measure_mode = TableRowMeasureMode::Measured;
+        let props = TableViewProps {
+            draw_frame: false,
+            row_measure_mode: TableRowMeasureMode::Measured,
+            ..Default::default()
+        };
 
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,
@@ -963,16 +979,18 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(360.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,
                       services: &mut FakeServices|
          -> fret_core::NodeId {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
-                let mut props = TableViewProps::default();
-                props.overscan = 4;
-                props.enable_column_grouping = false;
+                let props = TableViewProps {
+                    overscan: 4,
+                    enable_column_grouping: false,
+                    ..Default::default()
+                };
 
                 let table = table_virtualized_retained_v0(
                     cx,
@@ -1051,7 +1069,7 @@ mod tests {
             .semantics_snapshot()
             .expect("expected semantics snapshot after initial render");
         for col in ["a", "b", "c", "d"] {
-            assert_aligned(&snap, col);
+            assert_aligned(snap, col);
         }
 
         let _ = app.models_mut().update(&state, |st| {
@@ -1065,11 +1083,11 @@ mod tests {
             .semantics_snapshot()
             .expect("expected semantics snapshot after resize update");
         for col in ["a", "b", "c", "d"] {
-            assert_aligned(&snap, col);
+            assert_aligned(snap, col);
         }
 
-        let root_bounds = find_bounds(&snap, "table-retained-colpin-root");
-        let center_bounds = find_bounds(&snap, "table-retained-colpin-header-c");
+        let root_bounds = find_bounds(snap, "table-retained-colpin-root");
+        let center_bounds = find_bounds(snap, "table-retained-colpin-header-c");
         let root_right = root_bounds.origin.x.0 + root_bounds.size.width.0;
         let center_right = center_bounds.origin.x.0 + center_bounds.size.width.0;
         assert!(
@@ -1087,7 +1105,7 @@ mod tests {
             .expect("expected semantics snapshot after pin/unpin update");
 
         for col in ["a", "b", "c", "d"] {
-            assert_aligned(&snap, col);
+            assert_aligned(snap, col);
         }
     }
 
@@ -1127,18 +1145,20 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(360.0), Px(220.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,
                       services: &mut FakeServices|
          -> fret_core::NodeId {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
-                let mut props = TableViewProps::default();
-                props.overscan = 4;
-                props.enable_column_grouping = false;
-                props.row_height = Some(Px(28.0));
-                props.row_measure_mode = TableRowMeasureMode::Measured;
+                let props = TableViewProps {
+                    overscan: 4,
+                    enable_column_grouping: false,
+                    row_height: Some(Px(28.0)),
+                    row_measure_mode: TableRowMeasureMode::Measured,
+                    ..Default::default()
+                };
 
                 let table = table_virtualized_retained_v0(
                     cx,
@@ -1226,7 +1246,7 @@ mod tests {
             .expect("expected semantics snapshot after initial render");
 
         for col in ["a", "b", "c", "d"] {
-            assert_aligned(&snap, col);
+            assert_aligned(snap, col);
         }
     }
 }
@@ -1343,7 +1363,7 @@ struct GroupedDisplayCache {
     group_labels: std::collections::HashMap<RowKey, Arc<str>>,
     group_aggs_u64: std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
     group_aggs_any: std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>,
-    group_aggs_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+    group_aggs_text: GroupAggsText,
 
     deps: Option<GroupedDisplayDeps>,
     page_rows: Vec<DisplayRow>,
@@ -1462,8 +1482,8 @@ pub fn table_virtualized<H: UiHost, TData, IHeader, ICell>(
     state: Model<TableState>,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
-    row_key_at: &dyn Fn(&TData, usize) -> RowKey,
-    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
+    row_key_at: &RowKeyAt<TData>,
+    typeahead_label_at: Option<Arc<TypeaheadLabelAt<TData>>>,
     props: TableViewProps,
     on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
     render_header_cell: impl FnMut(
@@ -1507,10 +1527,10 @@ pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, ICell>(
     state: Model<TableState>,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
-    row_key_at: &dyn Fn(&TData, usize) -> RowKey,
-    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
+    row_key_at: &RowKeyAt<TData>,
+    typeahead_label_at: Option<Arc<TypeaheadLabelAt<TData>>>,
     props: TableViewProps,
-    copy_text_at: Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>,
+    copy_text_at: Arc<CopyTextAtFn>,
     on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
     render_header_cell: impl FnMut(
         &mut ElementContext<'_, H>,
@@ -1565,14 +1585,12 @@ pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
     state: Model<TableState>,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
-    row_key_at: Arc<dyn Fn(&TData, usize) -> RowKey>,
-    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
+    row_key_at: Arc<RowKeyAt<TData>>,
+    typeahead_label_at: Option<Arc<TypeaheadLabelAt<TData>>>,
     props: TableViewProps,
-    header_label: Arc<dyn Fn(&ColumnDef<TData>) -> Arc<str>>,
-    header_accessory_at: Option<
-        Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>) -> AnyElement>,
-    >,
-    cell_at: Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement>,
+    header_label: Arc<HeaderLabelAt<TData>>,
+    header_accessory_at: Option<Arc<HeaderAccessoryAt<H, TData>>>,
+    cell_at: Arc<CellAt<H, TData>>,
     debug_header_cell_test_id_prefix: Option<Arc<str>>,
     debug_row_test_id_prefix: Option<Arc<str>>,
 ) -> AnyElement
@@ -1631,8 +1649,10 @@ where
         .map(|c| with_table_view_column_constraints(c, &props))
         .collect();
 
-    let mut sizing_options = TableOptions::default();
-    sizing_options.grouped_column_mode = props.grouped_column_mode;
+    let sizing_options = TableOptions {
+        grouped_column_mode: props.grouped_column_mode,
+        ..Default::default()
+    };
 
     let sizing_table = Table::builder(empty)
         .columns(sizing_columns)
@@ -1712,10 +1732,7 @@ where
                 .collect();
 
             if !sorting.is_empty() {
-                let mut sorters: Vec<(
-                    SortSpec,
-                    Arc<dyn Fn(&TData, &TData) -> std::cmp::Ordering>,
-                )> = Vec::new();
+                let mut sorters: Vec<SorterSpec<TData>> = Vec::new();
                 for spec in &sorting {
                     if let Some(col) = columns
                         .iter()
@@ -1920,7 +1937,7 @@ where
                                                             let sort_toggle_column_for_pointer =
                                                                 sort_toggle_column.clone();
                                                             let sort_options_for_pointer =
-                                                                sort_options.clone();
+                                                                sort_options;
                                                             cx.pressable_on_pointer_up(Arc::new(
                                                                 move |host, acx, up| {
                                                                     if !up.is_click
@@ -2644,10 +2661,10 @@ fn table_virtualized_impl<H: UiHost, TData, IHeader, ICell>(
     state: Model<TableState>,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
-    row_key_at: &dyn Fn(&TData, usize) -> RowKey,
-    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
+    row_key_at: &RowKeyAt<TData>,
+    typeahead_label_at: Option<Arc<TypeaheadLabelAt<TData>>>,
     props: TableViewProps,
-    copy_text_at: Option<Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>>,
+    copy_text_at: Option<Arc<CopyTextAtFn>>,
     on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
     mut render_header_cell: impl FnMut(
         &mut ElementContext<'_, H>,
@@ -2713,8 +2730,10 @@ where
         .cloned()
         .map(|c| with_table_view_column_constraints(c, &props))
         .collect();
-    let mut sizing_options = TableOptions::default();
-    sizing_options.grouped_column_mode = props.grouped_column_mode;
+    let sizing_options = TableOptions {
+        grouped_column_mode: props.grouped_column_mode,
+        ..Default::default()
+    };
 
     let sizing_table = Table::builder(empty)
         .columns(sizing_columns)
@@ -2784,7 +2803,7 @@ where
             };
 
             let started = Instant::now();
-            let (order, recomputed) = cache.row_order(data, &columns, deps);
+            let (order, recomputed) = cache.row_order(data, columns, deps);
             let elapsed = started.elapsed();
 
             if profile && recomputed {
@@ -2804,8 +2823,10 @@ where
 
     let page_display_rows: Vec<DisplayRow> = if grouping.is_empty() {
         if has_row_pinning {
-            let mut options = crate::headless::table::TableOptions::default();
-            options.keep_pinned_rows = props.keep_pinned_rows;
+            let options = crate::headless::table::TableOptions {
+                keep_pinned_rows: props.keep_pinned_rows,
+                ..Default::default()
+            };
 
             let table_pre = Table::builder(data)
                 .columns(columns.to_vec())
@@ -3023,11 +3044,13 @@ where
                 .filter(|c| c.aggregation != Aggregation::None)
                 .collect();
 
-            let mut options = crate::headless::table::TableOptions::default();
-            options.manual_sorting = true;
-            options.manual_pagination = true;
-            options.manual_expanding = true;
-            options.keep_pinned_rows = props.keep_pinned_rows;
+            let options = crate::headless::table::TableOptions {
+                manual_sorting: true,
+                manual_pagination: true,
+                manual_expanding: true,
+                keep_pinned_rows: props.keep_pinned_rows,
+                ..Default::default()
+            };
 
             let mut state_for_grouping = state_value.clone();
             state_for_grouping.sorting.clear();
@@ -3046,18 +3069,14 @@ where
                 data: &[TData],
                 row_index_by_key: &std::collections::HashMap<RowKey, usize>,
                 agg_columns: &[&ColumnDef<TData>],
-            ) -> (
-                std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
-                std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
-            ) {
+            ) -> (GroupAggsU64, GroupAggsText) {
                 if agg_columns.is_empty() {
                     return (Default::default(), Default::default());
                 }
                 let out_u64 =
                     compute_grouped_u64_aggregations(model, data, row_index_by_key, agg_columns);
 
-                let mut out_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>> =
-                    Default::default();
+                let mut out_text: GroupAggsText = Default::default();
                 for (&row_key, entries) in &out_u64 {
                     let mut text_values: Vec<(ColumnId, Arc<str>)> =
                         Vec::with_capacity(entries.len());
@@ -3097,17 +3116,14 @@ where
                 Arc::from(format!("{value} ({leaf_row_count})"))
             }
 
-            fn push_visible<'a, TData>(
-                model: &'a crate::headless::table::GroupedRowModel,
+            fn push_visible<TData>(
+                model: &crate::headless::table::GroupedRowModel,
                 index: crate::headless::table::GroupedRowIndex,
                 row_index_by_key: &std::collections::HashMap<RowKey, usize>,
                 group_labels: &std::collections::HashMap<RowKey, Arc<str>>,
-                group_aggs_text: &std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
-                group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
-                group_aggs_any: &std::collections::HashMap<
-                    RowKey,
-                    Arc<[(ColumnId, TanStackValue)]>,
-                >,
+                group_aggs_text: &GroupAggsText,
+                group_aggs_u64: &GroupAggsU64,
+                group_aggs_any: &GroupAggsAny,
                 sorting: &[SortSpec],
                 columns: &[ColumnDef<TData>],
                 data: &[TData],
@@ -3949,7 +3965,7 @@ where
                                                                                             let sort_toggle_column_for_pointer =
                                                                                                 sort_toggle_column.clone();
                                                                                             let sort_options_for_pointer =
-                                                                                                sort_options.clone();
+                                                                                                sort_options;
                                                                                             cx.pressable_on_pointer_up(Arc::new(
                                                                                                 move |host, _acx, up| {
                                                                                                     if !up.is_click
@@ -4158,11 +4174,11 @@ where
                                                                                                     }
                                                                                                     host.release_pointer_capture();
                                                                                                     let _ = host.models_mut().update(&state_model_up, |st| {
-                                                                                                        if !st
+                                                                                                        if st
                                                                                                             .column_sizing_info
                                                                                                             .is_resizing_column
-                                                                                                            .as_ref()
-                                                                                                            .is_some_and(|a| a.as_ref() == col_id_up.as_ref())
+                                                                                                            .as_deref()
+                                                                                                            != Some(col_id_up.as_ref())
                                                                                                         {
                                                                                                             return;
                                                                                                         }

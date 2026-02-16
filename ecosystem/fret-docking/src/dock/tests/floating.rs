@@ -351,8 +351,10 @@ fn floating_window_can_be_dragged_from_tab() {
         }),
     );
 
-    let mut buttons = fret_core::MouseButtons::default();
-    buttons.left = true;
+    let buttons = fret_core::MouseButtons {
+        left: true,
+        ..Default::default()
+    };
     let moved = Point::new(Px(down.x.0 + 50.0), Px(down.y.0 + 20.0));
     ui.dispatch_event(
         &mut app,

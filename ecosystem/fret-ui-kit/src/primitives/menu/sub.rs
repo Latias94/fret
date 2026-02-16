@@ -1071,26 +1071,25 @@ pub fn handle_dismissible_pointer_move(
                 .read(&models.open_value, |v| v.is_some())
                 .ok()
                 .unwrap_or(false);
-            if submenu_open {
-                if let Some(intent) =
+            if submenu_open
+                && let Some(intent) =
                     pointer_grace_intent::grace_intent_from_exit_point(mv.position, grace, Px(5.0))
-                {
-                    let _ = host
-                        .models_mut()
-                        .update(&models.pointer_grace_intent, |v| *v = Some(intent));
-                    cancel_timer(host, &models.pointer_grace_timer);
-                    let token = host.next_timer_token();
-                    host.push_effect(Effect::SetTimer {
-                        window: Some(acx.window),
-                        token,
-                        after: cfg.pointer_grace_timeout,
-                        repeat: None,
-                    });
-                    let _ = host
-                        .models_mut()
-                        .update(&models.pointer_grace_timer, |v| *v = Some(token));
-                    did_update_grace_intent = true;
-                }
+            {
+                let _ = host
+                    .models_mut()
+                    .update(&models.pointer_grace_intent, |v| *v = Some(intent));
+                cancel_timer(host, &models.pointer_grace_timer);
+                let token = host.next_timer_token();
+                host.push_effect(Effect::SetTimer {
+                    window: Some(acx.window),
+                    token,
+                    after: cfg.pointer_grace_timeout,
+                    repeat: None,
+                });
+                let _ = host
+                    .models_mut()
+                    .update(&models.pointer_grace_timer, |v| *v = Some(token));
+                did_update_grace_intent = true;
             }
         }
     }
@@ -1172,7 +1171,6 @@ pub fn sync_while_trigger_hovered<H: UiHost>(
 
         if already_open {
             set_trigger_if_none(cx, item_id, &models.trigger);
-            return;
         }
     } else {
         let _ = cx
@@ -1511,11 +1509,11 @@ pub fn submenu_item_close_key_handler(
             close_and_restore_trigger(host, acx, &models);
             return true;
         }
-        let is_close_key = match (down.key, dir) {
-            (fret_core::KeyCode::ArrowLeft, LayoutDirection::Ltr) => true,
-            (fret_core::KeyCode::ArrowRight, LayoutDirection::Rtl) => true,
-            _ => false,
-        };
+        let is_close_key = matches!(
+            (down.key, dir),
+            (fret_core::KeyCode::ArrowLeft, LayoutDirection::Ltr)
+                | (fret_core::KeyCode::ArrowRight, LayoutDirection::Rtl)
+        );
         if !is_close_key {
             return false;
         }
@@ -1639,7 +1637,7 @@ mod tests {
         let mut app = App::new();
         let mut host = Host { app: &mut app };
 
-        let models = new_models(&mut host.app);
+        let models = new_models(host.app);
         let cfg = MenuSubmenuConfig::default();
 
         let _ = host
@@ -1695,7 +1693,7 @@ mod tests {
         let mut app = App::new();
         let mut host = Host { app: &mut app };
 
-        let models = new_models(&mut host.app);
+        let models = new_models(host.app);
         let cfg = MenuSubmenuConfig::default();
 
         let _ = host
@@ -1750,7 +1748,7 @@ mod tests {
         let mut app = App::new();
         let mut host = Host { app: &mut app };
 
-        let models = new_models(&mut host.app);
+        let models = new_models(host.app);
         let cfg = MenuSubmenuConfig::default();
 
         let token = host.next_timer_token();

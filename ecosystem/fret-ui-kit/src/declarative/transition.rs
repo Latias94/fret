@@ -40,7 +40,7 @@ pub fn ticks_60hz_for_duration(duration: Duration) -> u64 {
     }
 
     // Ceil(duration / (1/60)s) so transitions do not end earlier than requested.
-    let ticks = (ns + ref_ns - 1) / ref_ns;
+    let ticks = ns.div_ceil(ref_ns);
     ticks.clamp(1, 10_000) as u64
 }
 
@@ -623,12 +623,8 @@ mod tests {
         let effects0 = app.flush_effects();
         assert!(out0.present);
         assert!(out0.animating);
-        assert!(
-            effects0
-                .iter()
-                .any(|e| *e == Effect::RequestAnimationFrame(window))
-        );
-        assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
+        assert!(effects0.contains(&Effect::RequestAnimationFrame(window)));
+        assert!(effects0.contains(&Effect::Redraw(window)));
     }
 
     #[test]

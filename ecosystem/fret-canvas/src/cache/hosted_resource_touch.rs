@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn touch_hosted_resources_in_scene_ops_aggregates_counts() {
-        let mut services = Services::default();
+        let mut services = Services;
 
         let mut text = TextCache::default();
         let mut paths = PathCache::default();

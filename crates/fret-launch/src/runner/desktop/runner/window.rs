@@ -299,7 +299,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let RawWindowHandle::Win32(handle) = handle.as_raw() else {
             return None;
         };
-        Some(handle.hwnd.get() as isize)
+        Some(handle.hwnd.get())
     }
 
     #[cfg(target_os = "windows")]
@@ -338,10 +338,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 {
                     fallback = Some(window);
                 }
-            } else if let Some(&window) = hwnd_to_window.get(&hwnd) {
-                if self.screen_pos_in_window(window, screen_pos) {
-                    return Some(window);
-                }
+            } else if let Some(&window) = hwnd_to_window.get(&hwnd)
+                && self.screen_pos_in_window(window, screen_pos)
+            {
+                return Some(window);
             }
 
             let Some(next) = super::win32::next_window_in_z_order(hwnd) else {

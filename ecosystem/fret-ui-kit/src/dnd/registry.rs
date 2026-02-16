@@ -88,6 +88,7 @@ pub fn droppable_rect_in_scope(
     .flatten()
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn register_droppable_rect_in_scope(
     models: &mut ModelStore,
     svc: &DndServiceModel,
@@ -119,6 +120,7 @@ pub fn register_droppable_rect_in_scope(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn register_droppable_rect(
     models: &mut ModelStore,
     svc: &DndServiceModel,
@@ -142,6 +144,7 @@ pub fn register_droppable_rect(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn register_droppable_rect_default_scope(
     models: &mut ModelStore,
     svc: &DndServiceModel,

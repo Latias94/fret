@@ -209,7 +209,7 @@ mod tests {
         handler.do_action(req.clone());
 
         let pending_now = pending.lock().expect("pending actions lock");
-        assert_eq!(pending_now.as_slice(), &[req.clone()]);
+        assert_eq!(pending_now.as_slice(), std::slice::from_ref(&req));
         drop(pending_now);
 
         assert_eq!(rx.try_recv().ok(), Some(req));

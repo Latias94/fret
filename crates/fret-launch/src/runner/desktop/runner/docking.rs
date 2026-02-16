@@ -92,10 +92,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // Prefer the diagnostics cursor override if present; scripted runs cannot reliably
         // control OS cursor position, so clobbering `cursor_screen_pos` here can make poll-up
         // drop routing non-deterministic.
-        if self.diag_cursor_screen_pos_override.is_none() || self.cursor_screen_pos.is_none() {
-            if let Some(p) = win32::cursor_pos_physical() {
-                self.cursor_screen_pos = Some(p);
-            }
+        if (self.diag_cursor_screen_pos_override.is_none() || self.cursor_screen_pos.is_none())
+            && let Some(p) = win32::cursor_pos_physical()
+        {
+            self.cursor_screen_pos = Some(p);
         }
 
         dock_tearoff_log(format_args!(
