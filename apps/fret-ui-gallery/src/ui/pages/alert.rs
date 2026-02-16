@@ -18,7 +18,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .gap(Space::N2)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
+            move |cx| ui::children![cx; shadcn::typography::h4(cx, title), body],
         )
     };
 
@@ -67,7 +67,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            vec![
+            ui::children![
+                cx;
                 build_alert(
                     cx,
                     "ui-gallery-alert-demo-success",
@@ -117,11 +118,10 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .layout(LayoutRefinement::default().w_full())
                 .justify_end(),
             |cx| {
-                vec![
+                ui::children![cx;
                     shadcn::Button::new("Enable")
                         .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .into_element(cx),
+                        .size(shadcn::ButtonSize::Sm),
                 ]
             },
         );
@@ -177,7 +177,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 cx,
                 stack::VStackProps::default().gap(Space::N3).items_start(),
                 |cx| {
-                    vec![build_alert(
+                    ui::children![cx; build_alert(
                         cx,
                         "ui-gallery-alert-rtl",
                         shadcn::AlertVariant::Default,
@@ -202,7 +202,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |_cx| {
-            vec![
+            ui::children![
+                _cx;
                 preview_hint,
                 demo,
                 basic,
@@ -215,16 +216,16 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     );
     let component_panel = shell(cx, component_stack).test_id("ui-gallery-alert-component");
 
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
+    let code_block = |cx: &mut ElementContext<'_, App>,
+                      title: &'static str,
+                      snippet: &'static str| {
+        shadcn::Card::new(ui::children![
+                cx;
+                shadcn::CardHeader::new(ui::children![cx; shadcn::CardTitle::new(title)]).into_element(cx),
+                shadcn::CardContent::new(ui::children![cx; ui::text_block(cx, snippet)]).into_element(cx),
             ])
             .into_element(cx)
-        };
+    };
 
     let code_stack = stack::vstack(
         cx,
@@ -233,7 +234,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            vec![
+            ui::children![
+                cx;
                 code_block(
                     cx,
                     "Basic / Destructive",
@@ -261,7 +263,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            vec![
+            ui::children![
+                cx;
                 shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
