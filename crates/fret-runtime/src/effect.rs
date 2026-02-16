@@ -130,10 +130,17 @@ pub enum Effect {
         token: ShareSheetToken,
         items: Vec<fret_core::ShareItem>,
     },
+    /// Opens a platform-native file dialog (best-effort).
+    ///
+    /// Runners/backends typically respond by delivering one of:
+    /// - `fret_core::Event::FileDialogSelection` (token + names), followed by
+    ///   `Effect::FileDialogReadAll` to obtain bytes, or
+    /// - `fret_core::Event::FileDialogCanceled` if the user cancels.
     FileDialogOpen {
         window: AppWindowId,
         options: FileDialogOptions,
     },
+    /// Requests reading all selected file bytes for a previously opened file dialog.
     FileDialogReadAll {
         window: AppWindowId,
         token: FileDialogToken,
@@ -143,6 +150,7 @@ pub enum Effect {
         token: FileDialogToken,
         limits: ExternalDropReadLimits,
     },
+    /// Releases runner-owned resources associated with a file dialog token (best-effort).
     FileDialogRelease {
         token: FileDialogToken,
     },
@@ -156,6 +164,7 @@ pub enum Effect {
         token: IncomingOpenToken,
         limits: ExternalDropReadLimits,
     },
+    /// Releases runner-owned resources associated with an incoming-open token (best-effort).
     IncomingOpenRelease {
         token: IncomingOpenToken,
     },
@@ -316,12 +325,14 @@ pub enum Effect {
     /// - Desktop backends typically translate this into a "redraw on the next event-loop turn"
     ///   request (and may coalesce multiple requests).
     RequestAnimationFrame(AppWindowId),
+    /// Requests a timer callback to be delivered as `fret_core::Event::Timer` (best-effort).
     SetTimer {
         window: Option<AppWindowId>,
         token: TimerToken,
         after: Duration,
         repeat: Option<Duration>,
     },
+    /// Cancels a previously requested timer (best-effort).
     CancelTimer {
         token: TimerToken,
     },

@@ -150,6 +150,13 @@ impl App {
         self.mark_global_changed(id);
     }
 
+    /// Returns and clears the list of globals that were marked changed since the last call.
+    ///
+    /// This is used by UI drivers to propagate global changes into window trees.
+    ///
+    /// Notes:
+    /// - Only *tracked* mutations participate (e.g. `set_global`, `with_global_mut`). Untracked
+    ///   mutations (`with_global_mut_untracked`) are intentionally excluded.
     pub fn take_changed_globals(&mut self) -> Vec<TypeId> {
         self.changed_globals_dedup.clear();
         std::mem::take(&mut self.changed_globals)
@@ -605,6 +612,11 @@ impl App {
         }
     }
 
+    /// Drains queued effects and materializes deferred redraw requests.
+    ///
+    /// This app-level helper:
+    /// - appends one-shot `Effect::Redraw` for any windows requested via `request_redraw`,
+    /// - filters some platform-specific effects based on current settings (e.g. OS menubar).
     pub fn flush_effects(&mut self) -> Vec<Effect> {
         let mut effects = std::mem::take(&mut self.effects);
         for window in self.redraw_requests.drain() {
