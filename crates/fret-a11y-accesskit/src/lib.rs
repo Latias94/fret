@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 
 use accesskit::{
     Action, ActionRequest, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree,
-    TreeUpdate,
+    TreeId, TreeUpdate,
 };
 use fret_core::{SemanticsNode, SemanticsRole, SemanticsSnapshot};
 use slotmap::{Key, KeyData};
@@ -367,6 +367,7 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             toolkit_name: Some("fret".to_string()),
             toolkit_version: Some(env!("CARGO_PKG_VERSION").to_string()),
         }),
+        tree_id: TreeId::ROOT,
         focus,
     }
 }
@@ -375,14 +376,20 @@ pub fn focus_target_from_action(req: &ActionRequest) -> Option<fret_core::NodeId
     if req.action != Action::Focus {
         return None;
     }
-    parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
+    parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))
 }
 
 pub fn invoke_target_from_action(req: &ActionRequest) -> Option<fret_core::NodeId> {
     if req.action != Action::Click {
         return None;
     }
-    parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
+    parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -395,8 +402,12 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
     if req.action != Action::SetValue {
         return None;
     }
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
 
-    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
     let data = req.data.as_ref()?;
     match data {
         accesskit::ActionData::Value(v) => Some((target, SetValueData::Text(v.to_string()))),
@@ -412,8 +423,12 @@ pub fn replace_selected_text_from_action(
     if req.action != Action::ReplaceSelectedText {
         return None;
     }
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
 
-    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
     let node = snapshot.nodes.iter().find(|n| n.id == target)?;
     if node.role != SemanticsRole::TextField || node.value.is_none() {
         return None;
@@ -454,8 +469,12 @@ pub fn set_text_selection_from_action(
     if req.action != Action::SetTextSelection {
         return None;
     }
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
 
-    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
     let data = req.data.as_ref()?;
     let accesskit::ActionData::SetTextSelection(sel) = data else {
         return None;
@@ -1327,7 +1346,8 @@ mod tests {
 
         let req = accesskit::ActionRequest {
             action: accesskit::Action::SetTextSelection,
-            target: to_accesskit_id(input),
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: to_accesskit_id(input),
             data: Some(accesskit::ActionData::SetTextSelection(
                 accesskit::TextSelection {
                     anchor: accesskit::TextPosition {
@@ -1436,7 +1456,8 @@ mod tests {
 
         let req = accesskit::ActionRequest {
             action: accesskit::Action::ReplaceSelectedText,
-            target: to_accesskit_id(input),
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: to_accesskit_id(input),
             data: Some(accesskit::ActionData::Value("x".into())),
         };
         let (target, value) = replace_selected_text_from_action(&req, &snapshot)
@@ -1520,7 +1541,8 @@ mod tests {
 
         let req = accesskit::ActionRequest {
             action: accesskit::Action::ReplaceSelectedText,
-            target: to_accesskit_id(input),
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: to_accesskit_id(input),
             data: Some(accesskit::ActionData::Value("x".into())),
         };
         assert!(
