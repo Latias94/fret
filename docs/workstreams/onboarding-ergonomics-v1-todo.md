@@ -242,10 +242,18 @@ Design note:
     - `apps/fretboard/src/dev.rs` (web dev shells into `apps/fret-demo-web`)
     - `docs/workstreams/onboarding-ergonomics-v1.md` (Decisions)
 
-- [ ] ONB-demo-061 Make “core onboarding” demos runnable on both native + wasm via the same selection mechanism.
+- [x] ONB-demo-061 Make “core onboarding” demos runnable on both native + wasm via the same selection mechanism.
   - Targets:
     - `simple-todo`
     - `todo_demo` (if we keep it as the “best practice baseline”)
+  - Evidence:
+    - `apps/fret-examples/src/simple_todo_demo.rs` (cross-platform demo implementation)
+    - `apps/fret-demo-web/src/wasm.rs` (web `?demo=simple-todo` selection)
+    - `apps/fret-demo/src/main.rs` (native demo selection; includes `simple-todo` + `todo_demo`)
+    - `apps/fretboard/src/dev.rs` (`fretboard dev native --demo <demo>` parity with web)
+    - `apps/fretboard/src/demos.rs` (`fretboard dev web --demo simple-todo` validation list)
+  - Note:
+    - `todo_demo` remains desktop-first until `fret::mvu` supports wasm (`ecosystem/fret/src/mvu.rs` is `desktop`-gated).
 
 - [ ] ONB-demo-062 Evaluate whether we still need separate `*-web` shells for individual apps once they are selectable in `fret-demo-web`.
   - Decision gate:

@@ -46,6 +46,8 @@ fn web_demos() -> &'static [&'static str] {
     &[
         // Full UI Gallery app (pages: `?page=...`).
         "ui_gallery",
+        // Simple onboarding baseline (matches `fretboard new simple-todo`).
+        "simple-todo",
         // Lightweight examples gallery (separate app from `fret-ui-gallery`).
         "components_gallery",
         // External texture imports (web copy path; ADR 0234).

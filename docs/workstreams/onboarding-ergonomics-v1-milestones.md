@@ -188,10 +188,18 @@ Deliverables:
 
 Acceptance:
 
-- `fretboard dev web --demo simple_todo` (name TBD) works.
-- Native has an equivalent runnable path (either `--bin simple_todo` or `fret-demo -- <id>`).
+- `fretboard dev web --demo simple-todo` works.
+- Native has an equivalent runnable path:
+  - `fretboard dev native --demo simple-todo` (mirrors wasm’s `?demo=...` selection), or
+  - `fretboard dev native --bin simple_todo_demo` (bin-centric; supports hotpatch workflows).
 
 Evidence (current):
 
+- `apps/fret-examples/src/simple_todo_demo.rs` (cross-platform demo implementation)
+- `apps/fret-demo-web/src/wasm.rs` (web `?demo=simple-todo` selection)
+- `apps/fret-demo/src/main.rs` (native `-- <id>` selection; includes `simple-todo`)
+- `apps/fret-demo/src/bin/simple_todo_demo.rs` (native bin entry; supports `--bin`)
+- `apps/fretboard/src/dev.rs` (`fretboard dev native --demo <id>` parity with web)
+- `apps/fretboard/src/demos.rs` (`fretboard dev web --demo simple-todo` validation list)
 - `apps/fret-demo/src/bin/ui_gallery.rs` (native bin, feature-gated)
 - `apps/fret-demo-web/src/wasm.rs` (wasm selection already supports `ui_gallery`)

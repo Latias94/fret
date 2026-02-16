@@ -4,13 +4,13 @@ use fret::prelude::*;
 use fret_genui_core::catalog::{CatalogActionV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::form_validation::{
-    validate_all, ValidationIssueV1, ValidationRegistryV1, ValidationStateV1,
+    ValidationIssueV1, ValidationRegistryV1, ValidationStateV1, validate_all,
 };
 use fret_genui_core::json_pointer;
 use fret_genui_core::mixed_stream::{MixedSpecStreamCompiler, MixedStreamMode, MixedStreamOptions};
-use fret_genui_core::render::{render_spec, GenUiActionQueue, GenUiRuntime};
+use fret_genui_core::render::{GenUiActionQueue, GenUiRuntime, render_spec};
 use fret_genui_core::spec::SpecV1;
-use fret_genui_core::spec_fixer::{auto_fix_spec, SpecFixups};
+use fret_genui_core::spec_fixer::{SpecFixups, auto_fix_spec};
 use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
@@ -1079,9 +1079,11 @@ fn view(
         .into_element(cx);
 
         let issues_body = if spec_issue_count == 0 {
-            vec![ui::text(cx, Arc::<str>::from("No spec issues."))
-                .text_sm()
-                .into_element(cx)]
+            vec![
+                ui::text(cx, Arc::<str>::from("No spec issues."))
+                    .text_sm()
+                    .into_element(cx),
+            ]
         } else {
             spec_issue_lines
                 .iter()
