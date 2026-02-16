@@ -27,6 +27,18 @@ viewport tooling, to avoid late rewrites and accidental behavior drift.
   - Single-window / no OS multi-window mode (validates ADR 0083 degradation): `FRET_SINGLE_WINDOW=1 cargo run -p fret-demo --bin docking_arbitration_demo`
 - Components overlays demo: `cargo run -p fret-demo --bin components_gallery`
 
+## ImGui-style "transparent payload" (optional)
+
+To better match Dear ImGui multi-viewport behavior when a tear-off window follows the cursor (peek-behind
+hover selection + visible target previews), you can enable transparent payload during follow:
+
+- Quick env var: `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1 cargo run -p fret-demo --bin docking_arbitration_demo`
+- Or via settings: `DockingInteractionSettings::transparent_payload_during_follow` (default false)
+
+For scripted repros with `fretboard`:
+
+- `cargo run -p fretboard -- diag repro docking-arbitration --env FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
+
 ### Docking arbitration demo: synth pointer mode
 
 The docking arbitration demo includes a **synthetic pointer stream** so multi-pointer arbitration

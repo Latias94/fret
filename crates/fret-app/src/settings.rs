@@ -170,6 +170,8 @@ pub struct DockingSettingsV1 {
     pub tab_drag_threshold_px: f32,
     pub dock_hint_scale_inner: f32,
     pub dock_hint_scale_outer: f32,
+    pub transparent_payload_during_follow: bool,
+    pub transparent_payload_alpha: f32,
 }
 
 impl Default for DockingSettingsV1 {
@@ -179,6 +181,8 @@ impl Default for DockingSettingsV1 {
             tab_drag_threshold_px: 6.0,
             dock_hint_scale_inner: 1.0,
             dock_hint_scale_outer: 1.0,
+            transparent_payload_during_follow: false,
+            transparent_payload_alpha: 0.5,
         }
     }
 }
@@ -246,11 +250,21 @@ impl SettingsFileV1 {
             default_dock_hint_scale_outer
         };
 
+        let default_transparent_payload_alpha =
+            fret_runtime::DockingInteractionSettings::default().transparent_payload_alpha;
+        let transparent_payload_alpha = if self.docking.transparent_payload_alpha.is_finite() {
+            self.docking.transparent_payload_alpha.clamp(0.0, 1.0)
+        } else {
+            default_transparent_payload_alpha
+        };
+
         fret_runtime::DockingInteractionSettings {
             drag_inversion: self.docking.drag_inversion.clone().into(),
             tab_drag_threshold: fret_core::Px(tab_drag_threshold_px),
             dock_hint_scale_inner,
             dock_hint_scale_outer,
+            transparent_payload_during_follow: self.docking.transparent_payload_during_follow,
+            transparent_payload_alpha,
             ..Default::default()
         }
     }
