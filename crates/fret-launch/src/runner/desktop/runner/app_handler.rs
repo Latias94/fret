@@ -70,7 +70,7 @@ struct HitchLogWriter {
 struct HitchLogState {
     writers: Vec<HitchLogWriter>,
     writes_since_flush: u32,
-    last_flush: std::time::Instant,
+    last_flush: Instant,
 }
 
 impl HitchLogState {
@@ -94,7 +94,7 @@ impl HitchLogState {
         Self {
             writers,
             writes_since_flush: 0,
-            last_flush: std::time::Instant::now(),
+            last_flush: Instant::now(),
         }
     }
 
@@ -119,7 +119,7 @@ impl HitchLogState {
                 let _ = w.file.flush();
             }
             self.writes_since_flush = 0;
-            self.last_flush = std::time::Instant::now();
+            self.last_flush = Instant::now();
         }
     }
 }
@@ -1507,9 +1507,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
                     let draw_result = (|| -> Result<(), fret_render::RenderError> {
-                        let (frame, view) = surface.get_current_frame_view().map_err(|source| {
-                            fret_render::RenderError::SurfaceAcquireFailed { source }
-                        })?;
+                        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+                        let (frame, view) = {
+                            let acquire_span = trace_enabled
+                                .then(|| {
+                                    tracing::trace_span!(
+                                        "fret.runner.surface.acquire",
+                                        window = ?app_window,
+                                    )
+                                })
+                                .unwrap_or_else(tracing::Span::none);
+                            let _guard = acquire_span.enter();
+                            surface.get_current_frame_view().map_err(|source| {
+                                fret_render::RenderError::SurfaceAcquireFailed { source }
+                            })?
+                        };
 
                         let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
@@ -1561,6 +1573,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         #[cfg(feature = "diag-screenshots")]
                         if let Some(diag) = self.diag_screenshots.as_mut() {
                             let window_ffi = app_window.data().as_ffi();
+                            let begin_span = trace_enabled
+                                .then(|| {
+                                    tracing::trace_span!(
+                                        "fret.runner.diag_screenshots.begin",
+                                        window = ?app_window,
+                                    )
+                                })
+                                .unwrap_or_else(tracing::Span::none);
+                            let _guard = begin_span.enter();
                             if let Some((cmd, inflight)) = diag.begin_capture_for_window(
                                 &context.device,
                                 window_ffi,
@@ -1575,26 +1596,69 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let mut pending_bundle_screenshot = None;
                         if let Some(dir) = screenshot_dir
-                            && let Some((pending, copy_cmd)) =
+                            && let Some((pending, copy_cmd)) = {
+                                let begin_span = trace_enabled
+                                    .then(|| {
+                                        tracing::trace_span!(
+                                            "fret.runner.diag_bundle_screenshot.begin_readback",
+                                            window = ?app_window,
+                                        )
+                                    })
+                                    .unwrap_or_else(tracing::Span::none);
+                                let _guard = begin_span.enter();
                                 self.diag_bundle_screenshots.begin_readback(
                                     &context.device,
                                     &frame.texture,
                                     surface.format(),
                                     surface.size(),
                                 )
+                            }
                         {
                             cmd_buffers.push(copy_cmd);
                             pending_bundle_screenshot = Some((pending, dir));
                         }
 
-                        context.queue.submit(cmd_buffers);
-                        frame.present();
+                        let cmd_buffers_len = cmd_buffers.len();
+                        {
+                            let submit_span = trace_enabled
+                                .then(|| {
+                                    tracing::trace_span!(
+                                        "fret.runner.queue.submit",
+                                        window = ?app_window,
+                                        cmd_buffers = cmd_buffers_len as u32,
+                                    )
+                                })
+                                .unwrap_or_else(tracing::Span::none);
+                            let _guard = submit_span.enter();
+                            context.queue.submit(cmd_buffers);
+                        }
+                        {
+                            let present_trace_span = trace_enabled
+                                .then(|| {
+                                    tracing::trace_span!(
+                                        "fret.runner.frame.present",
+                                        window = ?app_window,
+                                    )
+                                })
+                                .unwrap_or_else(tracing::Span::none);
+                            let _guard = present_trace_span.enter();
+                            frame.present();
+                        }
                         drop(engine_keepalive);
 
                         #[cfg(feature = "diag-screenshots")]
                         if let (Some(diag), Some(inflight)) =
                             (self.diag_screenshots.as_mut(), screenshot_inflight)
                         {
+                            let finish_span = trace_enabled
+                                .then(|| {
+                                    tracing::trace_span!(
+                                        "fret.runner.diag_screenshots.finish",
+                                        window = ?app_window,
+                                    )
+                                })
+                                .unwrap_or_else(tracing::Span::none);
+                            let _guard = finish_span.enter();
                             if let Err(err) = diag.finish_capture(&context.device, inflight) {
                                 tracing::warn!(
                                     error = %err,
@@ -1605,6 +1669,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
 
                         if let Some((pending, dir)) = pending_bundle_screenshot {
+                            let bundle_span = trace_enabled
+                                .then(|| {
+                                    tracing::trace_span!(
+                                        "fret.runner.diag_bundle_screenshot.write_bmp",
+                                        window = ?app_window,
+                                    )
+                                })
+                                .unwrap_or_else(tracing::Span::none);
+                            let _guard = bundle_span.enter();
                             let _ = self.diag_bundle_screenshots.finish_and_write_bmp(
                                 &context.device,
                                 pending,
