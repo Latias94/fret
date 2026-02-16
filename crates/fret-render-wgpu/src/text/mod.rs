@@ -6063,6 +6063,127 @@ mod tests {
     }
 
     #[test]
+    fn trailing_whitespace_run_at_soft_wrap_is_selectable_for_attributed_text() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "foo   bar";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let spans = Arc::<[TextSpan]>::from(vec![
+            TextSpan {
+                len: 4,
+                shaping: TextShapingStyle::default(),
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 0.9,
+                        g: 0.1,
+                        b: 0.1,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+            },
+            TextSpan {
+                len: content.len() - 4,
+                shaping: TextShapingStyle::default(),
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 0.1,
+                        g: 0.3,
+                        b: 0.9,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+            },
+        ]);
+
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(content),
+            spans: spans.clone(),
+        };
+        assert!(rich.is_valid(), "expected attributed input to be valid");
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (single_blob, _metrics) =
+            text.prepare_attributed(&rich, &style, single_line_constraints);
+
+        let space_run_end = 6;
+        let b_end = 7;
+
+        let x_space_end = text
+            .caret_x(single_blob, space_run_end)
+            .expect("caret_x at end of whitespace run");
+        let x_b_end = text.caret_x(single_blob, b_end).expect("caret_x after 'b'");
+        assert!(
+            x_b_end.0 > x_space_end.0 + 0.1,
+            "expected 'b' to advance beyond the trailing whitespace"
+        );
+
+        // Force a soft wrap at the boundary between the whitespace run and the next word. This
+        // keeps the run as trailing characters at the visual end of the first line.
+        let max_width = Px((x_space_end.0 + x_b_end.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare_attributed(&rich, &style, wrapped_constraints);
+        let blob_ref = text.blob(blob).expect("wrapped blob");
+        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
+
+        let first = &blob_ref.shape.lines[0];
+        assert!(
+            first.end >= space_run_end,
+            "expected the first visual line to include the trailing whitespace run (end={})",
+            first.end
+        );
+
+        let caret_after_second_space = text
+            .caret_rect(blob, 5, CaretAffinity::Downstream)
+            .expect("caret rect after second space");
+        let caret_after_space_run = text
+            .caret_rect(blob, space_run_end, CaretAffinity::Upstream)
+            .expect("caret rect after whitespace run (upstream)");
+        assert!(
+            caret_after_space_run.origin.x.0 > caret_after_second_space.origin.x.0 + 0.1,
+            "expected the trailing whitespace run to have positive width in caret geometry"
+        );
+
+        let mut rects = Vec::new();
+        text.selection_rects(blob, (5, 6), &mut rects)
+            .expect("selection rects");
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect for the trailing whitespace"
+        );
+
+        text.release(single_blob);
+        text.release(blob);
+    }
+
+    #[test]
     fn rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
