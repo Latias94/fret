@@ -7,7 +7,7 @@ use fret_runtime::ui_host::{
 };
 use fret_runtime::{
     ClipboardToken, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect, FrameId,
-    ModelHost, ModelStore, TickId, TimerToken,
+    ModelHost, ModelStore, ShareSheetToken, TickId, TimerToken,
 };
 
 #[derive(Default)]
@@ -22,6 +22,7 @@ pub(crate) struct TestUiHostImpl {
     pub(crate) frame_id: FrameId,
     pub(crate) next_timer_token: u64,
     pub(crate) next_clipboard_token: u64,
+    pub(crate) next_share_sheet_token: u64,
     pub(crate) next_image_upload_token: u64,
 }
 
@@ -110,6 +111,11 @@ impl TimeHost for TestUiHostImpl {
     fn next_clipboard_token(&mut self) -> ClipboardToken {
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
         ClipboardToken(self.next_clipboard_token)
+    }
+
+    fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+        ShareSheetToken(self.next_share_sheet_token)
     }
 
     fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {

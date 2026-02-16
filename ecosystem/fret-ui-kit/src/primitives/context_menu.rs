@@ -187,10 +187,10 @@ pub fn context_menu_touch_long_press_on_pointer_move(
     if state.pointer_id != Some(mv.pointer_id) {
         return false;
     }
-    if let Some(origin) = state.origin {
-        if touch_long_press_exceeds_move_threshold(origin, mv.position) {
-            clear_touch_long_press_inner(host, &mut state);
-        }
+    if let Some(origin) = state.origin
+        && touch_long_press_exceeds_move_threshold(origin, mv.position)
+    {
+        clear_touch_long_press_inner(host, &mut state);
     }
     false
 }
@@ -432,6 +432,7 @@ mod tests {
                 modifiers: Modifiers::default(),
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                hit_is_text_input: false,
             },
         );
         assert!(!handled);
@@ -481,6 +482,7 @@ mod tests {
                 modifiers: Modifiers::default(),
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                hit_is_text_input: false,
             },
         );
 
@@ -553,6 +555,7 @@ mod tests {
                 modifiers: Modifiers::default(),
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                hit_is_text_input: false,
             },
         );
 

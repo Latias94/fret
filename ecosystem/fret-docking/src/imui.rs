@@ -19,6 +19,8 @@ use fret_ui::{UiHost, UiTree};
 
 use crate::{create_dock_space_node_with_test_id, render_and_bind_dock_panels};
 
+type DockSpaceConfigureFn<H> = Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>>;
+
 /// Options for embedding a dock space in an imui tree.
 #[derive(Debug, Clone)]
 pub struct DockSpaceImUiOptions {
@@ -63,8 +65,7 @@ pub fn dock_space_with<H: UiHost + 'static>(
 ) {
     let window = ui.with_cx_mut(|cx| cx.window);
 
-    let configure: Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>> =
-        Rc::new(RefCell::new(Box::new(configure)));
+    let configure: DockSpaceConfigureFn<H> = Rc::new(RefCell::new(Box::new(configure)));
     let test_id = options.test_id;
     let tab_drag_anchor_test_id = options.tab_drag_anchor_test_id;
 
@@ -102,7 +103,7 @@ fn build_dock_host<H: UiHost + 'static>(
     window: AppWindowId,
     test_id: Option<&'static str>,
     tab_drag_anchor_test_id: Option<&'static str>,
-    configure: Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>>,
+    configure: DockSpaceConfigureFn<H>,
 ) -> fret_core::NodeId {
     let test_id = test_id.unwrap_or("dock-space");
     let dock_space = create_dock_space_node_with_test_id(ui_tree, window, test_id);
@@ -139,7 +140,7 @@ impl<H: UiHost> Widget<H> for DockTabDragAnchor {
 struct DockHostRoot<H: UiHost> {
     dock_space: fret_core::NodeId,
     tab_drag_anchor: Option<fret_core::NodeId>,
-    configure: Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>>,
+    configure: DockSpaceConfigureFn<H>,
 }
 
 impl<H: UiHost + 'static> Widget<H> for DockHostRoot<H> {

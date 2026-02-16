@@ -15,10 +15,10 @@ pub struct RowPinningState {
 }
 
 pub fn is_row_pinned(row_key: RowKey, state: &RowPinningState) -> Option<RowPinPosition> {
-    if state.top.iter().any(|k| *k == row_key) {
+    if state.top.contains(&row_key) {
         return Some(RowPinPosition::Top);
     }
-    if state.bottom.iter().any(|k| *k == row_key) {
+    if state.bottom.contains(&row_key) {
         return Some(RowPinPosition::Bottom);
     }
     None

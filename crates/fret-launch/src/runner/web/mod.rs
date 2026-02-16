@@ -28,6 +28,7 @@ use fret_core::{AppWindowId, Event, Scene};
 use fret_render::{Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{FrameId, PlatformCapabilities, TickId};
 use js_sys::{Function, Reflect};
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
 use winit::window::{Window, WindowId};
@@ -43,6 +44,7 @@ struct GfxState {
     surface_state: SurfaceState<'static>,
     renderer: Renderer,
     last_surface_error: Option<wgpu::SurfaceError>,
+    diag_keepalive_redraw: bool,
 }
 
 pub struct WinitRunner<D: WinitAppDriver> {
@@ -69,6 +71,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     pending_events: Vec<Event>,
     pending_async_events: Rc<RefCell<Vec<Event>>>,
+    pending_clipboard_write_results: Rc<RefCell<Vec<Result<(), String>>>>,
     tick_id: TickId,
     frame_id: FrameId,
 
@@ -84,6 +87,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     diag_incoming_open_payloads: HashMap<fret_core::IncomingOpenToken, DiagIncomingOpenPayload>,
 
     environment_media_queries: Option<render_loop::WebEnvironmentMediaQueries>,
+    devtools_ws_inbox_waker: Option<Closure<dyn FnMut(web_sys::Event)>>,
 }
 
 #[derive(Debug, Default)]
@@ -185,6 +189,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             scene: Scene::default(),
             pending_events: Vec::new(),
             pending_async_events: Rc::new(RefCell::new(Vec::new())),
+            pending_clipboard_write_results: Rc::new(RefCell::new(Vec::new())),
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             uploaded_images: HashMap::new(),
@@ -197,6 +202,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             diag_incoming_open_next_token: 1,
             diag_incoming_open_payloads: HashMap::new(),
             environment_media_queries: None,
+            devtools_ws_inbox_waker: None,
         }
     }
 
@@ -246,8 +252,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
         available.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
         available.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
-        available.clipboard.text = true;
+        available.clipboard.text.read = window_has_web_clipboard_read();
+        available.clipboard.text.write = window_has_web_clipboard_write();
         available.clipboard.files = false;
+        available.clipboard.primary_text = false;
         available.dnd.external = false;
         available.dnd.external_payload = fret_runtime::ExternalDragPayloadKind::None;
         available.dnd.external_position = fret_runtime::ExternalDragPositionQuality::None;
@@ -284,8 +292,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .ui
             .window_z_level
             .clamp_to_available(available.ui.window_z_level);
-        caps.clipboard.text &= available.clipboard.text;
+        caps.clipboard.text.read &= available.clipboard.text.read;
+        caps.clipboard.text.write &= available.clipboard.text.write;
         caps.clipboard.files &= available.clipboard.files;
+        caps.clipboard.primary_text &= available.clipboard.primary_text;
         caps.dnd.external &= available.dnd.external;
         caps.dnd.external_payload = if caps.dnd.external {
             available.dnd.external_payload
@@ -325,4 +335,42 @@ fn window_has_web_share() -> bool {
         Err(_) => return false,
     };
     share.dyn_ref::<Function>().is_some()
+}
+
+fn window_has_web_clipboard_read() -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let navigator = match Reflect::get(window.as_ref(), &JsValue::from_str("navigator")) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let clipboard = match Reflect::get(&navigator, &JsValue::from_str("clipboard")) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let read_text = Reflect::get(&clipboard, &JsValue::from_str("readText"))
+        .ok()
+        .and_then(|v| v.dyn_into::<Function>().ok())
+        .is_some();
+    read_text
+}
+
+fn window_has_web_clipboard_write() -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let navigator = match Reflect::get(window.as_ref(), &JsValue::from_str("navigator")) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let clipboard = match Reflect::get(&navigator, &JsValue::from_str("clipboard")) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let write_text = Reflect::get(&clipboard, &JsValue::from_str("writeText"))
+        .ok()
+        .and_then(|v| v.dyn_into::<Function>().ok())
+        .is_some();
+    write_text
 }

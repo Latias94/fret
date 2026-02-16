@@ -3,8 +3,14 @@ use fret_core::{AppWindowId, ColorScheme, UiServices, WindowMetricsService};
 use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Theme installation configuration stored in app globals.
+///
+/// This is used by the `app-integration` helpers to keep a stable source of truth for what theme
+/// should be applied when the environment (e.g. OS light/dark setting) changes.
 pub struct ShadcnInstallConfig {
+    /// The base color family (e.g. Slate, Zinc, ...).
     pub base_color: ShadcnBaseColor,
+    /// The preferred color scheme when the environment is unknown.
     pub scheme: ShadcnColorScheme,
 }
 
@@ -21,6 +27,7 @@ pub fn install_app(app: &mut fret_app::App) {
     install_app_with(app, ShadcnInstallConfig::default());
 }
 
+/// Installs the default shadcn theme into the app and stores the configuration in app globals.
 pub fn install_app_with(app: &mut fret_app::App, config: ShadcnInstallConfig) {
     crate::shadcn_themes::apply_shadcn_new_york_v4(app, config.base_color, config.scheme);
     app.with_global_mut_untracked(ShadcnInstallConfig::default, |stored, _app| {
@@ -28,6 +35,7 @@ pub fn install_app_with(app: &mut fret_app::App, config: ShadcnInstallConfig) {
     });
 }
 
+/// Convenience wrapper around [`install_app_with`].
 pub fn install_app_with_theme(
     app: &mut fret_app::App,
     base_color: ShadcnBaseColor,
@@ -78,6 +86,10 @@ pub fn sync_theme_from_environment(
     desired
 }
 
+/// `fret-bootstrap`-style integration entrypoint.
+///
+/// This keeps the signature compatible with `BootstrapBuilder::install(...)` which receives both
+/// the app and a `UiServices` handle.
 pub fn install(app: &mut fret_app::App, services: &mut dyn UiServices) {
     let _ = services;
     install_app(app);

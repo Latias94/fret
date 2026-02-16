@@ -8,9 +8,9 @@ use fret_core::{
     dock::DropZone, geometry::Px,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService, DockingRuntime,
-    create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockSpace,
+    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
+    DockingRuntime, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, WindowCreateSpec,
@@ -141,16 +141,8 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
 
-        // Keep the scripted drag anchors inside the *tab* rect even when tabs use natural widths
-        // (as opposed to stretching to fill the full tab bar).
-        let mid_x = bounds.origin.x.0 + bounds.size.width.0 * 0.5;
-        let pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
-        let x_l = bounds.origin.x.0 + pad_x;
-        let x_r = mid_x + pad_x;
-        let y = bounds.origin.y.0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
-
         let half = DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE.0 * 0.5;
-        let rect = |x: f32| {
+        let rect = |x: f32, y: f32| {
             Rect::new(
                 Point::new(Px((x - half).max(bounds.origin.x.0)), Px(y - half)),
                 Size::new(
@@ -160,8 +152,120 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             )
         };
 
-        let _ = cx.layout_in(self.left_anchor, rect(x_l));
-        let _ = cx.layout_in(self.right_anchor, rect(x_r));
+        // Scripted drag anchors must start on the *tab* itself (not empty space in the tab bar),
+        // otherwise docking will interpret the interaction as a "tabs group" drag.
+        //
+        // For multi-window tear-off scenarios, this distinction matters:
+        // - panel drags tear off a single tab (ImGui-style),
+        // - tabs-group drags tear off the whole stack.
+        //
+        // Avoid depending on the viewport layout cache produced during `DockSpace::paint(...)`.
+        // That cache is populated after layout, which makes script anchors race-y on the first
+        // few frames (especially around window resize / multi-window tear-off).
+        let fallback_y = bounds.origin.y.0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
+        let fallback_mid_x = bounds.origin.x.0 + bounds.size.width.0 * 0.5;
+        let fallback_pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
+        let mut left_anchor_pos = (bounds.origin.x.0 + fallback_pad_x, fallback_y);
+        let mut right_anchor_pos = (fallback_mid_x + fallback_pad_x, fallback_y);
+
+        if let Some(dock) = cx.app.global::<DockManager>() {
+            use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
+
+            fn tabs_rect_for_panel(
+                graph: &DockGraph,
+                node: DockNodeId,
+                rect: Rect,
+                split_handle_gap: Px,
+                split_handle_hit_thickness: Px,
+                panel: &PanelKey,
+            ) -> Option<Rect> {
+                match graph.node(node)? {
+                    DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
+                    DockNode::Split {
+                        axis,
+                        children,
+                        fractions,
+                    } => {
+                        let min_px = vec![Px(0.0); children.len()];
+                        let computed = resizable::compute_layout(
+                            *axis,
+                            rect,
+                            children.len(),
+                            fractions,
+                            split_handle_gap,
+                            split_handle_hit_thickness,
+                            &min_px,
+                        );
+                        for (child, &child_rect) in children.iter().zip(computed.panel_rects.iter())
+                        {
+                            if let Some(found) = tabs_rect_for_panel(
+                                graph,
+                                *child,
+                                child_rect,
+                                split_handle_gap,
+                                split_handle_hit_thickness,
+                                panel,
+                            ) {
+                                return Some(found);
+                            }
+                        }
+                        None
+                    }
+                    _ => None,
+                }
+            }
+
+            fn tab_bar_anchor_for_panel(
+                dock: &DockManager,
+                window: AppWindowId,
+                bounds: Rect,
+                split_handle_gap: Px,
+                split_handle_hit_thickness: Px,
+                panel: &PanelKey,
+            ) -> Option<(f32, f32)> {
+                let root = dock.graph.window_root(window)?;
+                let tabs_rect = tabs_rect_for_panel(
+                    &dock.graph,
+                    root,
+                    bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    panel,
+                )?;
+                let x = tabs_rect.origin.x.0 + 16.0;
+                let y = tabs_rect.origin.y.0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
+                Some((x, y))
+            }
+
+            let viewport_left = PanelKey::new("demo.viewport.left");
+            let viewport_right = PanelKey::new("demo.viewport.right");
+            if let Some(p) = tab_bar_anchor_for_panel(
+                dock,
+                self.window,
+                bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                &viewport_left,
+            ) {
+                left_anchor_pos = p;
+            }
+            if let Some(p) = tab_bar_anchor_for_panel(
+                dock,
+                self.window,
+                bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                &viewport_right,
+            ) {
+                right_anchor_pos = p;
+            }
+        }
+
+        let _ = cx.layout_in(self.left_anchor, rect(left_anchor_pos.0, left_anchor_pos.1));
+        let _ = cx.layout_in(
+            self.right_anchor,
+            rect(right_anchor_pos.0, right_anchor_pos.1),
+        );
 
         let float_zone_anchor_rect = {
             // Mirror `fret_docking::dock::layout::float_zone(...)` logic for stable, pixel-free
@@ -764,41 +868,38 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     .into_element(cx);
 
                     let actions_card = shadcn::Card::new(vec![
-                        shadcn::CardHeader::new(vec![
-                            shadcn::CardTitle::new("Actions").into_element(cx),
-                            shadcn::CardDescription::new("Overlay probes + policy toggles")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
                         shadcn::CardContent::new(vec![vstack(
                             cx,
                             VStackProps::default()
-                                .gap(Space::N2)
+                                .gap(Space::N1)
                                 .layout(LayoutRefinement::default().w_full()),
                             |cx| {
                                 vec![
-                                    shadcn::Button::new("Toggle drop mask (left edge)")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .test_id("dock-arb-toggle-drop-mask-left-edge")
-                                        .on_activate(Arc::new(move |host, _action_cx, _reason| {
-                                            let mut next = false;
-                                            let _ = host.models_mut().update(
-                                                &drop_mask_disallow_left_edge,
-                                                |v| {
-                                                    *v = !*v;
-                                                    next = *v;
-                                                },
-                                            );
-                                            disallow_left_flag.store(next, Ordering::Relaxed);
-                                        }))
-                                        .into_element(cx),
-                                    popover,
-                                    dialog,
-                                    shadcn::Button::new("Underlay (modal barrier target)")
-                                        .variant(shadcn::ButtonVariant::Secondary)
-                                        .test_id("dock-arb-underlay-probe")
-                                        .into_element(cx),
-                                    shadcn::Toaster::new().into_element(cx),
+                                    cx.keyed("dock-arb-action-drop-mask", |cx| {
+                                        shadcn::Button::new("Toggle drop mask (left edge)")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("dock-arb-toggle-drop-mask-left-edge")
+                                            .on_activate(Arc::new(move |host, _action_cx, _reason| {
+                                                let mut next = false;
+                                                let _ = host.models_mut().update(
+                                                    &drop_mask_disallow_left_edge,
+                                                    |v| {
+                                                        *v = !*v;
+                                                        next = *v;
+                                                    },
+                                                );
+                                                disallow_left_flag.store(next, Ordering::Relaxed);
+                                            }))
+                                            .into_element(cx)
+                                    }),
+                                    cx.keyed("dock-arb-action-popover", |_cx| popover),
+                                    cx.keyed("dock-arb-action-dialog", |_cx| dialog),
+                                    cx.keyed("dock-arb-action-underlay", |cx| {
+                                        shadcn::Button::new("Underlay (modal barrier target)")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("dock-arb-underlay-probe")
+                                            .into_element(cx)
+                                    }),
                                 ]
                             },
                         )])
@@ -861,8 +962,8 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                         VStackProps::default()
                             .gap(Space::N3)
                             .layout(LayoutRefinement::default().size_full().min_w_0().min_h_0()),
-                        |_cx| vec![header_card, state_card, actions_card, debug_layers_card],
-                    )]
+                        |_cx| vec![actions_card, header_card, state_card, debug_layers_card],
+                    ), shadcn::Toaster::new().into_element(cx)]
                 },
             )]
                 },
@@ -936,6 +1037,7 @@ struct DockingArbitrationDriver {
     next_synth_touch_id: u64,
     layout_preset: DockingArbitrationLayoutPreset,
     persist_layout_on_exit: bool,
+    diag_layout_sanitized: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -1041,6 +1143,7 @@ impl DockingArbitrationDriver {
             next_synth_touch_id: 42,
             layout_preset,
             persist_layout_on_exit,
+            diag_layout_sanitized: false,
         }
     }
 
@@ -1282,8 +1385,18 @@ impl DockingArbitrationDriver {
         }
     }
 
-    fn ensure_dock_graph(&self, app: &mut App, window: AppWindowId) {
+    fn ensure_dock_graph(&mut self, app: &mut App, window: AppWindowId) {
         use fret_core::{DockNode, PanelKey};
+
+        let diag_enabled = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+        let layout_preset = self.layout_preset;
+        let main_window = self.main_window;
+        let should_sanitize_for_diag =
+            diag_enabled && Some(window) == main_window && !self.diag_layout_sanitized;
+        if should_sanitize_for_diag {
+            self.diag_layout_sanitized = true;
+        }
 
         app.with_global_mut(DockManager::default, |dock, _app| {
             let viewport_left = PanelKey::new("demo.viewport.left");
@@ -1316,7 +1429,16 @@ impl DockingArbitrationDriver {
                 viewport: None,
             });
 
-            if dock.graph.window_root(window).is_some() {
+            // Diagnostics scripts assume a stable baseline dock graph. When diagnostics are enabled,
+            // force the main window to start from the selected preset even if a previous session
+            // left a persisted layout in place.
+            //
+            // Important: only do this for the main window and only once, otherwise multi-window
+            // tear-off scripts would be disrupted by resetting the graph after creating new OS
+            // windows.
+            if should_sanitize_for_diag {
+                dock.graph = fret_core::DockGraph::new();
+            } else if dock.graph.window_root(window).is_some() {
                 return;
             }
 
@@ -1342,7 +1464,7 @@ impl DockingArbitrationDriver {
                 })
             }
 
-            match self.layout_preset {
+            match layout_preset {
                 DockingArbitrationLayoutPreset::Default => {
                     let tabs_left = tabs_for_panel(&mut dock.graph, viewport_left);
                     let tabs_right = tabs_for_panel(&mut dock.graph, viewport_right);
@@ -1569,7 +1691,7 @@ impl DockingArbitrationDriver {
     }
 
     fn render_dock(
-        &self,
+        &mut self,
         app: &mut App,
         services: &mut dyn UiServices,
         window: AppWindowId,
@@ -1581,7 +1703,14 @@ impl DockingArbitrationDriver {
         OverlayController::begin_frame(app, window);
 
         let dock_space = state.dock_space.get_or_insert_with(|| {
-            create_dock_space_node_with_test_id(&mut state.ui, window, "dock-arb-dock-space")
+            use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+            let allow_chained_tear_off =
+                std::env::var_os("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF").is_some();
+            state.ui.create_node_retained(
+                DockSpace::new(window)
+                    .with_allow_multi_window_tear_off(allow_chained_tear_off)
+                    .with_semantics_test_id("dock-arb-dock-space"),
+            )
         });
         let _ = state.root.get_or_insert_with(|| {
             let left_anchor = state
@@ -2128,7 +2257,12 @@ impl WinitAppDriver for DockingArbitrationDriver {
 
         if injected_any {
             let mut deferred_effects: Vec<Effect> = Vec::new();
+            let mut flush_rounds: u32 = 0;
             loop {
+                flush_rounds = flush_rounds.saturating_add(1);
+                if flush_rounds > 128 {
+                    break;
+                }
                 let effects = app.flush_effects();
                 if effects.is_empty() {
                     break;
@@ -2429,13 +2563,35 @@ pub fn run() -> anyhow::Result<()> {
     });
 
     let viewport_tools = Arc::new(Mutex::new(DemoViewportToolState::default()));
-    let mut caps = PlatformCapabilities::default();
+    let diag_enabled =
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+
+    // Start from the runner-provided capabilities; diagnostics + docking behavior depends on
+    // accurate platform flags (multi-window, tear-off, hover detection quality).
+    let mut caps = app
+        .global::<PlatformCapabilities>()
+        .cloned()
+        .unwrap_or_default();
     if std::env::var("FRET_SINGLE_WINDOW")
         .ok()
         .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
     {
         caps.ui.multi_window = false;
         caps.ui.window_tear_off = true;
+    }
+
+    // Optional diagnostics knob: force single-window hover semantics.
+    //
+    // Note: when window hover detection is enabled, docking can route hover using a runner-owned
+    // cursor screen position override (physical pixels). Prefer `set_cursor_in_window_logical` in
+    // scripts to avoid DPI-dependent drift when exercising drag previews.
+    let disable_cross_window_hover_in_diag =
+        std::env::var("FRET_DOCK_ARB_DIAG_DISABLE_CROSS_WINDOW_HOVER")
+            .ok()
+            .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    if diag_enabled && disable_cross_window_hover_in_diag {
+        caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+        caps.ui.window_tear_off = false;
     }
     app.set_global(caps);
     app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
@@ -2520,8 +2676,6 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     let layout_preset = DockingArbitrationLayoutPreset::from_env();
-    let diag_enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
-        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
     let no_persist = std::env::var("FRET_DOCK_ARB_NO_PERSIST")
         .ok()
         .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));

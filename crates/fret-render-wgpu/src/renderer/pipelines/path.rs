@@ -11,6 +11,18 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.path_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!("fret.renderer.pipeline.create.path", format = ?format, reason)
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret path shader"),
             source: wgpu::ShaderSource::Wgsl(PATH_SHADER.into()),
@@ -18,7 +30,7 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret path pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout],
+            bind_group_layouts: &[&self.uniform_bind_group_layout, self.path_paints.layout()],
             immediate_size: 0,
         });
 
@@ -39,7 +51,7 @@ impl Renderer {
                             shader_location: 0,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 8,
                             shader_location: 1,
                         },
@@ -89,6 +101,25 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.path_msaa_pipeline.is_none() {
+                    "missing"
+                } else if self.path_msaa_pipeline_format != Some(format) {
+                    "format_changed"
+                } else {
+                    "sample_count_changed"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.path_msaa",
+                    format = ?format,
+                    sample_count,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret path msaa shader"),
             source: wgpu::ShaderSource::Wgsl(PATH_SHADER.into()),
@@ -96,7 +127,7 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret path msaa pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout],
+            bind_group_layouts: &[&self.uniform_bind_group_layout, self.path_paints.layout()],
             immediate_size: 0,
         });
 
@@ -117,7 +148,7 @@ impl Renderer {
                             shader_location: 0,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 8,
                             shader_location: 1,
                         },

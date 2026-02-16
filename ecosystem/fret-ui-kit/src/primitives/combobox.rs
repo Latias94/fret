@@ -187,6 +187,7 @@ pub fn set_open_change_reason_on_activate(
     open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
     reason: ComboboxOpenChangeReason,
 ) -> OnActivate {
+    #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, action_cx, _activate_reason| {
         let _ = host
             .models_mut()
@@ -198,6 +199,7 @@ pub fn set_open_change_reason_on_activate(
 pub fn set_open_change_reason_on_dismiss_request(
     open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
 ) -> OnDismissRequest {
+    #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, action_cx, req| {
         let reason = open_change_reason_from_dismiss_reason(req.reason);
         let _ = host
@@ -215,6 +217,7 @@ pub fn commit_selection_on_activate<T: Clone + PartialEq + 'static>(
     open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
     selected_value: T,
 ) -> OnActivate {
+    #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, action_cx, _activate_reason| {
         let _ = host.models_mut().update(&value, |v| {
             if policy.toggle_selected_to_none
@@ -243,6 +246,7 @@ pub fn on_close_auto_focus_with_reason(
     trigger_id: Arc<Mutex<Option<GlobalElementId>>>,
     policy: ComboboxCloseAutoFocusPolicy,
 ) -> OnCloseAutoFocus {
+    #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, _action_cx, req| {
         let reason = host
             .models_mut()
@@ -259,7 +263,7 @@ pub fn on_close_auto_focus_with_reason(
             }
             ComboboxCloseAutoFocusDecision::RestoreTrigger => {
                 req.prevent_default();
-                let target = trigger_id.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                let target = *trigger_id.lock().unwrap_or_else(|e| e.into_inner());
                 if let Some(target) = target {
                     host.request_focus(target);
                 }

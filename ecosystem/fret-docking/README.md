@@ -22,7 +22,5 @@ These are useful for aligning design intent and vocabulary:
 
 - `egui_tiles` (N-ary linear containers + shares + simplification rules)
   - Upstream: https://github.com/rerun-io/egui_tiles
-  - Local checkout: `F:\SourceCodes\Rust\fret\repo-ref\egui_tiles\`
 - `dockview` (layout tree + panel state map separation; floating/popout state organization)
   - Upstream: https://github.com/mathuo/dockview
-  - Local checkout: `F:\SourceCodes\Rust\fret\repo-ref\dockview\`

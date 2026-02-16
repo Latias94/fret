@@ -54,9 +54,11 @@ fn executor_gates_submit_and_records_validation_issues() {
 
     let mut exec = GenUiActionExecutorV1::new(state.clone()).with_standard_actions();
     let validation_model = validation.clone();
-    exec.register_handler(
-        "formSubmit",
-        Arc::new(move |host, state, _inv| {
+    #[allow(clippy::arc_with_non_send_sync)]
+    let handler = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiActionHost,
+              state: &fret_runtime::Model<Value>,
+              _inv: &GenUiActionInvocation| {
             let snapshot = host
                 .models_mut()
                 .read(state, Clone::clone)
@@ -90,8 +92,9 @@ fn executor_gates_submit_and_records_validation_issues() {
                     message: "validation failed".to_string(),
                 })
             }
-        }),
+        },
     );
+    exec.register_handler("formSubmit", handler);
 
     let mut host = UiActionHostAdapter { app: &mut app };
     let mut i = inv("formSubmit", json!({ "formName": "Demo" }));
@@ -155,9 +158,11 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
 
     let mut exec = GenUiActionExecutorV1::new(state.clone()).with_standard_actions();
     let validation_model = validation.clone();
-    exec.register_handler(
-        "formSubmit",
-        Arc::new(move |host, state, _inv| {
+    #[allow(clippy::arc_with_non_send_sync)]
+    let handler = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiActionHost,
+              state: &fret_runtime::Model<Value>,
+              _inv: &GenUiActionInvocation| {
             let snapshot = host
                 .models_mut()
                 .read(state, Clone::clone)
@@ -191,8 +196,9 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
                     message: "validation failed".to_string(),
                 })
             }
-        }),
+        },
     );
+    exec.register_handler("formSubmit", handler);
 
     let mut host = UiActionHostAdapter { app: &mut app };
     let mut i = inv("formSubmit", json!({ "formName": "Demo" }));

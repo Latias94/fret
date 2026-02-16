@@ -1,8 +1,16 @@
+//! AccessKit adapter for Fret semantics snapshots.
+//!
+//! This crate converts `fret-core`'s portable semantics tree (`SemanticsSnapshot`) into
+//! AccessKit's `TreeUpdate` representation.
+//!
+//! Backend-specific wiring (e.g. hooking this into a windowing system) lives in runner crates such
+//! as `fret-runner-winit`.
+
 use std::collections::{HashMap, HashSet};
 
 use accesskit::{
     Action, ActionRequest, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree,
-    TreeUpdate,
+    TreeId, TreeUpdate,
 };
 use fret_core::{SemanticsNode, SemanticsRole, SemanticsSnapshot};
 use slotmap::{Key, KeyData};
@@ -164,6 +172,10 @@ fn byte_to_character_index(value: &str, byte_offset: u32) -> usize {
     index
 }
 
+/// Builds an AccessKit [`TreeUpdate`] from a Fret [`SemanticsSnapshot`].
+///
+/// `scale_factor` should match the target's pixel scale (e.g. window scale factor) so bounds are
+/// converted from logical pixels to physical pixels as expected by AccessKit.
 pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64) -> TreeUpdate {
     let visible_roots = choose_visible_roots(snapshot);
     let children = build_children_index(&snapshot.nodes);
@@ -355,6 +367,7 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             toolkit_name: Some("fret".to_string()),
             toolkit_version: Some(env!("CARGO_PKG_VERSION").to_string()),
         }),
+        tree_id: TreeId::ROOT,
         focus,
     }
 }
@@ -363,14 +376,20 @@ pub fn focus_target_from_action(req: &ActionRequest) -> Option<fret_core::NodeId
     if req.action != Action::Focus {
         return None;
     }
-    parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
+    parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))
 }
 
 pub fn invoke_target_from_action(req: &ActionRequest) -> Option<fret_core::NodeId> {
     if req.action != Action::Click {
         return None;
     }
-    parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
+    parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -383,8 +402,12 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
     if req.action != Action::SetValue {
         return None;
     }
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
 
-    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
     let data = req.data.as_ref()?;
     match data {
         accesskit::ActionData::Value(v) => Some((target, SetValueData::Text(v.to_string()))),
@@ -400,8 +423,12 @@ pub fn replace_selected_text_from_action(
     if req.action != Action::ReplaceSelectedText {
         return None;
     }
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
 
-    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
     let node = snapshot.nodes.iter().find(|n| n.id == target)?;
     if node.role != SemanticsRole::TextField || node.value.is_none() {
         return None;
@@ -442,8 +469,12 @@ pub fn set_text_selection_from_action(
     if req.action != Action::SetTextSelection {
         return None;
     }
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
 
-    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
     let data = req.data.as_ref()?;
     let accesskit::ActionData::SetTextSelection(sel) = data else {
         return None;
@@ -1315,7 +1346,8 @@ mod tests {
 
         let req = accesskit::ActionRequest {
             action: accesskit::Action::SetTextSelection,
-            target: to_accesskit_id(input),
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: to_accesskit_id(input),
             data: Some(accesskit::ActionData::SetTextSelection(
                 accesskit::TextSelection {
                     anchor: accesskit::TextPosition {
@@ -1424,7 +1456,8 @@ mod tests {
 
         let req = accesskit::ActionRequest {
             action: accesskit::Action::ReplaceSelectedText,
-            target: to_accesskit_id(input),
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: to_accesskit_id(input),
             data: Some(accesskit::ActionData::Value("x".into())),
         };
         let (target, value) = replace_selected_text_from_action(&req, &snapshot)
@@ -1508,7 +1541,8 @@ mod tests {
 
         let req = accesskit::ActionRequest {
             action: accesskit::Action::ReplaceSelectedText,
-            target: to_accesskit_id(input),
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: to_accesskit_id(input),
             data: Some(accesskit::ActionData::Value("x".into())),
         };
         assert!(

@@ -48,6 +48,7 @@ struct TestHost {
     frame_id: FrameId,
     next_timer_token: u64,
     next_clipboard_token: u64,
+    next_share_sheet_token: u64,
     next_image_upload_token: u64,
 }
 
@@ -172,6 +173,12 @@ impl TimeHost for TestHost {
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         let token = fret_runtime::ClipboardToken(self.next_clipboard_token);
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+        token
+    }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        let token = fret_runtime::ShareSheetToken(self.next_share_sheet_token);
+        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
         token
     }
 
@@ -415,6 +422,7 @@ enum SceneOpSigV1 {
     PopLayer,
     PushClipRect,
     PushClipRRect,
+    PushClipPath,
     PopClip,
     PushMask,
     PopMask,
@@ -422,6 +430,7 @@ enum SceneOpSigV1 {
     PopEffect,
     PushCompositeGroup,
     PopCompositeGroup,
+    StrokeRRect { order: u32 },
     Quad { order: u32 },
     Image { order: u32 },
     ImageRegion { order: u32 },
@@ -444,6 +453,7 @@ impl From<SceneSig> for SceneOpSigV1 {
             SceneSig::PopLayer => Self::PopLayer,
             SceneSig::PushClipRect => Self::PushClipRect,
             SceneSig::PushClipRRect => Self::PushClipRRect,
+            SceneSig::PushClipPath => Self::PushClipPath,
             SceneSig::PopClip => Self::PopClip,
             SceneSig::PushMask => Self::PushMask,
             SceneSig::PopMask => Self::PopMask,
@@ -451,6 +461,7 @@ impl From<SceneSig> for SceneOpSigV1 {
             SceneSig::PopEffect => Self::PopEffect,
             SceneSig::PushCompositeGroup => Self::PushCompositeGroup,
             SceneSig::PopCompositeGroup => Self::PopCompositeGroup,
+            SceneSig::StrokeRRect(order) => Self::StrokeRRect { order: order.0 },
             SceneSig::Quad(order) => Self::Quad { order: order.0 },
             SceneSig::Image(order) => Self::Image { order: order.0 },
             SceneSig::ImageRegion(order) => Self::ImageRegion { order: order.0 },
@@ -4222,7 +4233,9 @@ fn menu_style_overrides_apply_to_container_and_label() {
         scene
             .ops()
             .iter()
-            .any(|op| { matches!(op, SceneOp::Text { color, .. } if *color == override_label) }),
+            .any(|op| {
+                matches!(op, SceneOp::Text { paint, .. } if *paint == fret_core::Paint::Solid(override_label))
+            }),
         "expected MenuStyle.item_label_color to affect at least one text draw op"
     );
 }
@@ -4502,12 +4515,14 @@ fn dialog_style_overrides_apply_to_container_and_text() {
         scene
             .ops()
             .iter()
-            .any(|op| { matches!(op, SceneOp::Text { color, .. } if *color == override_headline) }),
+            .any(|op| {
+                matches!(op, SceneOp::Text { paint, .. } if *paint == fret_core::Paint::Solid(override_headline))
+            }),
         "expected DialogStyle.headline_color to affect at least one text draw op"
     );
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Text { color, .. } if *color == override_supporting)
+            matches!(op, SceneOp::Text { paint, .. } if *paint == fret_core::Paint::Solid(override_supporting))
         }),
         "expected DialogStyle.supporting_text_color to affect at least one text draw op"
     );

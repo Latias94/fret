@@ -401,6 +401,8 @@ enum Msg {
     ResetEditor,
     ApplyStream,
     ResetStream,
+    SetAutoApply(bool),
+    AutoApplyToggled,
 }
 
 struct GenUiProgram;
@@ -606,6 +608,41 @@ impl MvuProgram for GenUiProgram {
                     .models_mut()
                     .update(&state.action_queue, |q| q.invocations.clear());
             }
+            Msg::SetAutoApply(value) => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.auto_apply_standard_actions, |v| *v = value);
+                if value {
+                    let _ = app
+                        .models_mut()
+                        .update(&state.action_queue, |q| q.invocations.clear());
+                    state.queue_summary = Some(Arc::<str>::from(
+                        "Switched to live mode (auto-apply on). Queue cleared.",
+                    ));
+                } else {
+                    state.queue_summary = Some(Arc::<str>::from(
+                        "Switched to queue-only mode (auto-apply off). Pressing buttons will not change state until you apply the queue via executor.",
+                    ));
+                }
+            }
+            Msg::AutoApplyToggled => {
+                let enabled = app
+                    .models()
+                    .get_copied(&state.auto_apply_standard_actions)
+                    .unwrap_or(true);
+                if enabled {
+                    let _ = app
+                        .models_mut()
+                        .update(&state.action_queue, |q| q.invocations.clear());
+                    state.queue_summary = Some(Arc::<str>::from(
+                        "Switched to live mode (auto-apply on). Queue cleared.",
+                    ));
+                } else {
+                    state.queue_summary = Some(Arc::<str>::from(
+                        "Switched to queue-only mode (auto-apply off). Pressing buttons will not change state until you apply the queue via executor.",
+                    ));
+                }
+            }
             Msg::ResetState => {
                 let seed = state.spec.state.clone().unwrap_or(Value::Null);
                 let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
@@ -774,6 +811,10 @@ fn view(
     let reset_editor_cmd = msg.cmd(Msg::ResetEditor);
     let apply_stream_cmd = msg.cmd(Msg::ApplyStream);
     let reset_stream_cmd = msg.cmd(Msg::ResetStream);
+    let enable_live_cmd = msg.cmd(Msg::SetAutoApply(true));
+    let auto_apply_toggled_cmd = msg.cmd(Msg::AutoApplyToggled);
+    let apply_queue_cmd_toolbar = apply_queue_cmd.clone();
+    let apply_queue_cmd_banner = apply_queue_cmd.clone();
 
     let auto_apply_model = st.auto_apply_standard_actions.clone();
     let auto_apply_enabled = cx
@@ -784,7 +825,7 @@ fn view(
         .unwrap_or(true);
 
     let auto_fix_model = st.auto_fix_on_apply.clone();
-    let auto_fix_enabled = cx
+    let _auto_fix_enabled = cx
         .watch_model(&st.auto_fix_on_apply)
         .layout()
         .read(|_host, v| *v)
@@ -866,46 +907,71 @@ fn view(
         .collect();
 
     let toolbar = ui::h_flex(cx, move |cx| {
-        vec![
-            ui::text(
-                cx,
-                Arc::<str>::from(format!(
-                    "auto-apply standard actions: {}",
-                    if auto_apply_enabled { "on" } else { "off" }
-                )),
-            )
-            .text_sm()
-            .into_element(cx),
+        let mode_label: Arc<str> = Arc::from(if auto_apply_enabled {
+            "Mode: live (auto-apply on)"
+        } else {
+            "Mode: queue-only (auto-apply off)"
+        });
+        let mode_badge = shadcn::Badge::new(mode_label)
+            .variant(if auto_apply_enabled {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Destructive
+            })
+            .into_element(cx);
+
+        let mut items: Vec<AnyElement> = Vec::new();
+        items.push(mode_badge);
+
+        items.push(
+            ui::text(cx, Arc::<str>::from("auto-apply"))
+                .text_sm()
+                .into_element(cx),
+        );
+        items.push(
             shadcn::Switch::new(auto_apply_model.clone())
                 .a11y_label("Auto-apply standard actions")
+                .on_click(auto_apply_toggled_cmd)
                 .into_element(cx),
-            ui::text(
-                cx,
-                Arc::<str>::from(format!(
-                    "auto-fix spec on apply: {}",
-                    if auto_fix_enabled { "on" } else { "off" }
-                )),
-            )
-            .text_sm()
-            .into_element(cx),
+        );
+
+        items.push(
+            ui::text(cx, Arc::<str>::from("auto-fix on apply"))
+                .text_sm()
+                .into_element(cx),
+        );
+        items.push(
             shadcn::Switch::new(auto_fix_model.clone())
                 .a11y_label("Auto-fix spec on apply")
                 .into_element(cx),
-            ui::text(cx, count_label.clone()).text_sm().into_element(cx),
+        );
+
+        items.push(ui::text(cx, count_label.clone()).text_sm().into_element(cx));
+
+        items.push(
             shadcn::Button::new("Clear queue")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(clear_cmd)
                 .into_element(cx),
-            shadcn::Button::new("Apply queue (executor)")
-                .variant(shadcn::ButtonVariant::Outline)
-                .disabled(auto_apply_enabled)
-                .on_click(apply_queue_cmd)
-                .into_element(cx),
+        );
+
+        if !auto_apply_enabled {
+            items.push(
+                shadcn::Button::new("Apply queue (executor)")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .on_click(apply_queue_cmd_toolbar)
+                    .into_element(cx),
+            );
+        }
+
+        items.push(
             shadcn::Button::new("Reset state")
                 .variant(shadcn::ButtonVariant::Outline)
                 .on_click(reset_cmd)
                 .into_element(cx),
-        ]
+        );
+
+        items
     })
     .gap(Space::N2)
     .items_center()
@@ -950,8 +1016,23 @@ fn view(
                 shadcn::Alert::new([
                     shadcn::AlertTitle::new("Queue-only mode").into_element(cx),
                     shadcn::AlertDescription::new(
-                        "Auto-apply is off: pressing buttons will only append action invocations to the queue. Use “Apply queue (executor)” or turn auto-apply on to update state.",
+                        "Auto-apply is off: pressing buttons will NOT change the UI. Actions are only appended to the queue. Apply the queue via executor, or switch back to live mode.",
                     )
+                    .into_element(cx),
+                    ui::h_flex(cx, move |cx| {
+                        vec![
+                            shadcn::Button::new("Switch to live mode")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .on_click(enable_live_cmd)
+                                .into_element(cx),
+                            shadcn::Button::new("Apply queue (executor)")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .on_click(apply_queue_cmd_banner)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
                     .into_element(cx),
                 ])
                 .into_element(cx),
@@ -1312,7 +1393,7 @@ fn view(
             ])
             .into_element(cx);
 
-        let body = ui::v_flex(cx, move |_cx| vec![tabs])
+        let body = ui::v_flex(cx, move |_cx| [tabs])
             .gap(Space::N0)
             .w_full()
             .h_full()
@@ -1327,7 +1408,7 @@ fn view(
     };
 
     let page = ui::container(cx, move |cx| {
-        [ui::h_flex(cx, move |_cx| vec![left, right])
+        [ui::h_flex(cx, move |_cx| [left, right])
             .gap(Space::N3)
             .w_full()
             .h_full()
@@ -1339,7 +1420,7 @@ fn view(
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    ui::children![cx; page].into()
 }
 
 fn maybe_auto_fix_spec(enabled: bool, spec: &SpecV1) -> (SpecV1, SpecFixups) {

@@ -1346,12 +1346,13 @@ impl Tabs {
                                 let trigger_h = Px(
                                     (list_height.0 - list_padding.0 * 2.0 - 1.0).max(0.0),
                                 );
-                                let trigger_layout = decl_style::layout_style(
-                                    &theme,
-                                    LayoutRefinement::default()
-                                        .flex_1()
-                                        .h_px(trigger_h),
-                                );
+                                let trigger_refinement = if list_full_width {
+                                    LayoutRefinement::default().flex_1().h_px(trigger_h)
+                                } else {
+                                    LayoutRefinement::default().h_px(trigger_h)
+                                };
+                                let trigger_layout =
+                                    decl_style::layout_style(&theme, trigger_refinement);
 
                                 let list_item_count = items_for_list.len();
                                 let mut out: Vec<AnyElement> =

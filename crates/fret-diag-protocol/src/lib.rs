@@ -1,8 +1,20 @@
+//! Stable, serializable protocol types for Fret diagnostics and scripted UI automation.
+//!
+//! The diagnostics pipeline intentionally uses explicit schema versions (e.g. `*V1`, `*V2`) so
+//! tooling can evolve without breaking older bundles/scripts.
+//!
+//! Most users interact with this crate indirectly via `fretboard diag` and the JSON artifacts in
+//! `tools/diag-scripts/`.
+
 use serde::{Deserialize, Serialize};
 
 pub mod builder;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Envelope message for diagnostics/devtools transports.
+///
+/// Transports (e.g. WebSockets) send a `type` discriminator and a free-form JSON `payload`.
+/// Higher-level tooling is responsible for validating the schema version and payload structure.
 pub struct DiagTransportMessageV1 {
     pub schema_version: u32,
     pub r#type: String,
@@ -15,6 +27,7 @@ pub struct DiagTransportMessageV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Hello message sent by a client when attaching to a devtools server.
 pub struct DevtoolsHelloV1 {
     pub client_kind: String,
     pub client_version: String,
@@ -23,6 +36,7 @@ pub struct DevtoolsHelloV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Acknowledgement message returned by the devtools server after receiving [`DevtoolsHelloV1`].
 pub struct DevtoolsHelloAckV1 {
     pub server_version: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -92,6 +106,9 @@ pub enum UiImeEventV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Scripted UI interaction plan (schema v1).
+///
+/// Used by `fretboard diag` to drive automated UI actions and assertions.
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -165,6 +182,9 @@ pub enum UiActionStepV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Scripted UI interaction plan (schema v2).
+///
+/// This is the preferred schema for new scripts and generators.
 pub struct UiActionScriptV2 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -651,6 +671,37 @@ pub enum UiActionStepV2 {
         x_px: f32,
         y_px: f32,
     },
+    /// Set a runner-level cursor screen position override using window-local client coordinates.
+    ///
+    /// This is identical to `set_cursor_in_window`, except the coordinates are in window-client
+    /// **logical pixels** (pre-DPI scale). The runner converts to physical pixels using the
+    /// current window scale factor.
+    ///
+    /// Prefer this for deterministic scripts that already express geometry in logical pixels.
+    SetCursorInWindowLogical {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        x_px: f32,
+        y_px: f32,
+    },
+    /// Set a runner-level mouse button state override.
+    ///
+    /// This is intended for scripted diagnostics that need to exercise runner-level fallback
+    /// behavior that depends on OS button state (e.g. "release outside all windows" poll-up
+    /// paths) without requiring real OS input.
+    ///
+    /// Desktop runners may choose to apply this only while certain interactions are active
+    /// (e.g. cross-window dock drags).
+    SetMouseButtons {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        left: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        right: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        middle: Option<bool>,
+    },
     RaiseWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -978,6 +1029,12 @@ pub enum UiPredicateV1 {
     /// result can bump `TextFontStackKey` and trigger large relayouts; this predicate lets perf
     /// suites wait for that one-time work to complete before entering a measured window.
     SystemFontRescanIdle,
+    /// True when the runner has observed an OS accessibility activation request for the current
+    /// window.
+    ///
+    /// This is intended to gate “AccessKit ↔ OS AX is actually live” rather than only asserting
+    /// that the app has an internal semantics tree.
+    RunnerAccessibilityActivated,
     VisibleInWindow {
         target: UiSelectorV1,
     },
@@ -1953,5 +2010,20 @@ mod tests {
         })
         .unwrap();
         assert_eq!(value, serde_json::json!({ "schema_version": 1 }));
+    }
+
+    #[test]
+    fn predicate_runner_accessibility_activated_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::RunnerAccessibilityActivated).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({ "kind": "runner_accessibility_activated" })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::RunnerAccessibilityActivated
+        ));
     }
 }

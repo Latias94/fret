@@ -13,7 +13,63 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        let window = self.window;
+        let frame_id = app.frame_id();
+        let kind: &'static str = match event {
+            Event::Pointer(_) | Event::PointerCancel(_) => "pointer",
+            Event::Timer { .. } => "timer",
+            _ => "other",
+        };
+
+        let ((), elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.dispatch.event",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    kind,
+                )
+            },
+            || self.dispatch_event_inner(app, services, event, base_root),
+        );
+        if self.debug_enabled {
+            self.debug_stats.dispatch_events = self.debug_stats.dispatch_events.saturating_add(1);
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.dispatch_time += elapsed;
+                match kind {
+                    "pointer" => {
+                        self.debug_stats.dispatch_pointer_events =
+                            self.debug_stats.dispatch_pointer_events.saturating_add(1);
+                        self.debug_stats.dispatch_pointer_event_time += elapsed;
+                    }
+                    "timer" => {
+                        self.debug_stats.dispatch_timer_events =
+                            self.debug_stats.dispatch_timer_events.saturating_add(1);
+                        self.debug_stats.dispatch_timer_event_time += elapsed;
+                    }
+                    _ => {
+                        self.debug_stats.dispatch_other_events =
+                            self.debug_stats.dispatch_other_events.saturating_add(1);
+                        self.debug_stats.dispatch_other_event_time += elapsed;
+                    }
+                }
+            }
+        }
+    }
+
+    #[stacksafe::stacksafe]
+    fn dispatch_event_inner(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        event: &Event,
+        base_root: NodeId,
+    ) {
         self.begin_debug_frame_if_needed(app.frame_id());
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
 
         if let Some(window) = self.window {
             let frame_id = app.frame_id();
@@ -21,6 +77,26 @@ impl<H: UiHost> UiTree<H> {
                 .global::<fret_core::WindowFrameClockService>()
                 .and_then(|svc| svc.snapshot(window))
                 .map(|s| s.now_monotonic);
+
+            match event {
+                Event::ClipboardText { token, .. } => {
+                    app.with_global_mut_untracked(
+                        fret_runtime::WindowClipboardDiagnosticsStore::default,
+                        |svc, _host| {
+                            svc.record_read_ok(window, frame_id, *token);
+                        },
+                    );
+                }
+                Event::ClipboardTextUnavailable { token, message } => {
+                    app.with_global_mut_untracked(
+                        fret_runtime::WindowClipboardDiagnosticsStore::default,
+                        |svc, _host| {
+                            svc.record_read_unavailable(window, frame_id, *token, message.clone());
+                        },
+                    );
+                }
+                _ => {}
+            }
 
             let update_pointer = |app: &mut H,
                                   pointer_id: fret_core::PointerId,
@@ -76,18 +152,39 @@ impl<H: UiHost> UiTree<H> {
         // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
         // hit-testing.
         if matches!(event, Event::Pointer(_)) {
-            self.invalidate_scroll_handle_bindings_for_changed_handles(
-                app,
-                crate::layout_pass::LayoutPassKind::Final,
-                /* consume_deferred_scroll_to_item */ false,
-                /* commit_scroll_handle_baselines */ false,
+            let (_, elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || tracing::trace_span!("fret.ui.dispatch.scroll_handle_invalidation"),
+                || {
+                    self.invalidate_scroll_handle_bindings_for_changed_handles(
+                        app,
+                        crate::layout_pass::LayoutPassKind::Final,
+                        /* consume_deferred_scroll_to_item */ false,
+                        /* commit_scroll_handle_baselines */ false,
+                    );
+                },
             );
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.dispatch_scroll_handle_invalidation_time += elapsed;
+            }
         }
 
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
-        let (active_layers, barrier_root) = self.active_input_layers();
-        self.enforce_modal_barrier_scope(&active_layers);
+        let ((active_layers, barrier_root), active_layers_elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.ui.dispatch.active_layers"),
+            || {
+                let (active_layers, barrier_root) = self.active_input_layers();
+                self.enforce_modal_barrier_scope(&active_layers);
+                (active_layers, barrier_root)
+            },
+        );
+        if let Some(active_layers_elapsed) = active_layers_elapsed {
+            self.debug_stats.dispatch_active_layers_time += active_layers_elapsed;
+        }
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
         // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
@@ -135,53 +232,64 @@ impl<H: UiHost> UiTree<H> {
         self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
-        let caps = app
-            .global::<PlatformCapabilities>()
-            .cloned()
-            .unwrap_or_default();
-        let mut input_ctx = InputContext {
-            platform: Platform::current(),
-            caps,
-            ui_has_modal: barrier_root.is_some(),
-            window_arbitration: None,
-            focus_is_text_input,
-            text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
-            edit_can_undo: true,
-            edit_can_redo: true,
-            router_can_back: false,
-            router_can_forward: false,
-            dispatch_phase: InputDispatchPhase::Bubble,
-        };
-        if let Some(window) = self.window {
-            if let Some(mode) = app
-                .global::<fret_runtime::WindowTextBoundaryModeService>()
-                .and_then(|svc| svc.mode(window))
-            {
-                input_ctx.text_boundary_mode = mode;
-            }
-            if let Some(mode) = self.focus_text_boundary_mode_override() {
-                input_ctx.text_boundary_mode = mode;
-            }
-            if let Some(availability) = app
-                .global::<fret_runtime::WindowCommandAvailabilityService>()
-                .and_then(|svc| svc.snapshot(window))
-                .copied()
-            {
-                input_ctx.edit_can_undo = availability.edit_can_undo;
-                input_ctx.edit_can_redo = availability.edit_can_redo;
-                input_ctx.router_can_back = availability.router_can_back;
-                input_ctx.router_can_forward = availability.router_can_forward;
-            }
+        let (input_ctx, input_ctx_elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.ui.dispatch.input_context"),
+            || {
+                let caps = app
+                    .global::<PlatformCapabilities>()
+                    .cloned()
+                    .unwrap_or_default();
+                let mut input_ctx = InputContext {
+                    platform: Platform::current(),
+                    caps,
+                    ui_has_modal: barrier_root.is_some(),
+                    window_arbitration: None,
+                    focus_is_text_input,
+                    text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+                    edit_can_undo: true,
+                    edit_can_redo: true,
+                    router_can_back: false,
+                    router_can_forward: false,
+                    dispatch_phase: InputDispatchPhase::Bubble,
+                };
+                if let Some(window) = self.window {
+                    if let Some(mode) = app
+                        .global::<fret_runtime::WindowTextBoundaryModeService>()
+                        .and_then(|svc| svc.mode(window))
+                    {
+                        input_ctx.text_boundary_mode = mode;
+                    }
+                    if let Some(mode) = self.focus_text_boundary_mode_override() {
+                        input_ctx.text_boundary_mode = mode;
+                    }
+                    if let Some(availability) = app
+                        .global::<fret_runtime::WindowCommandAvailabilityService>()
+                        .and_then(|svc| svc.snapshot(window))
+                        .copied()
+                    {
+                        input_ctx.edit_can_undo = availability.edit_can_undo;
+                        input_ctx.edit_can_redo = availability.edit_can_redo;
+                        input_ctx.router_can_back = availability.router_can_back;
+                        input_ctx.router_can_forward = availability.router_can_forward;
+                    }
 
-            let window_arbitration = self.window_input_arbitration_snapshot();
-            input_ctx.window_arbitration = Some(window_arbitration);
+                    let window_arbitration = self.window_input_arbitration_snapshot();
+                    input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+                    app.with_global_mut(
+                        fret_runtime::WindowInputContextService::default,
+                        |svc, _app| {
+                            svc.set_snapshot(window, input_ctx.clone());
+                        },
+                    );
+                }
+                input_ctx
+            },
+        );
+        if let Some(input_ctx_elapsed) = input_ctx_elapsed {
+            self.debug_stats.dispatch_input_context_time += input_ctx_elapsed;
         }
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
@@ -298,51 +406,173 @@ impl<H: UiHost> UiTree<H> {
             }
             return;
         }
-        if matches!(event, Event::Timer { .. }) {
-            if let Event::Timer { token } = event
-                && let Some(window) = self.window
-                && let Some(node) = crate::elements::timer_target_node(app, window, *token)
-            {
-                let stopped = self.dispatch_event_to_node_chain(
-                    app,
-                    services,
-                    &input_ctx,
-                    node,
-                    event,
-                    &mut needs_redraw,
-                    &mut invalidation_visited,
-                );
-                if stopped {
-                    if needs_redraw {
-                        self.request_redraw_coalesced(app);
+        if let Event::Timer { token } = event {
+            let window = self.window;
+            let frame_id = app.frame_id();
+            let token = *token;
+            let mut timer_target: Option<NodeId> = None;
+            let mut broadcast_rebuild_visible_layers_elapsed: Option<Duration> = None;
+            let mut broadcast_loop_elapsed: Option<Duration> = None;
+            let mut broadcast_layers_visited: u32 = 0;
+            let mut stopped = false;
+            let mut broadcast_attempted = false;
+
+            let ((), timer_elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.dispatch.timer",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        token = token.0,
+                    )
+                },
+                || {
+                    if let Some(window) = window {
+                        timer_target = crate::elements::timer_target_node(app, window, token);
                     }
-                    return;
+                    if let Some(node) = timer_target {
+                        let (targeted_stopped, _) = fret_perf::measure_span(
+                            self.debug_enabled,
+                            trace_enabled,
+                            || {
+                                tracing::trace_span!(
+                                    "fret.ui.dispatch.timer.targeted",
+                                    window = ?window,
+                                    frame_id = frame_id.0,
+                                    token = token.0,
+                                    node = ?node,
+                                )
+                            },
+                            || {
+                                self.dispatch_event_to_node_chain(
+                                    app,
+                                    services,
+                                    &input_ctx,
+                                    node,
+                                    event,
+                                    &mut needs_redraw,
+                                    &mut invalidation_visited,
+                                )
+                            },
+                        );
+                        stopped = targeted_stopped;
+                    }
+
+                    if !stopped {
+                        broadcast_attempted = true;
+                        let (layers, rebuild_elapsed) = fret_perf::measure_span(
+                            self.debug_enabled,
+                            trace_enabled,
+                            || {
+                                tracing::trace_span!(
+                                    "fret.ui.dispatch.timer.broadcast.rebuild_visible_layers",
+                                    window = ?window,
+                                    frame_id = frame_id.0,
+                                    token = token.0,
+                                )
+                            },
+                            || {
+                                self.visible_layers_in_paint_order()
+                                    .collect::<Vec<UiLayerId>>()
+                            },
+                        );
+                        broadcast_rebuild_visible_layers_elapsed = rebuild_elapsed;
+
+                        let (broadcast_stopped, loop_elapsed) = fret_perf::measure_span(
+                            self.debug_enabled,
+                            trace_enabled,
+                            || {
+                                tracing::trace_span!(
+                                    "fret.ui.dispatch.timer.broadcast.loop",
+                                    window = ?window,
+                                    frame_id = frame_id.0,
+                                    token = token.0,
+                                )
+                            },
+                            || {
+                                for layer_id in layers.into_iter().rev() {
+                                    broadcast_layers_visited =
+                                        broadcast_layers_visited.saturating_add(1);
+                                    let Some(layer) = self.layers.get(layer_id) else {
+                                        continue;
+                                    };
+                                    if !layer.wants_timer_events || !layer.visible {
+                                        continue;
+                                    }
+                                    let stopped = self.dispatch_event_to_node_chain(
+                                        app,
+                                        services,
+                                        &input_ctx,
+                                        layer.root,
+                                        event,
+                                        &mut needs_redraw,
+                                        &mut invalidation_visited,
+                                    );
+                                    if stopped {
+                                        return true;
+                                    }
+                                }
+                                false
+                            },
+                        );
+                        broadcast_loop_elapsed = loop_elapsed;
+                        stopped = broadcast_stopped;
+                    }
+                },
+            );
+
+            if self.debug_enabled {
+                let is_targeted = timer_target.is_some();
+                if is_targeted {
+                    self.debug_stats.dispatch_timer_targeted_events = self
+                        .debug_stats
+                        .dispatch_timer_targeted_events
+                        .saturating_add(1);
+                } else {
+                    self.debug_stats.dispatch_timer_broadcast_events = self
+                        .debug_stats
+                        .dispatch_timer_broadcast_events
+                        .saturating_add(1);
+                }
+
+                if let Some(timer_elapsed) = timer_elapsed {
+                    if is_targeted {
+                        self.debug_stats.dispatch_timer_targeted_time += timer_elapsed;
+                    } else {
+                        self.debug_stats.dispatch_timer_broadcast_time += timer_elapsed;
+                    }
+
+                    if timer_elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                        self.debug_stats.dispatch_timer_slowest_event_time = timer_elapsed;
+                        self.debug_stats.dispatch_timer_slowest_token = Some(token);
+                        self.debug_stats.dispatch_timer_slowest_was_broadcast = !is_targeted;
+                    }
+                }
+
+                if broadcast_attempted && timer_target.is_none() {
+                    self.debug_stats.dispatch_timer_broadcast_layers_visited = self
+                        .debug_stats
+                        .dispatch_timer_broadcast_layers_visited
+                        .saturating_add(broadcast_layers_visited);
+
+                    if let Some(rebuild_elapsed) = broadcast_rebuild_visible_layers_elapsed {
+                        self.debug_stats
+                            .dispatch_timer_broadcast_rebuild_visible_layers_time +=
+                            rebuild_elapsed;
+                    }
+                    if let Some(loop_elapsed) = broadcast_loop_elapsed {
+                        self.debug_stats.dispatch_timer_broadcast_loop_time += loop_elapsed;
+                    }
                 }
             }
 
-            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-            for layer_id in layers.into_iter().rev() {
-                let Some(layer) = self.layers.get(layer_id) else {
-                    continue;
-                };
-                if !layer.wants_timer_events || !layer.visible {
-                    continue;
+            if stopped {
+                if needs_redraw {
+                    self.request_redraw_coalesced(app);
                 }
-                let stopped = self.dispatch_event_to_node_chain(
-                    app,
-                    services,
-                    &input_ctx,
-                    layer.root,
-                    event,
-                    &mut needs_redraw,
-                    &mut invalidation_visited,
-                );
-                if stopped {
-                    if needs_redraw {
-                        self.request_redraw_coalesced(app);
-                    }
-                    return;
-                }
+                return;
             }
         }
 
@@ -627,20 +857,30 @@ impl<H: UiHost> UiTree<H> {
                 && cursor_query_choice.is_none()
                 && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
             {
-                let mut node = captured.or(hit_for_hover);
-                while let Some(id) = node {
-                    let (bounds, parent) = self
-                        .nodes
-                        .get(id)
-                        .map(|n| (n.bounds, n.parent))
-                        .unwrap_or_default();
-                    if let Some(icon) = self.with_widget_mut(id, |widget, _tree| {
-                        widget.cursor_icon_at(bounds, pos, &input_ctx)
-                    }) {
-                        cursor_query_choice = Some(icon);
-                        break;
-                    }
-                    node = parent;
+                let (_, elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || tracing::trace_span!("fret.ui.dispatch.cursor_query"),
+                    || {
+                        let mut node = captured.or(hit_for_hover);
+                        while let Some(id) = node {
+                            let (bounds, parent) = self
+                                .nodes
+                                .get(id)
+                                .map(|n| (n.bounds, n.parent))
+                                .unwrap_or_default();
+                            if let Some(icon) = self.with_widget_mut(id, |widget, _tree| {
+                                widget.cursor_icon_at(bounds, pos, &input_ctx)
+                            }) {
+                                cursor_query_choice = Some(icon);
+                                break;
+                            }
+                            node = parent;
+                        }
+                    },
+                );
+                if let Some(elapsed) = elapsed {
+                    self.debug_stats.dispatch_cursor_query_time += elapsed;
                 }
             }
 
@@ -840,15 +1080,25 @@ impl<H: UiHost> UiTree<H> {
 
         if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
             if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.dispatch_pointer_move_layer_observers(
-                    app,
-                    services,
-                    &input_ctx,
-                    barrier_root,
-                    event,
-                    &mut needs_redraw,
-                    &mut invalidation_visited,
+                let (_, elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || tracing::trace_span!("fret.ui.dispatch.pointer_move_layer_observers"),
+                    || {
+                        self.dispatch_pointer_move_layer_observers(
+                            app,
+                            services,
+                            &input_ctx,
+                            barrier_root,
+                            event,
+                            &mut needs_redraw,
+                            &mut invalidation_visited,
+                        );
+                    },
                 );
+                if let Some(elapsed) = elapsed {
+                    self.debug_stats.dispatch_pointer_move_layer_observers_time += elapsed;
+                }
             }
             if needs_redraw {
                 self.request_redraw_coalesced(app);
@@ -874,11 +1124,21 @@ impl<H: UiHost> UiTree<H> {
                     | Event::InternalDrag(_)
             )
         {
-            let chain = if event_position(event).is_some() {
-                self.build_mapped_event_chain(node_id, event)
-            } else {
-                self.build_unmapped_event_chain(node_id, event)
-            };
+            let (chain, chain_elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || tracing::trace_span!("fret.ui.dispatch.event_chain_build"),
+                || {
+                    if event_position(event).is_some() {
+                        self.build_mapped_event_chain(node_id, event)
+                    } else {
+                        self.build_unmapped_event_chain(node_id, event)
+                    }
+                },
+            );
+            if let Some(chain_elapsed) = chain_elapsed {
+                self.debug_stats.dispatch_event_chain_build_time += chain_elapsed;
+            }
             let pointer_hit_is_text_input =
                 if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
                     && let Some(window) = self.window
@@ -913,159 +1173,177 @@ impl<H: UiHost> UiTree<H> {
                 let mut capture_ctx = input_ctx.clone();
                 capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
-                for (node_id, event_for_node) in chain.iter().rev() {
-                    let node_id = *node_id;
-                    let (
-                        invalidations,
-                        requested_focus,
-                        requested_capture,
-                        requested_cursor,
-                        notify_requested,
-                        notify_requested_location,
-                        stop_propagation,
-                    ) = self.with_widget_mut(node_id, |widget, tree| {
-                        let (children, bounds) = tree
-                            .nodes
-                            .get(node_id)
-                            .map(|n| (n.children.as_slice(), n.bounds))
-                            .unwrap_or((&[][..], Rect::default()));
-                        let mut cx = EventCx {
-                            app,
-                            services: &mut *services,
-                            node: node_id,
-                            layer_root: tree.node_root(node_id),
-                            window: tree.window,
-                            pointer_id: event_pointer_id_for_capture,
-                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
-                            event_window_position,
-                            event_window_wheel_delta,
-                            input_ctx: capture_ctx.clone(),
-                            pointer_hit_is_text_input,
-                            prevented_default_actions: &mut prevented_default_actions,
-                            children,
-                            focus: tree.focus,
-                            captured: event_pointer_id_for_capture
-                                .and_then(|p| tree.captured.get(&p).copied()),
-                            bounds,
-                            invalidations: Vec::new(),
-                            requested_focus: None,
-                            requested_capture: None,
-                            requested_cursor: None,
-                            notify_requested: false,
-                            notify_requested_location: None,
-                            stop_propagation: false,
-                        };
-                        widget.event_capture(&mut cx, event_for_node);
-                        (
-                            cx.invalidations,
-                            cx.requested_focus,
-                            cx.requested_capture,
-                            cx.requested_cursor,
-                            cx.notify_requested,
-                            cx.notify_requested_location,
-                            cx.stop_propagation,
-                        )
-                    });
+                let (_, capture_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || tracing::trace_span!("fret.ui.dispatch.widget_capture"),
+                    || {
+                        for (node_id, event_for_node) in chain.iter().rev() {
+                            let node_id = *node_id;
+                            let (
+                                invalidations,
+                                requested_focus,
+                                requested_capture,
+                                requested_cursor,
+                                notify_requested,
+                                notify_requested_location,
+                                stop_propagation,
+                            ) = self.with_widget_mut(node_id, |widget, tree| {
+                                let (children, bounds) = tree
+                                    .nodes
+                                    .get(node_id)
+                                    .map(|n| (n.children.as_slice(), n.bounds))
+                                    .unwrap_or((&[][..], Rect::default()));
+                                let mut cx = EventCx {
+                                    app,
+                                    services: &mut *services,
+                                    node: node_id,
+                                    layer_root: tree.node_root(node_id),
+                                    window: tree.window,
+                                    pointer_id: event_pointer_id_for_capture,
+                                    scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                                    event_window_position,
+                                    event_window_wheel_delta,
+                                    input_ctx: capture_ctx.clone(),
+                                    pointer_hit_is_text_input,
+                                    prevented_default_actions: &mut prevented_default_actions,
+                                    children,
+                                    focus: tree.focus,
+                                    captured: event_pointer_id_for_capture
+                                        .and_then(|p| tree.captured.get(&p).copied()),
+                                    bounds,
+                                    invalidations: Vec::new(),
+                                    requested_focus: None,
+                                    requested_capture: None,
+                                    requested_cursor: None,
+                                    notify_requested: false,
+                                    notify_requested_location: None,
+                                    stop_propagation: false,
+                                };
+                                widget.event_capture(&mut cx, event_for_node);
+                                (
+                                    cx.invalidations,
+                                    cx.requested_focus,
+                                    cx.requested_capture,
+                                    cx.requested_cursor,
+                                    cx.notify_requested,
+                                    cx.notify_requested_location,
+                                    cx.stop_propagation,
+                                )
+                            });
 
-                    if !invalidations.is_empty()
-                        || requested_focus.is_some()
-                        || requested_capture.is_some()
-                        || notify_requested
-                    {
-                        needs_redraw = true;
-                    }
+                            if !invalidations.is_empty()
+                                || requested_focus.is_some()
+                                || requested_capture.is_some()
+                                || notify_requested
+                            {
+                                needs_redraw = true;
+                            }
 
-                    for (id, inv) in invalidations {
-                        self.mark_invalidation(id, inv);
-                    }
-                    if notify_requested {
-                        self.debug_record_notify_request(
-                            app.frame_id(),
-                            node_id,
-                            notify_requested_location,
-                        );
-                        self.mark_invalidation_with_source(
-                            node_id,
-                            Invalidation::Paint,
-                            UiDebugInvalidationSource::Notify,
-                        );
-                    }
+                            for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            if notify_requested {
+                                self.debug_record_notify_request(
+                                    app.frame_id(),
+                                    node_id,
+                                    notify_requested_location,
+                                );
+                                self.mark_invalidation_with_source(
+                                    node_id,
+                                    Invalidation::Paint,
+                                    UiDebugInvalidationSource::Notify,
+                                );
+                            }
 
-                    if let Some(focus) = requested_focus
-                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                    {
-                        focus_requested = true;
-                        if let Some(prev) = self.focus {
-                            self.mark_invalidation(prev, Invalidation::Paint);
-                        }
-                        self.focus = Some(focus);
-                        self.mark_invalidation(focus, Invalidation::Paint);
-                        // Avoid scrolling during pointer-down sequences (e.g. click):
-                        // programmatic scroll-to-focus can move content under a stationary cursor,
-                        // causing pressable activation to fail on pointer-up.
-                        if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
-                            self.scroll_node_into_view(app, focus);
-                        }
-                    } else if requested_focus.is_some() {
-                        focus_requested = true;
-                    }
+                            if let Some(focus) = requested_focus
+                                && self.focus_request_is_allowed(
+                                    app,
+                                    self.window,
+                                    &active_layers,
+                                    focus,
+                                )
+                            {
+                                focus_requested = true;
+                                if let Some(prev) = self.focus {
+                                    self.mark_invalidation(prev, Invalidation::Paint);
+                                }
+                                self.focus = Some(focus);
+                                self.mark_invalidation(focus, Invalidation::Paint);
+                                // Avoid scrolling during pointer-down sequences (e.g. click):
+                                // programmatic scroll-to-focus can move content under a stationary cursor,
+                                // causing pressable activation to fail on pointer-up.
+                                if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                                    self.scroll_node_into_view(app, focus);
+                                }
+                            } else if requested_focus.is_some() {
+                                focus_requested = true;
+                            }
 
-                    if let Some(capture) = requested_capture
-                        && let Some(pointer_id) = event_pointer_id_for_capture
-                    {
-                        match capture {
-                            Some(node) => {
-                                let allow = !dock_drag_affects_window
-                                    || dock_drag_capture_anchor == Some(node);
-                                if allow {
-                                    if !matches!(event, Event::PointerCancel(_))
-                                        && let Some(old_capture) =
-                                            self.captured.get(&pointer_id).copied()
-                                        && old_capture != node
-                                        && self.node_in_any_layer(old_capture, &active_layers)
-                                    {
-                                        let mut cancel_ctx = input_ctx.clone();
-                                        cancel_ctx.dispatch_phase = InputDispatchPhase::Bubble;
-                                        let cancel_event = pointer_cancel_event_for_capture_switch(
-                                            event, pointer_id,
-                                        );
-                                        let _ = self.dispatch_event_to_node_chain(
-                                            app,
-                                            services,
-                                            &cancel_ctx,
-                                            old_capture,
-                                            &cancel_event,
-                                            &mut needs_redraw,
-                                            &mut invalidation_visited,
-                                        );
+                            if let Some(capture) = requested_capture
+                                && let Some(pointer_id) = event_pointer_id_for_capture
+                            {
+                                match capture {
+                                    Some(node) => {
+                                        let allow = !dock_drag_affects_window
+                                            || dock_drag_capture_anchor == Some(node);
+                                        if allow {
+                                            if !matches!(event, Event::PointerCancel(_))
+                                                && let Some(old_capture) =
+                                                    self.captured.get(&pointer_id).copied()
+                                                && old_capture != node
+                                                && self
+                                                    .node_in_any_layer(old_capture, &active_layers)
+                                            {
+                                                let mut cancel_ctx = input_ctx.clone();
+                                                cancel_ctx.dispatch_phase =
+                                                    InputDispatchPhase::Bubble;
+                                                let cancel_event =
+                                                    pointer_cancel_event_for_capture_switch(
+                                                        event, pointer_id,
+                                                    );
+                                                let _ = self.dispatch_event_to_node_chain(
+                                                    app,
+                                                    services,
+                                                    &cancel_ctx,
+                                                    old_capture,
+                                                    &cancel_event,
+                                                    &mut needs_redraw,
+                                                    &mut invalidation_visited,
+                                                );
+                                            }
+                                            self.captured.insert(pointer_id, node);
+                                        }
                                     }
-                                    self.captured.insert(pointer_id, node);
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
                                 }
                             }
-                            None => {
-                                self.captured.remove(&pointer_id);
+
+                            if let Some(requested_cursor) = requested_cursor
+                                && (cursor_choice.is_none() || cursor_choice_from_query)
+                            {
+                                cursor_choice = Some(requested_cursor);
+                                cursor_choice_from_query = false;
+                            }
+
+                            if stop_propagation {
+                                stop_propagation_requested = true;
+                                if stop_propagation_requested_by.is_none() {
+                                    stop_propagation_requested_by = Some(node_id);
+                                }
+                                if is_wheel && wheel_stop_node.is_none() {
+                                    wheel_stop_node = Some(node_id);
+                                }
+                                stopped_in_capture = true;
+                                break;
                             }
                         }
-                    }
-
-                    if let Some(requested_cursor) = requested_cursor
-                        && (cursor_choice.is_none() || cursor_choice_from_query)
-                    {
-                        cursor_choice = Some(requested_cursor);
-                        cursor_choice_from_query = false;
-                    }
-
-                    if stop_propagation {
-                        stop_propagation_requested = true;
-                        if stop_propagation_requested_by.is_none() {
-                            stop_propagation_requested_by = Some(node_id);
-                        }
-                        if is_wheel && wheel_stop_node.is_none() {
-                            wheel_stop_node = Some(node_id);
-                        }
-                        stopped_in_capture = true;
-                        break;
-                    }
+                    },
+                );
+                if let Some(capture_elapsed) = capture_elapsed {
+                    self.debug_stats.dispatch_widget_capture_time += capture_elapsed;
                 }
             }
 
@@ -1073,165 +1351,183 @@ impl<H: UiHost> UiTree<H> {
                 let mut bubble_ctx = input_ctx.clone();
                 bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
-                for (node_id, event_for_node) in chain {
-                    let (
-                        invalidations,
-                        requested_focus,
-                        requested_capture,
-                        requested_cursor,
-                        notify_requested,
-                        notify_requested_location,
-                        stop_propagation,
-                    ) = self.with_widget_mut(node_id, |widget, tree| {
-                        let (children, bounds) = tree
-                            .nodes
-                            .get(node_id)
-                            .map(|n| (n.children.as_slice(), n.bounds))
-                            .unwrap_or((&[][..], Rect::default()));
-                        let mut cx = EventCx {
-                            app,
-                            services: &mut *services,
-                            node: node_id,
-                            layer_root: tree.node_root(node_id),
-                            window: tree.window,
-                            pointer_id: event_pointer_id_for_capture,
-                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
-                            event_window_position,
-                            event_window_wheel_delta,
-                            input_ctx: bubble_ctx.clone(),
-                            pointer_hit_is_text_input,
-                            prevented_default_actions: &mut prevented_default_actions,
-                            children,
-                            focus: tree.focus,
-                            captured: event_pointer_id_for_capture
-                                .and_then(|p| tree.captured.get(&p).copied()),
-                            bounds,
-                            invalidations: Vec::new(),
-                            requested_focus: None,
-                            requested_capture: None,
-                            requested_cursor: None,
-                            notify_requested: false,
-                            notify_requested_location: None,
-                            stop_propagation: false,
-                        };
-                        widget.event(&mut cx, &event_for_node);
-                        if cx.requested_cursor.is_none()
-                            && matches!(event_for_node, Event::Pointer(_))
-                            && cx.input_ctx.caps.ui.cursor_icons
-                            && let Some(position) = event_position(&event_for_node)
-                        {
-                            cx.requested_cursor =
-                                widget.cursor_icon_at(bounds, position, &cx.input_ctx);
-                        }
-                        (
-                            cx.invalidations,
-                            cx.requested_focus,
-                            cx.requested_capture,
-                            cx.requested_cursor,
-                            cx.notify_requested,
-                            cx.notify_requested_location,
-                            cx.stop_propagation,
-                        )
-                    });
+                let (_, bubble_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || tracing::trace_span!("fret.ui.dispatch.widget_bubble"),
+                    || {
+                        for (node_id, event_for_node) in chain {
+                            let (
+                                invalidations,
+                                requested_focus,
+                                requested_capture,
+                                requested_cursor,
+                                notify_requested,
+                                notify_requested_location,
+                                stop_propagation,
+                            ) = self.with_widget_mut(node_id, |widget, tree| {
+                                let (children, bounds) = tree
+                                    .nodes
+                                    .get(node_id)
+                                    .map(|n| (n.children.as_slice(), n.bounds))
+                                    .unwrap_or((&[][..], Rect::default()));
+                                let mut cx = EventCx {
+                                    app,
+                                    services: &mut *services,
+                                    node: node_id,
+                                    layer_root: tree.node_root(node_id),
+                                    window: tree.window,
+                                    pointer_id: event_pointer_id_for_capture,
+                                    scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                                    event_window_position,
+                                    event_window_wheel_delta,
+                                    input_ctx: bubble_ctx.clone(),
+                                    pointer_hit_is_text_input,
+                                    prevented_default_actions: &mut prevented_default_actions,
+                                    children,
+                                    focus: tree.focus,
+                                    captured: event_pointer_id_for_capture
+                                        .and_then(|p| tree.captured.get(&p).copied()),
+                                    bounds,
+                                    invalidations: Vec::new(),
+                                    requested_focus: None,
+                                    requested_capture: None,
+                                    requested_cursor: None,
+                                    notify_requested: false,
+                                    notify_requested_location: None,
+                                    stop_propagation: false,
+                                };
+                                widget.event(&mut cx, &event_for_node);
+                                if cx.requested_cursor.is_none()
+                                    && matches!(event_for_node, Event::Pointer(_))
+                                    && cx.input_ctx.caps.ui.cursor_icons
+                                    && let Some(position) = event_position(&event_for_node)
+                                {
+                                    cx.requested_cursor =
+                                        widget.cursor_icon_at(bounds, position, &cx.input_ctx);
+                                }
+                                (
+                                    cx.invalidations,
+                                    cx.requested_focus,
+                                    cx.requested_capture,
+                                    cx.requested_cursor,
+                                    cx.notify_requested,
+                                    cx.notify_requested_location,
+                                    cx.stop_propagation,
+                                )
+                            });
 
-                    if !invalidations.is_empty()
-                        || requested_focus.is_some()
-                        || requested_capture.is_some()
-                        || notify_requested
-                    {
-                        needs_redraw = true;
-                    }
+                            if !invalidations.is_empty()
+                                || requested_focus.is_some()
+                                || requested_capture.is_some()
+                                || notify_requested
+                            {
+                                needs_redraw = true;
+                            }
 
-                    for (id, inv) in invalidations {
-                        self.mark_invalidation(id, inv);
-                    }
-                    if notify_requested {
-                        self.debug_record_notify_request(
-                            app.frame_id(),
-                            node_id,
-                            notify_requested_location,
-                        );
-                        self.mark_invalidation_with_source(
-                            node_id,
-                            Invalidation::Paint,
-                            UiDebugInvalidationSource::Notify,
-                        );
-                    }
+                            for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            if notify_requested {
+                                self.debug_record_notify_request(
+                                    app.frame_id(),
+                                    node_id,
+                                    notify_requested_location,
+                                );
+                                self.mark_invalidation_with_source(
+                                    node_id,
+                                    Invalidation::Paint,
+                                    UiDebugInvalidationSource::Notify,
+                                );
+                            }
 
-                    if let Some(focus) = requested_focus
-                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                    {
-                        focus_requested = true;
-                        if let Some(prev) = self.focus {
-                            self.mark_invalidation(prev, Invalidation::Paint);
-                        }
-                        self.focus = Some(focus);
-                        self.mark_invalidation(focus, Invalidation::Paint);
-                        self.scroll_node_into_view(app, focus);
-                    } else if requested_focus.is_some() {
-                        focus_requested = true;
-                    }
+                            if let Some(focus) = requested_focus
+                                && self.focus_request_is_allowed(
+                                    app,
+                                    self.window,
+                                    &active_layers,
+                                    focus,
+                                )
+                            {
+                                focus_requested = true;
+                                if let Some(prev) = self.focus {
+                                    self.mark_invalidation(prev, Invalidation::Paint);
+                                }
+                                self.focus = Some(focus);
+                                self.mark_invalidation(focus, Invalidation::Paint);
+                                self.scroll_node_into_view(app, focus);
+                            } else if requested_focus.is_some() {
+                                focus_requested = true;
+                            }
 
-                    if let Some(capture) = requested_capture
-                        && let Some(pointer_id) = event_pointer_id_for_capture
-                    {
-                        match capture {
-                            Some(node) => {
-                                let allow = !dock_drag_affects_window
-                                    || dock_drag_capture_anchor == Some(node);
-                                if allow {
-                                    if !matches!(event, Event::PointerCancel(_))
-                                        && let Some(old_capture) =
-                                            self.captured.get(&pointer_id).copied()
-                                        && old_capture != node
-                                        && self.node_in_any_layer(old_capture, &active_layers)
-                                    {
-                                        let mut cancel_ctx = input_ctx.clone();
-                                        cancel_ctx.dispatch_phase = InputDispatchPhase::Bubble;
-                                        let cancel_event = pointer_cancel_event_for_capture_switch(
-                                            event, pointer_id,
-                                        );
-                                        let _ = self.dispatch_event_to_node_chain(
-                                            app,
-                                            services,
-                                            &cancel_ctx,
-                                            old_capture,
-                                            &cancel_event,
-                                            &mut needs_redraw,
-                                            &mut invalidation_visited,
-                                        );
+                            if let Some(capture) = requested_capture
+                                && let Some(pointer_id) = event_pointer_id_for_capture
+                            {
+                                match capture {
+                                    Some(node) => {
+                                        let allow = !dock_drag_affects_window
+                                            || dock_drag_capture_anchor == Some(node);
+                                        if allow {
+                                            if !matches!(event, Event::PointerCancel(_))
+                                                && let Some(old_capture) =
+                                                    self.captured.get(&pointer_id).copied()
+                                                && old_capture != node
+                                                && self
+                                                    .node_in_any_layer(old_capture, &active_layers)
+                                            {
+                                                let mut cancel_ctx = input_ctx.clone();
+                                                cancel_ctx.dispatch_phase =
+                                                    InputDispatchPhase::Bubble;
+                                                let cancel_event =
+                                                    pointer_cancel_event_for_capture_switch(
+                                                        event, pointer_id,
+                                                    );
+                                                let _ = self.dispatch_event_to_node_chain(
+                                                    app,
+                                                    services,
+                                                    &cancel_ctx,
+                                                    old_capture,
+                                                    &cancel_event,
+                                                    &mut needs_redraw,
+                                                    &mut invalidation_visited,
+                                                );
+                                            }
+                                            self.captured.insert(pointer_id, node);
+                                        }
                                     }
-                                    self.captured.insert(pointer_id, node);
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
                                 }
                             }
-                            None => {
-                                self.captured.remove(&pointer_id);
+
+                            if let Some(requested_cursor) = requested_cursor
+                                && (cursor_choice.is_none() || cursor_choice_from_query)
+                            {
+                                cursor_choice = Some(requested_cursor);
+                                cursor_choice_from_query = false;
+                            }
+
+                            if stop_propagation {
+                                stop_propagation_requested = true;
+                                if stop_propagation_requested_by.is_none() {
+                                    stop_propagation_requested_by = Some(node_id);
+                                }
+                                if is_wheel && wheel_stop_node.is_none() {
+                                    wheel_stop_node = Some(node_id);
+                                }
+                            }
+
+                            let captured_now = event_pointer_id_for_capture
+                                .and_then(|p| self.captured.get(&p).copied());
+                            if captured_now.is_some() || stop_propagation {
+                                break;
                             }
                         }
-                    }
-
-                    if let Some(requested_cursor) = requested_cursor
-                        && (cursor_choice.is_none() || cursor_choice_from_query)
-                    {
-                        cursor_choice = Some(requested_cursor);
-                        cursor_choice_from_query = false;
-                    }
-
-                    if stop_propagation {
-                        stop_propagation_requested = true;
-                        if stop_propagation_requested_by.is_none() {
-                            stop_propagation_requested_by = Some(node_id);
-                        }
-                        if is_wheel && wheel_stop_node.is_none() {
-                            wheel_stop_node = Some(node_id);
-                        }
-                    }
-
-                    let captured_now =
-                        event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
-                    if captured_now.is_some() || stop_propagation {
-                        break;
-                    }
+                    },
+                );
+                if let Some(bubble_elapsed) = bubble_elapsed {
+                    self.debug_stats.dispatch_widget_bubble_time += bubble_elapsed;
                 }
             }
         } else if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
@@ -1247,253 +1543,283 @@ impl<H: UiHost> UiTree<H> {
                 let mut capture_ctx = input_ctx.clone();
                 capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
-                for &node_id in chain.iter().rev() {
-                    let (
-                        invalidations,
-                        requested_focus,
-                        requested_capture,
-                        requested_cursor,
-                        notify_requested,
-                        notify_requested_location,
-                        stop_propagation,
-                    ) = self.with_widget_mut(node_id, |widget, tree| {
-                        let (children, bounds) = tree
-                            .nodes
-                            .get(node_id)
-                            .map(|n| (n.children.as_slice(), n.bounds))
-                            .unwrap_or((&[][..], Rect::default()));
-                        let mut cx = EventCx {
-                            app,
-                            services: &mut *services,
-                            node: node_id,
-                            layer_root: tree.node_root(node_id),
-                            window: tree.window,
-                            pointer_id: event_pointer_id_for_capture,
-                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
-                            event_window_position,
-                            event_window_wheel_delta,
-                            input_ctx: capture_ctx.clone(),
-                            pointer_hit_is_text_input: false,
-                            prevented_default_actions: &mut prevented_default_actions,
-                            children,
-                            focus: tree.focus,
-                            captured: event_pointer_id_for_capture
-                                .and_then(|p| tree.captured.get(&p).copied()),
-                            bounds,
-                            invalidations: Vec::new(),
-                            requested_focus: None,
-                            requested_capture: None,
-                            requested_cursor: None,
-                            notify_requested: false,
-                            notify_requested_location: None,
-                            stop_propagation: false,
-                        };
-                        widget.event_capture(&mut cx, event);
-                        (
-                            cx.invalidations,
-                            cx.requested_focus,
-                            cx.requested_capture,
-                            cx.requested_cursor,
-                            cx.notify_requested,
-                            cx.notify_requested_location,
-                            cx.stop_propagation,
-                        )
-                    });
+                let (_, capture_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || tracing::trace_span!("fret.ui.dispatch.widget_capture", kind = "key"),
+                    || {
+                        for &node_id in chain.iter().rev() {
+                            let (
+                                invalidations,
+                                requested_focus,
+                                requested_capture,
+                                requested_cursor,
+                                notify_requested,
+                                notify_requested_location,
+                                stop_propagation,
+                            ) = self.with_widget_mut(node_id, |widget, tree| {
+                                let (children, bounds) = tree
+                                    .nodes
+                                    .get(node_id)
+                                    .map(|n| (n.children.as_slice(), n.bounds))
+                                    .unwrap_or((&[][..], Rect::default()));
+                                let mut cx = EventCx {
+                                    app,
+                                    services: &mut *services,
+                                    node: node_id,
+                                    layer_root: tree.node_root(node_id),
+                                    window: tree.window,
+                                    pointer_id: event_pointer_id_for_capture,
+                                    scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                                    event_window_position,
+                                    event_window_wheel_delta,
+                                    input_ctx: capture_ctx.clone(),
+                                    pointer_hit_is_text_input: false,
+                                    prevented_default_actions: &mut prevented_default_actions,
+                                    children,
+                                    focus: tree.focus,
+                                    captured: event_pointer_id_for_capture
+                                        .and_then(|p| tree.captured.get(&p).copied()),
+                                    bounds,
+                                    invalidations: Vec::new(),
+                                    requested_focus: None,
+                                    requested_capture: None,
+                                    requested_cursor: None,
+                                    notify_requested: false,
+                                    notify_requested_location: None,
+                                    stop_propagation: false,
+                                };
+                                widget.event_capture(&mut cx, event);
+                                (
+                                    cx.invalidations,
+                                    cx.requested_focus,
+                                    cx.requested_capture,
+                                    cx.requested_cursor,
+                                    cx.notify_requested,
+                                    cx.notify_requested_location,
+                                    cx.stop_propagation,
+                                )
+                            });
 
-                    if !invalidations.is_empty()
-                        || requested_focus.is_some()
-                        || requested_capture.is_some()
-                        || notify_requested
-                    {
-                        needs_redraw = true;
-                    }
+                            if !invalidations.is_empty()
+                                || requested_focus.is_some()
+                                || requested_capture.is_some()
+                                || notify_requested
+                            {
+                                needs_redraw = true;
+                            }
 
-                    for (id, inv) in invalidations {
-                        self.mark_invalidation(id, inv);
-                    }
-                    if notify_requested {
-                        self.debug_record_notify_request(
-                            app.frame_id(),
-                            node_id,
-                            notify_requested_location,
-                        );
-                        self.mark_invalidation_with_source(
-                            node_id,
-                            Invalidation::Paint,
-                            UiDebugInvalidationSource::Notify,
-                        );
-                    }
+                            for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            if notify_requested {
+                                self.debug_record_notify_request(
+                                    app.frame_id(),
+                                    node_id,
+                                    notify_requested_location,
+                                );
+                                self.mark_invalidation_with_source(
+                                    node_id,
+                                    Invalidation::Paint,
+                                    UiDebugInvalidationSource::Notify,
+                                );
+                            }
 
-                    if let Some(focus) = requested_focus
-                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                    {
-                        focus_requested = true;
-                        if let Some(prev) = self.focus {
-                            self.mark_invalidation(prev, Invalidation::Paint);
-                        }
-                        self.focus = Some(focus);
-                        self.mark_invalidation(focus, Invalidation::Paint);
-                        self.scroll_node_into_view(app, focus);
-                    } else if requested_focus.is_some() {
-                        focus_requested = true;
-                    }
+                            if let Some(focus) = requested_focus
+                                && self.focus_request_is_allowed(
+                                    app,
+                                    self.window,
+                                    &active_layers,
+                                    focus,
+                                )
+                            {
+                                focus_requested = true;
+                                if let Some(prev) = self.focus {
+                                    self.mark_invalidation(prev, Invalidation::Paint);
+                                }
+                                self.focus = Some(focus);
+                                self.mark_invalidation(focus, Invalidation::Paint);
+                                self.scroll_node_into_view(app, focus);
+                            } else if requested_focus.is_some() {
+                                focus_requested = true;
+                            }
 
-                    if let Some(capture) = requested_capture
-                        && let Some(pointer_id) = event_pointer_id_for_capture
-                    {
-                        match capture {
-                            Some(node) => {
-                                let allow = !dock_drag_affects_window
-                                    || dock_drag_capture_anchor == Some(node);
-                                if allow {
-                                    self.captured.insert(pointer_id, node);
+                            if let Some(capture) = requested_capture
+                                && let Some(pointer_id) = event_pointer_id_for_capture
+                            {
+                                match capture {
+                                    Some(node) => {
+                                        let allow = !dock_drag_affects_window
+                                            || dock_drag_capture_anchor == Some(node);
+                                        if allow {
+                                            self.captured.insert(pointer_id, node);
+                                        }
+                                    }
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
                                 }
                             }
-                            None => {
-                                self.captured.remove(&pointer_id);
+
+                            if requested_cursor.is_some() && cursor_choice.is_none() {
+                                cursor_choice = requested_cursor;
+                            }
+
+                            if stop_propagation {
+                                stop_propagation_requested = true;
+                                if stop_propagation_requested_by.is_none() {
+                                    stop_propagation_requested_by = Some(node_id);
+                                }
+                                stopped_in_capture = true;
+                                break;
                             }
                         }
-                    }
-
-                    if requested_cursor.is_some() && cursor_choice.is_none() {
-                        cursor_choice = requested_cursor;
-                    }
-
-                    if stop_propagation {
-                        stop_propagation_requested = true;
-                        if stop_propagation_requested_by.is_none() {
-                            stop_propagation_requested_by = Some(node_id);
-                        }
-                        stopped_in_capture = true;
-                        break;
-                    }
+                    },
+                );
+                if let Some(capture_elapsed) = capture_elapsed {
+                    self.debug_stats.dispatch_widget_capture_time += capture_elapsed;
                 }
             }
             if !stopped_in_capture {
                 let mut bubble_ctx = input_ctx.clone();
                 bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
-                for node_id in chain {
-                    let (
-                        invalidations,
-                        requested_focus,
-                        requested_capture,
-                        requested_cursor,
-                        notify_requested,
-                        notify_requested_location,
-                        stop_propagation,
-                    ) = self.with_widget_mut(node_id, |widget, tree| {
-                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                        let _ = parent;
-                        let (children, bounds) = tree
-                            .nodes
-                            .get(node_id)
-                            .map(|n| (n.children.as_slice(), n.bounds))
-                            .unwrap_or((&[][..], Rect::default()));
-                        let mut cx = EventCx {
-                            app,
-                            services: &mut *services,
-                            node: node_id,
-                            layer_root: tree.node_root(node_id),
-                            window: tree.window,
-                            pointer_id: event_pointer_id_for_capture,
-                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
-                            event_window_position,
-                            event_window_wheel_delta,
-                            input_ctx: bubble_ctx.clone(),
-                            pointer_hit_is_text_input: false,
-                            prevented_default_actions: &mut prevented_default_actions,
-                            children,
-                            focus: tree.focus,
-                            captured: event_pointer_id_for_capture
-                                .and_then(|p| tree.captured.get(&p).copied()),
-                            bounds,
-                            invalidations: Vec::new(),
-                            requested_focus: None,
-                            requested_capture: None,
-                            requested_cursor: None,
-                            notify_requested: false,
-                            notify_requested_location: None,
-                            stop_propagation: false,
-                        };
-                        widget.event(&mut cx, event);
-                        (
-                            cx.invalidations,
-                            cx.requested_focus,
-                            cx.requested_capture,
-                            cx.requested_cursor,
-                            cx.notify_requested,
-                            cx.notify_requested_location,
-                            cx.stop_propagation,
-                        )
-                    });
+                let (_, bubble_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || tracing::trace_span!("fret.ui.dispatch.widget_bubble", kind = "key"),
+                    || {
+                        for node_id in chain {
+                            let (
+                                invalidations,
+                                requested_focus,
+                                requested_capture,
+                                requested_cursor,
+                                notify_requested,
+                                notify_requested_location,
+                                stop_propagation,
+                            ) = self.with_widget_mut(node_id, |widget, tree| {
+                                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                                let _ = parent;
+                                let (children, bounds) = tree
+                                    .nodes
+                                    .get(node_id)
+                                    .map(|n| (n.children.as_slice(), n.bounds))
+                                    .unwrap_or((&[][..], Rect::default()));
+                                let mut cx = EventCx {
+                                    app,
+                                    services: &mut *services,
+                                    node: node_id,
+                                    layer_root: tree.node_root(node_id),
+                                    window: tree.window,
+                                    pointer_id: event_pointer_id_for_capture,
+                                    scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                                    event_window_position,
+                                    event_window_wheel_delta,
+                                    input_ctx: bubble_ctx.clone(),
+                                    pointer_hit_is_text_input: false,
+                                    prevented_default_actions: &mut prevented_default_actions,
+                                    children,
+                                    focus: tree.focus,
+                                    captured: event_pointer_id_for_capture
+                                        .and_then(|p| tree.captured.get(&p).copied()),
+                                    bounds,
+                                    invalidations: Vec::new(),
+                                    requested_focus: None,
+                                    requested_capture: None,
+                                    requested_cursor: None,
+                                    notify_requested: false,
+                                    notify_requested_location: None,
+                                    stop_propagation: false,
+                                };
+                                widget.event(&mut cx, event);
+                                (
+                                    cx.invalidations,
+                                    cx.requested_focus,
+                                    cx.requested_capture,
+                                    cx.requested_cursor,
+                                    cx.notify_requested,
+                                    cx.notify_requested_location,
+                                    cx.stop_propagation,
+                                )
+                            });
 
-                    if !invalidations.is_empty()
-                        || requested_focus.is_some()
-                        || requested_capture.is_some()
-                        || notify_requested
-                    {
-                        needs_redraw = true;
-                    }
+                            if !invalidations.is_empty()
+                                || requested_focus.is_some()
+                                || requested_capture.is_some()
+                                || notify_requested
+                            {
+                                needs_redraw = true;
+                            }
 
-                    for (id, inv) in invalidations {
-                        self.mark_invalidation(id, inv);
-                    }
-                    if notify_requested {
-                        self.debug_record_notify_request(
-                            app.frame_id(),
-                            node_id,
-                            notify_requested_location,
-                        );
-                        self.mark_invalidation_with_source(
-                            node_id,
-                            Invalidation::Paint,
-                            UiDebugInvalidationSource::Notify,
-                        );
-                    }
+                            for (id, inv) in invalidations {
+                                self.mark_invalidation(id, inv);
+                            }
+                            if notify_requested {
+                                self.debug_record_notify_request(
+                                    app.frame_id(),
+                                    node_id,
+                                    notify_requested_location,
+                                );
+                                self.mark_invalidation_with_source(
+                                    node_id,
+                                    Invalidation::Paint,
+                                    UiDebugInvalidationSource::Notify,
+                                );
+                            }
 
-                    if let Some(focus) = requested_focus
-                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                    {
-                        focus_requested = true;
-                        if let Some(prev) = self.focus {
-                            self.mark_invalidation(prev, Invalidation::Paint);
-                        }
-                        self.focus = Some(focus);
-                        self.mark_invalidation(focus, Invalidation::Paint);
-                        self.scroll_node_into_view(app, focus);
-                    } else if requested_focus.is_some() {
-                        focus_requested = true;
-                    }
+                            if let Some(focus) = requested_focus
+                                && self.focus_request_is_allowed(
+                                    app,
+                                    self.window,
+                                    &active_layers,
+                                    focus,
+                                )
+                            {
+                                focus_requested = true;
+                                if let Some(prev) = self.focus {
+                                    self.mark_invalidation(prev, Invalidation::Paint);
+                                }
+                                self.focus = Some(focus);
+                                self.mark_invalidation(focus, Invalidation::Paint);
+                                self.scroll_node_into_view(app, focus);
+                            } else if requested_focus.is_some() {
+                                focus_requested = true;
+                            }
 
-                    if let Some(capture) = requested_capture
-                        && let Some(pointer_id) = event_pointer_id_for_capture
-                    {
-                        match capture {
-                            Some(node) => {
-                                let allow = !dock_drag_affects_window
-                                    || dock_drag_capture_anchor == Some(node);
-                                if allow {
-                                    self.captured.insert(pointer_id, node);
+                            if let Some(capture) = requested_capture
+                                && let Some(pointer_id) = event_pointer_id_for_capture
+                            {
+                                match capture {
+                                    Some(node) => {
+                                        let allow = !dock_drag_affects_window
+                                            || dock_drag_capture_anchor == Some(node);
+                                        if allow {
+                                            self.captured.insert(pointer_id, node);
+                                        }
+                                    }
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
                                 }
                             }
-                            None => {
-                                self.captured.remove(&pointer_id);
+
+                            if requested_cursor.is_some() && cursor_choice.is_none() {
+                                cursor_choice = requested_cursor;
+                            }
+
+                            if stop_propagation {
+                                stop_propagation_requested = true;
+                                if stop_propagation_requested_by.is_none() {
+                                    stop_propagation_requested_by = Some(node_id);
+                                }
+                                break;
                             }
                         }
-                    }
-
-                    if requested_cursor.is_some() && cursor_choice.is_none() {
-                        cursor_choice = requested_cursor;
-                    }
-
-                    if stop_propagation {
-                        stop_propagation_requested = true;
-                        if stop_propagation_requested_by.is_none() {
-                            stop_propagation_requested_by = Some(node_id);
-                        }
-                        break;
-                    }
+                    },
+                );
+                if let Some(bubble_elapsed) = bubble_elapsed {
+                    self.debug_stats.dispatch_widget_bubble_time += bubble_elapsed;
                 }
             }
 
@@ -1949,37 +2275,37 @@ impl<H: UiHost> UiTree<H> {
                 );
 
             #[cfg(feature = "diagnostics")]
-            if let Some(window) = self.window {
-                if ime_reserved {
-                    app.with_global_mut_untracked(
-                        fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
-                        |store, app| {
-                            store.record(
-                                window,
-                                fret_runtime::ShortcutRoutingDecision {
-                                    seq: 0,
-                                    frame_id: app.frame_id(),
-                                    phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
-                                    key: *key,
-                                    modifiers: *modifiers,
-                                    repeat: *repeat,
-                                    deferred: true,
-                                    focus_is_text_input,
-                                    ime_composing: self.ime_composing,
-                                    pending_sequence_len: self
-                                        .pending_shortcut
-                                        .keystrokes
-                                        .len()
-                                        .min(u32::MAX as usize)
-                                        as u32,
-                                    outcome: fret_runtime::ShortcutRoutingOutcome::ReservedForIme,
-                                    command: None,
-                                    command_enabled: None,
-                                },
-                            );
-                        },
-                    );
-                }
+            if let Some(window) = self.window
+                && ime_reserved
+            {
+                app.with_global_mut_untracked(
+                    fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
+                    |store, app| {
+                        store.record(
+                            window,
+                            fret_runtime::ShortcutRoutingDecision {
+                                seq: 0,
+                                frame_id: app.frame_id(),
+                                phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
+                                key: *key,
+                                modifiers: *modifiers,
+                                repeat: *repeat,
+                                deferred: true,
+                                focus_is_text_input,
+                                ime_composing: self.ime_composing,
+                                pending_sequence_len: self
+                                    .pending_shortcut
+                                    .keystrokes
+                                    .len()
+                                    .min(u32::MAX as usize)
+                                    as u32,
+                                outcome: fret_runtime::ShortcutRoutingOutcome::ReservedForIme,
+                                command: None,
+                                command_enabled: None,
+                            },
+                        );
+                    },
+                );
             }
 
             if !ime_reserved
@@ -2017,15 +2343,25 @@ impl<H: UiHost> UiTree<H> {
             //
             // We intentionally use observer dispatch to avoid allowing the previous target to
             // mutate focus/capture/cursor routing on the transition frame.
-            self.dispatch_event_to_node_chain_observer(
-                app,
-                services,
-                &input_ctx,
-                prev,
-                event,
-                &mut invalidation_visited,
+            let (_, elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || tracing::trace_span!("fret.ui.dispatch.synth_hover_observer", node = ?prev),
+                || {
+                    self.dispatch_event_to_node_chain_observer(
+                        app,
+                        services,
+                        &input_ctx,
+                        prev,
+                        event,
+                        &mut invalidation_visited,
+                    );
+                    needs_redraw = true;
+                },
             );
-            needs_redraw = true;
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.dispatch_synth_hover_observer_time += elapsed;
+            }
         }
 
         if is_wheel
@@ -2078,17 +2414,27 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            self.update_hover_state_from_hit(
-                app,
-                window,
-                barrier_root,
-                Some(*position),
-                hit_for_hover,
-                hit_for_hover_region,
-                hit_for_raw_below_barrier,
-                &mut invalidation_visited,
-                &mut needs_redraw,
+            let (_, elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || tracing::trace_span!("fret.ui.dispatch.hover_update"),
+                || {
+                    self.update_hover_state_from_hit(
+                        app,
+                        window,
+                        barrier_root,
+                        Some(*position),
+                        hit_for_hover,
+                        hit_for_hover_region,
+                        hit_for_raw_below_barrier,
+                        &mut invalidation_visited,
+                        &mut needs_redraw,
+                    );
+                },
             );
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.dispatch_hover_update_time += elapsed;
+            }
         }
 
         if input_ctx.caps.ui.cursor_icons
@@ -2098,21 +2444,45 @@ impl<H: UiHost> UiTree<H> {
             let icon = cursor_choice
                 .or(cursor_query_choice)
                 .unwrap_or(fret_core::CursorIcon::Default);
-            app.push_effect(Effect::CursorSetIcon { window, icon });
+            let (_, elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.dispatch.cursor_effect",
+                        window = ?window,
+                        icon = ?icon
+                    )
+                },
+                || app.push_effect(Effect::CursorSetIcon { window, icon }),
+            );
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.dispatch_cursor_effect_time += elapsed;
+            }
         }
 
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
-        self.dispatch_pointer_move_layer_observers(
-            app,
-            services,
-            &input_ctx,
-            barrier_root,
-            event,
-            &mut needs_redraw,
-            &mut invalidation_visited,
+        let (_, elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.ui.dispatch.pointer_move_layer_observers"),
+            || {
+                self.dispatch_pointer_move_layer_observers(
+                    app,
+                    services,
+                    &input_ctx,
+                    barrier_root,
+                    event,
+                    &mut needs_redraw,
+                    &mut invalidation_visited,
+                );
+            },
         );
+        if let Some(elapsed) = elapsed {
+            self.debug_stats.dispatch_pointer_move_layer_observers_time += elapsed;
+        }
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
@@ -2123,56 +2493,66 @@ impl<H: UiHost> UiTree<H> {
 
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
         // see the latest focus/modal state without waiting for the next paint pass.
-        if let Some(window) = self.window {
-            let (_active_layers, barrier_root) = self.active_input_layers();
-            let caps = app
-                .global::<PlatformCapabilities>()
-                .cloned()
-                .unwrap_or_default();
-            let mut input_ctx = InputContext {
-                platform: Platform::current(),
-                caps,
-                ui_has_modal: barrier_root.is_some(),
-                window_arbitration: None,
-                focus_is_text_input,
-                text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
-                edit_can_undo: true,
-                edit_can_redo: true,
-                router_can_back: false,
-                router_can_forward: false,
-                dispatch_phase: InputDispatchPhase::Bubble,
-            };
-            if let Some(mode) = app
-                .global::<fret_runtime::WindowTextBoundaryModeService>()
-                .and_then(|svc| svc.mode(window))
-            {
-                input_ctx.text_boundary_mode = mode;
-            }
-            if let Some(mode) = self.focus_text_boundary_mode_override() {
-                input_ctx.text_boundary_mode = mode;
-            }
-            if let Some(availability) = app
-                .global::<fret_runtime::WindowCommandAvailabilityService>()
-                .and_then(|svc| svc.snapshot(window))
-                .copied()
-            {
-                input_ctx.edit_can_undo = availability.edit_can_undo;
-                input_ctx.edit_can_redo = availability.edit_can_redo;
-                input_ctx.router_can_back = availability.router_can_back;
-                input_ctx.router_can_forward = availability.router_can_forward;
-            }
+        let (_, elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.ui.dispatch.post_dispatch_snapshot"),
+            || {
+                if let Some(window) = self.window {
+                    let (_active_layers, barrier_root) = self.active_input_layers();
+                    let caps = app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    let mut input_ctx = InputContext {
+                        platform: Platform::current(),
+                        caps,
+                        ui_has_modal: barrier_root.is_some(),
+                        window_arbitration: None,
+                        focus_is_text_input,
+                        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+                        edit_can_undo: true,
+                        edit_can_redo: true,
+                        router_can_back: false,
+                        router_can_forward: false,
+                        dispatch_phase: InputDispatchPhase::Bubble,
+                    };
+                    if let Some(mode) = app
+                        .global::<fret_runtime::WindowTextBoundaryModeService>()
+                        .and_then(|svc| svc.mode(window))
+                    {
+                        input_ctx.text_boundary_mode = mode;
+                    }
+                    if let Some(mode) = self.focus_text_boundary_mode_override() {
+                        input_ctx.text_boundary_mode = mode;
+                    }
+                    if let Some(availability) = app
+                        .global::<fret_runtime::WindowCommandAvailabilityService>()
+                        .and_then(|svc| svc.snapshot(window))
+                        .copied()
+                    {
+                        input_ctx.edit_can_undo = availability.edit_can_undo;
+                        input_ctx.edit_can_redo = availability.edit_can_redo;
+                        input_ctx.router_can_back = availability.router_can_back;
+                        input_ctx.router_can_forward = availability.router_can_forward;
+                    }
 
-            let window_arbitration = self.window_input_arbitration_snapshot();
-            input_ctx.window_arbitration = Some(window_arbitration);
+                    let window_arbitration = self.window_input_arbitration_snapshot();
+                    input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+                    app.with_global_mut(
+                        fret_runtime::WindowInputContextService::default,
+                        |svc, _app| {
+                            svc.set_snapshot(window, input_ctx.clone());
+                        },
+                    );
 
-            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+                    self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+                }
+            },
+        );
+        if let Some(elapsed) = elapsed {
+            self.debug_stats.dispatch_post_dispatch_snapshot_time += elapsed;
         }
     }
 }

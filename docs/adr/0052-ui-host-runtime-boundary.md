@@ -1,5 +1,14 @@
 # ADR 0052: UI Host Runtime Boundary (Embeddable Core vs Integrated App)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (Prototype implemented; still iterating)
 Scope: Workspace-level crate boundaries (`fret-ui`, `fret-app`, runner/platform)
 

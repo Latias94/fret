@@ -170,6 +170,17 @@ impl InvalidationFlags {
     }
 }
 
+/// Retained UI tree and per-window interaction state machine.
+///
+/// `UiTree` owns the widget/node graph for a single window and is responsible for:
+/// - mounting declarative element roots,
+/// - routing input events and commands,
+/// - running layout and producing paint scenes,
+/// - producing semantics snapshots for accessibility backends,
+/// - tracking focus/capture/hover and other interaction state across frames.
+///
+/// Higher-level driver layers (e.g. `fret-bootstrap`) orchestrate when and how a `UiTree` is
+/// ticked and provide host services via the [`UiHost`] trait.
 pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
     layers: SlotMap<UiLayerId, UiLayer>,

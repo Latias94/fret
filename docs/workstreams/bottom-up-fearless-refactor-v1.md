@@ -1,5 +1,17 @@
 # Bottom-Up Fearless Refactor v1 (Repository-Wide)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Bevy: https://github.com/bevyengine/bevy
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- shadcn/ui: https://github.com/shadcn-ui/ui
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream notes only; ADRs remain the source of truth)
 
 Tracking file:

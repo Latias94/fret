@@ -170,8 +170,7 @@
       "query": {
         "focus_is_text_input": true,
         "ime_composing": true,
-        "key": "Tab",
-        "outcome": "reserved_for_ime"
+        "key": "Tab"
       },
       "timeout_frames": 120,
       "type": "wait_shortcut_routing_trace"

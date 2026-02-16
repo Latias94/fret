@@ -45,7 +45,13 @@ The goal is to provide a smooth, general-purpose application framework that scal
 
 ## Quick Start
 
-Create a new native todo app scaffold:
+Create a new native app scaffold (recommended: `simple-todo` first):
+
+```bash
+cargo run -p fretboard -- new simple-todo --name my-simple-todo
+```
+
+Then try the best-practice baseline (`todo`, includes selectors + queries):
 
 ```bash
 cargo run -p fretboard -- new todo --name my-todo

@@ -11,6 +11,7 @@ use slotmap::SecondaryMap;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+use crate::runtime_config::{LayoutEngineSweepPolicy, ui_runtime_config};
 
 mod flow;
 pub(crate) use flow::{build_viewport_flow_subtree, layout_children_from_engine_if_solved};
@@ -41,7 +42,10 @@ pub struct TaffyLayoutEngine {
     parent: SecondaryMap<NodeId, NodeId>,
     seen_generation: u32,
     seen_stamp: SecondaryMap<NodeId, u32>,
+    seen_count: usize,
     child_nodes_scratch: Vec<TaffyNodeId>,
+    child_unique_scratch: Vec<NodeId>,
+    child_dedupe_set_scratch: HashSet<NodeId>,
     mark_seen_stack_scratch: Vec<NodeId>,
     mark_solved_stack_scratch: Vec<NodeId>,
     clear_solved_stack_scratch: Vec<NodeId>,
@@ -102,7 +106,10 @@ impl Default for TaffyLayoutEngine {
             parent: SecondaryMap::new(),
             seen_generation: 1,
             seen_stamp: SecondaryMap::new(),
+            seen_count: 0,
             child_nodes_scratch: Vec::new(),
+            child_unique_scratch: Vec::new(),
+            child_dedupe_set_scratch: HashSet::new(),
             mark_seen_stack_scratch: Vec::new(),
             mark_solved_stack_scratch: Vec::new(),
             clear_solved_stack_scratch: Vec::new(),
@@ -148,7 +155,10 @@ impl TaffyLayoutEngine {
 
     #[inline]
     fn mark_seen(&mut self, node: NodeId) {
-        self.seen_stamp.insert(node, self.seen_generation);
+        let prev = self.seen_stamp.insert(node, self.seen_generation);
+        if prev != Some(self.seen_generation) {
+            self.seen_count = self.seen_count.saturating_add(1);
+        }
     }
 
     #[inline]
@@ -172,6 +182,7 @@ impl TaffyLayoutEngine {
                 self.seen_generation = 1;
                 self.seen_stamp.clear();
             }
+            self.seen_count = 0;
             self.solve_generation = 0;
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
@@ -185,6 +196,12 @@ impl TaffyLayoutEngine {
     }
 
     pub fn end_frame(&mut self) {
+        if ui_runtime_config().layout_engine_sweep_policy == LayoutEngineSweepPolicy::OnDemand
+            && self.seen_count == self.node_to_layout.len()
+        {
+            return;
+        }
+
         let stale: Vec<NodeId> = self
             .node_to_layout
             .iter()
@@ -411,7 +428,7 @@ impl TaffyLayoutEngine {
                     root,
                     available,
                     sf,
-                    |n, c| measure(n, c),
+                    &mut measure,
                 );
             }
             return;
@@ -453,7 +470,7 @@ impl TaffyLayoutEngine {
                         root,
                         available,
                         sf,
-                        |n, c| measure(n, c),
+                        &mut measure,
                     );
                 }
                 return;
@@ -487,7 +504,7 @@ impl TaffyLayoutEngine {
                     root,
                     available,
                     sf,
-                    |n, c| measure(n, c),
+                    &mut measure,
                 );
             }
             return;
@@ -502,7 +519,7 @@ impl TaffyLayoutEngine {
                     root,
                     available,
                     sf,
-                    |n, c| measure(n, c),
+                    &mut measure,
                 );
             }
             return;
@@ -775,8 +792,8 @@ impl TaffyLayoutEngine {
     }
 
     pub fn request_layout_node(&mut self, node: NodeId) -> Option<LayoutId> {
-        self.mark_seen(node);
         if let Some(id) = self.node_to_layout.get(node).copied() {
+            self.mark_seen(node);
             return Some(id);
         }
 
@@ -796,6 +813,7 @@ impl TaffyLayoutEngine {
         let id = LayoutId(taffy_id);
         self.node_to_layout.insert(node, id);
         self.layout_to_node.insert(id, node);
+        self.mark_seen(node);
         Some(id)
     }
 
@@ -849,15 +867,68 @@ impl TaffyLayoutEngine {
     }
 
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
+        let original_len = children.len();
+        let mut child_unique_scratch = std::mem::take(&mut self.child_unique_scratch);
+        let mut child_dedupe_set_scratch = std::mem::take(&mut self.child_dedupe_set_scratch);
+
+        let mut had_dupes = false;
+        let children = if children.len() <= 1 {
+            children
+        } else if children.len() <= 32 {
+            child_unique_scratch.clear();
+            child_unique_scratch.reserve(children.len());
+            for &child in children {
+                if child_unique_scratch.iter().any(|&seen| seen == child) {
+                    had_dupes = true;
+                    continue;
+                }
+                child_unique_scratch.push(child);
+            }
+            if had_dupes {
+                child_unique_scratch.as_slice()
+            } else {
+                children
+            }
+        } else {
+            child_unique_scratch.clear();
+            child_dedupe_set_scratch.clear();
+            child_unique_scratch.reserve(children.len());
+            for &child in children {
+                if !child_dedupe_set_scratch.insert(child) {
+                    had_dupes = true;
+                    continue;
+                }
+                child_unique_scratch.push(child);
+            }
+            if had_dupes {
+                child_unique_scratch.as_slice()
+            } else {
+                children
+            }
+        };
+
+        if had_dupes {
+            tracing::warn!(
+                parent = ?node,
+                children_len = original_len,
+                unique_len = children.len(),
+                "layout engine set_children received duplicate children; deduping to avoid taffy panic"
+            );
+        }
+
         if self
             .children
             .get(node)
             .is_some_and(|prev| prev.as_slice() == children)
         {
+            self.child_unique_scratch = child_unique_scratch;
+            self.child_dedupe_set_scratch = child_dedupe_set_scratch;
             return;
         }
 
         let Some(parent) = self.request_layout_node(node).map(|id| id.0) else {
+            self.child_unique_scratch = child_unique_scratch;
+            self.child_dedupe_set_scratch = child_dedupe_set_scratch;
             return;
         };
         let prev_children = self.children.get(node).cloned();
@@ -870,6 +941,8 @@ impl TaffyLayoutEngine {
         self.child_nodes_scratch.reserve(children.len());
         for &child in children {
             let Some(child_id) = self.request_layout_node(child).map(|id| id.0) else {
+                self.child_unique_scratch = child_unique_scratch;
+                self.child_dedupe_set_scratch = child_dedupe_set_scratch;
                 return;
             };
             self.child_nodes_scratch.push(child_id);
@@ -896,6 +969,9 @@ impl TaffyLayoutEngine {
                 Self::warn_taffy_error_once("set_children", err);
             }
         }
+
+        self.child_unique_scratch = child_unique_scratch;
+        self.child_dedupe_set_scratch = child_dedupe_set_scratch;
     }
 
     #[stacksafe::stacksafe]

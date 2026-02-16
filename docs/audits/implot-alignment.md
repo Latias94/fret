@@ -1,5 +1,14 @@
 # ImPlot Alignment (Fret Plot)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- ImPlot: https://github.com/epezent/implot
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document tracks feature parity between:
 
 - ImPlot (reference in `repo-ref/implot`)

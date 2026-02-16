@@ -1,5 +1,14 @@
 # ADR 0132: `delinea` Large Data + Progressive Rendering Strategy (P0/P1 Baseline)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context
@@ -103,6 +112,6 @@ P1:
 
 ## References
 
-- ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
+- ECharts scheduler/progressive pipeline: `repo-ref/echarts/src/core/Scheduler.ts`
 - ADR 0109: `docs/archive/delinea-adr-bootstrap/0190-delinea-headless-chart-engine.md`
 - ADR 0110: `docs/archive/delinea-adr-bootstrap/0191-delinea-transform-pipeline-and-datazoom-semantics.md`

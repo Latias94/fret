@@ -150,6 +150,10 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
     } else {
         available_height
     };
+    // Radix applies `min-height` and `max-height` to the wrapper. When `min-height` exceeds the
+    // computed max height, the wrapper can still grow (and overflow the collision boundary) so
+    // the listbox stays usable near tight edges.
+    let max_height = Px(max_height.0.max(min_height.0));
 
     let trigger_mid_to_bottom_edge = Px(max_height.0 - top_edge_to_trigger_mid.0);
 
@@ -186,6 +190,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             (content_top_to_item_mid.0 + clamped_trigger_mid_to_bottom_edge.0).min(max_height.0),
         );
         let height = Px(height.0.min(full_content_h.0));
+        let height = Px(height.0.max(min_height.0));
 
         SelectItemAlignedOutputs {
             left,
@@ -195,7 +200,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             width,
             min_width,
             height,
-            min_height: Px(min_height.0.min(height.0)),
+            min_height,
             max_height,
             scroll_to_y: None,
         }
@@ -221,6 +226,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             (clamped_top_edge_to_trigger_mid.0 + item_mid_to_content_bottom.0).min(max_height.0),
         );
         let height = Px(height.0.min(full_content_h.0));
+        let height = Px(height.0.max(min_height.0));
 
         let scroll_to =
             Px(content_top_to_item_mid.0 - top_edge_to_trigger_mid.0 + viewport_offset_top.0);
@@ -233,7 +239,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             width,
             min_width,
             height,
-            min_height: Px(min_height.0.min(height.0)),
+            min_height,
             max_height,
             scroll_to_y: Some(scroll_to),
         }
@@ -303,5 +309,31 @@ mod tests {
         assert_eq!(out.bottom, Some(Px(0.0)));
         assert_eq!(out.top, None);
         assert_eq!(out.scroll_to_y, None);
+    }
+
+    #[test]
+    fn vertical_enforces_min_height_near_window_bottom() {
+        let out = select_item_aligned_position(SelectItemAlignedInputs {
+            direction: LayoutDirection::Ltr,
+            window: rect(0.0, 0.0, 520.0, 360.0),
+            trigger: rect(233.0, 283.0, 240.0, 36.0),
+            content: rect(0.0, 0.0, 240.0, 100.0),
+            value_node: rect(241.0, 291.0, 180.0, 20.0),
+            selected_item_text: rect(20.0, 10.0, 60.0, 20.0),
+            selected_item: rect(10.0, 4.0, 220.0, 32.0),
+            viewport: rect(10.0, 0.0, 240.0, 200.0),
+            content_border_top: Px(1.0),
+            content_padding_top: Px(4.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(4.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: true,
+            selected_item_is_last: false,
+            items_height: Px(32.0 * 40.0),
+        });
+
+        assert!(out.min_height.0 >= 32.0 * 5.0);
+        assert!(out.height.0 >= out.min_height.0);
     }
 }

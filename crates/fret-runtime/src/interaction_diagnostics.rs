@@ -91,6 +91,10 @@ pub enum DockDropResolveSource {
     OutsideWindow,
     /// The cursor is inside `float_zone(...)`, forcing in-window floating.
     FloatZone,
+    /// The window has no dock root and the cursor is inside the dock bounds.
+    ///
+    /// Dropping in this state will create the initial root tab stack for the window.
+    EmptyDockSpace,
     /// The position is inside the window, but outside the computed docking layout bounds.
     LayoutBoundsMiss,
     /// The previous hover target was reused (anti-flicker latch).

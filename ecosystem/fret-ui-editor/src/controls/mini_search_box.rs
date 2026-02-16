@@ -7,20 +7,16 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, KeyCode, Px};
+use fret_core::KeyCode;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
-    PressableProps, SizeStyle, TextInputProps,
-};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::EditorDensity;
-use crate::primitives::chrome::resolve_editor_text_field_style;
-use crate::primitives::icons::editor_icon;
-use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
+use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
+use crate::primitives::input_group::{editor_clear_button_segment, editor_joined_input_frame};
+use crate::primitives::style::EditorStyle;
 
 #[derive(Debug, Clone)]
 pub struct MiniSearchBoxOptions {
@@ -75,172 +71,101 @@ impl MiniSearchBox {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let has_value = cx
-            .read_model_ref(&self.model, Invalidation::Layout, |s| !s.is_empty())
-            .unwrap_or(false);
-        let enabled_for_paint = self.options.enabled;
+        let MiniSearchBox { model, options } = self;
 
-        let (density, chrome, text_style) = {
+        let has_value = cx
+            .read_model_ref(&model, Invalidation::Layout, |s| !s.is_empty())
+            .unwrap_or(false);
+        let enabled_for_paint = options.enabled;
+
+        let (density, frame_chrome, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
-            let (chrome, text_style) = resolve_editor_text_field_style(
-                theme,
-                self.options.size,
-                &ChromeRefinement::default(),
-            );
-            (density, chrome, text_style)
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+            let frame_chrome = style.frame_chrome_small();
+            let (chrome, text_style) =
+                resolve_editor_text_field_style(theme, options.size, &ChromeRefinement::default());
+            (density, frame_chrome, chrome, text_style)
         };
 
-        let mut input_props = TextInputProps::new(self.model.clone());
+        let mut input_props = TextInputProps::new(model.clone());
         input_props.layout = LayoutStyle {
             size: SizeStyle {
                 width: Length::Fill,
-                height: Length::Auto,
+                height: Length::Fill,
                 min_height: Some(density.row_height),
                 ..Default::default()
             },
             ..Default::default()
         };
-        input_props.enabled = self.options.enabled;
-        input_props.focusable = self.options.focusable;
-        input_props.placeholder = self.options.placeholder.clone();
-        input_props.test_id = self.options.test_id.clone();
-        input_props.chrome = chrome;
+        input_props.enabled = options.enabled;
+        input_props.focusable = options.focusable;
+        input_props.placeholder = options.placeholder.clone();
+        input_props.test_id = None;
+
+        // Joined field: the frame is drawn by the input group. Keep the inner text input
+        // transparent and borderless to avoid double chrome.
+        input_props.chrome = joined_text_input_style(chrome);
         input_props.text_style = text_style;
 
-        let input = cx.text_input(input_props);
+        let model_for_input = model.clone();
+        let model_for_trailing = model.clone();
 
-        // Basic affordance: Escape clears if there is text.
-        let model_for_key = self.model.clone();
-        cx.key_add_on_key_down_capture_for(
-            input.id,
-            Arc::new(move |host, action_cx: ActionCx, down| {
-                if down.key != KeyCode::Escape {
-                    return false;
-                }
-                let had_value = host
-                    .models_mut()
-                    .read(&model_for_key, |s| !s.is_empty())
-                    .unwrap_or(false);
-                if !had_value {
-                    return false;
-                }
-                let _ = host.models_mut().update(&model_for_key, |s| s.clear());
-                host.request_redraw(action_cx.window);
-                true
-            }),
-        );
+        editor_joined_input_frame(
+            cx,
+            options.layout,
+            density,
+            frame_chrome,
+            enabled_for_paint,
+            false,
+            options.test_id.clone(),
+            move |cx| {
+                let input = cx.text_input(input_props);
 
-        let clear = has_value.then(|| {
-            let model_for_clear = self.model.clone();
-            let mut el = cx.pressable(
-                PressableProps {
-                    enabled: enabled_for_paint,
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Px(density.hit_thickness),
-                            height: Length::Px(density.row_height),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    a11y: PressableA11y {
-                        label: Some(Arc::from("Clear search")),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                move |cx, _st| {
-                    let on_activate: OnActivate = Arc::new({
-                        let model_for_clear = model_for_clear.clone();
-                        move |host, action_cx, _reason: ActivateReason| {
-                            let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
-                            host.request_redraw(action_cx.window);
+                // Basic affordance: Escape clears if there is text.
+                let model_for_key = model_for_input.clone();
+                cx.key_add_on_key_down_capture_for(
+                    input.id,
+                    Arc::new(move |host, action_cx: ActionCx, down| {
+                        if down.key != KeyCode::Escape {
+                            return false;
                         }
-                    });
-                    cx.pressable_add_on_activate(on_activate);
+                        let had_value = host
+                            .models_mut()
+                            .read(&model_for_key, |s| !s.is_empty())
+                            .unwrap_or(false);
+                        if !had_value {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&model_for_key, |s| s.clear());
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
 
-                    let theme = Theme::global(&*cx.app);
-                    let hovered = _st.hovered || _st.hovered_raw;
-                    let pressed = _st.pressed;
-                    let bg = editor_icon_button_bg(theme, enabled_for_paint, hovered, pressed);
-                    let border =
-                        editor_icon_button_border(theme, enabled_for_paint, hovered, pressed);
-                    let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
-
-                    vec![cx.container(
-                        fret_ui::element::ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            background: bg,
-                            border: Edges::all(border_width),
-                            border_color: border,
-                            corner_radii: fret_core::Corners::all(Px(6.0)),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    vec![editor_icon(
-                                        cx,
-                                        density,
-                                        fret_icons::ids::ui::CLOSE,
-                                        Some(Px(12.0)),
-                                    )]
-                                },
-                            )]
-                        },
-                    )]
-                },
-            );
-            if let Some(test_id) = self.options.clear_test_id.as_ref() {
-                el = el.test_id(test_id.clone());
-            }
-            el
-        });
-
-        let root = cx.flex(
-            FlexProps {
-                layout: self.options.layout,
-                direction: Axis::Horizontal,
-                gap: Px(4.0),
-                padding: Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: false,
+                input
             },
-            move |_cx| {
-                let mut out = vec![input];
-                if let Some(clear) = clear {
-                    out.push(clear);
+            move |cx| {
+                if !has_value {
+                    return Vec::new();
                 }
-                out
-            },
-        );
 
-        // Do not force focus ring policies here; callers can wrap if needed.
-        root
+                let model_for_clear = model_for_trailing.clone();
+                let on_activate: OnActivate =
+                    Arc::new(move |host, action_cx, _reason: ActivateReason| {
+                        let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
+                        host.request_redraw(action_cx.window);
+                    });
+
+                vec![editor_clear_button_segment(
+                    cx,
+                    density,
+                    enabled_for_paint,
+                    Arc::from("Clear search"),
+                    options.clear_test_id.clone(),
+                    on_activate,
+                )]
+            },
+        )
     }
 }

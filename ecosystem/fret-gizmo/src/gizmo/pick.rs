@@ -882,11 +882,8 @@ impl Gizmo {
         );
         let center_local = (min_local + max_local) * 0.5;
 
-        let Some(view_dir) =
-            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
-        else {
-            return None;
-        };
+        let view_dir =
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)?;
         let (u, v) = plane_basis(view_dir);
 
         let handle_half_world = axis_length_world(
@@ -1080,50 +1077,45 @@ impl Gizmo {
         }
 
         let mut view_hit: Option<PickHit> = None;
-        if include_view {
-            if let Some(view_dir) =
+        if include_view
+            && let Some(view_dir) =
                 view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
-            {
-                let axis_dir = view_dir.normalize_or_zero();
-                if axis_dir.length_squared() > 0.0 {
-                    let (u, v) = plane_basis(axis_dir);
-                    let handle = RotateHandle::View.id();
-                    let r = (radius_world * pv.rotate_view_ring_radius_scale).max(1e-6);
-                    let mut prev: Option<crate::math::ProjectedPoint> = None;
-                    for i in 0..=segments {
-                        let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
-                        let world = origin + (u * t.cos() + v * t.sin()) * r;
-                        let Some(p) = project_point(
-                            view_projection,
-                            viewport,
-                            world,
-                            self.config.depth_range,
-                        ) else {
-                            prev = None;
-                            continue;
-                        };
-                        if !p.inside_clip {
-                            prev = None;
-                            continue;
-                        }
-
-                        if let Some(prev) = prev {
-                            if let Some(d) = (PickSegmentCapsule2d {
-                                a: prev.screen,
-                                b: p.screen,
-                                radius: self.config.pick_radius_px,
-                            })
-                            .hit_distance(cursor)
-                            {
-                                match view_hit {
-                                    Some(best) if d >= best.score => {}
-                                    _ => view_hit = Some(PickHit { handle, score: d }),
-                                };
-                            }
-                        }
-
-                        prev = Some(p);
+        {
+            let axis_dir = view_dir.normalize_or_zero();
+            if axis_dir.length_squared() > 0.0 {
+                let (u, v) = plane_basis(axis_dir);
+                let handle = RotateHandle::View.id();
+                let r = (radius_world * pv.rotate_view_ring_radius_scale).max(1e-6);
+                let mut prev: Option<crate::math::ProjectedPoint> = None;
+                for i in 0..=segments {
+                    let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
+                    let world = origin + (u * t.cos() + v * t.sin()) * r;
+                    let Some(p) =
+                        project_point(view_projection, viewport, world, self.config.depth_range)
+                    else {
+                        prev = None;
+                        continue;
+                    };
+                    if !p.inside_clip {
+                        prev = None;
+                        continue;
                     }
+
+                    if let Some(prev) = prev
+                        && let Some(d) = (PickSegmentCapsule2d {
+                            a: prev.screen,
+                            b: p.screen,
+                            radius: self.config.pick_radius_px,
+                        })
+                        .hit_distance(cursor)
+                    {
+                        match view_hit {
+                            Some(best) if d >= best.score => {}
+                            _ => view_hit = Some(PickHit { handle, score: d }),
+                        };
+                    }
+
+                    prev = Some(p);
                 }
             }
         }

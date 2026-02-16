@@ -1,6 +1,6 @@
 ---
 name: fret-skills-playbook
-description: "Shared playbook for Fret agent skills: layering decisions (mechanism vs policy), regression gate types, `test_id` and diag script conventions, and evidence discipline. Use when writing/updating skills or when you want a consistent ‘what to leave behind’ checklist."
+description: "This skill should be used when the user asks to \"write or update a skill\", \"define regression gates\", \"add a diag script\", or \"standardize `test_id` conventions\". Provides shared conventions for layering decisions (mechanism vs policy), regression gate types, diag scripts, and evidence discipline."
 ---
 
 # Fret skills playbook (shared conventions)

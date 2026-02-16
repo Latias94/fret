@@ -3,6 +3,10 @@
 This repository is intentionally documentation-driven: the goal is to lock in “hard-to-change” editor-grade UI
 contracts early to avoid large rewrites later.
 
+New to the repo? Start with:
+
+- First hour onboarding (native): `docs/first-hour.md`
+
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
@@ -24,6 +28,7 @@ contracts early to avoid large rewrites later.
 - Debugging playbook: `docs/debugging-playbook.md`
 - CPU timeline profiling (Tracy): `docs/tracy.md`
 - UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
+- UI Gallery docs-style component pages tracker: `docs/workstreams/ui-gallery-docs-page-layout-refactor.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
 - Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
@@ -113,8 +118,12 @@ so the default authoring story lives in ecosystem crates.
 
 ## Repository references
 
-- `repo-ref/zed` is a local reference checkout used to study GPUI patterns.
-- Optional (clone locally when needed): `repo-ref/gpui-component` is used to study component ergonomics and theme schema patterns (see `docs/repo-ref.md`).
-- Optional (clone locally when needed): `repo-ref/godot` is used to study editor workflows (docking, multi-window, viewport patterns).
+These upstream repositories are used as non-normative reference sources (design + implementation vocabulary):
+
+- Zed/GPUI: https://github.com/zed-industries/zed
+- GPUI component experiments: https://github.com/zed-industries/zed
+- Godot editor workflows: https://github.com/godotengine/godot
+
+If you want local, pinned snapshots for alignment work, see `docs/repo-ref.md`.
 
 These references are not required to build Fret, but they are helpful when validating architectural decisions.

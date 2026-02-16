@@ -134,7 +134,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
                 cx.stop_propagation();
             }
         }
-        Event::ClipboardTextUnavailable { token } => {
+        Event::ClipboardTextUnavailable { token, message } => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -150,7 +150,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
                 notify_requested: &mut cx.notify_requested,
                 notify_requested_location: &mut cx.notify_requested_location,
             };
-            if hook(&mut host, action_cx, *token) {
+            if hook(&mut host, action_cx, *token, message.clone()) {
                 cx.stop_propagation();
             }
         }

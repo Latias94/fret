@@ -166,8 +166,7 @@ impl super::TransformGraph {
             };
         }
 
-        let mut indices: Vec<u32> = Vec::new();
-        indices.reserve(view_len.min(4096));
+        let mut indices: Vec<u32> = Vec::with_capacity(view_len.min(4096));
 
         let mut kept = 0usize;
         for view_index in 0..view_len {
@@ -277,9 +276,9 @@ fn y_indices_signature(
     max_view_len: usize,
 ) -> u64 {
     let mut h = FNV1A_OFFSET;
-    h = fnv1a_step(h, model_rev.0 as u64);
-    h = fnv1a_step(h, view_rev.0 as u64);
-    h = fnv1a_step(h, data_rev.0 as u64);
+    h = fnv1a_step(h, model_rev.0);
+    h = fnv1a_step(h, view_rev.0);
+    h = fnv1a_step(h, data_rev.0);
     h = fnv1a_step(h, series_id.0);
     h = fnv1a_step(h, kind as u64);
     h = fnv1a_step(h, x_col as u64);

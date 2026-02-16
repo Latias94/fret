@@ -515,6 +515,7 @@ pub struct DialogContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    a11y_label: Option<Arc<str>>,
 }
 
 impl DialogContent {
@@ -524,7 +525,13 @@ impl DialogContent {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            a11y_label: None,
         }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -561,6 +568,7 @@ impl DialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
+        let a11y_label = self.a11y_label;
         let container = shadcn_layout::container_vstack(
             cx,
             props,
@@ -575,6 +583,7 @@ impl DialogContent {
 
         container.attach_semantics(SemanticsDecoration {
             role: Some(SemanticsRole::Dialog),
+            label: a11y_label,
             labelled_by_element,
             described_by_element,
             ..Default::default()

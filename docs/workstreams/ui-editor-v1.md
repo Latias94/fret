@@ -1,7 +1,16 @@
 # Editor Component Surface (`fret-ui-editor`) v1
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ## Summary
 
@@ -85,7 +94,7 @@ This avoids long-term dependency cycles and keeps the editor surface reusable ou
 
 Guidelines:
 
-- Components should prefer semantic IDs (`ui.chevron.down`, `ui.close`, …) rather than vendor IDs.
+- Components should prefer semantic IDs (`ui.chevron.down`, `ui.close`, `ui.reset`, …) rather than vendor IDs.
 - Apps should install an icon pack (e.g. `ecosystem/fret-icons-lucide`) or provide their own mapping.
 - The editor-proof demo installs the lucide pack to avoid “missing icon” placeholders.
 
@@ -172,6 +181,7 @@ Suggested v1 key families:
 - `editor.slider.*` (track height, thumb size)
 - `editor.axis.*` (axis label colors for vec/transform controls)
 - `editor.color.*` (swatch size, popup padding)
+- `editor.vec.*` (responsive vec layout)
 
 ### Minimal v1 token table (proposed)
 
@@ -193,8 +203,11 @@ Notes:
 | `editor.numeric.scrub_fast_multiplier` | metric | Alt fast mode multiplier | > 1.0 |
 | `editor.numeric.scrub_drag_threshold` | metric | Minimum drag distance (px) before scrubbing starts | small (2–6px) |
 | `editor.numeric.error_fg` | color | Numeric input validation/error foreground | near `destructive` |
+| `editor.numeric.error_border` | color | Numeric input error-state frame border | near `destructive` |
+| `editor.numeric.error_bg` | color | Numeric input error-state frame background | subtle, opaque |
 | `editor.property.column_gap` | metric | Label/value column gap | small |
 | `editor.property.group_header_height` | metric | Collapsible group header height | row_height-ish |
+| `editor.property.auto_stack_below` | metric | Stack property row label/value vertically below this width | tuned per inspector width |
 | `editor.checkbox.size` | metric | Checkbox visual square size (inside hit target) | ~16px |
 | `editor.checkbox.radius` | metric | Checkbox corner radius | small |
 | `editor.enum_select.max_list_height` | metric | Max height for enum select list viewport | medium |
@@ -202,6 +215,8 @@ Notes:
 | `editor.axis.y_color` | color | Axis label color (Y) | green-ish |
 | `editor.axis.z_color` | color | Axis label color (Z) | blue-ish |
 | `editor.axis.w_color` | color | Axis label color (W) | muted |
+| `editor.vec.auto_stack_below` | metric | Stack vec axes vertically below this width | tuned per inspector width |
+| `editor.vec.axis_min_width` | metric | Minimum per-axis group width (row layout) | tuned to keep vec inputs readable |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
 | `editor.slider.track_height` | metric | Slider track thickness | small (3–6px) |
@@ -225,15 +240,24 @@ They are tracked here to keep the workstream grounded in “what feels broken”
   Owner: mechanisms (`crates/fret-ui` / renderer invalidation), with local repros in `ecosystem/fret-ui-editor`.
 - **Dismiss policy confidence**: outside-press dismissal should be reliable for mouse and touch; trigger press should
   close menu overlays without requiring “disable outside pointer events” occlusion policies.
-  EnumSelect now uses dismissible popover policy; see `ecosystem/fret-ui-editor/src/controls/enum_select.rs`.
+  EnumSelect now uses dismissible popover policy, and its anchored panel wrapper is auto-sized so the listbox does
+  not claim the full window for hit testing (keeps outside press dismissal correct even when the popper flips).
+  See `ecosystem/fret-ui-editor/src/controls/enum_select.rs` and `tools/diag-scripts/imui-editor-proof-enum-select-dismiss-and-close.json`.
   Owner: `fret-ui-kit` overlay substrates + editor policies.
+- **Layout safety hardening**: layout engine `set_children` must never panic due to duplicate children edges (taffy
+  assumes consistent parent/child sets). We currently dedupe and warn to keep demos runnable while root-cause
+  identity issues are fixed in policy layers; see `crates/fret-ui/src/layout/engine.rs`.
 - **State keying discipline**: stateful controls must key their internal state per instance (stable key preference:
-  explicit `id_source` then `(callsite, model.id())`), otherwise multiple widgets can fight over drag/typing state.
+  explicit `id_source` then `(callsite, model.id())`; never callsite-only for loop-built widgets), otherwise multiple
+  widgets can fight over drag/typing state.
   `test_id` is for diagnostics/automation and must not be treated as widget identity.
   This applies to demo harness state helpers too: any `with_state`-backed model helper must be `named/keyed`
   (see `apps/fret-examples/src/imui_editor_proof_demo.rs`, `named_demo_state`).
-- **Visual cohesion**: editor controls are still missing a single, shared “widget visuals” resolver (hover/active/disabled)
-  comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`. Without this, chrome and density drift across controls.
+- **Visual cohesion**: we now have early convergence points (`EditorStyle`, `EditorWidgetVisuals`, and joined input-group
+  primitives). Text inputs now drive hover and a lightweight pressed/active visual via `HoverRegion` + `PointerRegion`,
+  but hover/active/disabled visuals are not yet
+  consistently resolved across all controls (and some controls still rely on ad-hoc capture/hover plumbing). Keep
+  converging toward a single “widget visuals” resolver comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`.
 
 ## Interaction contracts (v1)
 

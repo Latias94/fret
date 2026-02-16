@@ -1,12 +1,13 @@
 use crate::spec::*;
 use crate::ui;
 use fret_app::{App, Model};
-use fret_core::{AppWindowId, SemanticsRole};
+use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
 use fret_ui::Invalidation;
 use fret_ui::declarative;
-use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SemanticsDecoration, SpacerProps};
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn as shadcn;
 use fret_workspace::WorkspaceFrame;
 use std::sync::Arc;
 
@@ -272,6 +273,25 @@ fn render_root_contents(
         frame.settings_edit_can_redo.clone(),
         &mut content,
     );
+
+    let command_palette = cx.keyed("ui_gallery.global_command_palette", |cx| {
+        shadcn::CommandDialog::new_with_host_commands(
+            cx,
+            frame.content_models.cmdk_open.clone(),
+            frame.content_models.cmdk_query.clone(),
+        )
+        .a11y_label("Command palette")
+        .empty_text("No results found.")
+        .into_element(cx, |cx| {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Px(Px(0.0));
+            layout.size.height = Length::Px(Px(0.0));
+            layout.flex.grow = 0.0;
+            layout.flex.shrink = 0.0;
+            cx.spacer(SpacerProps { layout, min: Px(0.0) })
+        })
+    });
+    content.push(command_palette);
 
     debug_hud::maybe_push_debug_hud(
         cx,

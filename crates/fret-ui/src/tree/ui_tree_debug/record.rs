@@ -329,6 +329,9 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn debug_record_layout_engine_solve(
         &mut self,
         root: NodeId,
+        root_element: Option<GlobalElementId>,
+        root_element_kind: Option<&'static str>,
+        root_element_path: Option<String>,
         solve_time: Duration,
         measure_calls: u64,
         measure_cache_hits: u64,
@@ -342,6 +345,9 @@ impl<H: UiHost> UiTree<H> {
         const MAX_LAYOUT_ENGINE_SOLVES: usize = 16;
         let record = UiDebugLayoutEngineSolve {
             root,
+            root_element,
+            root_element_kind,
+            root_element_path,
             solve_time,
             measure_calls,
             measure_cache_hits,

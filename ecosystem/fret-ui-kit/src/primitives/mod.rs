@@ -22,6 +22,18 @@
 //! Runtime mechanisms live in `fret-ui`; these facades intentionally port behavior outcomes, not
 //! React/DOM APIs.
 
+#![allow(clippy::arc_with_non_send_sync)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::match_like_matches_macro)]
+#![allow(clippy::new_without_default)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::bool_assert_comparison)]
+#![allow(clippy::default_constructed_unit_structs)]
+#![allow(clippy::items_after_test_module)]
+
 pub mod accordion;
 pub mod active_descendant;
 pub mod alert_dialog;

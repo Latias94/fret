@@ -21,7 +21,7 @@ pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
 pub use mask::Mask;
 pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient,
-    TileMode,
+    SweepGradient, TileMode,
 };
 pub use stroke::{DashPatternV1, StrokeStyleV1};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
@@ -510,14 +510,14 @@ pub enum SceneOp {
         order: DrawOrder,
         origin: Point,
         text: TextBlobId,
-        color: Color,
+        paint: Paint,
     },
 
     Path {
         order: DrawOrder,
         origin: Point,
         path: PathId,
-        color: Color,
+        paint: Paint,
     },
 
     ViewportSurface {

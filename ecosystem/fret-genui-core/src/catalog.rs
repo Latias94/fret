@@ -12,9 +12,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum CatalogValueTypeV1 {
+    #[default]
     Any,
     String,
     Boolean,
@@ -36,12 +37,6 @@ pub enum CatalogValueTypeV1 {
         #[serde(default)]
         variants: Vec<CatalogValueTypeV1>,
     },
-}
-
-impl Default for CatalogValueTypeV1 {
-    fn default() -> Self {
-        Self::Any
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -153,27 +148,27 @@ impl CatalogV1 {
                     }
                     out.push('\n');
 
-                    if let CatalogValueTypeV1::Object { fields, .. } = &def.value_type {
-                        if !fields.is_empty() {
-                            out.push_str("    fields:\n");
-                            for (k, v) in fields {
-                                out.push_str("    - ");
-                                out.push_str(k);
-                                out.push_str(": ");
-                                out.push_str(v.value_type.prompt_hint().as_str());
-                                if v.required {
-                                    out.push_str(" (required)");
-                                }
-                                if let Some(default) = v.default.as_ref() {
-                                    out.push_str(" default=");
-                                    out.push_str(default.to_string().as_str());
-                                }
-                                if let Some(desc) = v.description.as_deref() {
-                                    out.push_str(" — ");
-                                    out.push_str(desc);
-                                }
-                                out.push('\n');
+                    if let CatalogValueTypeV1::Object { fields, .. } = &def.value_type
+                        && !fields.is_empty()
+                    {
+                        out.push_str("    fields:\n");
+                        for (k, v) in fields {
+                            out.push_str("    - ");
+                            out.push_str(k);
+                            out.push_str(": ");
+                            out.push_str(v.value_type.prompt_hint().as_str());
+                            if v.required {
+                                out.push_str(" (required)");
                             }
+                            if let Some(default) = v.default.as_ref() {
+                                out.push_str(" default=");
+                                out.push_str(default.to_string().as_str());
+                            }
+                            if let Some(desc) = v.description.as_deref() {
+                                out.push_str(" — ");
+                                out.push_str(desc);
+                            }
+                            out.push('\n');
                         }
                     }
                 }
@@ -220,23 +215,23 @@ impl CatalogV1 {
                     }
                     out.push('\n');
 
-                    if let CatalogValueTypeV1::Object { fields, .. } = &v.value_type {
-                        if !fields.is_empty() {
-                            out.push_str("    fields:\n");
-                            for (fk, fv) in fields {
-                                out.push_str("    - ");
-                                out.push_str(fk);
-                                out.push_str(": ");
-                                out.push_str(fv.value_type.prompt_hint().as_str());
-                                if fv.required {
-                                    out.push_str(" (required)");
-                                }
-                                if let Some(default) = fv.default.as_ref() {
-                                    out.push_str(" default=");
-                                    out.push_str(default.to_string().as_str());
-                                }
-                                out.push('\n');
+                    if let CatalogValueTypeV1::Object { fields, .. } = &v.value_type
+                        && !fields.is_empty()
+                    {
+                        out.push_str("    fields:\n");
+                        for (fk, fv) in fields {
+                            out.push_str("    - ");
+                            out.push_str(fk);
+                            out.push_str(": ");
+                            out.push_str(fv.value_type.prompt_hint().as_str());
+                            if fv.required {
+                                out.push_str(" (required)");
                             }
+                            if let Some(default) = fv.default.as_ref() {
+                                out.push_str(" default=");
+                                out.push_str(default.to_string().as_str());
+                            }
+                            out.push('\n');
                         }
                     }
                 }
@@ -611,10 +606,10 @@ fn dynamic_value_schema(ty: &CatalogValueTypeV1, nullable: bool) -> Value {
 
 fn dynamic_prop_schema(def: &CatalogPropV1) -> Value {
     let mut v = dynamic_value_schema(&def.value_type, def.nullable);
-    if let Some(default) = def.default.as_ref() {
-        if let Some(obj) = v.as_object_mut() {
-            obj.insert("default".to_string(), default.clone());
-        }
+    if let Some(default) = def.default.as_ref()
+        && let Some(obj) = v.as_object_mut()
+    {
+        obj.insert("default".to_string(), default.clone());
     }
     v
 }

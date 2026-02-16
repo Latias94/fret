@@ -1,3 +1,12 @@
+//! Text buffer primitives for editor-grade experiences in Fret.
+//!
+//! This crate provides a small, undo-friendly text buffer model built on `ropey`:
+//! - stable document identities (`DocId`, `DocUri`),
+//! - byte-indexed edit operations (`Edit`),
+//! - invertible transactions (`TextBufferTx`) suitable for undo/redo layers.
+//!
+//! Higher-level editor widgets and view integration live in other ecosystem crates.
+
 use std::ops::Range;
 
 use ropey::Rope;

@@ -83,3 +83,76 @@ Evidence:
     - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)
     - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - Repro commands (local web, DevTools WS transport):
+    - Terminal 1 (DevTools WS server):
+      - `cargo run -p fret-devtools-ws`
+      - Copy the printed `token` (and keep the server running).
+    - Terminal 2 (Trunk dev server):
+      - `cargo run -p fretboard -- dev web --demo external_texture_imports_web_demo --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token>`
+      - Open the printed URL (it already includes `fret_devtools_ws` + `fret_devtools_token`).
+      - If you opened the demo earlier, refresh using the printed URL so the app actually connects to DevTools WS.
+      - Note: the web runner keeps requesting redraw while DevTools WS is configured so scripts/bundles are
+        processed even when the UI would otherwise be idle. If you see `timeout waiting for script result`,
+        confirm you're on a freshly rebuilt page (hard refresh) and that the tab is visible (not backgrounded).
+    - Terminal 3 (run the steady script + compare to baseline):
+      - `cargo run -p fretboard -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+      - Troubleshooting:
+        - `error: no DevTools sessions available (is the app connected?)` means the demo page is not connected to the WS server (missing query params, wrong token, or the page is not open).
+        - `error: timeout waiting for script result` usually means the page is not rendering / not polling WS messages (backgrounded tab, stale page without WS keepalive redraw, or you didn’t refresh after rebuilding).
+          Quick smoke: run `tools/diag-scripts/external-texture-imports-web-copy-smoke.json` via `diag perf` or `fret-diag-export` to confirm scripts/bundles are flowing before running the steady perf script.
+        - If multiple sessions exist, pass `--devtools-session-id <id>` (or list sessions via `cargo run -p fret-diag-export -- --list-sessions`).
+  - Baseline record:
+    - Date: 2026-02-15
+    - Exports:
+      - `target/fret-diag-web-copy/exports/1771140829044-bundle`
+      - `target/fret-diag-web-copy/exports/1771140845261-bundle`
+
+- [x] EXT-diag-210 Import ingest observability (requested vs effective) is surfaced in perf snapshots
+      and diagnostics bundles.
+  - Notes:
+    - The caller should set:
+      - `RenderTargetMetadata.requested_ingest_strategy` (desired), and
+      - `RenderTargetMetadata.ingest_strategy` (effective, after capability-gated fallback).
+    - The renderer reports:
+      - `render_target_updates_requested_ingest_*` (requested distribution),
+      - `render_target_updates_ingest_*` (effective distribution),
+      - `render_target_updates_ingest_fallbacks` (requested != effective),
+      - and `viewport_draw_calls_ingest_*` (draw-side attribution).
+    - This is best-effort observability only; it must not change import behavior by itself.
+    - Optional gate: fail a perf run when fallbacks occur unexpectedly:
+      - `--check-perf-hints --check-perf-hints-min-severity info --check-perf-hints-deny renderer.external_import_ingest_fallbacks`
+  - Evidence:
+    - `crates/fret-render-core/src/lib.rs` (`RenderTargetMetadata.requested_ingest_strategy`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (update-time counters)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (perf snapshot plumbing)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` fields)
+    - `crates/fret-diag/src/lib.rs` (`renderer.external_import_ingest_fallbacks` perf hint)
+    - `crates/fret-launch/src/runner/web/app_handler.rs` (web: enable renderer perf when DevTools WS is configured)
+    - `crates/fret-launch/src/runner/web/render_loop.rs` (web: record `RendererPerfFrameStore` samples + WS keepalive redraw)
+
+## M5 — Zero/low-copy ceiling (v2; capability-gated)
+
+- [~] EXT-m5-400 Contract v2 is documented and bounded:
+      define the strategy set, capability gating, deterministic fallback order, and metadata
+      semantics so copy and zero/low-copy paths converge to the same observable behavior.
+  - ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md`
+
+- [ ] EXT-m5-410 Perf-gate checklist is expanded for v2:
+      add a v2 steady-state perf script + baseline for any zero/low-copy path we land, and keep
+      the existing copy-path baselines as non-regression anchors (web + native).
+  - Evidence anchors (existing copy-path gates):
+    - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+    - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - Checklist (new v2 baselines):
+    - Record both requested vs effective ingest distributions and the fallback count:
+      - `render_target_updates_requested_ingest_*`
+      - `render_target_updates_ingest_*`
+      - `render_target_updates_ingest_fallbacks`
+    - Keep `viewport_draw_calls_ingest_*` stable for the target workload (draw-side attribution).
+    - If `requested=ExternalZeroCopy` is used in a demo, the baseline must explicitly tolerate
+      fallback to `effective=GpuCopy` on unsupported targets (and show it via the counters).
+
+- [!] EXT-m5-420 Web zero-copy implementation (blocked):
+      WebCodecs `VideoFrame` → WebGPU `ExternalTexture` → imported render target, capability-gated
+      with deterministic fallback to the GPU copy path.
+  - Blocker: wgpu WebGPU backend missing `ExternalTexture` implementation (wgpu v28).

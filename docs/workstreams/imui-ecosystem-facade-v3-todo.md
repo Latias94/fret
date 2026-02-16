@@ -1,5 +1,14 @@
 # imui Ecosystem Facade v3 - TODO Tracker
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: In progress (M0+ pending)
 Last updated: 2026-02-10
 

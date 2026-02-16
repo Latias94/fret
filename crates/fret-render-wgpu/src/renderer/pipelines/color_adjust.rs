@@ -17,6 +17,22 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.color_adjust_pipeline_format != Some(format) {
+                    "format_changed"
+                } else {
+                    "missing"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.color_adjust",
+                    format = ?format,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("fret color-adjust bind group layout"),
             entries: &[

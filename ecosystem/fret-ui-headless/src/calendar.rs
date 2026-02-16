@@ -99,7 +99,7 @@ impl DayMatcher {
             Self::Bool(v) => *v,
             Self::Predicate(p) => p(date),
             Self::Date(d) => *d == date,
-            Self::Dates(ds) => ds.iter().any(|d| *d == date),
+            Self::Dates(ds) => ds.contains(&date),
             Self::DateRange(r) => range_includes_date(*r, date, false),
             Self::DayOfWeek(days) => days.iter().any(|d| *d == date.weekday()),
             Self::DateInterval { before, after } => {
@@ -124,10 +124,10 @@ impl DayMatcher {
 pub fn range_includes_date(range: DateRangeSelection, date: Date, exclude_ends: bool) -> bool {
     let mut from = range.from;
     let mut to = range.to;
-    if let (Some(f), Some(t)) = (from, to) {
-        if t < f {
-            (from, to) = (Some(t), Some(f));
-        }
+    if let (Some(f), Some(t)) = (from, to)
+        && t < f
+    {
+        (from, to) = (Some(t), Some(f));
     }
 
     match (from, to) {
@@ -209,9 +209,10 @@ pub fn day_picker_cell_state(
     modifiers: &DayPickerModifiers,
 ) -> DayPickerCellState {
     let base = day_picker_day_modifiers(day, show_outside_days, modifiers);
-    // Align with react-day-picker/shadcn behavior: bounds make days *disabled* (not hidden),
-    // so the grid stays visually aligned without blank gaps.
-    let hidden = base.hidden;
+    // Align with react-day-picker/shadcn behavior:
+    // - days outside `startMonth`/`endMonth` can be suppressed from the grid
+    // - keep in-month days visible but disabled when out of bounds (common for date-range bounds)
+    let hidden = base.hidden || (!in_bounds && !day.in_month);
 
     let mut disabled = base.disabled || (!day.in_month && disable_outside_days) || !in_bounds;
     if hidden {
@@ -350,7 +351,7 @@ pub fn day_picker_select_multi(
     let min = min.unwrap_or(0);
     let max = max.unwrap_or(0);
 
-    let is_selected = current.iter().any(|d| *d == trigger);
+    let is_selected = current.contains(&trigger);
 
     if is_selected {
         if current.len() == min {
@@ -493,12 +494,7 @@ pub fn day_picker_add_to_range(
         && let (Some(f), Some(t)) = (r.from, r.to)
     {
         let diff_days = (t - f).whole_days();
-        if max_days > 0 && diff_days > max_days {
-            *r = DateRangeSelection {
-                from: Some(trigger),
-                to: None,
-            };
-        } else if min_days > 1 && diff_days < min_days {
+        if (max_days > 0 && diff_days > max_days) || (min_days > 1 && diff_days < min_days) {
             *r = DateRangeSelection {
                 from: Some(trigger),
                 to: None,
@@ -754,6 +750,19 @@ mod tests {
     }
 
     #[test]
+    fn day_picker_cell_state_outside_day_out_of_bounds_is_hidden() {
+        let d = Date::from_calendar_date(2026, Month::February, 1).unwrap();
+        let day = CalendarDay {
+            date: d,
+            in_month: false,
+        };
+
+        let st = day_picker_cell_state(day, true, false, false, &DayPickerModifiers::default());
+        assert!(st.hidden);
+        assert!(st.disabled);
+    }
+
+    #[test]
     fn month_grid_is_stable_42_days() {
         let m = CalendarMonth::new(2026, Month::January);
         let grid = month_grid(m, Weekday::Monday);
@@ -906,13 +915,13 @@ mod tests {
             }
         );
 
-        // Out-of-bounds days are hidden (and disabled).
+        // In-month out-of-bounds days remain visible but disabled.
         let st =
             day_picker_cell_state(in_month, true, false, false, &DayPickerModifiers::default());
         assert_eq!(
             st,
             DayPickerCellState {
-                hidden: true,
+                hidden: false,
                 disabled: true
             }
         );

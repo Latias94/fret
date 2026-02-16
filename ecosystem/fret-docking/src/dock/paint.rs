@@ -233,7 +233,7 @@ pub(super) fn paint_dock(
                     order: fret_core::DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: title.blob,
-                    color: text_color,
+                    paint: (text_color).into(),
                 });
                 scene.push(SceneOp::PopClip);
             }
@@ -289,7 +289,7 @@ pub(super) fn paint_dock(
                         order: fret_core::DrawOrder(6),
                         origin: Point::new(text_x, text_y),
                         text: glyph.blob,
-                        color,
+                        paint: (color).into(),
                     });
                 }
             }
@@ -342,7 +342,7 @@ pub(super) fn paint_dock(
                     order: fret_core::DrawOrder(11),
                     origin: Point::new(text_x, text_y),
                     text: glyph.blob,
-                    color,
+                    paint: (color).into(),
                 });
             }
         }
@@ -405,7 +405,7 @@ pub(super) fn paint_dock(
                             order: fret_core::DrawOrder(102),
                             origin: Point::new(text_x, text_y),
                             text: title.blob,
-                            color: text_color,
+                            paint: (text_color).into(),
                         });
                     }
                 }
@@ -469,6 +469,7 @@ pub(super) fn paint_dock(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_split_handles(
     theme: fret_ui::ThemeSnapshot,
     graph: &DockGraph,
@@ -527,6 +528,7 @@ pub(super) fn paint_split_handles(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_drop_overlay(
     theme: fret_ui::ThemeSnapshot,
     target: Option<DockDropTarget>,
@@ -563,6 +565,20 @@ pub(super) fn paint_drop_overlay(
                 background: fret_core::Paint::Solid(Color { a: 0.10, ..primary }),
                 border: Edges::all(Px(3.0)),
                 border_paint: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
+                corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
+            });
+        }
+        DockDropTarget::EmptyDockSpace { window: w } => {
+            if w != window {
+                return;
+            }
+            let zone = bounds;
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(10_000),
+                rect: zone,
+                background: fret_core::Paint::Solid(Color { a: 0.08, ..primary }),
+                border: Edges::all(Px(3.0)),
+                border_paint: fret_core::Paint::Solid(Color { a: 0.75, ..primary }),
                 corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
             });
         }
@@ -659,7 +675,7 @@ pub(super) fn paint_drop_overlay(
                             order: fret_core::DrawOrder(9_996),
                             origin: Point::new(text_x, text_y),
                             text: title.blob,
-                            color: Color { a: 0.92, ..fg },
+                            paint: (Color { a: 0.92, ..fg }).into(),
                         });
                         scene.push(SceneOp::PopClip);
                     }
@@ -781,6 +797,7 @@ pub(super) fn paint_drop_overlay(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_drop_hints(
     theme: fret_ui::ThemeSnapshot,
     hints: Option<DockDropHints>,

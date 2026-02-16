@@ -1,6 +1,6 @@
 ---
 name: fret-app-ui-builder
-description: "Product-oriented workflow for building a good-looking, usable app with Fret quickly: choose a baseline style, apply theme overrides, compose shadcn recipes, and leave regression gates. Use when starting a new app or refactoring an existing app UI."
+description: "This skill should be used when the user asks to \"build a Fret app UI\", \"refactor an existing Fret UI\", \"pick a theme/tokens baseline\", or \"compose shadcn-style recipes\". Provides a product-oriented workflow (style → recipes → UX polish → gates) to ship a cohesive, usable UI with early regression protection."
 ---
 
 # Fret app UI builder (product-oriented)
@@ -30,6 +30,9 @@ It is intentionally **self-contained**: it includes theming, recipes, and the mo
 - Surface type: editor workspace / settings forms / dashboard / content viewer.
 - Scheme + density: light/dark + compact/default/comfortable.
 - Vibe keywords: minimal / soft / neubrutal / hud / glass overlays / high-contrast.
+- Differentiation hook: what should a user remember after 3 seconds?
+- Typography constraints: any required fonts, mono usage, or code-heavy surfaces?
+- Motion tolerance: none / subtle / expressive (and whether reduced-motion is required).
 - Primary modality: keyboard-first / mouse-first / mixed.
 - Must-have flows: command palette, settings, navigation sidebar, data table, docking workspace.
 - Evidence needs: diag script gate only, or screenshots/pixel checks too?
@@ -37,6 +40,21 @@ It is intentionally **self-contained**: it includes theming, recipes, and the mo
 Defaults if unclear:
 
 - Build a dark + compact editor shell, with command palette enabled and stable `test_id` targets.
+
+## Design brief (1 minute, non-negotiable)
+
+Before writing UI code, capture a **one-paragraph brief**. This prevents “default shadcn” drift and
+keeps token/theme work coherent.
+
+Template (copy/paste):
+
+- Purpose + audience:
+- Tone (pick one extreme, then execute precisely):
+- Constraints (perf/a11y/brand/fonts/reduced motion):
+- Differentiation hook (the memorable detail):
+- Baseline style pick (use `stylegen.py --suggest` to pick one):
+
+Deep dive reference (Fret-adapted): `references/mind-models/mm-design-direction.md`
 
 ## Smallest starting point (one command)
 
@@ -73,8 +91,9 @@ If you are in an external app repo, start with `fret-external-app-mode` first.
 
 ## Workflow
 
-1) **Lock the look first (theme + density).**
-   - Pick a baseline preset (New York v4).
+1) **Lock the direction + look first (brief → theme → density).**
+   - Write the 1-minute design brief (above) and pick a baseline style.
+   - Pick a baseline preset (New York v4) and keep it as the stable base.
    - Apply a small `ThemeConfig` override (1–2 axes at a time: density + ring first).
 2) **Compose the shell before details.**
    - Decide: sidebar + top bar + center viewport + inspector (optional) + bottom panel (optional).
@@ -155,6 +174,7 @@ Rule: `crates/fret-ui` is mechanism-only; policy belongs in components via actio
 Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test), Evidence (anchors + command). See `fret-skills-playbook`.
 
 - A cohesive baseline style is applied (preset + `ThemeConfig` override checked in).
+- A short design brief exists (keywords + chosen baseline style + differentiation hook).
 - The primary shell is usable (consistent spacing rhythm, focus-visible, predictable layering).
 - At least one end-to-end interaction gate exists:
   - `tools/diag-scripts/*.json` with stable `test_id` selectors and `capture_bundle`.
@@ -166,12 +186,14 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 - Style generation: `.agents/skills/fret-app-ui-builder/scripts/stylegen.py`
 - Style catalog (used by `stylegen.py`): `.agents/skills/fret-app-ui-builder/references/style_catalog.json`
 - Recipes + mind models: `.agents/skills/fret-app-ui-builder/references/`
+- Design direction mind model: `.agents/skills/fret-app-ui-builder/references/mind-models/mm-design-direction.md`
 - Polish pass rules: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 - Diag + perf gates: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 
 ## Common pitfalls
 
 - Styling per-component with magic numbers instead of token overrides.
+- Skipping the design brief → shipping the default baseline with no “point of view”.
 - Building overlay state machines without leaving a diag script gate.
 - Missing `test_id` targets (scripts rot immediately).
 - Mixing parity work with new design work without gates.

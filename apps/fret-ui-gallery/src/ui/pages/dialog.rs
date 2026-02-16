@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_dialog(
     cx: &mut ElementContext<'_, App>,
@@ -133,48 +134,6 @@ pub(super) fn preview_dialog(
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let profile_fields =
         |cx: &mut ElementContext<'_, App>, name: Model<String>, username: Model<String>| {
             let field =
@@ -220,46 +179,43 @@ pub(super) fn preview_dialog(
         let name_model = demo_name.clone();
         let username_model = demo_username.clone();
 
-        let content = shadcn::Dialog::new(open.clone())
-            .into_element(
-                cx,
-                move |cx| {
-                    shadcn::Button::new("Open Dialog")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dialog-demo-trigger")
-                        .toggle_model(trigger_open.clone())
-                        .into_element(cx)
-                },
-                move |cx| {
-                    shadcn::DialogContent::new([
-                        shadcn::DialogClose::new(close_open.clone()).into_element(cx),
-                        shadcn::DialogHeader::new([
-                            shadcn::DialogTitle::new("Edit profile").into_element(cx),
-                            shadcn::DialogDescription::new(
-                                "Make changes to your profile here. Click save when you're done.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        profile_fields(cx, name_model.clone(), username_model.clone()),
-                        shadcn::DialogFooter::new([
-                            shadcn::Button::new("Cancel")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(close_open.clone())
-                                .into_element(cx),
-                            shadcn::Button::new("Save changes")
-                                .toggle_model(save_open.clone())
-                                .into_element(cx),
-                        ])
+        let content = shadcn::Dialog::new(open.clone()).into_element(
+            cx,
+            move |cx| {
+                shadcn::Button::new("Open Dialog")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dialog-demo-trigger")
+                    .toggle_model(trigger_open.clone())
+                    .into_element(cx)
+            },
+            move |cx| {
+                shadcn::DialogContent::new([
+                    shadcn::DialogClose::new(close_open.clone()).into_element(cx),
+                    shadcn::DialogHeader::new([
+                        shadcn::DialogTitle::new("Edit profile").into_element(cx),
+                        shadcn::DialogDescription::new(
+                            "Make changes to your profile here. Click save when you're done.",
+                        )
                         .into_element(cx),
                     ])
-                    .into_element(cx)
-                    .test_id("ui-gallery-dialog-demo-content")
-                },
-            )
-            .test_id("ui-gallery-dialog-demo");
-
-        section_card(cx, "Demo", content)
+                    .into_element(cx),
+                    profile_fields(cx, name_model.clone(), username_model.clone()),
+                    shadcn::DialogFooter::new([
+                        shadcn::Button::new("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(close_open.clone())
+                            .into_element(cx),
+                        shadcn::Button::new("Save changes")
+                            .toggle_model(save_open.clone())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-dialog-demo-content")
+            },
+        );
+        content
     };
 
     let custom_close = {
@@ -267,44 +223,41 @@ pub(super) fn preview_dialog(
         let open_for_footer = custom_open.clone();
         let link_model = share_link.clone();
 
-        let content = shadcn::Dialog::new(custom_open.clone())
-            .into_element(
-                cx,
-                move |cx| {
-                    shadcn::Button::new("Share")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dialog-custom-close-trigger")
-                        .toggle_model(open_for_trigger.clone())
-                        .into_element(cx)
-                },
-                move |cx| {
-                    shadcn::DialogContent::new([
-                        shadcn::DialogHeader::new([
-                            shadcn::DialogTitle::new("Share link").into_element(cx),
-                            shadcn::DialogDescription::new(
-                                "Replace the close affordance with a custom footer action.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::Input::new(link_model.clone())
-                            .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx),
-                        shadcn::DialogFooter::new([shadcn::Button::new("Close")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .test_id("ui-gallery-dialog-custom-close-footer")
-                            .toggle_model(open_for_footer.clone())
-                            .into_element(cx)])
+        let content = shadcn::Dialog::new(custom_open.clone()).into_element(
+            cx,
+            move |cx| {
+                shadcn::Button::new("Share")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dialog-custom-close-trigger")
+                    .toggle_model(open_for_trigger.clone())
+                    .into_element(cx)
+            },
+            move |cx| {
+                shadcn::DialogContent::new([
+                    shadcn::DialogHeader::new([
+                        shadcn::DialogTitle::new("Share link").into_element(cx),
+                        shadcn::DialogDescription::new(
+                            "Replace the close affordance with a custom footer action.",
+                        )
                         .into_element(cx),
                     ])
-                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
-                    .into_element(cx)
-                    .test_id("ui-gallery-dialog-custom-close-content")
-                },
-            )
-            .test_id("ui-gallery-dialog-custom-close");
-
-        section_card(cx, "Custom Close Button", content)
+                    .into_element(cx),
+                    shadcn::Input::new(link_model.clone())
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                    shadcn::DialogFooter::new([shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .test_id("ui-gallery-dialog-custom-close-footer")
+                        .toggle_model(open_for_footer.clone())
+                        .into_element(cx)])
+                    .into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
+                .into_element(cx)
+                .test_id("ui-gallery-dialog-custom-close-content")
+            },
+        );
+        content
     };
 
     let no_close = {
@@ -333,112 +286,104 @@ pub(super) fn preview_dialog(
                 .into_element(cx)
                 .test_id("ui-gallery-dialog-no-close-content")
             },
-        )
-        .test_id("ui-gallery-dialog-no-close");
-
-        section_card(cx, "No Close Button", content)
+        );
+        content
     };
 
     let sticky_footer = {
         let open_for_trigger = sticky_open.clone();
         let close_open = sticky_open.clone();
 
-        let content = shadcn::Dialog::new(sticky_open.clone())
-            .into_element(
-                cx,
-                move |cx| {
-                    shadcn::Button::new("Sticky Footer")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dialog-sticky-footer-trigger")
-                        .toggle_model(open_for_trigger.clone())
-                        .into_element(cx)
-                },
-                move |cx| {
-                    let scroll_body = shadcn::ScrollArea::new([lorem_block(cx, "Sticky", 14)])
-                        .refine_layout(
-                            LayoutRefinement::default()
-                                .w_full()
-                                .h_px(Px(220.0))
-                                .min_w_0()
-                                .min_h_0(),
-                        )
-                        .viewport_test_id("ui-gallery-dialog-sticky-footer-viewport")
-                        .into_element(cx);
+        let content = shadcn::Dialog::new(sticky_open.clone()).into_element(
+            cx,
+            move |cx| {
+                shadcn::Button::new("Sticky Footer")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dialog-sticky-footer-trigger")
+                    .toggle_model(open_for_trigger.clone())
+                    .into_element(cx)
+            },
+            move |cx| {
+                let scroll_body = shadcn::ScrollArea::new([lorem_block(cx, "Sticky", 14)])
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(Px(220.0))
+                            .min_w_0()
+                            .min_h_0(),
+                    )
+                    .viewport_test_id("ui-gallery-dialog-sticky-footer-viewport")
+                    .into_element(cx);
 
-                    shadcn::DialogContent::new([
-                        shadcn::DialogClose::new(close_open.clone()).into_element(cx),
-                        shadcn::DialogHeader::new([
-                            shadcn::DialogTitle::new("Sticky Footer").into_element(cx),
-                            shadcn::DialogDescription::new(
-                                "The footer remains visible while the content area scrolls.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        scroll_body,
-                        shadcn::DialogFooter::new([
-                            shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(close_open.clone())
-                                .into_element(cx),
-                            shadcn::Button::new("Save changes").into_element(cx),
-                        ])
+                shadcn::DialogContent::new([
+                    shadcn::DialogClose::new(close_open.clone()).into_element(cx),
+                    shadcn::DialogHeader::new([
+                        shadcn::DialogTitle::new("Sticky Footer").into_element(cx),
+                        shadcn::DialogDescription::new(
+                            "The footer remains visible while the content area scrolls.",
+                        )
                         .into_element(cx),
                     ])
-                    .into_element(cx)
-                    .test_id("ui-gallery-dialog-sticky-footer-content")
-                },
-            )
-            .test_id("ui-gallery-dialog-sticky-footer");
-
-        section_card(cx, "Sticky Footer", content)
+                    .into_element(cx),
+                    scroll_body,
+                    shadcn::DialogFooter::new([
+                        shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(close_open.clone())
+                            .into_element(cx),
+                        shadcn::Button::new("Save changes").into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-dialog-sticky-footer-content")
+            },
+        );
+        content
     };
 
     let scrollable_content = {
         let open_for_trigger = scrollable_open.clone();
         let close_open = scrollable_open.clone();
 
-        let content = shadcn::Dialog::new(scrollable_open.clone())
-            .into_element(
-                cx,
-                move |cx| {
-                    shadcn::Button::new("Scrollable Content")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dialog-scrollable-trigger")
-                        .toggle_model(open_for_trigger.clone())
-                        .into_element(cx)
-                },
-                move |cx| {
-                    let scroll_body = shadcn::ScrollArea::new([lorem_block(cx, "Scrollable", 14)])
-                        .refine_layout(
-                            LayoutRefinement::default()
-                                .w_full()
-                                .h_px(Px(240.0))
-                                .min_w_0()
-                                .min_h_0(),
-                        )
-                        .viewport_test_id("ui-gallery-dialog-scrollable-viewport")
-                        .into_element(cx);
-
-                    shadcn::DialogContent::new([
-                        shadcn::DialogClose::new(close_open.clone()).into_element(cx),
-                        shadcn::DialogHeader::new([
-                            shadcn::DialogTitle::new("Scrollable Content").into_element(cx),
-                            shadcn::DialogDescription::new(
-                                "Long content can scroll while the header stays in view.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        scroll_body,
-                    ])
+        let content = shadcn::Dialog::new(scrollable_open.clone()).into_element(
+            cx,
+            move |cx| {
+                shadcn::Button::new("Scrollable Content")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dialog-scrollable-trigger")
+                    .toggle_model(open_for_trigger.clone())
                     .into_element(cx)
-                    .test_id("ui-gallery-dialog-scrollable-content")
-                },
-            )
-            .test_id("ui-gallery-dialog-scrollable");
+            },
+            move |cx| {
+                let scroll_body = shadcn::ScrollArea::new([lorem_block(cx, "Scrollable", 14)])
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(Px(240.0))
+                            .min_w_0()
+                            .min_h_0(),
+                    )
+                    .viewport_test_id("ui-gallery-dialog-scrollable-viewport")
+                    .into_element(cx);
 
-        section_card(cx, "Scrollable Content", content)
+                shadcn::DialogContent::new([
+                    shadcn::DialogClose::new(close_open.clone()).into_element(cx),
+                    shadcn::DialogHeader::new([
+                        shadcn::DialogTitle::new("Scrollable Content").into_element(cx),
+                        shadcn::DialogDescription::new(
+                            "Long content can scroll while the header stays in view.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    scroll_body,
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-dialog-scrollable-content")
+            },
+        );
+        content
     };
 
     let rtl = {
@@ -489,108 +434,18 @@ pub(super) fn preview_dialog(
                     },
                 )
             },
-        )
-        .test_id("ui-gallery-dialog-rtl");
-
-        section_card(cx, "RTL", content)
+        );
+        content
     };
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Dialog docs order: Demo, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL.",
-    );
-
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                custom_close,
-                no_close,
-                sticky_footer,
-                scrollable_content,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-dialog-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic Dialog",
-                    r#"let dialog = shadcn::Dialog::new(open).into_element(
-    cx,
-    |cx| shadcn::Button::new("Open").toggle_model(open.clone()).into_element(cx),
-    |cx| {
-        shadcn::DialogContent::new([
-            shadcn::DialogClose::new(open.clone()).into_element(cx),
-            shadcn::DialogHeader::new([
-                shadcn::DialogTitle::new("Edit profile").into_element(cx),
-            ]).into_element(cx),
-        ]).into_element(cx)
-    },
-);"#,
-                ),
-                code_block(
-                    cx,
-                    "No Close Button",
-                    r#"shadcn::DialogContent::new([
-    shadcn::DialogHeader::new([
-        shadcn::DialogTitle::new("No Close Button").into_element(cx),
-    ]).into_element(cx),
-]).into_element(cx); // omit DialogClose"#,
-                ),
-                code_block(
-                    cx,
-                    "Scrollable + Sticky Footer",
-                    r#"let body = shadcn::ScrollArea::new([rows])
-    .refine_layout(LayoutRefinement::default().h_px(Px(220.0)))
-    .into_element(cx);
-
-shadcn::DialogContent::new([
-    shadcn::DialogHeader::new([title, description]).into_element(cx),
-    body,
-    shadcn::DialogFooter::new([close_button, save_button]).into_element(cx),
-]).into_element(cx);"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
@@ -610,13 +465,106 @@ shadcn::DialogContent::new([
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-dialog",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Dialog docs order: Demo, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Basic dialog with header, form fields, and footer actions.")
+                .code(
+                    "rust",
+                    r#"let dialog = shadcn::Dialog::new(open).into_element(
+    cx,
+    |cx| shadcn::Button::new("Open Dialog").toggle_model(open.clone()).into_element(cx),
+    |cx| {
+        shadcn::DialogContent::new([
+            shadcn::DialogClose::new(open.clone()).into_element(cx),
+            shadcn::DialogHeader::new([
+                shadcn::DialogTitle::new("Edit profile").into_element(cx),
+                shadcn::DialogDescription::new("...").into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::DialogFooter::new([/* buttons */]).into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
+            DocSection::new("Custom Close Button", custom_close)
+                .description("Replace the close affordance with a custom footer action.")
+                .code(
+                    "rust",
+                    r#"shadcn::DialogContent::new([
+    shadcn::DialogHeader::new([
+        shadcn::DialogTitle::new("Share link").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Input::new(link_model).into_element(cx),
+    shadcn::DialogFooter::new([
+        shadcn::Button::new("Close").toggle_model(open.clone()).into_element(cx),
+    ])
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("No Close Button", no_close)
+                .description("Omit explicit close controls and rely on Escape or overlay dismissal.")
+                .code(
+                    "rust",
+                    r#"shadcn::DialogContent::new([
+    shadcn::DialogHeader::new([
+        shadcn::DialogTitle::new("No Close Button").into_element(cx),
+    ])
+    .into_element(cx),
+])
+.into_element(cx); // omit DialogClose"#,
+                ),
+            DocSection::new("Sticky Footer", sticky_footer)
+                .description("Footer stays visible while the content scrolls.")
+                .code(
+                    "rust",
+                    r#"let scroll_body = shadcn::ScrollArea::new([rows])
+    .refine_layout(LayoutRefinement::default().h_px(Px(220.0)))
+    .into_element(cx);
+
+shadcn::DialogContent::new([
+    shadcn::DialogHeader::new([title, description]).into_element(cx),
+    scroll_body,
+    shadcn::DialogFooter::new([close_button, save_button]).into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Scrollable Content", scrollable_content)
+                .description("Long body scrolls while keeping the header visible.")
+                .code(
+                    "rust",
+                    r#"let scroll_body = shadcn::ScrollArea::new([rows])
+    .refine_layout(LayoutRefinement::default().h_px(Px(240.0)))
+    .into_element(cx);
+
+shadcn::DialogContent::new([
+    shadcn::DialogClose::new(open.clone()).into_element(cx),
+    shadcn::DialogHeader::new([title, description]).into_element(cx),
+    scroll_body,
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .description("Dialog layout should work under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::Dialog::new(open).into_element(cx, trigger, content)
+})"#,
+                ),
+            DocSection::new("Notes", notes).description(
+                "Keep test IDs stable so fretboard diag scripts and regression screenshots remain reusable.",
+            ),
+        ],
+    );
+
+    vec![body]
 }

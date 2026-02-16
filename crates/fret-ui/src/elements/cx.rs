@@ -43,6 +43,15 @@ use super::hash::{callsite_hash, derive_child_id, stable_hash};
 use super::runtime::{EnvironmentQueryKey, LayoutQueryRegionMarker};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
+/// Per-frame view construction context passed to declarative element constructors.
+///
+/// `ElementContext` exposes:
+/// - a mutable handle to the app/host (`cx.app`) implementing [`UiHost`],
+/// - the current window id and frame id,
+/// - helper constructors for common element kinds (containers, text, input, overlays, etc.),
+/// - access to theme and environment queries.
+///
+/// It is created and owned by [`UiTree`] and should be treated as an ephemeral, frame-scoped API.
 pub struct ElementContext<'a, H: UiHost> {
     pub app: &'a mut H,
     pub window: AppWindowId,

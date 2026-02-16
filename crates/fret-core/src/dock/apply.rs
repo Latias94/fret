@@ -40,6 +40,9 @@ impl DockGraph {
             DockOp::RequestFloatPanelToNewWindow { .. } => Err(DockOpApplyError {
                 kind: DockOpApplyErrorKind::UnsupportedOp,
             }),
+            DockOp::RequestFloatTabsToNewWindow { .. } => Err(DockOpApplyError {
+                kind: DockOpApplyErrorKind::UnsupportedOp,
+            }),
             _ => Ok(self.apply_op(op)),
         }
     }
@@ -63,6 +66,16 @@ impl DockGraph {
                 *zone,
                 *insert_index,
             ),
+            DockOp::MovePanelToEmptyDockSpace {
+                source_window,
+                panel,
+                target_window,
+            } => {
+                if self.window_root(*target_window).is_some() {
+                    return false;
+                }
+                self.float_panel_to_window(*source_window, panel.clone(), *target_window)
+            }
             DockOp::MoveTabs {
                 source_window,
                 source_tabs,
@@ -78,12 +91,23 @@ impl DockGraph {
                 *zone,
                 *insert_index,
             ),
+            DockOp::MoveTabsToEmptyDockSpace {
+                source_window,
+                source_tabs,
+                target_window,
+            } => {
+                if self.window_root(*target_window).is_some() {
+                    return false;
+                }
+                self.float_tabs_to_window(*source_window, *source_tabs, *target_window)
+            }
             DockOp::FloatPanelToWindow {
                 source_window,
                 panel,
                 new_window,
             } => self.float_panel_to_window(*source_window, panel.clone(), *new_window),
             DockOp::RequestFloatPanelToNewWindow { .. } => false,
+            DockOp::RequestFloatTabsToNewWindow { .. } => false,
             DockOp::FloatPanelInWindow {
                 source_window,
                 panel,

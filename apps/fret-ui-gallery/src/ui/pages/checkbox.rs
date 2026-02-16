@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_checkbox(
     cx: &mut ElementContext<'_, App>,
     model: Model<bool>,
@@ -172,77 +174,6 @@ pub(super) fn preview_checkbox(
         .get_model_copied(&checked_optional, Invalidation::Layout)
         .unwrap_or(None);
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        let heading_style = {
-            let theme = Theme::global(&*cx.app);
-            let base_px = theme.metric_by_key("font.size").unwrap_or(Px(14.0));
-            let line_height = theme.metric_by_key("font.line_height");
-            let base = fret_core::TextStyle {
-                font: fret_core::FontId::default(),
-                size: base_px,
-                weight: fret_core::FontWeight::NORMAL,
-                slant: fret_core::TextSlant::Normal,
-                line_height,
-                letter_spacing_em: None,
-            };
-            fret_core::TextStyle {
-                size: Px(20.0),
-                weight: fret_core::FontWeight::SEMIBOLD,
-                ..base
-            }
-        };
-
-        let heading = cx.text_props(fret_ui::element::TextProps {
-            layout: fret_ui::element::LayoutStyle::default(),
-            text: title.into(),
-            style: Some(heading_style),
-            color: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-        });
-
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_stretch()
-                .layout(LayoutRefinement::default().w_full()),
-            move |_cx| vec![heading, body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let demo_content = stack::hstack(
         cx,
         stack::HStackProps::default()
@@ -272,7 +203,7 @@ pub(super) fn preview_checkbox(
         },
     )
     .test_id("ui-gallery-checkbox-demo");
-    let demo = section_card(cx, "Demo", demo_content);
+    let demo = demo_content;
 
     let checked_state_content = stack::vstack(
         cx,
@@ -341,7 +272,7 @@ pub(super) fn preview_checkbox(
         },
     )
     .test_id("ui-gallery-checkbox-checked-state");
-    let checked_state = section_card(cx, "Checked State", checked_state_content);
+    let checked_state = checked_state_content;
 
     let invalid_content = shadcn::Field::new([
         shadcn::FieldContent::new([
@@ -369,7 +300,7 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-invalid-field");
-    let invalid_state = section_card(cx, "Invalid State", invalid_content);
+    let invalid_state = invalid_content;
 
     let basic_content = shadcn::Field::new([
         shadcn::Checkbox::new(model.clone())
@@ -385,7 +316,7 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-basic-field");
-    let basic = section_card(cx, "Basic", basic_content);
+    let basic = basic_content;
 
     let description_content = shadcn::Field::new([
         shadcn::FieldContent::new([
@@ -408,7 +339,7 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-description-field");
-    let description_section = section_card(cx, "Description", description_content);
+    let description_section = description_content;
 
     let disabled_content = shadcn::Field::new([
         shadcn::Checkbox::new(disabled.clone())
@@ -430,7 +361,7 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-disabled-field");
-    let disabled_section = section_card(cx, "Disabled", disabled_content);
+    let disabled_section = disabled_content;
 
     let group_item = |cx: &mut ElementContext<'_, App>,
                       label: &'static str,
@@ -488,7 +419,7 @@ pub(super) fn preview_checkbox(
         },
     )
     .test_id("ui-gallery-checkbox-group");
-    let group = section_card(cx, "Group", group_content);
+    let group = group_content;
 
     let table_row = |cx: &mut ElementContext<'_, App>,
                      id: &'static str,
@@ -561,7 +492,7 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-table");
-    let table = section_card(cx, "Table", table_content);
+    let table = table_content;
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -583,90 +514,23 @@ pub(super) fn preview_checkbox(
         },
     )
     .test_id("ui-gallery-checkbox-rtl-field");
-    let rtl_section = section_card(cx, "RTL", rtl_content);
+    let rtl_section = rtl_content;
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Checkbox docs flow: Demo -> Checked State -> Invalid State -> Basic -> Description -> Disabled -> Group -> Table -> RTL.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_stretch()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                checked_state,
-                invalid_state,
-                basic,
-                description_section,
-                disabled_section,
-                group,
-                table,
-                rtl_section,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-checkbox-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic",
-                    r#"let checkbox = shadcn::Checkbox::new(model)
-    .a11y_label("Accept terms")
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "Checked + Optional",
-                    r#"let controlled = shadcn::Checkbox::new(controlled_model);
-let optional = shadcn::Checkbox::new_optional(optional_model); // None => indeterminate"#,
-                ),
-                code_block(
-                    cx,
-                    "Field + Table + RTL",
-                    r#"Field::new([FieldLabel::new("Enable notifications").for_control("notifications"), Checkbox::new(model).control_id("notifications").into_element(cx)])
-with_direction_provider(LayoutDirection::Rtl, |cx| Checkbox::new(model).into_element(cx));"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
-                    "Use `Field`/`FieldLabel`/`FieldDescription` composition to keep label, helper text, and toggle target aligned.",
+                    "API reference: `ecosystem/fret-ui-shadcn/src/checkbox.rs` (Checkbox).",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "Use Field composition (FieldLabel/FieldDescription) to keep label, helper text, and toggle target aligned.",
                 ),
                 shadcn::typography::muted(
                     cx,
@@ -683,13 +547,56 @@ with_direction_provider(LayoutDirection::Rtl, |cx| Checkbox::new(model).into_ele
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-checkbox",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Checkbox docs flow: Demo -> Checked State -> Invalid State -> Basic -> Description -> Disabled -> Group -> Table -> RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Single checkbox with a live state readout.")
+                .code(
+                    "rust",
+                    r#"let checkbox = shadcn::Checkbox::new(model)
+    .a11y_label("Accept terms")
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Checked State", checked_state)
+                .description("Controlled checked model and optional/indeterminate model.")
+                .code(
+                    "rust",
+                    r#"let controlled = shadcn::Checkbox::new(controlled_model);
+let optional = shadcn::Checkbox::new_optional(optional_model); // None => indeterminate"#,
+                ),
+            DocSection::new("Invalid State", invalid_state)
+                .description("Invalid styling is currently approximated via destructive border."),
+            DocSection::new("Basic", basic).description("Field + checkbox + label composition."),
+            DocSection::new("Description", description_section)
+                .description("FieldContent keeps label and helper text aligned with the control."),
+            DocSection::new("Disabled", disabled_section)
+                .description("Disabled checkbox should block interaction and use muted styling."),
+            DocSection::new("Group", group)
+                .description("Checkbox group pattern with per-item descriptions."),
+            DocSection::new("Table", table)
+                .description("Table selection pattern with header and row checkboxes.")
+                .code(
+                    "rust",
+                    r#"shadcn::TableCell::new(
+    shadcn::Checkbox::new(model).a11y_label("Select row").into_element(cx),
+)"#,
+                ),
+            DocSection::new("RTL", rtl_section)
+                .description("Checkbox + label alignment under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::Checkbox::new(model).into_element(cx)
+})"#,
+                ),
+            DocSection::new("Notes", notes).description("API reference pointers and parity notes."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-checkbox")]
 }

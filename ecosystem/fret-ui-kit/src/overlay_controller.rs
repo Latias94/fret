@@ -785,20 +785,19 @@ impl OverlayController {
         let base_root = ui.base_root();
         let layers = ui.debug_layers_in_paint_order();
 
-        let mut out = OverlayArbitrationSnapshot::default();
-        out.has_any_overlays = layers
-            .iter()
-            .any(|l| l.visible && base_root.is_none_or(|base| l.root != base));
-        out.modal_barrier_active = runtime.modal_barrier_root.is_some();
-        out.pointer_capture_active = runtime.pointer_capture_active;
-
-        if out.modal_barrier_active {
-            out.pointer_occlusion = PointerOcclusion::None;
-            return out;
+        let modal_barrier_active = runtime.modal_barrier_root.is_some();
+        OverlayArbitrationSnapshot {
+            has_any_overlays: layers
+                .iter()
+                .any(|l| l.visible && base_root.is_none_or(|base| l.root != base)),
+            modal_barrier_active,
+            pointer_capture_active: runtime.pointer_capture_active,
+            pointer_occlusion: if modal_barrier_active {
+                PointerOcclusion::None
+            } else {
+                runtime.pointer_occlusion
+            },
         }
-
-        out.pointer_occlusion = runtime.pointer_occlusion;
-        out
     }
 
     /// Computes an ordered, window-scoped overlay stack snapshot by combining:
@@ -1113,7 +1112,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(300.0), Px(200.0)),
@@ -1162,8 +1161,8 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let snap = OverlayController::arbitration_snapshot(&ui);
-        assert_eq!(snap.has_any_overlays, true);
-        assert_eq!(snap.modal_barrier_active, false);
+        assert!(snap.has_any_overlays);
+        assert!(!snap.modal_barrier_active);
         assert_eq!(
             snap.pointer_occlusion,
             fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
@@ -1184,8 +1183,8 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let snap = OverlayController::arbitration_snapshot(&ui);
-        assert_eq!(snap.has_any_overlays, true);
-        assert_eq!(snap.modal_barrier_active, true);
+        assert!(snap.has_any_overlays);
+        assert!(snap.modal_barrier_active);
         assert_eq!(
             snap.pointer_occlusion,
             fret_ui::tree::PointerOcclusion::None
@@ -1199,7 +1198,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(300.0), Px(200.0)),
@@ -1252,13 +1251,13 @@ mod tests {
         );
 
         let snap = OverlayController::arbitration_snapshot(&ui);
-        assert_eq!(snap.has_any_overlays, false);
-        assert_eq!(snap.modal_barrier_active, false);
+        assert!(!snap.has_any_overlays);
+        assert!(!snap.modal_barrier_active);
         assert_eq!(
             snap.pointer_occlusion,
             fret_ui::tree::PointerOcclusion::None
         );
-        assert_eq!(snap.pointer_capture_active, true);
+        assert!(snap.pointer_capture_active);
     }
 
     #[test]
@@ -1271,7 +1270,7 @@ mod tests {
         let popover_open = app.models_mut().insert(true);
         let modal_open = app.models_mut().insert(true);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(300.0), Px(200.0)),

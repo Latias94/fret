@@ -246,49 +246,6 @@ pub(super) fn drop_zone_rect(rect: Rect, zone: DropZone) -> Rect {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn drop_zone_rect_matches_half_split_geometry() {
-        let rect = Rect::new(
-            Point::new(Px(10.0), Px(20.0)),
-            Size::new(Px(200.0), Px(100.0)),
-        );
-
-        assert_eq!(
-            drop_zone_rect(rect, DropZone::Left),
-            Rect::new(
-                Point::new(Px(10.0), Px(20.0)),
-                Size::new(Px(100.0), Px(100.0))
-            )
-        );
-        assert_eq!(
-            drop_zone_rect(rect, DropZone::Right),
-            Rect::new(
-                Point::new(Px(110.0), Px(20.0)),
-                Size::new(Px(100.0), Px(100.0))
-            )
-        );
-        assert_eq!(
-            drop_zone_rect(rect, DropZone::Top),
-            Rect::new(
-                Point::new(Px(10.0), Px(20.0)),
-                Size::new(Px(200.0), Px(50.0))
-            )
-        );
-        assert_eq!(
-            drop_zone_rect(rect, DropZone::Bottom),
-            Rect::new(
-                Point::new(Px(10.0), Px(70.0)),
-                Size::new(Px(200.0), Px(50.0))
-            )
-        );
-        assert_eq!(drop_zone_rect(rect, DropZone::Center), rect);
-    }
-}
-
 pub(super) fn float_zone(bounds: Rect) -> Rect {
     // Keep this affordance within the tab bar height so it does not overlap panel content
     // (especially viewports). The tab bar height is `DOCK_TAB_H` (currently 28px).
@@ -451,4 +408,47 @@ pub(super) fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
         ),
     };
     (chrome, dock)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drop_zone_rect_matches_half_split_geometry() {
+        let rect = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Left),
+            Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(100.0), Px(100.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Right),
+            Rect::new(
+                Point::new(Px(110.0), Px(20.0)),
+                Size::new(Px(100.0), Px(100.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Top),
+            Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(200.0), Px(50.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Bottom),
+            Rect::new(
+                Point::new(Px(10.0), Px(70.0)),
+                Size::new(Px(200.0), Px(50.0))
+            )
+        );
+        assert_eq!(drop_zone_rect(rect, DropZone::Center), rect);
+    }
 }

@@ -726,6 +726,7 @@ fn selectable_text_double_click_sets_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
         linux_primary_selection: true,
+        ..Default::default()
     });
     let mut caps = fret_runtime::PlatformCapabilities::default();
     caps.clipboard.primary_text = true;
@@ -1198,7 +1199,10 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities {
         clipboard: fret_runtime::capabilities::ClipboardCapabilities {
-            text: false,
+            text: fret_runtime::capabilities::ClipboardTextCapabilities {
+                read: false,
+                write: false,
+            },
             files: false,
             primary_text: false,
         },

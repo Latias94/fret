@@ -28,11 +28,7 @@ pub(in crate::ui) fn preview_ai_image_demo(
                     .border_1()
                     .border_color(ColorRef::Color(theme.color_token("border"))),
             )
-            .refine_layout(
-                LayoutRefinement::default()
-                    .h_px(Px(300.0))
-                    .aspect_ratio(1.0),
-            )
+            .refine_layout(LayoutRefinement::default().w_px(Px(300.0)).h_px(Px(300.0)))
             .test_id("ui-ai-image-demo-image")
             .into_element(cx)
     });
@@ -42,19 +38,9 @@ pub(in crate::ui) fn preview_ai_image_demo(
             .test_id("ui-ai-image-demo-loading")
     });
 
-    let props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .rounded(Radius::Lg)
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_token("border")))
-            .p(Space::N4),
-        LayoutRefinement::default()
-            .w_full()
-            .min_w_0()
-            .min_h_0()
-            .h_px(Px(420.0)),
-    );
+    let chrome = ChromeRefinement::default().p(Space::N4);
+    let layout = LayoutRefinement::default().w_full().min_w_0().min_h_0();
+    let props = decl_style::container_props(theme, chrome, layout);
 
     vec![stack::vstack(
         cx,

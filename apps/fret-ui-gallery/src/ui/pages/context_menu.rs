@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_context_menu(
     cx: &mut ElementContext<'_, App>,
@@ -151,48 +152,6 @@ pub(super) fn preview_context_menu(
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let trigger_surface =
         |cx: &mut ElementContext<'_, App>, label: &'static str, test_id: &'static str| {
             shadcn::Button::new(label)
@@ -233,7 +192,27 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(cx, "Basic", menu.test_id("ui-gallery-context-menu-basic"))
+
+        let last = cx
+            .app
+            .models()
+            .get_cloned(&last_action)
+            .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |cx| {
+                vec![
+                    menu,
+                    shadcn::typography::muted(cx, format!("last action: {last}"))
+                        .test_id("ui-gallery-context-menu-last-action"),
+                ]
+            },
+        )
     };
 
     let submenu = {
@@ -277,11 +256,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(
-            cx,
-            "Submenu",
-            menu.test_id("ui-gallery-context-menu-submenu"),
-        )
+        menu
     };
 
     let shortcuts = {
@@ -316,11 +291,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(
-            cx,
-            "Shortcuts",
-            menu.test_id("ui-gallery-context-menu-shortcuts"),
-        )
+        menu
     };
 
     let groups = {
@@ -363,7 +334,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(cx, "Groups", menu.test_id("ui-gallery-context-menu-groups"))
+        menu
     };
 
     let icons = {
@@ -405,7 +376,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(cx, "Icons", menu.test_id("ui-gallery-context-menu-icons"))
+        menu
     };
 
     let checkboxes = {
@@ -449,9 +420,9 @@ pub(super) fn preview_context_menu(
         let checkboxes_content = stack::vstack(
             cx,
             stack::VStackProps::default().gap(Space::N2).items_start(),
-            |_cx| vec![menu.test_id("ui-gallery-context-menu-checkboxes"), state],
+            |_cx| vec![menu, state],
         );
-        section_card(cx, "Checkboxes", checkboxes_content)
+        checkboxes_content
     };
 
     let radio = {
@@ -487,9 +458,9 @@ pub(super) fn preview_context_menu(
         let radio_content = stack::vstack(
             cx,
             stack::VStackProps::default().gap(Space::N2).items_start(),
-            |_cx| vec![menu.test_id("ui-gallery-context-menu-radio"), selected_text],
+            |_cx| vec![menu, selected_text],
         );
-        section_card(cx, "Radio", radio_content)
+        radio_content
     };
 
     let destructive = {
@@ -517,11 +488,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(
-            cx,
-            "Destructive",
-            menu.test_id("ui-gallery-context-menu-destructive"),
-        )
+        menu
     };
 
     let rtl = {
@@ -562,119 +529,17 @@ pub(super) fn preview_context_menu(
             },
         );
 
-        section_card(
-            cx,
-            "RTL",
-            rtl_content.test_id("ui-gallery-context-menu-rtl"),
-        )
+        rtl_content
     };
 
-    let last = cx
-        .app
-        .models()
-        .get_cloned(&last_action)
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Context Menu docs order: Basic, Submenu, Shortcuts, Groups, Icons, Checkboxes, Radio, Destructive, RTL.",
-    );
-
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        move |cx| {
-            vec![
-                preview_hint,
-                cx.text(format!("last action: {last}")),
-                basic,
-                submenu,
-                shortcuts,
-                groups,
-                icons,
-                checkboxes,
-                radio,
-                destructive,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-context-menu-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic + Submenu",
-                    r#"ContextMenu::new(open).into_element(
-    cx,
-    |cx| trigger,
-    |_cx| vec![
-        ContextMenuEntry::Item(ContextMenuItem::new("Open")),
-        ContextMenuEntry::Item(ContextMenuItem::new("More").submenu(vec![...]))
-    ],
-);"#,
-                ),
-                code_block(
-                    cx,
-                    "Shortcuts + Icons",
-                    r#"ContextMenuItem::new("Open File")
-    .trailing(ContextMenuShortcut::new("Cmd+O").into_element(cx));
-
-ContextMenuItem::new("Settings")
-    .leading(icon::icon(cx, IconId::new_static("lucide.settings")));"#,
-                ),
-                code_block(
-                    cx,
-                    "Checkboxes + Radio + RTL",
-                    r#"ContextMenuEntry::CheckboxItem(
-    ContextMenuCheckboxItem::new(show_status_bar, "Show status bar")
-);
-
-ContextMenuEntry::RadioGroup(
-    ContextMenuRadioGroup::new(theme_mode)
-        .item(ContextMenuRadioItemSpec::new("light", "Light"))
-        .item(ContextMenuRadioItemSpec::new("dark", "Dark"))
-);
-
-with_direction_provider(LayoutDirection::Rtl, |cx| {
-    ContextMenu::new(open).into_element(cx, |cx| trigger, |_cx| entries)
-});"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Keep context menu entries task-focused; destructive entries should be visually separated by a divider.",
@@ -694,13 +559,53 @@ with_direction_provider(LayoutDirection::Rtl, |cx| {
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-context-menu",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Context Menu docs order: Basic, Submenu, Shortcuts, Groups, Icons, Checkboxes, Radio, Destructive, RTL.",
+        ),
+        vec![
+            DocSection::new("Basic", basic)
+                .description("Right click on the trigger surface to open the menu.")
+                .code(
+                    "rust",
+                    r#"let open = app.models_mut().insert(false);
+let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entries);"#,
+                ),
+            DocSection::new("Submenu", submenu)
+                .description("Nested submenu entries for grouped actions."),
+            DocSection::new("Shortcuts", shortcuts)
+                .description("Trailing shortcuts for command discovery."),
+            DocSection::new("Groups", groups)
+                .description("Explicit groups and labels for structured menus."),
+            DocSection::new("Icons", icons).description("Leading icons for visual scanning."),
+            DocSection::new("Checkboxes", checkboxes)
+                .description("Checkbox items are bound to boolean models.")
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::CheckboxItem(
+    shadcn::ContextMenuCheckboxItem::new(show_status_bar, "Show status bar"),
+);"#,
+                ),
+            DocSection::new("Radio", radio)
+                .description("Radio groups are bound to a single selected value.")
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::RadioGroup(
+    shadcn::ContextMenuRadioGroup::new(theme_mode)
+        .item(shadcn::ContextMenuRadioItemSpec::new("light", "Light"))
+        .item(shadcn::ContextMenuRadioItemSpec::new("dark", "Dark")),
+);"#,
+                ),
+            DocSection::new("Destructive", destructive)
+                .description("Destructive items use a dedicated visual variant."),
+            DocSection::new("RTL", rtl)
+                .description("Menu layout should follow right-to-left direction context."),
+            DocSection::new("Notes", notes)
+                .description("Implementation notes and regression guidelines."),
+        ],
+    );
+
+    vec![body]
 }

@@ -18,10 +18,13 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 - `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (tail / spikes, `top_*`)
+- `docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json` (typical perf, `frame_p95_*`)
 
 Seed policy (how thresholds were derived):
 
 - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`
+- `docs/workstreams/perf-baselines/policies/ui-gallery-complex-typical.v1.json`
 
 ## P0 runbook (fast gate check)
 
@@ -60,6 +63,9 @@ Workflow when it fails:
 - Attribute the worst bundle:
   - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
   - `target/release/fretboard.exe diag stats <bundle.json> --sort cpu_cycles --top 30`
+  - Renderer stage timings (CPU-side) are also available in `diag stats`:
+    - `--sort ensure_pipelines|plan_compile|upload|record_passes|encoder_finish`
+    - The human summary prints `renderer p50/p95` and `renderer max` when the fields are present.
 
 If suite results look inconsistent (a script is fast when run alone but slow inside a suite), use
 suite normalization hooks to reduce cross-script state contamination:
@@ -67,11 +73,44 @@ suite normalization hooks to reduce cross-script state contamination:
 - `--suite-prewarm <script.json>...`: run once per launched process before the suite.
 - `--suite-prelude <script.json>...`: run before each measured script (and per-run when combined with
   `--suite-prelude-each-run`).
+- If the suite still drifts (or you hit a long-run crash), consider isolating scripts by relaunching
+  once per script:
+  - `--reuse-launch --reuse-launch-per-script --launch -- <cmd...>`
 
 Suggested defaults for UI-gallery perf work:
 
 - `--suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json`
-- `--suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json`
+- `--suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json`
+
+## Complex UI suite (typical perf)
+
+Use two separate suites depending on whether you are hunting tail spikes or checking “normal”
+frame-time distributions.
+
+Tail / spikes (worst-frame `top_*`):
+
+- `target/release/fretboard.exe diag perf ui-gallery-complex-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+Typical perf gate (bundle frame percentiles `frame_p95_*`):
+
+- `target/release/fretboard.exe diag perf ui-gallery-complex-typical --repeat 11 --warmup-frames 5 --reuse-launch --perf-threshold-agg p90 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --suite-prelude-each-run --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+Notes:
+
+- Use `--suite-prelude-each-run` for typical gates to reduce cross-run drift when using `--reuse-launch`.
+- Use `--repeat >= 11` when gating percentiles (with small repeat counts, `p90` collapses to `max`).
+
+To inspect “normal” (non-tail) performance, prefer frame percentiles from each evidence bundle:
+
+- `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
+  - Look at `time p50/p95 (us)` (these are per-frame percentiles within the bundle).
+- `target/fret-diag/check.perf_thresholds.json` also includes per-run `frame_p50_*` / `frame_p95_*`
+  fields, derived from the bundle stats, for quick scanning without opening each bundle.
+
+Recommended snapshot retention for typical-perf runs:
+
+- `FRET_DIAG_MAX_SNAPSHOTS=180`
+- `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=180`
 
 ## Failure triage (when a gate fails)
 

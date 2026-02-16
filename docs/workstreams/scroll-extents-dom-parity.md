@@ -5,6 +5,15 @@ date: 2026-02-01
 scope: fret-ui, scroll, layout, perf
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # Scroll Extents (DOM/GPUI Parity)
 
 This workstream proposes a more scalable scroll extent strategy for `fret-ui` that avoids deep

@@ -1,5 +1,6 @@
 mod image;
 mod mask;
+mod paint;
 mod path;
 mod quad;
 mod svg;

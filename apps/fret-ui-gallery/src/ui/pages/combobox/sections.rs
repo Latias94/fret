@@ -28,7 +28,7 @@ pub(super) fn demo(
             ]
         },
     );
-    helpers::section_card(cx, "Demo", demo_content)
+    demo_content
 }
 
 pub(super) fn custom_items_top(
@@ -58,10 +58,6 @@ pub(super) fn custom_items_top(
         move |cx| {
             vec![
                 custom_combo,
-                shadcn::typography::muted(
-                    cx,
-                    "Fret currently uses string value/label pairs; object-item mapping (`itemToStringValue`) is approximated by richer labels.",
-                ),
                 helpers::state_rows(
                     cx,
                     &models.custom_value,
@@ -71,7 +67,7 @@ pub(super) fn custom_items_top(
             ]
         },
     );
-    helpers::section_card(cx, "Custom Items", content)
+    content
 }
 
 pub(super) fn multiple_selection(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -79,7 +75,7 @@ pub(super) fn multiple_selection(cx: &mut ElementContext<'_, App>) -> AnyElement
         cx,
         "Upstream supports chips + multiple values. Current Fret `Combobox` API is single-select; keep this as an explicit parity gap marker.",
     );
-    helpers::section_card(cx, "Multiple Selection", content)
+    content
 }
 
 pub(super) fn basic(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
@@ -116,7 +112,7 @@ pub(super) fn basic(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -
             ]
         },
     );
-    helpers::section_card(cx, "Basic", content)
+    content
 }
 
 pub(super) fn long_list(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
@@ -150,10 +146,6 @@ pub(super) fn long_list(cx: &mut ElementContext<'_, App>, models: &ComboboxModel
         move |cx| {
             vec![
                 combo,
-                shadcn::typography::muted(
-                    cx,
-                    "This section exists to support long-list scroll regression gates (and future virtualization invariants).",
-                ),
                 helpers::state_rows(
                     cx,
                     &models.long_list_value,
@@ -163,7 +155,7 @@ pub(super) fn long_list(cx: &mut ElementContext<'_, App>, models: &ComboboxModel
             ]
         },
     );
-    helpers::section_card(cx, "Long List", content)
+    content
 }
 
 pub(super) fn multiple(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -171,7 +163,7 @@ pub(super) fn multiple(cx: &mut ElementContext<'_, App>) -> AnyElement {
         cx,
         "`multiple` + chips behavior is not exposed in current Fret `Combobox`; tracked as a follow-up API expansion.",
     );
-    helpers::section_card(cx, "Multiple", content)
+    content
 }
 
 pub(super) fn clear_button(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -179,7 +171,7 @@ pub(super) fn clear_button(cx: &mut ElementContext<'_, App>) -> AnyElement {
         cx,
         "Upstream has `showClear`. Current Fret API can be cleared by external state reset, but does not provide built-in clear trigger yet.",
     );
-    helpers::section_card(cx, "Clear Button", content)
+    content
 }
 
 pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
@@ -207,10 +199,6 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
         move |cx| {
             vec![
                 groups_combo,
-                shadcn::typography::muted(
-                    cx,
-                    "Grouped rows are approximated with prefix labels until dedicated group/separator APIs are introduced.",
-                ),
                 helpers::state_rows(
                     cx,
                     &models.groups_value,
@@ -220,7 +208,7 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
             ]
         },
     );
-    helpers::section_card(cx, "Groups", content)
+    content
 }
 
 pub(super) fn custom_items_example(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -228,7 +216,7 @@ pub(super) fn custom_items_example(cx: &mut ElementContext<'_, App>) -> AnyEleme
         cx,
         "Render-rich custom item surfaces are currently approximated at label level in this gallery.",
     );
-    helpers::section_card(cx, "Custom Items", content)
+    content
 }
 
 pub(super) fn invalid(
@@ -259,10 +247,6 @@ pub(super) fn invalid(
         move |cx| {
             vec![
                 invalid_combo,
-                shadcn::typography::muted(
-                    cx,
-                    "Invalid visual is currently approximated via destructive border style on trigger.",
-                ),
                 helpers::state_rows(
                     cx,
                     &models.invalid_value,
@@ -272,7 +256,7 @@ pub(super) fn invalid(
             ]
         },
     );
-    helpers::section_card(cx, "Invalid", content)
+    content
 }
 
 pub(super) fn disabled(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
@@ -304,7 +288,7 @@ pub(super) fn disabled(cx: &mut ElementContext<'_, App>, models: &ComboboxModels
             ]
         },
     );
-    helpers::section_card(cx, "Disabled", content)
+    content
 }
 
 pub(super) fn auto_highlight(
@@ -328,17 +312,9 @@ pub(super) fn auto_highlight(
             .gap(Space::N2)
             .items_start()
             .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        move |cx| {
-            vec![
-                auto_highlight_combo,
-                shadcn::typography::muted(
-                    cx,
-                    "Current behavior follows command palette defaults; explicit `autoHighlight` knob is not yet surfaced.",
-                ),
-            ]
-        },
+        move |_cx| vec![auto_highlight_combo],
     );
-    helpers::section_card(cx, "Auto Highlight", content)
+    content
 }
 
 pub(super) fn popup(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -346,7 +322,7 @@ pub(super) fn popup(cx: &mut ElementContext<'_, App>) -> AnyElement {
         cx,
         "Trigger-as-button popup recipe is not yet exposed as a dedicated API in Fret Combobox.",
     );
-    helpers::section_card(cx, "Popup", content)
+    content
 }
 
 pub(super) fn input_group(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
@@ -405,7 +381,7 @@ pub(super) fn input_group(cx: &mut ElementContext<'_, App>, models: &ComboboxMod
             ]
         },
     );
-    helpers::section_card(cx, "Input Group", content)
+    content
 }
 
 pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
@@ -445,57 +421,5 @@ pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> 
             ]
         },
     );
-    helpers::section_card(cx, "RTL", content)
-}
-
-pub(super) fn component_panel(
-    cx: &mut ElementContext<'_, App>,
-    demo: AnyElement,
-    custom_items_top: AnyElement,
-    multiple_selection: AnyElement,
-    basic: AnyElement,
-    long_list: AnyElement,
-    multiple: AnyElement,
-    clear_button: AnyElement,
-    groups: AnyElement,
-    custom_items_example: AnyElement,
-    invalid: AnyElement,
-    disabled: AnyElement,
-    auto_highlight: AnyElement,
-    popup: AnyElement,
-    input_group: AnyElement,
-    rtl: AnyElement,
-) -> AnyElement {
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Combobox docs flow; unsupported recipes are kept as explicit gap markers.",
-    );
-    let stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        move |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                custom_items_top,
-                multiple_selection,
-                basic,
-                long_list,
-                multiple,
-                clear_button,
-                groups,
-                custom_items_example,
-                invalid,
-                disabled,
-                auto_highlight,
-                popup,
-                input_group,
-                rtl,
-            ]
-        },
-    );
-    helpers::shell(cx, stack).test_id("ui-gallery-combobox-component")
+    content
 }

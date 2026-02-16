@@ -15,8 +15,9 @@ use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::PathCache;
 use fret_canvas::text::TextCache;
 use fret_core::{
-    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, SceneOp, StrokeStyle,
-    TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, SceneOp, StrokeCapV1,
+    StrokeJoinV1, StrokeStyleV2, TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    TextWrap,
 };
 
 use crate::ui::presenter::{EdgeMarker, EdgeMarkerKind, EdgeRouteKind};
@@ -251,8 +252,12 @@ impl CanvasPaintCache {
                     services,
                     cache_key,
                     &commands,
-                    PathStyle::Stroke(StrokeStyle {
+                    PathStyle::StrokeV2(StrokeStyleV2 {
                         width: Px(width_px / zoom),
+                        join: StrokeJoinV1::Round,
+                        cap: StrokeCapV1::Round,
+                        miter_limit: 4.0,
+                        dash: None,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -266,8 +271,12 @@ impl CanvasPaintCache {
                     services,
                     cache_key,
                     &commands,
-                    PathStyle::Stroke(StrokeStyle {
+                    PathStyle::StrokeV2(StrokeStyleV2 {
                         width: Px(width_px / zoom),
+                        join: StrokeJoinV1::Round,
+                        cap: StrokeCapV1::Round,
+                        miter_limit: 4.0,
+                        dash: None,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -291,8 +300,12 @@ impl CanvasPaintCache {
                     services,
                     cache_key,
                     &commands,
-                    PathStyle::Stroke(StrokeStyle {
+                    PathStyle::StrokeV2(StrokeStyleV2 {
                         width: Px(width_px / zoom),
+                        join: StrokeJoinV1::Round,
+                        cap: StrokeCapV1::Round,
+                        miter_limit: 4.0,
+                        dash: None,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -332,8 +345,12 @@ impl CanvasPaintCache {
             services,
             cache_key,
             commands,
-            PathStyle::Stroke(StrokeStyle {
+            PathStyle::StrokeV2(StrokeStyleV2 {
                 width: Px(width_px / zoom),
+                join: StrokeJoinV1::Round,
+                cap: StrokeCapV1::Round,
+                miter_limit: 4.0,
+                dash: None,
             }),
             PathConstraints {
                 scale_factor: scale_factor * zoom,

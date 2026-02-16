@@ -1,5 +1,14 @@
 # Creative Recipes (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Magic UI: https://github.com/magicuidesign/magicui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This workstream turns the “creative visuals” ADR set into an implementable, ecosystem-friendly
 surface without turning the kernel into a shader zoo.
 
@@ -50,7 +59,7 @@ fallbacks and diagnostics.
 
 Avoid a single mega-branch. Split by “high-conflict kernel churn” vs “ecosystem surface”.
 
-Suggested worktrees under `F:\SourceCodes\Rust\fret-worktrees\`:
+Suggested worktrees under `fret-worktrees/` (a sibling directory to this repo):
 
 - `ws/creative-recipes-foundation`:
   - only `ecosystem/fret-ui-kit` recipe trait + reporting + catalog scaffolding

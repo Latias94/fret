@@ -278,6 +278,44 @@ fn paint_source_does_not_materialize_whole_buffer_string() {
 }
 
 #[test]
+fn a11y_source_does_not_materialize_whole_buffer_string() {
+    // Regression guard: the editor a11y composed-window path should never call
+    // `TextBuffer::text_string()`. Materializing the entire rope would scale with document size
+    // and defeat windowed platform text input.
+    const SRC: &str = include_str!("../a11y/mod.rs");
+    assert!(
+        !SRC.contains(".text_string("),
+        "a11y/mod.rs must not call TextBuffer::text_string()"
+    );
+}
+
+#[test]
+fn a11y_composed_window_is_bounded_for_large_documents() {
+    // Regression guard: the composed a11y window must remain bounded even for large documents.
+    // This defends against accidental full-document materialization during platform queries.
+    let mut text = String::with_capacity(300_000);
+    for _ in 0..50_000 {
+        text.push_str("abcd\n");
+    }
+    assert!(text.len() > 200_000);
+
+    let handle = CodeEditorHandle::new(text.clone());
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(text.len() / 2);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 8);
+    assert!(
+        value.len() < text.len() / 10,
+        "expected composed a11y value to be a bounded window, not a full-document snapshot"
+    );
+    assert!(
+        value.len() < 20_000,
+        "expected composed a11y value to remain bounded by window budgets"
+    );
+}
+
+#[test]
 fn drag_autoscroll_delta_y_is_zero_inside_safe_band() {
     let delta = drag_autoscroll_delta_y(Px(100.0), Px(30.0), Px(50.0));
     assert_eq!(delta, Px(0.0));
@@ -848,6 +886,45 @@ fn row_text_cache_stats_tracks_hits_and_misses() {
 }
 
 #[test]
+fn code_wrap_policy_change_invalidates_row_text_cache() {
+    let handle = CodeEditorHandle::new("ab_cd_ef");
+    handle.set_soft_wrap_cols(Some(4));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Conservative,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 8);
+        assert_eq!(range, 0..4);
+        assert_eq!(
+            text.as_ref(),
+            "ab_c",
+            "conservative wrap falls back to grapheme boundaries (no identifier knob)"
+        );
+    }
+
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 8);
+        assert_eq!(range, 0..3);
+        assert_eq!(
+            text.as_ref(),
+            "ab_",
+            "balanced wrap prefers breaking after '_' when near the wrap width"
+        );
+    }
+}
+
+#[test]
 fn ctrl_page_down_bubbles_and_keeps_preedit() {
     let handle = CodeEditorHandle::new("hello\nworld");
     let preedit = PreeditState {
@@ -1008,6 +1085,43 @@ fn caret_rect_offsets_for_preedit_cursor() {
 
     assert_eq!(rect.origin.x, Px(20.0), "2 cols * 10px");
     assert_eq!(rect.origin.y, Px(0.0));
+}
+
+#[test]
+fn ime_cursor_area_matches_caret_rect_for_selection_under_preedit_and_wrap() {
+    let handle = CodeEditorHandle::new("a馃榾bcd");
+    handle.set_soft_wrap_cols(Some(2));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: "a馃榾".len(),
+            focus: "a馃榾".len(),
+        };
+        st.preedit = Some(PreeditState {
+            text: "XY".to_string(),
+            cursor: Some((1, 1)),
+        });
+    }
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(120.0)),
+    );
+
+    let mut st = handle.state.borrow_mut();
+    let expected =
+        caret_rect_for_selection(&mut st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
+    let actual =
+        ime_cursor_area_for_text_input_region(&mut st, Px(20.0), Px(10.0), bounds, &scroll)
+            .expect("ime cursor area");
+    assert_eq!(actual, expected);
 }
 
 #[test]
@@ -1235,6 +1349,409 @@ fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
 }
 
 #[test]
+fn platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line() {
+    // Staging contract: selection-replacing composition ranges that span a newline in the
+    // platform-facing composed window are clamped to the anchor logical line in the view model.
+    // This keeps IME replacement deterministic while we stage multi-line composition support.
+    let handle = CodeEditorHandle::new("ab\ncd");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(0);
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+    st.preedit = None;
+    st.preedit_replace_range = None;
+    st.preedit_saved_selection = None;
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "ab\ncd");
+
+    // Range 1..4 covers "b\nc" in UTF-16 (ASCII here), i.e. it spans the newline boundary.
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 4),
+        "X",
+        Some(fret_runtime::Utf16Range::new(1, 2)),
+    );
+    assert!(did);
+    assert_eq!(
+        st.buffer.text_string(),
+        "ab\ncd",
+        "base buffer stays unchanged"
+    );
+
+    // Clamp to the end of the first line (newline byte index == 2), replacing only "b".
+    assert_eq!(st.preedit_replace_range, Some(1..2));
+    assert_eq!(
+        st.preedit.as_ref().map(|p| p.text.as_str()),
+        Some("X"),
+        "composing text remains preedit-only"
+    );
+    assert_eq!(st.selection.caret(), 1);
+
+    let (next_value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(next_value.as_str(), "aX\ncd");
+    assert_eq!(composition, Some((1, 2)));
+    assert_eq!(selection, Some((1, 2)));
+}
+
+#[test]
+fn platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap() {
+    let text = "a😀bcdefghij";
+    let handle = CodeEditorHandle::new(text);
+    handle.set_soft_wrap_cols(Some(6));
+
+    let replace_start = text.find('b').expect("expected 'b' in text");
+    let replace_end = replace_start.saturating_add("bc".len()).min(text.len());
+    handle.set_selection(Selection {
+        anchor: replace_start,
+        focus: replace_end,
+    });
+    handle.debug_platform_set_marked_text_for_selection("XY");
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let row_h = Px(20.0);
+    let cell_w = Px(10.0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let after_preedit = value
+        .find("XY")
+        .map(|start| start + "XY".len())
+        .expect("expected preedit text in composed a11y value");
+
+    let end_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        after_preedit,
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    let (_, end_byte) = fret_core::utf::utf16_range_to_utf8_byte_range(
+        value.as_str(),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+    );
+    let end_byte = u32::try_from(end_byte.min(value.len())).unwrap_or(u32::MAX);
+
+    let buf_byte = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, end_byte);
+
+    // Seed geometry cache for the row so platform queries exercise the cached caret-stop path.
+    let pt = st.display_map.byte_to_display_point(&st.buffer, buf_byte);
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, pt.row, 1024);
+
+    let mut caret_stops: Vec<(usize, Px)> = Vec::with_capacity(row_text.len().saturating_add(2));
+    caret_stops.push((0, Px(0.0)));
+    for (i, _) in row_text.char_indices() {
+        caret_stops.push((i, Px(i as f32 * cell_w.0)));
+    }
+    caret_stops.push((row_text.len(), Px(row_text.len() as f32 * cell_w.0)));
+    caret_stops.sort_by_key(|(i, _)| *i);
+    caret_stops.dedup_by_key(|(i, _)| *i);
+
+    st.row_geom_cache.insert(
+        pt.row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: Some(Px(0.0)),
+                caret_rect_height: Some(row_h),
+                has_preedit: preedit_range.is_some(),
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    // BoundsForRange-like path: map a11y value UTF-16 -> a11y UTF-8 -> buffer byte -> caret rect.
+    let rect =
+        geom::caret_rect_for_buffer_byte_boundary(&st, row_h, cell_w, bounds, &scroll, buf_byte)
+            .expect("caret rect for buffer byte boundary");
+
+    // CharacterIndexForPoint-like path: hit test back to a UTF-16 index and ensure it round-trips.
+    let point = Point::new(
+        Px(rect.origin.x.0 + 1.0),
+        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+    );
+    let local_y = (point.y.0 - bounds.origin.y.0 + scroll.offset().y.0).max(0.0);
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+
+    let hit_byte = geom::caret_for_pointer(&mut st, row, bounds, point, cell_w);
+    assert_eq!(
+        hit_byte, buf_byte,
+        "expected hit-testing inside the caret rect to map back to the same buffer byte boundary"
+    );
+
+    let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, hit_byte);
+    let got_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(a11y_offset).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    assert_eq!(got_utf16, end_utf16);
+}
+
+#[test]
+fn platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap() {
+    let text = "a😀bcdefghij";
+    let handle = CodeEditorHandle::new(text);
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_compose_inline_preedit(true);
+
+    let caret = text.find('b').expect("expected 'b' in text");
+    handle.set_caret(caret);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let row_h = Px(20.0);
+    let cell_w = Px(10.0);
+
+    let mut st = handle.state.borrow_mut();
+    assert!(
+        st.compose_inline_preedit,
+        "expected inline preedit composition enabled"
+    );
+    assert!(
+        st.preedit_replace_range
+            .as_ref()
+            .map_or(true, |r| r.is_empty()),
+        "expected non-replacing preedit so a11y uses the composed display window"
+    );
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(
+        value.contains("XY"),
+        "expected preedit injection in a11y value"
+    );
+
+    // Pick a boundary that is after the injected preedit segment so the mapping must account
+    // for the global offset shift (bytes after caret include the preedit string).
+    let after_target = value
+        .find('h')
+        .map(|start| start + 'h'.len_utf8())
+        .expect("expected 'h' in composed a11y value");
+
+    let end_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        after_target,
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    let (_, end_byte) = fret_core::utf::utf16_range_to_utf8_byte_range(
+        value.as_str(),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+    );
+    let end_byte = u32::try_from(end_byte.min(value.len())).unwrap_or(u32::MAX);
+
+    let buf_byte = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, end_byte);
+    let expected_buf_byte = text
+        .find('h')
+        .map(|start| start + 'h'.len_utf8())
+        .expect("expected 'h' in base buffer text");
+    assert_eq!(
+        buf_byte, expected_buf_byte,
+        "expected mapping from composed a11y offset to land on the matching buffer boundary"
+    );
+
+    // Seed geometry cache for the row so platform queries exercise the cached caret-stop path.
+    let pt = st.display_map.byte_to_display_point(&st.buffer, buf_byte);
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, pt.row, 1024);
+
+    let mut caret_stops: Vec<(usize, Px)> = Vec::with_capacity(row_text.len().saturating_add(2));
+    caret_stops.push((0, Px(0.0)));
+    for (i, _) in row_text.char_indices() {
+        caret_stops.push((i, Px(i as f32 * cell_w.0)));
+    }
+    caret_stops.push((row_text.len(), Px(row_text.len() as f32 * cell_w.0)));
+    caret_stops.sort_by_key(|(i, _)| *i);
+    caret_stops.dedup_by_key(|(i, _)| *i);
+
+    st.row_geom_cache.insert(
+        pt.row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: Some(Px(0.0)),
+                caret_rect_height: Some(row_h),
+                has_preedit: preedit_range.is_some(),
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    // BoundsForRange-like path: map a11y value UTF-16 -> a11y UTF-8 -> buffer byte -> caret rect.
+    let rect =
+        geom::caret_rect_for_buffer_byte_boundary(&st, row_h, cell_w, bounds, &scroll, buf_byte)
+            .expect("caret rect for buffer byte boundary");
+
+    // CharacterIndexForPoint-like path: hit test back to a UTF-16 index and ensure it round-trips.
+    let point = Point::new(
+        Px(rect.origin.x.0 + 1.0),
+        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+    );
+    let local_y = (point.y.0 - bounds.origin.y.0 + scroll.offset().y.0).max(0.0);
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+
+    let hit_byte = geom::caret_for_pointer(&mut st, row, bounds, point, cell_w);
+    assert_eq!(
+        hit_byte, buf_byte,
+        "expected hit-testing inside the caret rect to map back to the same buffer byte boundary"
+    );
+
+    let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, hit_byte);
+    let got_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(a11y_offset).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    assert_eq!(got_utf16, end_utf16);
+}
+
+#[test]
+fn platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap()
+ {
+    let text = "ab_cd_efghij😀kl";
+    let handle = CodeEditorHandle::new(text);
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_compose_inline_preedit(true);
+    handle.set_allow_decorations_under_inline_preedit(true);
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 2..5,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 1,
+            text: Arc::<str>::from("<inlay>"),
+        }],
+    );
+
+    let caret = text.find('e').expect("expected 'e' in text");
+    handle.set_caret(caret);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let row_h = Px(20.0);
+    let cell_w = Px(10.0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(value.contains("<inlay>"));
+    assert!(value.contains("…"));
+    assert!(value.contains("XY"));
+
+    let buf_byte = text
+        .find('h')
+        .map(|start| start + 'h'.len_utf8())
+        .expect("expected 'h' in base buffer text");
+
+    let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, buf_byte);
+    let end_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(a11y_offset).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    let (_, end_byte) = fret_core::utf::utf16_range_to_utf8_byte_range(
+        value.as_str(),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+    );
+    let end_byte = u32::try_from(end_byte.min(value.len())).unwrap_or(u32::MAX);
+
+    let mapped_buf = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, end_byte);
+    assert_eq!(
+        mapped_buf, buf_byte,
+        "expected composed a11y offset mapping to round-trip for buffer boundaries beyond folds/inlays/preedit"
+    );
+
+    // Seed geometry cache for the row so platform queries exercise the cached caret-stop path.
+    let pt = st.display_map.byte_to_display_point(&st.buffer, buf_byte);
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, pt.row, 1024);
+
+    let mut caret_stops: Vec<(usize, Px)> = Vec::with_capacity(row_text.len().saturating_add(2));
+    caret_stops.push((0, Px(0.0)));
+    for (i, _) in row_text.char_indices() {
+        caret_stops.push((i, Px(i as f32 * cell_w.0)));
+    }
+    caret_stops.push((row_text.len(), Px(row_text.len() as f32 * cell_w.0)));
+    caret_stops.sort_by_key(|(i, _)| *i);
+    caret_stops.dedup_by_key(|(i, _)| *i);
+
+    st.row_geom_cache.insert(
+        pt.row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: Some(Px(0.0)),
+                caret_rect_height: Some(row_h),
+                has_preedit: preedit_range.is_some(),
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let rect =
+        geom::caret_rect_for_buffer_byte_boundary(&st, row_h, cell_w, bounds, &scroll, buf_byte)
+            .expect("caret rect for buffer byte boundary");
+    let point = Point::new(
+        Px(rect.origin.x.0 + 1.0),
+        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+    );
+    let local_y = (point.y.0 - bounds.origin.y.0 + scroll.offset().y.0).max(0.0);
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+
+    let hit_byte = geom::caret_for_pointer(&mut st, row, bounds, point, cell_w);
+    assert_eq!(hit_byte, buf_byte);
+
+    let got_a11y = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, hit_byte);
+    let got_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(got_a11y).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    assert_eq!(got_utf16, end_utf16);
+}
+
+#[test]
 fn font_stack_key_change_clears_geometry_caches() {
     let handle = CodeEditorHandle::new("hello");
     let mut st = handle.state.borrow_mut();
@@ -1367,6 +1884,499 @@ fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
     assert_eq!(
         caret, 1,
         "expected fallback monospace hit-test (x=15 -> col 1)"
+    );
+}
+
+#[test]
+fn caret_for_pointer_snaps_inside_inlay_only_row_to_insertion_point_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(3));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 3,
+            text: Arc::<str>::from("X"),
+        }],
+    );
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+    let mut st = handle.state.borrow_mut();
+
+    // Ensure we have an "inlay-only" row: base slice empty, but composed text non-empty.
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 1, 64);
+    assert_eq!(
+        row_range,
+        st.display_map.display_row_byte_range(&st.buffer, 1),
+        "cached row text range must match the display map"
+    );
+    assert_eq!(row_text.as_ref(), "X");
+    assert!(fold_map.is_some());
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        1,
+        (
+            RowGeom {
+                row_range: row_range.clone(),
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    // Pointer hit-test should clamp inside the insertion span to the insertion point in the base
+    // buffer.
+    let caret = caret_for_pointer(
+        &mut st,
+        1,
+        bounds,
+        fret_core::Point::new(Px(9.0), Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(caret, 3);
+}
+
+#[test]
+fn caret_for_pointer_snaps_inside_preedit_replacement_span_under_wrap_and_code_wrap_policy() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: "left->".len(),
+        focus: "left->right".len(),
+    };
+    st.preedit = None;
+    st.preedit_replace_range = None;
+    st.preedit_saved_selection = None;
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), st.buffer.text_string());
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new("left->".len() as u32, "left->right".len() as u32),
+        "X",
+        Some(fret_runtime::Utf16Range::new(
+            "left->".len() as u32,
+            ("left->".len() + 1) as u32,
+        )),
+    );
+    assert!(did);
+    assert!(st.preedit.is_some());
+    assert!(st.preedit_replace_range.is_some());
+
+    let caret = st.selection.caret();
+    let row = st.display_map.byte_to_display_point(&st.buffer, caret).row;
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, row, 64);
+    let preedit_range = preedit_range.expect("expected a visible preedit range on the caret row");
+    assert!(row_text.as_ref().contains('X'));
+    assert!(fold_map.is_some());
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        row,
+        (
+            RowGeom {
+                row_range: row_range.clone(),
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: true,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let x = Px(preedit_range.start as f32 * 10.0);
+    let caret = caret_for_pointer(
+        &mut st,
+        row,
+        bounds,
+        fret_core::Point::new(x, Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(caret, "left->".len());
+}
+
+#[test]
+fn shift_click_extends_selection_to_inlay_insertion_point_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(3));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 3,
+            text: Arc::<str>::from("X"),
+        }],
+    );
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    let row = 1;
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, row, 64);
+    assert_eq!(row_text.as_ref(), "X");
+    assert!(fold_map.is_some());
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let caret = caret_for_pointer(
+        &mut st,
+        row,
+        bounds,
+        fret_core::Point::new(Px(9.0), Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(
+        caret, 3,
+        "clicking inside the inlay must map to its insertion point"
+    );
+
+    input::apply_pointer_down_selection(&mut st, row, caret, 1, true);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 0,
+            focus: 3
+        }
+    );
+}
+
+#[test]
+fn shift_drag_preserves_anchor_when_dragging_across_fold_placeholder_mapping() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(2));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..5,
+            placeholder: Arc::<str>::from("."),
+        }],
+    );
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+    let mut st = handle.state.borrow_mut();
+    assert_eq!(st.display_map.row_count(), 2);
+    st.selection = Selection {
+        anchor: 5,
+        focus: 5,
+    };
+
+    // Seed geometry for the first wrapped row ("a.") so caret_for_pointer goes through fold_map.
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 0, 64);
+    assert_eq!(row_text.as_ref(), "a.");
+    assert!(fold_map.is_some());
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        0,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let caret_on_placeholder = caret_for_pointer(
+        &mut st,
+        0,
+        bounds,
+        fret_core::Point::new(Px(10.0), Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(caret_on_placeholder, 1);
+
+    input::apply_pointer_down_selection(&mut st, 0, caret_on_placeholder, 1, true);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 5,
+            focus: 1
+        }
+    );
+
+    // Simulate dragging to the start of the next wrapped row ("f").
+    let caret_next_row = st
+        .display_map
+        .display_point_to_byte(&st.buffer, DisplayPoint::new(1, 0));
+    st.selection.focus = caret_next_row;
+    assert_eq!(st.selection.anchor, 5);
+}
+
+#[test]
+fn pointer_down_cancels_preedit_replacement_and_snaps_to_replace_start() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+    st.preedit = None;
+    st.preedit_replace_range = None;
+    st.preedit_saved_selection = None;
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let start = "left->".len();
+    let end = "left->right".len();
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(start as u32, end as u32),
+        "X",
+        Some(fret_runtime::Utf16Range::new(
+            start as u32,
+            (start + 1) as u32,
+        )),
+    );
+    assert!(did);
+    assert!(st.preedit.is_some());
+    assert!(st.preedit_replace_range.is_some());
+
+    let caret = st.selection.caret();
+    let row = st.display_map.byte_to_display_point(&st.buffer, caret).row;
+    let (_row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, row, 64);
+    let preedit_range = preedit_range.expect("expected a visible preedit range on the caret row");
+    assert!(row_text.as_ref().contains('X'));
+    assert!(fold_map.is_some());
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    let row_range = st.display_map.display_row_byte_range(&st.buffer, row);
+    st.row_geom_cache.insert(
+        row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: true,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let caret_on_preedit = caret_for_pointer(
+        &mut st,
+        row,
+        bounds,
+        fret_core::Point::new(Px(preedit_range.start as f32 * 10.0), Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(caret_on_preedit, start);
+
+    input::apply_pointer_down_selection(&mut st, row, caret_on_preedit, 1, false);
+    assert!(st.preedit.is_none());
+    assert!(st.preedit_replace_range.is_none());
+    assert!(st.preedit_saved_selection.is_none());
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: start,
+            focus: start
+        }
+    );
+}
+
+#[test]
+fn triple_click_selects_logical_line_on_inlay_only_row_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef\nzzz");
+    handle.set_soft_wrap_cols(Some(3));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 3,
+            text: Arc::<str>::from("X"),
+        }],
+    );
+
+    let mut st = handle.state.borrow_mut();
+    assert_eq!(st.display_map.row_count(), 4);
+
+    let (row_range, row_text, _fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 1, 64);
+    assert_eq!(row_range, 3..3);
+    assert_eq!(row_text.as_ref(), "X");
+
+    input::apply_pointer_down_selection(&mut st, 1, 0, 3, false);
+
+    let expected = st
+        .buffer
+        .line_byte_range_including_newline(0)
+        .expect("line 0");
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: expected.start,
+            focus: expected.end,
+        }
+    );
+}
+
+#[test]
+fn triple_click_cancels_preedit_replacement_and_selects_logical_line() {
+    let handle = CodeEditorHandle::new("left->right->tail\nzzz");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+    st.preedit = None;
+    st.preedit_replace_range = None;
+    st.preedit_saved_selection = None;
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let start = "left->".len();
+    let end = "left->right".len();
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(start as u32, end as u32),
+        "X",
+        Some(fret_runtime::Utf16Range::new(
+            start as u32,
+            (start + 1) as u32,
+        )),
+    );
+    assert!(did);
+    assert!(st.preedit.is_some());
+    assert!(st.preedit_replace_range.is_some());
+
+    let caret = st.selection.caret();
+    let row = st.display_map.byte_to_display_point(&st.buffer, caret).row;
+
+    input::apply_pointer_down_selection(&mut st, row, caret, 3, false);
+    assert!(st.preedit.is_none());
+    assert!(st.preedit_replace_range.is_none());
+    assert!(st.preedit_saved_selection.is_none());
+
+    let expected = st
+        .buffer
+        .line_byte_range_including_newline(0)
+        .expect("line 0");
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: expected.start,
+            focus: expected.end,
+        }
     );
 }
 
@@ -1989,6 +2999,171 @@ fn pointer_down_double_click_selects_word_and_cancels_preedit() {
 }
 
 #[test]
+fn pointer_down_double_click_selects_word_on_inlay_only_row_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(3));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 3,
+            text: Arc::<str>::from("X"),
+        }],
+    );
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    let mut st = handle.state.borrow_mut();
+
+    let row = 1;
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, row, 64);
+    assert_eq!(row_text.as_ref(), "X");
+    assert!(fold_map.is_some());
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let caret = caret_for_pointer(
+        &mut st,
+        row,
+        bounds,
+        fret_core::Point::new(Px(9.0), Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(caret, 3);
+
+    let (expect_start, expect_end) =
+        select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
+    input::apply_pointer_down_selection(&mut st, row, caret, 2, false);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: expect_start,
+            focus: expect_end,
+        }
+    );
+}
+
+#[test]
+fn pointer_down_double_click_cancels_preedit_replacement_and_selects_word() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+    st.preedit = None;
+    st.preedit_replace_range = None;
+    st.preedit_saved_selection = None;
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let start = "left->".len();
+    let end = "left->right".len();
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(start as u32, end as u32),
+        "X",
+        Some(fret_runtime::Utf16Range::new(
+            start as u32,
+            (start + 1) as u32,
+        )),
+    );
+    assert!(did);
+    assert!(st.preedit.is_some());
+    assert!(st.preedit_replace_range.is_some());
+
+    let row = st.display_map.byte_to_display_point(&st.buffer, start).row;
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, row, 64);
+    let preedit_range = preedit_range.expect("expected visible preedit on caret row");
+    assert!(row_text.as_ref().contains('X'));
+    assert!(fold_map.is_some());
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: true,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let x = Px(preedit_range.start as f32 * 10.0);
+    let caret = caret_for_pointer(
+        &mut st,
+        row,
+        bounds,
+        fret_core::Point::new(x, Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(caret, start);
+
+    let (expect_start, expect_end) =
+        select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
+    input::apply_pointer_down_selection(&mut st, row, caret, 2, false);
+    assert!(st.preedit.is_none());
+    assert!(st.preedit_replace_range.is_none());
+    assert!(st.preedit_saved_selection.is_none());
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: expect_start,
+            focus: expect_end,
+        }
+    );
+}
+
+#[test]
 fn pointer_down_triple_click_selects_logical_line_including_newline_and_cancels_preedit() {
     let handle = CodeEditorHandle::new("abc\ndef\n");
     {
@@ -2063,6 +3238,48 @@ fn move_caret_vertical_clamps_in_display_row_space_when_wrapped() {
     // Row 2 is the last display row; another Down should clamp.
     input::move_caret_vertical(&mut st, 1, false, Px(10.0));
     assert_eq!(st.selection.caret(), 5);
+}
+
+#[test]
+fn move_caret_vertical_steps_through_code_wrap_policy_rows() {
+    let handle = CodeEditorHandle::new("left->right->tail\nzzz");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    // Expect the first logical line to be split into three wrapped display rows.
+    let rows: Vec<String> = (0..st.display_map.row_count())
+        .map(|row| {
+            let range = st.display_map.display_row_byte_range(&st.buffer, row);
+            st.buffer.slice_to_string(range).unwrap_or_default()
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            "left->".to_string(),
+            "right".to_string(),
+            "->tail".to_string(),
+            "zzz".to_string()
+        ]
+    );
+
+    // Down should walk display rows (not logical lines) until it reaches the next line.
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
+    assert_eq!(st.selection.caret(), "left->".len());
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
+    assert_eq!(st.selection.caret(), "left->right".len());
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
+    assert_eq!(st.selection.caret(), "left->right->tail\n".len());
 }
 
 #[test]
@@ -2170,6 +3387,279 @@ fn home_end_move_within_wrapped_display_rows() {
     };
     input::move_caret_home_end(&mut st, false, true, false);
     assert_eq!(st.selection.caret(), st.buffer.len_bytes());
+}
+
+#[test]
+fn shift_home_end_extends_selection_within_wrapped_display_rows() {
+    let handle = CodeEditorHandle::new("abcd\nef");
+    handle.set_soft_wrap_cols(Some(2));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 3,
+        focus: 3,
+    };
+
+    input::move_caret_home_end(&mut st, true, false, true);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 3,
+            focus: 2,
+        }
+    );
+
+    st.selection = Selection {
+        anchor: 3,
+        focus: 3,
+    };
+    input::move_caret_home_end(&mut st, false, false, true);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 3,
+            focus: 4,
+        }
+    );
+}
+
+#[test]
+fn shift_vertical_extends_selection_in_display_row_space_when_wrapped() {
+    let handle = CodeEditorHandle::new("abcd\nef");
+    handle.set_soft_wrap_cols(Some(2));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    input::move_caret_vertical(&mut st, 1, true, Px(10.0));
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 0,
+            focus: 2,
+        }
+    );
+
+    input::move_caret_vertical(&mut st, 1, true, Px(10.0));
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 0,
+            focus: 5,
+        }
+    );
+}
+
+#[test]
+fn home_end_respects_code_wrap_policy_row_boundaries() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let mut st = handle.state.borrow_mut();
+    // Place the caret inside the "right" segment.
+    st.selection = Selection {
+        anchor: "left->r".len(),
+        focus: "left->r".len(),
+    };
+
+    // Sanity: End should produce a caret in the same display-map space as the policy segmentation.
+    input::move_caret_home_end(&mut st, false, false, false);
+
+    let mut rows: Vec<String> = Vec::new();
+    for row in 0..st.display_map.row_count() {
+        let range = st.display_map.display_row_byte_range(&st.buffer, row);
+        rows.push(st.buffer.slice_to_string(range).unwrap_or_default());
+    }
+    assert_eq!(rows.join(""), st.buffer.text_string());
+
+    for w in rows.windows(2) {
+        assert!(
+            !(w[0].ends_with('-') && w[1].starts_with('>')),
+            "expected `->` to not be split across a wrap boundary: rows={rows:?}"
+        );
+    }
+}
+
+#[test]
+fn set_code_wrap_policy_clears_row_geom_cache_when_wrapped() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.row_geom_cache.insert(
+            0,
+            (
+                geom::RowGeom {
+                    row_range: 0.."left->".len(),
+                    key: row_geom_key_for_tests(&Arc::from("left->")),
+                    caret_stops: vec![(0, Px(0.0))],
+                    fold_map: None,
+                    caret_rect_top: None,
+                    caret_rect_height: None,
+                    has_preedit: false,
+                    preedit: None,
+                },
+                0,
+            ),
+        );
+        assert!(!st.row_geom_cache.is_empty());
+    }
+
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Conservative,
+        ),
+    ));
+
+    let st = handle.state.borrow();
+    assert!(st.row_geom_cache.is_empty());
+    assert_eq!(st.row_geom_cache_wrap_cols, st.display_wrap_cols);
+}
+
+#[test]
+fn move_caret_vertical_uses_row_fold_map_for_inlay_insertions_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(3));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 3,
+            text: Arc::<str>::from("X"),
+        }],
+    );
+
+    let mut st = handle.state.borrow_mut();
+    assert_eq!(st.display_map.row_count(), 3);
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    // Prefer a stable target x so the vertical move hit-tests a specific caret stop.
+    st.caret_preferred_x = Some(Px(10.0));
+
+    // Seed geometry for the next row ("X") so the move path uses the geometry cache.
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 1, 64);
+    assert_eq!(
+        row_range,
+        st.display_map.display_row_byte_range(&st.buffer, 1),
+        "cached row text range must match the display map"
+    );
+    assert_eq!(row_text.as_ref(), "X");
+    assert!(
+        fold_map.is_some(),
+        "expected an insertion span for the inlay"
+    );
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        1,
+        (
+            RowGeom {
+                row_range: row_range.clone(),
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    input::move_caret_vertical(&mut st, 1, false, Px(8.0));
+    assert_eq!(
+        st.selection.caret(),
+        3,
+        "expected caret to snap to the inlay insertion point (before 'd')"
+    );
+}
+
+#[test]
+fn move_caret_vertical_uses_row_fold_map_for_fold_placeholders_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(2));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..5,
+            placeholder: Arc::<str>::from("."),
+        }],
+    );
+
+    let mut st = handle.state.borrow_mut();
+    assert_eq!(st.display_map.row_count(), 2);
+
+    // Seed geometry for the first wrapped row ("a.") so the vertical move path uses the cached
+    // caret stop mapping (which must respect fold placeholders).
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 0, 64);
+    assert_eq!(
+        row_range,
+        st.display_map.display_row_byte_range(&st.buffer, 0),
+        "cached row text range must match the display map"
+    );
+    assert_eq!(row_text.as_ref(), "a.");
+    assert!(fold_map.is_some());
+
+    // Start on the second wrapped row and move up. The requested x targets the placeholder in the
+    // first wrapped row, which must snap to the fold start in the base buffer.
+    st.selection = Selection {
+        anchor: 5,
+        focus: 5,
+    };
+    st.caret_preferred_x = Some(Px(10.0));
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        0,
+        (
+            RowGeom {
+                row_range: row_range.clone(),
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    input::move_caret_vertical(&mut st, -1, false, Px(8.0));
+    assert_eq!(
+        st.selection.caret(),
+        1,
+        "expected caret to snap to the fold start when targeting the placeholder"
+    );
 }
 
 #[test]

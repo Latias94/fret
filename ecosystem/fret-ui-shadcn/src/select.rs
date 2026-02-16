@@ -2,12 +2,12 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollAxis,
-    ScrollProps, SemanticsProps, StackProps, WheelRegionProps,
+    ScrollProps, SemanticsProps, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -37,6 +37,7 @@ use fret_ui_kit::{
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -50,6 +51,13 @@ struct SelectOpenChangeCallbackState {
     initialized: bool,
     last_open: bool,
     pending_complete: Option<bool>,
+}
+
+#[derive(Debug, Default)]
+struct SelectScrollArrowAutoScrollState {
+    token: Option<TimerToken>,
+    last_pos: Option<Point>,
+    hovered: bool,
 }
 
 fn select_open_change_events(
@@ -100,6 +108,7 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     theme: Theme,
     item_step: Px,
     predicted_has_scroll: bool,
+    allow_hover_scroll_arrows: bool,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
@@ -110,26 +119,25 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
     should_focus_selected_item: impl Fn() -> bool + Clone + 'static,
     on_focused_selected_item: impl Fn() + Clone + 'static,
+    clear_active_row_on_scroll_arrow_hover: impl Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx)
+    + Clone
+    + 'static,
     content: C,
 ) -> AnyElement
 where
     C: FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
-    cx.flex(
-        FlexProps {
+    cx.container(
+        ContainerProps {
             layout: {
                 let mut layout = LayoutStyle::default();
+                layout.position = PositionStyle::Relative;
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
                 layout
             },
-            direction: fret_core::Axis::Vertical,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
-            wrap: false,
+            ..Default::default()
         },
         move |cx| {
             let handle = scroll_handle.clone();
@@ -145,9 +153,9 @@ where
 
             let max = handle.max_offset();
             let offset = handle.offset();
-            // Guard against fractional max offsets (layout rounding) causing scroll affordances to
-            // appear when content visually fits.
-            let scroll_epsilon = Px(0.5);
+            // Guard against fractional offsets (layout rounding) causing scroll affordances to
+            // flicker when content visually fits.
+            let scroll_epsilon = Px(1.0);
             let has_scroll = predicted_has_scroll || max.y.0 > scroll_epsilon.0;
             let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
             // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
@@ -163,22 +171,29 @@ where
                 );
             }
 
-            set_scroll_up_visible(show_up);
+            // Base UI scroll arrows are absolutely positioned and do not affect popup flow layout.
+            // Keep item-aligned state from assuming that scroll-arrow visibility shifts the viewport.
+            set_scroll_up_visible(false);
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
                                  test_id: &'static str,
                                  dir: f32,
-                                 visible: bool| {
+                                 visible: bool,
+                                 inset: InsetStyle| {
+                if !visible {
+                    return None;
+                }
                 let handle_for_pressable = handle.clone();
                 let handle_for_wheel = handle.clone();
                 let theme = theme.clone();
+                let clear_active_for_hover = clear_active_row_on_scroll_arrow_hover.clone();
                 let pressable = cx.pressable(
                     PressableProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
-                            layout.size.height = Length::Px(scroll_button_h);
+                            layout.size.height = Length::Fill;
                             layout
                         },
                         enabled: true,
@@ -191,6 +206,14 @@ where
                         ..Default::default()
                     },
                     move |cx, _st| {
+                        let id = cx.root_id();
+                        let auto_scroll_state: Arc<Mutex<SelectScrollArrowAutoScrollState>> =
+                            cx.with_state_for(
+                                id,
+                                || Arc::new(Mutex::new(SelectScrollArrowAutoScrollState::default())),
+                                |s| s.clone(),
+                            );
+
                         let handle = handle_for_pressable.clone();
                         let on_scroll = Arc::new(move |host: &mut dyn fret_ui::action::UiActionHost,
                                                   action_cx: ActionCx| {
@@ -199,6 +222,46 @@ where
                             handle.scroll_to_offset(next);
                             host.request_redraw(action_cx.window);
                         });
+
+                        let auto_scroll_state_for_timer = auto_scroll_state.clone();
+                        let handle_for_timer = handle_for_pressable.clone();
+                        let clear_active_for_timer = clear_active_for_hover.clone();
+                        cx.timer_on_timer_for(
+                            id,
+                            Arc::new(move |host, action_cx, token| {
+                                let mut st = auto_scroll_state_for_timer
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                if st.token.as_ref() != Some(&token) {
+                                    return false;
+                                }
+                                if !st.hovered {
+                                    st.token = None;
+                                    return true;
+                                }
+
+                                let prev = handle_for_timer.offset();
+                                let max = handle_for_timer.max_offset();
+
+                                let next_y = (prev.y.0 + item_step.0 * dir).clamp(0.0, max.y.0);
+                                if (next_y - prev.y.0).abs() <= 0.01 {
+                                    st.token = None;
+                                    return true;
+                                }
+
+                                handle_for_timer.scroll_to_offset(Point::new(prev.x, Px(next_y)));
+                                clear_active_for_timer(host, action_cx);
+                                host.request_redraw(action_cx.window);
+
+                                host.push_effect(Effect::SetTimer {
+                                    window: Some(action_cx.window),
+                                    token,
+                                    after: Duration::from_millis(40),
+                                    repeat: None,
+                                });
+                                true
+                            }),
+                        );
 
                         let on_scroll_for_activate = on_scroll.clone();
                         cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
@@ -212,6 +275,60 @@ where
                             on_scroll(host, action_cx);
                             host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                             fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                        }));
+
+                        let clear_active_for_move = clear_active_for_hover.clone();
+                        let auto_scroll_state_for_move = auto_scroll_state.clone();
+                        cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                            let token = {
+                                let mut st = auto_scroll_state_for_move
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                st.hovered = true;
+
+                                let did_move = st.last_pos.map_or(true, |p| p != mv.position);
+                                st.last_pos = Some(mv.position);
+                                if !did_move || st.token.is_some() {
+                                    return false;
+                                }
+
+                                // Base UI scroll arrows start a 40ms scroll timer on mouse move rather
+                                // than scrolling immediately on hover.
+                                let token = host.next_timer_token();
+                                st.token = Some(token);
+                                token
+                            };
+
+                            // Base UI clears the active index on pointer move over scroll arrows.
+                            clear_active_for_move(host, action_cx);
+
+                            host.push_effect(Effect::SetTimer {
+                                window: Some(action_cx.window),
+                                token,
+                                after: Duration::from_millis(40),
+                                repeat: None,
+                            });
+                            false
+                        }));
+
+                        let auto_scroll_state_for_hover = auto_scroll_state.clone();
+                        cx.pressable_add_on_hover_change(Arc::new(move |host, action_cx, hovered| {
+                            let mut st = auto_scroll_state_for_hover
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            st.hovered = hovered;
+                            if !hovered {
+                                st.last_pos = None;
+                                if let Some(token) = st.token.take() {
+                                    host.push_effect(Effect::CancelTimer { token });
+                                }
+                                return;
+                            }
+
+                            // Base UI clears the active index when the pointer moves over scroll
+                            // arrows. Mirror the outcome so item highlights don't "stick" while the
+                            // pointer is on the arrow strip.
+                            clear_active_for_hover(host, action_cx);
                         }));
 
                         vec![cx.container(
@@ -276,12 +393,22 @@ where
                 // In the DOM, wheel events scroll the nearest scrollable ancestor even if the
                 // pointer is over non-scrollable affordances (like Radix's scroll buttons).
                 //
-                // Our buttons are siblings of the scroll viewport, so wrap them in a wheel region
-                // bound to the same scroll handle to avoid "stuck" scrolling when the pointer lands
-                // over the button strip. `WheelRegion` also ensures scroll-handle bindings get the
-                // correct invalidation (hit-test + paint) under view-cache reuse.
+                // In our renderer the arrows are layered over the scroll viewport; wrap them in a
+                // wheel region bound to the same scroll handle so wheel scrolling continues to work
+                // even when the pointer is over the arrow strip.
                 let pressable = cx.wheel_region(
                     WheelRegionProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Px(scroll_button_h);
+                            layout.position = PositionStyle::Absolute;
+                            layout.inset.left = inset.left;
+                            layout.inset.right = inset.right;
+                            layout.inset.top = inset.top;
+                            layout.inset.bottom = inset.bottom;
+                            layout
+                        },
                         axis: ScrollAxis::Y,
                         scroll_handle: handle_for_wheel.clone(),
                         ..Default::default()
@@ -289,168 +416,159 @@ where
                     move |_cx| vec![pressable],
                 );
 
-                let gated = cx.interactivity_gate(true, visible, |_cx| vec![pressable]);
-                cx.opacity(if visible { 1.0 } else { 0.0 }, |_cx| vec![gated])
+                Some(pressable)
             };
 
-            let handle_for_stack = handle.clone();
-            let stack = cx.stack_props(
-                StackProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(0.0));
-                        layout.flex.grow = 1.0;
-                        layout.flex.shrink = 1.0;
-                        layout.flex.basis = Length::Px(Px(0.0));
-                        layout
-                    },
+            active_element_id_out.set(None);
+            let active_element_ref = active_element_id_out;
+
+            let mut scroll_layout = LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = Overflow::Clip;
+
+            let handle_for_scroll = handle.clone();
+            let scroll = cx.scroll(
+                ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(handle_for_scroll.clone()),
+                    ..Default::default()
                 },
                 move |cx| {
-                    active_element_id_out.set(None);
-                    let active_element_ref = active_element_id_out;
-
-                    let mut scroll_layout = LayoutStyle::default();
-                    scroll_layout.size.width = Length::Fill;
-                    scroll_layout.size.height = Length::Fill;
-                    scroll_layout.overflow = Overflow::Clip;
-
-                    let scroll = cx.scroll(
-                        ScrollProps {
-                            layout: scroll_layout,
-                            scroll_handle: Some(handle_for_stack.clone()),
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout
+                            },
+                            padding: Edges::all(Px(0.0)),
                             ..Default::default()
                         },
-                        move |cx| {
-                            vec![cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout
-                                    },
-                                    padding: Edges::all(Px(0.0)),
-                                    ..Default::default()
-                                },
-                                move |cx| {
-                                    content(cx, active_element_ref)
-                                        .into_iter()
-                                        .collect::<Vec<_>>()
-                                },
-                            )]
-                        },
-                    );
-                    viewport_id_out.set(Some(scroll.id));
-
-                    let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
-                    let scroll = if let Some(active_element) = active_element_ref.get() {
-                        scroll.attach_semantics(
-                            fret_ui::element::SemanticsDecoration::default()
-                                .active_descendant_element(active_element.0),
-                        )
-                    } else {
-                        scroll
-                    };
-
-                    if let Some(active_element) = active_element_ref.get() {
-                        let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
-                            let (Some(viewport), Some(child)) = (
-                                cx.last_bounds_for_element(scroll.id),
-                                cx.last_bounds_for_element(active_element),
-                            ) else {
-                                return false;
-                            };
-
-                            // Compute positions in scroll-content coordinates (stable even when we don't
-                            // have paint-space bounds for scrolled children).
-                            let child_top = Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
-                            let child_h = Px(child.size.height.0.max(0.0));
-                            let child_bottom = Px(child_top.0 + child_h.0);
-                            let viewport_h = Px(viewport.size.height.0.max(0.0));
-                            if viewport_h.0 <= 0.01 {
-                                return false;
-                            }
-
-                            let prev = handle_for_stack.offset();
-                            let view_top = prev.y;
-                            let view_bottom = Px(prev.y.0 + viewport_h.0);
-
-                            // If the active row is taller than the viewport, we can't make it fully visible;
-                            // match "nearest" semantics by aligning the top edge.
-                            let target_y = if child_h.0 >= viewport_h.0 - 0.01 {
-                                child_top
-                            } else if child_top.0 < view_top.0 {
-                                child_top
-                            } else if child_bottom.0 > view_bottom.0 {
-                                Px(child_bottom.0 - viewport_h.0)
-                            } else {
-                                view_top
-                            };
-
-                            if (target_y.0 - prev.y.0).abs() <= 0.01 {
-                                return false;
-                            }
-                            handle_for_stack.set_offset(Point::new(prev.x, target_y));
-                            true
-                        };
-
-                        if has_scroll && !did_initial_scroll && should_align_active_to_top() {
-                            let did = active_desc::scroll_active_element_align_top_y(
-                                cx,
-                                &handle_for_stack,
-                                scroll.id,
-                                active_element,
-                            );
-                            if did {
-                                on_aligned_active_to_top();
-                            } else if let (Some(viewport), Some(child)) = (
-                                cx.last_bounds_for_element(scroll.id),
-                                cx.last_bounds_for_element(active_element),
-                            ) {
-                                let delta = (child.origin.y.0 - viewport.origin.y.0).abs();
-                                if delta <= 0.01 {
-                                    on_aligned_active_to_top();
-                                }
-                            }
-
-                        } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
-                            let _ = scroll_active_nearest(cx);
-                            on_focused_selected_item();
-                        } else {
-                            // Match Radix Select: only keep the active option in view when the
-                            // active row changes via keyboard/typeahead. Do not continuously
-                            // "chase" the active row during wheel scrolling.
-                            if consume_pending_active_scroll_into_view() {
-                                let _ = scroll_active_nearest(cx);
-                            }
-                        }
-                    }
-
-                    vec![scroll]
+                        move |cx| content(cx, active_element_ref).into_iter().collect::<Vec<_>>(),
+                    )]
                 },
             );
+            viewport_id_out.set(Some(scroll.id));
 
-            if has_scroll {
-                vec![
-                    scroll_button(
-                        cx,
-                        ids::ui::CHEVRON_UP,
-                        "select-scroll-up-button",
-                        -1.0,
-                        show_up,
-                    ),
-                    stack,
-                    scroll_button(
-                        cx,
-                        ids::ui::CHEVRON_DOWN,
-                        "select-scroll-down-button",
-                        1.0,
-                        show_down,
-                    ),
-                ]
+            let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
+            let scroll = if let Some(active_element) = active_element_ref.get() {
+                scroll.attach_semantics(
+                    fret_ui::element::SemanticsDecoration::default()
+                        .active_descendant_element(active_element.0),
+                )
             } else {
-                vec![stack]
+                scroll
+            };
+
+            if let Some(active_element) = active_element_ref.get() {
+                let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
+                    let (Some(viewport), Some(child)) = (
+                        cx.last_bounds_for_element(scroll.id),
+                        cx.last_bounds_for_element(active_element),
+                    ) else {
+                        return false;
+                    };
+
+                    // Compute positions in scroll-content coordinates (stable even when we don't have
+                    // paint-space bounds for scrolled children).
+                    let child_top = Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
+                    let child_h = Px(child.size.height.0.max(0.0));
+                    let child_bottom = Px(child_top.0 + child_h.0);
+                    let viewport_h = Px(viewport.size.height.0.max(0.0));
+                    if viewport_h.0 <= 0.01 {
+                        return false;
+                    }
+
+                    let prev = handle_for_scroll.offset();
+                    let view_top = prev.y;
+                    let view_bottom = Px(prev.y.0 + viewport_h.0);
+
+                    // If the active row is taller than the viewport, we can't make it fully visible;
+                    // match "nearest" semantics by aligning the top edge.
+                    let target_y = if child_h.0 >= viewport_h.0 - 0.01 {
+                        child_top
+                    } else if child_top.0 < view_top.0 {
+                        child_top
+                    } else if child_bottom.0 > view_bottom.0 {
+                        Px(child_bottom.0 - viewport_h.0)
+                    } else {
+                        view_top
+                    };
+
+                    if (target_y.0 - prev.y.0).abs() <= 0.01 {
+                        return false;
+                    }
+                    handle_for_scroll.set_offset(Point::new(prev.x, target_y));
+                    true
+                };
+
+                if has_scroll && !did_initial_scroll && should_align_active_to_top() {
+                    let did = active_desc::scroll_active_element_align_top_y(
+                        cx,
+                        &handle_for_scroll,
+                        scroll.id,
+                        active_element,
+                    );
+                    if did {
+                        on_aligned_active_to_top();
+                    } else if let (Some(viewport), Some(child)) = (
+                        cx.last_bounds_for_element(scroll.id),
+                        cx.last_bounds_for_element(active_element),
+                    ) {
+                        let delta = (child.origin.y.0 - viewport.origin.y.0).abs();
+                        if delta <= 0.01 {
+                            on_aligned_active_to_top();
+                        }
+                    }
+                } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
+                    let _ = scroll_active_nearest(cx);
+                    on_focused_selected_item();
+                } else {
+                    // Match Radix Select: only keep the active option in view when the active row
+                    // changes via keyboard/typeahead. Do not continuously "chase" the active row
+                    // during wheel scrolling.
+                    if consume_pending_active_scroll_into_view() {
+                        let _ = scroll_active_nearest(cx);
+                    }
+                }
             }
+
+            let mut out = Vec::with_capacity(3);
+            out.push(scroll);
+            if has_scroll && allow_hover_scroll_arrows {
+                if let Some(btn) = scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_UP,
+                    "select-scroll-up-button",
+                    -1.0,
+                    show_up,
+                    InsetStyle {
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)),
+                        bottom: None,
+                    },
+                ) {
+                    out.push(btn);
+                }
+                if let Some(btn) = scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_DOWN,
+                    "select-scroll-down-button",
+                    1.0,
+                    show_down,
+                    InsetStyle {
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        top: None,
+                        bottom: Some(Px(0.0)),
+                    },
+                ) {
+                    out.push(btn);
+                }
+            }
+            out
         },
     )
 }
@@ -1158,6 +1276,10 @@ fn select_impl<H: UiHost>(
         if matches!(trigger_layout.size.width, Length::Auto) {
             trigger_layout.flex.align_self = Some(CrossAlign::Start);
         }
+        // In narrow containers (e.g. dialog headers), allow the trigger to shrink so surrounding
+        // text does not get forced into extreme wrapping.
+        trigger_layout.size.min_width = Some(Px(0.0));
+        trigger_layout.flex.shrink = 1.0;
 
         let mut border = resolved.border_color;
         let mut border_focus = resolved.border_color_focused;
@@ -1194,6 +1316,7 @@ fn select_impl<H: UiHost>(
             content: radix_select::SelectContentKeyState,
             was_open: bool,
             opened_by_pointer: bool,
+            opened_by_touch: bool,
             scroll_handle: fret_ui::scroll::ScrollHandle,
             value_node: Option<GlobalElementId>,
             viewport: Option<GlobalElementId>,
@@ -1204,6 +1327,11 @@ fn select_impl<H: UiHost>(
             alignment_item_pos: Option<usize>,
             alignment_item_has_leading_non_item: bool,
             width_probe: Option<GlobalElementId>,
+            // Item-aligned select placement can be sensitive to sub-frame layout settling (e.g.
+            // text measurement, scroll affordances). To avoid visible "jitter" on hover/focus
+            // changes, lock the first stable item-aligned layout for the duration of a single
+            // open session (cleared on close/unmount).
+            last_item_aligned_layout: Option<radix_select::SelectItemAlignedLayout>,
             pending_item_aligned_scroll_to_y: Option<Px>,
             last_item_aligned_scroll_to_y: Option<Px>,
             item_aligned_user_scrolled: bool,
@@ -1223,6 +1351,7 @@ fn select_impl<H: UiHost>(
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
                     opened_by_pointer: false,
+                    opened_by_touch: false,
                     scroll_handle: fret_ui::scroll::ScrollHandle::default(),
                     value_node: None,
                     viewport: None,
@@ -1233,6 +1362,7 @@ fn select_impl<H: UiHost>(
                     alignment_item_pos: None,
                     alignment_item_has_leading_non_item: false,
                     width_probe: None,
+                    last_item_aligned_layout: None,
                     pending_item_aligned_scroll_to_y: None,
                     last_item_aligned_scroll_to_y: None,
                     item_aligned_user_scrolled: false,
@@ -1315,6 +1445,22 @@ fn select_impl<H: UiHost>(
 
             if !overlay_present {
                 let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                // The item-aligned placement path reads last-known bounds for overlay-owned element
+                // IDs (viewport/listbox/selected item). If we keep those IDs around after the
+                // overlay unmounts, we may accidentally reuse stale, render-transformed bounds on
+                // the next open (e.g. after presence scale animations), leading to compounding
+                // shrink/drift across open/close cycles.
+                //
+                // Base UI recomputes placement inputs on every open; match that outcome by
+                // clearing overlay-owned element IDs when the overlay is no longer present.
+                state.viewport = None;
+                state.listbox = None;
+                state.content_panel = None;
+                state.width_probe = None;
+                state.selected_item = None;
+                state.selected_item_text = None;
+                state.alignment_item_pos = None;
+                state.alignment_item_has_leading_non_item = false;
                 state.pending_item_aligned_scroll_to_y = None;
                 state.last_item_aligned_scroll_to_y = None;
                 state.item_aligned_user_scrolled = false;
@@ -1325,6 +1471,7 @@ fn select_impl<H: UiHost>(
                 state.pending_active_align_top_scroll = false;
                 state.pending_active_scroll_into_view = false;
                 state.opened_by_pointer = false;
+                state.opened_by_touch = false;
             }
 
             let state_for_timer = trigger_state.clone();
@@ -1385,6 +1532,7 @@ fn select_impl<H: UiHost>(
                     let now_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
                     if !was_open && now_open {
                         state.opened_by_pointer = false;
+                        state.opened_by_touch = false;
                     }
                     let after = host
                         .models_mut()
@@ -1479,6 +1627,10 @@ fn select_impl<H: UiHost>(
                 }
                 if !was_open && now_open {
                     state.opened_by_pointer = true;
+                    state.opened_by_touch = matches!(
+                        down.pointer_type,
+                        fret_core::PointerType::Touch | fret_core::PointerType::Pen
+                    );
                 }
                 state.trigger.clear_typeahead(host);
 
@@ -1549,6 +1701,7 @@ fn select_impl<H: UiHost>(
                         if !was_open && now_open {
                             radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_pointer_up);
                             state.opened_by_pointer = true;
+                            state.opened_by_touch = true;
                             let has_selected_item_in_list = host
                                 .models_mut()
                                 .read(&model_for_pointer_up, |selected| {
@@ -1729,6 +1882,8 @@ fn select_impl<H: UiHost>(
                         _did_item_aligned_scroll_initial,
                         _did_item_aligned_scroll_reposition,
                         _item_aligned_scroll_up_visible,
+                        last_item_aligned_layout,
+                        width_probe_ready_for_lock,
                     ) = if position == SelectPosition::ItemAligned {
                         let (
                             value_node,
@@ -1743,6 +1898,7 @@ fn select_impl<H: UiHost>(
                             did_item_aligned_scroll_initial,
                             did_item_aligned_scroll_reposition,
                             item_aligned_scroll_up_visible,
+                            last_item_aligned_layout,
                         ) = {
                             let state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
                             (
@@ -1758,6 +1914,7 @@ fn select_impl<H: UiHost>(
                                 state.did_item_aligned_scroll_initial,
                                 state.did_item_aligned_scroll_reposition,
                                 state.item_aligned_scroll_up_visible,
+                                state.last_item_aligned_layout,
                             )
                         };
 
@@ -1842,14 +1999,22 @@ fn select_impl<H: UiHost>(
                         } else {
                             None
                         };
+                        let width_probe_ready_for_lock = match width_probe {
+                            None => true,
+                            Some(id) => cx
+                                .last_bounds_for_element(id)
+                                .is_some_and(|rect| rect.size.width.0.is_finite() && rect.size.width.0 > 0.0),
+                        };
                         (
                             item_aligned_inputs,
                             did_item_aligned_scroll_initial,
                             did_item_aligned_scroll_reposition,
                             item_aligned_scroll_up_visible,
+                            last_item_aligned_layout,
+                            width_probe_ready_for_lock,
                         )
                     } else {
-                        (None, false, false, false)
+                        (None, false, false, false, None, false)
                     };
 
                     let side_offset = side_offset_override.unwrap_or_else(|| {
@@ -1960,7 +2125,7 @@ fn select_impl<H: UiHost>(
                     let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
-                    let resolved = radix_select::select_resolve_content_placement_from_elements(
+                    let mut resolved = radix_select::select_resolve_content_placement_from_elements(
                         cx,
                         anchor,
                         outer,
@@ -1969,8 +2134,43 @@ fn select_impl<H: UiHost>(
                         arrow.then_some(arrow_size),
                         item_aligned_inputs,
                     );
+                    let mut item_aligned_layout_is_cached_fallback = false;
+                    let mut item_aligned_layout_locked_this_frame = false;
+                    if position == SelectPosition::ItemAligned && is_open {
+                        if let Some(layout) = last_item_aligned_layout {
+                            // Lock placement for the duration of the open session (Base UI's
+                            // `alignItemWithTrigger` disables anchor tracking; model the outcome
+                            // by reusing the first stable solved layout).
+                            item_aligned_layout_is_cached_fallback = true;
+                            resolved = radix_select::SelectResolvedContentPlacement {
+                                placement: radix_select::select_content_placement_item_aligned(
+                                    anchor, layout,
+                                ),
+                                item_aligned_layout: Some(layout),
+                            };
+                        } else if let Some(layout) = resolved.item_aligned_layout
+                            && width_probe_ready_for_lock
+                        {
+                            let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                            if state.last_item_aligned_layout.is_none() {
+                                state.last_item_aligned_layout = Some(layout);
+                                item_aligned_layout_locked_this_frame = true;
+                            }
+                        }
+                    }
+                    if debug_item_aligned {
+                        eprintln!(
+                            "select item-aligned placement: computed_layout={} cached_layout_present={} cached_used={} locked_now={} placed_y={}",
+                            resolved.item_aligned_layout.is_some(),
+                            last_item_aligned_layout.is_some(),
+                            item_aligned_layout_is_cached_fallback,
+                            item_aligned_layout_locked_this_frame,
+                            resolved.placement.placed.origin.y.0,
+                        );
+                    }
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
+                        && !item_aligned_layout_is_cached_fallback
                     {
                         // Radix repositions once after the scroll-up button mounts (it shifts the
                         // viewport down in the normal flow). Model this as an initial scroll plus
@@ -2176,7 +2376,9 @@ fn select_impl<H: UiHost>(
                                  state.was_open = false;
                                  state.content.set_active_row(None);
                                  state.pending_active_align_top_scroll = false;
+                                 state.last_item_aligned_layout = None;
                                 state.opened_by_pointer = false;
+                                state.opened_by_touch = false;
                             }
 
                             state.content.active_row()
@@ -2348,6 +2550,13 @@ fn select_impl<H: UiHost>(
                                         let state_for_consume_active_scroll_into_view =
                                             trigger_state_for_overlay_in_content.clone();
 
+                                        let allow_hover_scroll_arrows = {
+                                            let state = trigger_state_for_overlay_in_content
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            !state.opened_by_touch
+                                        };
+
                                         let scroll = select_scroll_with_buttons(
                                             cx,
                                             theme_for_overlay.clone(),
@@ -2355,6 +2564,7 @@ fn select_impl<H: UiHost>(
                                             item_len > 0
                                                 && Px(item_h.0 * item_len as f32).0
                                                     > desired_content_h.0 + 0.5,
+                                            allow_hover_scroll_arrows,
                                             scroll_handle,
                                             initial_scroll_to_y,
                                             viewport_id_out,
@@ -2406,6 +2616,20 @@ fn select_impl<H: UiHost>(
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
                                                 state.did_item_aligned_focus_scroll = true;
+                                            },
+                                            {
+                                                let state_for_arrow_hover =
+                                                    trigger_state_for_overlay_in_content.clone();
+                                                move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                      action_cx: ActionCx| {
+                                                    let mut state = state_for_arrow_hover
+                                                        .lock()
+                                                        .unwrap_or_else(|e| e.into_inner());
+                                                    if state.content.active_row().is_some() {
+                                                        state.content.set_active_row(None);
+                                                        host.request_redraw(action_cx.window);
+                                                    }
+                                                }
                                             },
                                             move |cx, active_element| {
                                                                 let mut out = Vec::with_capacity(rows.len());
@@ -2629,36 +2853,91 @@ fn select_impl<H: UiHost>(
                                                                                         );
                                                                                     }
 
-                                                                                     if !item_disabled {
-                                                                                         cx.pressable_add_on_hover_change(Arc::new(
-                                                                                             move |host, action_cx, hovered| {
-                                                                                                 let mut state = state_for_hover
-                                                                                                     .lock()
-                                                                                                     .unwrap_or_else(|e| e.into_inner());
-                                                                                                 if hovered {
-                                                                                                     if state.content.active_row()
-                                                                                                         != Some(row_idx_for_hover)
-                                                                                                     {
-                                                                                                         state.content.set_active_row(
-                                                                                                             Some(row_idx_for_hover),
-                                                                                                         );
-                                                                                                         host.request_redraw(
-                                                                                                             action_cx.window,
-                                                                                                         );
-                                                                                                     }
-                                                                                                 } else if state.content.active_row()
-                                                                                                     == Some(row_idx_for_hover)
-                                                                                                 {
-                                                                                                     // Base UI clears the active index when the pointer leaves the
-                                                                                                     // popup so the highlight does not become "stuck" on the last
-                                                                                                     // hovered option. Mirror that behavior per-row by clearing when
-                                                                                                     // the active row stops being hovered.
-                                                                                                     state.content.set_active_row(None);
-                                                                                                     host.request_redraw(action_cx.window);
-                                                                                                 }
-                                                                                             },
-                                                                                         ));
-                                                                                     }
+                                                                                    if !item_disabled {
+                                                                                        let hover_clear_token: Arc<
+                                                                                            Mutex<Option<TimerToken>>,
+                                                                                        > = cx.with_state_for(
+                                                                                            id,
+                                                                                            || {
+                                                                                                Arc::new(Mutex::new(
+                                                                                                    None::<TimerToken>,
+                                                                                                ))
+                                                                                            },
+                                                                                            |s| s.clone(),
+                                                                                        );
+
+                                                                                        let hover_clear_token_for_timer =
+                                                                                            hover_clear_token.clone();
+                                                                                        let state_for_timer =
+                                                                                            state_for_hover.clone();
+                                                                                        let row_idx_for_timer =
+                                                                                            row_idx_for_hover;
+                                                                                        cx.timer_on_timer_for(
+                                                                                            id,
+                                                                                            Arc::new(
+                                                                                                move |host, action_cx, token| {
+                                                                                                    let mut hover_token = hover_clear_token_for_timer
+                                                                                                        .lock()
+                                                                                                        .unwrap_or_else(|e| e.into_inner());
+                                                                                                    if hover_token.as_ref()
+                                                                                                        != Some(&token)
+                                                                                                    {
+                                                                                                        return false;
+                                                                                                    }
+                                                                                                    *hover_token = None;
+
+                                                                                                    let mut state = state_for_timer
+                                                                                                        .lock()
+                                                                                                        .unwrap_or_else(|e| e.into_inner());
+                                                                                                    if state.content.active_row()
+                                                                                                        == Some(row_idx_for_timer)
+                                                                                                    {
+                                                                                                        state.content.set_active_row(None);
+                                                                                                        host.request_redraw(action_cx.window);
+                                                                                                    }
+                                                                                                    true
+                                                                                                },
+                                                                                            ),
+                                                                                        );
+
+                                                                                        let hover_clear_token_for_hover =
+                                                                                            hover_clear_token.clone();
+                                                                                        cx.pressable_add_on_hover_change(Arc::new(
+                                                                                            move |host, action_cx, hovered| {
+                                                                                                let mut hover_token = hover_clear_token_for_hover
+                                                                                                    .lock()
+                                                                                                    .unwrap_or_else(|e| e.into_inner());
+                                                                                                if let Some(token) = hover_token.take() {
+                                                                                                    host.push_effect(Effect::CancelTimer { token });
+                                                                                                }
+
+                                                                                                let mut state = state_for_hover
+                                                                                                    .lock()
+                                                                                                    .unwrap_or_else(|e| e.into_inner());
+                                                                                                if hovered {
+                                                                                                    if state.content.active_row()
+                                                                                                        != Some(row_idx_for_hover)
+                                                                                                    {
+                                                                                                        state.content.set_active_row(Some(row_idx_for_hover));
+                                                                                                        host.request_redraw(action_cx.window);
+                                                                                                    }
+                                                                                                } else if state.content.active_row()
+                                                                                                    == Some(row_idx_for_hover)
+                                                                                                {
+                                                                                                    // Base UI clears the active index on pointer leave via `setTimeout(0)`
+                                                                                                    // to avoid flicker when moving between adjacent rows.
+                                                                                                    let token = host.next_timer_token();
+                                                                                                    *hover_token = Some(token);
+                                                                                                    host.push_effect(Effect::SetTimer {
+                                                                                                        window: Some(action_cx.window),
+                                                                                                        token,
+                                                                                                        after: Duration::from_millis(0),
+                                                                                                        repeat: None,
+                                                                                                    });
+                                                                                                }
+                                                                                            },
+                                                                                        ));
+                                                                                    }
 
                                                                                     let theme = Theme::global(&*cx.app).clone();
                                                                                     // new-york-v4: items highlight on focus/hover via `bg-accent`.
@@ -4481,6 +4760,30 @@ mod tests {
             &mut services,
             window,
             bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let effects = app.flush_effects();
+        let token = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(0) => {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("hover leave timer token");
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
             model,
             open,
             items,
@@ -5540,6 +5843,118 @@ mod tests {
             app.models().get_copied(&open),
             Some(true),
             "touch up inside trigger should open"
+        );
+    }
+
+    #[test]
+    fn select_touch_open_hides_scroll_arrows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = (1..=40)
+            .map(|i| {
+                SelectItem::new(
+                    Arc::from(format!("item-{i:02}")),
+                    Arc::from(format!("Item {i:02}")),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(13),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(13),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Allow the overlay to mount and the scroll handle to observe content overflow.
+        for _ in 0..3 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-viewport")),
+            "expected select overlay content to mount"
+        );
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-up-button")),
+            "scroll arrows are hover-only; touch-opened select should not render them"
+        );
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-down-button")),
+            "scroll arrows are hover-only; touch-opened select should not render them"
         );
     }
 
@@ -7009,6 +7424,296 @@ mod tests {
     }
 
     #[test]
+    fn select_scroll_buttons_hover_autoscroll_without_dismissing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..50)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_down = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
+            .expect("scroll down node");
+        let down_bounds = ui
+            .debug_node_bounds(scroll_down.id)
+            .expect("scroll down bounds");
+        let hover_pos = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(down_bounds.origin.x.0 + down_bounds.size.width.0 * fx),
+                    Px(down_bounds.origin.y.0 + down_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_down.id)
+                {
+                    return p;
+                }
+            }
+            panic!("expected scroll down bounds to be hit-testable; bounds={down_bounds:?}");
+        })();
+
+        // Base UI starts auto-scroll on pointer move over the scroll arrow.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: hover_pos,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let effects = app.flush_effects();
+        let token = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(40) => {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("hover autoscroll timer token");
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_up = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+            .expect("scroll up node");
+        let up_bounds = ui
+            .debug_node_bounds(scroll_up.id)
+            .expect("scroll up bounds");
+        let up_is_hit_testable = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(up_bounds.origin.x.0 + up_bounds.size.width.0 * fx),
+                    Px(up_bounds.origin.y.0 + up_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_up.id)
+                {
+                    return true;
+                }
+            }
+            false
+        })();
+        assert!(
+            up_is_hit_testable,
+            "expected hover autoscroll to make scroll up hit-testable; bounds={up_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn select_scroll_viewport_height_stable_when_scroll_buttons_toggle() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..80)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node");
+        let viewport_id = viewport.id;
+        let viewport_bounds = ui
+            .debug_node_bounds(viewport_id)
+            .expect("select viewport bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(
+                    Px(viewport_bounds.origin.x.0 + viewport_bounds.size.width.0 * 0.5),
+                    Px(viewport_bounds.origin.y.0 + viewport_bounds.size.height.0 * 0.5),
+                ),
+                delta: fret_core::Point::new(Px(0.0), Px(-120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport_after = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node after scroll");
+        let viewport_after_bounds = ui
+            .debug_node_bounds(viewport_after.id)
+            .expect("select viewport bounds after scroll");
+
+        // After scrolling, the scroll-up affordance may appear. Ensure it does not change the
+        // viewport's layout height (prevents hover/layout jumps).
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-up-button")),
+            "expected scroll-up button to become visible after wheel scrolling"
+        );
+        let delta_h = (viewport_after_bounds.size.height.0 - viewport_bounds.size.height.0).abs();
+        assert!(
+            delta_h <= 0.01,
+            "expected viewport height to remain stable when scroll buttons toggle (delta_h={delta_h})"
+        );
+    }
+
+    #[test]
     fn select_wheel_scroll_clamps_to_last_item_without_blank_space() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -7271,6 +7976,122 @@ mod tests {
                 "expected non-zero viewport height after wheel (frame={i}); bounds={viewport_bounds:?}"
             );
         }
+    }
+
+    #[test]
+    fn select_item_aligned_overlay_does_not_shrink_across_open_close_cycles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(520.0), Px(280.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..60)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        for _ in 0..3 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node");
+        let viewport_before = ui.debug_node_bounds(viewport.id).expect("viewport bounds");
+        assert!(
+            viewport_before.size.height.0 > 1.0,
+            "expected non-zero viewport height before close; bounds={viewport_before:?}"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Wait for the presence animation to fully unmount the overlay.
+        let mut closed = false;
+        for _ in 0..120 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let has_listbox = snap.nodes.iter().any(|n| n.role == SemanticsRole::ListBox);
+            if !has_listbox {
+                closed = true;
+                break;
+            }
+        }
+        assert!(closed, "expected select overlay to unmount after closing");
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        for _ in 0..3 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node after reopen");
+        let viewport_after = ui
+            .debug_node_bounds(viewport.id)
+            .expect("viewport bounds after reopen");
+        assert!(
+            viewport_after.size.height.0 > 1.0,
+            "expected non-zero viewport height after reopen; bounds={viewport_after:?}"
+        );
+
+        let drift = (viewport_after.size.height.0 - viewport_before.size.height.0).abs();
+        assert!(
+            drift <= 1.0,
+            "expected viewport height to remain stable across close/reopen; drift={drift} before={viewport_before:?} after={viewport_after:?}"
+        );
     }
 
     #[test]

@@ -1,5 +1,14 @@
 # Immediate-Mode Authoring Facade ("imui") v1
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- imgui-rs: https://github.com/imgui-rs/imgui-rs
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Baseline (historical reference; superseded by v2)
 Last updated: 2026-02-09
 

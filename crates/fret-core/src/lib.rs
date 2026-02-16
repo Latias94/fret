@@ -86,7 +86,7 @@ pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,
     EffectMode, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS, MaterialParams,
     Paint, RadialGradient, Scene, SceneOp, SceneRecording, SceneValidationError,
-    SceneValidationErrorKind, TileMode, UvRect,
+    SceneValidationErrorKind, SweepGradient, TileMode, UvRect,
 };
 pub use semantics::{
     SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot,
@@ -105,7 +105,7 @@ pub use text::{
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
-    StrokeStyle,
+    StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2,
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::{

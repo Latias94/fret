@@ -5,6 +5,15 @@ date: 2026-02-12
 scope: ecosystem/fret-ui-ai, diag gates, upstream parity tracking
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Vercel AI Elements: https://github.com/vercel/ai-elements
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # AI Elements Port (`fret-ui-ai`) — Milestones
 
 This document is a **one-screen milestone board** for the AI Elements port.

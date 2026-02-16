@@ -25,37 +25,37 @@ struct FixtureExpect {
 #[serde(tag = "type")]
 enum FixtureAction {
     #[serde(rename = "resetSorting")]
-    ResetSorting {
+    Sorting {
         #[serde(default)]
         default_state: Option<bool>,
     },
     #[serde(rename = "resetColumnFilters")]
-    ResetColumnFilters {
+    ColumnFilters {
         #[serde(default)]
         default_state: Option<bool>,
     },
     #[serde(rename = "resetGlobalFilter")]
-    ResetGlobalFilter {
+    GlobalFilter {
         #[serde(default)]
         default_state: Option<bool>,
     },
     #[serde(rename = "resetGrouping")]
-    ResetGrouping {
+    Grouping {
         #[serde(default)]
         default_state: Option<bool>,
     },
     #[serde(rename = "resetColumnVisibility")]
-    ResetColumnVisibility {
+    ColumnVisibility {
         #[serde(default)]
         default_state: Option<bool>,
     },
     #[serde(rename = "resetColumnOrder")]
-    ResetColumnOrder {
+    ColumnOrder {
         #[serde(default)]
         default_state: Option<bool>,
     },
     #[serde(rename = "resetRowSelection")]
-    ResetRowSelection {
+    RowSelection {
         #[serde(default)]
         default_state: Option<bool>,
     },
@@ -141,27 +141,27 @@ fn tanstack_v8_resets_parity() {
                 .build();
 
             match action {
-                FixtureAction::ResetSorting { default_state } => {
+                FixtureAction::Sorting { default_state } => {
                     state.sorting = table.reset_sorting(default_state.unwrap_or(false));
                 }
-                FixtureAction::ResetColumnFilters { default_state } => {
+                FixtureAction::ColumnFilters { default_state } => {
                     state.column_filters =
                         table.reset_column_filters(default_state.unwrap_or(false));
                 }
-                FixtureAction::ResetGlobalFilter { default_state } => {
+                FixtureAction::GlobalFilter { default_state } => {
                     state.global_filter = table.reset_global_filter(default_state.unwrap_or(false));
                 }
-                FixtureAction::ResetGrouping { default_state } => {
+                FixtureAction::Grouping { default_state } => {
                     state.grouping = table.reset_grouping(default_state.unwrap_or(false));
                 }
-                FixtureAction::ResetColumnVisibility { default_state } => {
+                FixtureAction::ColumnVisibility { default_state } => {
                     state.column_visibility =
                         table.reset_column_visibility(default_state.unwrap_or(false));
                 }
-                FixtureAction::ResetColumnOrder { default_state } => {
+                FixtureAction::ColumnOrder { default_state } => {
                     state.column_order = table.reset_column_order(default_state.unwrap_or(false));
                 }
-                FixtureAction::ResetRowSelection { default_state } => {
+                FixtureAction::RowSelection { default_state } => {
                     state.row_selection = table.reset_row_selection(default_state.unwrap_or(false));
                 }
             }

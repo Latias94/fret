@@ -1,5 +1,18 @@
 # Motion Foundation (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Animata: https://github.com/codse/animata
+- Flutter: https://github.com/flutter/flutter
+- Material Web: https://github.com/material-components/material-web
+- Motion: https://github.com/motiondivision/motion
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (notes only; ADRs remain the source of truth)
 
 See:
@@ -79,7 +92,7 @@ Mechanism vs policy:
 - shadcn/ui v4 usage (durations + easings in recipes):
   - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/*.tsx` (e.g. `sheet.tsx`, `sidebar.tsx`)
 - Animata (recipe inspiration; Framer Motion / DOM-based, treat as “spec” not “runtime”):
-  - Local mirror root (this workstation): `F:\SourceCodes\Rust\fret\repo-ref\animata`
+  - Local repo-ref checkout (optional): `repo-ref/animata/`
   - `repo-ref/animata/README.md`
   - `repo-ref/animata/animata/overlay/*.tsx`
 

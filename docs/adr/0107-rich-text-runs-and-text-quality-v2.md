@@ -1,5 +1,14 @@
 # ADR 0107: Rich Text Runs and Text Quality v2 (Runs, Decorations, Subpixel Strategy)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context
@@ -7,7 +16,7 @@ Status: Proposed
 Fret’s current text contract (ADR 0006 / ADR 0029) is intentionally simple:
 
 - `TextService::prepare(text: &str, style: &TextStyle, constraints: TextConstraints) -> (TextBlobId, TextMetrics)`
-- `SceneOp::Text { text: TextBlobId, color, origin }`
+- `SceneOp::Text { text: TextBlobId, paint, origin }`
 
 This works well for “uniform style” UI text. However, editor-grade surfaces (and the new Markdown
 surface in ADR 0099) require **inline style variation** that must still participate in wrapping,

@@ -191,10 +191,12 @@ fn capture_edge_wire_and_markers_for_bounds(bounds: Rect) -> (Vec<Vec<PathComman
             continue;
         }
 
-        let PathStyle::Stroke(stroke) = style else {
-            continue;
+        let width = match *style {
+            PathStyle::Stroke(stroke) => stroke.width,
+            PathStyle::StrokeV2(stroke) => stroke.width,
+            PathStyle::Fill(_) => continue,
         };
-        if stroke.width.0.to_bits() != wire_width_bits {
+        if width.0.to_bits() != wire_width_bits {
             continue;
         }
         if cmds.len() == 2

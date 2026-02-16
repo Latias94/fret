@@ -35,7 +35,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 self.deliver_window_event_now(window, &Event::ClipboardText { token, text });
             }
             PlatformCompletion::ClipboardTextUnavailable { token } => {
-                self.deliver_window_event_now(window, &Event::ClipboardTextUnavailable { token });
+                self.deliver_window_event_now(
+                    window,
+                    &Event::ClipboardTextUnavailable {
+                        token,
+                        message: None,
+                    },
+                );
             }
             PlatformCompletion::ExternalDropData(data) => {
                 self.deliver_window_event_now(window, &Event::ExternalDropData(data));
@@ -126,26 +132,31 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .unwrap_or_default();
         let allow_window_under_cursor =
             caps.ui.window_hover_detection != fret_runtime::WindowHoverDetectionQuality::None;
+        let reliable_window_under_cursor =
+            caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
         // When a dock tear-off window is following the cursor, the cursor is always "inside" that
         // moving window. Prefer other windows under the cursor so we can dock back into the main
         // window (ImGui-style).
-        let prefer_not = self
-            .dock_tearoff_follow
-            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
-            .map(|f| f.window);
+        let prefer_not = self.dock_tearoff_follow.map(|f| f.window);
 
-        // Prefer the window we already hovered, if the cursor is still inside it. This makes
-        // cross-window drag hover stable even when OS windows overlap and we don't have z-order.
-        let hovered = self
-            .internal_drag_hover_window
-            .filter(|w| self.screen_pos_in_window(*w, screen_pos))
-            .filter(|w| Some(*w) != prefer_not)
-            .or_else(|| {
-                allow_window_under_cursor
-                    .then(|| self.window_under_cursor(screen_pos, prefer_not))
-                    .flatten()
-            });
+        let hovered = if reliable_window_under_cursor {
+            allow_window_under_cursor
+                .then(|| self.window_under_cursor(screen_pos, prefer_not))
+                .flatten()
+        } else {
+            // Prefer the window we already hovered, if the cursor is still inside it. This makes
+            // cross-window drag hover stable even when OS windows overlap and we don't have
+            // reliable z-order.
+            self.internal_drag_hover_window
+                .filter(|w| self.screen_pos_in_window(*w, screen_pos))
+                .filter(|w| Some(*w) != prefer_not)
+                .or_else(|| {
+                    allow_window_under_cursor
+                        .then(|| self.window_under_cursor(screen_pos, prefer_not))
+                        .flatten()
+                })
+        };
         let hovered = hovered.or_else(|| {
             // For dock tear-off, keep delivering `InternalDrag::Over` to the source window even
             // when the cursor is outside all windows so the UI can react before mouse-up.
@@ -255,23 +266,33 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .unwrap_or_default();
         let allow_window_under_cursor =
             caps.ui.window_hover_detection != fret_runtime::WindowHoverDetectionQuality::None;
+        let reliable_window_under_cursor =
+            caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let prefer_not = self
-            .dock_tearoff_follow
-            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
-            .map(|f| f.window);
+        let prefer_not = self.dock_tearoff_follow.map(|f| f.window);
 
-        // Prefer the last hovered window if possible; window overlap makes hit-testing ambiguous.
-        let target = self
-            .internal_drag_hover_window
-            .filter(|w| self.screen_pos_in_window(*w, screen_pos))
-            .filter(|w| Some(*w) != prefer_not)
-            .or_else(|| {
-                allow_window_under_cursor
-                    .then(|| self.window_under_cursor(screen_pos, prefer_not))
-                    .flatten()
-            })
-            .or(self.internal_drag_hover_window);
+        let target = if reliable_window_under_cursor {
+            allow_window_under_cursor
+                .then(|| self.window_under_cursor(screen_pos, prefer_not))
+                .flatten()
+                .or(self
+                    .internal_drag_hover_window
+                    .filter(|w| Some(*w) != prefer_not))
+        } else {
+            // Prefer the last hovered window if possible; window overlap makes hit-testing
+            // ambiguous when we don't have reliable z-order.
+            self.internal_drag_hover_window
+                .filter(|w| self.screen_pos_in_window(*w, screen_pos))
+                .filter(|w| Some(*w) != prefer_not)
+                .or_else(|| {
+                    allow_window_under_cursor
+                        .then(|| self.window_under_cursor(screen_pos, prefer_not))
+                        .flatten()
+                })
+                .or(self
+                    .internal_drag_hover_window
+                    .filter(|w| Some(*w) != prefer_not))
+        };
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
         let target = target.unwrap_or(drag_source_window);

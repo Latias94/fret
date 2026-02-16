@@ -32,21 +32,16 @@ impl BuiltInAggregationFn {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum AggregationFnSpec {
     /// TanStack `aggregationFn: 'auto'` (default).
+    #[default]
     Auto,
     BuiltIn(BuiltInAggregationFn),
     /// TanStack `aggregationFn: <string>` resolved via `options.aggregationFns[key] ?? builtIn[key]`.
     Named(Arc<str>),
     /// No aggregation for this column.
     None,
-}
-
-impl Default for AggregationFnSpec {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 pub type AggregationFn = Arc<dyn Fn(&str, &[TanStackValue]) -> TanStackValue + Send + Sync>;

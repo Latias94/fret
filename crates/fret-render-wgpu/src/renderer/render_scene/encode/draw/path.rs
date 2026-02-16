@@ -2,6 +2,7 @@ use super::super::state::{
     EncodeState, apply_transform_px, bounds_of_quad_points, transform_quad_points_px,
 };
 use super::super::*;
+use super::paint::{PaintMaterialPolicy, paint_to_gpu};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -20,12 +21,12 @@ pub(in super::super) fn encode_path(
     state: &mut EncodeState<'_>,
     origin: Point,
     path: fret_core::PathId,
-    color: Color,
+    paint: fret_core::scene::Paint,
 ) {
     state.flush_quad_batch();
 
     let group_opacity = state.current_opacity();
-    if color.a <= 0.0 || group_opacity <= 0.0 {
+    if group_opacity <= 0.0 {
         return;
     }
     let Some(prepared) = renderer.paths.get(path) else {
@@ -55,6 +56,32 @@ pub(in super::super) fn encode_path(
         return;
     }
     let t_px = state.current_transform_px();
+
+    let paint_gpu = paint_to_gpu(
+        renderer,
+        state,
+        paint,
+        group_opacity,
+        state.scale_factor,
+        PaintMaterialPolicy::DegradeToSolidBase,
+    );
+    // Visibility early-out: for solid, alpha is encoded in params0.w (premul). For gradients,
+    // scan stop alphas cheaply.
+    let visible = if paint_gpu.kind == 0 {
+        paint_gpu.params0[3] > 0.0
+    } else {
+        let mut any = false;
+        for c in paint_gpu.stop_colors {
+            if c[3] > 0.0 {
+                any = true;
+                break;
+            }
+        }
+        any
+    };
+    if !visible {
+        return;
+    }
 
     let local_bounds = Rect::new(
         Point::new(
@@ -91,7 +118,7 @@ pub(in super::super) fn encode_path(
     if debug_path_draw_enabled() && debug_path_draw_should_log() {
         let b = prepared.metrics.bounds;
         eprintln!(
-            "encode_path: draw id={:?} origin=({:.1},{:.1}) bounds=({:.1},{:.1} {:.1}x{:.1}) tris={} color=({:.2},{:.2},{:.2},{:.2}) scissor={:?}",
+            "encode_path: draw id={:?} origin=({:.1},{:.1}) bounds=({:.1},{:.1} {:.1}x{:.1}) tris={} paint_kind={} scissor={:?}",
             path,
             origin.x.0,
             origin.y.0,
@@ -100,10 +127,7 @@ pub(in super::super) fn encode_path(
             b.size.width.0,
             b.size.height.0,
             prepared.triangles.len(),
-            color.r,
-            color.g,
-            color.b,
-            color.a,
+            paint_gpu.kind,
             clipped_scissor
         );
     }
@@ -111,7 +135,8 @@ pub(in super::super) fn encode_path(
     let first_vertex = state.path_vertices.len() as u32;
     let ox = origin.x.0 * state.scale_factor;
     let oy = origin.y.0 * state.scale_factor;
-    let premul = color_to_linear_rgba_premul(EncodeState::color_with_opacity(color, group_opacity));
+    let paint_index = state.path_paints.len().min(u32::MAX as usize) as u32;
+    state.path_paints.push(paint_gpu);
 
     for p in &prepared.triangles {
         let lx = ox + p[0] * state.scale_factor;
@@ -119,7 +144,7 @@ pub(in super::super) fn encode_path(
         let (wx, wy) = apply_transform_px(t_px, lx, ly);
         state.path_vertices.push(PathVertex {
             pos_px: [wx, wy],
-            color: premul,
+            local_pos_px: [lx, ly],
         });
     }
 
@@ -130,6 +155,7 @@ pub(in super::super) fn encode_path(
             uniform_index: state.current_uniform_index,
             first_vertex,
             vertex_count,
+            paint_index,
         }));
     }
 }
@@ -142,9 +168,7 @@ pub(in super::super) fn encode_clip_path_mask(
 ) -> Option<(u32, u32)> {
     state.flush_quad_batch();
 
-    let Some(prepared) = renderer.paths.get(path) else {
-        return None;
-    };
+    let prepared = renderer.paths.get(path)?;
     if prepared.triangles.is_empty() {
         return None;
     }
@@ -161,7 +185,7 @@ pub(in super::super) fn encode_clip_path_mask(
         let (wx, wy) = apply_transform_px(t_px, lx, ly);
         state.path_vertices.push(PathVertex {
             pos_px: [wx, wy],
-            color: [0.0; 4],
+            local_pos_px: [0.0; 2],
         });
     }
 

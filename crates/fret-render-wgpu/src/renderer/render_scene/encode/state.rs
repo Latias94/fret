@@ -25,6 +25,8 @@ pub(super) struct EncodeState<'a> {
     pub(super) text_subpixel_enhanced_contrast: f32,
 
     pub(super) instances: &'a mut Vec<QuadInstance>,
+    pub(super) path_paints: &'a mut Vec<PaintGpu>,
+    pub(super) text_paints: &'a mut Vec<PaintGpu>,
     pub(super) viewport_vertices: &'a mut Vec<ViewportVertex>,
     pub(super) text_vertices: &'a mut Vec<TextVertex>,
     pub(super) path_vertices: &'a mut Vec<PathVertex>,
@@ -56,6 +58,8 @@ pub(super) struct EncodeState<'a> {
 
     pub(super) quad_batch: Option<(ScissorRect, u32, QuadPipelineKey, u32)>,
 
+    pub(super) text_white_paint_index: Option<u32>,
+
     pub(super) transform_stack: Vec<Transform2D>,
     pub(super) opacity_stack: Vec<f32>,
 
@@ -86,6 +90,8 @@ impl<'a> EncodeState<'a> {
         material_distinct_budget_per_frame: usize,
     ) -> Self {
         let instances = &mut encoding.instances;
+        let path_paints = &mut encoding.path_paints;
+        let text_paints = &mut encoding.text_paints;
         let viewport_vertices = &mut encoding.viewport_vertices;
         let text_vertices = &mut encoding.text_vertices;
         let path_vertices = &mut encoding.path_vertices;
@@ -114,6 +120,8 @@ impl<'a> EncodeState<'a> {
             text_grayscale_enhanced_contrast,
             text_subpixel_enhanced_contrast,
             instances,
+            path_paints,
+            text_paints,
             viewport_vertices,
             text_vertices,
             path_vertices,
@@ -138,6 +146,7 @@ impl<'a> EncodeState<'a> {
             mask_scope_count,
             current_uniform_index: 0,
             quad_batch: None,
+            text_white_paint_index: None,
             transform_stack: vec![Transform2D::IDENTITY],
             opacity_stack: vec![1.0],
 
@@ -191,6 +200,7 @@ impl<'a> EncodeState<'a> {
             && prev.uniform_index == draw.uniform_index
             && prev.kind == draw.kind
             && prev.atlas_page == draw.atlas_page
+            && prev.paint_index == draw.paint_index
             && prev_end == draw.first_vertex;
 
         if can_merge {

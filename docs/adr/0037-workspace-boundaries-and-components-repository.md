@@ -1,5 +1,16 @@
 # ADR 0037: Workspace Boundaries and External Components Repository (`fret-components`)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- fret-ui-precision: (internal reference; no public upstream link)
+- gpui-component: https://github.com/longbridge/gpui-component
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

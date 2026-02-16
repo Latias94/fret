@@ -78,10 +78,11 @@ impl<'a, H: UiHost> CachedSubtreeExt for ElementContext<'a, H> {
     where
         I: IntoIterator<Item = AnyElement>,
     {
-        let mut view_cache = ViewCacheProps::default();
-        view_cache.layout = props.layout;
-        view_cache.contained_layout = props.contained_layout;
-        view_cache.cache_key = props.cache_key;
+        let view_cache = ViewCacheProps {
+            layout: props.layout,
+            contained_layout: props.contained_layout,
+            cache_key: props.cache_key,
+        };
         self.view_cache(view_cache, f)
     }
 }

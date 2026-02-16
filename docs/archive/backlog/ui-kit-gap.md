@@ -2,6 +2,16 @@
 title: UI Kit Gap Analysis (shadcn/ui + gpui-component)
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # UI Kit Gap Analysis (shadcn/ui + gpui-component)
 
 This document tracks:

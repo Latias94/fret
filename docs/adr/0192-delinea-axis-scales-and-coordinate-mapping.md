@@ -1,5 +1,14 @@
 # ADR 0192: `delinea` Axis Scales + Coordinate Mapping Contract (Value/Category v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context
@@ -128,8 +137,8 @@ P1 follow-ups:
 
 ## References
 
-- ECharts scales: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Interval.ts`,
-  `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Ordinal.ts`
+- ECharts scales: `repo-ref/echarts/src/scale/Interval.ts`,
+  `repo-ref/echarts/src/scale/Ordinal.ts`
 - ADR 0190: `docs/adr/0190-delinea-headless-chart-engine.md`
 - ADR 0191: `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ADR 0098: `docs/adr/0098-plot-architecture-and-performance.md`

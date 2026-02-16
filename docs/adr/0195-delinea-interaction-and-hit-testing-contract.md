@@ -1,5 +1,14 @@
 # ADR 0195: `delinea` Interaction + Hit Testing Contract (AxisPointer/Tooltip/Legend v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context
@@ -146,4 +155,4 @@ P1:
 
 - ADR 0190: `docs/adr/0190-delinea-headless-chart-engine.md`
 - ADR 0191: `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
-- ECharts axisPointer/tooltip concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\echarts.all.ts`
+- ECharts axisPointer/tooltip concepts: `repo-ref/echarts/src/echarts.all.ts`

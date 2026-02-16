@@ -87,7 +87,7 @@ fn render_and_readback(
     scene: &Scene,
     size: (u32, u32),
 ) -> Vec<u8> {
-    let format = wgpu::TextureFormat::Rgba8Unorm;
+    let format = wgpu::TextureFormat::Rgba8UnormSrgb;
     let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("composite_group_conformance output"),
         size: wgpu::Extent3d {
@@ -119,6 +119,37 @@ fn render_and_readback(
     ctx.queue.submit([cb]);
     let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
     read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size)
+}
+
+fn u8_from_f32_clamped(x: f32) -> u8 {
+    (x.clamp(0.0, 1.0) * 255.0 + 0.5) as u8
+}
+
+fn linear_to_srgb_f32(x: f32) -> f32 {
+    let x = x.clamp(0.0, 1.0);
+    if x <= 0.0031308 {
+        x * 12.92
+    } else {
+        let a = 0.055;
+        (1.0 + a) * x.powf(1.0 / 2.4) - a
+    }
+}
+
+fn u8_from_linear_to_srgb_f32(x: f32) -> u8 {
+    u8_from_f32_clamped(linear_to_srgb_f32(x))
+}
+
+fn assert_rgba_approx_eq(actual: [u8; 4], expected: [u8; 4], tol: u8, context: &str) {
+    for i in 0..4 {
+        let a = actual[i];
+        let e = expected[i];
+        let lo = e.saturating_sub(tol);
+        let hi = e.saturating_add(tol);
+        assert!(
+            a >= lo && a <= hi,
+            "{context}: channel[{i}] expected≈{expected:?} (tol={tol}) got={actual:?}"
+        );
+    }
 }
 
 #[test]
@@ -190,6 +221,114 @@ fn gpu_composite_group_add_is_scissored_and_additive() {
         inside[0] > outside[0] + 6 && inside[1] > outside[1] + 6 && inside[2] > outside[2] + 6,
         "expected additive blend to brighten inside pixels: outside={outside:?} inside={inside:?}"
     );
+}
+
+#[test]
+fn gpu_composite_group_blend_modes_v2_smoke_conformance() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let size = (64u32, 64u32);
+    let full = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0)));
+    let bounds = Rect::new(
+        Point::new(Px(16.0), Px(16.0)),
+        Size::new(Px(32.0), Px(32.0)),
+    );
+
+    let dst = Color {
+        r: 0.6,
+        g: 0.2,
+        b: 0.8,
+        a: 1.0,
+    };
+    let src = Color {
+        r: 0.1,
+        g: 0.5,
+        b: 0.3,
+        a: 1.0,
+    };
+
+    let modes = [BlendMode::Darken, BlendMode::Lighten, BlendMode::Subtract];
+
+    for mode in modes {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: full,
+            background: Paint::Solid(dst),
+            border: Edges::all(Px(0.0)),
+            border_paint: Paint::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+
+        scene.push(SceneOp::PushCompositeGroup {
+            desc: CompositeGroupDesc::new(bounds, mode, EffectQuality::Auto),
+        });
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(1),
+            rect: bounds,
+            background: Paint::Solid(src),
+            border: Edges::all(Px(0.0)),
+            border_paint: Paint::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        scene.push(SceneOp::PopCompositeGroup);
+
+        let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+        let outside = pixel_rgba(&pixels, size.0, 8, 8);
+        let inside = pixel_rgba(&pixels, size.0, 32, 32);
+
+        assert_rgba_approx_eq(
+            outside,
+            [
+                u8_from_linear_to_srgb_f32(dst.r),
+                u8_from_linear_to_srgb_f32(dst.g),
+                u8_from_linear_to_srgb_f32(dst.b),
+                255,
+            ],
+            4,
+            &format!("mode={mode:?} outside"),
+        );
+
+        let expected_rgb_srgb = match mode {
+            BlendMode::Darken => [
+                linear_to_srgb_f32(dst.r.min(src.r)),
+                linear_to_srgb_f32(dst.g.min(src.g)),
+                linear_to_srgb_f32(dst.b.min(src.b)),
+            ],
+            BlendMode::Lighten => [
+                linear_to_srgb_f32(dst.r.max(src.r)),
+                linear_to_srgb_f32(dst.g.max(src.g)),
+                linear_to_srgb_f32(dst.b.max(src.b)),
+            ],
+            BlendMode::Subtract => [
+                linear_to_srgb_f32((dst.r - src.r).clamp(0.0, 1.0)),
+                linear_to_srgb_f32((dst.g - src.g).clamp(0.0, 1.0)),
+                linear_to_srgb_f32((dst.b - src.b).clamp(0.0, 1.0)),
+            ],
+            BlendMode::Over | BlendMode::Add | BlendMode::Multiply | BlendMode::Screen => {
+                unreachable!("modes loop must include only v2 fixed-function modes")
+            }
+        };
+
+        assert_rgba_approx_eq(
+            inside,
+            [
+                u8_from_f32_clamped(expected_rgb_srgb[0]),
+                u8_from_f32_clamped(expected_rgb_srgb[1]),
+                u8_from_f32_clamped(expected_rgb_srgb[2]),
+                255,
+            ],
+            6,
+            &format!("mode={mode:?} inside"),
+        );
+    }
 }
 
 #[test]

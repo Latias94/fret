@@ -167,19 +167,10 @@ impl ToastVariantPalette {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ToastTextStyle {
     pub style_key: Option<String>,
     pub color_key: Option<String>,
-}
-
-impl Default for ToastTextStyle {
-    fn default() -> Self {
-        Self {
-            style_key: None,
-            color_key: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

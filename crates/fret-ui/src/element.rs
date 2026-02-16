@@ -39,6 +39,19 @@ impl AnyElement {
     /// Prefer this over wrapping a subtree in `Semantics` when you only need to stamp
     /// `test_id` / `label` / `role` / `value` for diagnostics or UI automation, since `Semantics`
     /// introduces a real layout node.
+    ///
+    /// ```ignore
+    /// use fret_core::SemanticsRole;
+    /// use fret_ui::element::SemanticsDecoration;
+    ///
+    /// // `some_element` is any `AnyElement` produced by your view constructors:
+    /// let el = some_element.attach_semantics(
+    ///     SemanticsDecoration::default()
+    ///         .role(SemanticsRole::Button)
+    ///         .label("Save")
+    ///         .test_id("toolbar.save"),
+    /// );
+    /// ```
     pub fn attach_semantics(mut self, decoration: SemanticsDecoration) -> Self {
         self.semantics_decoration = Some(match self.semantics_decoration.take() {
             Some(existing) => existing.merge(decoration),
@@ -48,6 +61,12 @@ impl AnyElement {
     }
 
     /// Attach a debug/test-only identifier for diagnostics and deterministic UI automation.
+    ///
+    /// This is shorthand for attaching a [`SemanticsDecoration`] with `test_id` set.
+    ///
+    /// ```ignore
+    /// let el = some_element.test_id("settings.theme.toggle");
+    /// ```
     pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
         self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
     }
@@ -485,6 +504,19 @@ impl Default for ContainerProps {
 ///
 /// This is primarily intended for diagnostics and UI automation (`test_id`) and for restricted
 /// a11y stamping on typed elements without introducing a layout wrapper.
+///
+/// ```ignore
+/// use fret_core::SemanticsRole;
+/// use fret_ui::element::SemanticsDecoration;
+///
+/// let decoration = SemanticsDecoration::default()
+///     .role(SemanticsRole::Checkbox)
+///     .label("Enable autosave")
+///     .checked(Some(true))
+///     .test_id("settings.autosave");
+///
+/// let el = some_element.attach_semantics(decoration);
+/// ```
 #[derive(Debug, Default, Clone)]
 pub struct SemanticsDecoration {
     pub role: Option<SemanticsRole>,
@@ -2094,6 +2126,9 @@ pub struct ScrollbarState {
 }
 
 /// Authoring conversion boundary (ADR 0039).
+///
+/// Most application code does not implement this directly; component crates typically expose
+/// ergonomic constructors that return `AnyElement` (or helpers that build `Elements`).
 pub trait IntoElement {
     fn into_element(self, id: GlobalElementId) -> AnyElement;
 }
@@ -2102,6 +2137,8 @@ pub trait IntoElement {
 ///
 /// This is intended for authoring-facing APIs that want an "iterator-friendly" return type without
 /// forcing callers into `Vec<AnyElement>` as the only option.
+///
+/// This type is commonly used as a view return value (e.g. `ViewElements` in `fret-bootstrap`).
 #[derive(Debug, Clone, Default)]
 pub struct Elements(pub Vec<AnyElement>);
 

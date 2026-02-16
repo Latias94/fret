@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct NativeSelectPageModels {
@@ -29,48 +31,6 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(820.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let select_width = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
     let demo = {
@@ -79,7 +39,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             .refine_layout(select_width.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-demo");
-        section_card(cx, "Demo", content)
+        content
     };
 
     let groups = {
@@ -103,7 +63,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             },
         )
         .test_id("ui-gallery-native-select-groups");
-        section_card(cx, "Groups", content)
+        content
     };
 
     let disabled = {
@@ -113,7 +73,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             .refine_layout(select_width.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-disabled");
-        section_card(cx, "Disabled", content)
+        content
     };
 
     let invalid = {
@@ -123,7 +83,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             .refine_layout(select_width.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-invalid");
-        section_card(cx, "Invalid", content)
+        content
     };
 
     let native_vs_select = {
@@ -154,7 +114,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             },
         )
         .test_id("ui-gallery-native-select-vs-select");
-        section_card(cx, "Native Select vs Select", content)
+        content
     };
 
     let rtl = {
@@ -170,96 +130,21 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         )
         .test_id("ui-gallery-native-select-rtl");
 
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Native Select docs order: Demo, Groups, Disabled, Invalid, Native Select vs Select, RTL.",
-                ),
-                demo,
-                groups,
-                disabled,
-                invalid,
-                native_vs_select,
-                rtl,
-            ]
-        },
-    );
-    let component_panel =
-        shell(cx, component_panel_body).test_id("ui-gallery-native-select-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Basic Usage").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"NativeSelect::new("Select a fruit").a11y_label("Fruit")"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Disabled and Invalid").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"NativeSelect::new("...").disabled(true); NativeSelect::new("...").aria_invalid(true);"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Compare APIs").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"NativeSelect has native surface semantics; Select provides custom popup/list interactions."#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs` and `ecosystem/fret-ui-shadcn/src/select.rs`.",
+                ),
                 shadcn::typography::muted(
                     cx,
                     "Current NativeSelect API is label-based; explicit option/optgroup nodes are not exposed yet.",
@@ -270,18 +155,47 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "Each section has stable test_id for future diag scripts.",
+                    "Use NativeSelect for native browser behavior/mobile ergonomics; use Select for richer overlays and custom interactions.",
                 ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-native-select",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Native Select docs order: Demo, Groups, Disabled, Invalid, Native Select vs Select, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Basic native select with a label.")
+                .max_w(Px(820.0))
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new("Select a fruit")
+    .a11y_label("Fruit")
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Groups", groups)
+                .description("Optgroup-like grouping is approximated with multiple selects.")
+                .max_w(Px(820.0)),
+            DocSection::new("Disabled", disabled)
+                .description("Disabled native select.")
+                .max_w(Px(820.0)),
+            DocSection::new("Invalid", invalid)
+                .description("Invalid state via `aria_invalid(true)`.")
+                .max_w(Px(820.0)),
+            DocSection::new("Native Select vs Select", native_vs_select)
+                .description("Compare native and styled select side-by-side.")
+                .max_w(Px(820.0)),
+            DocSection::new("RTL", rtl)
+                .description("Native select under an RTL direction provider.")
+                .max_w(Px(820.0)),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and caveats.")
+                .max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-native-select")]
 }

@@ -1,5 +1,14 @@
 # Apache ECharts Alignment (Fret Charts)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document tracks feature and semantics alignment between:
 
 - Apache ECharts (reference in `repo-ref/echarts`)

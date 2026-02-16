@@ -10,13 +10,13 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
     CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
 };
+use fret_core::time::Instant;
 use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
 };
 use fret_runtime::{CommandId, DragSession, DragSessionId, Effect};
 use fret_ui::retained_bridge::Widget as _;
 use serde_json::Value;
-use std::time::Instant;
 
 mod a11y_active_descendant_conformance;
 mod background_style_conformance;

@@ -22,30 +22,34 @@ See `docs/shadcn-web-goldens.md:1` for the full workflow.
 
 Quickstart:
 
+Upstream references:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
 1) Install deps:
 
-`pnpm -C repo-ref/ui install`
+`pnpm -C <shadcn-ui-root> install`
 
 2) Build the local `shadcn` workspace package (required on fresh checkouts):
 
-`pnpm -C repo-ref/ui --filter shadcn build`
+`pnpm -C <shadcn-ui-root> --filter shadcn build`
 
 3) Install a browser for puppeteer (only if you don't have a local Chrome/Edge):
 
-`pnpm -C repo-ref/ui dlx puppeteer browsers install chrome`
+`pnpm -C <shadcn-ui-root> dlx puppeteer browsers install chrome`
 
 4) Build + start a shadcn production server (Terminal A):
 
-Important: `pnpm -C repo-ref/ui/apps/v4 build` currently defaults to Turbopack and may fail to
+Important: `pnpm -C <shadcn-ui-root>/apps/v4 build` currently defaults to Turbopack and may fail to
 resolve some transitive Radix deps under pnpm on Windows. Prefer a webpack production build:
 
 If your environment cannot reach Google Fonts during `next build`, you can still build shadcn v4
 offline by using Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` hook (maps requested families to local
 Windows font files):
 
-`cd repo-ref/ui/apps/v4; $env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES=(Resolve-Path ../../../../goldens/shadcn-web/scripts/next-font-google-mock.cjs).Path; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
+`cd <shadcn-ui-root>/apps/v4; $env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES=(Resolve-Path ../../../../goldens/shadcn-web/scripts/next-font-google-mock.cjs).Path; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
 
-`$env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020`
+`$env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; pnpm -C <shadcn-ui-root>/apps/v4 exec next start -p 4020`
 
 Alternatively, use the repo helper:
 
@@ -53,7 +57,7 @@ Alternatively, use the repo helper:
 
 5) Extract JSON goldens (Terminal B):
 
-`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --update --baseUrl=http://localhost:4020`
+`pnpm -C <shadcn-ui-root>/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --update --baseUrl=http://localhost:4020`
 
 Single-command alternative (starts/stops a production server in-process):
 
@@ -61,7 +65,7 @@ Single-command alternative (starts/stops a production server in-process):
 
 Extract *all* routable new-york-v4 pages (block+component+example):
 
-`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
+`pnpm -C <shadcn-ui-root>/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
 
 Default output dir:
 

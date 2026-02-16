@@ -1,5 +1,15 @@
 # Primitives Interaction Semantics Alignment v1 — Popover (Audit Sheet)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream note; not a contract)
 
 Baseline: Radix Popover outcomes (dismiss semantics and focus behavior; click-through defaults are a Fret policy choice).

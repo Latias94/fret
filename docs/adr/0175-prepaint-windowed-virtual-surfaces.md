@@ -1,5 +1,16 @@
 # ADR 0175: Prepaint-Windowed Virtual Surfaces (GPUI-Aligned)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Flutter: https://github.com/flutter/flutter
+- gpui-component: https://github.com/longbridge/gpui-component
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (v1 contract; implementation in progress)
 
 ## Context

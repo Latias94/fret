@@ -1,6 +1,6 @@
 use fret_app::Effect;
 use fret_core::Event;
-use fret_runtime::{PlatformCapabilities, WindowRequest};
+use fret_runtime::{PlatformCapabilities, WindowClipboardDiagnosticsStore, WindowRequest};
 use js_sys::{Array, Function, Object, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{JsFuture, spawn_local};
@@ -92,7 +92,7 @@ fn js_error_string(err: &JsValue) -> String {
         (Some(name), Some(message)) if !message.is_empty() => format!("{name}: {message}"),
         (Some(name), _) => name,
         (_, Some(message)) if !message.is_empty() => message,
-        _ => "navigator.share rejected".to_string(),
+        _ => "operation rejected".to_string(),
     }
 }
 
@@ -122,6 +122,31 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         gfx: &mut GfxState,
         state: &mut D::WindowState,
     ) -> bool {
+        if !self.pending_clipboard_write_results.borrow().is_empty() {
+            let results: Vec<Result<(), String>> = self
+                .pending_clipboard_write_results
+                .borrow_mut()
+                .drain(..)
+                .collect();
+            let window = self.app_window;
+            let frame_id = self.frame_id;
+            self.app.with_global_mut_untracked(
+                WindowClipboardDiagnosticsStore::default,
+                |store, _app| {
+                    for result in results {
+                        match result {
+                            Ok(()) => store.record_write_ok(window, frame_id),
+                            Err(message) => store.record_write_unavailable(
+                                window,
+                                frame_id,
+                                (!message.is_empty()).then_some(message),
+                            ),
+                        }
+                    }
+                },
+            );
+        }
+
         let did_work = self.dispatcher.drain_turn() || self.drain_inboxes(Some(self.app_window));
         let effects = self.app.flush_effects();
         let effects = self.web_services.handle_effects(&mut self.app, effects);
@@ -343,9 +368,148 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     });
                     window.request_redraw();
                 }
-                Effect::ClipboardSetText { text: _ } => {
-                    // Best-effort: clipboard access is platform-dependent on web and may be
-                    // restricted. For now, treat as unsupported.
+                Effect::ClipboardSetText { text } => {
+                    if self.diag_clipboard_force_unavailable {
+                        self.app.with_global_mut_untracked(
+                            WindowClipboardDiagnosticsStore::default,
+                            |store, _app| {
+                                store.record_write_unavailable(
+                                    self.app_window,
+                                    self.frame_id,
+                                    Some("diagnostics forced clipboard unavailable".to_string()),
+                                );
+                            },
+                        );
+                        continue;
+                    }
+
+                    let Some(window) = web_sys::window() else {
+                        self.app.with_global_mut_untracked(
+                            WindowClipboardDiagnosticsStore::default,
+                            |store, _app| {
+                                store.record_write_unavailable(
+                                    self.app_window,
+                                    self.frame_id,
+                                    Some("window is unavailable for clipboard write".to_string()),
+                                );
+                            },
+                        );
+                        continue;
+                    };
+                    let navigator =
+                        match Reflect::get(window.as_ref(), &JsValue::from_str("navigator")) {
+                            Ok(v) => v,
+                            Err(_) => {
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_unavailable(
+                                            self.app_window,
+                                            self.frame_id,
+                                            Some(
+                                                "navigator is unavailable for clipboard write"
+                                                    .to_string(),
+                                            ),
+                                        );
+                                    },
+                                );
+                                continue;
+                            }
+                        };
+                    let clipboard = match Reflect::get(&navigator, &JsValue::from_str("clipboard"))
+                    {
+                        Ok(v) => v,
+                        Err(_) => {
+                            self.app.with_global_mut_untracked(
+                                WindowClipboardDiagnosticsStore::default,
+                                |store, _app| {
+                                    store.record_write_unavailable(
+                                        self.app_window,
+                                        self.frame_id,
+                                        Some("navigator.clipboard is unavailable".to_string()),
+                                    );
+                                },
+                            );
+                            continue;
+                        }
+                    };
+                    let write_fn = match Reflect::get(&clipboard, &JsValue::from_str("writeText"))
+                        .ok()
+                        .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        Some(v) => v,
+                        None => {
+                            self.app.with_global_mut_untracked(
+                                WindowClipboardDiagnosticsStore::default,
+                                |store, _app| {
+                                    store.record_write_unavailable(
+                                        self.app_window,
+                                        self.frame_id,
+                                        Some(
+                                            "navigator.clipboard.writeText is unavailable"
+                                                .to_string(),
+                                        ),
+                                    );
+                                },
+                            );
+                            continue;
+                        }
+                    };
+
+                    // Important: call `navigator.clipboard.writeText(...)` synchronously while
+                    // draining effects so the invocation can inherit a browser user-activation
+                    // gesture when applicable (similar to `navigator.share`).
+                    let promise = match write_fn.call1(&clipboard, &JsValue::from_str(&text)) {
+                        Ok(v) => match v.dyn_into::<Promise>() {
+                            Ok(p) => p,
+                            Err(_) => {
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_unavailable(
+                                            self.app_window,
+                                            self.frame_id,
+                                            Some(
+                                                "navigator.clipboard.writeText did not return a Promise"
+                                                    .to_string(),
+                                            ),
+                                        );
+                                    },
+                                );
+                                continue;
+                            }
+                        },
+                        Err(_) => {
+                            self.app.with_global_mut_untracked(
+                                WindowClipboardDiagnosticsStore::default,
+                                |store, _app| {
+                                    store.record_write_unavailable(
+                                        self.app_window,
+                                        self.frame_id,
+                                        Some(
+                                            "navigator.clipboard.writeText threw synchronously"
+                                                .to_string(),
+                                        ),
+                                    );
+                                },
+                            );
+                            continue;
+                        }
+                    };
+
+                    let pending = self.pending_clipboard_write_results.clone();
+                    let proxy = self.event_loop_proxy.clone();
+                    spawn_local(async move {
+                        let result = JsFuture::from(promise).await;
+                        let outcome = match result {
+                            Ok(_) => Ok(()),
+                            Err(err) => Err(js_error_string(&err)),
+                        };
+                        pending.borrow_mut().push(outcome);
+                        if let Some(proxy) = proxy {
+                            proxy.wake_up();
+                        }
+                    });
                 }
                 Effect::ClipboardGetText {
                     window: target_window,
@@ -354,9 +518,116 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     if target_window != self.app_window {
                         continue;
                     }
-                    self.pending_events
-                        .push(Event::ClipboardTextUnavailable { token });
-                    window.request_redraw();
+
+                    if self.diag_clipboard_force_unavailable {
+                        self.pending_events.push(Event::ClipboardTextUnavailable {
+                            token,
+                            message: Some("diagnostics forced clipboard unavailable".to_string()),
+                        });
+                        window.request_redraw();
+                        continue;
+                    }
+
+                    let Some(window_handle) = web_sys::window() else {
+                        self.pending_events.push(Event::ClipboardTextUnavailable {
+                            token,
+                            message: Some("window is unavailable for clipboard read".to_string()),
+                        });
+                        window.request_redraw();
+                        continue;
+                    };
+                    let navigator =
+                        match Reflect::get(window_handle.as_ref(), &JsValue::from_str("navigator"))
+                        {
+                            Ok(v) => v,
+                            Err(_) => {
+                                self.pending_events.push(Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: Some(
+                                        "navigator is unavailable for clipboard read".to_string(),
+                                    ),
+                                });
+                                window.request_redraw();
+                                continue;
+                            }
+                        };
+                    let clipboard = match Reflect::get(&navigator, &JsValue::from_str("clipboard"))
+                    {
+                        Ok(v) => v,
+                        Err(_) => {
+                            self.pending_events.push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some("navigator.clipboard is unavailable".to_string()),
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+                    let read_fn = match Reflect::get(&clipboard, &JsValue::from_str("readText"))
+                        .ok()
+                        .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        Some(v) => v,
+                        None => {
+                            self.pending_events.push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some(
+                                    "navigator.clipboard.readText is unavailable".to_string(),
+                                ),
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    // Important: call `navigator.clipboard.readText(...)` synchronously while
+                    // draining effects so the invocation can inherit a browser user-activation
+                    // gesture when applicable.
+                    let promise = match read_fn.call0(&clipboard) {
+                        Ok(v) => match v.dyn_into::<Promise>() {
+                            Ok(p) => p,
+                            Err(_) => {
+                                self.pending_events.push(Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: Some(
+                                        "navigator.clipboard.readText did not return a Promise"
+                                            .to_string(),
+                                    ),
+                                });
+                                window.request_redraw();
+                                continue;
+                            }
+                        },
+                        Err(_) => {
+                            self.pending_events.push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some(
+                                    "navigator.clipboard.readText threw synchronously".to_string(),
+                                ),
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    let pending = self.pending_async_events.clone();
+                    let proxy = self.event_loop_proxy.clone();
+                    spawn_local(async move {
+                        let event = match JsFuture::from(promise).await {
+                            Ok(v) => {
+                                let text = v.as_string().unwrap_or_default();
+                                Event::ClipboardText { token, text }
+                            }
+                            Err(err) => Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some(js_error_string(&err)),
+                            },
+                        };
+                        pending.borrow_mut().push(event);
+                        if let Some(proxy) = proxy {
+                            proxy.wake_up();
+                        }
+                    });
                 }
                 Effect::PrimarySelectionSetText { text: _ } => {}
                 Effect::PrimarySelectionGetText {

@@ -6,34 +6,28 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
-use cocoa::{
-    appkit::{
-        NSApp, NSApplication, NSDeleteFunctionKey, NSDownArrowFunctionKey, NSEndFunctionKey,
-        NSEventModifierFlags, NSF1FunctionKey, NSF2FunctionKey, NSF3FunctionKey, NSF4FunctionKey,
-        NSF5FunctionKey, NSF6FunctionKey, NSF7FunctionKey, NSF8FunctionKey, NSF9FunctionKey,
-        NSF10FunctionKey, NSF11FunctionKey, NSF12FunctionKey, NSF13FunctionKey, NSF14FunctionKey,
-        NSF15FunctionKey, NSF16FunctionKey, NSF17FunctionKey, NSF18FunctionKey, NSF19FunctionKey,
-        NSF20FunctionKey, NSF21FunctionKey, NSF22FunctionKey, NSF23FunctionKey, NSF24FunctionKey,
-        NSF25FunctionKey, NSF26FunctionKey, NSF27FunctionKey, NSF28FunctionKey, NSF29FunctionKey,
-        NSF30FunctionKey, NSF31FunctionKey, NSF32FunctionKey, NSF33FunctionKey, NSF34FunctionKey,
-        NSF35FunctionKey, NSHomeFunctionKey, NSLeftArrowFunctionKey, NSMenu, NSMenuItem,
-        NSPageDownFunctionKey, NSPageUpFunctionKey, NSRightArrowFunctionKey, NSUpArrowFunctionKey,
-    },
-    base::{id, nil},
-    foundation::{NSAutoreleasePool, NSInteger, NSString},
-};
 use fret_core::{AppWindowId, KeyCode};
 use fret_runtime::{
     CommandId, CommandScope, InputContext, InputDispatchPhase, Keymap, KeymapService, MenuBar,
     MenuItem, MenuRole, OsAction, Platform, PlatformCapabilities, SystemMenuType, WhenExpr,
     WindowCommandGatingSnapshot,
 };
-use objc::{
-    declare::ClassDecl,
-    msg_send,
-    runtime::{BOOL, Class, NO, Object, Sel, YES},
-    sel, sel_impl,
+use objc2::rc::Retained;
+use objc2::runtime::{AnyClass, AnyObject, Bool, ClassBuilder, NSObject, Sel};
+use objc2::{ClassType, MainThreadMarker, msg_send, sel};
+use objc2_app_kit::{
+    NSApplication, NSDeleteFunctionKey, NSDownArrowFunctionKey, NSEndFunctionKey,
+    NSEventModifierFlags, NSF1FunctionKey, NSF2FunctionKey, NSF3FunctionKey, NSF4FunctionKey,
+    NSF5FunctionKey, NSF6FunctionKey, NSF7FunctionKey, NSF8FunctionKey, NSF9FunctionKey,
+    NSF10FunctionKey, NSF11FunctionKey, NSF12FunctionKey, NSF13FunctionKey, NSF14FunctionKey,
+    NSF15FunctionKey, NSF16FunctionKey, NSF17FunctionKey, NSF18FunctionKey, NSF19FunctionKey,
+    NSF20FunctionKey, NSF21FunctionKey, NSF22FunctionKey, NSF23FunctionKey, NSF24FunctionKey,
+    NSF25FunctionKey, NSF26FunctionKey, NSF27FunctionKey, NSF28FunctionKey, NSF29FunctionKey,
+    NSF30FunctionKey, NSF31FunctionKey, NSF32FunctionKey, NSF33FunctionKey, NSF34FunctionKey,
+    NSF35FunctionKey, NSHomeFunctionKey, NSLeftArrowFunctionKey, NSMenu, NSMenuItem,
+    NSPageDownFunctionKey, NSPageUpFunctionKey, NSRightArrowFunctionKey, NSUpArrowFunctionKey,
 };
+use objc2_foundation::{NSInteger, NSString};
 use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use winit::{event_loop::EventLoopProxy, window::Window};
 
@@ -41,7 +35,7 @@ use super::RunnerUserEvent;
 
 static EVENT_LOOP_PROXY: OnceLock<EventLoopProxy> = OnceLock::new();
 static PROXY_EVENTS: OnceLock<Arc<Mutex<Vec<RunnerUserEvent>>>> = OnceLock::new();
-static MENU_DELEGATE_CLASS: OnceLock<&'static Class> = OnceLock::new();
+static MENU_DELEGATE_CLASS: OnceLock<&'static AnyClass> = OnceLock::new();
 
 thread_local! {
     static MENU_STATE: RefCell<MacosMenuState> = RefCell::new(MacosMenuState::default());
@@ -52,14 +46,13 @@ struct MacosMenuItemDef {
     command: CommandId,
     command_when: Option<WhenExpr>,
     item_when: Option<WhenExpr>,
-    os_action: Option<OsAction>,
     command_scope: CommandScope,
 }
 
 #[derive(Debug)]
 struct MacosMenuState {
-    delegate: id,
-    main_menu: id,
+    delegate: Option<Retained<AnyObject>>,
+    main_menu: Option<Retained<NSMenu>>,
     tag_to_def: HashMap<NSInteger, MacosMenuItemDef>,
     ns_window_to_app_window: HashMap<isize, AppWindowId>,
     cached_keymap: Keymap,
@@ -71,8 +64,8 @@ struct MacosMenuState {
 impl Default for MacosMenuState {
     fn default() -> Self {
         Self {
-            delegate: nil,
-            main_menu: nil,
+            delegate: None,
+            main_menu: None,
             tag_to_def: HashMap::new(),
             ns_window_to_app_window: HashMap::new(),
             cached_keymap: Keymap::default(),
@@ -189,12 +182,15 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
 }
 
 pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
-    let delegate_class: &'static Class = *MENU_DELEGATE_CLASS.get_or_init(menu_delegate_class);
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let delegate_class: &'static AnyClass = *MENU_DELEGATE_CLASS.get_or_init(menu_delegate_class);
 
     let normalized_menu_bar = menu_bar.clone().normalized();
 
     let (commands, keymap, caps) = {
-        let commands = app.commands().clone();
+        let commands = app.commands();
         let keymap = app
             .global::<KeymapService>()
             .map(|svc| svc.keymap.clone())
@@ -227,142 +223,162 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         state.cached_keymap = keymap;
         state.cached_caps = caps;
 
-        unsafe {
-            if state.delegate == nil {
-                let delegate: id = msg_send![delegate_class, new];
-                state.delegate = delegate;
-            }
-
-            let main_menu = NSMenu::new(nil).autorelease();
-            state.tag_to_def.clear();
-            state.next_tag = 1;
-
-            let mut app_menu: Option<&fret_runtime::Menu> = None;
-            let mut other_menus: Vec<&fret_runtime::Menu> = Vec::new();
-            for menu in &normalized_menu_bar.menus {
-                if menu.role == Some(MenuRole::App) && app_menu.is_none() {
-                    app_menu = Some(menu);
-                } else {
-                    other_menus.push(menu);
-                }
-            }
-            let menus_iter = app_menu.into_iter().chain(other_menus);
-
-            for menu in menus_iter {
-                let submenu = NSMenu::new(nil).autorelease();
-                let title = ns_string(&menu.title);
-                let _: () = msg_send![submenu, setTitle: title];
-                let _: () = msg_send![submenu, setDelegate: state.delegate];
-
-                for item in &menu.items {
-                    append_menu_item(&mut state, submenu, item, &commands, &base_ctx);
-                }
-
-                let menu_item = NSMenuItem::new(nil).autorelease();
-                let _: () = msg_send![menu_item, setTitle: title];
-                menu_item.setSubmenu_(submenu);
-                main_menu.addItem_(menu_item);
-
-                if menu.role == Some(MenuRole::Window) {
-                    let app = NSApp();
-                    app.setWindowsMenu_(submenu);
-                }
-
-                if menu.role == Some(MenuRole::Help) {
-                    let app = NSApp();
-                    let _: () = msg_send![app, setHelpMenu: submenu];
-                }
-
-                if menu.role == Some(MenuRole::App) {
-                    let app = NSApp();
-                    let _: () = msg_send![app, setAppleMenu: submenu];
-                }
-            }
-
-            let app = NSApp();
-            let _: () = msg_send![app, setMainMenu: main_menu];
-
-            state.main_menu = main_menu;
+        if state.delegate.is_none() {
+            let delegate: Retained<AnyObject> = unsafe { msg_send![delegate_class, new] };
+            state.delegate = Some(delegate);
         }
+        let delegate_ptr: Option<*const AnyObject> =
+            state.delegate.as_ref().map(|d| Retained::as_ptr(d));
+
+        let appkit_app = NSApplication::sharedApplication(mtm);
+        let main_menu = NSMenu::new(mtm);
+        state.tag_to_def.clear();
+        state.next_tag = 1;
+
+        let mut app_menu: Option<&fret_runtime::Menu> = None;
+        let mut other_menus: Vec<&fret_runtime::Menu> = Vec::new();
+        for menu in &normalized_menu_bar.menus {
+            if menu.role == Some(MenuRole::App) && app_menu.is_none() {
+                app_menu = Some(menu);
+            } else {
+                other_menus.push(menu);
+            }
+        }
+        let menus_iter = app_menu.into_iter().chain(other_menus);
+
+        for menu in menus_iter {
+            let title = NSString::from_str(&menu.title);
+            let submenu = NSMenu::new(mtm);
+            submenu.setTitle(&title);
+            unsafe {
+                let delegate = delegate_ptr.map(|p| &*p);
+                let _: () = msg_send![&submenu, setDelegate: delegate];
+            }
+
+            for item in &menu.items {
+                append_menu_item(mtm, &mut state, &submenu, item, commands, &base_ctx);
+            }
+
+            let menu_item = NSMenuItem::new(mtm);
+            menu_item.setTitle(&title);
+            menu_item.setSubmenu(Some(&submenu));
+            main_menu.addItem(&menu_item);
+
+            if menu.role == Some(MenuRole::Window) {
+                appkit_app.setWindowsMenu(Some(&submenu));
+            }
+
+            if menu.role == Some(MenuRole::Help) {
+                appkit_app.setHelpMenu(Some(&submenu));
+            }
+
+            if menu.role == Some(MenuRole::App) {
+                unsafe {
+                    let _: () = msg_send![&appkit_app, setAppleMenu: &*submenu];
+                }
+            }
+        }
+
+        appkit_app.setMainMenu(Some(&main_menu));
+
+        state.main_menu = Some(main_menu);
     });
 }
 
 pub(crate) fn hide_app() {
-    unsafe {
-        let app = NSApp();
-        let _: () = msg_send![app, hide: nil];
-    }
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    app.hide(None);
 }
 
 pub(crate) fn show_about_panel() {
-    unsafe {
-        let app = NSApp();
-        let _: () = msg_send![app, orderFrontStandardAboutPanel: nil];
-    }
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    app.orderFrontStandardAboutPanel(None);
 }
 
 pub(crate) fn hide_other_apps() {
-    unsafe {
-        let app = NSApp();
-        let _: () = msg_send![app, hideOtherApplications: nil];
-    }
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    app.hideOtherApplications(None);
 }
 
 pub(crate) fn unhide_all_apps() {
-    unsafe {
-        let app = NSApp();
-        let _: () = msg_send![app, unhideAllApplications: nil];
-    }
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    app.unhideAllApplications(None);
 }
 
-unsafe fn append_menu_item(
+fn append_menu_item(
+    mtm: MainThreadMarker,
     state: &mut MacosMenuState,
-    menu: id,
+    menu: &NSMenu,
     item: &MenuItem,
     commands: &fret_runtime::CommandRegistry,
     base_ctx: &InputContext,
 ) {
+    let delegate_ptr: Option<*const AnyObject> =
+        state.delegate.as_ref().map(|d| Retained::as_ptr(d));
+
     match item {
         MenuItem::Separator => {
-            let sep = NSMenuItem::separatorItem(nil);
-            menu.addItem_(sep);
+            let sep = NSMenuItem::separatorItem(mtm);
+            menu.addItem(&sep);
         }
         MenuItem::SystemMenu { title, menu_type } => {
-            let system_item = NSMenuItem::new(nil).autorelease();
-            let _: () = msg_send![system_item, setTitle: ns_string(title)];
-            let submenu = NSMenu::new(nil).autorelease();
-            let _: () = msg_send![submenu, setTitle: ns_string(title)];
-            let _: () = msg_send![submenu, setDelegate: state.delegate];
-            system_item.setSubmenu_(submenu);
+            let title = NSString::from_str(title);
+            let system_item = NSMenuItem::new(mtm);
+            system_item.setTitle(&title);
+
+            let submenu = NSMenu::new(mtm);
+            submenu.setTitle(&title);
+            unsafe {
+                let delegate = delegate_ptr.map(|p| &*p);
+                let _: () = msg_send![&submenu, setDelegate: delegate];
+            }
+            system_item.setSubmenu(Some(&submenu));
 
             match menu_type {
                 SystemMenuType::Services => {
-                    let app = NSApp();
-                    app.setServicesMenu_(system_item);
+                    let app = NSApplication::sharedApplication(mtm);
+                    app.setServicesMenu(Some(&submenu));
                 }
             }
 
-            menu.addItem_(system_item);
+            menu.addItem(&system_item);
         }
         MenuItem::Label { title } => {
-            let item = NSMenuItem::new(nil).autorelease();
-            let _: () = msg_send![item, setTitle: ns_string(title)];
-            // Avoid relying on deprecated cocoa trait surface; send the selector directly.
-            let _: () = msg_send![item, setEnabled: false];
-            menu.addItem_(item);
+            let title = NSString::from_str(title);
+            let item = NSMenuItem::new(mtm);
+            item.setTitle(&title);
+            item.setEnabled(false);
+            menu.addItem(&item);
         }
         MenuItem::Submenu { title, items, .. } => {
-            let submenu_item = NSMenuItem::new(nil).autorelease();
-            let _: () = msg_send![submenu_item, setTitle: ns_string(title)];
+            let title = NSString::from_str(title);
+            let submenu_item = NSMenuItem::new(mtm);
+            submenu_item.setTitle(&title);
 
-            let submenu = NSMenu::new(nil).autorelease();
-            let _: () = msg_send![submenu, setTitle: ns_string(title)];
-            let _: () = msg_send![submenu, setDelegate: state.delegate];
-            for item in items {
-                append_menu_item(state, submenu, item, commands, base_ctx);
+            let submenu = NSMenu::new(mtm);
+            submenu.setTitle(&title);
+            unsafe {
+                let delegate = delegate_ptr.map(|p| &*p);
+                let _: () = msg_send![&submenu, setDelegate: delegate];
             }
-            submenu_item.setSubmenu_(submenu);
-            menu.addItem_(submenu_item);
+
+            for item in items {
+                append_menu_item(mtm, state, &submenu, item, commands, base_ctx);
+            }
+            submenu_item.setSubmenu(Some(&submenu));
+            menu.addItem(&submenu_item);
         }
         MenuItem::Command { command, when, .. } => {
             let (label, command_when, os_action, command_scope) =
@@ -389,7 +405,6 @@ unsafe fn append_menu_item(
                     command: command.clone(),
                     command_when,
                     item_when: when.clone(),
-                    os_action,
                     command_scope,
                 },
             );
@@ -403,11 +418,20 @@ unsafe fn append_menu_item(
                 Some(OsAction::Redo) => sel!(redo:),
                 None => sel!(fretMenuItemInvoked:),
             };
-            let item = NSMenuItem::alloc(nil)
-                .initWithTitle_action_keyEquivalent_(ns_string(&label), selector, ns_string(""))
-                .autorelease();
-            item.setTarget_(state.delegate);
-            let _: () = msg_send![item, setTag: tag];
+            let label = NSString::from_str(&label);
+            let empty = NSString::from_str("");
+            let item = NSMenuItem::new(mtm);
+            item.setTitle(&label);
+            item.setKeyEquivalent(&empty);
+            unsafe {
+                item.setAction(Some(selector));
+            }
+            if let Some(delegate_ptr) = delegate_ptr {
+                unsafe {
+                    item.setTarget(Some(&*delegate_ptr));
+                }
+            }
+            item.setTag(tag);
 
             if let Some(seq) = state
                 .cached_keymap
@@ -416,11 +440,12 @@ unsafe fn append_menu_item(
                 && let Some(eq) = key_equivalent_for_code(seq[0].key)
             {
                 let mask = chord_modifiers_to_mask(seq[0]);
-                let _: () = msg_send![item, setKeyEquivalent: ns_string(&eq)];
-                item.setKeyEquivalentModifierMask_(mask);
+                let eq = NSString::from_str(&eq);
+                item.setKeyEquivalent(&eq);
+                item.setKeyEquivalentModifierMask(mask);
             }
 
-            menu.addItem_(item);
+            menu.addItem(&item);
         }
     }
 }
@@ -428,16 +453,16 @@ unsafe fn append_menu_item(
 fn chord_modifiers_to_mask(chord: fret_runtime::KeyChord) -> NSEventModifierFlags {
     let mut mask = NSEventModifierFlags::empty();
     if chord.mods.meta {
-        mask |= NSEventModifierFlags::NSCommandKeyMask;
+        mask |= NSEventModifierFlags::Command;
     }
     if chord.mods.ctrl {
-        mask |= NSEventModifierFlags::NSControlKeyMask;
+        mask |= NSEventModifierFlags::Control;
     }
     if chord.mods.alt || chord.mods.alt_gr {
-        mask |= NSEventModifierFlags::NSAlternateKeyMask;
+        mask |= NSEventModifierFlags::Option;
     }
     if chord.mods.shift {
-        mask |= NSEventModifierFlags::NSShiftKeyMask;
+        mask |= NSEventModifierFlags::Shift;
     }
     mask
 }
@@ -445,7 +470,7 @@ fn chord_modifiers_to_mask(chord: fret_runtime::KeyChord) -> NSEventModifierFlag
 fn key_equivalent_for_code(code: KeyCode) -> Option<String> {
     use keyboard_types::Code;
 
-    let from_u16 = |v: u16| String::from_utf16(&[v]).ok();
+    let from_u32 = |v: u32| char::from_u32(v).map(|c| c.to_string());
 
     Some(match code {
         Code::KeyA => "a".to_string(),
@@ -492,99 +517,87 @@ fn key_equivalent_for_code(code: KeyCode) -> Option<String> {
         Code::Escape => String::from_utf16(&[0x1b]).ok()?,
         Code::Backspace => String::from_utf16(&[0x7f]).ok()?,
 
-        Code::ArrowUp => from_u16(NSUpArrowFunctionKey)?,
-        Code::ArrowDown => from_u16(NSDownArrowFunctionKey)?,
-        Code::ArrowLeft => from_u16(NSLeftArrowFunctionKey)?,
-        Code::ArrowRight => from_u16(NSRightArrowFunctionKey)?,
-        Code::PageUp => from_u16(NSPageUpFunctionKey)?,
-        Code::PageDown => from_u16(NSPageDownFunctionKey)?,
-        Code::Home => from_u16(NSHomeFunctionKey)?,
-        Code::End => from_u16(NSEndFunctionKey)?,
-        Code::Delete => from_u16(NSDeleteFunctionKey)?,
+        Code::ArrowUp => from_u32(NSUpArrowFunctionKey)?,
+        Code::ArrowDown => from_u32(NSDownArrowFunctionKey)?,
+        Code::ArrowLeft => from_u32(NSLeftArrowFunctionKey)?,
+        Code::ArrowRight => from_u32(NSRightArrowFunctionKey)?,
+        Code::PageUp => from_u32(NSPageUpFunctionKey)?,
+        Code::PageDown => from_u32(NSPageDownFunctionKey)?,
+        Code::Home => from_u32(NSHomeFunctionKey)?,
+        Code::End => from_u32(NSEndFunctionKey)?,
+        Code::Delete => from_u32(NSDeleteFunctionKey)?,
 
-        Code::F1 => from_u16(NSF1FunctionKey)?,
-        Code::F2 => from_u16(NSF2FunctionKey)?,
-        Code::F3 => from_u16(NSF3FunctionKey)?,
-        Code::F4 => from_u16(NSF4FunctionKey)?,
-        Code::F5 => from_u16(NSF5FunctionKey)?,
-        Code::F6 => from_u16(NSF6FunctionKey)?,
-        Code::F7 => from_u16(NSF7FunctionKey)?,
-        Code::F8 => from_u16(NSF8FunctionKey)?,
-        Code::F9 => from_u16(NSF9FunctionKey)?,
-        Code::F10 => from_u16(NSF10FunctionKey)?,
-        Code::F11 => from_u16(NSF11FunctionKey)?,
-        Code::F12 => from_u16(NSF12FunctionKey)?,
-        Code::F13 => from_u16(NSF13FunctionKey)?,
-        Code::F14 => from_u16(NSF14FunctionKey)?,
-        Code::F15 => from_u16(NSF15FunctionKey)?,
-        Code::F16 => from_u16(NSF16FunctionKey)?,
-        Code::F17 => from_u16(NSF17FunctionKey)?,
-        Code::F18 => from_u16(NSF18FunctionKey)?,
-        Code::F19 => from_u16(NSF19FunctionKey)?,
-        Code::F20 => from_u16(NSF20FunctionKey)?,
-        Code::F21 => from_u16(NSF21FunctionKey)?,
-        Code::F22 => from_u16(NSF22FunctionKey)?,
-        Code::F23 => from_u16(NSF23FunctionKey)?,
-        Code::F24 => from_u16(NSF24FunctionKey)?,
-        Code::F25 => from_u16(NSF25FunctionKey)?,
-        Code::F26 => from_u16(NSF26FunctionKey)?,
-        Code::F27 => from_u16(NSF27FunctionKey)?,
-        Code::F28 => from_u16(NSF28FunctionKey)?,
-        Code::F29 => from_u16(NSF29FunctionKey)?,
-        Code::F30 => from_u16(NSF30FunctionKey)?,
-        Code::F31 => from_u16(NSF31FunctionKey)?,
-        Code::F32 => from_u16(NSF32FunctionKey)?,
-        Code::F33 => from_u16(NSF33FunctionKey)?,
-        Code::F34 => from_u16(NSF34FunctionKey)?,
-        Code::F35 => from_u16(NSF35FunctionKey)?,
+        Code::F1 => from_u32(NSF1FunctionKey)?,
+        Code::F2 => from_u32(NSF2FunctionKey)?,
+        Code::F3 => from_u32(NSF3FunctionKey)?,
+        Code::F4 => from_u32(NSF4FunctionKey)?,
+        Code::F5 => from_u32(NSF5FunctionKey)?,
+        Code::F6 => from_u32(NSF6FunctionKey)?,
+        Code::F7 => from_u32(NSF7FunctionKey)?,
+        Code::F8 => from_u32(NSF8FunctionKey)?,
+        Code::F9 => from_u32(NSF9FunctionKey)?,
+        Code::F10 => from_u32(NSF10FunctionKey)?,
+        Code::F11 => from_u32(NSF11FunctionKey)?,
+        Code::F12 => from_u32(NSF12FunctionKey)?,
+        Code::F13 => from_u32(NSF13FunctionKey)?,
+        Code::F14 => from_u32(NSF14FunctionKey)?,
+        Code::F15 => from_u32(NSF15FunctionKey)?,
+        Code::F16 => from_u32(NSF16FunctionKey)?,
+        Code::F17 => from_u32(NSF17FunctionKey)?,
+        Code::F18 => from_u32(NSF18FunctionKey)?,
+        Code::F19 => from_u32(NSF19FunctionKey)?,
+        Code::F20 => from_u32(NSF20FunctionKey)?,
+        Code::F21 => from_u32(NSF21FunctionKey)?,
+        Code::F22 => from_u32(NSF22FunctionKey)?,
+        Code::F23 => from_u32(NSF23FunctionKey)?,
+        Code::F24 => from_u32(NSF24FunctionKey)?,
+        Code::F25 => from_u32(NSF25FunctionKey)?,
+        Code::F26 => from_u32(NSF26FunctionKey)?,
+        Code::F27 => from_u32(NSF27FunctionKey)?,
+        Code::F28 => from_u32(NSF28FunctionKey)?,
+        Code::F29 => from_u32(NSF29FunctionKey)?,
+        Code::F30 => from_u32(NSF30FunctionKey)?,
+        Code::F31 => from_u32(NSF31FunctionKey)?,
+        Code::F32 => from_u32(NSF32FunctionKey)?,
+        Code::F33 => from_u32(NSF33FunctionKey)?,
+        Code::F34 => from_u32(NSF34FunctionKey)?,
+        Code::F35 => from_u32(NSF35FunctionKey)?,
 
         _ => return None,
     })
 }
 
-fn ns_string(s: &str) -> id {
-    unsafe {
-        cocoa::foundation::NSString::alloc(nil)
-            .init_str(s)
-            .autorelease()
-    }
-}
-
-fn ns_window_id(window: &dyn Window) -> Option<id> {
+fn ns_window_id(window: &dyn Window) -> Option<*mut AnyObject> {
     let handle = window.window_handle().ok()?;
     let RawWindowHandle::AppKit(h) = handle.as_raw() else {
         return None;
     };
-    let ns_view: id = h.ns_view.as_ptr() as id;
-    if ns_view == nil {
+    let ns_view = h.ns_view.as_ptr().cast::<AnyObject>();
+    if ns_view.is_null() {
         return None;
     }
     unsafe {
-        let ns_window: id = msg_send![ns_view, window];
-        (ns_window != nil).then_some(ns_window)
+        let ns_window: *mut AnyObject = msg_send![ns_view, window];
+        (!ns_window.is_null()).then_some(ns_window)
     }
 }
 
 fn key_window_ptr() -> Option<isize> {
-    unsafe {
-        let app = NSApp();
-        let key_window: id = msg_send![app, keyWindow];
-        if key_window == nil {
-            return None;
-        }
-        Some(key_window as isize)
-    }
+    let Some(mtm) = MainThreadMarker::new() else {
+        return None;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    let key_window: *mut AnyObject = unsafe { msg_send![&app, keyWindow] };
+    (!key_window.is_null()).then_some(key_window as isize)
 }
 
 fn main_window_ptr() -> Option<isize> {
-    unsafe {
-        let app = NSApp();
-        let main_window: id = msg_send![app, mainWindow];
-        if main_window == nil {
-            return None;
-        }
-        Some(main_window as isize)
-    }
+    let Some(mtm) = MainThreadMarker::new() else {
+        return None;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    let main_window: *mut AnyObject = unsafe { msg_send![&app, mainWindow] };
+    (!main_window.is_null()).then_some(main_window as isize)
 }
 
 fn active_app_window_id(state: &MacosMenuState) -> Option<AppWindowId> {
@@ -604,54 +617,61 @@ fn active_app_window_id(state: &MacosMenuState) -> Option<AppWindowId> {
         })
 }
 
-fn menu_delegate_class() -> &'static Class {
-    let superclass = Class::get("NSObject").expect("NSObject class");
-    let mut decl = ClassDecl::new("FretMenuDelegate", superclass).expect("FretMenuDelegate class");
-
+fn menu_delegate_class() -> &'static AnyClass {
+    let mut builder =
+        ClassBuilder::new(c"FretMenuDelegate", NSObject::class()).expect("FretMenuDelegate class");
     unsafe {
-        decl.add_method(
+        builder.add_method(
             sel!(fretMenuItemInvoked:),
-            fret_menu_item_invoked as extern "C" fn(&Object, Sel, id),
+            fret_menu_item_invoked as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem),
         );
-        decl.add_method(
+        builder.add_method(
             sel!(cut:),
-            fret_menu_item_invoked as extern "C" fn(&Object, Sel, id),
+            fret_menu_item_invoked as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem),
         );
-        decl.add_method(
+        builder.add_method(
             sel!(copy:),
-            fret_menu_item_invoked as extern "C" fn(&Object, Sel, id),
+            fret_menu_item_invoked as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem),
         );
-        decl.add_method(
+        builder.add_method(
             sel!(paste:),
-            fret_menu_item_invoked as extern "C" fn(&Object, Sel, id),
+            fret_menu_item_invoked as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem),
         );
-        decl.add_method(
+        builder.add_method(
             sel!(selectAll:),
-            fret_menu_item_invoked as extern "C" fn(&Object, Sel, id),
+            fret_menu_item_invoked as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem),
         );
-        decl.add_method(
+        builder.add_method(
             sel!(undo:),
-            fret_menu_item_invoked as extern "C" fn(&Object, Sel, id),
+            fret_menu_item_invoked as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem),
         );
-        decl.add_method(
+        builder.add_method(
             sel!(redo:),
-            fret_menu_item_invoked as extern "C" fn(&Object, Sel, id),
+            fret_menu_item_invoked as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem),
         );
-        decl.add_method(
+        builder.add_method(
             sel!(validateMenuItem:),
-            fret_validate_menu_item as extern "C" fn(&Object, Sel, id) -> BOOL,
+            fret_validate_menu_item
+                as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenuItem) -> Bool,
         );
-        decl.add_method(
+        builder.add_method(
             sel!(menuWillOpen:),
-            fret_menu_will_open as extern "C" fn(&Object, Sel, id),
+            fret_menu_will_open as extern "C-unwind" fn(*mut AnyObject, Sel, *mut NSMenu),
         );
     }
 
-    decl.register()
+    builder.register()
 }
 
-extern "C" fn fret_menu_item_invoked(_this: &Object, _cmd: Sel, item: id) {
-    let tag: NSInteger = unsafe { msg_send![item, tag] };
+extern "C-unwind" fn fret_menu_item_invoked(
+    _this: *mut AnyObject,
+    _cmd: Sel,
+    item: *mut NSMenuItem,
+) {
+    let Some(item) = (unsafe { item.as_ref() }) else {
+        return;
+    };
+    let tag: NSInteger = item.tag();
     let Some((window, command)) = MENU_STATE.with(|state| {
         let Ok(state) = state.try_borrow() else {
             return None;
@@ -675,7 +695,7 @@ extern "C" fn fret_menu_item_invoked(_this: &Object, _cmd: Sel, item: id) {
     proxy.wake_up();
 }
 
-extern "C" fn fret_menu_will_open(_this: &Object, _cmd: Sel, _menu: id) {
+extern "C-unwind" fn fret_menu_will_open(_this: *mut AnyObject, _cmd: Sel, _menu: *mut NSMenu) {
     let Some(events) = PROXY_EVENTS.get() else {
         return;
     };
@@ -688,15 +708,22 @@ extern "C" fn fret_menu_will_open(_this: &Object, _cmd: Sel, _menu: id) {
     proxy.wake_up();
 }
 
-extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BOOL {
-    let tag: NSInteger = unsafe { msg_send![item, tag] };
+extern "C-unwind" fn fret_validate_menu_item(
+    _this: *mut AnyObject,
+    _cmd: Sel,
+    item: *mut NSMenuItem,
+) -> Bool {
+    let Some(item) = (unsafe { item.as_ref() }) else {
+        return Bool::YES;
+    };
+    let tag: NSInteger = item.tag();
 
     MENU_STATE.with(|state| {
         let Ok(state) = state.try_borrow() else {
-            return YES;
+            return Bool::YES;
         };
         let Some(def) = state.tag_to_def.get(&tag) else {
-            return YES;
+            return Bool::YES;
         };
 
         let active_window = active_app_window_id(&state);
@@ -727,6 +754,6 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
                     .as_ref()
                     .map(|w| w.eval(gating.input_ctx()))
                     .unwrap_or(true);
-        if enabled { YES } else { NO }
+        Bool::new(enabled)
     })
 }

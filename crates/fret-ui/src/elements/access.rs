@@ -82,7 +82,22 @@ pub(crate) fn record_timer_target<H: UiHost>(
     target: GlobalElementId,
 ) {
     with_window_state(app, window, |st| {
-        st.timer_targets.insert(token, target);
+        st.timer_targets.insert(
+            token,
+            crate::elements::runtime::TimerTarget::Element(target),
+        );
+    });
+}
+
+pub(crate) fn record_timer_target_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    token: TimerToken,
+    node: NodeId,
+) {
+    with_window_state(app, window, |st| {
+        st.timer_targets
+            .insert(token, crate::elements::runtime::TimerTarget::Node(node));
     });
 }
 
@@ -109,8 +124,13 @@ pub(crate) fn timer_target_node<H: UiHost>(
     token: TimerToken,
 ) -> Option<NodeId> {
     with_window_state(app, window, |st| {
-        let element = st.timer_targets.get(&token).copied()?;
-        st.node_entry(element).map(|e| e.node)
+        let target = st.timer_targets.get(&token).copied()?;
+        match target {
+            crate::elements::runtime::TimerTarget::Element(element) => {
+                st.node_entry(element).map(|e| e.node)
+            }
+            crate::elements::runtime::TimerTarget::Node(node) => Some(node),
+        }
     })
 }
 

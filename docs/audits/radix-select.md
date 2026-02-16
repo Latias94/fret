@@ -1,5 +1,15 @@
 # Radix Primitives Audit — Select
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's Radix-aligned select substrate against the upstream Radix
 `@radix-ui/react-select` primitive implementation pinned in `repo-ref/primitives`.
 

@@ -271,13 +271,12 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
             return CommandAvailability::NotHandled;
         }
 
-        let clipboard_text = cx.input_ctx.caps.clipboard.text;
         let (start, end) = self.area.selection_range();
         let has_selection = start != end;
 
         match cmd {
             "text.copy" | "text.cut" => {
-                if !clipboard_text {
+                if !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
                 if has_selection {
@@ -287,7 +286,7 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                 }
             }
             "text.paste" => {
-                if !clipboard_text {
+                if !cx.input_ctx.caps.clipboard.text.read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available

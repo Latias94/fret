@@ -1,5 +1,14 @@
 # AI Elements Port (`fret-ui-ai`) — TODO Tracker
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Vercel AI Elements: https://github.com/vercel/ai-elements
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream tracker)
 
 This document tracks executable TODOs for porting AI Elements into Fret’s ecosystem.

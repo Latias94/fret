@@ -20,17 +20,9 @@ pub struct ScaleFadePresenceOutput {
 /// This is a component-layer helper (policy/ergonomics), not a runtime contract. It is
 /// intentionally time-source agnostic: the caller supplies a monotonic `tick` (typically frame
 /// count).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct FadePresence {
     timeline: TransitionTimeline,
-}
-
-impl Default for FadePresence {
-    fn default() -> Self {
-        Self {
-            timeline: TransitionTimeline::default(),
-        }
-    }
 }
 
 impl FadePresence {

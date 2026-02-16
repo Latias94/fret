@@ -1,5 +1,16 @@
 # Docking — Dear ImGui Docking Branch Parity Matrix (Fret)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- imgui-rs: https://github.com/imgui-rs/imgui-rs
+- dockview: https://github.com/mathuo/dockview
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document is the **detailed** capability-by-capability parity map between:
 
 - **Dear ImGui docking branch** (core docking in `repo-ref/imgui/imgui.cpp` + multi-viewport platform backends), and
@@ -227,6 +238,12 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
   - Fret: when a dock tear-off window follows the cursor, prefer the window behind it (`prefer_not`) so re-docking remains possible
     without flicker. See `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`route_internal_drag_hover_from_cursor`)
     and `crates/fret-launch/src/runner/desktop/runner/window.rs` (`window_under_cursor`).
+  - Optional (ImGui-style “transparent payload”):
+    - ImGui: `ImGuiIO::ConfigDockingTransparentPayload` + `Platform_SetWindowAlpha` + `ImGuiViewportFlags_NoInputs`.
+    - Fret: enable via `DockingInteractionSettings::transparent_payload_during_follow` (default false), or force on via
+      `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`. This makes the dock-floating follow window semi-transparent and best-effort
+      “no inputs” (ignore mouse) while following the cursor, to improve “peek behind” hand feel.
+      - Anchor: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`).
 
 - **Drop hint hit-testing uses a 5-way selection with hysteresis**
   - ImGui: `DockNodeCalcDropRectsAndTestMousePos()` has a custom radial/quadrant test to reduce diagonal flicker.
@@ -304,10 +321,16 @@ inability to hit a specific docking direction are often coordinate-space bugs.
   - Fret:
     - Supports *both*:
       - single-panel drag (`DockPanelDragPayload`, `DockOp::MovePanel` / `DockOp::FloatPanel*`), and
-      - whole tab-stack drag from tab-bar empty space (`DockTabsDragPayload`, `DockOp::MoveTabs` / `DockOp::FloatTabsInWindow`).
+      - whole tab-stack drag from tab-bar empty space (`DockTabsDragPayload`, `DockOp::MoveTabs` / `DockOp::FloatTabs*`).
     - Current gap vs ImGui:
-      - tab-stack drag does not tear off into a new OS window yet (it floats in-window only).
       - we do not yet have an equivalent of “move node from title-bar band” for non-tab-window chrome.
+  - Evidence anchors:
+    - Group drag payload: `ecosystem/fret-docking/src/dock/types.rs`
+    - Group move op: `crates/fret-core/src/dock/op.rs`
+    - Group tear-off request: `crates/fret-core/src/dock/op.rs` (`RequestFloatTabsToNewWindow`)
+    - Tear-off integration: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`, `handle_dock_window_created`)
+    - Cross-window group tear-off tests:
+      - `ecosystem/fret-docking/src/runtime.rs` (`window_created_updates_drag_source_window_for_active_dock_tabs_drag`)
 
 ---
 
@@ -486,8 +509,12 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
     - Undocking creates a floating node; with multi-viewports it may spawn a platform window.
   - Fret:
     - Two-level float:
-      - In-window floating (`DockOp::FloatPanelInWindow` / `DockOp::SetFloatingRect`)
-      - New OS window (`DockOp::RequestFloatPanelToNewWindow` → `WindowRequest::Create(DockFloating)`)
+      - In-window floating:
+        - `DockOp::FloatPanelInWindow` / `DockOp::FloatTabsInWindow`
+        - `DockOp::SetFloatingRect`
+      - New OS window (tear-off):
+        - `DockOp::RequestFloatPanelToNewWindow` / `DockOp::RequestFloatTabsToNewWindow`
+        - runner: `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`
   - Evidence anchors:
     - Dock UI emits request: `ecosystem/fret-docking/src/dock/space.rs`
     - Runtime translates to window create: `ecosystem/fret-docking/src/runtime.rs`
@@ -570,6 +597,19 @@ Open parity question:
   - Evidence anchors:
     - `docs/adr/0072-docking-interaction-arbitration-matrix.md`
     - `docs/docking-arbitration-checklist.md`
+
+- [x] **Drop into an empty dockspace window (no root tabs)**
+  - ImGui:
+    - docking targets can be dockspaces with no visible windows when kept alive (e.g. `ImGuiDockNodeFlags_KeepAliveOnly`).
+  - Fret:
+    - `DockDropTarget::EmptyDockSpace` resolves to:
+      - `DockOp::MovePanelToEmptyDockSpace`, or
+      - `DockOp::MoveTabsToEmptyDockSpace`.
+    - This allows re-docking into a window that currently has no dock root.
+  - Evidence anchors:
+    - Dock ops: `crates/fret-core/src/dock/op.rs`
+    - Apply semantics: `crates/fret-core/src/dock/apply.rs`
+    - UI resolution: `ecosystem/fret-docking/src/dock/space.rs` (`resolve_dock_drop_target(...)`)
 
 - [x] **Closing a floating OS window merges its content back**
   - This matches editor-grade UX and is tracked as a P0 in:

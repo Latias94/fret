@@ -13,7 +13,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             Event::ClipboardText { token, text } => {
                 self.handle_clipboard_text(cx, *token, text);
             }
-            Event::ClipboardTextUnavailable { token } => {
+            Event::ClipboardTextUnavailable { token, .. } => {
                 self.handle_clipboard_text_unavailable(cx, *token);
             }
             Event::WindowFocusChanged(false) => {

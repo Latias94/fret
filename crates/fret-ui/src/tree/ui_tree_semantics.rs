@@ -112,12 +112,11 @@ impl<H: UiHost> UiTree<H> {
             stack.push((root, Transform2D::IDENTITY));
             while let Some((id, before)) = stack.pop() {
                 if !visited.insert(id) {
-                    if cfg!(debug_assertions) {
+                    if crate::strict_runtime::strict_runtime_enabled() {
                         panic!("cycle detected while building semantics snapshot: node={id:?}");
-                    } else {
-                        tracing::error!(?id, "cycle detected while building semantics snapshot");
-                        continue;
                     }
+                    tracing::error!(?id, "cycle detected while building semantics snapshot");
+                    continue;
                 }
                 let (
                     parent,

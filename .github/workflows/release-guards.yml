@@ -1,0 +1,30 @@
+name: Release Guards
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - release-plz.toml
+      - Cargo.toml
+      - crates/**/Cargo.toml
+      - ecosystem/**/Cargo.toml
+      - apps/**/Cargo.toml
+      - tools/release_closure_check.py
+
+permissions: {}
+
+jobs:
+  release-closure:
+    name: Release scope closure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check release scope closure
+        run: python3 tools/release_closure_check.py --config release-plz.toml

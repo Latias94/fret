@@ -1,5 +1,14 @@
 # Radix Primitives Coverage & Downshift Plan (Fret)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document tracks how `fret-ui-kit::primitives` maps to upstream Radix UI Primitives
 (`repo-ref/primitives/packages/react/*`), and proposes a downshift plan for achieving a
 "one-module-per-Radix-package" facade surface that others can reuse outside the shadcn layer.

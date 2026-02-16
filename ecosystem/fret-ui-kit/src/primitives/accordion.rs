@@ -67,12 +67,11 @@ pub fn tab_stop_index_single(
     open: Option<&str>,
     disabled: &[bool],
 ) -> Option<usize> {
-    if let Some(open) = open {
-        if let Some(active) =
+    if let Some(open) = open
+        && let Some(active) =
             crate::headless::roving_focus::active_index_from_str_keys(values, Some(open), disabled)
-        {
-            return Some(active);
-        }
+    {
+        return Some(active);
     }
     crate::headless::roving_focus::first_enabled(disabled)
 }

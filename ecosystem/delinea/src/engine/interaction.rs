@@ -20,9 +20,9 @@ impl AxisInteractionLocks {
     }
 }
 
-pub fn lock_entry<'a>(
-    map: &'a mut std::collections::BTreeMap<AxisId, AxisInteractionLocks>,
+pub fn lock_entry(
+    map: &mut std::collections::BTreeMap<AxisId, AxisInteractionLocks>,
     axis: AxisId,
-) -> &'a mut AxisInteractionLocks {
+) -> &mut AxisInteractionLocks {
     map.entry(axis).or_default()
 }

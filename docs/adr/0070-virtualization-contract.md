@@ -2,6 +2,17 @@
 title: "ADR 0070: Virtualization Contract (Virtual List Metrics + Range)"
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- virtualizer (Rust): https://github.com/Latias94/virtualizer
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # ADR 0070: Virtualization Contract (Virtual List Metrics + Range)
 
 ## Status

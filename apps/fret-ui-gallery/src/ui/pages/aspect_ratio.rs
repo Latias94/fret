@@ -1,48 +1,8 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let ratio_example = |cx: &mut ElementContext<'_, App>,
                          ratio: f32,
                          max_w: Px,
@@ -88,7 +48,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Landscape media",
         "ui-gallery-aspect-ratio-demo",
     );
-    let demo = section_card(cx, "Demo", demo_content);
+    let demo = demo_content;
 
     let square_content = ratio_example(
         cx,
@@ -98,7 +58,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Square media",
         "ui-gallery-aspect-ratio-square",
     );
-    let square = section_card(cx, "Square", square_content);
+    let square = square_content;
 
     let portrait_content = ratio_example(
         cx,
@@ -108,7 +68,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Portrait media",
         "ui-gallery-aspect-ratio-portrait",
     );
-    let portrait = section_card(cx, "Portrait", portrait_content);
+    let portrait = portrait_content;
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -124,75 +84,20 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             )
         },
     );
-    let rtl = section_card(cx, "RTL", rtl_content);
+    let rtl = rtl_content;
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Aspect Ratio docs order (Demo, Square, Portrait, RTL).",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| vec![preview_hint, demo, square, portrait, rtl],
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-aspect-ratio-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic Usage",
-                    r#"let media = AspectRatio::new(16.0 / 9.0, content)
-    .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "Square + Portrait",
-                    r#"AspectRatio::new(1.0, square_content)
-AspectRatio::new(9.0 / 16.0, portrait_content)"#,
-                ),
-                code_block(
-                    cx,
-                    "RTL",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    AspectRatio::new(16.0 / 9.0, content).into_element(cx)
-})"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`.",
+                ),
                 shadcn::typography::muted(
                     cx,
                     "Use `AspectRatio` to lock geometry first, then style radius/border/background around it.",
@@ -212,13 +117,29 @@ AspectRatio::new(9.0 / 16.0, portrait_content)"#,
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-aspect-ratio",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some("Preview follows shadcn Aspect Ratio docs order: Demo, Square, Portrait, RTL."),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("16:9 landscape media frame with an inline caption.")
+                .code(
+                    "rust",
+                    r#"let content = cx.text("...");
+shadcn::AspectRatio::new(16.0 / 9.0, content)
+    .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Square", square)
+                .description("1:1 square media for avatars/thumbnails."),
+            DocSection::new("Portrait", portrait)
+                .description("9:16 portrait media for reels/short video cards."),
+            DocSection::new("RTL", rtl)
+                .description("AspectRatio should remain direction-agnostic."),
+            DocSection::new("Notes", notes).description("API reference pointers and usage notes."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-aspect-ratio-component")]
 }

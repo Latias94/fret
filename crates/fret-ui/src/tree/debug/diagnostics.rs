@@ -1,5 +1,3 @@
-#![cfg(feature = "diagnostics")]
-
 use super::super::*;
 
 #[cfg(feature = "diagnostics")]

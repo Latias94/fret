@@ -13,8 +13,12 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
   - [x] paths/URLs,
   - [x] emoji ZWJ/VS16,
   - [x] long-token emergency wraps.
-- [ ] Add a dedicated “wrap invariants” module (optional):
-  - [ ] trailing whitespace at soft wrap is selectable (keep existing gate in `crates/fret-render-wgpu/src/text/mod.rs` and expand coverage).
+- [~] Add a dedicated “wrap invariants” module (optional):
+  - Status: invariants are currently gated in `crates/fret-render-wgpu/src/text/mod.rs`; extract
+    into a dedicated module if the list grows further.
+  - [x] trailing whitespace at soft wrap is selectable:
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`trailing_space_at_soft_wrap_is_selectable`)
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`trailing_whitespace_run_at_soft_wrap_is_selectable`)
 
 ## M1 — Wrapper heuristic upgrade
 
@@ -42,16 +46,29 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
   - [x] run the fixture-driven wrap conformance suite under the Parley path,
   - [x] document any known gaps as explicit TODOs (avoid silent behavior drift).
 - [~] Performance guard:
-  - [~] ensure no O(n²) regressions on long paragraphs (Parley path is linear; keep a dedicated
-    long-paragraph probe in the wrapper test suite),
-  - [~] keep resize jitter bounded:
+  - [x] ensure no O(n²) regressions on long paragraphs (Parley path is linear; keep a dedicated
+    long-paragraph probe in the wrapper test suite):
+    - `crates/fret-render-wgpu/src/text/wrapper.rs`
+      (`parley_word_wrap_handles_long_plain_paragraph_under_resize_jitter`)
+    - `crates/fret-render-wgpu/src/text/wrapper.rs`
+      (`parley_word_wrap_handles_long_attributed_paragraph_under_resize_jitter`)
+  - [x] keep resize jitter bounded:
     - add a diag perf script focused on `TextWrap::Word` under window resize jitter:
       `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`
-    - optional catastrophic regression smoke gate:
+    - catastrophic regression smoke gate:
       `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py`
 - [x] Cleanup:
   - [x] delete the legacy wrapper implementation once the Parley path passes the gates above (no
     compatibility branch retained).
+
+## M3 — RTL + mixed-script staging
+
+- [x] Add deterministic wrapped RTL hit testing and geometry gates.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends`)
+- [x] Add mixed-direction wrapped selection geometry gates.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty`)
 
 ## Customization seam (recommended)
 

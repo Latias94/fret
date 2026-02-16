@@ -31,7 +31,6 @@ fret-ui-magic = { path = "../../ecosystem/fret-ui-magic", features = ["app-integ
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
-fret-code-view = { path = "../../ecosystem/fret-code-view" }
 fret-code-editor-view = { path = "../../ecosystem/fret-code-editor-view" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret = { path = "../../ecosystem/fret" }
@@ -60,10 +59,12 @@ wgpu.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false }
+fret-code-view = { path = "../../ecosystem/fret-code-view" }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor" }
 fret-router = { path = "../../ecosystem/fret-router", features = ["web-history", "hash-routing", "query-integration"] }
 web-sys = { version = "0.3", features = ["Window", "Location"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["syntax-all"] }
+fret-code-view = { path = "../../ecosystem/fret-code-view", features = ["syntax-rust"] }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor", features = ["syntax-rust", "syntax-markdown"] }

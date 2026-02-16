@@ -93,7 +93,7 @@ pub fn compute_flat_row_order<TData>(
                 return true;
             };
             for filter_fn in &global_filter_fns {
-                if filter_fn(row, &global_value) {
+                if filter_fn(row, global_value) {
                     return true;
                 }
             }

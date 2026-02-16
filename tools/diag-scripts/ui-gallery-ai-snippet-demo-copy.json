@@ -26,19 +26,23 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-snippet-demo-with-prefix-copy" }
+        "target": { "kind": "test_id", "id": "ui-ai-snippet-demo-nextest" }
       },
       "timeout_frames": 240
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-ai-snippet-demo-with-prefix-copy" }
+      "target": { "kind": "test_id", "id": "ui-ai-snippet-demo-nextest-copy" },
+      "stable_frames": 3,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-snippet-demo-with-prefix-copied" }
+        "target": { "kind": "test_id", "id": "ui-ai-snippet-demo-nextest-copied" }
       },
       "timeout_frames": 240
     },

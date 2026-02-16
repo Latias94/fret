@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn touch_hosted_resources_in_scene_ops_aggregates_counts() {
-        let mut services = Services::default();
+        let mut services = Services;
 
         let mut text = TextCache::default();
         let mut paths = PathCache::default();
@@ -161,6 +161,7 @@ mod tests {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: 1.0,
             },
         );
@@ -186,7 +187,7 @@ mod tests {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                color: Color::TRANSPARENT,
+                paint: fret_core::Paint::Solid(Color::TRANSPARENT),
             },
             SceneOp::SvgImage {
                 order: DrawOrder(0),

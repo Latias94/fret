@@ -2,6 +2,16 @@
 title: "ADR 0065: Icon System and Asset Packaging (SVG-First, Semantic Keys)"
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # ADR 0065: Icon System and Asset Packaging (SVG-First, Semantic Keys)
 
 ## Status

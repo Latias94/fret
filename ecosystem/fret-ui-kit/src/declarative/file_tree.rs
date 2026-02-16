@@ -120,16 +120,13 @@ fn rebuild_entries(
     (entries, index_by_id)
 }
 
-pub fn file_tree_view_retained_v0<H: UiHost>(
+pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<TreeItem>>,
     state: Model<TreeState>,
     scroll: &VirtualListScrollHandle,
     props: FileTreeViewProps,
-) -> AnyElement
-where
-    H: 'static,
-{
+) -> AnyElement {
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
     let state_revision = cx.app.models().revision(&state).unwrap_or(0);
     let TreeState { selected, expanded } = cx.watch_model(&state).paint().cloned_or_default();
@@ -235,10 +232,8 @@ where
                 cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
                     let _ = host.models_mut().update(&state_for_activate, |st| {
                         st.selected = Some(row_id);
-                        if row_has_children {
-                            if !st.expanded.insert(row_id) {
-                                st.expanded.remove(&row_id);
-                            }
+                        if row_has_children && !st.expanded.insert(row_id) {
+                            st.expanded.remove(&row_id);
                         }
                     });
 
@@ -309,7 +304,7 @@ where
 
     let layout = props.layout;
     let list = cx.virtual_list_keyed_retained_with_layout_fn(
-        layout.clone(),
+        layout,
         entries.len(),
         options,
         scroll,

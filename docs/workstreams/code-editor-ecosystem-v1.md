@@ -1,5 +1,15 @@
 # Code Editor Ecosystem v1 - Refactor Plan & TODO Tracker
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Monaco Editor: https://github.com/microsoft/monaco-editor
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream document; normative contracts live in ADRs)
 Last updated: 2026-02-09
 

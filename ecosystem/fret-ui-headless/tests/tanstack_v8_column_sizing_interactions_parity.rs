@@ -317,12 +317,14 @@ fn tanstack_v8_column_sizing_interactions_parity() {
         let subset: TanStackStateSubset =
             serde_json::from_value(snap.state.clone()).expect("tanstack state subset");
 
-        let mut state = TableState::default();
-        state.column_order = subset
-            .column_order
-            .iter()
-            .map(|s| Arc::<str>::from(s.as_str()))
-            .collect();
+        let mut state = TableState {
+            column_order: subset
+                .column_order
+                .iter()
+                .map(|s| Arc::<str>::from(s.as_str()))
+                .collect(),
+            ..Default::default()
+        };
         if let Some(pin) = subset.column_pinning {
             state.column_pinning.left = pin
                 .left

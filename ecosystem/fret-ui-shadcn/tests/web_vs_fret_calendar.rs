@@ -656,7 +656,10 @@ fn find_best_text_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rg
     );
 
     scene_walk(scene, |st, op| {
-        let SceneOp::Text { origin, color, .. } = *op else {
+        let SceneOp::Text { origin, paint, .. } = *op else {
+            return;
+        };
+        let fret_core::Paint::Solid(color) = paint else {
             return;
         };
         let origin = st.transform.apply_point(origin);
@@ -735,11 +738,14 @@ fn find_best_icon_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rg
                 best = Some(rgba);
             }
         }
-        SceneOp::Path { origin, color, .. } => {
+        SceneOp::Path { origin, paint, .. } => {
             let origin = st.transform.apply_point(origin);
             if !search_within.contains(origin) {
                 return;
             }
+            let fret_core::Paint::Solid(color) = paint else {
+                return;
+            };
             let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
             if rgba.a <= 0.01 {
                 return;
@@ -2069,15 +2075,23 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
     let web_prev_icon_opacity = web_prev_icon
         .computed_style
         .get("opacity")
-        .or_else(|| web_prev.computed_style.get("opacity"))
         .and_then(|v| v.parse::<f32>().ok())
-        .unwrap_or(1.0);
+        .unwrap_or(1.0)
+        * web_prev
+            .computed_style
+            .get("opacity")
+            .and_then(|v| v.parse::<f32>().ok())
+            .unwrap_or(1.0);
     let web_next_icon_opacity = web_next_icon
         .computed_style
         .get("opacity")
-        .or_else(|| web_next.computed_style.get("opacity"))
         .and_then(|v| v.parse::<f32>().ok())
-        .unwrap_or(1.0);
+        .unwrap_or(1.0)
+        * web_next
+            .computed_style
+            .get("opacity")
+            .and_then(|v| v.parse::<f32>().ok())
+            .unwrap_or(1.0);
 
     let expected_prev_icon = apply_opacity(web_prev_icon_color, web_prev_icon_opacity);
     let expected_next_icon = apply_opacity(web_next_icon_color, web_next_icon_opacity);

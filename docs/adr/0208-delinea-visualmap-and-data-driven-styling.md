@@ -1,5 +1,14 @@
 # ADR 0208: `delinea` VisualMap + Data-Driven Styling Contract (ECharts-Inspired)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed (P0 decision gate)
 
 ## Context
@@ -154,7 +163,7 @@ P1:
 ## References
 
 - Apache ECharts VisualMap implementation:
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMap\\VisualMapModel.ts`
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMap\\visualEncoding.ts`
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMapContinuous.ts`
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMapPiecewise.ts`
+  - `repo-ref/echarts/src/component/visualMap/VisualMapModel.ts`
+  - `repo-ref/echarts/src/component/visualMap/visualEncoding.ts`
+  - `repo-ref/echarts/src/component/visualMapContinuous.ts`
+  - `repo-ref/echarts/src/component/visualMapPiecewise.ts`

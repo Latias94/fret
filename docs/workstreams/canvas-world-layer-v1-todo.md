@@ -1,5 +1,14 @@
 # Declarative Canvas World Layer v1 — TODO
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- XYFlow: https://github.com/xyflow/xyflow
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream tracker)
 
 This TODO list is scoped to the “nodes as element subtrees in a pan/zoom world” substrate.

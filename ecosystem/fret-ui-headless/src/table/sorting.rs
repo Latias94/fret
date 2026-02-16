@@ -156,14 +156,12 @@ pub fn toggle_sorting_state_tanstack(
         } else {
             SortAction::Add
         }
+    } else if old_len > 0 && existing_index.is_some_and(|i| i != old_len.saturating_sub(1)) {
+        SortAction::Replace
+    } else if existing_sorting.is_some() {
+        SortAction::Toggle
     } else {
-        if old_len > 0 && existing_index.is_some_and(|i| i != old_len.saturating_sub(1)) {
-            SortAction::Replace
-        } else if existing_sorting.is_some() {
-            SortAction::Toggle
-        } else {
-            SortAction::Replace
-        }
+        SortAction::Replace
     };
 
     if matches!(sort_action, SortAction::Toggle) && next_sorting_order.is_none() {
@@ -177,18 +175,19 @@ pub fn toggle_sorting_state_tanstack(
                 desc: next_desc,
             });
 
-            if let Some(max) = options.max_multi_sort_col_count {
-                if max > 0 && sorting.len() > max {
-                    let to_remove = sorting.len().saturating_sub(max);
-                    sorting.drain(0..to_remove);
-                }
+            if let Some(max) = options.max_multi_sort_col_count
+                && max > 0
+                && sorting.len() > max
+            {
+                let to_remove = sorting.len().saturating_sub(max);
+                sorting.drain(0..to_remove);
             }
         }
         SortAction::Toggle => {
-            if let Some(i) = existing_index {
-                if let Some(spec) = sorting.get_mut(i) {
-                    spec.desc = next_desc;
-                }
+            if let Some(i) = existing_index
+                && let Some(spec) = sorting.get_mut(i)
+            {
+                spec.desc = next_desc;
             }
         }
         SortAction::Remove => {
@@ -408,10 +407,10 @@ fn split_alpha_numeric_tokens(s: &str) -> Vec<&str> {
         }
     }
 
-    if let (Some(start_idx), Some(_)) = (start, current_is_digit) {
-        if start_idx < s.len() {
-            out.push(&s[start_idx..]);
-        }
+    if let (Some(start_idx), Some(_)) = (start, current_is_digit)
+        && start_idx < s.len()
+    {
+        out.push(&s[start_idx..]);
     }
 
     out.into_iter().filter(|seg| !seg.is_empty()).collect()
@@ -572,9 +571,7 @@ fn resolve_sort_cmp_for_column<'a, TData>(
         return Some(ResolvedSortCmp::Cmp(cmp.clone()));
     }
 
-    let Some(spec) = column.sorting_fn.as_ref() else {
-        return None;
-    };
+    let spec = column.sorting_fn.as_ref()?;
 
     match spec {
         SortingFnSpec::Auto => {
@@ -698,67 +695,66 @@ pub fn sort_row_model<'a, TData>(
             };
 
             let mut ord = Ordering::Equal;
-            if let Some(sort_undefined) = cfg.sort_undefined {
-                if !matches!(sort_undefined, SortUndefined::Disabled) {
-                    if let Some(is_undefined) = cfg.sort_is_undefined.as_ref() {
-                        let a_undefined = match is_undefined {
-                            ResolvedIsUndefined::Fn(f) => f(a_row.original),
-                            ResolvedIsUndefined::Value(get_value) => {
-                                matches!((get_value)(a_row.original), TanStackValue::Undefined)
-                            }
-                        };
-                        let b_undefined = match is_undefined {
-                            ResolvedIsUndefined::Fn(f) => f(b_row.original),
-                            ResolvedIsUndefined::Value(get_value) => {
-                                matches!((get_value)(b_row.original), TanStackValue::Undefined)
-                            }
-                        };
+            if let Some(sort_undefined) = cfg.sort_undefined
+                && !matches!(sort_undefined, SortUndefined::Disabled)
+                && let Some(is_undefined) = cfg.sort_is_undefined.as_ref()
+            {
+                let a_undefined = match is_undefined {
+                    ResolvedIsUndefined::Fn(f) => f(a_row.original),
+                    ResolvedIsUndefined::Value(get_value) => {
+                        matches!((get_value)(a_row.original), TanStackValue::Undefined)
+                    }
+                };
+                let b_undefined = match is_undefined {
+                    ResolvedIsUndefined::Fn(f) => f(b_row.original),
+                    ResolvedIsUndefined::Value(get_value) => {
+                        matches!((get_value)(b_row.original), TanStackValue::Undefined)
+                    }
+                };
 
-                        if a_undefined || b_undefined {
-                            ord = match sort_undefined {
-                                SortUndefined::First => {
-                                    if a_undefined == b_undefined {
-                                        Ordering::Equal
-                                    } else if a_undefined {
-                                        Ordering::Less
-                                    } else {
-                                        Ordering::Greater
-                                    }
-                                }
-                                SortUndefined::Last => {
-                                    if a_undefined == b_undefined {
-                                        Ordering::Equal
-                                    } else if a_undefined {
-                                        Ordering::Greater
-                                    } else {
-                                        Ordering::Less
-                                    }
-                                }
-                                SortUndefined::Dir(dir) => {
-                                    if a_undefined == b_undefined {
-                                        Ordering::Equal
-                                    } else if a_undefined {
-                                        if dir < 0 {
-                                            Ordering::Less
-                                        } else {
-                                            Ordering::Greater
-                                        }
-                                    } else if dir < 0 {
-                                        Ordering::Greater
-                                    } else {
-                                        Ordering::Less
-                                    }
-                                }
-                                SortUndefined::Disabled => Ordering::Equal,
-                            };
-
-                            // TanStack: `first`/`last` returns early (ignores desc/invert multipliers).
-                            if matches!(sort_undefined, SortUndefined::First | SortUndefined::Last)
-                                && ord != Ordering::Equal
-                            {
-                                return ord;
+                if a_undefined || b_undefined {
+                    ord = match sort_undefined {
+                        SortUndefined::First => {
+                            if a_undefined == b_undefined {
+                                Ordering::Equal
+                            } else if a_undefined {
+                                Ordering::Less
+                            } else {
+                                Ordering::Greater
                             }
                         }
+                        SortUndefined::Last => {
+                            if a_undefined == b_undefined {
+                                Ordering::Equal
+                            } else if a_undefined {
+                                Ordering::Greater
+                            } else {
+                                Ordering::Less
+                            }
+                        }
+                        SortUndefined::Dir(dir) => {
+                            if a_undefined == b_undefined {
+                                Ordering::Equal
+                            } else if a_undefined {
+                                if dir < 0 {
+                                    Ordering::Less
+                                } else {
+                                    Ordering::Greater
+                                }
+                            } else if dir < 0 {
+                                Ordering::Greater
+                            } else {
+                                Ordering::Less
+                            }
+                        }
+                        SortUndefined::Disabled => Ordering::Equal,
+                    };
+
+                    // TanStack: `first`/`last` returns early (ignores desc/invert multipliers).
+                    if matches!(sort_undefined, SortUndefined::First | SortUndefined::Last)
+                        && ord != Ordering::Equal
+                    {
+                        return ord;
                     }
                 }
             }

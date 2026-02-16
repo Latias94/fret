@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct InputGroupPageModels {
@@ -167,48 +169,6 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(860.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
     let demo = {
@@ -246,7 +206,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 ]
             },
         );
-        section_card(cx, "Demo", content)
+        content
     };
 
     let align_inline_start = {
@@ -256,7 +216,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-align-inline-start")
             .into_element(cx);
-        section_card(cx, "Align / inline-start", content)
+        content
     };
 
     let align_inline_end = {
@@ -266,7 +226,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-align-inline-end")
             .into_element(cx);
-        section_card(cx, "Align / inline-end", content)
+        content
     };
 
     let align_block_start = {
@@ -277,7 +237,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-align-block-start")
             .into_element(cx);
-        section_card(cx, "Align / block-start", content)
+        content
     };
 
     let align_block_end = {
@@ -296,7 +256,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-align-block-end")
             .into_element(cx);
-        section_card(cx, "Align / block-end", content)
+        content
     };
 
     let icon = {
@@ -306,7 +266,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-icon")
             .into_element(cx);
-        section_card(cx, "Icon", content)
+        content
     };
 
     let text = {
@@ -322,7 +282,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-text")
             .into_element(cx);
-        section_card(cx, "Text", content)
+        content
     };
 
     let button = {
@@ -335,7 +295,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-button")
             .into_element(cx);
-        section_card(cx, "Button", content)
+        content
     };
 
     let kbd = {
@@ -348,7 +308,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-kbd")
             .into_element(cx);
-        section_card(cx, "Kbd", content)
+        content
     };
 
     let dropdown = {
@@ -364,7 +324,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-dropdown")
             .into_element(cx);
-        section_card(cx, "Dropdown", content)
+        content
     };
 
     let spinner = {
@@ -374,7 +334,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-spinner")
             .into_element(cx);
-        section_card(cx, "Spinner", content)
+        content
     };
 
     let textarea = {
@@ -393,7 +353,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-textarea")
             .into_element(cx);
-        section_card(cx, "Textarea", content)
+        content
     };
 
     let custom_input = {
@@ -411,7 +371,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-custom")
             .into_element(cx);
-        section_card(cx, "Custom Input", content)
+        content
     };
 
     let rtl = {
@@ -429,130 +389,88 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
         .test_id("ui-gallery-input-group-rtl");
 
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Input Group docs order: Demo, Align (inline-start/inline-end/block-start/block-end), Icon, Text, Button, Kbd, Dropdown, Spinner, Textarea, Custom Input, RTL.",
-                ),
-                demo,
-                align_inline_start,
-                align_inline_end,
-                align_block_start,
-                align_block_end,
-                icon,
-                text,
-                button,
-                kbd,
-                dropdown,
-                spinner,
-                textarea,
-                custom_input,
-                rtl,
-            ]
-        },
-    );
-    let component_panel =
-        shell(cx, component_panel_body).test_id("ui-gallery-input-group-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Inline Addons").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"InputGroup::new(model).leading([InputGroupText::new("@")]).trailing([InputGroupText::new(".com")]);"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Buttons and Kbd").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"InputGroup::new(model).trailing([InputGroupButton::new("Search")]).trailing_has_button(true).trailing_has_kbd(true);"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Textarea Layout").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "InputGroup::new(model).textarea().block_end([...]).block_end_border_top(true).textarea_min_height(Px(100.0));",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup).",
+                ),
                 shadcn::typography::muted(
                     cx,
                     "InputGroup API is slot based (`leading/trailing/block_start/block_end`) rather than explicit addon-align enums.",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "`Custom Input` docs scenario is represented as composition approximation in current API.",
+                    "`Custom Input` is represented as a composition approximation in the current API.",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "Each section has stable test_id for future diag scripts.",
+                    "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
                 ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-input-group",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Input Group docs order: Demo, Align (inline-start/inline-end/block-start/block-end), Icon, Text, Button, Kbd, Dropdown, Spinner, Textarea, Custom Input, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("A compact input group and a textarea-style input group.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .leading([shadcn::InputGroupText::new("@").into_element(cx)])
+    .trailing([shadcn::InputGroupButton::new("Go").into_element(cx)])
+    .trailing_has_button(true)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Align / inline-start", align_inline_start)
+                .description("Inline-start addon (leading slot)."),
+            DocSection::new("Align / inline-end", align_inline_end)
+                .description("Inline-end addon (trailing slot)."),
+            DocSection::new("Align / block-start", align_block_start)
+                .description("Block-start helper text with a divider."),
+            DocSection::new("Align / block-end", align_block_end)
+                .description("Textarea-style block-end footer with buttons."),
+            DocSection::new("Icon", icon).description("Icon-like leading adornment."),
+            DocSection::new("Text", text)
+                .description("Leading/trailing text addons should not overlap the control.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .leading([shadcn::InputGroupText::new("https://").into_element(cx)])
+    .trailing([shadcn::InputGroupText::new(".com").into_element(cx)])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Button", button)
+                .description("Trailing button; set `trailing_has_button(true)` for layout."),
+            DocSection::new("Kbd", kbd)
+                .description("Kbd-like addons (layout hints for monospace pills)."),
+            DocSection::new("Dropdown", dropdown)
+                .description("Leading button + caret composition approximation."),
+            DocSection::new("Spinner", spinner)
+                .description("Leading spinner while fetching results."),
+            DocSection::new("Textarea", textarea)
+                .description("Textarea mode with a footer row and min height."),
+            DocSection::new("Custom Input", custom_input)
+                .description("Custom/extended input chrome via slots."),
+            DocSection::new("RTL", rtl)
+                .description("InputGroup layout under an RTL direction provider."),
+            DocSection::new("Notes", notes).description("API reference pointers and invariants."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-input-group")]
 }

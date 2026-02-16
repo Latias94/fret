@@ -1,7 +1,7 @@
+use fret_core::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
 
 use fret_core::{AppWindowId, Point, Px, TimerToken};
 use fret_runtime::{CommandId, Effect, Model};
@@ -529,14 +529,13 @@ impl ToastStore {
     }
 
     fn default_duration_for(&self, window: AppWindowId, toaster_id: Option<&Arc<str>>) -> Duration {
-        if let Some(id) = toaster_id {
-            if let Some(duration) = self
+        if let Some(id) = toaster_id
+            && let Some(duration) = self
                 .default_duration_by_toaster_id
                 .get(&(window, id.clone()))
                 .copied()
-            {
-                return duration;
-            }
+        {
+            return duration;
         }
         self.default_duration_by_window
             .get(&window)
@@ -717,138 +716,135 @@ impl ToastStore {
         request: ToastRequest,
         auto_close_token: Option<TimerToken>,
     ) -> ToastUpsertOutcome {
-        if let Some(id) = request.id {
-            if let Some(toasts) = self.by_window.get_mut(&window) {
-                if let Some(toast) = toasts
-                    .iter_mut()
-                    .find(|t| t.id == id && t.open && t.remove_token.is_none())
-                {
-                    let prev_variant = toast.variant;
-                    let prev_remaining = toast.auto_close_remaining;
-                    let prev_token = toast.auto_close_token;
+        if let Some(id) = request.id
+            && let Some(toasts) = self.by_window.get_mut(&window)
+            && let Some(toast) = toasts
+                .iter_mut()
+                .find(|t| t.id == id && t.open && t.remove_token.is_none())
+        {
+            let prev_variant = toast.variant;
+            let prev_remaining = toast.auto_close_remaining;
+            let prev_token = toast.auto_close_token;
 
-                    toast.title = request.title;
-                    if let Some(desc) = request.description {
-                        toast.description = match desc {
-                            ToastDescription::Text(text) => Some(text),
-                            ToastDescription::Hidden => None,
-                        };
-                    }
-                    if let Some(variant) = request.variant {
-                        toast.variant = variant;
-                    }
-                    if request.icon.is_some() {
-                        toast.icon = request.icon;
-                    }
-                    if request.promise {
-                        toast.promise = true;
-                    }
-                    if request.action.is_some() {
-                        toast.action = request.action;
-                    }
-                    if request.cancel.is_some() {
-                        toast.cancel = request.cancel;
-                    }
-                    if let Some(dismissible) = request.dismissible {
-                        toast.dismissible = dismissible;
-                    }
-                    if request.close_button.is_some() {
-                        toast.close_button = request.close_button;
-                    }
-                    if request.toaster_id.is_some() {
-                        toast.toaster_id = request.toaster_id;
-                    }
-                    if request.position.is_some() {
-                        toast.position = request.position;
-                    }
-                    if request.rich_colors.is_some() {
-                        toast.rich_colors = request.rich_colors;
-                    }
-                    if let Some(invert) = request.invert {
-                        toast.invert = invert;
-                    }
-                    if request.test_id.is_some() {
-                        toast.test_id = request.test_id;
-                    }
-                    toast.drag_start = None;
-                    toast.drag_offset = Point::new(Px(0.0), Px(0.0));
-                    toast.settle_from = None;
-                    toast.dragging = false;
-                    toast.measured_height = None;
-                    toast.drag_axis = None;
-                    toast.drag_cfg = None;
-                    toast.drag_started_at = None;
+            toast.title = request.title;
+            if let Some(desc) = request.description {
+                toast.description = match desc {
+                    ToastDescription::Text(text) => Some(text),
+                    ToastDescription::Hidden => None,
+                };
+            }
+            if let Some(variant) = request.variant {
+                toast.variant = variant;
+            }
+            if request.icon.is_some() {
+                toast.icon = request.icon;
+            }
+            if request.promise {
+                toast.promise = true;
+            }
+            if request.action.is_some() {
+                toast.action = request.action;
+            }
+            if request.cancel.is_some() {
+                toast.cancel = request.cancel;
+            }
+            if let Some(dismissible) = request.dismissible {
+                toast.dismissible = dismissible;
+            }
+            if request.close_button.is_some() {
+                toast.close_button = request.close_button;
+            }
+            if request.toaster_id.is_some() {
+                toast.toaster_id = request.toaster_id;
+            }
+            if request.position.is_some() {
+                toast.position = request.position;
+            }
+            if request.rich_colors.is_some() {
+                toast.rich_colors = request.rich_colors;
+            }
+            if let Some(invert) = request.invert {
+                toast.invert = invert;
+            }
+            if request.test_id.is_some() {
+                toast.test_id = request.test_id;
+            }
+            toast.drag_start = None;
+            toast.drag_offset = Point::new(Px(0.0), Px(0.0));
+            toast.settle_from = None;
+            toast.dragging = false;
+            toast.measured_height = None;
+            toast.drag_axis = None;
+            toast.drag_cfg = None;
+            toast.drag_started_at = None;
 
-                    let mut cancel_auto: Option<TimerToken> = None;
-                    let mut schedule_auto: Option<(TimerToken, Duration)> = None;
+            let mut cancel_auto: Option<TimerToken> = None;
+            let mut schedule_auto: Option<(TimerToken, Duration)> = None;
 
-                    let duration_explicit = request.duration.is_explicit();
-                    let variant_changed =
-                        request.variant.is_some() && toast.variant != prev_variant;
-                    let leaving_loading = variant_changed
-                        && prev_variant == ToastVariant::Loading
-                        && toast.variant != ToastVariant::Loading;
-                    let restart_needed = duration_explicit || leaving_loading;
+            let duration_explicit = request.duration.is_explicit();
+            let variant_changed = request.variant.is_some() && toast.variant != prev_variant;
+            let leaving_loading = variant_changed
+                && prev_variant == ToastVariant::Loading
+                && toast.variant != ToastVariant::Loading;
+            let restart_needed = duration_explicit || leaving_loading;
 
-                    if duration_explicit {
-                        toast.duration = match request.duration {
-                            ToastDuration::Pinned => None,
-                            ToastDuration::Fixed(d) => Some(d),
-                            ToastDuration::UseDefault => toast.duration,
-                        };
+            if duration_explicit {
+                toast.duration = match request.duration {
+                    ToastDuration::Pinned => None,
+                    ToastDuration::Fixed(d) => Some(d),
+                    ToastDuration::UseDefault => toast.duration,
+                };
+            }
+
+            let wants_timer = toast.duration.filter(|d| d.as_secs_f32() > 0.0);
+            if duration_explicit || leaving_loading {
+                toast.auto_close_remaining = wants_timer;
+            }
+
+            // Do not treat "loading suppressed timers" as a pause signal.
+            let was_paused = prev_remaining.is_some()
+                && prev_token.is_none()
+                && prev_variant != ToastVariant::Loading;
+
+            if toast.variant == ToastVariant::Loading {
+                if let Some(token) = toast.auto_close_token.take() {
+                    self.by_token.remove(&token);
+                    cancel_auto = Some(token);
+                }
+            } else {
+                match (toast.auto_close_remaining, toast.auto_close_token) {
+                    (Some(after), Some(token)) if restart_needed => {
+                        schedule_auto = Some((token, auto_close_next_after(after)));
                     }
-
-                    let wants_timer = toast.duration.filter(|d| d.as_secs_f32() > 0.0);
-                    if duration_explicit || leaving_loading {
-                        toast.auto_close_remaining = wants_timer;
-                    }
-
-                    // Do not treat "loading suppressed timers" as a pause signal.
-                    let was_paused = prev_remaining.is_some()
-                        && prev_token.is_none()
-                        && prev_variant != ToastVariant::Loading;
-
-                    if toast.variant == ToastVariant::Loading {
-                        if let Some(token) = toast.auto_close_token.take() {
-                            self.by_token.remove(&token);
-                            cancel_auto = Some(token);
-                        }
-                    } else {
-                        match (toast.auto_close_remaining, toast.auto_close_token) {
-                            (Some(after), Some(token)) if restart_needed => {
-                                schedule_auto = Some((token, auto_close_next_after(after)));
-                            }
-                            (Some(after), None) if !was_paused => {
-                                if let Some(token) = auto_close_token {
-                                    toast.auto_close_token = Some(token);
-                                    self.by_token.insert(
-                                        token,
-                                        ToastTimerRef {
-                                            window,
-                                            toast: id,
-                                            kind: ToastTimerKind::AutoClose,
-                                        },
-                                    );
-                                    schedule_auto = Some((token, auto_close_next_after(after)));
-                                }
-                            }
-                            (None, Some(token)) => {
-                                toast.auto_close_token = None;
-                                self.by_token.remove(&token);
-                                cancel_auto = Some(token);
-                            }
-                            _ => {}
+                    (Some(after), None) if !was_paused => {
+                        if let Some(token) = auto_close_token {
+                            toast.auto_close_token = Some(token);
+                            self.by_token.insert(
+                                token,
+                                ToastTimerRef {
+                                    window,
+                                    toast: id,
+                                    kind: ToastTimerKind::AutoClose,
+                                },
+                            );
+                            schedule_auto = Some((token, auto_close_next_after(after)));
                         }
                     }
-
-                    return ToastUpsertOutcome {
-                        id,
-                        cancel_auto,
-                        schedule_auto,
-                        evicted: Vec::new(),
-                    };
+                    (None, Some(token)) => {
+                        toast.auto_close_token = None;
+                        self.by_token.remove(&token);
+                        cancel_auto = Some(token);
+                    }
+                    _ => {}
                 }
             }
+
+            return ToastUpsertOutcome {
+                id,
+                cancel_auto,
+                schedule_auto,
+                evicted: Vec::new(),
+            };
         }
 
         let id = self.add_toast(window, request, auto_close_token);
@@ -1103,9 +1099,7 @@ impl ToastStore {
         match axis {
             ToastDragAxis::X => {
                 let mut delta = dx;
-                if dx.0 > 0.0 && !cfg.allow_right {
-                    delta = Self::toast_dampen_delta(dx);
-                } else if dx.0 < 0.0 && !cfg.allow_left {
+                if (dx.0 > 0.0 && !cfg.allow_right) || (dx.0 < 0.0 && !cfg.allow_left) {
                     delta = Self::toast_dampen_delta(dx);
                 }
                 let delta = Px(delta.0.clamp(-max, max));
@@ -1113,9 +1107,7 @@ impl ToastStore {
             }
             ToastDragAxis::Y => {
                 let mut delta = dy;
-                if dy.0 > 0.0 && !cfg.allow_down {
-                    delta = Self::toast_dampen_delta(dy);
-                } else if dy.0 < 0.0 && !cfg.allow_up {
+                if (dy.0 > 0.0 && !cfg.allow_down) || (dy.0 < 0.0 && !cfg.allow_up) {
                     delta = Self::toast_dampen_delta(dy);
                 }
                 let delta = Px(delta.0.clamp(-max, max));
@@ -1182,9 +1174,7 @@ impl ToastStore {
     pub(super) fn end_drag(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastDragEnd> {
         let toasts = self.by_window.get_mut(&window)?;
         let toast = toasts.iter_mut().find(|t| t.id == id)?;
-        if toast.drag_start.is_none() {
-            return None;
-        }
+        toast.drag_start?;
         let cfg = toast.drag_cfg?;
         let Some(axis) = toast.drag_axis else {
             toast.drag_start = None;
@@ -1568,6 +1558,7 @@ pub struct ToastAsyncQueueHandle {
 }
 
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum ToastAsyncMsg {
     Upsert {
         window: AppWindowId,

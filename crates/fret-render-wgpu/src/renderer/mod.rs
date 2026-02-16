@@ -6,6 +6,7 @@ pub(super) use fret_core::{
     geometry::{Point, Px, Rect, Size, Transform2D},
     scene::{Color, Scene, SceneOp, UvRect},
 };
+use fret_render_core::RenderTargetIngestStrategy;
 use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -87,15 +88,13 @@ pub struct Renderer {
     viewport_sampler: wgpu::Sampler,
     image_sampler_nearest: wgpu::Sampler,
 
-    instance_buffers: Vec<wgpu::Buffer>,
-    quad_instance_bind_group_layout: wgpu::BindGroupLayout,
-    quad_instance_bind_groups: Vec<wgpu::BindGroup>,
-    instance_buffer_index: usize,
-    instance_capacity: usize,
+    quad_instances: buffers::StorageRingBuffer<QuadInstance>,
 
-    viewport_vertex_buffers: Vec<wgpu::Buffer>,
-    viewport_vertex_buffer_index: usize,
-    viewport_vertex_capacity: usize,
+    path_paints: buffers::StorageRingBuffer<PaintGpu>,
+
+    text_paints: buffers::StorageRingBuffer<PaintGpu>,
+
+    viewport_vertices: buffers::RingBuffer<ViewportVertex>,
 
     text_pipeline_format: Option<wgpu::TextureFormat>,
     text_pipeline: Option<wgpu::RenderPipeline>,
@@ -109,9 +108,7 @@ pub struct Renderer {
     mask_pipeline_format: Option<wgpu::TextureFormat>,
     mask_pipeline: Option<wgpu::RenderPipeline>,
 
-    text_vertex_buffers: Vec<wgpu::Buffer>,
-    text_vertex_buffer_index: usize,
-    text_vertex_capacity: usize,
+    text_vertices: buffers::RingBuffer<TextVertex>,
 
     path_pipeline_format: Option<wgpu::TextureFormat>,
     path_pipeline: Option<wgpu::RenderPipeline>,
@@ -123,8 +120,8 @@ pub struct Renderer {
     path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
-    composite_pipelines: [Option<wgpu::RenderPipeline>; 4],
-    composite_mask_pipelines: [Option<wgpu::RenderPipeline>; 4],
+    composite_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
+    composite_mask_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
     composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     clip_mask_pipeline: Option<wgpu::RenderPipeline>,
@@ -180,9 +177,7 @@ pub struct Renderer {
     alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     alpha_threshold_param_buffer: wgpu::Buffer,
 
-    path_vertex_buffers: Vec<wgpu::Buffer>,
-    path_vertex_buffer_index: usize,
-    path_vertex_capacity: usize,
+    path_vertices: buffers::RingBuffer<PathVertex>,
 
     path_intermediate: Option<PathIntermediate>,
     path_composite_vertices: wgpu::Buffer,
@@ -217,6 +212,10 @@ pub struct Renderer {
     perf_svg_raster_budget_evictions: u64,
     perf_svg_mask_atlas_page_evictions: u64,
     perf_svg_mask_atlas_entries_evicted: u64,
+    perf_pending_render_target_updates_requested_by_ingest:
+        [u64; RenderTargetIngestStrategy::COUNT],
+    perf_pending_render_target_updates_by_ingest: [u64; RenderTargetIngestStrategy::COUNT],
+    perf_pending_render_target_updates_ingest_fallbacks: u64,
     perf: RenderPerfStats,
     last_frame_perf: Option<RenderPerfSnapshot>,
     last_render_plan_segment_report: Option<Vec<RenderPlanSegmentReport>>,

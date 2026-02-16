@@ -26,14 +26,12 @@ impl Gizmo {
             .unwrap_or_else(|| targets[0].transform);
 
         let origin = Self::pivot_origin(active_transform, targets, self.config.pivot_mode);
-        let Some(cursor_ray) = ray_from_screen(
+        let cursor_ray = ray_from_screen(
             view_projection,
             viewport,
             input.cursor_px,
             self.config.depth_range,
-        ) else {
-            return None;
-        };
+        )?;
 
         let size_length_world =
             self.size_length_world_or_one(view_projection, viewport, origin, targets);
@@ -156,14 +154,12 @@ impl Gizmo {
             .unwrap_or_else(|| targets[0].transform);
 
         let origin = Self::pivot_origin(active_transform, targets, self.config.pivot_mode);
-        let Some(cursor_ray) = ray_from_screen(
+        let cursor_ray = ray_from_screen(
             view_projection,
             viewport,
             input.cursor_px,
             self.config.depth_range,
-        ) else {
-            return None;
-        };
+        )?;
 
         let size_length_world =
             self.size_length_world_or_one(view_projection, viewport, origin, targets);
@@ -248,32 +244,94 @@ impl Gizmo {
         self.state.hovered_kind = hovered_kind;
 
         if self.state.active.is_none() {
-            if input.drag_started {
-                if let Some(h) = hovered {
-                    let begin = if self.config.operation_mask.is_some() {
-                        match self.state.hovered_kind {
-                            Some(GizmoMode::Translate) => self.begin_translate_drag(
-                                view_projection,
-                                viewport,
-                                input,
-                                targets,
-                                cursor_ray,
-                                origin,
-                                h,
-                                axes,
-                            ),
-                            Some(GizmoMode::Rotate) => self.begin_rotate_drag(
-                                view_projection,
-                                viewport,
-                                input,
-                                targets,
-                                cursor_ray,
-                                origin,
-                                h,
-                                axes,
-                                size_length_world,
-                            ),
-                            Some(GizmoMode::Scale) => {
+            if input.drag_started
+                && let Some(h) = hovered
+            {
+                let begin = if self.config.operation_mask.is_some() {
+                    match self.state.hovered_kind {
+                        Some(GizmoMode::Translate) => self.begin_translate_drag(
+                            view_projection,
+                            viewport,
+                            input,
+                            targets,
+                            cursor_ray,
+                            origin,
+                            h,
+                            axes,
+                        ),
+                        Some(GizmoMode::Rotate) => self.begin_rotate_drag(
+                            view_projection,
+                            viewport,
+                            input,
+                            targets,
+                            cursor_ray,
+                            origin,
+                            h,
+                            axes,
+                            size_length_world,
+                        ),
+                        Some(GizmoMode::Scale) => {
+                            if let Some(bounds_handle) = Self::bounds_handle_from_id(h) {
+                                let origin_z01 = origin_z01(
+                                    view_projection,
+                                    viewport,
+                                    origin,
+                                    self.config.depth_range,
+                                )?;
+                                self.begin_bounds_drag(
+                                    view_projection,
+                                    viewport,
+                                    input,
+                                    targets,
+                                    cursor_ray,
+                                    origin,
+                                    origin_z01,
+                                    size_length_world,
+                                    bounds_handle,
+                                    h,
+                                    axes_raw,
+                                )
+                            } else {
+                                self.begin_scale_drag(
+                                    view_projection,
+                                    viewport,
+                                    input,
+                                    targets,
+                                    cursor_ray,
+                                    origin,
+                                    h,
+                                    axes,
+                                    size_length_world,
+                                )
+                            }
+                        }
+                        _ => None,
+                    }
+                } else {
+                    match self.config.mode {
+                        GizmoMode::Translate => self.begin_translate_drag(
+                            view_projection,
+                            viewport,
+                            input,
+                            targets,
+                            cursor_ray,
+                            origin,
+                            h,
+                            axes,
+                        ),
+                        GizmoMode::Rotate => self.begin_rotate_drag(
+                            view_projection,
+                            viewport,
+                            input,
+                            targets,
+                            cursor_ray,
+                            origin,
+                            h,
+                            axes,
+                            size_length_world,
+                        ),
+                        GizmoMode::Scale => {
+                            if self.config.show_bounds {
                                 if let Some(bounds_handle) = Self::bounds_handle_from_id(h) {
                                     let origin_z01 = origin_z01(
                                         view_projection,
@@ -307,12 +365,22 @@ impl Gizmo {
                                         size_length_world,
                                     )
                                 }
+                            } else {
+                                self.begin_scale_drag(
+                                    view_projection,
+                                    viewport,
+                                    input,
+                                    targets,
+                                    cursor_ray,
+                                    origin,
+                                    h,
+                                    axes,
+                                    size_length_world,
+                                )
                             }
-                            _ => None,
                         }
-                    } else {
-                        match self.config.mode {
-                            GizmoMode::Translate => self.begin_translate_drag(
+                        GizmoMode::Universal => match self.state.hovered_kind {
+                            Some(GizmoMode::Translate) => self.begin_translate_drag(
                                 view_projection,
                                 viewport,
                                 input,
@@ -322,7 +390,7 @@ impl Gizmo {
                                 h,
                                 axes,
                             ),
-                            GizmoMode::Rotate => self.begin_rotate_drag(
+                            Some(GizmoMode::Rotate) => self.begin_rotate_drag(
                                 view_projection,
                                 viewport,
                                 input,
@@ -333,100 +401,28 @@ impl Gizmo {
                                 axes,
                                 size_length_world,
                             ),
-                            GizmoMode::Scale => {
-                                if self.config.show_bounds {
-                                    if let Some(bounds_handle) = Self::bounds_handle_from_id(h) {
-                                        let origin_z01 = origin_z01(
-                                            view_projection,
-                                            viewport,
-                                            origin,
-                                            self.config.depth_range,
-                                        )?;
-                                        self.begin_bounds_drag(
-                                            view_projection,
-                                            viewport,
-                                            input,
-                                            targets,
-                                            cursor_ray,
-                                            origin,
-                                            origin_z01,
-                                            size_length_world,
-                                            bounds_handle,
-                                            h,
-                                            axes_raw,
-                                        )
-                                    } else {
-                                        self.begin_scale_drag(
-                                            view_projection,
-                                            viewport,
-                                            input,
-                                            targets,
-                                            cursor_ray,
-                                            origin,
-                                            h,
-                                            axes,
-                                            size_length_world,
-                                        )
-                                    }
-                                } else {
-                                    self.begin_scale_drag(
-                                        view_projection,
-                                        viewport,
-                                        input,
-                                        targets,
-                                        cursor_ray,
-                                        origin,
-                                        h,
-                                        axes,
-                                        size_length_world,
-                                    )
-                                }
-                            }
-                            GizmoMode::Universal => match self.state.hovered_kind {
-                                Some(GizmoMode::Translate) => self.begin_translate_drag(
-                                    view_projection,
-                                    viewport,
-                                    input,
-                                    targets,
-                                    cursor_ray,
-                                    origin,
-                                    h,
-                                    axes,
-                                ),
-                                Some(GizmoMode::Rotate) => self.begin_rotate_drag(
-                                    view_projection,
-                                    viewport,
-                                    input,
-                                    targets,
-                                    cursor_ray,
-                                    origin,
-                                    h,
-                                    axes,
-                                    size_length_world,
-                                ),
-                                Some(GizmoMode::Scale) => self.begin_scale_drag(
-                                    view_projection,
-                                    viewport,
-                                    input,
-                                    targets,
-                                    cursor_ray,
-                                    origin,
-                                    h,
-                                    axes,
-                                    size_length_world,
-                                ),
-                                _ => None,
-                            },
-                        }
-                    };
-
-                    // If a drag threshold is configured, we arm the interaction on pointer down
-                    // but only emit the `Begin` phase once the pointer has actually moved.
-                    if self.config.drag_start_threshold_px > 0.0 {
-                        return None;
+                            Some(GizmoMode::Scale) => self.begin_scale_drag(
+                                view_projection,
+                                viewport,
+                                input,
+                                targets,
+                                cursor_ray,
+                                origin,
+                                h,
+                                axes,
+                                size_length_world,
+                            ),
+                            _ => None,
+                        },
                     }
-                    return begin;
+                };
+
+                // If a drag threshold is configured, we arm the interaction on pointer down
+                // but only emit the `Begin` phase once the pointer has actually moved.
+                if self.config.drag_start_threshold_px > 0.0 {
+                    return None;
                 }
+                return begin;
             }
             return None;
         }
@@ -806,15 +802,13 @@ impl Gizmo {
                             .unwrap_or(self.state.drag_origin)
                         });
 
-                        let Some(mut angle) = angle_on_plane(
+                        let mut angle = angle_on_plane(
                             self.state.drag_origin,
                             hit_world,
                             axis_dir,
                             self.state.drag_basis_u,
                             self.state.drag_basis_v,
-                        ) else {
-                            return None;
-                        };
+                        )?;
                         angle *= self.handedness_rotation_sign();
 
                         let delta_angle =
@@ -1612,7 +1606,7 @@ impl Gizmo {
 
         let id = handle_sub_id(active) as u64;
         let (scale_dir, plane_normal, axis, plane_axes, plane_u, plane_v) = match id {
-            1 | 2 | 3 => {
+            1..=3 => {
                 let (_, axis_index) = axis_for_handle(active);
                 let axis_dir = axes[axis_index].normalize_or_zero();
                 if axis_dir.length_squared() == 0.0 {
@@ -1645,7 +1639,7 @@ impl Gizmo {
                 }
                 (dir, n, None, None, Vec3::X, Vec3::Y)
             }
-            14 | 15 | 16 => {
+            14..=16 => {
                 let (a, b) = match id {
                     14 => (0, 1),
                     15 => (0, 2),

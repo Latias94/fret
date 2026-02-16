@@ -1,5 +1,3 @@
-#![cfg(feature = "server-native")]
-
 use fret_diag_protocol::{
     DevtoolsHelloAckV1, DevtoolsHelloV1, DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1,
     DevtoolsSessionListV1, DevtoolsSessionRemovedV1, DiagTransportMessageV1,
@@ -137,29 +135,28 @@ fn handle_conn(stream: TcpStream, hub: Arc<Hub>, token: String) -> Result<(), St
 
     let removed = hub.peers.lock().map_err(|_| "lock poisoned")?.remove(&id);
 
-    if let Some(peer) = removed {
-        if peer.kind == PeerKind::App {
-            if let Some(session_id) = peer.session_id {
-                let removed_session = hub
-                    .sessions
-                    .lock()
-                    .map_err(|_| "lock poisoned")?
-                    .remove(&session_id);
-                if removed_session.is_some() {
-                    broadcast_to_tooling(
-                        hub.as_ref(),
-                        None,
-                        DiagTransportMessageV1 {
-                            schema_version: 1,
-                            r#type: "session.removed".to_string(),
-                            session_id: None,
-                            request_id: None,
-                            payload: serde_json::to_value(DevtoolsSessionRemovedV1 { session_id })
-                                .unwrap_or_else(|_| serde_json::json!({})),
-                        },
-                    );
-                }
-            }
+    if let Some(peer) = removed
+        && peer.kind == PeerKind::App
+        && let Some(session_id) = peer.session_id
+    {
+        let removed_session = hub
+            .sessions
+            .lock()
+            .map_err(|_| "lock poisoned")?
+            .remove(&session_id);
+        if removed_session.is_some() {
+            broadcast_to_tooling(
+                hub.as_ref(),
+                None,
+                DiagTransportMessageV1 {
+                    schema_version: 1,
+                    r#type: "session.removed".to_string(),
+                    session_id: None,
+                    request_id: None,
+                    payload: serde_json::to_value(DevtoolsSessionRemovedV1 { session_id })
+                        .unwrap_or_else(|_| serde_json::json!({})),
+                },
+            );
         }
     }
     Ok(())

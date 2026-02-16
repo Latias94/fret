@@ -3,7 +3,7 @@
 //! This lives in the runtime crate because it needs platform hooks and hard-to-change editing
 //! semantics (ADR 0012 / ADR 0071).
 use fret_core::{
-    CaretAffinity, Color, Corners, Edges, Px, Rect, Size, TextMetrics, TextStyle, TextWrap,
+    CaretAffinity, Color, Corners, Edges, Point, Px, Rect, Size, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::Effect;
 
@@ -143,12 +143,14 @@ pub struct TextArea {
     text_dirty: bool,
     show_scrollbar: bool,
 
+    offset_x: Px,
     offset_y: Px,
     scrollbar_width: Px,
     dragging_thumb: bool,
     drag_pointer_start_y: Px,
     drag_offset_start_y: Px,
     last_content_height: Px,
+    last_content_width: Px,
     last_viewport_height: Px,
 
     preedit: String,
@@ -167,6 +169,10 @@ pub struct TextArea {
     ime_deduper: crate::text_edit::ime::Deduper,
     pending_clipboard_token: Option<fret_runtime::ClipboardToken>,
     pending_primary_selection_token: Option<fret_runtime::ClipboardToken>,
+
+    selection_dragging: bool,
+    last_pointer_pos: Option<Point>,
+    selection_autoscroll_timer: Option<fret_runtime::TimerToken>,
 }
 
 impl Default for TextArea {
@@ -193,12 +199,14 @@ impl Default for TextArea {
             prepared_key: None,
             text_dirty: true,
             show_scrollbar: false,
+            offset_x: Px(0.0),
             offset_y: Px(0.0),
             scrollbar_width: Px(10.0),
             dragging_thumb: false,
             drag_pointer_start_y: Px(0.0),
             drag_offset_start_y: Px(0.0),
             last_content_height: Px(0.0),
+            last_content_width: Px(0.0),
             last_viewport_height: Px(0.0),
             preedit: String::new(),
             preedit_cursor: None,
@@ -215,6 +223,9 @@ impl Default for TextArea {
             ime_deduper: crate::text_edit::ime::Deduper::default(),
             pending_clipboard_token: None,
             pending_primary_selection_token: None,
+            selection_dragging: false,
+            last_pointer_pos: None,
+            selection_autoscroll_timer: None,
         }
     }
 }

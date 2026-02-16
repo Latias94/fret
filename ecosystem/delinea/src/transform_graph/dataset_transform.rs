@@ -437,40 +437,40 @@ fn passes_filter(
     if !x.is_finite() {
         return false;
     }
-    if let Some(t) = f.gte {
-        if x < t {
-            return false;
-        }
+    if let Some(t) = f.gte
+        && x < t
+    {
+        return false;
     }
-    if let Some(t) = f.gt {
-        if x <= t {
-            return false;
-        }
+    if let Some(t) = f.gt
+        && x <= t
+    {
+        return false;
     }
-    if let Some(t) = f.lte {
-        if x > t {
-            return false;
-        }
+    if let Some(t) = f.lte
+        && x > t
+    {
+        return false;
     }
-    if let Some(t) = f.lt {
-        if x >= t {
-            return false;
-        }
+    if let Some(t) = f.lt
+        && x >= t
+    {
+        return false;
     }
-    if let Some(t) = f.eq {
-        if x != t {
-            return false;
-        }
+    if let Some(t) = f.eq
+        && x != t
+    {
+        return false;
     }
-    if let Some(t) = f.ne {
-        if x == t {
-            return false;
-        }
+    if let Some(t) = f.ne
+        && x == t
+    {
+        return false;
     }
     true
 }
 
-fn apply_sorts_in_place(ds: &DatasetModel, table: &crate::data::DataTable, indices: &mut Vec<u32>) {
+fn apply_sorts_in_place(ds: &DatasetModel, table: &crate::data::DataTable, indices: &mut [u32]) {
     for t in &ds.transforms {
         let DatasetTransformSpecV1::Sort(s) = t else {
             continue;
@@ -482,7 +482,7 @@ fn apply_sorts_in_place(ds: &DatasetModel, table: &crate::data::DataTable, indic
 fn apply_sort_in_place(
     ds: &DatasetModel,
     table: &crate::data::DataTable,
-    indices: &mut Vec<u32>,
+    indices: &mut [u32],
     s: &DatasetSortSpecV1,
 ) {
     let Some(col) = ds.fields.get(&s.field).copied() else {

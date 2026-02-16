@@ -1,3 +1,10 @@
+//! Syntax highlighting helpers for Fret.
+//!
+//! This crate vendors a set of Tree-sitter highlight queries and provides a small API to map a
+//! source string to highlight spans.
+//!
+//! The output is intentionally backend-agnostic so higher layers can decide how to paint tokens.
+
 mod registry;
 
 use std::ops::Range;
@@ -6,12 +13,14 @@ pub use registry::HIGHLIGHT_NAMES;
 pub use registry::supported_languages;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// A half-open byte range in the source and an optional highlight name.
 pub struct HighlightSpan {
     pub range: Range<usize>,
     pub highlight: Option<&'static str>,
 }
 
 #[derive(Debug, thiserror::Error)]
+/// Highlighting error.
 pub enum HighlightError {
     #[error("unsupported language: {0}")]
     UnsupportedLanguage(String),
@@ -19,6 +28,9 @@ pub enum HighlightError {
     Highlight(#[from] tree_sitter_highlight::Error),
 }
 
+/// Highlights a source string using the vendored Tree-sitter highlight queries.
+///
+/// `language` is a short identifier from [`supported_languages`].
 pub fn highlight(source: &str, language: &str) -> Result<Vec<HighlightSpan>, HighlightError> {
     let Some(config) = registry::config_for(language) else {
         return Err(HighlightError::UnsupportedLanguage(language.to_string()));

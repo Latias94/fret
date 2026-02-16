@@ -4,8 +4,26 @@
 //! force a global async runtime (Tokio, etc.).
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-runtime/README.md`.
+//!
+//! ## Where to start
+//!
+//! - Commands: [`CommandId`], [`CommandRegistry`], [`CommandMeta`]
+//! - Models/state: [`Model`], [`ModelStore`], [`ModelCx`]
+//! - Effects: [`Effect`]
+//! - Host integration: [`UiHost`], [`GlobalsHost`], [`ModelsHost`]
+//! - Portability contracts: [`PlatformCapabilities`]
+//!
+//! ## Minimal example
+//!
+//! ```
+//! use fret_runtime::{CommandId, CommandMeta, CommandRegistry};
+//!
+//! let mut commands = CommandRegistry::default();
+//! commands.register(CommandId::from("app.quit"), CommandMeta::new("Quit"));
+//! ```
 
 pub mod capabilities;
+pub mod clipboard_diagnostics;
 pub mod command;
 pub mod commands;
 pub mod docking_settings;
@@ -24,6 +42,7 @@ pub mod menu;
 pub mod model;
 pub mod platform_completion;
 pub mod platform_text_input;
+pub mod runner_accessibility_diagnostics;
 pub mod runner_surface_lifecycle_diagnostics;
 pub mod shortcut_routing_diagnostics;
 pub mod strict_runtime;
@@ -49,6 +68,9 @@ pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
     WindowHoverDetectionQuality, WindowSetOuterPositionQuality, WindowZLevelQuality,
+};
+pub use clipboard_diagnostics::{
+    ClipboardReadDiagnostics, ClipboardWriteDiagnostics, WindowClipboardDiagnosticsStore,
 };
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
@@ -115,6 +137,9 @@ pub use model::{
 };
 pub use platform_completion::PlatformCompletion;
 pub use platform_text_input::{PlatformTextInputQuery, PlatformTextInputQueryResult, Utf16Range};
+pub use runner_accessibility_diagnostics::{
+    RunnerAccessibilityDiagnosticsStore, RunnerAccessibilitySnapshot,
+};
 pub use runner_surface_lifecycle_diagnostics::{
     RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,
 };

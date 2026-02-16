@@ -1,7 +1,17 @@
 # `fret-ui-editor` — ImGui / `fret-ui-precision` Alignment Inventory v1
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- fret-ui-precision: (internal reference; no public upstream link)
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active inventory (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ## Purpose
 
@@ -51,11 +61,11 @@ Legend:
 | `Checkbox` | B | M3 | `Checkbox`, mixed/indeterminate patterns | (N/A) | `editor.checkbox.*`, `editor.density.*` | `a11y_label`, `test_id` | Supports `Model<bool>` and `Model<Option<bool>>` (`None` = indeterminate). |
 | `EnumSelect` | B | M3 | `Combo` / listbox patterns | `repo-ref/fret-ui-precision/src/components/showcase/demos/AutocompleteDemo.tsx` | `editor.density.*` | `item_renderer`, `filter_policy` | Filterable select; item render slot. |
 | `ColorEdit` | B | M3 | `ColorEdit3/4`, `ColorPicker3/4` | `repo-ref/fret-ui-precision/src/components/showcase/demos/ColorPickerDemo.tsx` | `editor.color.*`, `editor.density.*` | `popup_content_slot`, `format_policy` | Start minimal: swatch + hex; popup picker can be incremental. |
-| `VecNEdit` | B | M3 | `DragFloat2/3/4` | `repo-ref/fret-ui-precision/src/components/showcase/demos/MatrixInputDemo.tsx` | `editor.numeric.*`, axis color tokens | `axis_label_slot`, `axis_reset_hook` | Implemented as `Vec2Edit/Vec3Edit/Vec4Edit` (axis labels + tokens + optional per-axis reset hooks). Axis groups grow evenly in-row; axis labels use a tinted background for stronger affordance. Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
-| `TransformEdit` | C | M3 | common editor composite | `repo-ref/fret-ui-precision/src/components/showcase/demos/MaterialEditorDemo.tsx` | `editor.density.*` | `layout_variant`, per-section slots | Implemented as `TransformEdit` (position/rotation/scale, optional link-scale). Evidence: `ecosystem/fret-ui-editor/src/controls/transform_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
+| `VecNEdit` | B | M3 | `DragFloat2/3/4` | `repo-ref/fret-ui-precision/src/components/showcase/demos/MatrixInputDemo.tsx` | `editor.numeric.*`, `editor.axis.*`, `editor.vec.*` (incl. `editor.vec.axis_min_width`) | `axis_label_slot`, `axis_reset_hook` | Implemented as `Vec2Edit/Vec3Edit/Vec4Edit` (axis labels + tokens + optional per-axis reset hooks). Axis groups grow evenly in-row; axis badges are square, semibold, and provide hover/press feedback. Axis reset affordance uses semantic `ui.reset` and shared icon-button chrome. Supports `Auto` layout variant to stack axes vertically in narrow inspectors (threshold: `editor.vec.auto_stack_below`, with a readable per-axis minimum via `editor.vec.axis_min_width`). Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
+| `TransformEdit` | C | M3 | common editor composite | `repo-ref/fret-ui-precision/src/components/showcase/demos/MaterialEditorDemo.tsx` | `editor.density.*` | `layout_variant`, per-section slots | Implemented as `TransformEdit` (position/rotation/scale, optional link-scale). Section badges now use the same dense badge styling as vec axes for quicker scanning. Evidence: `ecosystem/fret-ui-editor/src/controls/transform_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
 | `AssetRefField` | B | M3 | “combo + preview” patterns | `repo-ref/fret-ui-precision/src/components/showcase/demos/AssetPickerDemo.tsx` | `editor.density.*` | `data_source`, `preview_slot`, query adapters | UI-only shell; caller injects data; query integration optional. |
 | `InspectorPanel` | C | M3 | “left inspector” pattern | `repo-ref/fret-ui-precision/src/components/showcase/demos/BuildSettingsDemo.tsx` | `editor.density.*`, `editor.property.*` | `toolbar_slot`, `sections_slot` | Search + toolbar slots + grid; should look “real”. |
-| `GradientEditor` (spike) | C | M4 | gradient editor patterns (not core ImGui) | `repo-ref/fret-ui-precision/src/components/showcase/demos/GradientEditorDemo.tsx` | `editor.color.*`, `editor.numeric.*` | `stop_renderer`, `stop_menu_slot` | Composition proof: reuse ColorEdit + DragValue. |
+| `GradientEditor` (spike) | C | M4 | gradient editor patterns (not core ImGui) | `repo-ref/fret-ui-precision/src/components/showcase/demos/GradientEditorDemo.tsx` | `editor.color.*`, `editor.numeric.*` | `stop_renderer`, `stop_menu_slot` | Composition proof: reuse ColorEdit + DragValue. Includes an interactive preview (drag stop handles) and header actions (add/remove). Evidence: `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`. |
 | `CurveEditor` (candidate) | C | M5 | curves are usually custom (canvas) | `repo-ref/fret-ui-precision/src/components/showcase/demos/CurveEditorDemo.tsx` | `editor.density.*` | `snapping_policy`, `grid_policy` | Defer until M4 spike identifies substrate gaps. |
 | `Timeline` (future) | C | P2 | (custom) | `repo-ref/fret-ui-precision/src/components/showcase/demos/KeyframeEditorDemo.tsx` | `editor.density.*` | `virtualization_policy` | Post-v1; heavy state + perf constraints. |
 

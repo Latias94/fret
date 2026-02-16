@@ -80,7 +80,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                color,
+                paint: color.into(),
             });
         }
 
@@ -90,7 +90,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    color,
+                    paint: color.into(),
                 });
             }
             if let Some(path) = start_path {
@@ -98,7 +98,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    color,
+                    paint: color.into(),
                 });
             }
         } else {
@@ -122,7 +122,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        color,
+                        paint: color.into(),
                     });
                 }
             }
@@ -147,7 +147,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        color,
+                        paint: color.into(),
                     });
                 }
             }
@@ -243,7 +243,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                color,
+                paint: color.into(),
             });
         }
 
@@ -253,7 +253,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    color,
+                    paint: color.into(),
                 });
             }
             if let Some(path) = start_path {
@@ -261,7 +261,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    color,
+                    paint: color.into(),
                 });
             }
         } else {
@@ -285,7 +285,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        color,
+                        paint: color.into(),
                     });
                 }
             }
@@ -311,7 +311,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        color,
+                        paint: color.into(),
                     });
                 }
             }

@@ -1,5 +1,14 @@
 # ADR 0062: Tailwind Layout Primitives (Margin, Position/Inset, Grid, Aspect Ratio)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 ## Context
 
 Fret is aligning its declarative authoring model with a Tailwind/shadcn-style component ecosystem.

@@ -76,19 +76,10 @@ pub struct LightRadiusGizmoState {
     drag_total_applied: HashMap<GizmoTargetId, f32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct LightRadiusGizmoPlugin {
     pub config: LightRadiusGizmoConfig,
     pub state: LightRadiusGizmoState,
-}
-
-impl Default for LightRadiusGizmoPlugin {
-    fn default() -> Self {
-        Self {
-            config: LightRadiusGizmoConfig::default(),
-            state: LightRadiusGizmoState::default(),
-        }
-    }
 }
 
 impl LightRadiusGizmoPlugin {
@@ -167,14 +158,13 @@ impl LightRadiusGizmoPlugin {
         } else {
             0.0
         };
-        if input.snap {
-            if let Some(step) = self
+        if input.snap
+            && let Some(step) = self
                 .config
                 .snap_step_world
                 .filter(|s| s.is_finite() && *s > 0.0)
-            {
-                total_world = (total_world / step).round() * step;
-            }
+        {
+            total_world = (total_world / step).round() * step;
         }
         total_world
     }
@@ -247,9 +237,7 @@ impl LightRadiusGizmoPlugin {
         active_target: GizmoTargetId,
         targets: &[GizmoTarget3d],
     ) -> Option<GizmoUpdate> {
-        let Some(_) = self.state.active.take() else {
-            return None;
-        };
+        let _ = self.state.active.take()?;
 
         let mut custom_edits = Vec::with_capacity(targets.len());
         let mut active_total = 0.0;
@@ -367,7 +355,7 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
             return GizmoDrawList3d::default();
         }
 
-        let segs = self.config.segments.max(3).min(256);
+        let segs = self.config.segments.clamp(3, 256);
         let mut out = GizmoDrawList3d::default();
 
         // Fill (triangle fan).
@@ -438,7 +426,7 @@ impl GizmoPlugin for LightRadiusGizmoPlugin {
             return;
         }
 
-        let segs = self.config.segments.max(3).min(256);
+        let segs = self.config.segments.clamp(3, 256);
         let handle = Self::ring_handle();
         let bias = 0.0;
         let radius_px = self.config.pick_radius_px.max(1.0);

@@ -31,7 +31,21 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--skip-clippy", action="store_true")
     parser.add_argument("--skip-nextest", action="store_true")
     parser.add_argument("--skip-icons", action="store_true")
+    parser.add_argument("--skip-release-closure", action="store_true")
+    parser.add_argument("--skip-portable-time", action="store_true")
     parser.add_argument("--skip-diff-check", action="store_true")
+    parser.add_argument(
+        "--release-config",
+        default="release-plz.toml",
+        help="release-plz config path for release closure check (default: release-plz.toml).",
+    )
+    parser.add_argument(
+        "--release-write-order",
+        default="docs/release/v0.1.0-publish-order.txt",
+        help="Write computed publish order to this path (default: docs/release/v0.1.0-publish-order.txt).",
+    )
+    parser.add_argument("--release-strict-metadata", action="store_true")
+    parser.add_argument("--release-print-publish-commands", action="store_true")
     args = parser.parse_args(argv)
 
     repo_root = _repo_root()
@@ -53,6 +67,27 @@ def main(argv: list[str]) -> int:
         "Stringly command parsing policy",
         [py, str(repo_root / "tools/check_stringly_command_parsing.py")],
     )
+
+    if not args.skip_portable_time:
+        _run_checked(
+            "Portable time sources (prefer fret_core::time::Instant)",
+            [py, str(repo_root / "tools/check_portable_time.py")],
+        )
+
+    if not args.skip_release_closure:
+        closure_args = [
+            py,
+            str(repo_root / "tools/release_closure_check.py"),
+            "--config",
+            args.release_config,
+        ]
+        if args.release_write_order:
+            closure_args += ["--write-order", args.release_write_order]
+        if args.release_print_publish_commands:
+            closure_args.append("--print-publish-commands")
+        if args.release_strict_metadata:
+            closure_args.append("--strict-metadata")
+        _run_checked("Release scope closure + publish order", closure_args)
 
     if not args.skip_icons:
         icon_args = [py, str(repo_root / "tools/pre_release_icons.py")]

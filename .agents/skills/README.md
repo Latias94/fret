@@ -68,6 +68,46 @@ These conventions keep skills consistent and easy to auto-validate/package:
 - Recommended headings: `When to use`, `Quick start`, `Workflow`, `Evidence anchors`, `Common pitfalls`, `Related skills`
 - Evidence anchors: prefer stable file paths + symbol names; avoid fragile line-number anchors
 
+## Skill quality bar (engineering discipline)
+
+These rules are adapted from mature skill ecosystems (e.g. Claude Code plugin “skill-development” guidance),
+but aligned to how Fret skills are validated and shipped.
+
+### 1) Strong triggers in frontmatter
+
+- Make `description` *specific* about when it should trigger (include concrete user phrases like
+  “create a diag script”, “audit UI focus”, “align shadcn component”).
+- Prefer third-person trigger wording:
+  - ✅ “This skill should be used when…”
+  - ❌ Vague one-liners.
+
+### 2) Lean `SKILL.md` + progressive disclosure
+
+- Keep procedural essentials in `SKILL.md`.
+- Move long material (schemas, large checklists, deep background) into `references/` and link it.
+- If a reference is large, include a suggested `rg` search pattern so agents can load only the relevant slice.
+
+### 3) No duplicated knowledge
+
+- Pick one “owner skill” per concept; other skills should link to it.
+- Avoid copy/pasting the same checklist into multiple skills.
+
+### 4) Write for an agent (not a blog post)
+
+- Use imperative / verb-first instructions.
+- Avoid second-person narration (“you should…”).
+- Prefer checklists + short workflows over long prose.
+
+### 5) Evidence + regression protection
+
+- For non-trivial work, include evidence anchors (stable paths + key symbols).
+- Prefer leaving the “3-pack”: Repro + Gate + Evidence (see `fret-skills-playbook`).
+
+### 6) Validate locally
+
+- Fast: `python3 .agents/skills/fret_skills.py validate --strict`
+- Maintainer mode (mono-repo): `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
+
 Maintainer mode (recommended in the mono-repo; validates anchor paths and a small set of high-signal symbols):
 
 ```bash
@@ -105,6 +145,7 @@ Pick **one primary skill** based on intent, then pull in the adjacent ones only 
 - Debug a correctness regression (repro + gate + bundle): `fret-diag-workflow`
 - Measure or gate performance (numbers/baselines) + attribute worst-frame hitches: `fret-diag-workflow`
 - Optimize performance + make it a contract (tail vs typical, suite normalization, reversible fixes): `fret-perf-optimization` (then `fret-diag-workflow`)
+- Bridge perf bundles to Tracy timelines (deep attribution + instrumentation discipline): `fret-perf-tracy-bridge` (then `fret-diag-workflow`)
 - Maintain/author framework components (parity work + gates): `fret-shadcn-source-alignment` (framework/eco authors)
 - Maintain the framework safely (contracts + gates): `fret-framework-maintainer-guide`
 - Debug on real mobile devices (Android + iOS evidence): `fret-mobile-real-device-debug`
@@ -127,6 +168,7 @@ Common adjacent pulls:
 - `fret-mobile-real-device-debug`: Real-device mobile debugging workflow (Android + iOS): run the smallest mobile target, verify Vulkan/Metal constraints, and capture diagnostics bundle evidence for ADRs/workstreams.
 - `fret-diag-workflow`: Diagnostics for correctness + perf: scripted repros, bundles/screenshots, triage/compare, perf gates (`diag perf`), and worst-frame attribution.
 - `fret-perf-optimization`: Perf optimization workflow: turn “jank” into a durable perf contract (tail vs typical), normalize suites, attribute worst bundles, and land reversible fixes with evidence.
+- `fret-perf-tracy-bridge`: Bridge perf gates (diag perf + bundles) with Tracy timeline profiling: reproduce worst bundles, capture traces, and correlate spans with bundle stats.
 - `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
 - `fret-crate-audits`: Crate-by-crate code-quality audits for fearless refactors (purpose/exports/deps/hazards) and a small gate set.
 - `fret-boundary-checks`: Guardrails for crate boundary/portability refactors (layering, module-size drift, crate audit snapshot).

@@ -36,10 +36,14 @@ impl std::str::FromStr for PerfBaselineSeed {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[allow(clippy::enum_variant_names)]
 pub(crate) enum PerfSeedMetric {
     TopTotalTimeUs,
     TopLayoutTimeUs,
     TopLayoutEngineSolveTimeUs,
+    FrameP95TotalTimeUs,
+    FrameP95LayoutTimeUs,
+    FrameP95LayoutEngineSolveTimeUs,
 }
 
 impl PerfSeedMetric {
@@ -48,6 +52,11 @@ impl PerfSeedMetric {
             PerfSeedMetric::TopTotalTimeUs => "top_total_time_us",
             PerfSeedMetric::TopLayoutTimeUs => "top_layout_time_us",
             PerfSeedMetric::TopLayoutEngineSolveTimeUs => "top_layout_engine_solve_time_us",
+            PerfSeedMetric::FrameP95TotalTimeUs => "frame_p95_total_time_us",
+            PerfSeedMetric::FrameP95LayoutTimeUs => "frame_p95_layout_time_us",
+            PerfSeedMetric::FrameP95LayoutEngineSolveTimeUs => {
+                "frame_p95_layout_engine_solve_time_us"
+            }
         }
     }
 }
@@ -60,8 +69,13 @@ impl std::str::FromStr for PerfSeedMetric {
             "top_total_time_us" => Ok(PerfSeedMetric::TopTotalTimeUs),
             "top_layout_time_us" => Ok(PerfSeedMetric::TopLayoutTimeUs),
             "top_layout_engine_solve_time_us" => Ok(PerfSeedMetric::TopLayoutEngineSolveTimeUs),
+            "frame_p95_total_time_us" => Ok(PerfSeedMetric::FrameP95TotalTimeUs),
+            "frame_p95_layout_time_us" => Ok(PerfSeedMetric::FrameP95LayoutTimeUs),
+            "frame_p95_layout_engine_solve_time_us" => {
+                Ok(PerfSeedMetric::FrameP95LayoutEngineSolveTimeUs)
+            }
             _ => Err(format!(
-                "invalid metric (expected top_total_time_us|top_layout_time_us|top_layout_engine_solve_time_us): {s:?}"
+                "invalid metric (expected top_total_time_us|top_layout_time_us|top_layout_engine_solve_time_us|frame_p95_total_time_us|frame_p95_layout_time_us|frame_p95_layout_engine_solve_time_us): {s:?}"
             )),
         }
     }
@@ -163,6 +177,18 @@ pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'stat
             "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
             "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
             "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        ]),
+        "ui-gallery-complex-steady" => Some(&[
+            "tools/diag-scripts/ui-gallery-chrome-torture-steady.json",
+            "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
+            "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+            "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+        ]),
+        "ui-gallery-complex-typical" => Some(&[
+            "tools/diag-scripts/ui-gallery-chrome-torture-typical.json",
+            "tools/diag-scripts/ui-gallery-code-editor-torture-idle-typical.json",
+            "tools/diag-scripts/ui-gallery-virtual-list-torture-typical.json",
+            "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
         ]),
         "extras-marquee-steady" => Some(&["tools/diag-scripts/extras-marquee-steady.json"]),
         _ => None,
@@ -480,7 +506,7 @@ mod tests {
             &workspace_root,
             Some("extras-marquee-steady"),
             &scripts,
-            &[preset_path.clone()],
+            std::slice::from_ref(&preset_path),
             &[],
         )
         .unwrap();

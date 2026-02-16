@@ -26,9 +26,17 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-image-demo-status" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-ai-image-demo-image" }
       },
-      "timeout_frames": 1800
+      "timeout_frames": 1200
     },
     { "type": "capture_bundle", "label": "ui-gallery-ai-image-demo-load" }
   ]

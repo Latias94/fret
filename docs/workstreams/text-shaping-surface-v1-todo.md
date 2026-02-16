@@ -44,8 +44,26 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 
 ## Open questions
 
-- [ ] Do we need a feature behavior conformance fixture beyond “keying correctness”?
-  - Current tests validate deterministic canonicalization and cache invalidation.
-  - A behavior-visible fixture should likely use bundled fonts (`fret_fonts`) to avoid platform
-    font drift.
-- [ ] Do we want to support a CSS-like `font-feature-settings` parser, or keep the struct-only API?
+- [x] Add a feature behavior conformance gate beyond cache-key correctness.
+  - Gate: toggling `liga`/`calt` must be **behavior-visible** (not only key-visible) under a
+    bundled-font-only environment (no system font dependency):
+    - shaping output changes for at least one known ligature candidate string.
+    - word wrap breakpoints can change under `TextWrap::Word` for at least one known candidate.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
+  - Note: this supersedes the deferred question below; keep it for historical rationale.
+
+- [x] Do we need a feature behavior conformance fixture beyond “keying correctness”?
+  - Answer: yes — and we now have one.
+  - Rationale: keying correctness alone is not enough; we also want to know that feature overrides
+    are actually applied by the shaping pipeline.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
+- [~] Do we want to support a CSS-like `font-feature-settings` parser, or keep the struct-only API?
+  - Status: deferred.
+  - Recommendation: keep the struct-only API for v1. Introduce a parser only when there is a
+    product requirement for string-based configuration and we are ready to freeze an input grammar.

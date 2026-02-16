@@ -418,6 +418,7 @@ impl SnippetCopyButton {
                 Color::TRANSPARENT
             };
 
+            // AI Elements uses InputGroupButton size="icon-sm" (8x8 Tailwind => 32px).
             let size = Px(32.0);
             let radius = theme.metric_token("metric.radius.md");
             let icon_id = if copied {

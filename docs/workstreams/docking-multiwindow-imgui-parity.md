@@ -1,5 +1,14 @@
 # Docking Tear-off (Multi-Window) — ImGui Parity Refactor Workstream (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream document; normative contracts live in ADRs)
 
 This workstream targets **editor-grade docking across multiple OS windows** (tear-off + re-dock),
@@ -32,6 +41,8 @@ These non-normative anchors are useful when matching “multi-viewports” hand 
 - Windows backend example of “peek behind moving window”:
   - `repo-ref/imgui/backends/imgui_impl_win32.cpp:1422` (`NoInputs` set while dragging to detect window behind)
   - `repo-ref/imgui/backends/imgui_impl_win32.cpp:1127` (viewport flags → Win32 window styles: taskbar, top-most, decorations)
+- Transparent payload option:
+  - `repo-ref/imgui/imgui.h:2515` (`ImGuiIO::ConfigDockingTransparentPayload`)
 
 ## Scope
 
@@ -95,6 +106,10 @@ Evidence anchors:
 - Cross-window routing and tear-off follow: `crates/fret-launch/src/runner/desktop/mod.rs`,
   `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Arbitration rules: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+- Optional “transparent payload” (ImGui-style):
+  - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`
+  - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`)
+  - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
 
 ## Cross-platform gaps (common failure modes)
 

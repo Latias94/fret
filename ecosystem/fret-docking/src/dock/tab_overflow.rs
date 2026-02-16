@@ -50,7 +50,7 @@ pub(super) fn overflow_menu_row_height(tab_bar: Rect) -> Px {
 }
 
 pub(super) fn overflow_menu_row_count(tab_count: usize) -> usize {
-    tab_count.min(10).max(1)
+    tab_count.clamp(1, 10)
 }
 
 pub(super) fn overflow_menu_max_scroll(tab_bar: Rect, tab_count: usize) -> Px {
@@ -97,6 +97,8 @@ mod tests {
                 text_disabled: Color::TRANSPARENT,
                 accent: Color::TRANSPARENT,
                 selection_background: Color::TRANSPARENT,
+                selection_inactive_background: Color::TRANSPARENT,
+                selection_window_inactive_background: Color::TRANSPARENT,
                 hover_background: Color::TRANSPARENT,
                 focus_ring: Color::TRANSPARENT,
                 menu_background: Color::TRANSPARENT,

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "generated_unix_ms": 1770804524589,
   "kind": "perf_baseline",
-  "out_path": "F:\\SourceCodes\\Rust\\fret\\docs\\workstreams\\perf-baselines\\ui-code-editor-resize-probes.windows-rtx4090.v1.json",
+  "out_path": "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json",
   "warmup_frames": 5,
   "sort": "time",
   "repeat": 7,

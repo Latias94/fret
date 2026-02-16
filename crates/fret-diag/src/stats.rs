@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use super::util::{now_unix_ms, write_json_value};
@@ -121,6 +122,32 @@ pub(super) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_k
     }
 
     Ok(())
+}
+
+fn compact_string_middle<'a>(s: &'a str, head_bytes: usize, tail_bytes: usize) -> Cow<'a, str> {
+    // Keep `diag stats` output readable: element paths can be extremely long on Windows
+    // (workspace root + nested debug identity chain). Prefer keeping both the root prefix and the
+    // final "file:line:col" tail, which is usually the most actionable part.
+    let min_len = head_bytes.saturating_add(tail_bytes).saturating_add(3);
+    if s.len() <= min_len {
+        return Cow::Borrowed(s);
+    }
+
+    let mut head = head_bytes.min(s.len());
+    while head > 0 && !s.is_char_boundary(head) {
+        head -= 1;
+    }
+
+    let mut tail_start = s.len().saturating_sub(tail_bytes.min(s.len()));
+    while tail_start < s.len() && !s.is_char_boundary(tail_start) {
+        tail_start += 1;
+    }
+
+    Cow::Owned(format!("{}...{}", &s[..head], &s[tail_start..]))
+}
+
+fn compact_debug_path<'a>(path: &'a str) -> Cow<'a, str> {
+    compact_string_middle(path, 72, 160)
 }
 
 pub(super) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(
@@ -526,6 +553,11 @@ pub(super) enum BundleStatsSort {
     Dispatch,
     HitTest,
     RendererEncodeScene,
+    RendererEnsurePipelines,
+    RendererPlanCompile,
+    RendererUpload,
+    RendererRecordPasses,
+    RendererEncoderFinish,
     RendererPrepareText,
     RendererDrawCalls,
     RendererPipelineSwitches,
@@ -558,6 +590,15 @@ impl BundleStatsSort {
             "dispatch" => Ok(Self::Dispatch),
             "hit_test" => Ok(Self::HitTest),
             "encode_scene" | "encode" | "renderer_encode_scene" => Ok(Self::RendererEncodeScene),
+            "ensure_pipelines" | "ensure" | "renderer_ensure_pipelines" => {
+                Ok(Self::RendererEnsurePipelines)
+            }
+            "plan_compile" | "plan" | "renderer_plan_compile" => Ok(Self::RendererPlanCompile),
+            "upload" | "uploads" | "renderer_upload" => Ok(Self::RendererUpload),
+            "record_passes" | "record" | "renderer_record_passes" => Ok(Self::RendererRecordPasses),
+            "encoder_finish" | "finish" | "renderer_encoder_finish" => {
+                Ok(Self::RendererEncoderFinish)
+            }
             "prepare_text" | "renderer_prepare_text" => Ok(Self::RendererPrepareText),
             "draw_calls" | "draws" | "renderer_draw_calls" => Ok(Self::RendererDrawCalls),
             "pipeline_switches" | "pipelines" | "renderer_pipeline_switches" => {
@@ -621,7 +662,7 @@ impl BundleStatsSort {
                 Ok(Self::RendererIntermediatePoolFreeTextures)
             }
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
+                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|encode_scene|ensure_pipelines|plan_compile|upload|record_passes|encoder_finish|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
             )),
         }
     }
@@ -635,6 +676,11 @@ impl BundleStatsSort {
             Self::Dispatch => "dispatch",
             Self::HitTest => "hit_test",
             Self::RendererEncodeScene => "encode_scene",
+            Self::RendererEnsurePipelines => "ensure_pipelines",
+            Self::RendererPlanCompile => "plan_compile",
+            Self::RendererUpload => "upload",
+            Self::RendererRecordPasses => "record_passes",
+            Self::RendererEncoderFinish => "encoder_finish",
             Self::RendererPrepareText => "prepare_text",
             Self::RendererDrawCalls => "draw_calls",
             Self::RendererPipelineSwitches => "pipeline_switches",
@@ -665,8 +711,8 @@ pub(super) struct BundleStatsReport {
     warmup_frames: u64,
     pub(super) windows: u32,
     pub(super) snapshots: u32,
-    snapshots_considered: u32,
-    snapshots_skipped_warmup: u32,
+    pub(super) snapshots_considered: u32,
+    pub(super) snapshots_skipped_warmup: u32,
     pub(super) snapshots_with_model_changes: u32,
     pub(super) snapshots_with_global_changes: u32,
     snapshots_with_propagated_model_changes: u32,
@@ -730,39 +776,85 @@ pub(super) struct BundleStatsReport {
     max_layout_observation_record_time_us: u64,
     max_layout_observation_record_models_items: u32,
     max_layout_observation_record_globals_items: u32,
-    max_prepaint_time_us: u64,
-    max_paint_time_us: u64,
-    max_total_time_us: u64,
-    max_ui_thread_cpu_time_us: u64,
-    max_ui_thread_cpu_cycle_time_delta_cycles: u64,
-    max_layout_engine_solve_time_us: u64,
+    pub(super) max_prepaint_time_us: u64,
+    pub(super) max_paint_time_us: u64,
+    pub(super) max_total_time_us: u64,
+    pub(super) max_ui_thread_cpu_time_us: u64,
+    pub(super) max_ui_thread_cpu_cycle_time_delta_cycles: u64,
+    pub(super) max_layout_engine_solve_time_us: u64,
+    pub(super) max_renderer_encode_scene_us: u64,
+    pub(super) max_renderer_ensure_pipelines_us: u64,
+    pub(super) max_renderer_plan_compile_us: u64,
+    pub(super) max_renderer_upload_us: u64,
+    pub(super) max_renderer_record_passes_us: u64,
+    pub(super) max_renderer_encoder_finish_us: u64,
+    pub(super) max_renderer_prepare_svg_us: u64,
+    pub(super) max_renderer_prepare_text_us: u64,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
     max_global_change_invalidation_roots: u32,
     pub(super) max_hover_layout_invalidations: u32,
-    p50_total_time_us: u64,
-    p95_total_time_us: u64,
-    p50_ui_thread_cpu_time_us: u64,
-    p95_ui_thread_cpu_time_us: u64,
-    p50_ui_thread_cpu_cycle_time_delta_cycles: u64,
-    p95_ui_thread_cpu_cycle_time_delta_cycles: u64,
-    p50_layout_time_us: u64,
-    p95_layout_time_us: u64,
-    p50_prepaint_time_us: u64,
-    p95_prepaint_time_us: u64,
-    p50_paint_time_us: u64,
-    p95_paint_time_us: u64,
-    p50_layout_engine_solve_time_us: u64,
-    p95_layout_engine_solve_time_us: u64,
-    p50_dispatch_time_us: u64,
-    p95_dispatch_time_us: u64,
-    p50_hit_test_time_us: u64,
-    p95_hit_test_time_us: u64,
-    p50_paint_widget_time_us: u64,
-    p95_paint_widget_time_us: u64,
-    p50_paint_text_prepare_time_us: u64,
-    p95_paint_text_prepare_time_us: u64,
+    pub(super) p50_total_time_us: u64,
+    pub(super) p95_total_time_us: u64,
+    pub(super) p50_ui_thread_cpu_time_us: u64,
+    pub(super) p95_ui_thread_cpu_time_us: u64,
+    pub(super) p50_ui_thread_cpu_cycle_time_delta_cycles: u64,
+    pub(super) p95_ui_thread_cpu_cycle_time_delta_cycles: u64,
+    pub(super) p50_layout_time_us: u64,
+    pub(super) p95_layout_time_us: u64,
+    pub(super) p50_layout_collect_roots_time_us: u64,
+    pub(super) p95_layout_collect_roots_time_us: u64,
+    pub(super) p50_layout_request_build_roots_time_us: u64,
+    pub(super) p95_layout_request_build_roots_time_us: u64,
+    pub(super) p50_layout_roots_time_us: u64,
+    pub(super) p95_layout_roots_time_us: u64,
+    pub(super) p50_layout_view_cache_time_us: u64,
+    pub(super) p95_layout_view_cache_time_us: u64,
+    pub(super) p50_layout_collapse_layout_observations_time_us: u64,
+    pub(super) p95_layout_collapse_layout_observations_time_us: u64,
+    pub(super) p50_layout_prepaint_after_layout_time_us: u64,
+    pub(super) p95_layout_prepaint_after_layout_time_us: u64,
+    pub(super) p50_prepaint_time_us: u64,
+    pub(super) p95_prepaint_time_us: u64,
+    pub(super) p50_paint_time_us: u64,
+    pub(super) p95_paint_time_us: u64,
+    pub(super) p50_paint_input_context_time_us: u64,
+    pub(super) p95_paint_input_context_time_us: u64,
+    pub(super) p50_paint_scroll_handle_invalidation_time_us: u64,
+    pub(super) p95_paint_scroll_handle_invalidation_time_us: u64,
+    pub(super) p50_paint_collect_roots_time_us: u64,
+    pub(super) p95_paint_collect_roots_time_us: u64,
+    pub(super) p50_paint_publish_text_input_snapshot_time_us: u64,
+    pub(super) p95_paint_publish_text_input_snapshot_time_us: u64,
+    pub(super) p50_paint_collapse_observations_time_us: u64,
+    pub(super) p95_paint_collapse_observations_time_us: u64,
+    pub(super) p50_layout_engine_solve_time_us: u64,
+    pub(super) p95_layout_engine_solve_time_us: u64,
+    pub(super) p50_dispatch_time_us: u64,
+    pub(super) p95_dispatch_time_us: u64,
+    pub(super) p50_hit_test_time_us: u64,
+    pub(super) p95_hit_test_time_us: u64,
+    pub(super) p50_paint_widget_time_us: u64,
+    pub(super) p95_paint_widget_time_us: u64,
+    pub(super) p50_paint_text_prepare_time_us: u64,
+    pub(super) p95_paint_text_prepare_time_us: u64,
+    pub(super) p50_renderer_encode_scene_us: u64,
+    pub(super) p95_renderer_encode_scene_us: u64,
+    pub(super) p50_renderer_ensure_pipelines_us: u64,
+    pub(super) p95_renderer_ensure_pipelines_us: u64,
+    pub(super) p50_renderer_plan_compile_us: u64,
+    pub(super) p95_renderer_plan_compile_us: u64,
+    pub(super) p50_renderer_upload_us: u64,
+    pub(super) p95_renderer_upload_us: u64,
+    pub(super) p50_renderer_record_passes_us: u64,
+    pub(super) p95_renderer_record_passes_us: u64,
+    pub(super) p50_renderer_encoder_finish_us: u64,
+    pub(super) p95_renderer_encoder_finish_us: u64,
+    pub(super) p50_renderer_prepare_svg_us: u64,
+    pub(super) p95_renderer_prepare_svg_us: u64,
+    pub(super) p50_renderer_prepare_text_us: u64,
+    pub(super) p95_renderer_prepare_text_us: u64,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
@@ -885,10 +977,34 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_tick_id: u64,
     pub(super) renderer_frame_id: u64,
     pub(super) renderer_encode_scene_us: u64,
+    pub(super) renderer_ensure_pipelines_us: u64,
+    pub(super) renderer_plan_compile_us: u64,
+    pub(super) renderer_upload_us: u64,
+    pub(super) renderer_record_passes_us: u64,
+    pub(super) renderer_encoder_finish_us: u64,
     pub(super) renderer_prepare_text_us: u64,
     pub(super) renderer_prepare_svg_us: u64,
     pub(super) renderer_svg_upload_bytes: u64,
     pub(super) renderer_image_upload_bytes: u64,
+
+    pub(super) renderer_render_target_updates_ingest_unknown: u64,
+    pub(super) renderer_render_target_updates_ingest_owned: u64,
+    pub(super) renderer_render_target_updates_ingest_external_zero_copy: u64,
+    pub(super) renderer_render_target_updates_ingest_gpu_copy: u64,
+    pub(super) renderer_render_target_updates_ingest_cpu_upload: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_unknown: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_owned: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_external_zero_copy: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_gpu_copy: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_cpu_upload: u64,
+    pub(super) renderer_render_target_updates_ingest_fallbacks: u64,
+
+    pub(super) renderer_viewport_draw_calls: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_unknown: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_owned: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_external_zero_copy: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_gpu_copy: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_cpu_upload: u64,
     pub(super) renderer_svg_raster_budget_bytes: u64,
     pub(super) renderer_svg_rasters_live: u64,
     pub(super) renderer_svg_standalone_bytes_live: u64,
@@ -918,6 +1034,11 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_bind_group_switches: u64,
     pub(super) renderer_scissor_sets: u64,
     pub(super) renderer_scene_encoding_cache_misses: u64,
+    pub(super) renderer_material_quad_ops: u64,
+    pub(super) renderer_material_sampled_quad_ops: u64,
+    pub(super) renderer_material_distinct: u64,
+    pub(super) renderer_material_unknown_ids: u64,
+    pub(super) renderer_material_degraded_due_to_budget: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
     pub(super) changed_models: u32,
@@ -974,12 +1095,40 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) top_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
+    pub(super) layout_hotspots: Vec<BundleStatsLayoutHotspot>,
+    pub(super) widget_measure_hotspots: Vec<BundleStatsWidgetMeasureHotspot>,
     pub(super) paint_widget_hotspots: Vec<BundleStatsPaintWidgetHotspot>,
     pub(super) paint_text_prepare_hotspots: Vec<BundleStatsPaintTextPrepareHotspot>,
     pub(super) model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsLayoutHotspot {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) element_path: Option<String>,
+    pub(super) widget_type: Option<String>,
+    pub(super) layout_time_us: u64,
+    pub(super) inclusive_time_us: u64,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsWidgetMeasureHotspot {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) element_path: Option<String>,
+    pub(super) widget_type: Option<String>,
+    pub(super) measure_time_us: u64,
+    pub(super) inclusive_time_us: u64,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1063,6 +1212,9 @@ pub(super) struct BundleStatsCacheRoot {
 #[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsLayoutEngineSolve {
     pub(super) root_node: u64,
+    pub(super) root_element: Option<u64>,
+    pub(super) root_element_kind: Option<String>,
+    pub(super) root_element_path: Option<String>,
     pub(super) solve_time_us: u64,
     pub(super) measure_calls: u64,
     pub(super) measure_cache_hits: u64,
@@ -1198,6 +1350,59 @@ impl BundleStatsReport {
             self.p50_paint_text_prepare_time_us,
             self.p95_paint_text_prepare_time_us
         );
+        if self.p50_renderer_encode_scene_us > 0
+            || self.p95_renderer_encode_scene_us > 0
+            || self.p50_renderer_upload_us > 0
+            || self.p95_renderer_upload_us > 0
+            || self.p50_renderer_record_passes_us > 0
+            || self.p95_renderer_record_passes_us > 0
+        {
+            println!(
+                "renderer p50/p95 (us): encode={}/{} ensure={}/{} plan={}/{} upload={}/{} record={}/{} finish={}/{} svg={}/{} text={}/{}",
+                self.p50_renderer_encode_scene_us,
+                self.p95_renderer_encode_scene_us,
+                self.p50_renderer_ensure_pipelines_us,
+                self.p95_renderer_ensure_pipelines_us,
+                self.p50_renderer_plan_compile_us,
+                self.p95_renderer_plan_compile_us,
+                self.p50_renderer_upload_us,
+                self.p95_renderer_upload_us,
+                self.p50_renderer_record_passes_us,
+                self.p95_renderer_record_passes_us,
+                self.p50_renderer_encoder_finish_us,
+                self.p95_renderer_encoder_finish_us,
+                self.p50_renderer_prepare_svg_us,
+                self.p95_renderer_prepare_svg_us,
+                self.p50_renderer_prepare_text_us,
+                self.p95_renderer_prepare_text_us,
+            );
+        }
+        println!(
+            "layout breakdown p50/p95 (us): roots={}/{} request_build_roots={}/{} view_cache={}/{} collapse_obs={}/{} prepaint_after_layout={}/{}",
+            self.p50_layout_roots_time_us,
+            self.p95_layout_roots_time_us,
+            self.p50_layout_request_build_roots_time_us,
+            self.p95_layout_request_build_roots_time_us,
+            self.p50_layout_view_cache_time_us,
+            self.p95_layout_view_cache_time_us,
+            self.p50_layout_collapse_layout_observations_time_us,
+            self.p95_layout_collapse_layout_observations_time_us,
+            self.p50_layout_prepaint_after_layout_time_us,
+            self.p95_layout_prepaint_after_layout_time_us
+        );
+        println!(
+            "paint breakdown p50/p95 (us): input_ctx={}/{} scroll_inv={}/{} collect_roots={}/{} text_snapshot={}/{} collapse={}/{}",
+            self.p50_paint_input_context_time_us,
+            self.p95_paint_input_context_time_us,
+            self.p50_paint_scroll_handle_invalidation_time_us,
+            self.p95_paint_scroll_handle_invalidation_time_us,
+            self.p50_paint_collect_roots_time_us,
+            self.p95_paint_collect_roots_time_us,
+            self.p50_paint_publish_text_input_snapshot_time_us,
+            self.p95_paint_publish_text_input_snapshot_time_us,
+            self.p50_paint_collapse_observations_time_us,
+            self.p95_paint_collapse_observations_time_us
+        );
         if self.sum_layout_observation_record_time_us > 0
             || self.sum_layout_observation_record_models_items > 0
             || self.sum_layout_observation_record_globals_items > 0
@@ -1223,6 +1428,22 @@ impl BundleStatsReport {
             self.max_prepaint_time_us,
             self.max_paint_time_us
         );
+        if self.max_renderer_encode_scene_us > 0
+            || self.max_renderer_upload_us > 0
+            || self.max_renderer_record_passes_us > 0
+        {
+            println!(
+                "renderer max (us): encode={} ensure={} plan={} upload={} record={} finish={} svg={} text={}",
+                self.max_renderer_encode_scene_us,
+                self.max_renderer_ensure_pipelines_us,
+                self.max_renderer_plan_compile_us,
+                self.max_renderer_upload_us,
+                self.max_renderer_record_passes_us,
+                self.max_renderer_encoder_finish_us,
+                self.max_renderer_prepare_svg_us,
+                self.max_renderer_prepare_text_us,
+            );
+        }
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
             self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
@@ -1300,7 +1521,7 @@ impl BundleStatsReport {
                 .timestamp_unix_ms
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
-            println!(
+            let mut line = format!(
                 "  window={} tick={} frame={} ts={} cpu.us={} cpu.cycles={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
@@ -1353,6 +1574,25 @@ impl BundleStatsReport {
                 row.propagated_global_change_observation_edges,
                 row.propagated_global_change_unobserved_globals
             );
+            if row.renderer_encode_scene_us > 0
+                || row.renderer_prepare_text_us > 0
+                || row.renderer_prepare_svg_us > 0
+                || row.renderer_upload_us > 0
+                || row.renderer_record_passes_us > 0
+            {
+                line.push_str(&format!(
+                    " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
+                    row.renderer_encode_scene_us,
+                    row.renderer_ensure_pipelines_us,
+                    row.renderer_plan_compile_us,
+                    row.renderer_upload_us,
+                    row.renderer_record_passes_us,
+                    row.renderer_encoder_finish_us,
+                    row.renderer_prepare_svg_us,
+                    row.renderer_prepare_text_us,
+                ));
+            }
+            println!("{line}");
             if row.layout_observation_record_time_us > 0
                 || row.layout_observation_record_models_items > 0
                 || row.layout_observation_record_globals_items > 0
@@ -1592,6 +1832,7 @@ impl BundleStatsReport {
                         if let Some(path) = c.element_path.as_deref()
                             && !path.is_empty()
                         {
+                            let path = compact_debug_path(path);
                             s.push_str(&format!(" path={path}"));
                         }
                         if let Some(in_sem) = c.root_in_semantics {
@@ -1631,6 +1872,7 @@ impl BundleStatsReport {
                         if let Some(path) = c.element_path.as_deref()
                             && !path.is_empty()
                         {
+                            let path = compact_debug_path(path);
                             s.push_str(&format!(" path={path}"));
                         }
                         if let Some(in_sem) = c.root_in_semantics {
@@ -1698,55 +1940,71 @@ impl BundleStatsReport {
                         {
                             out.push_str(&format!(" role={role}"));
                         }
-                        if let Some(m) = s.top_measures.first() {
-                            if m.measure_time_us > 0 && m.node != 0 {
+                        if let Some(kind) = s.root_element_kind.as_deref()
+                            && !kind.is_empty()
+                        {
+                            out.push_str(&format!(" root.kind={kind}"));
+                        }
+                        if let Some(el) = s.root_element {
+                            out.push_str(&format!(" root.element={el}"));
+                        }
+                        if let Some(path) = s.root_element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            let path = compact_debug_path(path);
+                            out.push_str(&format!(" root.path={path}"));
+                        }
+                        if let Some(m) = s.top_measures.first()
+                            && m.measure_time_us > 0
+                            && m.node != 0
+                        {
+                            out.push_str(&format!(
+                                " top_measure.us={} node={}",
+                                m.measure_time_us, m.node
+                            ));
+                            if let Some(kind) = m.element_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" kind={kind}"));
+                            }
+                            if let Some(el) = m.element {
+                                out.push_str(&format!(" element={el}"));
+                            }
+                            if let Some(test_id) = m.test_id.as_deref()
+                                && !test_id.is_empty()
+                            {
+                                out.push_str(&format!(" test_id={test_id}"));
+                            }
+                            if let Some(role) = m.role.as_deref()
+                                && !role.is_empty()
+                            {
+                                out.push_str(&format!(" role={role}"));
+                            }
+                            if let Some(c) = m.top_children.first()
+                                && c.measure_time_us > 0
+                                && c.child != 0
+                            {
                                 out.push_str(&format!(
-                                    " top_measure.us={} node={}",
-                                    m.measure_time_us, m.node
+                                    " child.us={} child={}",
+                                    c.measure_time_us, c.child
                                 ));
-                                if let Some(kind) = m.element_kind.as_deref()
+                                if let Some(kind) = c.element_kind.as_deref()
                                     && !kind.is_empty()
                                 {
-                                    out.push_str(&format!(" kind={kind}"));
+                                    out.push_str(&format!(" child.kind={kind}"));
                                 }
-                                if let Some(el) = m.element {
-                                    out.push_str(&format!(" element={el}"));
+                                if let Some(el) = c.element {
+                                    out.push_str(&format!(" child.element={el}"));
                                 }
-                                if let Some(test_id) = m.test_id.as_deref()
+                                if let Some(test_id) = c.test_id.as_deref()
                                     && !test_id.is_empty()
                                 {
-                                    out.push_str(&format!(" test_id={test_id}"));
+                                    out.push_str(&format!(" child.test_id={test_id}"));
                                 }
-                                if let Some(role) = m.role.as_deref()
+                                if let Some(role) = c.role.as_deref()
                                     && !role.is_empty()
                                 {
-                                    out.push_str(&format!(" role={role}"));
-                                }
-                                if let Some(c) = m.top_children.first() {
-                                    if c.measure_time_us > 0 && c.child != 0 {
-                                        out.push_str(&format!(
-                                            " child.us={} child={}",
-                                            c.measure_time_us, c.child
-                                        ));
-                                        if let Some(kind) = c.element_kind.as_deref()
-                                            && !kind.is_empty()
-                                        {
-                                            out.push_str(&format!(" child.kind={kind}"));
-                                        }
-                                        if let Some(el) = c.element {
-                                            out.push_str(&format!(" child.element={el}"));
-                                        }
-                                        if let Some(test_id) = c.test_id.as_deref()
-                                            && !test_id.is_empty()
-                                        {
-                                            out.push_str(&format!(" child.test_id={test_id}"));
-                                        }
-                                        if let Some(role) = c.role.as_deref()
-                                            && !role.is_empty()
-                                        {
-                                            out.push_str(&format!(" child.role={role}"));
-                                        }
-                                    }
+                                    out.push_str(&format!(" child.role={role}"));
                                 }
                             }
                         }
@@ -1754,6 +2012,94 @@ impl BundleStatsReport {
                     })
                     .collect();
                 println!("    top_layout_engine_solves: {}", items.join(" | "));
+            }
+            if !row.layout_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .layout_hotspots
+                    .iter()
+                    .take(3)
+                    .map(|h| {
+                        let mut out = format!(
+                            "us={} incl.us={} node={}",
+                            h.layout_time_us, h.inclusive_time_us, h.node
+                        );
+                        if let Some(test_id) = h.test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            out.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = h.role.as_deref()
+                            && !role.is_empty()
+                        {
+                            out.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(widget) = h.widget_type.as_deref()
+                            && !widget.is_empty()
+                        {
+                            out.push_str(&format!(" widget={widget}"));
+                        }
+                        if let Some(kind) = h.element_kind.as_deref()
+                            && !kind.is_empty()
+                        {
+                            out.push_str(&format!(" kind={kind}"));
+                        }
+                        if let Some(el) = h.element {
+                            out.push_str(&format!(" element={el}"));
+                        }
+                        if let Some(path) = h.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            let path = compact_debug_path(path);
+                            out.push_str(&format!(" path={path}"));
+                        }
+                        out
+                    })
+                    .collect();
+                println!("    layout_hotspots: {}", items.join(" | "));
+            }
+            if !row.widget_measure_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .widget_measure_hotspots
+                    .iter()
+                    .take(3)
+                    .map(|h| {
+                        let mut out = format!(
+                            "us={} incl.us={} node={}",
+                            h.measure_time_us, h.inclusive_time_us, h.node
+                        );
+                        if let Some(test_id) = h.test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            out.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = h.role.as_deref()
+                            && !role.is_empty()
+                        {
+                            out.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(widget) = h.widget_type.as_deref()
+                            && !widget.is_empty()
+                        {
+                            out.push_str(&format!(" widget={widget}"));
+                        }
+                        if let Some(kind) = h.element_kind.as_deref()
+                            && !kind.is_empty()
+                        {
+                            out.push_str(&format!(" kind={kind}"));
+                        }
+                        if let Some(el) = h.element {
+                            out.push_str(&format!(" element={el}"));
+                        }
+                        if let Some(path) = h.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            let path = compact_debug_path(path);
+                            out.push_str(&format!(" path={path}"));
+                        }
+                        out
+                    })
+                    .collect();
+                println!("    widget_measure_hotspots: {}", items.join(" | "));
             }
             if !row.model_change_hotspots.is_empty() {
                 let items: Vec<String> = row
@@ -2081,6 +2427,38 @@ impl BundleStatsReport {
             Value::from(self.max_layout_engine_solve_time_us),
         );
         max.insert(
+            "renderer_encode_scene_us".to_string(),
+            Value::from(self.max_renderer_encode_scene_us),
+        );
+        max.insert(
+            "renderer_ensure_pipelines_us".to_string(),
+            Value::from(self.max_renderer_ensure_pipelines_us),
+        );
+        max.insert(
+            "renderer_plan_compile_us".to_string(),
+            Value::from(self.max_renderer_plan_compile_us),
+        );
+        max.insert(
+            "renderer_upload_us".to_string(),
+            Value::from(self.max_renderer_upload_us),
+        );
+        max.insert(
+            "renderer_record_passes_us".to_string(),
+            Value::from(self.max_renderer_record_passes_us),
+        );
+        max.insert(
+            "renderer_encoder_finish_us".to_string(),
+            Value::from(self.max_renderer_encoder_finish_us),
+        );
+        max.insert(
+            "renderer_prepare_svg_us".to_string(),
+            Value::from(self.max_renderer_prepare_svg_us),
+        );
+        max.insert(
+            "renderer_prepare_text_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_us),
+        );
+        max.insert(
             "invalidation_walk_calls".to_string(),
             Value::from(self.max_invalidation_walk_calls),
         );
@@ -2269,12 +2647,56 @@ impl BundleStatsReport {
             Value::from(self.p50_layout_time_us),
         );
         p50.insert(
+            "layout_collect_roots_time_us".to_string(),
+            Value::from(self.p50_layout_collect_roots_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_time_us),
+        );
+        p50.insert(
+            "layout_roots_time_us".to_string(),
+            Value::from(self.p50_layout_roots_time_us),
+        );
+        p50.insert(
+            "layout_view_cache_time_us".to_string(),
+            Value::from(self.p50_layout_view_cache_time_us),
+        );
+        p50.insert(
+            "layout_collapse_layout_observations_time_us".to_string(),
+            Value::from(self.p50_layout_collapse_layout_observations_time_us),
+        );
+        p50.insert(
+            "layout_prepaint_after_layout_time_us".to_string(),
+            Value::from(self.p50_layout_prepaint_after_layout_time_us),
+        );
+        p50.insert(
             "prepaint_time_us".to_string(),
             Value::from(self.p50_prepaint_time_us),
         );
         p50.insert(
             "paint_time_us".to_string(),
             Value::from(self.p50_paint_time_us),
+        );
+        p50.insert(
+            "paint_input_context_time_us".to_string(),
+            Value::from(self.p50_paint_input_context_time_us),
+        );
+        p50.insert(
+            "paint_scroll_handle_invalidation_time_us".to_string(),
+            Value::from(self.p50_paint_scroll_handle_invalidation_time_us),
+        );
+        p50.insert(
+            "paint_collect_roots_time_us".to_string(),
+            Value::from(self.p50_paint_collect_roots_time_us),
+        );
+        p50.insert(
+            "paint_publish_text_input_snapshot_time_us".to_string(),
+            Value::from(self.p50_paint_publish_text_input_snapshot_time_us),
+        );
+        p50.insert(
+            "paint_collapse_observations_time_us".to_string(),
+            Value::from(self.p50_paint_collapse_observations_time_us),
         );
         p50.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -2296,6 +2718,38 @@ impl BundleStatsReport {
             "paint_text_prepare_time_us".to_string(),
             Value::from(self.p50_paint_text_prepare_time_us),
         );
+        p50.insert(
+            "renderer_encode_scene_us".to_string(),
+            Value::from(self.p50_renderer_encode_scene_us),
+        );
+        p50.insert(
+            "renderer_ensure_pipelines_us".to_string(),
+            Value::from(self.p50_renderer_ensure_pipelines_us),
+        );
+        p50.insert(
+            "renderer_plan_compile_us".to_string(),
+            Value::from(self.p50_renderer_plan_compile_us),
+        );
+        p50.insert(
+            "renderer_upload_us".to_string(),
+            Value::from(self.p50_renderer_upload_us),
+        );
+        p50.insert(
+            "renderer_record_passes_us".to_string(),
+            Value::from(self.p50_renderer_record_passes_us),
+        );
+        p50.insert(
+            "renderer_encoder_finish_us".to_string(),
+            Value::from(self.p50_renderer_encoder_finish_us),
+        );
+        p50.insert(
+            "renderer_prepare_svg_us".to_string(),
+            Value::from(self.p50_renderer_prepare_svg_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_us),
+        );
         root.insert("p50".to_string(), Value::Object(p50));
 
         let mut p95 = Map::new();
@@ -2316,12 +2770,56 @@ impl BundleStatsReport {
             Value::from(self.p95_layout_time_us),
         );
         p95.insert(
+            "layout_collect_roots_time_us".to_string(),
+            Value::from(self.p95_layout_collect_roots_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_time_us),
+        );
+        p95.insert(
+            "layout_roots_time_us".to_string(),
+            Value::from(self.p95_layout_roots_time_us),
+        );
+        p95.insert(
+            "layout_view_cache_time_us".to_string(),
+            Value::from(self.p95_layout_view_cache_time_us),
+        );
+        p95.insert(
+            "layout_collapse_layout_observations_time_us".to_string(),
+            Value::from(self.p95_layout_collapse_layout_observations_time_us),
+        );
+        p95.insert(
+            "layout_prepaint_after_layout_time_us".to_string(),
+            Value::from(self.p95_layout_prepaint_after_layout_time_us),
+        );
+        p95.insert(
             "prepaint_time_us".to_string(),
             Value::from(self.p95_prepaint_time_us),
         );
         p95.insert(
             "paint_time_us".to_string(),
             Value::from(self.p95_paint_time_us),
+        );
+        p95.insert(
+            "paint_input_context_time_us".to_string(),
+            Value::from(self.p95_paint_input_context_time_us),
+        );
+        p95.insert(
+            "paint_scroll_handle_invalidation_time_us".to_string(),
+            Value::from(self.p95_paint_scroll_handle_invalidation_time_us),
+        );
+        p95.insert(
+            "paint_collect_roots_time_us".to_string(),
+            Value::from(self.p95_paint_collect_roots_time_us),
+        );
+        p95.insert(
+            "paint_publish_text_input_snapshot_time_us".to_string(),
+            Value::from(self.p95_paint_publish_text_input_snapshot_time_us),
+        );
+        p95.insert(
+            "paint_collapse_observations_time_us".to_string(),
+            Value::from(self.p95_paint_collapse_observations_time_us),
         );
         p95.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -2342,6 +2840,38 @@ impl BundleStatsReport {
         p95.insert(
             "paint_text_prepare_time_us".to_string(),
             Value::from(self.p95_paint_text_prepare_time_us),
+        );
+        p95.insert(
+            "renderer_encode_scene_us".to_string(),
+            Value::from(self.p95_renderer_encode_scene_us),
+        );
+        p95.insert(
+            "renderer_ensure_pipelines_us".to_string(),
+            Value::from(self.p95_renderer_ensure_pipelines_us),
+        );
+        p95.insert(
+            "renderer_plan_compile_us".to_string(),
+            Value::from(self.p95_renderer_plan_compile_us),
+        );
+        p95.insert(
+            "renderer_upload_us".to_string(),
+            Value::from(self.p95_renderer_upload_us),
+        );
+        p95.insert(
+            "renderer_record_passes_us".to_string(),
+            Value::from(self.p95_renderer_record_passes_us),
+        );
+        p95.insert(
+            "renderer_encoder_finish_us".to_string(),
+            Value::from(self.p95_renderer_encoder_finish_us),
+        );
+        p95.insert(
+            "renderer_prepare_svg_us".to_string(),
+            Value::from(self.p95_renderer_prepare_svg_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_us),
         );
         root.insert("p95".to_string(), Value::Object(p95));
 
@@ -2418,6 +2948,46 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_time_us".to_string(),
                     Value::from(row.layout_time_us),
+                );
+                obj.insert(
+                    "renderer_tick_id".to_string(),
+                    Value::from(row.renderer_tick_id),
+                );
+                obj.insert(
+                    "renderer_frame_id".to_string(),
+                    Value::from(row.renderer_frame_id),
+                );
+                obj.insert(
+                    "renderer_encode_scene_us".to_string(),
+                    Value::from(row.renderer_encode_scene_us),
+                );
+                obj.insert(
+                    "renderer_ensure_pipelines_us".to_string(),
+                    Value::from(row.renderer_ensure_pipelines_us),
+                );
+                obj.insert(
+                    "renderer_plan_compile_us".to_string(),
+                    Value::from(row.renderer_plan_compile_us),
+                );
+                obj.insert(
+                    "renderer_upload_us".to_string(),
+                    Value::from(row.renderer_upload_us),
+                );
+                obj.insert(
+                    "renderer_record_passes_us".to_string(),
+                    Value::from(row.renderer_record_passes_us),
+                );
+                obj.insert(
+                    "renderer_encoder_finish_us".to_string(),
+                    Value::from(row.renderer_encoder_finish_us),
+                );
+                obj.insert(
+                    "renderer_prepare_svg_us".to_string(),
+                    Value::from(row.renderer_prepare_svg_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_us".to_string(),
+                    Value::from(row.renderer_prepare_text_us),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),
@@ -3149,6 +3719,24 @@ impl BundleStatsReport {
                     .map(|s| {
                         let mut s_obj = Map::new();
                         s_obj.insert("root_node".to_string(), Value::from(s.root_node));
+                        s_obj.insert(
+                            "root_element".to_string(),
+                            s.root_element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        s_obj.insert(
+                            "root_element_kind".to_string(),
+                            s.root_element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        s_obj.insert(
+                            "root_element_path".to_string(),
+                            s.root_element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
                         s_obj.insert("solve_time_us".to_string(), Value::from(s.solve_time_us));
                         s_obj.insert("measure_calls".to_string(), Value::from(s.measure_calls));
                         s_obj.insert(
@@ -3251,6 +3839,110 @@ impl BundleStatsReport {
                     Value::Array(top_layout_engine_solves),
                 );
 
+                let layout_hotspots = row
+                    .layout_hotspots
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("node".to_string(), Value::from(h.node));
+                        h_obj.insert(
+                            "element".to_string(),
+                            h.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_kind".to_string(),
+                            h.element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_path".to_string(),
+                            h.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "widget_type".to_string(),
+                            h.widget_type
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert("layout_time_us".to_string(), Value::from(h.layout_time_us));
+                        h_obj.insert(
+                            "inclusive_time_us".to_string(),
+                            Value::from(h.inclusive_time_us),
+                        );
+                        h_obj.insert(
+                            "role".to_string(),
+                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "test_id".to_string(),
+                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert("layout_hotspots".to_string(), Value::Array(layout_hotspots));
+
+                let widget_measure_hotspots = row
+                    .widget_measure_hotspots
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("node".to_string(), Value::from(h.node));
+                        h_obj.insert(
+                            "element".to_string(),
+                            h.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_kind".to_string(),
+                            h.element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_path".to_string(),
+                            h.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "widget_type".to_string(),
+                            h.widget_type
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "measure_time_us".to_string(),
+                            Value::from(h.measure_time_us),
+                        );
+                        h_obj.insert(
+                            "inclusive_time_us".to_string(),
+                            Value::from(h.inclusive_time_us),
+                        );
+                        h_obj.insert(
+                            "role".to_string(),
+                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "test_id".to_string(),
+                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "widget_measure_hotspots".to_string(),
+                    Value::Array(widget_measure_hotspots),
+                );
+
                 let paint_widget_hotspots = row
                     .paint_widget_hotspots
                     .iter()
@@ -3328,7 +4020,7 @@ impl BundleStatsReport {
                         h_obj.insert("text_len".to_string(), Value::from(h.text_len));
                         h_obj.insert(
                             "max_width".to_string(),
-                            h.max_width.map(|v| Value::from(v)).unwrap_or(Value::Null),
+                            h.max_width.map(Value::from).unwrap_or(Value::Null),
                         );
                         h_obj.insert(
                             "wrap".to_string(),
@@ -3340,9 +4032,7 @@ impl BundleStatsReport {
                         );
                         h_obj.insert(
                             "scale_factor".to_string(),
-                            h.scale_factor
-                                .map(|v| Value::from(v))
-                                .unwrap_or(Value::Null),
+                            h.scale_factor.map(Value::from).unwrap_or(Value::Null),
                         );
                         h_obj.insert("reasons_mask".to_string(), Value::from(h.reasons_mask));
                         h_obj.insert(
@@ -3779,14 +4469,16 @@ mod tests {
 
     #[test]
     fn stats_json_includes_avg_and_budget() {
-        let mut report = BundleStatsReport::default();
-        report.sort = BundleStatsSort::Time;
-        report.snapshots_considered = 2;
-        report.sum_total_time_us = 100;
-        report.sum_layout_time_us = 40;
-        report.sum_prepaint_time_us = 10;
-        report.sum_paint_time_us = 50;
-        report.sum_layout_observation_record_time_us = 6;
+        let report = BundleStatsReport {
+            sort: BundleStatsSort::Time,
+            snapshots_considered: 2,
+            sum_total_time_us: 100,
+            sum_layout_time_us: 40,
+            sum_prepaint_time_us: 10,
+            sum_paint_time_us: 50,
+            sum_layout_observation_record_time_us: 6,
+            ..Default::default()
+        };
 
         let json = report.to_json();
         assert!(json.get("avg").is_some());
@@ -3853,30 +4545,31 @@ pub(super) fn check_bundle_for_stale_paint_json(
                 continue;
             };
 
-            if let (Some(prev_y), Some(prev_fp)) = (prev_y, prev_fp) {
-                if (y - prev_y).abs() >= eps as f64 && fp == prev_fp {
-                    let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let paint_nodes_performed = s
-                        .get("debug")
-                        .and_then(|v| v.get("stats"))
-                        .and_then(|v| v.get("paint_nodes_performed"))
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let paint_replayed_ops = s
-                        .get("debug")
-                        .and_then(|v| v.get("stats"))
-                        .and_then(|v| v.get("paint_cache_replayed_ops"))
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    suspicious.push(format!(
+            if let (Some(prev_y), Some(prev_fp)) = (prev_y, prev_fp)
+                && (y - prev_y).abs() >= eps as f64
+                && fp == prev_fp
+            {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let paint_nodes_performed = s
+                    .get("debug")
+                    .and_then(|v| v.get("stats"))
+                    .and_then(|v| v.get("paint_nodes_performed"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let paint_replayed_ops = s
+                    .get("debug")
+                    .and_then(|v| v.get("stats"))
+                    .and_then(|v| v.get("paint_cache_replayed_ops"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                suspicious.push(format!(
                         "window={window_id} tick={tick_id} frame={frame_id} test_id={test_id} delta_y={:.2} scene_fingerprint=0x{:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_replayed_ops}",
                         y - prev_y,
                         fp
                     ));
-                    if suspicious.len() >= 8 {
-                        break;
-                    }
+                if suspicious.len() >= 8 {
+                    break;
                 }
             }
 
@@ -4227,13 +4920,13 @@ fn semantics_node_summary_json(id: u64, node: Option<&serde_json::Value>) -> ser
     let label = node.get("label").and_then(|v| v.as_str());
     let value = node.get("value").and_then(|v| v.as_str());
 
-    let bounds = node.get("bounds").and_then(|b| {
-        Some(json!({
+    let bounds = node.get("bounds").map(|b| {
+        json!({
             "x": b.get("x").and_then(|v| v.as_f64()),
             "y": b.get("y").and_then(|v| v.as_f64()),
             "w": b.get("w").and_then(|v| v.as_f64()),
             "h": b.get("h").and_then(|v| v.as_f64()),
-        }))
+        })
     });
 
     json!({
@@ -5025,10 +5718,10 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
             .and_then(|v| v.first())
             .and_then(|v| v.get("offset"))
             .and_then(|v| v.as_f64());
-        if let (Some(a), Some(b)) = (before_offset, after_offset) {
-            if (a - b).abs() > 0.1 {
-                continue;
-            }
+        if let (Some(a), Some(b)) = (before_offset, after_offset)
+            && (a - b).abs() > 0.1
+        {
+            continue;
         }
 
         if hit_before == hit_after {
@@ -5597,25 +6290,24 @@ pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted_jso
 
                 if let (Some(prev_start), Some(prev_fp)) =
                     (stats.prev_visible_start, stats.prev_scene_fingerprint)
+                    && visible_start != prev_start
                 {
-                    if visible_start != prev_start {
-                        stats.visible_start_changes = stats.visible_start_changes.saturating_add(1);
-                        total_visible_start_changes = total_visible_start_changes.saturating_add(1);
-                        if fp == prev_fp {
-                            stats.suspicious_visible_start_changes =
-                                stats.suspicious_visible_start_changes.saturating_add(1);
-                            total_suspicious_changes = total_suspicious_changes.saturating_add(1);
-                            if suspicious.len() < 32 {
-                                suspicious.push(serde_json::json!({
-                                    "window": window_id,
-                                    "tick_id": tick_id,
-                                    "frame_id": frame_id,
-                                    "callsite_id": callsite_id,
-                                    "prev_visible_start": prev_start,
-                                    "visible_start": visible_start,
-                                    "scene_fingerprint": fp,
-                                }));
-                            }
+                    stats.visible_start_changes = stats.visible_start_changes.saturating_add(1);
+                    total_visible_start_changes = total_visible_start_changes.saturating_add(1);
+                    if fp == prev_fp {
+                        stats.suspicious_visible_start_changes =
+                            stats.suspicious_visible_start_changes.saturating_add(1);
+                        total_suspicious_changes = total_suspicious_changes.saturating_add(1);
+                        if suspicious.len() < 32 {
+                            suspicious.push(serde_json::json!({
+                                "window": window_id,
+                                "tick_id": tick_id,
+                                "frame_id": frame_id,
+                                "callsite_id": callsite_id,
+                                "prev_visible_start": prev_start,
+                                "visible_start": visible_start,
+                                "scene_fingerprint": fp,
+                            }));
                         }
                     }
                 }
@@ -6702,7 +7394,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
             }
 
             let mut unique_entries: Vec<&serde_json::Value> = Vec::new();
-            let mut seen_keys: std::collections::HashSet<(
+            type VirtualListShiftKey = (
                 Option<u64>,
                 Option<u64>,
                 Option<String>,
@@ -6710,7 +7402,9 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
                 Option<String>,
                 Option<String>,
                 Option<bool>,
-            )> = std::collections::HashSet::new();
+            );
+            let mut seen_keys: std::collections::HashSet<VirtualListShiftKey> =
+                std::collections::HashSet::new();
             for w in shift_entries {
                 let key = (
                     w.get("node").and_then(|v| v.as_u64()),
@@ -7158,7 +7852,7 @@ pub(super) fn check_bundle_for_drag_cache_root_paint_only(
                 .get("debug")
                 .and_then(|v| v.get("dirty_views"))
                 .and_then(|v| v.as_array())
-                .map_or(false, |dirty| {
+                .is_some_and(|dirty| {
                     dirty.iter().any(|d| {
                         d.get("root_node")
                             .and_then(|v| v.as_u64())
@@ -8395,10 +9089,12 @@ pub(super) fn bundle_stats_from_json_with_options(
         .and_then(|v| v.as_array())
         .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
-    let mut out = BundleStatsReport::default();
-    out.sort = sort;
-    out.warmup_frames = opts.warmup_frames;
-    out.windows = windows.len().min(u32::MAX as usize) as u32;
+    let mut out = BundleStatsReport {
+        sort,
+        warmup_frames: opts.warmup_frames,
+        windows: windows.len().min(u32::MAX as usize) as u32,
+        ..Default::default()
+    };
 
     let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
     let mut global_type_counts: std::collections::HashMap<String, u64> =
@@ -8908,6 +9604,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_encode_scene_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_ensure_pipelines_us = stats
+                .and_then(|m| m.get("renderer_ensure_pipelines_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_plan_compile_us = stats
+                .and_then(|m| m.get("renderer_plan_compile_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_upload_us = stats
+                .and_then(|m| m.get("renderer_upload_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_record_passes_us = stats
+                .and_then(|m| m.get("renderer_record_passes_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encoder_finish_us = stats
+                .and_then(|m| m.get("renderer_encoder_finish_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_prepare_text_us = stats
                 .and_then(|m| m.get("renderer_prepare_text_us"))
                 .and_then(|v| v.as_u64())
@@ -8922,6 +9638,78 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let renderer_image_upload_bytes = stats
                 .and_then(|m| m.get("renderer_image_upload_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let renderer_render_target_updates_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_owned = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_external_zero_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_external_zero_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_cpu_upload"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_owned = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_external_zero_copy = stats
+                .and_then(|m| {
+                    m.get("renderer_render_target_updates_requested_ingest_external_zero_copy")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_cpu_upload"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_fallbacks = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let renderer_viewport_draw_calls = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_owned = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_external_zero_copy = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_external_zero_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_cpu_upload"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_svg_raster_budget_bytes = stats
@@ -9038,6 +9826,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let renderer_scene_encoding_cache_misses = stats
                 .and_then(|m| m.get("renderer_scene_encoding_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_quad_ops = stats
+                .and_then(|m| m.get("renderer_material_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_sampled_quad_ops = stats
+                .and_then(|m| m.get("renderer_material_sampled_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_distinct = stats
+                .and_then(|m| m.get("renderer_material_distinct"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_unknown_ids = stats
+                .and_then(|m| m.get("renderer_material_unknown_ids"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_degraded_due_to_budget = stats
+                .and_then(|m| m.get("renderer_material_degraded_due_to_budget"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_engine_solves = stats
@@ -9403,6 +10211,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_contained_relayout_cache_roots,
             ) = snapshot_cache_root_stats(s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
+            let layout_hotspots = snapshot_layout_hotspots(s, 3);
+            let widget_measure_hotspots = snapshot_widget_measure_hotspots(s, 3);
             let paint_widget_hotspots = snapshot_paint_widget_hotspots(s, 3);
             let paint_text_prepare_hotspots = snapshot_paint_text_prepare_hotspots(s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
@@ -9549,6 +10359,27 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_engine_solve_time_us = out
                 .max_layout_engine_solve_time_us
                 .max(layout_engine_solve_time_us);
+            out.max_renderer_encode_scene_us = out
+                .max_renderer_encode_scene_us
+                .max(renderer_encode_scene_us);
+            out.max_renderer_ensure_pipelines_us = out
+                .max_renderer_ensure_pipelines_us
+                .max(renderer_ensure_pipelines_us);
+            out.max_renderer_plan_compile_us = out
+                .max_renderer_plan_compile_us
+                .max(renderer_plan_compile_us);
+            out.max_renderer_upload_us = out.max_renderer_upload_us.max(renderer_upload_us);
+            out.max_renderer_record_passes_us = out
+                .max_renderer_record_passes_us
+                .max(renderer_record_passes_us);
+            out.max_renderer_encoder_finish_us = out
+                .max_renderer_encoder_finish_us
+                .max(renderer_encoder_finish_us);
+            out.max_renderer_prepare_svg_us =
+                out.max_renderer_prepare_svg_us.max(renderer_prepare_svg_us);
+            out.max_renderer_prepare_text_us = out
+                .max_renderer_prepare_text_us
+                .max(renderer_prepare_text_us);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
@@ -9665,10 +10496,32 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_tick_id,
                 renderer_frame_id,
                 renderer_encode_scene_us,
+                renderer_ensure_pipelines_us,
+                renderer_plan_compile_us,
+                renderer_upload_us,
+                renderer_record_passes_us,
+                renderer_encoder_finish_us,
                 renderer_prepare_text_us,
                 renderer_prepare_svg_us,
                 renderer_svg_upload_bytes,
                 renderer_image_upload_bytes,
+                renderer_render_target_updates_ingest_unknown,
+                renderer_render_target_updates_ingest_owned,
+                renderer_render_target_updates_ingest_external_zero_copy,
+                renderer_render_target_updates_ingest_gpu_copy,
+                renderer_render_target_updates_ingest_cpu_upload,
+                renderer_render_target_updates_requested_ingest_unknown,
+                renderer_render_target_updates_requested_ingest_owned,
+                renderer_render_target_updates_requested_ingest_external_zero_copy,
+                renderer_render_target_updates_requested_ingest_gpu_copy,
+                renderer_render_target_updates_requested_ingest_cpu_upload,
+                renderer_render_target_updates_ingest_fallbacks,
+                renderer_viewport_draw_calls,
+                renderer_viewport_draw_calls_ingest_unknown,
+                renderer_viewport_draw_calls_ingest_owned,
+                renderer_viewport_draw_calls_ingest_external_zero_copy,
+                renderer_viewport_draw_calls_ingest_gpu_copy,
+                renderer_viewport_draw_calls_ingest_cpu_upload,
                 renderer_svg_raster_budget_bytes,
                 renderer_svg_rasters_live,
                 renderer_svg_standalone_bytes_live,
@@ -9698,6 +10551,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_bind_group_switches,
                 renderer_scissor_sets,
                 renderer_scene_encoding_cache_misses,
+                renderer_material_quad_ops,
+                renderer_material_sampled_quad_ops,
+                renderer_material_distinct,
+                renderer_material_unknown_ids,
+                renderer_material_degraded_due_to_budget,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
                 changed_models,
@@ -9753,6 +10611,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_cache_roots,
                 top_contained_relayout_cache_roots,
                 top_layout_engine_solves,
+                layout_hotspots,
+                widget_measure_hotspots,
                 paint_widget_hotspots,
                 paint_text_prepare_hotspots,
                 model_change_hotspots,
@@ -9783,9 +10643,60 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(rows.iter().map(|r| r.ui_thread_cpu_cycle_time_delta_cycles));
     (out.p50_layout_time_us, out.p95_layout_time_us) =
         p50_p95(rows.iter().map(|r| r.layout_time_us));
+    (
+        out.p50_layout_collect_roots_time_us,
+        out.p95_layout_collect_roots_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_collect_roots_time_us));
+    (
+        out.p50_layout_request_build_roots_time_us,
+        out.p95_layout_request_build_roots_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_time_us));
+    (out.p50_layout_roots_time_us, out.p95_layout_roots_time_us) =
+        p50_p95(rows.iter().map(|r| r.layout_roots_time_us));
+    (
+        out.p50_layout_view_cache_time_us,
+        out.p95_layout_view_cache_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_view_cache_time_us));
+    (
+        out.p50_layout_collapse_layout_observations_time_us,
+        out.p95_layout_collapse_layout_observations_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_collapse_layout_observations_time_us),
+    );
+    (
+        out.p50_layout_prepaint_after_layout_time_us,
+        out.p95_layout_prepaint_after_layout_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_prepaint_after_layout_time_us));
     (out.p50_prepaint_time_us, out.p95_prepaint_time_us) =
         p50_p95(rows.iter().map(|r| r.prepaint_time_us));
     (out.p50_paint_time_us, out.p95_paint_time_us) = p50_p95(rows.iter().map(|r| r.paint_time_us));
+    (
+        out.p50_paint_input_context_time_us,
+        out.p95_paint_input_context_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_input_context_time_us));
+    (
+        out.p50_paint_scroll_handle_invalidation_time_us,
+        out.p95_paint_scroll_handle_invalidation_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_scroll_handle_invalidation_time_us),
+    );
+    (
+        out.p50_paint_collect_roots_time_us,
+        out.p95_paint_collect_roots_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_collect_roots_time_us));
+    (
+        out.p50_paint_publish_text_input_snapshot_time_us,
+        out.p95_paint_publish_text_input_snapshot_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_publish_text_input_snapshot_time_us),
+    );
+    (
+        out.p50_paint_collapse_observations_time_us,
+        out.p95_paint_collapse_observations_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_collapse_observations_time_us));
     (
         out.p50_layout_engine_solve_time_us,
         out.p95_layout_engine_solve_time_us,
@@ -9800,6 +10711,36 @@ pub(super) fn bundle_stats_from_json_with_options(
         out.p50_paint_text_prepare_time_us,
         out.p95_paint_text_prepare_time_us,
     ) = p50_p95(rows.iter().map(|r| r.paint_text_prepare_time_us));
+    (
+        out.p50_renderer_encode_scene_us,
+        out.p95_renderer_encode_scene_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_encode_scene_us));
+    (
+        out.p50_renderer_ensure_pipelines_us,
+        out.p95_renderer_ensure_pipelines_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_ensure_pipelines_us));
+    (
+        out.p50_renderer_plan_compile_us,
+        out.p95_renderer_plan_compile_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_plan_compile_us));
+    (out.p50_renderer_upload_us, out.p95_renderer_upload_us) =
+        p50_p95(rows.iter().map(|r| r.renderer_upload_us));
+    (
+        out.p50_renderer_record_passes_us,
+        out.p95_renderer_record_passes_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_record_passes_us));
+    (
+        out.p50_renderer_encoder_finish_us,
+        out.p95_renderer_encoder_finish_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_encoder_finish_us));
+    (
+        out.p50_renderer_prepare_svg_us,
+        out.p95_renderer_prepare_svg_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_svg_us));
+    (
+        out.p50_renderer_prepare_text_us,
+        out.p95_renderer_prepare_text_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_us));
 
     match sort {
         BundleStatsSort::Invalidation => {
@@ -9874,6 +10815,59 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .then_with(|| {
                         b.renderer_pipeline_switches
                             .cmp(&a.renderer_pipeline_switches)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererEnsurePipelines => {
+            rows.sort_by(|a, b| {
+                b.renderer_ensure_pipelines_us
+                    .cmp(&a.renderer_ensure_pipelines_us)
+                    .then_with(|| b.renderer_plan_compile_us.cmp(&a.renderer_plan_compile_us))
+                    .then_with(|| b.renderer_encode_scene_us.cmp(&a.renderer_encode_scene_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererPlanCompile => {
+            rows.sort_by(|a, b| {
+                b.renderer_plan_compile_us
+                    .cmp(&a.renderer_plan_compile_us)
+                    .then_with(|| b.renderer_encode_scene_us.cmp(&a.renderer_encode_scene_us))
+                    .then_with(|| {
+                        b.renderer_record_passes_us
+                            .cmp(&a.renderer_record_passes_us)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererUpload => {
+            rows.sort_by(|a, b| {
+                b.renderer_upload_us
+                    .cmp(&a.renderer_upload_us)
+                    .then_with(|| {
+                        b.renderer_ensure_pipelines_us
+                            .cmp(&a.renderer_ensure_pipelines_us)
+                    })
+                    .then_with(|| b.renderer_plan_compile_us.cmp(&a.renderer_plan_compile_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererRecordPasses => {
+            rows.sort_by(|a, b| {
+                b.renderer_record_passes_us
+                    .cmp(&a.renderer_record_passes_us)
+                    .then_with(|| b.renderer_upload_us.cmp(&a.renderer_upload_us))
+                    .then_with(|| b.renderer_draw_calls.cmp(&a.renderer_draw_calls))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererEncoderFinish => {
+            rows.sort_by(|a, b| {
+                b.renderer_encoder_finish_us
+                    .cmp(&a.renderer_encoder_finish_us)
+                    .then_with(|| {
+                        b.renderer_record_passes_us
+                            .cmp(&a.renderer_record_passes_us)
                     })
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
@@ -10411,6 +11405,120 @@ fn snapshot_paint_widget_hotspots(
     out
 }
 
+fn snapshot_layout_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsLayoutHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("layout_hotspots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if hotspots.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+
+    let mut out: Vec<BundleStatsLayoutHotspot> = hotspots
+        .iter()
+        .take(max.max(1))
+        .map(|h| BundleStatsLayoutHotspot {
+            node: h.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+            element: h.get("element").and_then(|v| v.as_u64()),
+            element_kind: h
+                .get("element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            element_path: h
+                .get("element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            widget_type: h
+                .get("widget_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            layout_time_us: h
+                .get("layout_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            inclusive_time_us: h
+                .get("inclusive_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            role: None,
+            test_id: None,
+        })
+        .collect();
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
+        item.role = role;
+        item.test_id = test_id;
+    }
+
+    out
+}
+
+fn snapshot_widget_measure_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsWidgetMeasureHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("widget_measure_hotspots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if hotspots.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+
+    let mut out: Vec<BundleStatsWidgetMeasureHotspot> = hotspots
+        .iter()
+        .take(max.max(1))
+        .map(|h| BundleStatsWidgetMeasureHotspot {
+            node: h.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+            element: h.get("element").and_then(|v| v.as_u64()),
+            element_kind: h
+                .get("element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            element_path: h
+                .get("element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            widget_type: h
+                .get("widget_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            measure_time_us: h
+                .get("measure_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            inclusive_time_us: h
+                .get("inclusive_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            role: None,
+            test_id: None,
+        })
+        .collect();
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
+        item.role = role;
+        item.test_id = test_id;
+    }
+
+    out
+}
+
 fn snapshot_paint_text_prepare_hotspots(
     snapshot: &serde_json::Value,
     max: usize,
@@ -10614,6 +11722,15 @@ fn snapshot_layout_engine_solves(
 
             BundleStatsLayoutEngineSolve {
                 root_node: s.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
+                root_element: s.get("root_element").and_then(|v| v.as_u64()),
+                root_element_kind: s
+                    .get("root_element_kind")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                root_element_path: s
+                    .get("root_element_path")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
                 solve_time_us: s.get("solve_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
                 measure_calls: s.get("measure_calls").and_then(|v| v.as_u64()).unwrap_or(0),
                 measure_cache_hits: s
@@ -12755,7 +13872,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_j
                     }
                 }
                 1 => {
-                    if focused && (sel_lo == 5 && sel_hi == 5 || sel_lo == 0 && sel_hi == 5) {
+                    if focused && (sel_lo == 0 || sel_lo == 5) && sel_hi == 5 {
                         state = 2;
                         break;
                     }
@@ -13892,13 +15009,12 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
                     }
                 }
                 2 => {
-                    if caret == WRAP_COLS + 1 {
-                        if let Some(base) = baseline_len_bytes
-                            && len_bytes == base.saturating_add(1)
-                        {
-                            edited_len_bytes = Some(len_bytes);
-                            state = 3;
-                        }
+                    if caret == WRAP_COLS + 1
+                        && let Some(base) = baseline_len_bytes
+                        && len_bytes == base.saturating_add(1)
+                    {
+                        edited_len_bytes = Some(len_bytes);
+                        state = 3;
                     }
                 }
                 3 => {
@@ -13907,11 +15023,9 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
                     }
                 }
                 4 => {
-                    if caret == WRAP_COLS {
-                        if edited_len_bytes == Some(len_bytes) {
-                            state = 5;
-                            break;
-                        }
+                    if caret == WRAP_COLS && edited_len_bytes == Some(len_bytes) {
+                        state = 5;
+                        break;
                     }
                 }
                 _ => {}
@@ -18152,7 +19266,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
                     baseline_caret = caret;
                     state = 1;
                 }
-                1 | 2 | 3 => {
+                1..=3 => {
                     if rev != baseline_rev
                         || len != baseline_len
                         || anchor != baseline_anchor
@@ -18436,12 +19550,11 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
                     toggled_inlays = Some(inlays_fixture);
                     state = 3;
                 }
-            } else if state == 3 {
-                if baseline_folds.is_some_and(|b| folds_fixture == b)
-                    && baseline_inlays.is_some_and(|b| inlays_fixture == b)
-                {
-                    state = 4;
-                }
+            } else if state == 3
+                && baseline_folds.is_some_and(|b| folds_fixture == b)
+                && baseline_inlays.is_some_and(|b| inlays_fixture == b)
+            {
+                state = 4;
             }
 
             let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
@@ -18826,17 +19939,16 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_s
             }
 
             let torture = app_snapshot.get("code_editor")?.get("torture")?;
-            if torture.get("preedit_active")?.as_bool()? != true {
+            if !(torture.get("preedit_active")?.as_bool()?) {
                 return None;
             }
-            if torture
+            if !(torture
                 .get("allow_decorations_under_inline_preedit")?
-                .as_bool()?
-                != true
+                .as_bool()?)
             {
                 return None;
             }
-            if torture.get("compose_inline_preedit")?.as_bool()? != true {
+            if !(torture.get("compose_inline_preedit")?.as_bool()?) {
                 return None;
             }
 
@@ -19546,7 +20658,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
                         }
                     }
                     1 => {
-                        if (a == 3 && b == 3) || (a == 0 && b == 3) || (a == 4 && b == 5) {
+                        if (a == 0 || a == 3) && b == 3 || (a == 4 && b == 5) {
                             state = 2;
                         }
                     }
@@ -19556,7 +20668,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
                         }
                     }
                     3 => {
-                        if (a == 5 && b == 5) || (a == 0 && b == 5) {
+                        if (a == 0 || a == 5) && b == 5 {
                             state = 4;
                         }
                     }
@@ -20181,10 +21293,10 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
                         Some(s.len() as u64)
                     })
                 });
-            if let Some(len_bytes) = len_bytes {
-                if expected_len_bytes.is_none() {
-                    expected_len_bytes = Some(len_bytes);
-                }
+            if let Some(len_bytes) = len_bytes
+                && expected_len_bytes.is_none()
+            {
+                expected_len_bytes = Some(len_bytes);
             }
             let Some(len_bytes) = expected_len_bytes else {
                 continue;

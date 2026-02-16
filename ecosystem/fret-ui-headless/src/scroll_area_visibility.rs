@@ -162,14 +162,13 @@ impl ScrollAreaVisibility {
                 Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
         }
 
-        if self.scroll_state == ScrollVisibilityState::Scrolling {
-            if let Some(last) = self.last_scroll_tick
-                && input.tick.saturating_sub(last) >= config.scroll_end_debounce_ticks
-            {
-                self.scroll_state = ScrollVisibilityState::Idle;
-                self.scroll_hide_deadline =
-                    Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
-            }
+        if self.scroll_state == ScrollVisibilityState::Scrolling
+            && let Some(last) = self.last_scroll_tick
+            && input.tick.saturating_sub(last) >= config.scroll_end_debounce_ticks
+        {
+            self.scroll_state = ScrollVisibilityState::Idle;
+            self.scroll_hide_deadline =
+                Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
         }
 
         if self.scroll_state == ScrollVisibilityState::Idle

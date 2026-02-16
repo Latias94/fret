@@ -59,9 +59,11 @@ def main(argv: list[str]) -> int:
             scope_prefixes=("crates/", "ecosystem/", "apps/"),
             allowlist=(
                 # Runner-owned concurrency wiring.
-                "crates/fret-launch/src/runner/desktop/dispatcher.rs",
-                "crates/fret-launch/src/runner/desktop/hotpatch.rs",
+                "crates/fret-launch/src/runner/desktop/runner/dispatcher.rs",
+                "crates/fret-launch/src/runner/desktop/runner/hotpatch.rs",
+                "crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs",
                 # Diagnostics and devtools are allowed to use raw threads.
+                "crates/fret-diag/src/lib.rs",
                 "crates/fret-diag-ws/src/client.rs",
                 "crates/fret-diag-ws/src/server.rs",
                 "apps/fret-devtools/src/main.rs",
@@ -76,10 +78,12 @@ def main(argv: list[str]) -> int:
             allowlist=(
                 # Tooling is allowed to poll/wait.
                 "apps/fretboard/",
-                "crates/fret-launch/src/runner/desktop/hotpatch.rs",
+                "apps/fret-diag-export/src/main.rs",
+                "crates/fret-launch/src/runner/desktop/runner/hotpatch.rs",
                 "crates/fret-diag/src/lib.rs",
                 "crates/fret-diag/src/compare.rs",
                 "crates/fret-diag/src/stats.rs",
+                "crates/fret-diag/src/stats/script_runtime.rs",
                 "crates/fret-diag-ws/src/client.rs",
                 "apps/fret-examples/src/todo_demo.rs",
             ),

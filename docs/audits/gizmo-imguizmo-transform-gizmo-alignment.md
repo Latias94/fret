@@ -1,5 +1,16 @@
 # Audit: 3D Transform Gizmo Alignment (ImGuizmo + transform-gizmo)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Godot: https://github.com/godotengine/godot
+- ImGuizmo: https://github.com/CedricGuillemet/ImGuizmo
+- transform-gizmo: https://github.com/urholaukkarinen/transform-gizmo
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's `ecosystem/fret-gizmo` against two widely used reference implementations:
 
 - **ImGuizmo** (Dear ImGui overlay gizmo): `repo-ref/ImGuizmo`

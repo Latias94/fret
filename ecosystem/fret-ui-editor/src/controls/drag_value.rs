@@ -8,6 +8,14 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
+use crate::controls::numeric_input::{
+    NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
+    NumericInputOutcome, NumericParseFn, NumericValidateFn,
+};
+use crate::primitives::drag_value_core::DragValueScalar;
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
+use crate::primitives::{DragValueCore, DragValueCoreOptions};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
@@ -17,17 +25,6 @@ use fret_ui::element::{
     PositionStyle, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::recipes::input::InputTokenKeys;
-use fret_ui_kit::{ChromeRefinement, Size};
-
-use crate::controls::numeric_input::{
-    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
-    NumericValidateFn,
-};
-use crate::primitives::chrome::resolve_editor_frame_chrome;
-use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
-use crate::primitives::{DragValueCore, DragValueCoreOptions, EditorDensity};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragValueMode {
@@ -154,20 +151,8 @@ where
 
         let (density, scrub_chrome) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
-            let resolved = resolve_editor_frame_chrome(
-                theme,
-                Size::Small,
-                &ChromeRefinement::default(),
-                InputTokenKeys {
-                    bg: Some("component.input.bg"),
-                    border: Some("component.input.border"),
-                    border_focus: Some("component.input.border_focus"),
-                    fg: Some("component.input.fg"),
-                    ..InputTokenKeys::none()
-                },
-            );
-            (density, resolved)
+            let style = EditorStyle::resolve(theme);
+            (style.density, style.frame_chrome_small())
         };
 
         let model_for_change = self.model.clone();
@@ -218,8 +203,7 @@ where
                 ));
 
                 let theme = Theme::global(&*cx.app);
-                let visuals = editor_frame_visuals(
-                    theme,
+                let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
                     scrub_chrome,
                     EditorFrameState {
                         enabled: true,
@@ -286,6 +270,9 @@ where
                 enabled: typing,
                 focusable: typing,
                 test_id: self.options.test_id.clone(),
+                // Avoid growing the row height when a commit-time validation error occurs.
+                // A small trailing status icon keeps the inspector layout stable.
+                error_display: NumericInputErrorDisplay::TrailingIcon,
                 ..Default::default()
             })
             .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {

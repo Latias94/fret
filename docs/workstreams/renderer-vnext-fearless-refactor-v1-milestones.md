@@ -76,6 +76,37 @@ Exit criteria:
 - For a small fixed set of scenes, the old and new paths produce equivalent output (within defined
   tolerances) and any deltas are understood.
 
+Progress record (internal refactor: per-frame GPU buffer rings):
+
+- Date: 2026-02-16
+- Scope: renderer-internal resource plumbing (no contract changes)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`RingBuffer<T>`, `StorageRingBuffer<T>`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (ring initialization)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (uploads + per-frame rotation)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo test -p fret-render-wgpu --test text_paint_conformance`
+
+Progress record (external imports observability: ingest strategy counters):
+
+- Date: 2026-02-16
+- Commit: e3929d6a
+- Scope: renderer perf + diagnostics bundle plumbing (no contract changes; no ingest behavior changes)
+- Evidence anchors:
+  - `crates/fret-render-core/src/lib.rs` (`RenderTargetIngestStrategy`, `RenderTargetMetadata.ingest_strategy`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (counts declared ingest strategy for `register/update_render_target`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (snapshot plumbing + viewport draw attribution)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` fields)
+  - `apps/fret-examples/src/external_texture_imports_{demo,web_demo}.rs` (demo metadata tags)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-core`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo check -p fret-bootstrap`
+  - `cargo check -p fret-examples`
+
 ## M2 — Isolated opacity (saveLayerAlpha) v1
 
 Deliverables:
@@ -295,6 +326,52 @@ Perf snapshot (post quad variants):
   - `headless_renderer_perf: frames=600 encode=0.07ms prepare_svg=17.58ms ... pipelines=1200 binds=27600 ...`
   - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
 
+Perf snapshot (post scissor tightening for textured draws):
+
+- Date: 2026-02-15
+- Commit: `c4f08adb`
+- Commands run (exact):
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -q -p fret-svg-atlas-stress --release -- --headless --frames 600`
+- Outputs (summary):
+  - `headless: frames=600 wall=0.06s prepare=12.69ms ...`
+  - `headless_renderer_perf: frames=600 encode=0.05ms prepare_svg=12.69ms prepare_text=0.09ms draws=27000 ... pipelines=1200 binds=27600 ...`
+  - `headless_renderer_perf_pipelines: quad=600 ... mask=600 ...`
+
+Diag perf record (ui-gallery-steady; time-sorted):
+
+- Date: 2026-02-15
+- Commit: `c4f08adb`
+- Command (exact):
+  - `cargo run -q -p fretboard -- diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --sort time --top 5 --json --dir target/fret-diag-perf/ui-gallery-steady --env FRET_RENDERER_PERF_PIPELINES=1 --launch -- cargo run -q -p fret-ui-gallery --release`
+- Outputs (worst overall):
+  - Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - Bundle: `target/fret-diag-perf/ui-gallery-steady/1771144430419-ui-gallery-window-resize-stress-steady/bundle.json`
+  - `top_total_time_us`: `18764` (p50=`18487`, p95=`18764`)
+  - Phase p95 (us): layout=`11692`, solve=`2948`, paint=`6855`
+  - Renderer p95 (us): encode_scene=`408`, prepare_text=`372`
+  - Renderer p95 counters: draw_calls=`137`, pipeline_switches=`88`, bind_group_switches=`130`
+  - Note: this run is native Vulkan (RTX 4090); it is intended as a stable “macro” datapoint for refactors, not a WebGPU-specific measure.
+
+Progress record (Material counters surfaced in diag perf stats):
+
+- Date: 2026-02-15
+- Status: Landed (evidence plumbing for `REN-VNEXT-webgpu-004`)
+- Commit: `26acd3ac`
+- Command (exact):
+  - `cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --repeat 1 --warmup-frames 5 --sort time --top 5 --json --dir target/fret-diag-perf/material-counters-check --env FRET_RENDERER_PERF_PIPELINES=1 --launch -- cargo run -q -p fret-ui-gallery --release`
+- Outputs (evidence bundle):
+  - Bundle: `target/fret-diag-perf/material-counters-check/1771146473986-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Output contains: `top_renderer_material_{quad_ops,sampled_quad_ops,distinct,unknown_ids,degraded_due_to_budget}`
+
+Progress record (Material sampled split in quad variants):
+
+- Date: 2026-02-15
+- Status: Landed (avoid material catalog sampling on params-only paths)
+- Commit: `0944f010`
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/types.rs` (`QuadPipelineKey.fill_material_sampled`, `border_material_sampled`)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`material_eval(sample_catalog)`, `FRET_{FILL,BORDER}_MATERIAL_SAMPLED`)
+
 ## M6 — Evidence-driven perf recovery follow-ups (time-boxed)
 
 Deliverables:
@@ -310,3 +387,22 @@ Exit criteria:
 
 - Web demo still runs (no uniformity regressions).
 - Headless perf gates remain green on the reference baseline.
+
+Progress record (Quad/material headless gate):
+
+- Date: 2026-02-15
+- Status: Landed (stable counter-based guardrail + baseline)
+- Commit: `dc4c816d`
+- Gate:
+  - `python3 tools/perf/headless_quad_material_stress_gate.py`
+- Baseline:
+  - `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
+
+Progress record (External texture imports web copy perf baseline; guardrail):
+
+- Date: 2026-02-15
+- Status: Landed (baseline recorded; keep from regressing during renderer refactors)
+- Evidence:
+  - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+  - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - `docs/workstreams/external-texture-imports-v1-todo.md` (`EXT-web-perf-131`)

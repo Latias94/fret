@@ -5,6 +5,16 @@
 //! interaction policies live in the ecosystem layer (`fret-ui-kit`, `fret-ui-shadcn`) instead.
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-ui/README.md`.
+//!
+//! ## Where to start
+//!
+//! - [`UiTree`]: retained UI tree and per-window interaction state machine
+//! - [`ElementContext`]: per-frame context passed to element constructors
+//! - [`AnyElement`]: type-erased element node used by the declarative surface
+//! - [`Theme`]/[`ThemeConfig`]: token-driven theme configuration
+//!
+//! Most applications should not wire this crate directly; prefer `fret-bootstrap` or the
+//! ecosystem `fret` facade for the “golden path” runner/driver wiring.
 
 #![cfg_attr(test, allow(clippy::arc_with_non_send_sync))]
 
@@ -36,6 +46,7 @@ mod pointer_motion;
 pub mod retained_bridge;
 mod runtime_config;
 pub(crate) mod strict_runtime;
+/// Stable key type used by keyed element APIs (e.g. lists and cached subtrees).
 pub type ItemKey = u64;
 #[allow(dead_code)]
 pub(crate) mod resizable_panel_group;

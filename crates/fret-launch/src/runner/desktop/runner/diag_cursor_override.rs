@@ -16,6 +16,7 @@ pub(super) struct DiagCursorScreenPosOverride {
 enum CursorOverrideKindV1 {
     ScreenPhysical,
     WindowClientPhysical,
+    WindowClientLogical,
 }
 
 impl DiagCursorScreenPosOverride {
@@ -74,6 +75,22 @@ impl DiagCursorScreenPosOverride {
                 let origin = super::window::client_origin_screen(outer, deco);
                 PhysicalPosition::new(origin.x + x_px, origin.y + y_px)
             }
+            CursorOverrideKindV1::WindowClientLogical => {
+                let Some(window_ffi) = window_ffi else {
+                    return false;
+                };
+                let window = AppWindowId::from(KeyData::from_ffi(window_ffi));
+                let Some(state) = runner.windows.get(window) else {
+                    return false;
+                };
+                let Ok(outer) = state.window.outer_position() else {
+                    return false;
+                };
+                let deco = state.window.surface_position();
+                let origin = super::window::client_origin_screen(outer, deco);
+                let scale = state.window.scale_factor().max(0.000_001);
+                PhysicalPosition::new(origin.x + (x_px * scale), origin.y + (y_px * scale))
+            }
             CursorOverrideKindV1::ScreenPhysical => PhysicalPosition::new(x_px, y_px),
         };
 
@@ -103,6 +120,7 @@ fn parse_cursor_override_v1(text: &str) -> Option<(CursorOverrideKindV1, Option<
                 kind = match v {
                     "screen_physical" => Some(CursorOverrideKindV1::ScreenPhysical),
                     "window_client_physical" => Some(CursorOverrideKindV1::WindowClientPhysical),
+                    "window_client_logical" => Some(CursorOverrideKindV1::WindowClientLogical),
                     _ => None,
                 }
             }

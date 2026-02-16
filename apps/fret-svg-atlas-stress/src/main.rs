@@ -222,7 +222,11 @@ fn record_scene(
             let rect = Rect::new(Point::new(x, y), size);
 
             let fit = fit_mode.to_fit(idx);
-            let svg = if idx % 5 == 0 { svg_wide } else { svg_square };
+            let svg = if idx.is_multiple_of(5) {
+                svg_wide
+            } else {
+                svg_square
+            };
 
             let rgb = hsv_to_rgb((idx as f32 * 0.031).rem_euclid(1.0), 0.75, 0.95);
             let color = Color {
@@ -333,7 +337,11 @@ fn run_headless(
 
                 let fit = fit_mode.to_fit(idx);
                 let v = variants[idx % variants.len()];
-                let svg = if idx % 5 == 0 { v.wide } else { v.square };
+                let svg = if idx.is_multiple_of(5) {
+                    v.wide
+                } else {
+                    v.square
+                };
 
                 let rgb = hsv_to_rgb((idx as f32 * 0.031).rem_euclid(1.0), 0.75, 0.95);
                 let color = Color {
@@ -546,8 +554,10 @@ impl WinitAppDriver for SvgAtlasStressDriver {
 
     fn create_window_state(&mut self, _app: &mut App, _window: AppWindowId) -> Self::WindowState {
         Self::print_help();
-        let mut st = SvgAtlasStressState::default();
-        st.max_frames = self.max_frames;
+        let st = SvgAtlasStressState {
+            max_frames: self.max_frames,
+            ..Default::default()
+        };
         Self::print_state(&st);
         st
     }
@@ -582,51 +592,50 @@ impl WinitAppDriver for SvgAtlasStressDriver {
             Some(last) => now.duration_since(last) >= Duration::from_secs(1),
         };
         if should_report {
-            if let Some(snap) = renderer.take_perf_snapshot() {
-                if snap.frames != 0 {
-                    let pipeline_breakdown =
-                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+            if let Some(snap) = renderer.take_perf_snapshot()
+                && snap.frames != 0
+            {
+                let pipeline_breakdown = std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                try_println!(
+                    "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    snap.frames,
+                    snap.encode_scene_us as f64 / 1000.0,
+                    snap.prepare_svg_us as f64 / 1000.0,
+                    snap.prepare_text_us as f64 / 1000.0,
+                    snap.draw_calls,
+                    snap.quad_draw_calls,
+                    snap.viewport_draw_calls,
+                    snap.image_draw_calls,
+                    snap.text_draw_calls,
+                    snap.path_draw_calls,
+                    snap.mask_draw_calls,
+                    snap.fullscreen_draw_calls,
+                    snap.clip_mask_draw_calls,
+                    snap.pipeline_switches,
+                    snap.bind_group_switches,
+                    snap.uniform_bind_group_switches,
+                    snap.texture_bind_group_switches,
+                    snap.scissor_sets,
+                    snap.uniform_bytes / 1024,
+                    snap.instance_bytes / 1024,
+                    snap.vertex_bytes / 1024,
+                    snap.scene_encoding_cache_hits,
+                    snap.scene_encoding_cache_misses
+                );
+                if pipeline_breakdown {
                     try_println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
-                        snap.frames,
-                        snap.encode_scene_us as f64 / 1000.0,
-                        snap.prepare_svg_us as f64 / 1000.0,
-                        snap.prepare_text_us as f64 / 1000.0,
-                        snap.draw_calls,
-                        snap.quad_draw_calls,
-                        snap.viewport_draw_calls,
-                        snap.image_draw_calls,
-                        snap.text_draw_calls,
-                        snap.path_draw_calls,
-                        snap.mask_draw_calls,
-                        snap.fullscreen_draw_calls,
-                        snap.clip_mask_draw_calls,
-                        snap.pipeline_switches,
-                        snap.bind_group_switches,
-                        snap.uniform_bind_group_switches,
-                        snap.texture_bind_group_switches,
-                        snap.scissor_sets,
-                        snap.uniform_bytes / 1024,
-                        snap.instance_bytes / 1024,
-                        snap.vertex_bytes / 1024,
-                        snap.scene_encoding_cache_hits,
-                        snap.scene_encoding_cache_misses
+                        "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                        snap.pipeline_switches_quad,
+                        snap.pipeline_switches_viewport,
+                        snap.pipeline_switches_mask,
+                        snap.pipeline_switches_text_mask,
+                        snap.pipeline_switches_text_color,
+                        snap.pipeline_switches_path,
+                        snap.pipeline_switches_path_msaa,
+                        snap.pipeline_switches_composite,
+                        snap.pipeline_switches_fullscreen,
+                        snap.pipeline_switches_clip_mask,
                     );
-                    if pipeline_breakdown {
-                        try_println!(
-                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
-                            snap.pipeline_switches_quad,
-                            snap.pipeline_switches_viewport,
-                            snap.pipeline_switches_mask,
-                            snap.pipeline_switches_text_mask,
-                            snap.pipeline_switches_text_color,
-                            snap.pipeline_switches_path,
-                            snap.pipeline_switches_path_msaa,
-                            snap.pipeline_switches_composite,
-                            snap.pipeline_switches_fullscreen,
-                            snap.pipeline_switches_clip_mask,
-                        );
-                    }
                 }
             }
             if let Some(snap) = renderer.take_svg_perf_snapshot() {

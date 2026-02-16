@@ -6,6 +6,20 @@
 //!
 //! Note: This crate is now declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface (see ADR 0066 / declarative-only migration).
+//!
+//! ## Getting started
+//!
+//! Recommended imports for application/component code:
+//!
+//! ```rust
+//! use fret_ui_shadcn::prelude::*;
+//! ```
+//!
+//! ## Feature flags
+//!
+//! - `app-integration`: helpers for installing the default shadcn theme into `fret_app::App` and
+//!   syncing light/dark from `WindowMetricsService`.
+//! - `state-selector`, `state-query`: opt-in state helpers used by some recipes/demos.
 
 mod a11y_modal;
 pub mod accordion;
@@ -84,6 +98,7 @@ pub mod state;
 pub mod switch;
 pub mod table;
 pub mod tabs;
+mod text_edit_context_menu;
 pub mod textarea;
 pub mod toast;
 pub mod toggle;
@@ -148,6 +163,11 @@ pub use context_menu::{
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
 pub use media_image::MediaImage;
+pub use text_edit_context_menu::{
+    text_edit_context_menu, text_edit_context_menu_controllable, text_edit_context_menu_entries,
+    text_selection_context_menu, text_selection_context_menu_controllable,
+    text_selection_context_menu_entries,
+};
 /// Default high-performance data grid surface (canvas-rendered).
 ///
 /// This is the "performance ceiling" option for spreadsheet-scale density:

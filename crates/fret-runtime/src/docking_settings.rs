@@ -34,6 +34,20 @@ pub struct DockingInteractionSettings {
     pub dock_hint_scale_inner: f32,
     /// Scale factor for the outer docking hint pad geometry (1.0 matches current ImGui-parity).
     pub dock_hint_scale_outer: f32,
+    /// Optional ImGui-style "transparent payload" behavior when a dock tear-off window is
+    /// following the cursor.
+    ///
+    /// When enabled, the runner may:
+    /// - make the dock-floating OS window semi-transparent, and
+    /// - ignore mouse events for it ("NoInputs"), so hovered-window selection can "peek behind"
+    ///   the moving window in overlap cases.
+    ///
+    /// Default is `false` to keep multi-window behavior conservative across platforms/backends.
+    pub transparent_payload_during_follow: bool,
+    /// Alpha multiplier for the tear-off payload window while following the cursor.
+    ///
+    /// ImGui uses `0.50` for `ConfigDockingTransparentPayload`.
+    pub transparent_payload_alpha: f32,
 }
 
 impl Default for DockingInteractionSettings {
@@ -47,6 +61,8 @@ impl Default for DockingInteractionSettings {
             suppress_context_menu_during_viewport_capture: true,
             dock_hint_scale_inner: 1.0,
             dock_hint_scale_outer: 1.0,
+            transparent_payload_during_follow: false,
+            transparent_payload_alpha: 0.5,
         }
     }
 }

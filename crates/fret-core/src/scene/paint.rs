@@ -50,6 +50,19 @@ pub struct RadialGradient {
     pub stops: [GradientStop; MAX_STOPS],
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SweepGradient {
+    pub center: Point,
+    /// Start angle in turns (1.0 = full rotation), counter-clockwise from +X.
+    pub start_angle_turns: f32,
+    /// End angle in turns (1.0 = full rotation), counter-clockwise from +X.
+    pub end_angle_turns: f32,
+    pub tile_mode: TileMode,
+    pub color_space: ColorSpace,
+    pub stop_count: u8,
+    pub stops: [GradientStop; MAX_STOPS],
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialParams {
@@ -83,6 +96,7 @@ pub enum Paint {
     Solid(Color),
     LinearGradient(LinearGradient),
     RadialGradient(RadialGradient),
+    SweepGradient(SweepGradient),
     Material {
         id: MaterialId,
         params: MaterialParams,
@@ -231,6 +245,44 @@ impl Paint {
                 }
 
                 Paint::RadialGradient(g)
+            }
+            Paint::SweepGradient(mut g) => {
+                g.stop_count = normalize_stop_count(g.stop_count);
+                g.tile_mode = degrade_tile_mode(g.tile_mode);
+                g.color_space = degrade_color_space(g.color_space);
+
+                if !point_is_finite(g.center)
+                    || !g.start_angle_turns.is_finite()
+                    || !g.end_angle_turns.is_finite()
+                    || !stops_all_finite(g.stop_count, &g.stops)
+                {
+                    return Paint::TRANSPARENT;
+                }
+
+                g.stops = sort_stops(g.stop_count, g.stops);
+                if let Some(solid) = maybe_solid_from_degenerate(g.stop_count, &g.stops) {
+                    return solid;
+                }
+
+                let start = g.start_angle_turns.rem_euclid(1.0);
+                let span_raw = g.end_angle_turns - g.start_angle_turns;
+                let span_mod = span_raw.rem_euclid(1.0);
+                let span = if span_mod <= 1e-6 && span_raw.abs() >= 1.0 - 1e-6 {
+                    1.0
+                } else {
+                    span_mod
+                };
+
+                if span <= 1e-6 {
+                    let n = usize::from(g.stop_count).min(MAX_STOPS);
+                    let c = g.stops[n.saturating_sub(1)].color;
+                    return Paint::Solid(c);
+                }
+
+                g.start_angle_turns = start;
+                g.end_angle_turns = start + span;
+
+                Paint::SweepGradient(g)
             }
             Paint::Material { id, params } => Paint::Material {
                 id,

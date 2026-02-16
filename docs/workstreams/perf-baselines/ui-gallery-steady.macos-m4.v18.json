@@ -2,7 +2,7 @@
   "generated_unix_ms": 1770391803027,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "/Users/frankorz/codes/rust/fret/target/fret-diag-codex-perf-v18-select2/candidate-2.baseline.json",
+  "out_path": "docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json",
   "repeat": 7,
   "rows": [
     {

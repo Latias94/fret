@@ -15,7 +15,7 @@ Make “state → style” authoring consistent across ecosystem component libra
 
 ## Planned Worktree
 
-- Worktree path: `F:\SourceCodes\Rust\fret-worktrees\state-driven-style-resolution-v1`
+- Worktree path: `fret-worktrees/state-driven-style-resolution-v1` (a sibling directory to this repo)
 - Branch: `refactor/state-driven-style-resolution-v1`
 
 Note: this workstream was initially executed in a dedicated worktree, but the resulting contracts

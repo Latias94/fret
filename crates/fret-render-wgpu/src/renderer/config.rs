@@ -41,12 +41,44 @@ impl Renderer {
         let snap = RenderPerfSnapshot {
             frames: self.perf.frames,
             encode_scene_us: self.perf.encode_scene.as_micros() as u64,
+            ensure_pipelines_us: self.perf.ensure_pipelines.as_micros() as u64,
+            plan_compile_us: self.perf.plan_compile.as_micros() as u64,
+            upload_us: self.perf.upload.as_micros() as u64,
+            record_passes_us: self.perf.record_passes.as_micros() as u64,
+            encoder_finish_us: self.perf.encoder_finish.as_micros() as u64,
             prepare_svg_us: self.perf.prepare_svg.as_micros() as u64,
             prepare_text_us: self.perf.prepare_text.as_micros() as u64,
             svg_uploads: self.perf.svg_uploads,
             svg_upload_bytes: self.perf.svg_upload_bytes,
             image_uploads: self.perf.image_uploads,
             image_upload_bytes: self.perf.image_upload_bytes,
+            render_target_updates_ingest_unknown: self.perf.render_target_updates_ingest_unknown,
+            render_target_updates_ingest_owned: self.perf.render_target_updates_ingest_owned,
+            render_target_updates_ingest_external_zero_copy: self
+                .perf
+                .render_target_updates_ingest_external_zero_copy,
+            render_target_updates_ingest_gpu_copy: self.perf.render_target_updates_ingest_gpu_copy,
+            render_target_updates_ingest_cpu_upload: self
+                .perf
+                .render_target_updates_ingest_cpu_upload,
+            render_target_updates_requested_ingest_unknown: self
+                .perf
+                .render_target_updates_requested_ingest_unknown,
+            render_target_updates_requested_ingest_owned: self
+                .perf
+                .render_target_updates_requested_ingest_owned,
+            render_target_updates_requested_ingest_external_zero_copy: self
+                .perf
+                .render_target_updates_requested_ingest_external_zero_copy,
+            render_target_updates_requested_ingest_gpu_copy: self
+                .perf
+                .render_target_updates_requested_ingest_gpu_copy,
+            render_target_updates_requested_ingest_cpu_upload: self
+                .perf
+                .render_target_updates_requested_ingest_cpu_upload,
+            render_target_updates_ingest_fallbacks: self
+                .perf
+                .render_target_updates_ingest_fallbacks,
             svg_raster_budget_bytes: self.perf.svg_raster_budget_bytes,
             svg_rasters_live: self.perf.svg_rasters_live,
             svg_standalone_bytes_live: self.perf.svg_standalone_bytes_live,
@@ -105,6 +137,13 @@ impl Renderer {
             draw_calls: self.perf.draw_calls,
             quad_draw_calls: self.perf.quad_draw_calls,
             viewport_draw_calls: self.perf.viewport_draw_calls,
+            viewport_draw_calls_ingest_unknown: self.perf.viewport_draw_calls_ingest_unknown,
+            viewport_draw_calls_ingest_owned: self.perf.viewport_draw_calls_ingest_owned,
+            viewport_draw_calls_ingest_external_zero_copy: self
+                .perf
+                .viewport_draw_calls_ingest_external_zero_copy,
+            viewport_draw_calls_ingest_gpu_copy: self.perf.viewport_draw_calls_ingest_gpu_copy,
+            viewport_draw_calls_ingest_cpu_upload: self.perf.viewport_draw_calls_ingest_cpu_upload,
             image_draw_calls: self.perf.image_draw_calls,
             text_draw_calls: self.perf.text_draw_calls,
             path_draw_calls: self.perf.path_draw_calls,

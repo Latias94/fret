@@ -1,5 +1,16 @@
 # ADR 0117: Effect Layers and Backdrop Filters (Scene Semantics v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Bevy: https://github.com/bevyengine/bevy
+- React Bits: https://github.com/DavidHDev/react-bits
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (MVP implemented)
 
 ## Context

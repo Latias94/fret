@@ -4,7 +4,10 @@ use std::path::PathBuf;
 use crate::cli::workspace_root;
 
 use super::fs::sanitize_package_name;
-use super::{IconPack, NewTemplate, ScaffoldOptions, init_empty_at, init_hello_at, init_todo_at};
+use super::{
+    IconPack, NewTemplate, ScaffoldOptions, init_empty_at, init_hello_at, init_simple_todo_at,
+    init_todo_at,
+};
 
 pub(super) fn new_wizard() -> Result<(), String> {
     if !std::io::stdin().is_terminal() {
@@ -24,6 +27,7 @@ pub(super) fn new_wizard() -> Result<(), String> {
         &[
             ("empty", NewTemplate::Empty),
             ("hello", NewTemplate::Hello),
+            ("simple-todo", NewTemplate::SimpleTodo),
             ("todo", NewTemplate::Todo),
         ],
         1,
@@ -32,6 +36,7 @@ pub(super) fn new_wizard() -> Result<(), String> {
     let default_name = match template {
         NewTemplate::Empty => "my-app",
         NewTemplate::Hello => "hello-world",
+        NewTemplate::SimpleTodo => "simple-todo-app",
         NewTemplate::Todo => "todo-app",
     };
 
@@ -64,7 +69,9 @@ pub(super) fn new_wizard() -> Result<(), String> {
     };
 
     let ui_assets = match template {
-        NewTemplate::Todo => prompt_yes_no("Enable UI assets cache? (--ui-assets)", false)?,
+        NewTemplate::Todo | NewTemplate::SimpleTodo => {
+            prompt_yes_no("Enable UI assets cache? (--ui-assets)", false)?
+        }
         _ => false,
     };
 
@@ -86,6 +93,9 @@ pub(super) fn new_wizard() -> Result<(), String> {
     if matches!(template, NewTemplate::Todo) {
         println!("  ui-assets: {}", opts.ui_assets);
     }
+    if matches!(template, NewTemplate::SimpleTodo) {
+        println!("  ui-assets: {}", opts.ui_assets);
+    }
     println!();
 
     if !prompt_yes_no("Proceed?", true)? {
@@ -95,6 +105,7 @@ pub(super) fn new_wizard() -> Result<(), String> {
     match template {
         NewTemplate::Empty => init_empty_at(&out_dir, &package_name),
         NewTemplate::Hello => init_hello_at(&root, &out_dir, &package_name, opts),
+        NewTemplate::SimpleTodo => init_simple_todo_at(&root, &out_dir, &package_name, opts),
         NewTemplate::Todo => init_todo_at(&root, &out_dir, &package_name, opts),
     }
 }

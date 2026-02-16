@@ -271,7 +271,7 @@ impl DisplayMap {
                     continue;
                 } else {
                     let cols = buf.line_char_count(line);
-                    let rows_for_line = ((cols.max(1) + wrap - 1) / wrap).max(1);
+                    let rows_for_line = cols.max(1).div_ceil(wrap).max(1);
                     for row_in_line in 0..rows_for_line {
                         row_to_line.push(line);
                         row_start_col.push(row_in_line * wrap);
@@ -282,14 +282,16 @@ impl DisplayMap {
 
             let line_text_owned = buf.line_text(line).unwrap_or_default();
             let line_text = line_text_owned.as_str();
-            let folds = validate_fold_spans(line_text, folds)
-                .is_ok()
-                .then_some(folds)
-                .unwrap_or(&[]);
-            let inlays = validate_inlay_spans(line_text, inlays)
-                .is_ok()
-                .then_some(inlays)
-                .unwrap_or(&[]);
+            let folds = if validate_fold_spans(line_text, folds).is_ok() {
+                folds
+            } else {
+                &[]
+            };
+            let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+                inlays
+            } else {
+                &[]
+            };
 
             let preedit_for_line =
                 inline_preedit_for_line(buf, line, line_text, folds, preedit.as_ref());
@@ -357,7 +359,7 @@ impl DisplayMap {
             .line_to_first_row
             .get(line + 1)
             .copied()
-            .unwrap_or_else(|| self.row_to_line.len());
+            .unwrap_or(self.row_to_line.len());
         start..end.max(start)
     }
 
@@ -470,9 +472,11 @@ impl DisplayMap {
 
                         let before = base.get(..local_start).unwrap_or("");
                         let after = base.get(local_end..).unwrap_or("");
-                        let inserted = show_preedit_text
-                            .then_some(preedit.text.as_ref())
-                            .unwrap_or("");
+                        let inserted = if show_preedit_text {
+                            preedit.text.as_ref()
+                        } else {
+                            ""
+                        };
 
                         let mut out =
                             String::with_capacity(before.len() + inserted.len() + after.len());
@@ -544,6 +548,14 @@ impl DisplayMap {
             .end
             .saturating_sub(line_start)
             .max(row_start_in_line);
+        let row_is_empty = row_start_in_line == row_end_in_line;
+        let event_in_row = |byte: usize| {
+            if row_is_empty {
+                byte == row_start_in_line
+            } else {
+                byte >= row_start_in_line && byte < row_end_in_line
+            }
+        };
 
         let line_text_owned = buf.line_text(line).unwrap_or_default();
         let line_text = line_text_owned.as_str();
@@ -562,7 +574,7 @@ impl DisplayMap {
         for fold in folds.iter() {
             let start = fold.range.start.min(line_text.len());
             let end = fold.range.end.min(line_text.len()).max(start);
-            if start < row_start_in_line || start >= row_end_in_line {
+            if !event_in_row(start) {
                 continue;
             }
             let local_start = start.saturating_sub(row_start_in_line).min(base.len());
@@ -571,7 +583,7 @@ impl DisplayMap {
                 .saturating_sub(row_start_in_line)
                 .min(base.len())
                 .max(local_start);
-            if local_start >= local_end {
+            if local_start >= local_end && !row_is_empty {
                 continue;
             }
             row_folds.push(FoldSpan {
@@ -583,7 +595,7 @@ impl DisplayMap {
         let mut row_inlays: Vec<InlaySpan> = Vec::new();
         for inlay in inlays.iter() {
             let byte = inlay.byte.min(line_text.len());
-            if byte < row_start_in_line || byte >= row_end_in_line {
+            if !event_in_row(byte) {
                 continue;
             }
             let inside_fold = folds.iter().any(|f| {
@@ -674,10 +686,10 @@ impl DisplayMap {
         for span in row_inlays.iter() {
             added = added.saturating_add(span.text.len());
         }
-        if let Some(preedit) = preedit {
-            if preedit_event_inserts_text {
-                added = added.saturating_add(preedit.text.len());
-            }
+        if let Some(preedit) = preedit
+            && preedit_event_inserts_text
+        {
+            added = added.saturating_add(preedit.text.len());
         }
 
         let cap = base
@@ -706,9 +718,11 @@ impl DisplayMap {
                 && start == cursor
             {
                 let start = display_cursor;
-                let inserted = preedit_event_inserts_text
-                    .then_some(preedit.text.as_ref())
-                    .unwrap_or("");
+                let inserted = if preedit_event_inserts_text {
+                    preedit.text.as_ref()
+                } else {
+                    ""
+                };
                 let len = inserted.len();
                 out.push_str(inserted);
                 spans.push(DisplayRowSpan {
@@ -997,14 +1011,16 @@ impl DisplayMap {
                     .get(line)
                     .map(|v| v.as_ref())
                     .unwrap_or(&[]);
-                let folds = validate_fold_spans(line_text, folds)
-                    .is_ok()
-                    .then_some(folds)
-                    .unwrap_or(&[]);
-                let inlays = validate_inlay_spans(line_text, inlays)
-                    .is_ok()
-                    .then_some(inlays)
-                    .unwrap_or(&[]);
+                let folds = if validate_fold_spans(line_text, folds).is_ok() {
+                    folds
+                } else {
+                    &[]
+                };
+                let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+                    inlays
+                } else {
+                    &[]
+                };
 
                 let preedit_for_line =
                     inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
@@ -1022,13 +1038,23 @@ impl DisplayMap {
                     .line_to_first_row
                     .get(line + 1)
                     .copied()
-                    .unwrap_or_else(|| self.row_to_line.len());
+                    .unwrap_or(self.row_to_line.len());
                 let rows_for_line = line_last_excl.saturating_sub(line_first).max(1);
 
                 if folds_empty && inlays_empty && !has_preedit {
-                    let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
-                    let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
-                    return DisplayPoint::new(line_first + row_in_line, col_in_row);
+                    if self.code_wrap_policy.is_none() {
+                        let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
+                        let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
+                        return DisplayPoint::new(line_first + row_in_line, col_in_row);
+                    }
+
+                    let rows = self.line_display_row_range(line);
+                    let row_in_line =
+                        find_row_for_line_col(&self.row_start_col[rows.clone()], pt.col)
+                            .min(rows_for_line.saturating_sub(1));
+                    let display_row = rows.start.saturating_add(row_in_line);
+                    let row_start_col = *self.row_start_col.get(display_row).unwrap_or(&0);
+                    return DisplayPoint::new(display_row, pt.col.saturating_sub(row_start_col));
                 }
 
                 let line_start = buf.line_start(line).unwrap_or(0);
@@ -1043,14 +1069,16 @@ impl DisplayMap {
                     .get(line)
                     .map(|v| v.as_ref())
                     .unwrap_or(&[]);
-                let folds = validate_fold_spans(line_text, folds)
-                    .is_ok()
-                    .then_some(folds)
-                    .unwrap_or(&[]);
-                let inlays = validate_inlay_spans(line_text, inlays)
-                    .is_ok()
-                    .then_some(inlays)
-                    .unwrap_or(&[]);
+                let folds = if validate_fold_spans(line_text, folds).is_ok() {
+                    folds
+                } else {
+                    &[]
+                };
+                let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+                    inlays
+                } else {
+                    &[]
+                };
 
                 let preedit_for_line =
                     inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
@@ -1114,14 +1142,16 @@ impl DisplayMap {
             .get(line)
             .map(|v| v.as_ref())
             .unwrap_or(&[]);
-        let folds = validate_fold_spans(line_text, folds)
-            .is_ok()
-            .then_some(folds)
-            .unwrap_or(&[]);
-        let inlays = validate_inlay_spans(line_text, inlays)
-            .is_ok()
-            .then_some(inlays)
-            .unwrap_or(&[]);
+        let folds = if validate_fold_spans(line_text, folds).is_ok() {
+            folds
+        } else {
+            &[]
+        };
+        let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+            inlays
+        } else {
+            &[]
+        };
 
         let preedit_for_line =
             inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
@@ -1489,9 +1519,7 @@ fn inline_preedit_for_line(
         .unwrap_or(anchor)
         .min(buf.len_bytes())
         .max(replace_start);
-    let Some(line_range) = buf.line_byte_range(line) else {
-        return None;
-    };
+    let line_range = buf.line_byte_range(line)?;
     let replace_start = replace_start.max(line_range.start).min(line_range.end);
     let replace_end = replace_end
         .max(line_range.start)
@@ -2634,6 +2662,84 @@ mod display_map_tests {
             map.display_point_to_byte(&buf, DisplayPoint::new(0, 7)),
             11,
             "expected the composed line end to map to the end of the replaced range"
+        );
+    }
+
+    #[test]
+    fn byte_to_display_point_respects_code_wrap_policy_rows() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "left->right->tail\nzzz".to_string()).unwrap();
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        let map = DisplayMap::new_with_code_wrap_policy(&buf, Some(6), Some(policy));
+
+        assert_eq!(map.byte_to_display_point(&buf, 0), DisplayPoint::new(0, 0));
+        assert_eq!(
+            map.byte_to_display_point(&buf, "left->".len()),
+            DisplayPoint::new(1, 0)
+        );
+        assert_eq!(
+            map.byte_to_display_point(&buf, "left->right".len()),
+            DisplayPoint::new(2, 0)
+        );
+
+        let line0_end = buf.line_byte_range(0).expect("line 0").end;
+        assert_eq!(
+            map.byte_to_display_point(&buf, line0_end),
+            DisplayPoint::new(2, 6)
+        );
+    }
+
+    #[test]
+    fn inline_preedit_replacement_roundtrips_under_wrap_and_code_wrap_policy() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "left->right->tail".to_string()).unwrap();
+
+        let folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        let preedit = InlinePreedit {
+            anchor: "left->".len(),
+            replace_range: Some("left->".len().."left->right".len()),
+            text: Arc::<str>::from("X"),
+        };
+
+        let map = DisplayMap::new_with_decorations_and_preedit_and_code_wrap_policy(
+            &buf,
+            Some(6),
+            &folds,
+            &inlays,
+            Some(preedit),
+            Some(policy),
+        );
+
+        let mut rows: Vec<String> = Vec::new();
+        for row in 0..map.row_count() {
+            rows.push(
+                map.materialize_display_row_text(&buf, row)
+                    .text
+                    .as_ref()
+                    .to_string(),
+            );
+        }
+        assert_eq!(rows.join(""), "left->X->tail");
+        for w in rows.windows(2) {
+            assert!(
+                !(w[0].ends_with('-') && w[1].starts_with('>')),
+                "expected `->` to not be split across a wrap boundary: rows={rows:?}"
+            );
+        }
+
+        let start = "left->".len();
+        let inside_replaced = "left->ri".len();
+        let pt_start = map.byte_to_display_point(&buf, start);
+        assert_eq!(map.byte_to_display_point(&buf, inside_replaced), pt_start);
+        assert_eq!(map.display_point_to_byte(&buf, pt_start), start);
+        assert_eq!(
+            map.display_point_to_byte(&buf, DisplayPoint::new(pt_start.row, pt_start.col + 1)),
+            "left->right".len(),
+            "expected the composed replacement end to map to the end of the replaced range"
         );
     }
 }

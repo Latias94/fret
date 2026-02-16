@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_forms(
     cx: &mut ElementContext<'_, App>,
     text_input: Model<String>,
@@ -7,48 +9,6 @@ pub(super) fn preview_forms(
     checkbox: Model<bool>,
     switch: Model<bool>,
 ) -> Vec<AnyElement> {
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(840.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     let demo = {
@@ -111,7 +71,7 @@ pub(super) fn preview_forms(
         .into_element(cx)
         .test_id("ui-gallery-form-demo");
 
-        section_card(cx, "Demo", content)
+        content
     };
 
     let input = {
@@ -122,7 +82,7 @@ pub(super) fn preview_forms(
             .into_element(cx)
             .test_id("ui-gallery-form-input");
 
-        section_card(cx, "Input", content)
+        content
     };
 
     let textarea = {
@@ -136,7 +96,7 @@ pub(super) fn preview_forms(
             .into_element(cx)
             .test_id("ui-gallery-form-textarea");
 
-        section_card(cx, "Textarea", content)
+        content
     };
 
     let controls = {
@@ -177,7 +137,7 @@ pub(super) fn preview_forms(
         )
         .test_id("ui-gallery-form-controls");
 
-        section_card(cx, "Checkbox + Switch", content)
+        content
     };
 
     let fieldset = {
@@ -217,7 +177,7 @@ pub(super) fn preview_forms(
         .into_element(cx)
         .test_id("ui-gallery-form-fieldset");
 
-        section_card(cx, "Fieldset", content)
+        content
     };
 
     let rtl = {
@@ -255,106 +215,62 @@ pub(super) fn preview_forms(
         )
         .test_id("ui-gallery-form-rtl");
 
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Form page is a gallery hub that combines Input, Textarea, Checkbox, Switch and FieldSet composition.",
-                ),
-                demo,
-                input,
-                textarea,
-                controls,
-                fieldset,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-form-component");
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("FieldSet Composition").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "FieldSet::new([FieldLegend, FieldDescription, FieldGroup]).into_element(cx);",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Model-Bound Controls").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "Input::new(text_model), Textarea::new(text_model), Checkbox::new(bool_model), Switch::new(bool_model);",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
-                    "This page remains a gallery integration hub instead of a direct shadcn radix component page.",
+                    "API reference: `ecosystem/fret-ui-shadcn/src/form.rs` (Form alias), `ecosystem/fret-ui-shadcn/src/field.rs` (FieldSet), and control primitives: `input.rs`, `textarea.rs`, `checkbox.rs`, `switch.rs`.",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "Stable test IDs are added for each section to support future diag automation.",
+                    "This page remains a gallery integration hub (composition recipe) rather than a single primitive component page.",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "When Form docs get formalized, this page can be reordered to mirror upstream sections exactly.",
+                    "Keep stable test IDs for each recipe so future diag automation can target composition surfaces.",
                 ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-form",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Form page is a gallery hub that combines Input, Textarea, Checkbox, Switch, and FieldSet composition.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("FieldSet + FieldGroup recipe with multiple controls.")
+                .max_w(Px(840.0)),
+            DocSection::new("Input", input)
+                .description("A model-bound input control.")
+                .max_w(Px(840.0)),
+            DocSection::new("Textarea", textarea)
+                .description("A model-bound textarea control with fixed height.")
+                .max_w(Px(840.0)),
+            DocSection::new("Checkbox + Switch", controls)
+                .description("Basic checkbox + switch controls with labels.")
+                .max_w(Px(840.0)),
+            DocSection::new("Fieldset", fieldset)
+                .description("FieldSet recipe with grouped fields and action row.")
+                .max_w(Px(840.0)),
+            DocSection::new("RTL", rtl)
+                .description("Form composition under an RTL direction provider.")
+                .max_w(Px(840.0)),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and authoring notes.")
+                .max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-form")]
 }

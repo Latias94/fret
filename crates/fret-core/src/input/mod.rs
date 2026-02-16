@@ -345,6 +345,7 @@ pub enum Event {
     /// Clipboard read completed without a text payload (clipboard empty/unavailable/error).
     ClipboardTextUnavailable {
         token: ClipboardToken,
+        message: Option<String>,
     },
     /// Share sheet request completed.
     ShareSheetCompleted {

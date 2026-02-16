@@ -19,3 +19,10 @@ tracing.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys.workspace = true
+accesskit_windows = "0.32.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+accesskit_macos = "0.25.0"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+accesskit_unix = "0.20.0"

@@ -127,7 +127,7 @@ pub fn order_column_refs_for_grouping<'c, TData>(
     let non_grouped: Vec<&ColumnDef<TData>> = leaf_columns
         .iter()
         .copied()
-        .filter(|c| !is_grouped(&c))
+        .filter(|c| !is_grouped(c))
         .collect();
     if mode == GroupedColumnMode::Remove {
         return non_grouped;
@@ -467,8 +467,7 @@ pub fn group_row_model<'a, TData>(
         out_children
     }
 
-    let mut root_keys: Vec<RowKey> = Vec::new();
-    root_keys.reserve(row_model.root_rows().len());
+    let mut root_keys: Vec<RowKey> = Vec::with_capacity(row_model.root_rows().len());
     for &root in row_model.root_rows() {
         if let Some(r) = row_model.row(root) {
             root_keys.push(r.key);

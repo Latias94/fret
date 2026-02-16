@@ -11,6 +11,18 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.text_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!("fret.renderer.pipeline.create.text", format = ?format, reason)
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret text shader"),
             source: wgpu::ShaderSource::Wgsl(TEXT_SHADER.into()),
@@ -21,6 +33,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
+                self.text_paints.layout(),
             ],
             immediate_size: 0,
         });
@@ -48,6 +61,11 @@ impl Renderer {
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 16,
                             shader_location: 2,
                         },
@@ -93,6 +111,22 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.text_color_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.text_color",
+                    format = ?format,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret color text shader"),
             source: wgpu::ShaderSource::Wgsl(TEXT_COLOR_SHADER.into()),
@@ -103,6 +137,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
+                self.text_paints.layout(),
             ],
             immediate_size: 0,
         });
@@ -130,6 +165,11 @@ impl Renderer {
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 16,
                             shader_location: 2,
                         },
@@ -177,6 +217,22 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.text_subpixel_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.text_subpixel",
+                    format = ?format,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret subpixel text shader"),
             source: wgpu::ShaderSource::Wgsl(TEXT_SUBPIXEL_SHADER.into()),
@@ -187,6 +243,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
+                self.text_paints.layout(),
             ],
             immediate_size: 0,
         });
@@ -214,6 +271,11 @@ impl Renderer {
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 16,
                             shader_location: 2,
                         },

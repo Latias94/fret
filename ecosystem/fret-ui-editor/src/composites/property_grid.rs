@@ -13,7 +13,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::composites::property_row::PropertyRow;
-use crate::composites::property_row::{PropertyRowOptions, PropertyRowReset};
+use crate::composites::property_row::{
+    PropertyRowLayoutVariant, PropertyRowOptions, PropertyRowReset,
+};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -78,6 +80,7 @@ impl PropertyGrid {
             let row_opts = PropertyRowOptions {
                 label_width: self.options.label_width,
                 gap: Some(column_gap),
+                variant: PropertyRowLayoutVariant::Auto,
                 ..Default::default()
             };
 

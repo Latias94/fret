@@ -1,6 +1,6 @@
 ---
 name: fret-fixture-driven-harnesses
-description: "Convert large Rust test/conformance scenario matrices into fixture-driven harnesses (JSON fixtures + thin Rust runner), keeping behavior reviewable and reducing merge-conflict risk during bottom-up refactors. Use for shadcn/Radix conformance, overlay placement matrices, and any ‘god test file’ with repetitive cases."
+description: "This skill should be used when the user asks to \"convert a large test matrix\", \"reduce god test files\", \"add fixture-driven conformance\", or \"make repetitive scenarios reviewable\". Provides a workflow for JSON fixtures + thin Rust runners (shadcn/Radix conformance, overlay placement matrices) to reduce merge conflicts and keep behavior reviewable."
 ---
 
 # Fixture-driven harnesses (Fret)

@@ -312,7 +312,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     return false;
                 }
                 if matches!(command.as_str(), "text.copy" | "edit.copy")
-                    && !cx.input_ctx.caps.clipboard.text
+                    && !cx.input_ctx.caps.clipboard.text.write
                 {
                     return false;
                 }
@@ -501,7 +501,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         return CommandAvailability::Blocked;
                     }
                     "text.copy" | "edit.copy" => {
-                        if !cx.input_ctx.caps.clipboard.text {
+                        if !cx.input_ctx.caps.clipboard.text.write {
                             return CommandAvailability::Blocked;
                         }
                     }

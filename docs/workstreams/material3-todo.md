@@ -1,5 +1,16 @@
 # Material 3 / Expressive Alignment (TODO)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- bevy_material_ui: https://github.com/edgarhsanchez/bevy_material_ui
+- Compose Multiplatform (core): https://github.com/JetBrains/compose-multiplatform-core
+- Material Web: https://github.com/material-components/material-web
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Complete (MVP landed; follow-ups tracked in `docs/workstreams/material3-next-wave-v2.md`)
 
 This workstream tracks **visual + interaction outcome alignment** for Material Design 3 (and

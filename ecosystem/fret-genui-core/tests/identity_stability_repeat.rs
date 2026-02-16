@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
-use fret_genui_core::render::{ComponentResolver, GenUiRuntime, RenderLimits, render_spec};
+use fret_genui_core::render::{
+    ComponentResolver, GenUiRuntime, RenderLimits, RenderedChildV1, render_spec,
+};
 use fret_genui_core::spec::SpecV1;
 use fret_genui_core::validate::ValidationMode;
 use fret_runtime::Model;
@@ -43,9 +45,10 @@ impl<H: UiHost> ComponentResolver<H> for TestResolver {
         _key: &fret_genui_core::spec::ElementKey,
         element: &fret_genui_core::spec::ElementV1,
         props: &fret_genui_core::props::ResolvedProps,
-        children: Vec<AnyElement>,
+        children: Vec<RenderedChildV1>,
         _on_event: &dyn Fn(&str) -> Option<OnActivate>,
     ) -> Result<AnyElement, Self::Error> {
+        let children: Vec<AnyElement> = children.into_iter().map(|c| c.rendered).collect();
         let mut el = match element.ty.as_str() {
             "VStack" => cx.container(ContainerProps::default(), move |_cx| children),
             "ItemBox" => cx.container(ContainerProps::default(), move |_cx| children),
@@ -55,10 +58,10 @@ impl<H: UiHost> ComponentResolver<H> for TestResolver {
             }
         };
 
-        if element.ty == "ItemBox" {
-            if let Some(tid) = props.props.get("testId").and_then(|v| v.as_str()) {
-                el = el.test_id(tid);
-            }
+        if element.ty == "ItemBox"
+            && let Some(tid) = props.props.get("testId").and_then(|v| v.as_str())
+        {
+            el = el.test_id(tid);
         }
 
         Ok(el)
@@ -86,7 +89,7 @@ fn frame_item_ids(
             catalog: None,
             catalog_validation: ValidationMode::Ignore,
         };
-        let mut resolver = TestResolver::default();
+        let mut resolver = TestResolver;
         let rendered = render_spec(cx, spec, &runtime, &mut resolver).expect("render ok");
         let root = rendered.roots.into_iter().next().expect("root exists");
         TestResolver::collect_test_ids(&root, &mut out);

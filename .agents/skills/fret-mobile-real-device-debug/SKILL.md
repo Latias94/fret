@@ -1,6 +1,6 @@
 ---
 name: fret-mobile-real-device-debug
-description: "Real-device mobile debugging workflow for Fret (Android + iOS): run the smallest mobile target, verify Vulkan/Metal constraints, capture diagnostics bundles, and archive evidence for ADRs/workstreams."
+description: "This skill should be used when the user asks to \"debug on real mobile devices\", \"run the smallest Android/iOS target\", \"verify Vulkan/Metal constraints\", or \"capture mobile diagnostics evidence\". Provides a real-device workflow (Android + iOS) to reproduce issues, capture bundles, and archive evidence for ADRs/workstreams."
 ---
 
 # Fret mobile real-device debug (Android + iOS)

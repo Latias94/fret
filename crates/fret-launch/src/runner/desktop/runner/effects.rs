@@ -1,4 +1,4 @@
-use std::{any::TypeId, collections::HashSet, sync::OnceLock, time::Instant};
+use std::{any::TypeId, collections::HashSet, sync::OnceLock};
 
 use super::macos_cursor::dock_tearoff_log;
 use super::streaming_images::{
@@ -6,6 +6,7 @@ use super::streaming_images::{
 };
 use super::window::bring_window_to_front;
 use fret_app::{CreateWindowKind, Effect, WindowRequest};
+use fret_core::time::Instant;
 use fret_core::{Event, Point, Px};
 use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
@@ -13,7 +14,7 @@ use fret_platform::file_dialog::FileDialogProvider as _;
 use fret_platform::open_url::OpenUrl as _;
 use fret_platform_native::external_drop::NativeExternalDrop;
 use fret_platform_native::file_dialog::NativeFileDialog;
-use fret_runtime::{PlatformCapabilities, PlatformCompletion};
+use fret_runtime::{PlatformCapabilities, PlatformCompletion, WindowClipboardDiagnosticsStore};
 use tracing::error;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowLevel;
@@ -477,10 +478,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         if safe_area_insets.is_some() || occlusion_insets.is_some() {
                             let entry =
                                 self.diag_window_insets_overrides.entry(window).or_default();
-                            if let Some(value) = safe_area_insets.clone() {
+                            if let Some(value) = safe_area_insets {
                                 entry.safe_area_insets = Some(value);
                             }
-                            if let Some(value) = occlusion_insets.clone() {
+                            if let Some(value) = occlusion_insets {
                                 entry.occlusion_insets = Some(value);
                             }
                         }
@@ -517,11 +518,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
                             },
                         );
-                        if changed {
-                            if let Some(state) = self.windows.get(window) {
-                                state.window.request_redraw();
-                                self.raf_windows.insert(window);
-                            }
+                        if changed && let Some(state) = self.windows.get(window) {
+                            state.window.request_redraw();
+                            self.raf_windows.insert(window);
                         }
                     }
                     Effect::CursorSetIcon { window, icon } => {
@@ -725,8 +724,33 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         );
                     }
                     Effect::ClipboardSetText { text } => {
-                        if let Err(err) = self.clipboard.set_text(&text) {
-                            tracing::debug!(?err, "failed to set clipboard text");
+                        let window = self.main_window.or_else(|| self.windows.keys().next());
+                        let Some(window) = window else {
+                            continue;
+                        };
+
+                        match self.clipboard.set_text(&text) {
+                            Ok(()) => {
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_ok(window, self.frame_id);
+                                    },
+                                );
+                            }
+                            Err(err) => {
+                                tracing::debug!(?err, "failed to set clipboard text");
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_unavailable(
+                                            window,
+                                            self.frame_id,
+                                            Some(format!("{err:?}")),
+                                        );
+                                    },
+                                );
+                            }
                         }
                     }
                     Effect::ClipboardGetText { window, token } => {
@@ -736,7 +760,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         {
                             self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable { token },
+                                &Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                },
                             );
                             continue;
                         }
@@ -746,10 +773,23 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 window,
                                 &Event::ClipboardText { token, text },
                             ),
-                            Ok(None) | Err(_) => self.deliver_window_event_now(
+                            Ok(None) => self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable { token },
+                                &Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                },
                             ),
+                            Err(err) => {
+                                tracing::debug!(?err, "failed to read clipboard text");
+                                self.deliver_window_event_now(
+                                    window,
+                                    &Event::ClipboardTextUnavailable {
+                                        token,
+                                        message: Some(format!("{err:?}")),
+                                    },
+                                );
+                            }
                         }
                     }
                     Effect::PrimarySelectionSetText { text } => {
@@ -1256,7 +1296,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let t0 = std::time::Instant::now();
+                        let t0 = Instant::now();
                         match crate::runner::yuv::nv12_to_rgba8_rect(
                             crate::runner::yuv::Nv12ToRgba8RectInput {
                                 width,
@@ -1336,7 +1376,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                     } => {
                         stats.yuv_conversions_attempted =
                             stats.yuv_conversions_attempted.saturating_add(1);
-                        let t0 = std::time::Instant::now();
+                        let t0 = Instant::now();
                         match crate::runner::yuv::i420_to_rgba8_rect(
                             crate::runner::yuv::I420ToRgba8RectInput {
                                 width,
@@ -1462,6 +1502,13 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         continue;
                                     }
                                 };
+                            if matches!(
+                                create.kind,
+                                CreateWindowKind::DockFloating { .. }
+                                    | CreateWindowKind::DockRestore { .. }
+                            ) {
+                                self.dock_floating_windows.insert(new_window);
+                            }
 
                             if let CreateWindowKind::DockFloating { source_window, .. } =
                                 &create.kind
@@ -1517,6 +1564,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             grab_offset,
                                             manual_follow: true,
                                             last_outer_pos: None,
+                                            transparent_payload_applied: false,
                                         });
                                         // Do not call `drag_window()` here. ImGui drives multi-viewport
                                         // window movement by updating the platform window position in

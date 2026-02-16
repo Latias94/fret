@@ -1,15 +1,20 @@
 use super::*;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Duration};
 
+use fret_core::time::Instant;
 use fret_core::{Point, Scene};
 use fret_render::SurfaceState;
+#[cfg(target_os = "windows")]
+use std::collections::HashMap;
+#[cfg(target_os = "macos")]
+use std::collections::HashMap;
 use winit::{
     dpi::{PhysicalPosition, Position},
     window::Window,
 };
+
+#[cfg(target_os = "windows")]
+use winit::raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
 
 pub(super) struct WindowRuntime<S> {
     pub(super) window: Arc<dyn Window>,
@@ -62,6 +67,7 @@ pub(super) struct DockTearoffFollow {
     pub(super) grab_offset: Point,
     pub(super) manual_follow: bool,
     pub(super) last_outer_pos: Option<PhysicalPosition<i32>>,
+    pub(super) transparent_payload_applied: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -82,8 +88,8 @@ pub(super) struct RectF64 {
 
 #[cfg(target_os = "macos")]
 pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Window>) -> bool {
-    use cocoa::base::{id, nil};
     use objc::runtime::Class;
+    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
 
@@ -97,20 +103,21 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
     }
 
     unsafe {
+        let nil: *mut Object = std::ptr::null_mut();
         let Some(class) = Class::get("NSApplication") else {
             window.focus_window();
             return true;
         };
-        let app: id = msg_send![class, sharedApplication];
+        let app: *mut Object = msg_send![class, sharedApplication];
         if app.is_null() {
             window.focus_window();
             return true;
         }
 
-        let ns_window: id = match window.window_handle() {
+        let ns_window: *mut Object = match window.window_handle() {
             Ok(handle) => match handle.as_raw() {
                 winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
-                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
                     if ns_view.is_null() {
                         std::ptr::null_mut()
                     } else {
@@ -126,10 +133,10 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
             return true;
         }
 
-        let sender_ns_window: id = match sender_window.window_handle() {
+        let sender_ns_window: *mut Object = match sender_window.window_handle() {
             Ok(handle) => match handle.as_raw() {
                 winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
-                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
                     if ns_view.is_null() {
                         std::ptr::null_mut()
                     } else {
@@ -169,8 +176,8 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
         // success rate of the ordering change when the source window is in a tracked interaction.
         window.focus_window();
 
-        let key_window_after: id = msg_send![app, keyWindow];
-        let main_window_after: id = msg_send![app, mainWindow];
+        let key_window_after: *mut Object = msg_send![app, keyWindow];
+        let main_window_after: *mut Object = msg_send![app, mainWindow];
         let is_key_after: bool = msg_send![ns_window, isKeyWindow];
         let is_main_after: bool = msg_send![ns_window, isMainWindow];
         let is_visible_after: bool = msg_send![ns_window, isVisible];
@@ -205,6 +212,88 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
 pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Window>) -> bool {
     window.focus_window();
     true
+}
+
+#[cfg(target_os = "macos")]
+pub(super) fn set_dock_drag_transparent_payload(
+    window: &dyn Window,
+    enabled: bool,
+    alpha: f32,
+) -> bool {
+    use cocoa::base::{id, nil};
+    use objc::{msg_send, sel, sel_impl};
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let ns_window: id = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                let ns_view: id = h.ns_view.as_ptr() as id;
+                if ns_view.is_null() {
+                    std::ptr::null_mut()
+                } else {
+                    unsafe { msg_send![ns_view, window] }
+                }
+            }
+            _ => std::ptr::null_mut(),
+        },
+        Err(_) => std::ptr::null_mut(),
+    };
+    if ns_window.is_null() {
+        return false;
+    }
+
+    unsafe {
+        let alpha: f64 = if enabled {
+            (alpha.clamp(0.0, 1.0)) as f64
+        } else {
+            1.0
+        };
+        let _: () = msg_send![ns_window, setAlphaValue: alpha];
+        let ignore: bool = enabled;
+        let _: () = msg_send![ns_window, setIgnoresMouseEvents: ignore];
+
+        // When disabling, nudge the window ordering to avoid rare cases where a previously
+        // ignoring-mouse window does not immediately resume receiving pointer events.
+        if !enabled {
+            let _: () = msg_send![ns_window, orderFront: nil];
+        }
+    }
+
+    true
+}
+
+#[cfg(target_os = "windows")]
+pub(super) fn set_dock_drag_transparent_payload(
+    window: &dyn Window,
+    enabled: bool,
+    alpha: f32,
+) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
+
+    let alpha = if enabled { alpha } else { 1.0 };
+    super::win32::set_window_alpha(hwnd, alpha);
+    super::win32::set_window_mouse_passthrough(hwnd, enabled);
+    true
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+pub(super) fn set_dock_drag_transparent_payload(
+    _window: &dyn Window,
+    _enabled: bool,
+    _alpha: f32,
+) -> bool {
+    false
 }
 
 pub(super) fn client_origin_screen(
@@ -290,6 +379,172 @@ pub(super) fn outer_pos_for_cursor_grab(
 impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
 
+    #[cfg(target_os = "macos")]
+    fn ns_window_number_for_window(window: &dyn Window) -> Option<i32> {
+        use cocoa::base::id;
+        use objc::{msg_send, sel, sel_impl};
+        use winit::raw_window_handle::HasWindowHandle as _;
+
+        let ns_window: id = match window.window_handle() {
+            Ok(handle) => match handle.as_raw() {
+                winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    if ns_view.is_null() {
+                        std::ptr::null_mut()
+                    } else {
+                        unsafe { msg_send![ns_view, window] }
+                    }
+                }
+                _ => std::ptr::null_mut(),
+            },
+            Err(_) => std::ptr::null_mut(),
+        };
+        if ns_window.is_null() {
+            return None;
+        }
+
+        let number: i32 = unsafe { msg_send![ns_window, windowNumber] };
+        Some(number)
+    }
+
+    #[cfg(target_os = "macos")]
+    fn ordered_ns_window_numbers_front_to_back() -> Vec<i32> {
+        use cocoa::base::id;
+        use objc::runtime::Class;
+        use objc::{msg_send, sel, sel_impl};
+
+        unsafe {
+            let Some(class) = Class::get("NSApplication") else {
+                return Vec::new();
+            };
+            let app: id = msg_send![class, sharedApplication];
+            if app.is_null() {
+                return Vec::new();
+            }
+            let ordered: id = msg_send![app, orderedWindows];
+            if ordered.is_null() {
+                return Vec::new();
+            }
+
+            let count: usize = msg_send![ordered, count];
+            let mut out: Vec<i32> = Vec::with_capacity(count);
+            for idx in 0..count {
+                let w: id = msg_send![ordered, objectAtIndex: idx];
+                if w.is_null() {
+                    continue;
+                }
+                let number: i32 = msg_send![w, windowNumber];
+                out.push(number);
+            }
+            out
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn window_under_cursor_macos(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> Option<fret_core::AppWindowId> {
+        let mut number_to_window: HashMap<i32, fret_core::AppWindowId> = HashMap::new();
+        for (window, state) in self.windows.iter() {
+            let Some(number) = Self::ns_window_number_for_window(state.window.as_ref()) else {
+                continue;
+            };
+            number_to_window.insert(number, window);
+        }
+
+        if number_to_window.is_empty() {
+            return None;
+        }
+
+        let prefer_not_number = prefer_not
+            .and_then(|w| self.windows.get(w))
+            .and_then(|state| Self::ns_window_number_for_window(state.window.as_ref()));
+
+        let ordered = Self::ordered_ns_window_numbers_front_to_back();
+        if ordered.is_empty() {
+            return None;
+        }
+
+        let mut fallback: Option<fret_core::AppWindowId> = None;
+        for number in ordered {
+            let Some(&window) = number_to_window.get(&number) else {
+                continue;
+            };
+            if !self.screen_pos_in_window(window, screen_pos) {
+                continue;
+            }
+            if prefer_not_number.is_some_and(|p| p == number) {
+                fallback = Some(window);
+                continue;
+            }
+            return Some(window);
+        }
+
+        fallback
+    }
+
+    #[cfg(target_os = "windows")]
+    fn hwnd_for_window(window: &dyn Window) -> Option<isize> {
+        let handle = window.window_handle().ok()?;
+        let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+            return None;
+        };
+        Some(handle.hwnd.get())
+    }
+
+    #[cfg(target_os = "windows")]
+    fn window_under_cursor_win32(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> Option<fret_core::AppWindowId> {
+        let mut hwnd_to_window: HashMap<isize, fret_core::AppWindowId> = HashMap::new();
+        for (window, state) in self.windows.iter() {
+            let Some(hwnd) = Self::hwnd_for_window(state.window.as_ref()) else {
+                continue;
+            };
+            hwnd_to_window.insert(hwnd, window);
+        }
+
+        if hwnd_to_window.is_empty() {
+            return None;
+        }
+
+        let prefer_not_hwnd = prefer_not
+            .and_then(|w| self.windows.get(w))
+            .and_then(|state| Self::hwnd_for_window(state.window.as_ref()));
+
+        let mut fallback: Option<fret_core::AppWindowId> = None;
+        let mut hwnd = super::win32::window_under_cursor_root(screen_pos)?;
+        // Bounded traversal: the global z-order can change while we walk it.
+        for _ in 0..256 {
+            if hwnd == 0 {
+                break;
+            }
+
+            if prefer_not_hwnd.is_some_and(|p| p == hwnd) {
+                if let Some(&window) = hwnd_to_window.get(&hwnd)
+                    && self.screen_pos_in_window(window, screen_pos)
+                {
+                    fallback = Some(window);
+                }
+            } else if let Some(&window) = hwnd_to_window.get(&hwnd)
+                && self.screen_pos_in_window(window, screen_pos)
+            {
+                return Some(window);
+            }
+
+            let Some(next) = super::win32::next_window_in_z_order(hwnd) else {
+                break;
+            };
+            hwnd = next;
+        }
+
+        fallback
+    }
+
     pub(super) fn compute_window_position_from_anchor(
         &self,
         anchor: fret_core::WindowAnchor,
@@ -369,11 +624,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let mut x = screen_pos.x;
         let mut y = screen_pos.y;
 
+        #[cfg(target_os = "windows")]
+        let decoration_offset = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::decoration_offset_for_hwnd)
+            .unwrap_or_else(|| state.window.surface_position());
+        #[cfg(not(target_os = "windows"))]
+        let decoration_offset = state.window.surface_position();
+
         if let Some((ox, oy)) = outer_pos_for_cursor_grab(
             screen_pos,
             grab_offset_logical,
             scale,
-            state.window.surface_position(),
+            decoration_offset,
             Some(max_client),
         ) {
             x = ox;
@@ -429,11 +691,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // window (visible as a fixed offset between cursor and window).
         let target_inner = state.window.surface_size();
         let target_inner_logical: winit::dpi::LogicalSize<f32> = target_inner.to_logical(scale);
+
+        #[cfg(target_os = "windows")]
+        let decoration_offset = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::decoration_offset_for_hwnd)
+            .unwrap_or_else(|| state.window.surface_position());
+        #[cfg(not(target_os = "windows"))]
+        let decoration_offset = state.window.surface_position();
+
         let (mut x, mut y) = outer_pos_for_cursor_grab(
             screen_pos,
             grab_offset_logical,
             scale,
-            state.window.surface_position(),
+            decoration_offset,
             Some(target_inner_logical),
         )?;
 
@@ -555,6 +825,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
+        #[cfg(target_os = "macos")]
+        if let Some(window) = self.window_under_cursor_macos(screen_pos, prefer_not) {
+            return Some(window);
+        }
+
+        #[cfg(target_os = "windows")]
+        if let Some(window) = self.window_under_cursor_win32(screen_pos, prefer_not) {
+            return Some(window);
+        }
+
         let mut fallback: Option<fret_core::AppWindowId> = None;
         for &w in self.windows_z_order.iter().rev() {
             let Some(state) = self.windows.get(w) else {
@@ -583,7 +863,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         // Fallback if the z-order list has drifted.
         for w in self.windows.keys() {
-            if self.windows_z_order.iter().any(|tracked| *tracked == w) {
+            if self.windows_z_order.contains(&w) {
                 continue;
             }
             let Some(state) = self.windows.get(w) else {
@@ -905,5 +1185,41 @@ mod tests {
         let screen_pos = PhysicalPosition::new(120.0, 240.0);
         let local = local_pos_for_screen_pos(origin, scale, screen_pos);
         assert_eq!(local, Point::new(Px(10.0), Px(20.0)));
+    }
+
+    #[test]
+    fn screen_pos_in_client_respects_outer_plus_decoration_offset() {
+        let outer = winit::dpi::PhysicalPosition::new(100, 200);
+        let deco = winit::dpi::PhysicalPosition::new(12, 34);
+        let origin = client_origin_screen(outer, deco);
+        let size = PhysicalSize::new(100u32, 50u32);
+
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(112.0, 234.0)
+        ));
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(111.9, 234.0)
+        ));
+    }
+
+    #[test]
+    fn local_pos_for_screen_pos_roundtrips_with_outer_plus_decoration_and_scale() {
+        let outer = winit::dpi::PhysicalPosition::new(100, 200);
+        let deco = winit::dpi::PhysicalPosition::new(10, 30);
+        let origin = client_origin_screen(outer, deco);
+        let scale = 1.5;
+
+        let desired_local = Point::new(Px(20.0), Px(40.0));
+        let screen_pos = PhysicalPosition::new(
+            origin.x + desired_local.x.0 as f64 * scale,
+            origin.y + desired_local.y.0 as f64 * scale,
+        );
+
+        let local = local_pos_for_screen_pos(origin, scale, screen_pos);
+        assert_eq!(local, desired_local);
     }
 }
