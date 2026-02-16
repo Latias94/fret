@@ -55,7 +55,7 @@ Legend:
 | Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Keeps existing `test_id`s for demo + snap-points scenarios. |
 | Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json` (1) | Keeps existing `test_id`s for triggers and demo items. |
 | Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
-| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (4) | Candidate: right-click vs long-press + keyboard. |
+| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (5) | Adds a page-level docs smoke; existing overlay scripts still gate right-click/keyboard paths. |
 | Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-tooltip-hovercard-*.json` (1) | Candidate: alignment + delay + pointer leave. |
 
 ### Shadcn/navigation + misc
