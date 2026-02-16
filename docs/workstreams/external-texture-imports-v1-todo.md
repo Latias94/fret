@@ -10,8 +10,21 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
 
 ## Open items (v1 follow-ups)
 
+- [~] EXT-adr-200 External texture imports v2 contract (zero/low-copy):
+      define the bounded strategy set, capability gating, deterministic fallback order, and the
+      required metadata semantics for correctness parity.
+  - ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md`
+  - Exit criteria:
+    - the fallback chain is explicit and bounded (no “best effort”),
+    - metadata (colorspace/orientation/alpha) semantics are locked,
+    - and a minimal perf-gate checklist is recorded for wasm/mobile.
+
 - [!] EXT-web-100 Web v1 zero-copy import: WebCodecs `VideoFrame` → WebGPU `ExternalTexture`
       (capability-gated) with deterministic fallback.
+  - Notes:
+    - This is the web backend’s primary v2 “ceiling path”, but it remains blocked until the
+      WebGPU backend supports `ExternalTexture` ingestion end-to-end.
+    - Contract details are tracked in ADR 0282.
   - Blocker: wgpu WebGPU backend does not implement `ExternalTexture` yet (wgpu v28 has an
     `unimplemented!` stub in `wgpu/src/backend/webgpu.rs`).
   - Evidence anchors:

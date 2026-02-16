@@ -88,3 +88,22 @@ Evidence:
     - Exports:
       - `target/fret-diag-web-copy/exports/1771140829044-bundle`
       - `target/fret-diag-web-copy/exports/1771140845261-bundle`
+
+## M5 — Zero/low-copy ceiling (v2; capability-gated)
+
+- [~] EXT-m5-400 Contract v2 is documented and bounded:
+      define the strategy set, capability gating, deterministic fallback order, and metadata
+      semantics so copy and zero/low-copy paths converge to the same observable behavior.
+  - ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md`
+
+- [ ] EXT-m5-410 Perf-gate checklist is expanded for v2:
+      add a v2 steady-state perf script + baseline for any zero/low-copy path we land, and keep
+      the existing copy-path baselines as non-regression anchors (web + native).
+  - Evidence anchors (existing copy-path gates):
+    - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+    - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+
+- [!] EXT-m5-420 Web zero-copy implementation (blocked):
+      WebCodecs `VideoFrame` → WebGPU `ExternalTexture` → imported render target, capability-gated
+      with deterministic fallback to the GPU copy path.
+  - Blocker: wgpu WebGPU backend missing `ExternalTexture` implementation (wgpu v28).

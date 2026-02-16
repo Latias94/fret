@@ -1,0 +1,116 @@
+---
+title: External Texture Imports v2 (Zero/Low-Copy, Capability-Gated)
+status: Draft
+date: 2026-02-16
+---
+
+# ADR 0282: External Texture Imports v2 (Zero/Low-Copy, Capability-Gated)
+
+## Context
+
+ADR 0234 established a staged approach for “external texture imports”:
+
+1. A **contract path** that runs end-to-end in-repo using `RenderTargetId` +
+   `SceneOp::ViewportSurface`, with per-frame `TextureView` refresh via runner-applied deltas.
+2. A **true external import** path (optional, capability-gated) that avoids leaking backend handles
+   into UI/component code.
+
+The v1 copy-based paths are sufficient for static or low-frequency images. However, for high
+frequency + high resolution sources (video/camera/remote desktop/large canvases), “copy every
+frame into a renderer-owned texture” becomes a primary frame-budget risk:
+
+- bandwidth and GPU time (especially at 1080p/4K @ 60/120Hz),
+- latency and jitter (extra sync points / queuing),
+- memory and power (mobile constraints),
+- and semantic correctness (colorspace/orientation/alpha metadata needs a single authoritative
+  place to live).
+
+At the same time, WebGPU and mobile GPUs have strict portability constraints. Many “zero-copy”
+mechanisms are only available behind capabilities and require deterministic fallback.
+
+## Decision
+
+Define a v2 policy for external texture imports that raises the performance ceiling while keeping
+the public UI contract stable and portable:
+
+1. **UI-facing contract remains unchanged**:
+   - UI/component code continues to use `RenderTargetId` + `SceneOp::ViewportSurface`.
+   - No backend handles (wgpu/WebGPU/Vulkan/Metal) are exposed to `fret-ui` or ecosystem code.
+
+2. **Import strategy is capability-gated and bounded**:
+   - The runner/renderer selects an import strategy from a small, ordered set.
+   - Unsupported strategies must fall back deterministically to a copy-based path.
+
+3. **Metadata is first-class and authoritative**:
+   - colorspace / transfer / matrix hints,
+   - orientation / transform hints,
+   - alpha semantics (premul vs straight),
+   - and timestamp hints (diagnostics only),
+   must travel with the imported target so zero/low-copy and copy paths converge to the same
+   observable output.
+
+4. **Perf is gated**:
+   - existing copy-path perf baselines remain non-regression anchors,
+   - v2 introduces steady-state perf baselines for any landed zero/low-copy strategy, especially
+     on wasm/mobile.
+
+## Import strategy set (bounded)
+
+This ADR defines a bounded set of strategies. Concrete backend implementations may add internal
+details, but must map into one of these categories:
+
+1. **Zero-copy (external texture sampling)**
+   - Example: WebGPU `ExternalTexture` sampling for WebCodecs `VideoFrame`.
+   - Requires explicit capability gating and a deterministic fallback.
+
+2. **Low-copy (GPU-only copy / blit)**
+   - Example: `Queue::copy_external_image_to_texture` (web) or GPU-to-GPU copies on native.
+   - This is the default portable “fast path” when true zero-copy is unavailable.
+
+3. **CPU upload**
+   - Example: decoded bytes uploaded via `Queue::write_texture`.
+   - Always available as the final deterministic fallback.
+
+The renderer must never silently choose an “unknown best effort” path. The selected strategy must
+be observable in diagnostics/perf snapshots.
+
+## Deterministic fallback order
+
+For a given target/backend, the effective strategy is selected by a deterministic ordered chain:
+
+1. Prefer **zero-copy** if the backend reports support and the source provides an eligible frame.
+2. Else prefer **low-copy GPU copy**.
+3. Else fall back to **CPU upload**.
+
+This chain must be stable across machines for the same capability snapshot, and must not depend
+on timing or opportunistic resource availability.
+
+## Semantics: metadata and correctness
+
+Imported render targets must behave identically (as observed by UI sampling) regardless of the
+ingestion strategy:
+
+- alpha semantics must be applied consistently (straight vs premul),
+- orientation/transform hints must map to stable sampling transforms,
+- and colorspace hints must not be “lost” when using copy-based fallbacks.
+
+If a backend cannot preserve a metadata property for a given strategy (e.g. colorspace metadata is
+not representable), it must degrade deterministically and record a diagnostic counter.
+
+## Consequences
+
+- The framework gains a clear, portable, performance-oriented story for video/camera/streaming UI.
+- Implementation complexity is isolated to runner/renderer layers; `fret-ui` remains a mechanism
+  contract surface.
+- Web zero-copy remains explicitly capability-gated and may remain blocked until upstream backend
+  support exists; the copy paths remain first-class and gated by perf baselines.
+
+## Evidence / implementation anchors
+
+- v1 contract + staging: `docs/adr/0234-imported-render-targets-and-external-texture-imports-v1.md`
+- Workstream tracking:
+  - `docs/workstreams/external-texture-imports-v1.md`
+  - `docs/workstreams/external-texture-imports-v1-todo.md`
+  - `docs/workstreams/external-texture-imports-v1-milestones.md`
+- Capability surface (today): `crates/fret-render-wgpu/src/capabilities.rs`
+- Native adapter seam (today): `crates/fret-launch/src/runner/native_external_import.rs`
