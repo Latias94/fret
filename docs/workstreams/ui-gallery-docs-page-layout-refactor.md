@@ -40,7 +40,7 @@ Legend:
 
 | Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|---|
-| Select | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Per-section | `tools/diag-scripts/ui-gallery-select-*.json` (16) | Keeps existing diag `test_id`s for trigger/items. |
+| Select | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Per-section | `tools/diag-scripts/ui-gallery-select-*.json` (16) | Keeps existing diag `test_id`s for trigger/items. |
 | Combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-combobox-*.json` (10) | `apps/fret-ui-gallery/src/ui/pages/combobox/sections.rs` returns “pure content” (no nested cards). |
 | Date Picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json` | Keeps range-roving regression script compatible (role/name driven). |
 | Field | `apps/fret-ui-gallery/src/ui/pages/field.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: convert to sections; keep `Field` examples grouped by recipe. |
@@ -56,7 +56,7 @@ Legend:
 | Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|---|
 | Alert Dialog | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-alert-dialog-*.json` (4) | Notes are a dedicated section; headings are nowrap+ellipsis by default. |
-| Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dialog-*.json` (3) | `docs-order-smoke` targets this page; `escape-focus-restore*` targets the Overlay page dialog widget. |
+| Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dialog-*.json` (3) | `docs-order-smoke` targets this page; `escape-focus-restore*` targets the Overlay page dialog widget. |
 | Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Keeps existing `test_id`s for demo + snap-points scenarios. |
 | Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json` (1) | Keeps existing `test_id`s for triggers and demo items. |
 | Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
@@ -75,7 +75,7 @@ Legend:
 | Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: list item patterns + icons + truncation. |
 | Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Candidate: accordion/collapsible behavior notes. |
 | Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: minimal surface. |
-| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
+| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
 | Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-empty-docs-smoke.json` (1) | Keeps existing `test_id`s for each recipe. |
 
 ## Suggested Migration Order (next)

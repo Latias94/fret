@@ -2790,6 +2790,23 @@ This page validates:
 
 - value model binding (`Model<Option<Arc<str>>>`)
 - open/close model binding (`Model<bool>`)
+
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx`
+- Radix docs: https://www.radix-ui.com/docs/primitives/components/select
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::Select`
+- `fret_ui_shadcn::SelectItem`, `SelectGroup`, `SelectLabel`, `SelectSeparator`
+- `fret_ui_shadcn::select::SelectPosition` (item-aligned vs popper)
+
+Upstream API reference:
+
+- https://www.radix-ui.com/docs/primitives/components/select#api-reference
 "#;
 
 pub(crate) const USAGE_SELECT: &str = r#"
@@ -3330,7 +3347,28 @@ let field = shadcn::Field::new(vec![
 pub(crate) const DOC_ALERT: &str = r#"
 ## Alert
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx`
+
+This page aligns with the shadcn examples:
+
+- Basic
+- Destructive
+- Action
+- Custom Colors
+- RTL
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::Alert`, `AlertVariant`
+- `fret_ui_shadcn::AlertTitle`, `AlertDescription`
+
+Notes:
+
+- shadcn/ui includes an `AlertAction` slot; Fret currently composes actions inline (see Preview).
 "#;
 
 pub(crate) const USAGE_ALERT: &str = r#"
@@ -3488,7 +3526,16 @@ pub(crate) const USAGE_CONTEXT_MENU: &str = r#"
 pub(crate) const DOC_DIALOG: &str = r#"
 ## Dialog
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/dialog.mdx`
+- Radix docs: https://www.radix-ui.com/docs/primitives/components/dialog
+
+## API Reference
+
+Upstream API reference:
+
+- https://www.radix-ui.com/docs/primitives/components/dialog#api-reference
 "#;
 
 pub(crate) const USAGE_DIALOG: &str = r#"
