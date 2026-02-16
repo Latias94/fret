@@ -178,6 +178,8 @@ Evidence anchors (initial):
 - Geometry cache key:
   - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
+- Display-map epoch gate:
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`code_wrap_policy_change_invalidates_row_text_cache`)
 - Paint-only stability gate:
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
 

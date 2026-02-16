@@ -223,8 +223,12 @@ Goal: make editor geometry queries (caret/hit-test/IME bounds) **cache-stable an
 folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
 
 - [~] Define the stable cache key for row geometry:
-  - [~] text revision + display window mapping epoch (handled by cache invalidation on
-    `(revision, wrap_cols, folds_epoch, inlays_epoch)` and by pointer-identity row keys),
+  - [x] text revision + display window mapping epoch:
+    - model `DisplayMap` rebuilds as a monotonic `display_map_epoch`,
+    - include `display_map_epoch` in row text/geometry cache invalidation checks to prevent stale
+      `row -> text/range` materialization after policy-only display-map changes (e.g. code wrap).
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`code_wrap_policy_change_invalidates_row_text_cache`)
   - [x] shaping-relevant style key (font/axes/features/letter spacing) via `RowGeomKey`,
   - [x] constraints key (wrap/overflow/max width bucket, scale factor) via `RowGeomKey` (64px ceil bucket for wrap=None + align=Start),
   - [x] `TextFontStackKey` revision via `RowGeomKey` + cache clears on font stack change.
