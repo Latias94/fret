@@ -29,6 +29,151 @@ macro_rules! children {
     }};
 }
 
+/// Implement the `UiBuilder` patch + render glue for a component that supports both chrome and
+/// layout refinements.
+///
+/// The type must provide:
+/// - `fn refine_style(self, ChromeRefinement) -> Self`
+/// - `fn refine_layout(self, LayoutRefinement) -> Self`
+/// - `fn into_element(self, &mut ElementContext<'_, H>) -> AnyElement`
+#[macro_export]
+macro_rules! ui_component_chrome_layout {
+    ($ty:ty) => {
+        impl $crate::UiPatchTarget for $ty {
+            fn apply_ui_patch(self, patch: $crate::UiPatch) -> Self {
+                self.refine_style(patch.chrome).refine_layout(patch.layout)
+            }
+        }
+
+        impl $crate::UiSupportsChrome for $ty {}
+        impl $crate::UiSupportsLayout for $ty {}
+
+        impl $crate::UiIntoElement for $ty {
+            #[track_caller]
+            fn into_element<H: ::fret_ui::UiHost>(
+                self,
+                cx: &mut ::fret_ui::ElementContext<'_, H>,
+            ) -> ::fret_ui::element::AnyElement {
+                <$ty>::into_element(self, cx)
+            }
+        }
+    };
+}
+
+/// Implement the `UiBuilder` patch + render glue for a component that supports layout refinements
+/// only.
+///
+/// The type must provide:
+/// - `fn refine_layout(self, LayoutRefinement) -> Self`
+/// - `fn into_element(self, &mut ElementContext<'_, H>) -> AnyElement`
+#[macro_export]
+macro_rules! ui_component_layout_only {
+    ($ty:ty) => {
+        impl $crate::UiPatchTarget for $ty {
+            fn apply_ui_patch(self, patch: $crate::UiPatch) -> Self {
+                self.refine_layout(patch.layout)
+            }
+        }
+
+        impl $crate::UiSupportsLayout for $ty {}
+
+        impl $crate::UiIntoElement for $ty {
+            #[track_caller]
+            fn into_element<H: ::fret_ui::UiHost>(
+                self,
+                cx: &mut ::fret_ui::ElementContext<'_, H>,
+            ) -> ::fret_ui::element::AnyElement {
+                <$ty>::into_element(self, cx)
+            }
+        }
+    };
+}
+
+/// Implement `UiPatchTarget` + `UiSupports*` for a component that supports both chrome and layout
+/// refinements, without implementing rendering glue.
+#[macro_export]
+macro_rules! ui_component_chrome_layout_patch_only {
+    ($ty:ty) => {
+        impl $crate::UiPatchTarget for $ty {
+            fn apply_ui_patch(self, patch: $crate::UiPatch) -> Self {
+                self.refine_style(patch.chrome).refine_layout(patch.layout)
+            }
+        }
+
+        impl $crate::UiSupportsChrome for $ty {}
+        impl $crate::UiSupportsLayout for $ty {}
+    };
+}
+
+/// Implement `UiPatchTarget` + `UiSupportsLayout` for a component that supports layout refinements
+/// only, without implementing rendering glue.
+#[macro_export]
+macro_rules! ui_component_layout_only_patch_only {
+    ($ty:ty) => {
+        impl $crate::UiPatchTarget for $ty {
+            fn apply_ui_patch(self, patch: $crate::UiPatch) -> Self {
+                self.refine_layout(patch.layout)
+            }
+        }
+
+        impl $crate::UiSupportsLayout for $ty {}
+    };
+}
+
+/// Implement patch + render glue for a component that does not accept any `UiPatch`, but still
+/// wants to opt into the `.ui()` surface (e.g. purely cosmetic elements).
+#[macro_export]
+macro_rules! ui_component_passthrough {
+    ($ty:ty) => {
+        impl $crate::UiPatchTarget for $ty {
+            fn apply_ui_patch(self, _patch: $crate::UiPatch) -> Self {
+                self
+            }
+        }
+
+        impl $crate::UiIntoElement for $ty {
+            #[track_caller]
+            fn into_element<H: ::fret_ui::UiHost>(
+                self,
+                cx: &mut ::fret_ui::ElementContext<'_, H>,
+            ) -> ::fret_ui::element::AnyElement {
+                <$ty>::into_element(self, cx)
+            }
+        }
+    };
+}
+
+/// Implement `UiPatchTarget` for a component that does not accept any `UiPatch`, without
+/// implementing rendering glue.
+#[macro_export]
+macro_rules! ui_component_passthrough_patch_only {
+    ($ty:ty) => {
+        impl $crate::UiPatchTarget for $ty {
+            fn apply_ui_patch(self, _patch: $crate::UiPatch) -> Self {
+                self
+            }
+        }
+    };
+}
+
+/// Implement `UiIntoElement` for a stateless component authored as `RenderOnce` (ADR 0039).
+///
+/// Note: we intentionally avoid a blanket impl due to coherence restrictions on upstream types.
+#[macro_export]
+macro_rules! ui_into_element_render_once {
+    ($ty:ty) => {
+        impl $crate::UiIntoElement for $ty {
+            #[track_caller]
+            fn into_element<H: ::fret_ui::UiHost>(
+                self,
+                cx: &mut ::fret_ui::ElementContext<'_, H>,
+            ) -> ::fret_ui::element::AnyElement {
+                ::fret_ui::element::RenderOnce::render_once(self, cx)
+            }
+        }
+    };
+}
+
 pub mod command;
 mod corners4;
 pub mod declarative;
@@ -155,3 +300,58 @@ pub fn try_handle_window_overlays_command<H: fret_ui::UiHost>(
 pub use tree::{
     TreeEntry, TreeItem, TreeItemId, TreeRowRenderer, TreeRowState, TreeState, flatten_tree,
 };
+
+#[cfg(test)]
+mod ui_component_macro_tests {
+    use super::*;
+    use fret_ui::element::TextProps;
+
+    #[derive(Debug, Clone, Copy)]
+    struct DummyComponent;
+
+    impl DummyComponent {
+        fn refine_style(self, _chrome: ChromeRefinement) -> Self {
+            self
+        }
+
+        fn refine_layout(self, _layout: LayoutRefinement) -> Self {
+            self
+        }
+
+        fn into_element<H: fret_ui::UiHost>(
+            self,
+            cx: &mut fret_ui::ElementContext<'_, H>,
+        ) -> fret_ui::element::AnyElement {
+            cx.text_props(TextProps::new("dummy"))
+        }
+    }
+
+    ui_component_chrome_layout!(DummyComponent);
+
+    #[test]
+    fn ui_component_chrome_layout_macro_compiles() {
+        fn assert_traits<T: UiPatchTarget + UiSupportsChrome + UiSupportsLayout + UiIntoElement>() {
+        }
+        assert_traits::<DummyComponent>();
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    struct DummyRenderOnceComponent;
+
+    impl fret_ui::element::RenderOnce for DummyRenderOnceComponent {
+        fn render_once<H: fret_ui::UiHost>(
+            self,
+            cx: &mut fret_ui::ElementContext<'_, H>,
+        ) -> fret_ui::element::AnyElement {
+            cx.text_props(TextProps::new("dummy-render-once"))
+        }
+    }
+
+    ui_into_element_render_once!(DummyRenderOnceComponent);
+
+    #[test]
+    fn ui_into_element_render_once_macro_compiles() {
+        fn assert_into_element<T: UiIntoElement>() {}
+        assert_into_element::<DummyRenderOnceComponent>();
+    }
+}
