@@ -35,7 +35,7 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
         "schema_version": 1,
         "root": "root",
         "elements": {
-            "root": { "type": "VStack", "props": { "gap": "N3" }, "children": ["title", "card", "grid_title", "grid", "tabs_title", "tabs", "accordion_title", "accordion", "feedback_title", "feedback_box"] },
+            "root": { "type": "VStack", "props": { "gap": "N3" }, "children": ["title", "card", "grid_title", "grid", "tabs_title", "tabs", "accordion_title", "accordion", "table_title", "table", "feedback_title", "feedback_box"] },
             "title": { "type": "Text", "props": { "text": "GenUI Dashboard Smoke" }, "children": [] },
             "card": { "type": "Card", "props": { "wrapContent": false }, "children": ["card_header", "card_content"] },
             "card_header": { "type": "CardHeader", "props": {}, "children": ["card_title", "card_desc"] },
@@ -106,6 +106,30 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
             },
             "acc_two_text": { "type": "Text", "props": { "text": "Accordion body 2" }, "children": [] },
 
+            "table_title": { "type": "Text", "props": { "text": "Table" }, "children": [] },
+            "table": {
+                "type": "Table",
+                "props": {
+                    "data": { "$state": "/customers" },
+                    "dataPath": "/customers",
+                    "columns": [
+                        { "key": "name", "label": "Name" },
+                        { "key": "email", "label": "Email" },
+                        { "key": "status", "label": "Status" }
+                    ],
+                    "rowActions": [
+                        {
+                            "label": "Delete",
+                            "variant": "destructive",
+                            "action": "removeState",
+                            "params": { "statePath": "/customers", "index": { "$index": true } }
+                        }
+                    ],
+                    "emptyMessage": "No customers"
+                },
+                "children": []
+            },
+
             "feedback_title": { "type": "Text", "props": { "text": "Feedback" }, "children": [] },
             "feedback_box": {
                 "type": "Box",
@@ -130,7 +154,14 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
             "spinner": { "type": "Spinner", "props": { "sizePx": 16 }, "children": [] },
             "skeleton": { "type": "Skeleton", "props": { "hPx": 16, "wFull": true }, "children": [] }
         },
-        "state": { "count": 1, "progress": 42 }
+        "state": {
+            "count": 1,
+            "progress": 42,
+            "customers": [
+                { "id": "c1", "name": "Ada Lovelace", "email": "ada@example.com", "status": "active" },
+                { "id": "c2", "name": "Grace Hopper", "email": "grace@example.com", "status": "inactive" }
+            ]
+        }
     }))
     .unwrap();
 
@@ -182,6 +213,9 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
         assert!(joined.contains("Panel B"));
         assert!(joined.contains("First"));
         assert!(joined.contains("Second"));
+        assert!(joined.contains("Ada Lovelace"));
+        assert!(joined.contains("grace@example.com"));
+        assert!(joined.contains("Delete"));
         assert!(
             !joined.contains("Unknown GenUI component"),
             "unexpected unknown component placeholder text; got:\n{joined}"

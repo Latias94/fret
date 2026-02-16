@@ -8,6 +8,7 @@ use fret_ui::{ElementContext, UiHost};
 mod basic;
 mod choice;
 mod compound;
+mod data;
 mod feedback;
 mod forms;
 mod helpers;
@@ -79,6 +80,7 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
             "Spinner" => Ok(self.render_spinner(cx, props, children)),
             "Skeleton" => Ok(self.render_skeleton(cx, props, children)),
             "Badge" => Ok(self.render_badge(cx, resolved_props, children)),
+            "Table" => Ok(self.render_table(cx, key, props)),
             "ResponsiveGrid" => Ok(self.render_responsive_grid(cx, resolved_props, children)),
             "ResponsiveStack" => Ok(self.render_responsive_stack(cx, resolved_props, children)),
             other => Ok(self.unknown_component(cx, key, other)),

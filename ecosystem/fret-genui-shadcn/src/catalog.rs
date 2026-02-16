@@ -928,6 +928,103 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
     );
 
     out.insert(
+        "Table".to_string(),
+        component("Data table (json-render-style): renders a table from columns[] + data[].")
+            .prop(
+                "data",
+                desc(
+                    CatalogPropV1::any().required(true),
+                    "Rows data. Prefer {\"$state\":\"/path\"} pointing to an array of objects.",
+                ),
+            )
+            .prop(
+                "dataPath",
+                desc(
+                    CatalogPropV1::string(),
+                    "Optional JSON Pointer to the backing state array (enables $item/$index in row action params).",
+                ),
+            )
+            .prop(
+                "columns",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional([
+                        (
+                            "key",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Field key for each row object.",
+                            ),
+                        ),
+                        (
+                            "label",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Column header label.",
+                            ),
+                        ),
+                    ]))
+                    .required(true),
+                    "Table columns.",
+                ),
+            )
+            .prop(
+                "rowActions",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional([
+                        (
+                            "label",
+                            desc(CatalogPropV1::string().required(true), "Button label."),
+                        ),
+                        (
+                            "action",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Action name to enqueue on press.",
+                            ),
+                        ),
+                        (
+                            "params",
+                            desc(
+                                CatalogPropV1::object_fields_allowing_additional(
+                                    std::iter::empty::<(String, CatalogPropV1)>(),
+                                ),
+                                "Optional action params (values or expressions). If dataPath is set, $item/$index are available.",
+                            ),
+                        ),
+                        (
+                            "variant",
+                            desc(
+                                CatalogPropV1::enum_values([
+                                    "default",
+                                    "secondary",
+                                    "destructive",
+                                    "outline",
+                                    "ghost",
+                                    "link",
+                                ]),
+                                "Button variant.",
+                            ),
+                        ),
+                        (
+                            "disabled",
+                            desc(
+                                CatalogPropV1::boolean().default_value(json!(false)),
+                                "Disable the action button.",
+                            ),
+                        ),
+                    ])),
+                    "Optional per-row action buttons.",
+                ),
+            )
+            .prop(
+                "emptyMessage",
+                desc(CatalogPropV1::string(), "Text to show when the data array is empty."),
+            )
+            .note("Table is a macro component: it renders internal rows/cells; it does not require child elements.")
+            .build(),
+    );
+
+    out.insert(
         "ResponsiveGrid".to_string(),
         component(
             "Responsive grid layout: chunks children into rows based on container/viewport width.",
