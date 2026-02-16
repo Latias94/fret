@@ -80,7 +80,7 @@ pub(crate) fn editor_input_group_frame_with_overrides<H: UiHost>(
     cx.container(
         ContainerProps {
             layout,
-            padding: chrome.padding,
+            padding: Edges::all(Px(0.0)),
             background: Some(visuals.bg),
             border: Edges::all(chrome.border_width),
             border_color: Some(visuals.border),
@@ -88,6 +88,28 @@ pub(crate) fn editor_input_group_frame_with_overrides<H: UiHost>(
             ..Default::default()
         },
         move |cx| contents(cx, visuals),
+    )
+}
+
+pub(crate) fn editor_input_group_inset<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    padding: Edges,
+    child: AnyElement,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            padding,
+            ..Default::default()
+        },
+        move |_cx| vec![child],
     )
 }
 

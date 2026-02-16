@@ -17,9 +17,14 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::EditorDensity;
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::icons::editor_icon;
+use crate::primitives::input_group::{
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
+    editor_input_group_row,
+};
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::EditorFrameState;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 #[derive(Debug, Clone)]
@@ -80,22 +85,24 @@ impl MiniSearchBox {
             .unwrap_or(false);
         let enabled_for_paint = self.options.enabled;
 
-        let (density, chrome, text_style) = {
+        let (density, frame_chrome, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+            let frame_chrome = style.frame_chrome_small();
             let (chrome, text_style) = resolve_editor_text_field_style(
                 theme,
                 self.options.size,
                 &ChromeRefinement::default(),
             );
-            (density, chrome, text_style)
+            (density, frame_chrome, chrome, text_style)
         };
 
         let mut input_props = TextInputProps::new(self.model.clone());
         input_props.layout = LayoutStyle {
             size: SizeStyle {
                 width: Length::Fill,
-                height: Length::Auto,
+                height: Length::Fill,
                 min_height: Some(density.row_height),
                 ..Default::default()
             },
@@ -104,11 +111,30 @@ impl MiniSearchBox {
         input_props.enabled = self.options.enabled;
         input_props.focusable = self.options.focusable;
         input_props.placeholder = self.options.placeholder.clone();
-        input_props.test_id = self.options.test_id.clone();
-        input_props.chrome = chrome;
+        input_props.test_id = None;
+
+        // Joined field: the frame is drawn by the input group. Keep the inner text input
+        // transparent and borderless to avoid double chrome.
+        let mut joined_chrome = chrome;
+        joined_chrome.padding = Edges::all(Px(0.0));
+        joined_chrome.border = Edges::all(Px(0.0));
+        joined_chrome.corner_radii = fret_core::Corners::all(Px(0.0));
+        joined_chrome.background = fret_core::Color {
+            a: 0.0,
+            ..joined_chrome.background
+        };
+        joined_chrome.border_color = fret_core::Color {
+            a: 0.0,
+            ..joined_chrome.border_color
+        };
+        joined_chrome.border_color_focused = joined_chrome.border_color;
+        joined_chrome.focus_ring = None;
+
+        input_props.chrome = joined_chrome;
         input_props.text_style = text_style;
 
         let input = cx.text_input(input_props);
+        let is_focused = cx.is_focused_element(input.id);
 
         // Basic affordance: Escape clears if there is text.
         let model_for_key = self.model.clone();
@@ -181,7 +207,7 @@ impl MiniSearchBox {
                             background: bg,
                             border: Edges::all(border_width),
                             border_color: border,
-                            corner_radii: fret_core::Corners::all(Px(6.0)),
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
                             ..Default::default()
                         },
                         move |cx| {
@@ -221,24 +247,34 @@ impl MiniSearchBox {
             el
         });
 
-        let root = cx.flex(
-            FlexProps {
-                layout: self.options.layout,
-                direction: Axis::Horizontal,
-                gap: Px(4.0),
-                padding: Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: false,
+        let divider = frame_chrome.border;
+        let input = editor_input_group_inset(cx, frame_chrome.padding, input);
+
+        let mut root = editor_input_group_frame(
+            cx,
+            self.options.layout,
+            density,
+            frame_chrome,
+            EditorFrameState {
+                enabled: enabled_for_paint,
+                hovered: false,
+                pressed: false,
+                focused: is_focused,
+                open: false,
             },
-            move |_cx| {
+            move |cx, _visuals| {
                 let mut out = vec![input];
                 if let Some(clear) = clear {
+                    out.push(editor_input_group_divider(cx, divider));
                     out.push(clear);
                 }
-                out
+                vec![editor_input_group_row(cx, Px(0.0), out)]
             },
         );
+
+        if let Some(test_id) = self.options.test_id.as_ref() {
+            root = root.test_id(test_id.clone());
+        }
 
         // Do not force focus ring policies here; callers can wrap if needed.
         root

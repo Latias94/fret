@@ -24,7 +24,8 @@ use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, editor_axis_segment, editor_input_group_divider,
-    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_row,
+    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
+    editor_input_group_row,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::EditorFrameState;
@@ -266,7 +267,7 @@ where
                             visuals.bg,
                         );
                         let sep = editor_input_group_divider(cx, divider);
-                        let value = cx.text_props(TextProps {
+                        let value_text_el = cx.text_props(TextProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
@@ -286,6 +287,8 @@ where
                             overflow: TextOverflow::Ellipsis,
                             align: TextAlign::Start,
                         });
+                        let value =
+                            editor_input_group_inset(cx, frame_chrome.padding, value_text_el);
 
                         vec![editor_input_group_row(cx, Px(0.0), vec![axis, sep, value])]
                     },
@@ -471,21 +474,7 @@ where
                     let sep = editor_input_group_divider(cx, divider);
 
                     // Wrap the text input so the group padding applies, without adding its own padding.
-                    let input_wrap = cx.container(
-                        fret_ui::element::ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    min_height: Some(density.row_height),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        move |_cx| vec![input],
-                    );
+                    let input_wrap = editor_input_group_inset(cx, frame_chrome.padding, input);
 
                     vec![editor_input_group_row(
                         cx,
