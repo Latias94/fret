@@ -386,51 +386,173 @@ impl<H: UiHost> UiTree<H> {
             }
             return;
         }
-        if matches!(event, Event::Timer { .. }) {
-            if let Event::Timer { token } = event
-                && let Some(window) = self.window
-                && let Some(node) = crate::elements::timer_target_node(app, window, *token)
-            {
-                let stopped = self.dispatch_event_to_node_chain(
-                    app,
-                    services,
-                    &input_ctx,
-                    node,
-                    event,
-                    &mut needs_redraw,
-                    &mut invalidation_visited,
-                );
-                if stopped {
-                    if needs_redraw {
-                        self.request_redraw_coalesced(app);
+        if let Event::Timer { token } = event {
+            let window = self.window;
+            let frame_id = app.frame_id();
+            let token = *token;
+            let mut timer_target: Option<NodeId> = None;
+            let mut broadcast_rebuild_visible_layers_elapsed: Option<Duration> = None;
+            let mut broadcast_loop_elapsed: Option<Duration> = None;
+            let mut broadcast_layers_visited: u32 = 0;
+            let mut stopped = false;
+            let mut broadcast_attempted = false;
+
+            let ((), timer_elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.dispatch.timer",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        token = token.0,
+                    )
+                },
+                || {
+                    if let Some(window) = window {
+                        timer_target = crate::elements::timer_target_node(app, window, token);
                     }
-                    return;
+                    if let Some(node) = timer_target {
+                        let (targeted_stopped, _) = fret_perf::measure_span(
+                            self.debug_enabled,
+                            trace_enabled,
+                            || {
+                                tracing::trace_span!(
+                                    "fret.ui.dispatch.timer.targeted",
+                                    window = ?window,
+                                    frame_id = frame_id.0,
+                                    token = token.0,
+                                    node = ?node,
+                                )
+                            },
+                            || {
+                                self.dispatch_event_to_node_chain(
+                                    app,
+                                    services,
+                                    &input_ctx,
+                                    node,
+                                    event,
+                                    &mut needs_redraw,
+                                    &mut invalidation_visited,
+                                )
+                            },
+                        );
+                        stopped = targeted_stopped;
+                    }
+
+                    if !stopped {
+                        broadcast_attempted = true;
+                        let (layers, rebuild_elapsed) = fret_perf::measure_span(
+                            self.debug_enabled,
+                            trace_enabled,
+                            || {
+                                tracing::trace_span!(
+                                    "fret.ui.dispatch.timer.broadcast.rebuild_visible_layers",
+                                    window = ?window,
+                                    frame_id = frame_id.0,
+                                    token = token.0,
+                                )
+                            },
+                            || {
+                                self.visible_layers_in_paint_order()
+                                    .collect::<Vec<UiLayerId>>()
+                            },
+                        );
+                        broadcast_rebuild_visible_layers_elapsed = rebuild_elapsed;
+
+                        let (broadcast_stopped, loop_elapsed) = fret_perf::measure_span(
+                            self.debug_enabled,
+                            trace_enabled,
+                            || {
+                                tracing::trace_span!(
+                                    "fret.ui.dispatch.timer.broadcast.loop",
+                                    window = ?window,
+                                    frame_id = frame_id.0,
+                                    token = token.0,
+                                )
+                            },
+                            || {
+                                for layer_id in layers.into_iter().rev() {
+                                    broadcast_layers_visited =
+                                        broadcast_layers_visited.saturating_add(1);
+                                    let Some(layer) = self.layers.get(layer_id) else {
+                                        continue;
+                                    };
+                                    if !layer.wants_timer_events || !layer.visible {
+                                        continue;
+                                    }
+                                    let stopped = self.dispatch_event_to_node_chain(
+                                        app,
+                                        services,
+                                        &input_ctx,
+                                        layer.root,
+                                        event,
+                                        &mut needs_redraw,
+                                        &mut invalidation_visited,
+                                    );
+                                    if stopped {
+                                        return true;
+                                    }
+                                }
+                                false
+                            },
+                        );
+                        broadcast_loop_elapsed = loop_elapsed;
+                        stopped = broadcast_stopped;
+                    }
+                },
+            );
+
+            if self.debug_enabled {
+                let is_targeted = timer_target.is_some();
+                if is_targeted {
+                    self.debug_stats.dispatch_timer_targeted_events = self
+                        .debug_stats
+                        .dispatch_timer_targeted_events
+                        .saturating_add(1);
+                } else {
+                    self.debug_stats.dispatch_timer_broadcast_events = self
+                        .debug_stats
+                        .dispatch_timer_broadcast_events
+                        .saturating_add(1);
+                }
+
+                if let Some(timer_elapsed) = timer_elapsed {
+                    if is_targeted {
+                        self.debug_stats.dispatch_timer_targeted_time += timer_elapsed;
+                    } else {
+                        self.debug_stats.dispatch_timer_broadcast_time += timer_elapsed;
+                    }
+
+                    if timer_elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                        self.debug_stats.dispatch_timer_slowest_event_time = timer_elapsed;
+                        self.debug_stats.dispatch_timer_slowest_token = Some(token);
+                        self.debug_stats.dispatch_timer_slowest_was_broadcast = !is_targeted;
+                    }
+                }
+
+                if broadcast_attempted && timer_target.is_none() {
+                    self.debug_stats.dispatch_timer_broadcast_layers_visited = self
+                        .debug_stats
+                        .dispatch_timer_broadcast_layers_visited
+                        .saturating_add(broadcast_layers_visited);
+
+                    if let Some(rebuild_elapsed) = broadcast_rebuild_visible_layers_elapsed {
+                        self.debug_stats
+                            .dispatch_timer_broadcast_rebuild_visible_layers_time +=
+                            rebuild_elapsed;
+                    }
+                    if let Some(loop_elapsed) = broadcast_loop_elapsed {
+                        self.debug_stats.dispatch_timer_broadcast_loop_time += loop_elapsed;
+                    }
                 }
             }
 
-            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-            for layer_id in layers.into_iter().rev() {
-                let Some(layer) = self.layers.get(layer_id) else {
-                    continue;
-                };
-                if !layer.wants_timer_events || !layer.visible {
-                    continue;
+            if stopped {
+                if needs_redraw {
+                    self.request_redraw_coalesced(app);
                 }
-                let stopped = self.dispatch_event_to_node_chain(
-                    app,
-                    services,
-                    &input_ctx,
-                    layer.root,
-                    event,
-                    &mut needs_redraw,
-                    &mut invalidation_visited,
-                );
-                if stopped {
-                    if needs_redraw {
-                        self.request_redraw_coalesced(app);
-                    }
-                    return;
-                }
+                return;
             }
         }
 
