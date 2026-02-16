@@ -478,8 +478,8 @@ impl SceneRecording {
                         });
                     }
                 }
-                SceneOp::Text { origin, color, .. } => {
-                    if !point_is_finite(origin) || !color_is_finite(color) {
+                SceneOp::Text { origin, paint, .. } => {
+                    if !point_is_finite(origin) || !paint_is_finite(paint) {
                         return Err(SceneValidationError {
                             index,
                             op,

@@ -56,8 +56,13 @@ Key semantics to lock:
 - clip/mask/effect stacks operate in pixel space as today
 - backends must degrade deterministically when a `Paint` variant is unsupported
 
+## Current progress (2026-02-16)
+
+- Contract landed: `SceneOp::Text` now carries `paint: Paint` (instead of `color: Color`).
+- Renderer landed (wgpu default): text paint evaluation is supported for solid + gradients with bounded batching (`paint_index`).
+- Conformance gate landed: `crates/fret-render-wgpu/tests/text_paint_conformance.rs`.
+
 ## Tracking
 
 Detailed TODOs: `docs/workstreams/text-paint-surface-v1-todo.md`  
 Milestones: `docs/workstreams/text-paint-surface-v1-milestones.md`
-

@@ -76,11 +76,17 @@ Degradations must not introduce unbounded state surfaces.
 
 ## Evidence / implementation anchors
 
-Planned anchors (to be filled as work lands):
+Anchors (staged / WIP in `ws/renderer-vnext-fearless-refactor-v1`):
 
-- Contract: `crates/fret-core/src/scene/mod.rs` (`SceneOp::Text { paint }`)
-- Validation/fingerprint: `crates/fret-core/src/scene/validate.rs`, `crates/fret-core/src/scene/fingerprint.rs`
-- Renderer text pipeline: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs`,
-  `crates/fret-render-wgpu/src/renderer/shaders.rs`
-- Conformance: `crates/fret-render-wgpu/tests/` (GPU readback text paint tests)
-
+- Contract:
+  - `crates/fret-core/src/scene/mod.rs` (`SceneOp::Text { paint }`)
+- Validation/fingerprint:
+  - `crates/fret-core/src/scene/validate.rs`
+  - `crates/fret-core/src/scene/fingerprint.rs`
+- Renderer (wgpu default):
+  - Encoding: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (per-vertex `local_pos`, `TextDraw.paint_index`)
+  - Bindings: `crates/fret-render-wgpu/src/renderer/resources.rs`, `crates/fret-render-wgpu/src/renderer/buffers.rs`
+  - Execute: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (bind group 2 + instance-indexed paint lookup)
+- Conformance:
+  - Font determinism: `crates/fret-render-wgpu/tests/text_font_source_determinism.rs`
+  - GPU readback: `crates/fret-render-wgpu/tests/text_paint_conformance.rs`

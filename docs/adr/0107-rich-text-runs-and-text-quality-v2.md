@@ -7,7 +7,7 @@ Status: Proposed
 Fret’s current text contract (ADR 0006 / ADR 0029) is intentionally simple:
 
 - `TextService::prepare(text: &str, style: &TextStyle, constraints: TextConstraints) -> (TextBlobId, TextMetrics)`
-- `SceneOp::Text { text: TextBlobId, color, origin }`
+- `SceneOp::Text { text: TextBlobId, paint, origin }`
 
 This works well for “uniform style” UI text. However, editor-grade surfaces (and the new Markdown
 surface in ADR 0099) require **inline style variation** that must still participate in wrapping,

@@ -130,6 +130,7 @@ pub(super) struct ViewportVertex {
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct TextVertex {
     pub(super) pos_px: [f32; 2],
+    pub(super) local_pos_px: [f32; 2],
     pub(super) uv: [f32; 2],
     pub(super) color: [f32; 4],
 }
@@ -561,6 +562,7 @@ pub(super) struct TextDraw {
     pub(super) vertex_count: u32,
     pub(super) kind: TextDrawKind,
     pub(super) atlas_page: u16,
+    pub(super) paint_index: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -643,6 +645,7 @@ pub(super) struct EffectMarker {
 pub(super) struct SceneEncoding {
     pub(super) instances: Vec<QuadInstance>,
     pub(super) path_paints: Vec<PaintGpu>,
+    pub(super) text_paints: Vec<PaintGpu>,
     pub(super) viewport_vertices: Vec<ViewportVertex>,
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
@@ -666,6 +669,7 @@ impl SceneEncoding {
     pub(super) fn clear(&mut self) {
         self.instances.clear();
         self.path_paints.clear();
+        self.text_paints.clear();
         self.viewport_vertices.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();

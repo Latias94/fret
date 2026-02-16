@@ -32,7 +32,7 @@ Acceptance criteria:
 - `SceneOp::Text` accepts `Paint`.
 - ADR locks the coordinate semantics and fallback/degradation policy.
 
-Status: Not started.
+Status: Landed.
 
 ### M1 — Renderer implementation
 
@@ -41,7 +41,7 @@ Acceptance criteria:
 - wgpu text pipeline evaluates paint correctly in logical text-local space.
 - material paint is capability-gated and degrades deterministically.
 
-Status: Not started.
+Status: Landed (wgpu default).
 
 ### M2 — Conformance gate
 
@@ -49,7 +49,7 @@ Acceptance criteria:
 
 - GPU readback test(s) assert expected gradient properties across scale factors.
 
-Status: Not started.
+Status: Landed (GPU readback).
 
 ### M3 — Adoption (optional)
 
@@ -58,4 +58,3 @@ Acceptance criteria:
 - At least one consumer uses non-solid `Paint` on text to validate ergonomics.
 
 Status: Not started.
-

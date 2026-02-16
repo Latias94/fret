@@ -606,7 +606,7 @@ impl ElementHostWidget {
                     order: DrawOrder(0),
                     origin,
                     text: blob,
-                    color,
+                    paint: fret_core::scene::Paint::Solid(color),
                 });
             }
             ElementInstance::StyledText(props) => {
@@ -800,7 +800,7 @@ impl ElementHostWidget {
                     order: DrawOrder(0),
                     origin,
                     text: blob,
-                    color,
+                    paint: fret_core::scene::Paint::Solid(color),
                 });
             }
             ElementInstance::SelectableText(props) => {
@@ -1144,7 +1144,7 @@ impl ElementHostWidget {
                     order: DrawOrder(0),
                     origin,
                     text: blob,
-                    color,
+                    paint: fret_core::scene::Paint::Solid(color),
                 });
 
                 if dragging

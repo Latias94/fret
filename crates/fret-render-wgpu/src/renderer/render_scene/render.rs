@@ -539,12 +539,14 @@ impl Renderer {
 
         let instances = &encoding.instances;
         let path_paints = &encoding.path_paints;
+        let text_paints = &encoding.text_paints;
         let viewport_vertices = &encoding.viewport_vertices;
         let text_vertices = &encoding.text_vertices;
         let path_vertices = &encoding.path_vertices;
 
         self.ensure_instance_capacity(device, instances.len());
         self.ensure_path_paint_capacity(device, path_paints.len());
+        self.ensure_text_paint_capacity(device, text_paints.len());
         self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
         self.ensure_text_vertex_capacity(device, text_vertices.len());
         self.ensure_path_vertex_capacity(device, path_vertices.len());
@@ -574,6 +576,20 @@ impl Renderer {
                 frame_perf.instance_bytes = frame_perf
                     .instance_bytes
                     .saturating_add((std::mem::size_of::<PaintGpu>() * path_paints.len()) as u64);
+            }
+        }
+
+        let text_paint_buffer_index = self.text_paint_buffer_index;
+        self.text_paint_buffer_index =
+            (self.text_paint_buffer_index + 1) % self.text_paint_buffers.len();
+        let text_paint_buffer = self.text_paint_buffers[text_paint_buffer_index].clone();
+        let text_paint_bind_group = self.text_paint_bind_groups[text_paint_buffer_index].clone();
+        if !text_paints.is_empty() {
+            queue.write_buffer(&text_paint_buffer, 0, bytemuck::cast_slice(text_paints));
+            if perf_enabled {
+                frame_perf.instance_bytes = frame_perf
+                    .instance_bytes
+                    .saturating_add((std::mem::size_of::<PaintGpu>() * text_paints.len()) as u64);
             }
         }
 
@@ -1381,6 +1397,7 @@ impl Renderer {
                                                         .mask_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
+                                                pass.set_bind_group(2, &text_paint_bind_group, &[]);
                                                 if perf_enabled {
                                                     frame_perf.bind_group_switches = frame_perf
                                                         .bind_group_switches
@@ -1434,6 +1451,7 @@ impl Renderer {
                                                         .color_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
+                                                pass.set_bind_group(2, &text_paint_bind_group, &[]);
                                                 if perf_enabled {
                                                     frame_perf.bind_group_switches = frame_perf
                                                         .bind_group_switches
@@ -1489,6 +1507,7 @@ impl Renderer {
                                                         .subpixel_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
+                                                pass.set_bind_group(2, &text_paint_bind_group, &[]);
                                                 if perf_enabled {
                                                     frame_perf.bind_group_switches = frame_perf
                                                         .bind_group_switches
@@ -1565,7 +1584,7 @@ impl Renderer {
                                     }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                        0..1,
+                                        draw.paint_index..(draw.paint_index + 1),
                                     );
                                     if perf_enabled {
                                         frame_perf.draw_calls =

@@ -7,10 +7,13 @@ Tracking files:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 
-Current status (as of 2026-02-15):
+Current status (as of 2026-02-16):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
 - Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
+- Text paint surface v1 started:
+  - ADR 0279 drafted (`SceneOp::Text` upgrades from `Color` to `Paint`).
+  - Implementation WIP in this worktree (next: GPU readback conformance).
 - A cheap headless perf gate exists and has a checked-in baseline:
   - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
@@ -511,7 +514,7 @@ This appendix is a living inventory for M4 (`Paint/Material evolution`). It answ
 | `SceneOp::Quad` | fill/background | `Paint` (solid + gradients + `Paint::Material`) | Renderer conformance: `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`, `crates/fret-render-wgpu/tests/materials_conformance.rs`, `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`. |
 | `SceneOp::Quad` | border | `Paint` (solid + gradients + `Paint::Material`) | Same gates as fill; border paint is a `Paint` in the contract. |
 | `SceneOp::StrokeRRect` | stroke | `Paint` (solid + gradients + `Paint::Material`) | Contract: `crates/fret-core/src/scene/mod.rs` (`StrokeRRect.stroke_paint: Paint`). |
-| `SceneOp::Text` | glyph color | solid `Color` only | Paint expansion would need an explicit contract (e.g. gradient text, material text) and dedicated conformance scenes. |
+| `SceneOp::Text` | glyph paint | `Paint` (v1: solid + linear gradient; bounded fallbacks) | Contract + semantics: ADR 0279. Tracking: `docs/workstreams/text-paint-surface-v1.md` (conformance gate pending). |
 | `SceneOp::Path` | fill color | solid `Color` only | Contract expansion candidate tracked as `REN-VNEXT-paint-002`. |
 | `SceneOp::{Image,ImageRegion}` | texture sample | image + opacity | Sampling hints are tracked as M5; mask-image uses `Mask::Image` (ADR 0273), not `Paint`. |
 | `SceneOp::MaskImage` / `SceneOp::SvgMaskIcon` | alpha mask tint | solid `Color` tint + opacity | Coverage is expected in red for `MaskImage`. |
@@ -523,8 +526,9 @@ This appendix is a living inventory for M4 (`Paint/Material evolution`). It answ
 - `SceneOp::Path` being solid-only is the largest “paint surface discontinuity” today.
   - If we expand it to accept `Paint`, we must define: tiling semantics, local coordinate mapping
     (origin + transform), and deterministic fallbacks for wasm/mobile (ADR + conformance gate).
-- `SceneOp::Text` paint expansion is deferred until text pipeline constraints are settled; keep the
-  v1 contract simple and predictable.
+- `SceneOp::Text` paint expansion is now tracked as an active, bounded workstream:
+  - ADR 0279 + `docs/workstreams/text-paint-surface-v1.md`
+  - next closure item: GPU readback conformance gate(s)
 
 Decision (v1 for this workstream):
 
@@ -594,7 +598,7 @@ The current contract is intentionally conservative:
 
 - `SceneOp::Quad` supports `Paint` for fill and border.
 - `SceneOp::Path` is **solid-color only**.
-- `SceneOp::Text` is **solid-color only**.
+- `SceneOp::Text` now accepts `Paint` (v1 bounded; conformance pending).
 
 Common needs that are not contract-level yet:
 

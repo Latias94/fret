@@ -99,6 +99,12 @@ pub struct Renderer {
     path_paint_buffer_index: usize,
     path_paint_capacity: usize,
 
+    text_paint_buffers: Vec<wgpu::Buffer>,
+    text_paint_bind_group_layout: wgpu::BindGroupLayout,
+    text_paint_bind_groups: Vec<wgpu::BindGroup>,
+    text_paint_buffer_index: usize,
+    text_paint_capacity: usize,
+
     viewport_vertex_buffers: Vec<wgpu::Buffer>,
     viewport_vertex_buffer_index: usize,
     viewport_vertex_capacity: usize,

@@ -418,6 +418,48 @@ impl Renderer {
             })
             .collect();
 
+        let text_paint_capacity = 1024;
+        let text_paint_buffers: Vec<wgpu::Buffer> = (0..FRAMES_IN_FLIGHT)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret text paints #{i}")),
+                    size: (text_paint_capacity * std::mem::size_of::<PaintGpu>()) as u64,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
+        let text_paint_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret text paints bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let text_paint_bind_groups: Vec<wgpu::BindGroup> = text_paint_buffers
+            .iter()
+            .enumerate()
+            .map(|(i, buffer)| {
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some(&format!("fret text paints bind group #{i}")),
+                    layout: &text_paint_bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: buffer.as_entire_binding(),
+                    }],
+                })
+            })
+            .collect();
+
         let viewport_vertex_capacity = 64 * 6;
         let viewport_vertex_buffers = (0..FRAMES_IN_FLIGHT)
             .map(|i| {
@@ -531,6 +573,11 @@ impl Renderer {
             path_paint_bind_groups,
             path_paint_buffer_index: 0,
             path_paint_capacity,
+            text_paint_buffers,
+            text_paint_bind_group_layout,
+            text_paint_bind_groups,
+            text_paint_buffer_index: 0,
+            text_paint_capacity,
             viewport_vertex_buffers,
             viewport_vertex_buffer_index: 0,
             viewport_vertex_capacity,

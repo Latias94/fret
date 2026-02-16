@@ -1425,7 +1425,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         order: DrawOrder(0),
                         origin: base_origin,
                         text: blob,
-                        color: self.chrome_style.placeholder_color,
+                        paint: fret_core::scene::Paint::Solid(self.chrome_style.placeholder_color),
                     });
                 }
             } else if let Some(blob) = self.text_blob {
@@ -1433,7 +1433,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: base_origin,
                     text: blob,
-                    color: self.chrome_style.text_color,
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
                 });
             }
         } else {
@@ -1451,7 +1451,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: base_origin,
                     text: blob,
-                    color: self.chrome_style.text_color,
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
                 });
             }
             if let Some(pre_blob) = self.preedit_blob {
@@ -1461,7 +1461,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: pre_origin,
                     text: pre_blob,
-                    color: self.chrome_style.preedit_color,
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.preedit_color),
                 });
             }
             if let Some(suffix_blob) = self.suffix_blob {
@@ -1473,7 +1473,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: suffix_origin,
                     text: suffix_blob,
-                    color: self.chrome_style.text_color,
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
                 });
             }
         }

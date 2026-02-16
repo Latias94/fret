@@ -510,7 +510,7 @@ pub enum SceneOp {
         order: DrawOrder,
         origin: Point,
         text: TextBlobId,
-        color: Color,
+        paint: Paint,
     },
 
     Path {
