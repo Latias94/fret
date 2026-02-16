@@ -105,7 +105,7 @@ pub use text::{
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
-    StrokeStyle,
+    StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2,
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::{

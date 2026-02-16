@@ -29,6 +29,26 @@ pub(super) struct PreparedPath {
 }
 
 fn mix_path_style(state: u64, style: fret_core::PathStyle) -> u64 {
+    fn stable_join_key(join: fret_core::StrokeJoinV1) -> u64 {
+        match join {
+            fret_core::StrokeJoinV1::Miter => 1,
+            fret_core::StrokeJoinV1::Bevel => 2,
+            fret_core::StrokeJoinV1::Round => 3,
+        }
+    }
+
+    fn stable_cap_key(cap: fret_core::StrokeCapV1) -> u64 {
+        match cap {
+            fret_core::StrokeCapV1::Butt => 1,
+            fret_core::StrokeCapV1::Square => 2,
+            fret_core::StrokeCapV1::Round => 3,
+        }
+    }
+
+    fn stable_f32(x: f32) -> f32 {
+        if x.is_finite() { x } else { 0.0 }
+    }
+
     match style {
         fret_core::PathStyle::Fill(fill) => {
             let state = mix_u64(state, 0xF11);
@@ -41,6 +61,19 @@ fn mix_path_style(state: u64, style: fret_core::PathStyle) -> u64 {
         fret_core::PathStyle::Stroke(stroke) => {
             let mut state = mix_u64(state, 0x570);
             state = mix_f32(state, stroke.width.0);
+            state
+        }
+        fret_core::PathStyle::StrokeV2(stroke) => {
+            let mut state = mix_u64(state, 0x572);
+            state = mix_f32(state, stroke.width.0);
+            state = mix_u64(state, stable_join_key(stroke.join));
+            state = mix_u64(state, stable_cap_key(stroke.cap));
+            state = mix_f32(state, stable_f32(stroke.miter_limit));
+            // v2 note: dash is a contract field but is implemented incrementally in the default
+            // renderer. Until deterministic dash segmentation is implemented, we degrade any dash
+            // request to a solid stroke and intentionally do *not* key the path cache on dash
+            // fields (avoid cache/key-space blowups with no visual effect).
+            state = mix_u64(state, 0);
             state
         }
     }
@@ -156,8 +189,13 @@ pub(super) fn metrics_from_path_commands(
         return fret_core::PathMetrics::default();
     };
 
-    if let fret_core::PathStyle::Stroke(stroke) = style {
-        let half = stroke.width.0.max(0.0) * 0.5;
+    let stroke_width = match style {
+        fret_core::PathStyle::Stroke(stroke) => Some(stroke.width),
+        fret_core::PathStyle::StrokeV2(stroke) => Some(stroke.width),
+        fret_core::PathStyle::Fill(_) => None,
+    };
+    if let Some(width) = stroke_width {
+        let half = width.0.max(0.0) * 0.5;
         min_x -= half;
         min_y -= half;
         max_x += half;
@@ -274,6 +312,48 @@ pub(super) fn tessellate_path_commands(
                 .with_line_join(lyon::tessellation::LineJoin::Round)
                 .with_start_cap(lyon::tessellation::LineCap::Round)
                 .with_end_cap(lyon::tessellation::LineCap::Round);
+            let mut tessellator = StrokeTessellator::new();
+            let _ = tessellator.tessellate_path(
+                &path,
+                &opts,
+                &mut BuffersBuilder::new(&mut buffers, |v: StrokeVertex| {
+                    let p = v.position();
+                    [p.x, p.y]
+                }),
+            );
+        }
+        fret_core::PathStyle::StrokeV2(stroke) => {
+            let width = stroke.width.0.max(0.0);
+
+            let join = match stroke.join {
+                fret_core::StrokeJoinV1::Miter => lyon::tessellation::LineJoin::Miter,
+                fret_core::StrokeJoinV1::Bevel => lyon::tessellation::LineJoin::Bevel,
+                fret_core::StrokeJoinV1::Round => lyon::tessellation::LineJoin::Round,
+            };
+            let cap = match stroke.cap {
+                fret_core::StrokeCapV1::Butt => lyon::tessellation::LineCap::Butt,
+                fret_core::StrokeCapV1::Square => lyon::tessellation::LineCap::Square,
+                fret_core::StrokeCapV1::Round => lyon::tessellation::LineCap::Round,
+            };
+
+            let miter_limit = if stroke.miter_limit.is_finite() {
+                stroke.miter_limit.clamp(1.0, 64.0)
+            } else {
+                4.0
+            };
+
+            // v2 note: dash is a contract field but may be implemented incrementally. Until we
+            // implement deterministic dash segmentation for arbitrary vector paths, we treat a
+            // dash request as a solid stroke (deterministic degradation).
+            let _dash = stroke.dash;
+
+            let opts = StrokeOptions::default()
+                .with_line_width(width)
+                .with_tolerance(tolerance)
+                .with_line_join(join)
+                .with_miter_limit(miter_limit)
+                .with_start_cap(cap)
+                .with_end_cap(cap);
             let mut tessellator = StrokeTessellator::new();
             let _ = tessellator.tessellate_path(
                 &path,
