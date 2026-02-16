@@ -315,14 +315,20 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             fit: format!("{fit:?}"),
             opacity: round3(opacity),
         },
-        SceneOp::Text { origin, color, .. } => SnapSceneOp::Text {
+        SceneOp::Text { origin, paint, .. } => SnapSceneOp::Text {
             origin: snap_point(origin),
-            color: snap_color(color),
+            color: snap_paint(paint),
         },
-        SceneOp::Path { origin, color, .. } => SnapSceneOp::Path {
-            origin: snap_point(origin),
-            color: snap_color(color),
-        },
+        SceneOp::Path { origin, paint, .. } => {
+            let color = match paint {
+                fret_core::Paint::Solid(c) => c,
+                _ => fret_core::scene::Color::TRANSPARENT,
+            };
+            SnapSceneOp::Path {
+                origin: snap_point(origin),
+                color: snap_color(color),
+            }
+        }
         SceneOp::ViewportSurface { rect, opacity, .. } => SnapSceneOp::ViewportSurface {
             rect: snap_rect(rect),
             opacity: round3(opacity),

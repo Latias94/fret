@@ -826,3 +826,169 @@ fn ime_cursor_area_is_in_visual_space_after_render_transform() {
         "expected IME cursor y to include render transform translation"
     );
 }
+
+#[test]
+fn ime_cursor_area_scrolls_horizontally_to_keep_caret_visible() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(40.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(RenderTransformWrapper::new(
+        fret_core::Transform2D::IDENTITY,
+    ));
+    let mut widget = TextInput::new().with_text("abcdefghijklmnopqrstuvwxyz");
+    widget.set_chrome_style(crate::TextInputStyle {
+        padding: fret_core::Edges::all(Px(0.0)),
+        ..Default::default()
+    });
+    let input = ui.create_node(widget);
+    ui.add_child(root, input);
+    ui.set_root(root);
+    ui.set_focus(Some(input));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = ImeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let origin = app
+        .take_effects()
+        .into_iter()
+        .find_map(|e| match e {
+            Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin),
+            _ => None,
+        })
+        .expect("expected an IME cursor area effect");
+
+    assert!(
+        origin.x.0 <= bounds.origin.x.0 + bounds.size.width.0 + 0.001,
+        "expected IME cursor x to remain within the text input bounds after horizontal scrolling"
+    );
+}
+
+#[test]
+fn dragging_selection_autoscrolls_horizontally_beyond_viewport() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(40.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(RenderTransformWrapper::new(
+        fret_core::Transform2D::IDENTITY,
+    ));
+    let mut widget = TextInput::new().with_text("abcdefghijklmnopqrstuvwxyz");
+    widget.set_chrome_style(crate::TextInputStyle {
+        padding: fret_core::Edges::all(Px(0.0)),
+        ..Default::default()
+    });
+    widget.caret = 0;
+    widget.selection_anchor = 0;
+    widget.offset_x = Px(0.0);
+    let input = ui.create_node(widget);
+    ui.add_child(root, input);
+    ui.set_root(root);
+    ui.set_focus(Some(input));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = ImeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(0.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let mut token = app
+        .take_effects()
+        .into_iter()
+        .find_map(|e| match e {
+            Effect::SetTimer { token, .. } => Some(token),
+            _ => None,
+        })
+        .expect("expected selection autoscroll to schedule a timer on pointer down");
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(13.0), Px(10.0)),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = app.take_effects();
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let snap0 = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after paint");
+    let (_, focus0) = snap0
+        .selection_utf16
+        .expect("expected selection to be present for focused text input");
+    assert!(
+        focus0 < snap0.text_len_utf16,
+        "expected a partial selection before timer-driven auto-scroll ticks"
+    );
+
+    for _ in 0..5 {
+        ui.dispatch_event(&mut app, &mut text, &Event::Timer { token });
+
+        token = app
+            .take_effects()
+            .into_iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, .. } => Some(token),
+                _ => None,
+            })
+            .expect("expected selection autoscroll to schedule the next timer tick");
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    }
+
+    let snap1 = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after paint");
+    let (_, focus1) = snap1
+        .selection_utf16
+        .expect("expected selection to be present for focused text input");
+
+    assert!(
+        focus1 > focus0,
+        "expected dragging selection near the right edge to auto-scroll and extend the selection"
+    );
+}

@@ -940,6 +940,11 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_bind_group_switches: u64,
     pub(super) renderer_scissor_sets: u64,
     pub(super) renderer_scene_encoding_cache_misses: u64,
+    pub(super) renderer_material_quad_ops: u64,
+    pub(super) renderer_material_sampled_quad_ops: u64,
+    pub(super) renderer_material_distinct: u64,
+    pub(super) renderer_material_unknown_ids: u64,
+    pub(super) renderer_material_degraded_due_to_budget: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
     pub(super) changed_models: u32,
@@ -9176,6 +9181,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_scene_encoding_cache_misses"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_material_quad_ops = stats
+                .and_then(|m| m.get("renderer_material_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_sampled_quad_ops = stats
+                .and_then(|m| m.get("renderer_material_sampled_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_distinct = stats
+                .and_then(|m| m.get("renderer_material_distinct"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_unknown_ids = stats
+                .and_then(|m| m.get("renderer_material_unknown_ids"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_degraded_due_to_budget = stats
+                .and_then(|m| m.get("renderer_material_degraded_due_to_budget"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_engine_solves = stats
                 .and_then(|m| m.get("layout_engine_solves"))
                 .and_then(|v| v.as_u64())
@@ -9834,6 +9859,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_bind_group_switches,
                 renderer_scissor_sets,
                 renderer_scene_encoding_cache_misses,
+                renderer_material_quad_ops,
+                renderer_material_sampled_quad_ops,
+                renderer_material_distinct,
+                renderer_material_unknown_ids,
+                renderer_material_degraded_due_to_budget,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
                 changed_models,
@@ -20038,7 +20068,10 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
     // 0: waiting for caret=2 (collapsed), no composition
     // 1: waiting for composition=2..4 and caret=4 (collapsed)
     // 2: waiting for caret=2 (collapsed), no composition
-    // 3: success
+    // 3: waiting for selection=0..5 (no composition) OR selection=2..2 + composition=0..2
+    // 4: waiting for selection=2..2 + composition=0..2
+    // 5: waiting for selection=0..5 (no composition)
+    // 6: success
     let mut state: u8 = 0;
 
     for w in windows {
@@ -20185,6 +20218,26 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
                         state = 3;
                     }
                 }
+                3 => {
+                    // The platform-style button sets selection 0..5 and immediately begins a
+                    // selection-replacing composition. Depending on snapshot timing we may see
+                    // either intermediate selection state or the composed view directly.
+                    if sel_lo == 0 && sel_hi == 5 && comp_norm.is_none() {
+                        state = 4;
+                    } else if sel_lo == 2 && sel_hi == 2 && comp_norm == Some((0, 2)) {
+                        state = 5;
+                    }
+                }
+                4 => {
+                    if sel_lo == 2 && sel_hi == 2 && comp_norm == Some((0, 2)) {
+                        state = 5;
+                    }
+                }
+                5 => {
+                    if sel_lo == 0 && sel_hi == 5 && comp_norm.is_none() {
+                        state = 6;
+                    }
+                }
                 _ => {}
             }
         }
@@ -20208,7 +20261,9 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
         "expected_sequence_normalized": [
             {"text_selection":[2,2],"text_composition":null},
             {"text_selection":[4,4],"text_composition":[2,4]},
-            {"text_selection":[2,2],"text_composition":null}
+            {"text_selection":[2,2],"text_composition":null},
+            {"text_selection":[2,2],"text_composition":[0,2]},
+            {"text_selection":[0,5],"text_composition":null}
         ],
     });
     write_json_value(&evidence_path, &payload)?;
@@ -20221,12 +20276,12 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
         ));
     }
 
-    if state == 3 {
+    if state == 6 {
         return Ok(());
     }
 
     Err(format!(
-        "ui-gallery code-editor a11y-composition gate failed (expected selection/composition sequence: caret 2..2 (no composition) -> caret 4..4 (composition 2..4) -> caret 2..2 (no composition))\n  bundle: {}\n  evidence: {}",
+        "ui-gallery code-editor a11y-composition gate failed (expected selection/composition sequence: caret 2..2 (no composition) -> caret 4..4 (composition 2..4) -> caret 2..2 (no composition) -> selection-replacing composition -> cancel restores selection)\n  bundle: {}\n  evidence: {}",
         bundle_path.display(),
         evidence_path.display()
     ))

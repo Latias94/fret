@@ -138,6 +138,8 @@ impl CodeBlock {
             copy_button_placement: fret_code_view::CodeBlockCopyButtonPlacement::Overlay,
             border: true,
             wrap: fret_code_view::CodeBlockWrap::ScrollX,
+            disable_ligatures: true,
+            disable_contextual_alternates: true,
             max_height: self.max_height,
             windowed_lines: false,
             windowed_lines_overscan: 6,

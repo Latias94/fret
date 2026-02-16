@@ -375,7 +375,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        color,
+                        paint: color.into(),
                     });
                 }
             };

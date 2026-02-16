@@ -62,31 +62,37 @@ pub(in super::super) fn encode_svg_mask_icon(
     state.text_vertices.extend_from_slice(&[
         TextVertex {
             pos_px: [quad[0].0, quad[0].1],
+            local_pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[1].0, quad[1].1],
+            local_pos_px: [quad[1].0, quad[1].1],
             uv: [u1, v0],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[2].0, quad[2].1],
+            local_pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[0].0, quad[0].1],
+            local_pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[2].0, quad[2].1],
+            local_pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[3].0, quad[3].1],
+            local_pos_px: [quad[3].0, quad[3].1],
             uv: [u0, v1],
             color: premul,
         },
@@ -102,6 +108,7 @@ pub(in super::super) fn encode_svg_mask_icon(
         first_vertex,
         vertex_count: 6,
         image: entry.image,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
     }));
 }
 
@@ -201,5 +208,6 @@ pub(in super::super) fn encode_svg_image(
         first_vertex,
         vertex_count: 6,
         image: entry.image,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
     }));
 }

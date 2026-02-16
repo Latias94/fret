@@ -12487,6 +12487,16 @@ pub struct UiFrameStatsV1 {
     pub renderer_scene_encoding_cache_hits: u64,
     #[serde(default)]
     pub renderer_scene_encoding_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_material_quad_ops: u64,
+    #[serde(default)]
+    pub renderer_material_sampled_quad_ops: u64,
+    #[serde(default)]
+    pub renderer_material_distinct: u64,
+    #[serde(default)]
+    pub renderer_material_unknown_ids: u64,
+    #[serde(default)]
+    pub renderer_material_degraded_due_to_budget: u64,
 }
 
 impl UiFrameStatsV1 {
@@ -12779,6 +12789,11 @@ impl UiFrameStatsV1 {
             renderer_vertex_bytes: 0,
             renderer_scene_encoding_cache_hits: 0,
             renderer_scene_encoding_cache_misses: 0,
+            renderer_material_quad_ops: 0,
+            renderer_material_sampled_quad_ops: 0,
+            renderer_material_distinct: 0,
+            renderer_material_unknown_ids: 0,
+            renderer_material_degraded_due_to_budget: 0,
         };
 
         if let Some(sample) = renderer_perf {
@@ -12837,6 +12852,12 @@ impl UiFrameStatsV1 {
             out.renderer_vertex_bytes = sample.perf.vertex_bytes;
             out.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
             out.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
+            out.renderer_material_quad_ops = sample.perf.material_quad_ops;
+            out.renderer_material_sampled_quad_ops = sample.perf.material_sampled_quad_ops;
+            out.renderer_material_distinct = sample.perf.material_distinct;
+            out.renderer_material_unknown_ids = sample.perf.material_unknown_ids;
+            out.renderer_material_degraded_due_to_budget =
+                sample.perf.material_degraded_due_to_budget;
         }
 
         out

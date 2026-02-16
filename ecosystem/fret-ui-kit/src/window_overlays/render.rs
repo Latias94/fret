@@ -351,8 +351,17 @@ fn should_suspend_pointer_gating_for_capture(
     disable_outside_pointer_events: bool,
     consume_outside_pointer_events: bool,
 ) -> bool {
-    open && capture_conflicts_with_layer
-        && (disable_outside_pointer_events || consume_outside_pointer_events)
+    // Input arbitration: avoid introducing pointer occlusion mid-capture.
+    //
+    // `disable_outside_pointer_events` implies installing pointer occlusion while the overlay is
+    // open. If another layer is currently capturing the pointer (viewport drags, resizers, etc.),
+    // enabling occlusion can change routing semantics in surprising ways.
+    //
+    // `consume_outside_pointer_events` only affects "outside press" dispatch (and suppresses
+    // underlay hit-test dispatch on outside press), which is safe to keep enabled while another
+    // layer is capturing the pointer.
+    let _ = consume_outside_pointer_events;
+    open && capture_conflicts_with_layer && disable_outside_pointer_events
 }
 
 struct OverlayFocusHost<'a, H: UiHost> {
@@ -1255,6 +1264,7 @@ pub fn render<H: UiHost + 'static>(
         on_close_auto_focus,
     ) in to_hide_popovers
     {
+        let was_visible = ui.is_layer_visible(layer);
         let mut close_auto_focus_prevented = close_auto_focus_prevented;
         if !close_auto_focus_handled {
             if let Some(on_close_auto_focus) = on_close_auto_focus.as_ref() {
@@ -1319,6 +1329,14 @@ pub fn render<H: UiHost + 'static>(
                     disable_outside_pointer_events: false,
                 },
             );
+        }
+
+        // When a non-modal overlay is hidden/unmounted, ensure the underlay repaints the region
+        // previously covered by the overlay. Without an explicit paint invalidation, a damage-
+        // based renderer can retain stale pixels (ghosting artifacts) after close.
+        if was_visible && let Some(base_root) = ui.base_root() {
+            ui.invalidate(base_root, Invalidation::Paint);
+            app.request_redraw(window);
         }
     }
 

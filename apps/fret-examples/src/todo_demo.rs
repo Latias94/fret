@@ -2,10 +2,12 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use fret::prelude::*;
+use fret_launch::{DevStateExport, DevStateHook, DevStateHooks};
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
 use fret_ui_shadcn::state::{query_error_alert, query_status_badge};
+use serde_json::{Value, json};
 
 const TEST_ID_INPUT: &str = "todo-input";
 const TEST_ID_ADD: &str = "todo-add";
@@ -14,6 +16,34 @@ const TEST_ID_FILTER_ALL: &str = "todo-filter-all";
 const TEST_ID_FILTER_ACTIVE: &str = "todo-filter-active";
 const TEST_ID_FILTER_COMPLETED: &str = "todo-filter-completed";
 const TEST_ID_REFRESH_TIP: &str = "todo-refresh-tip";
+
+const DEV_STATE_TODO_STATE_KEY: &str = "todo.demo.state.v1";
+
+#[derive(Debug, Default)]
+struct TodoDevStateIncoming {
+    snapshot: Option<TodoDevStateSnapshot>,
+}
+
+#[derive(Debug, Clone)]
+struct TodoDevStateSnapshot {
+    draft: String,
+    filter: TodoFilter,
+    todos: Vec<TodoDevStateTodo>,
+}
+
+#[derive(Debug, Clone)]
+struct TodoDevStateTodo {
+    id: u64,
+    done: bool,
+    text: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
+struct TodoDevStateModels {
+    todos: Model<Vec<TodoItem>>,
+    draft: Model<String>,
+    filter: Model<TodoFilter>,
+}
 
 fn todo_row_test_id(id: u64) -> Arc<str> {
     Arc::from(format!("todo-row-{id}"))
@@ -113,6 +143,25 @@ fn tip_policy() -> QueryPolicy {
 
 pub fn run() -> anyhow::Result<()> {
     fret::mvu::app::<TodoProgram>("todo-demo")?
+        .init_app(|app| {
+            app.with_global_mut_untracked(DevStateHooks::default, |hooks, _app| {
+                hooks.register(
+                    DevStateHook::new(DEV_STATE_TODO_STATE_KEY, |app| {
+                        let Some(models) = app.global::<TodoDevStateModels>() else {
+                            return DevStateExport::Noop;
+                        };
+                        DevStateExport::Set(export_todo_dev_state(app, models))
+                    })
+                    .with_import(|app, value| {
+                        let snapshot = parse_todo_dev_state(value)?;
+                        app.with_global_mut_untracked(TodoDevStateIncoming::default, |st, _app| {
+                            st.snapshot = Some(snapshot);
+                        });
+                        Ok(())
+                    }),
+                );
+            });
+        })
         .with_main_window("todo_demo", (560.0, 520.0))
         .run()?;
     Ok(())
@@ -142,33 +191,185 @@ impl MvuProgram for TodoProgram {
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
-    let done_1 = app.models_mut().insert(false);
-    let done_2 = app.models_mut().insert(true);
-    let done_3 = app.models_mut().insert(false);
-    let todos = app.models_mut().insert(vec![
-        TodoItem {
-            id: 1,
-            done: done_1,
-            text: Arc::from("Try the shadcn New York style"),
-        },
-        TodoItem {
-            id: 2,
-            done: done_2,
-            text: Arc::from("Validate selector derived state"),
-        },
-        TodoItem {
-            id: 3,
-            done: done_3,
-            text: Arc::from("Use query invalidation for async tips"),
-        },
-    ]);
+    let incoming =
+        app.with_global_mut_untracked(TodoDevStateIncoming::default, |st, _app| st.snapshot.take());
 
-    TodoState {
-        todos,
-        draft: app.models_mut().insert(String::new()),
-        filter: app.models_mut().insert(TodoFilter::All),
-        next_id: 4,
+    let restored = incoming.map(|snapshot| {
+        let mut max_id = 0u64;
+        let todos_vec: Vec<TodoItem> = snapshot
+            .todos
+            .into_iter()
+            .map(|todo| {
+                max_id = max_id.max(todo.id);
+                TodoItem {
+                    id: todo.id,
+                    done: app.models_mut().insert(todo.done),
+                    text: todo.text,
+                }
+            })
+            .collect();
+
+        let todos = app.models_mut().insert(todos_vec);
+        let draft = app.models_mut().insert(snapshot.draft);
+        let filter = app.models_mut().insert(snapshot.filter);
+        let next_id = max_id.saturating_add(1).max(1);
+
+        TodoState {
+            todos,
+            draft,
+            filter,
+            next_id,
+        }
+    });
+
+    let state = if let Some(restored) = restored {
+        restored
+    } else {
+        let done_1 = app.models_mut().insert(false);
+        let done_2 = app.models_mut().insert(true);
+        let done_3 = app.models_mut().insert(false);
+        let todos = app.models_mut().insert(vec![
+            TodoItem {
+                id: 1,
+                done: done_1,
+                text: Arc::from("Try the shadcn New York style"),
+            },
+            TodoItem {
+                id: 2,
+                done: done_2,
+                text: Arc::from("Validate selector derived state"),
+            },
+            TodoItem {
+                id: 3,
+                done: done_3,
+                text: Arc::from("Use query invalidation for async tips"),
+            },
+        ]);
+
+        TodoState {
+            todos,
+            draft: app.models_mut().insert(String::new()),
+            filter: app.models_mut().insert(TodoFilter::All),
+            next_id: 4,
+        }
+    };
+
+    app.set_global(TodoDevStateModels {
+        todos: state.todos.clone(),
+        draft: state.draft.clone(),
+        filter: state.filter.clone(),
+    });
+
+    state
+}
+
+fn parse_todo_dev_state(incoming: Value) -> Result<TodoDevStateSnapshot, String> {
+    let Some(obj) = incoming.as_object() else {
+        return Err("expected object".to_string());
+    };
+    let version = obj
+        .get("version")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing version".to_string())?;
+    if version != 1 {
+        return Err("unsupported version".to_string());
     }
+
+    let draft = obj
+        .get("draft")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+
+    let filter = obj
+        .get("filter")
+        .and_then(Value::as_str)
+        .and_then(parse_filter)
+        .unwrap_or(TodoFilter::All);
+
+    let mut items: Vec<TodoDevStateTodo> = Vec::new();
+    if let Some(todos_arr) = obj.get("todos").and_then(Value::as_array) {
+        for todo in todos_arr {
+            let Some(todo_obj) = todo.as_object() else {
+                continue;
+            };
+            let Some(id) = todo_obj.get("id").and_then(Value::as_u64) else {
+                continue;
+            };
+            let done = todo_obj
+                .get("done")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let text = todo_obj
+                .get("text")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            items.push(TodoDevStateTodo {
+                id,
+                done,
+                text: Arc::from(text),
+            });
+        }
+    }
+
+    Ok(TodoDevStateSnapshot {
+        draft,
+        filter,
+        todos: items,
+    })
+}
+
+fn parse_filter(raw: &str) -> Option<TodoFilter> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "all" => Some(TodoFilter::All),
+        "active" => Some(TodoFilter::Active),
+        "completed" => Some(TodoFilter::Completed),
+        _ => None,
+    }
+}
+
+fn export_todo_dev_state(app: &App, models: &TodoDevStateModels) -> Value {
+    let todos = app
+        .models()
+        .read(&models.todos, Clone::clone)
+        .ok()
+        .unwrap_or_default();
+
+    let todos = todos
+        .into_iter()
+        .map(|todo| {
+            let done = app.models().get_copied(&todo.done).unwrap_or(false);
+            json!({
+                "id": todo.id,
+                "done": done,
+                "text": todo.text.as_ref(),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let draft = app
+        .models()
+        .read(&models.draft, Clone::clone)
+        .ok()
+        .unwrap_or_default();
+
+    let filter = app
+        .models()
+        .get_copied(&models.filter)
+        .unwrap_or(TodoFilter::All);
+
+    let filter = match filter {
+        TodoFilter::All => "all",
+        TodoFilter::Active => "active",
+        TodoFilter::Completed => "completed",
+    };
+
+    json!({
+        "version": 1,
+        "draft": draft,
+        "filter": filter,
+        "todos": todos,
+    })
 }
 
 fn view(

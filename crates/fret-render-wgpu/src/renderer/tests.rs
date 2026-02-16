@@ -135,6 +135,91 @@ fn shaders_validate_for_webgpu() {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+mod webgpu_tint_guardrail {
+    use super::*;
+    use wasm_bindgen_test::*;
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    async fn request_webgpu_device() -> (wgpu::Device, wgpu::Queue) {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::BROWSER_WEBGPU,
+            ..wgpu::InstanceDescriptor::default()
+        });
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .await
+            .expect("WebGPU adapter must be available in browser tests");
+
+        adapter
+            .request_device(&wgpu::DeviceDescriptor::default())
+            .await
+            .expect("request_device must succeed in browser tests")
+    }
+
+    #[wasm_bindgen_test(async)]
+    async fn webgpu_tint_compiles_all_wgsl_shaders() {
+        let (device, _queue) = request_webgpu_device().await;
+
+        let quad_src = quad_shader_source();
+        let clip_mask_src = clip_mask_shader_source();
+        let upscale_masked_src = upscale_nearest_masked_shader_source();
+        let color_adjust_masked_src = color_adjust_masked_shader_source();
+        let color_matrix_masked_src = color_matrix_masked_shader_source();
+        let alpha_threshold_masked_src = alpha_threshold_masked_shader_source();
+        let blur_h_masked_src = blur_h_masked_shader_source();
+        let blur_v_masked_src = blur_v_masked_shader_source();
+        for (name, src) in [
+            ("viewport", VIEWPORT_SHADER),
+            ("quad", quad_src.as_str()),
+            ("blit", BLIT_SHADER),
+            ("blur_h", BLUR_H_SHADER),
+            ("blur_v", BLUR_V_SHADER),
+            ("blur_h_masked", blur_h_masked_src.as_str()),
+            ("blur_v_masked", blur_v_masked_src.as_str()),
+            ("blur_h_mask", BLUR_H_MASK_SHADER),
+            ("blur_v_mask", BLUR_V_MASK_SHADER),
+            ("downsample_nearest", DOWNSAMPLE_NEAREST_SHADER),
+            ("upscale_nearest", UPSCALE_NEAREST_SHADER),
+            ("upscale_nearest_masked", upscale_masked_src.as_str()),
+            ("upscale_nearest_mask", UPSCALE_NEAREST_MASK_SHADER),
+            ("color_adjust", COLOR_ADJUST_SHADER),
+            ("color_adjust_masked", color_adjust_masked_src.as_str()),
+            ("color_adjust_mask", COLOR_ADJUST_MASK_SHADER),
+            ("color_matrix", COLOR_MATRIX_SHADER),
+            ("color_matrix_masked", color_matrix_masked_src.as_str()),
+            ("color_matrix_mask", COLOR_MATRIX_MASK_SHADER),
+            ("alpha_threshold", ALPHA_THRESHOLD_SHADER),
+            (
+                "alpha_threshold_masked",
+                alpha_threshold_masked_src.as_str(),
+            ),
+            ("alpha_threshold_mask", ALPHA_THRESHOLD_MASK_SHADER),
+            ("composite_premul", COMPOSITE_PREMUL_SHADER),
+            ("composite_premul_mask", COMPOSITE_PREMUL_MASK_SHADER),
+            ("clip_mask", clip_mask_src.as_str()),
+            ("path_clip_mask", PATH_CLIP_MASK_SHADER),
+            ("path", PATH_SHADER),
+            ("text", TEXT_SHADER),
+            ("text_color", TEXT_COLOR_SHADER),
+            ("text_subpixel", TEXT_SUBPIXEL_SHADER),
+            ("mask", MASK_SHADER),
+        ] {
+            device.push_error_scope(wgpu::ErrorFilter::Validation);
+            let _module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some(name),
+                source: wgpu::ShaderSource::Wgsl(src.into()),
+            });
+            let err = device.pop_error_scope().await;
+            assert!(
+                err.is_none(),
+                "WebGPU/Tint validation failed for {name} shader: {err:?}"
+            );
+        }
+    }
+}
+
 #[test]
 fn transform_rows_match_apply_point() {
     let t = Transform2D {
@@ -280,6 +365,7 @@ fn image_fit_cover_encodes_cropped_uvs() {
         ),
         image,
         fit: ViewportFit::Cover,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
         opacity: 1.0,
     });
 
@@ -371,6 +457,7 @@ fn image_fit_contain_encodes_centered_draw_rect() {
         ),
         image,
         fit: ViewportFit::Contain,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
         opacity: 1.0,
     });
 

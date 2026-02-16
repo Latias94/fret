@@ -108,6 +108,43 @@ pub(super) fn a11y_composition_gate(
         },
     );
 
+    // Platform-style IME hooks (UTF-16 over composed view) — selection-replacing composition.
+    // This exercises the same editor path as the `TextInputRegion` replace-and-mark handlers.
+    let ime_start_handle = handle.clone();
+    let ime_start = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              _up: fret_ui::action::PointerUpCx| {
+            // Replace the selection "hello" (0..5) with a composing string.
+            ime_start_handle.set_selection(code_editor::Selection {
+                anchor: 0,
+                focus: 5,
+            });
+            ime_start_handle.debug_platform_set_marked_text_for_selection("ab");
+            if let Some(region_id) = ime_start_handle.region_id() {
+                host.request_focus(region_id);
+            }
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+            true
+        },
+    );
+
+    let ime_cancel_handle = handle.clone();
+    let ime_cancel = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              _up: fret_ui::action::PointerUpCx| {
+            ime_cancel_handle.debug_platform_cancel_marked_text();
+            if let Some(region_id) = ime_cancel_handle.region_id() {
+                host.request_focus(region_id);
+            }
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+            true
+        },
+    );
+
     let inject = cx
         .pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx| {
             cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
@@ -146,6 +183,46 @@ pub(super) fn a11y_composition_gate(
         move |_cx| vec![inject.clone(), clear.clone()],
     );
 
+    let platform_controls = {
+        let start = cx
+            .pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx| {
+                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                    host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+                    true
+                }));
+                cx.pointer_region_on_pointer_up(ime_start.clone());
+                vec![cx.text("IME setMarkedText (replace selection)")]
+            })
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Button)
+                    .test_id("ui-gallery-code-editor-a11y-composition-ime-set-marked-selection")
+                    .label("IME setMarkedText (replace selection)"),
+            );
+
+        let cancel = cx
+            .pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx| {
+                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                    host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+                    true
+                }));
+                cx.pointer_region_on_pointer_up(ime_cancel.clone());
+                vec![cx.text("IME cancel (empty marked text)")]
+            })
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Button)
+                    .test_id("ui-gallery-code-editor-a11y-composition-ime-cancel-marked-selection")
+                    .label("IME cancel (empty marked text)"),
+            );
+
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |_cx| vec![start.clone(), cancel.clone()],
+        )
+    };
+
     let panel = gate_panel(cx, theme, gate_editor);
 
     stack::vstack(
@@ -153,7 +230,7 @@ pub(super) fn a11y_composition_gate(
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N1),
-        |_cx| vec![controls, panel],
+        |_cx| vec![controls, platform_controls, panel],
     )
 }
 

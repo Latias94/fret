@@ -1,6 +1,6 @@
 # Workstream: Text Shaping Surface v1 (OpenType Features + Cache Semantics)
 
-Status: Draft (design); implementation planned as a fearless refactor follow-up to text-system-v2.
+Status: M0 implemented (contracts + Parley plumbing); M1 implemented (ecosystem policy adoption in `fret-code-editor` + `fret-code-view`).
 
 This document is **non-normative**. Normative contracts live in ADRs (notably the v2 Parley text
 system ADRs) and in the `fret-core` public API.
@@ -27,8 +27,9 @@ However, for editor-grade text, we still need a first-class shaping surface for:
 3) explicit cache-keying rules so that feature changes never reuse stale shaping / glyph raster
    outputs.
 
-Today, we do not expose OpenType features in `fret-core::TextShapingStyle`, even though Parley
-supports `StyleProperty::FontFeatures`.
+Historically, we did not expose OpenType features in `fret-core::TextShapingStyle`, even though
+Parley supports `StyleProperty::FontFeatures`. This gap is now closed for M0 (contracts + plumbing);
+remaining work is ecosystem policy adoption and productization.
 
 ## Goals
 
@@ -55,11 +56,12 @@ supports `StyleProperty::FontFeatures`.
   - `crates/fret-core/src/text/mod.rs` (`TextShapingStyle`, `TextFontAxisSetting`)
 - Parley plumbing:
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`shaping_properties_for_span`)
-  - currently sets: `FontStack`, `FontVariations`, `FontWeight`, `FontStyle`, `LetterSpacing`
-  - does **not** set: `FontFeatures`
+  - sets: `FontStack`, `FontVariations`, `FontWeight`, `FontStyle`, `LetterSpacing`, `FontFeatures`
 - Wrapper + cache keys:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextBlobKey`, `TextShapeKey`, measure caches)
   - spans participate in shaping key via a “shaping-only fingerprint” (do not regress this).
+  - features participate in the shaping fingerprint and blob keys:
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)
 
 ## Proposed API Surface (fret-core)
 
@@ -163,7 +165,8 @@ Do not require consumers to decode Parley internals.
   - Ensure cache keys include features deterministically.
   - Add unit tests for canonicalization + keying.
 - M1: Editor-grade adoption
-  - `ecosystem/fret-code-view` uses features for ligature policy (e.g. disable `liga` in code).
+  - `ecosystem/fret-code-view` / `ecosystem/fret-code-editor` uses features for ligature policy
+    (e.g. disable `liga`/`calt` in code, or provide a toggle).
   - Add a small conformance page in UI gallery (optional) to visualize feature toggles.
 - M2: Settings surface (optional, ecosystem)
   - Add a component-layer policy for “code font features” vs “UI font features”.
@@ -173,3 +176,13 @@ For a detailed, checklist-driven plan, see:
 - `docs/workstreams/text-shaping-surface-v1-milestones.md`
 - `docs/workstreams/text-shaping-surface-v1-todo.md`
 
+## Implementation notes (M0)
+
+Evidence anchors:
+
+- `TextFontFeatureSetting` + `TextShapingStyle.features`:
+  - `crates/fret-core/src/text/mod.rs`
+- Parley mapping and canonicalization:
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`font_features_for_settings`)
+- Shaping key participation:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)

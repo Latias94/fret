@@ -7,6 +7,17 @@ Tracking files:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 
+Current status (as of 2026-02-16):
+
+- WebGPU/Tint uniformity closure landed (browser smoke verified).
+- Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
+- Text paint surface v1 started:
+  - ADR 0279 drafted (`SceneOp::Text` upgrades from `Color` to `Paint`).
+  - Implementation WIP in this worktree (next: GPU readback conformance).
+- A cheap headless perf gate exists and has a checked-in baseline:
+  - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
+  - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
 ## 0) Why this workstream exists
 
 Fret’s renderer must satisfy a hard set of constraints simultaneously:
@@ -75,6 +86,7 @@ This workstream is intentionally “fearless but gated”. Before and after each
   - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+  - `crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs`
   - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
   - `crates/fret-render-wgpu/tests/materials_conformance.rs`
   - `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
@@ -84,6 +96,15 @@ When a new contract is added, extend this list with the smallest conformance gat
 - ordering is preserved,
 - the fallback path is deterministic,
 - and the wasm/mobile story is explicit.
+
+WebGPU guardrail (portability sanity):
+
+- `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
+Optional stronger guardrail (runs in a real browser WebGPU implementation, catches Tint uniformity drift):
+
+- `cd crates/fret-render-wgpu`
+- `wasm-pack test --headless --chrome`
 
 ## 2.2) Baseline runbook (copy/paste)
 
@@ -105,9 +126,19 @@ cargo nextest run -p fret-render-wgpu --test viewport_surface_metadata_conforman
 cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance
 cargo nextest run -p fret-render-wgpu --test mask_gradient_conformance
 cargo nextest run -p fret-render-wgpu --test mask_image_conformance
+cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance
 cargo nextest run -p fret-render-wgpu --test composite_group_conformance
 cargo nextest run -p fret-render-wgpu --test materials_conformance
 cargo nextest run -p fret-render-wgpu --test materials_sampled_conformance
+```
+
+Windows note:
+
+- If you hit `os error 206` (“filename or extension too long”) while building tests, set a shorter
+  target directory, for example:
+
+```powershell
+$env:CARGO_TARGET_DIR = 'F:\ct'
 ```
 
 Fallback (no nextest):
@@ -122,17 +153,39 @@ Record perf snapshots using the deterministic SVG atlas stress harness (prints `
 `headless_renderer_perf:` lines). Suggested baseline capture:
 
 ```bash
-cargo run -p fret-svg-atlas-stress -- --headless --frames 600
+cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600
 ```
 
 Notes:
 
 - PowerShell:
-  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+  - `$env:FRET_RENDERER_PERF_PIPELINES=1; cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600`
 - bash/zsh:
-  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress --release -- --headless --frames 600`
 - Keep the run duration and flags stable (e.g. 600 frames) so future diffs are meaningful.
 - Capture both `renderer_perf:` and `renderer_perf_pipelines:` lines if enabled.
+
+Headless gate (stable counters + thresholds):
+
+```powershell
+python3 tools/perf/headless_svg_atlas_stress_gate.py
+```
+
+Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
+### 2.2.4 Quad/material headless gate (variants + dash)
+
+This gate is focused on the quad shader hot paths (paint kinds + dash), and is intended to keep the
+pipeline-variant keyspace bounded and observable.
+
+It also reports Tier B material usage counters (`material_*`) so follow-up variants (e.g. material-kind splits)
+are only pursued when evidence shows materials are hot.
+
+```powershell
+python3 tools/perf/headless_quad_material_stress_gate.py
+```
+
+Baseline: `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
 
 ## 3) Proposed internal architecture (implementation, not contract)
 
@@ -435,6 +488,8 @@ Use this checklist before starting any renderer-internal refactor step.
 
 - [ ] Capability gating and fallback behavior are documented (ADR + workstream capability matrix update when decided).
 - [ ] Missing resources degrade deterministically (e.g. missing images/materials → no-op/solid fallback), not per-backend.
+- [ ] WebGPU uniformity rule is respected (Tint): derivative ops and sampling are not gated by non-uniform control flow.
+  - If a shader path needs derivatives, prefer pipeline variants with bounded keys (kind/tile mode) over branching on instance data.
 
 ### A4) Guardrails (always run)
 
@@ -459,7 +514,7 @@ This appendix is a living inventory for M4 (`Paint/Material evolution`). It answ
 | `SceneOp::Quad` | fill/background | `Paint` (solid + gradients + `Paint::Material`) | Renderer conformance: `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`, `crates/fret-render-wgpu/tests/materials_conformance.rs`, `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`. |
 | `SceneOp::Quad` | border | `Paint` (solid + gradients + `Paint::Material`) | Same gates as fill; border paint is a `Paint` in the contract. |
 | `SceneOp::StrokeRRect` | stroke | `Paint` (solid + gradients + `Paint::Material`) | Contract: `crates/fret-core/src/scene/mod.rs` (`StrokeRRect.stroke_paint: Paint`). |
-| `SceneOp::Text` | glyph color | solid `Color` only | Paint expansion would need an explicit contract (e.g. gradient text, material text) and dedicated conformance scenes. |
+| `SceneOp::Text` | glyph paint | `Paint` (v1: solid + linear gradient; bounded fallbacks) | Contract + semantics: ADR 0279. Tracking: `docs/workstreams/text-paint-surface-v1.md` (conformance gate pending). |
 | `SceneOp::Path` | fill color | solid `Color` only | Contract expansion candidate tracked as `REN-VNEXT-paint-002`. |
 | `SceneOp::{Image,ImageRegion}` | texture sample | image + opacity | Sampling hints are tracked as M5; mask-image uses `Mask::Image` (ADR 0273), not `Paint`. |
 | `SceneOp::MaskImage` / `SceneOp::SvgMaskIcon` | alpha mask tint | solid `Color` tint + opacity | Coverage is expected in red for `MaskImage`. |
@@ -471,8 +526,9 @@ This appendix is a living inventory for M4 (`Paint/Material evolution`). It answ
 - `SceneOp::Path` being solid-only is the largest “paint surface discontinuity” today.
   - If we expand it to accept `Paint`, we must define: tiling semantics, local coordinate mapping
     (origin + transform), and deterministic fallbacks for wasm/mobile (ADR + conformance gate).
-- `SceneOp::Text` paint expansion is deferred until text pipeline constraints are settled; keep the
-  v1 contract simple and predictable.
+- `SceneOp::Text` paint expansion is now tracked as an active, bounded workstream:
+  - ADR 0279 + `docs/workstreams/text-paint-surface-v1.md`
+  - next closure item: GPU readback conformance gate(s)
 
 Decision (v1 for this workstream):
 
@@ -523,3 +579,70 @@ The v1 policy is intentionally simple and deterministic:
 | --- | --- | --- | --- | --- |
 | `ParamsOnly` materials | **Must** | **Must** | **Must** | Registration must not fail; unknown ids degrade at draw time (transparent). |
 | `ParamsPlusCatalogTexture` (sampled) | **May** | **May** | **May** | If unsupported, registration fails with `Unsupported` and callers must select a non-sampled alternative. |
+
+---
+
+## Appendix D — Common UI renderer semantics gaps (post-v1 backlog)
+
+This appendix captures **common UI rendering semantics** that mainstream frameworks expose (CSS,
+Flutter, SwiftUI, Skia-based stacks) but that are either **missing** in the current `SceneOp`
+surface or only available via approximation/recipes today.
+
+These are not required to finish the renderer vNext refactor. They are tracked as a backlog in:
+
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md` (M7 — `REN-VNEXT-sem-*`)
+
+### D1) Paint surfaces missing on key primitives
+
+The current contract is intentionally conservative:
+
+- `SceneOp::Quad` supports `Paint` for fill and border.
+- `SceneOp::Path` is **solid-color only**.
+- `SceneOp::Text` now accepts `Paint` (v1 bounded; conformance pending).
+
+Common needs that are not contract-level yet:
+
+- Painted paths (gradients/materials on arbitrary vector shapes).
+- Gradient/material text fills and text outlines/strokes.
+
+These require careful design because they tend to:
+
+- increase shader binding surface area,
+- increase pipeline key space,
+- and create portability risks under WebGPU uniformity + downlevel mobile constraints.
+
+### D2) Stroke completeness (beyond dash)
+
+`StrokeStyleV1` only supports dash and only a limited set of stroke-like scene ops exist
+(notably `StrokeRRect`).
+
+Common missing stroke semantics:
+
+- join/cap/miter rules,
+- constant-pixel-width strokes under transform,
+- arbitrary path stroking (`StrokePath`).
+
+### D3) Gradient completeness (conic/sweep)
+
+Only linear and radial gradients exist today. A minimal sweep/conic gradient surface is a common
+UI need (spinners, rings, charts, accent glows) and is a likely v2 candidate if we can keep it
+bounded and portable.
+
+### D4) Blend mode coverage (bounded)
+
+The blend mode enum is intentionally small (`Over/Add/Multiply/Screen`). Many UI systems use
+additional blend modes, but expanding this must be **evidence-driven** and bounded, because:
+
+- support varies by backend/precision,
+- correctness expectations are high (visual diffs),
+- and it can complicate batching/pipeline selection.
+
+### D5) Tiling and wider color spaces (capability-gated)
+
+The contract currently sanitizes/degrades:
+
+- `TileMode::Repeat/Mirror` → `Clamp`
+- `ColorSpace::Oklab` → `Srgb`
+
+This keeps behavior deterministic across targets today, but leaves a backlog for “true”
+repeat/mirror and wider color management once we have the necessary capabilities and tests.

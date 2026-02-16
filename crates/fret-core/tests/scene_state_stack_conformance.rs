@@ -78,6 +78,9 @@ impl Interpreter {
                 });
             }
             SceneOp::PushClipPath { .. } => {
+                // Clip-path entries are captured in the renderer; this conformance interpreter only
+                // models the clip *stack* behavior. We treat it as a clip stack push with a distinct
+                // kind to ensure capture semantics remain testable.
                 self.clip_stack.push(ClipEntry {
                     kind: ClipKind::Path,
                     pushed_transform: self.current_transform(),

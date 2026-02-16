@@ -30,6 +30,15 @@ Evidence checklist:
 - `cargo nextest run -p fret-render`
 - `cargo nextest run -p fret-ui` (sanity; should be unaffected)
 
+Evidence anchors (M0):
+
+- API surface:
+  - `crates/fret-core/src/text/mod.rs` (`TextFontFeatureSetting`, `TextShapingStyle.features`)
+- Parley mapping + canonicalization:
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`font_features_for_settings`)
+- Shaping key participation:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)
+
 ## M1 — Editor-grade policy adoption (ecosystem)
 
 Exit criteria:
@@ -39,8 +48,11 @@ Exit criteria:
   - keep UI text defaults unchanged.
 - Attributed spans produced for syntax highlighting do not accidentally pull paint-only changes into
   shaping keys (regression test).
-- Optional: a demo page exists to visualize feature toggles on a known string (and documents which
-  fonts exhibit visible differences).
+- Regression gates:
+  - a feature toggle changes shaping keys deterministically (no stale shaping/layout reuse),
+  - paint-only edits hit the shape cache (no reshaping on color-only span changes).
+- Optional (recommended): a small demo/harness exists to visualize feature toggles on a known
+  string (and documents which bundled/system fonts exhibit visible differences).
 
 Evidence checklist:
 
@@ -59,4 +71,3 @@ Exit criteria:
 Notes:
 
 - This milestone should not block the core refactor; it is a “productization” pass.
-

@@ -10,12 +10,28 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/genui-json-render-v1.md`
+- `docs/workstreams/genui-json-render-v1-todo.md`
+- `docs/workstreams/genui-json-render-v1-milestones.md`
 - `docs/workstreams/hotpatch-devloop-alignment-v1.md`
+- `docs/workstreams/hotpatch-devloop-alignment-v1-refactor-design.md`
 - `docs/workstreams/hotpatch-devloop-alignment-v1-todo.md`
 - `docs/workstreams/hotpatch-devloop-alignment-v1-milestones.md`
+- `docs/workstreams/app-iteration-fast-restart-v1.md`
+- `docs/workstreams/app-iteration-fast-restart-v1-todo.md`
+- `docs/workstreams/app-iteration-fast-restart-v1-milestones.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/path-stroke-style-v2.md`
+- `docs/workstreams/path-stroke-style-v2-todo.md`
+- `docs/workstreams/path-stroke-style-v2-milestones.md`
+- `docs/workstreams/path-paint-surface-v1.md`
+- `docs/workstreams/path-paint-surface-v1-todo.md`
+- `docs/workstreams/path-paint-surface-v1-milestones.md`
+- `docs/workstreams/text-paint-surface-v1.md`
+- `docs/workstreams/text-paint-surface-v1-todo.md`
+- `docs/workstreams/text-paint-surface-v1-milestones.md`
 - `docs/workstreams/docking-nary-split-graph-v1.md`
 - `docs/workstreams/docking-nary-split-graph-v1-todo.md`
 - `docs/workstreams/docking-nary-split-graph-v1-milestones.md`

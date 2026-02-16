@@ -3,8 +3,8 @@ use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
 };
 use fret_diag_protocol::{
-    DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
-    DiagTransportMessageV1,
+    DevtoolsBundleDumpedV1, DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1,
+    DevtoolsSessionListV1, DiagTransportMessageV1,
 };
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -360,6 +360,10 @@ fn wait_for_bundle_dumped(
     let mut last_script_stage: Option<String> = None;
     let mut last_script_step_index: Option<u64> = None;
 
+    let mut chunk_exported_unix_ms: Option<u64> = None;
+    let mut chunk_dir: Option<String> = None;
+    let mut chunks: Vec<Option<String>> = Vec::new();
+
     while Instant::now() < deadline {
         while let Some(msg) = client.try_recv() {
             if msg.session_id.as_deref() != Some(session_id) {
@@ -395,21 +399,44 @@ fn wait_for_bundle_dumped(
                     }
                 }
                 "bundle.dumped" => {
-                    let dir = msg
-                        .payload
-                        .get("dir")
-                        .and_then(|v| v.as_str())
-                        .filter(|s| !s.trim().is_empty())
-                        .map(|s| s.to_string())
-                        .context("bundle.dumped missing dir")?;
+                    let dumped = serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload)
+                        .context("bundle.dumped payload was not DevtoolsBundleDumpedV1")?;
 
-                    let bundle = msg
-                        .payload
-                        .get("bundle")
-                        .cloned()
-                        .context("bundle.dumped missing bundle payload")?;
+                    if let Some(bundle) = dumped.bundle {
+                        return Ok((dumped.dir, bundle));
+                    }
 
-                    return Ok((dir, bundle));
+                    if let (Some(chunk), Some(chunk_index), Some(chunk_count)) = (
+                        dumped.bundle_json_chunk,
+                        dumped.bundle_json_chunk_index,
+                        dumped.bundle_json_chunk_count,
+                    ) {
+                        let chunk_count = chunk_count.max(1).min(10_000);
+                        let need_reset = chunk_exported_unix_ms != Some(dumped.exported_unix_ms)
+                            || chunk_dir.as_deref() != Some(dumped.dir.as_str())
+                            || chunks.len() != chunk_count as usize;
+
+                        if need_reset {
+                            chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
+                            chunk_dir = Some(dumped.dir.clone());
+                            chunks = vec![None; chunk_count as usize];
+                        }
+
+                        if let Some(slot) = chunks.get_mut(chunk_index as usize) {
+                            *slot = Some(chunk);
+                        }
+
+                        if chunks.iter().all(|c| c.is_some()) {
+                            let mut json = String::new();
+                            for part in chunks.iter().flatten() {
+                                json.push_str(part);
+                            }
+                            let bundle = serde_json::from_str::<serde_json::Value>(&json)
+                                .context("bundle.dumped chunked JSON was not valid JSON")?;
+                            let dir = chunk_dir.clone().unwrap_or_else(|| dumped.dir);
+                            return Ok((dir, bundle));
+                        }
+                    }
                 }
                 _ => {}
             }

@@ -175,6 +175,16 @@ impl Renderer {
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
+        let mask_image_sampler_nearest = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret mask image sampler (nearest)"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
 
         let mask_image_identity_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("fret mask image identity texture"),
@@ -281,6 +291,16 @@ impl Renderer {
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
+        let image_sampler_nearest = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret image sampler (nearest)"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
 
         let clip_mask_param_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -348,6 +368,90 @@ impl Renderer {
                 device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some(&format!("fret quad instances bind group #{i}")),
                     layout: &quad_instance_bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: buffer.as_entire_binding(),
+                    }],
+                })
+            })
+            .collect();
+
+        let path_paint_capacity = 1024;
+        let path_paint_buffers: Vec<wgpu::Buffer> = (0..FRAMES_IN_FLIGHT)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret path paints #{i}")),
+                    size: (path_paint_capacity * std::mem::size_of::<PaintGpu>()) as u64,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
+        let path_paint_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret path paints bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let path_paint_bind_groups: Vec<wgpu::BindGroup> = path_paint_buffers
+            .iter()
+            .enumerate()
+            .map(|(i, buffer)| {
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some(&format!("fret path paints bind group #{i}")),
+                    layout: &path_paint_bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: buffer.as_entire_binding(),
+                    }],
+                })
+            })
+            .collect();
+
+        let text_paint_capacity = 1024;
+        let text_paint_buffers: Vec<wgpu::Buffer> = (0..FRAMES_IN_FLIGHT)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret text paints #{i}")),
+                    size: (text_paint_capacity * std::mem::size_of::<PaintGpu>()) as u64,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
+        let text_paint_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret text paints bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let text_paint_bind_groups: Vec<wgpu::BindGroup> = text_paint_buffers
+            .iter()
+            .enumerate()
+            .map(|(i, buffer)| {
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some(&format!("fret text paints bind group #{i}")),
+                    layout: &text_paint_bind_group_layout,
                     entries: &[wgpu::BindGroupEntry {
                         binding: 0,
                         resource: buffer.as_entire_binding(),
@@ -437,6 +541,7 @@ impl Renderer {
             uniform_bind_group,
             uniform_bind_group_layout,
             mask_image_sampler,
+            mask_image_sampler_nearest,
             _mask_image_identity_texture: mask_image_identity_texture,
             mask_image_identity_view,
             mask_image_identity_uploaded: false,
@@ -452,16 +557,27 @@ impl Renderer {
             material_catalog_texture,
             material_catalog_uploaded: false,
             quad_pipeline_format: None,
-            quad_pipeline: None,
+            quad_pipelines: HashMap::new(),
             viewport_pipeline_format: None,
             viewport_pipeline: None,
             viewport_bind_group_layout,
             viewport_sampler,
+            image_sampler_nearest,
             instance_buffers,
             quad_instance_bind_group_layout,
             quad_instance_bind_groups,
             instance_buffer_index: 0,
             instance_capacity,
+            path_paint_buffers,
+            path_paint_bind_group_layout,
+            path_paint_bind_groups,
+            path_paint_buffer_index: 0,
+            path_paint_capacity,
+            text_paint_buffers,
+            text_paint_bind_group_layout,
+            text_paint_bind_groups,
+            text_paint_buffer_index: 0,
+            text_paint_capacity,
             viewport_vertex_buffers,
             viewport_vertex_buffer_index: 0,
             viewport_vertex_capacity,

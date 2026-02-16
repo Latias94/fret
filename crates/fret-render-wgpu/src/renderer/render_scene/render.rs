@@ -33,6 +33,36 @@ fn set_scissor_rect_absolute(
 }
 
 impl Renderer {
+    fn pick_image_bind_group(
+        &self,
+        image: fret_core::ImageId,
+        sampling: fret_core::scene::ImageSamplingHint,
+    ) -> Option<&wgpu::BindGroup> {
+        let (_, linear, nearest) = self.image_bind_groups.get(&image)?;
+        match sampling {
+            fret_core::scene::ImageSamplingHint::Nearest => Some(nearest),
+            fret_core::scene::ImageSamplingHint::Default
+            | fret_core::scene::ImageSamplingHint::Linear => Some(linear),
+        }
+    }
+
+    fn pick_uniform_bind_group_for_mask_image(
+        &self,
+        mask_image: Option<UniformMaskImageSelection>,
+    ) -> &wgpu::BindGroup {
+        let Some(sel) = mask_image else {
+            return &self.uniform_bind_group;
+        };
+        let Some((_, linear, nearest)) = self.uniform_mask_image_bind_groups.get(&sel.image) else {
+            return &self.uniform_bind_group;
+        };
+        match sel.sampling {
+            fret_core::scene::ImageSamplingHint::Nearest => nearest,
+            fret_core::scene::ImageSamplingHint::Default
+            | fret_core::scene::ImageSamplingHint::Linear => linear,
+        }
+    }
+
     pub fn render_scene(
         &mut self,
         device: &wgpu::Device,
@@ -82,7 +112,7 @@ impl Renderer {
         self.ensure_mask_image_identity_uploaded(queue);
 
         self.ensure_viewport_pipeline(device, format);
-        self.ensure_pipeline(device, format);
+        self.ensure_quad_pipelines(format);
         self.ensure_text_pipeline(device, format);
         self.ensure_text_color_pipeline(device, format);
         self.ensure_text_subpixel_pipeline(device, format);
@@ -508,11 +538,15 @@ impl Renderer {
         self.prepare_uniform_mask_image_bind_groups(device, &encoding.uniform_mask_images);
 
         let instances = &encoding.instances;
+        let path_paints = &encoding.path_paints;
+        let text_paints = &encoding.text_paints;
         let viewport_vertices = &encoding.viewport_vertices;
         let text_vertices = &encoding.text_vertices;
         let path_vertices = &encoding.path_vertices;
 
         self.ensure_instance_capacity(device, instances.len());
+        self.ensure_path_paint_capacity(device, path_paints.len());
+        self.ensure_text_paint_capacity(device, text_paints.len());
         self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
         self.ensure_text_vertex_capacity(device, text_vertices.len());
         self.ensure_path_vertex_capacity(device, path_vertices.len());
@@ -528,6 +562,34 @@ impl Renderer {
                 frame_perf.instance_bytes = frame_perf
                     .instance_bytes
                     .saturating_add((std::mem::size_of::<QuadInstance>() * instances.len()) as u64);
+            }
+        }
+
+        let path_paint_buffer_index = self.path_paint_buffer_index;
+        self.path_paint_buffer_index =
+            (self.path_paint_buffer_index + 1) % self.path_paint_buffers.len();
+        let path_paint_buffer = self.path_paint_buffers[path_paint_buffer_index].clone();
+        let path_paint_bind_group = self.path_paint_bind_groups[path_paint_buffer_index].clone();
+        if !path_paints.is_empty() {
+            queue.write_buffer(&path_paint_buffer, 0, bytemuck::cast_slice(path_paints));
+            if perf_enabled {
+                frame_perf.instance_bytes = frame_perf
+                    .instance_bytes
+                    .saturating_add((std::mem::size_of::<PaintGpu>() * path_paints.len()) as u64);
+            }
+        }
+
+        let text_paint_buffer_index = self.text_paint_buffer_index;
+        self.text_paint_buffer_index =
+            (self.text_paint_buffer_index + 1) % self.text_paint_buffers.len();
+        let text_paint_buffer = self.text_paint_buffers[text_paint_buffer_index].clone();
+        let text_paint_bind_group = self.text_paint_bind_groups[text_paint_buffer_index].clone();
+        if !text_paints.is_empty() {
+            queue.write_buffer(&text_paint_buffer, 0, bytemuck::cast_slice(text_paints));
+            if perf_enabled {
+                frame_perf.instance_bytes = frame_perf
+                    .instance_bytes
+                    .saturating_add((std::mem::size_of::<PaintGpu>() * text_paints.len()) as u64);
             }
         }
 
@@ -817,14 +879,8 @@ impl Renderer {
                         .get(mask_pass.uniform_index as usize)
                         .copied()
                         .flatten();
-                    let uniform_bind_group = match mask_image {
-                        Some(id) => self
-                            .uniform_mask_image_bind_groups
-                            .get(&id)
-                            .map(|(_, bg)| bg)
-                            .unwrap_or(&self.uniform_bind_group),
-                        None => &self.uniform_bind_group,
-                    };
+                    let uniform_bind_group =
+                        self.pick_uniform_bind_group_for_mask_image(mask_image);
                     rp.set_bind_group(
                         0,
                         uniform_bind_group,
@@ -897,10 +953,13 @@ impl Renderer {
                             Path,
                         }
 
-                        let quad_pipeline = self
-                            .quad_pipeline
-                            .as_ref()
-                            .expect("quad pipeline must exist");
+                        for item in &encoding.ordered_draws[scene_pass.draw_range.clone()] {
+                            let OrderedDraw::Quad(draw) = item else {
+                                continue;
+                            };
+                            let _ = self.quad_pipeline(device, format, draw.pipeline);
+                        }
+
                         let viewport_pipeline = self
                             .viewport_pipeline
                             .as_ref()
@@ -928,6 +987,7 @@ impl Renderer {
 
                         let mut active_pipeline = ActivePipeline::None;
                         let mut active_text_page: Option<u16> = None;
+                        let mut active_quad_pipeline: Option<QuadPipelineKey> = None;
 
                         fn begin_main_pass<'a>(
                             encoder: &'a mut wgpu::CommandEncoder,
@@ -954,7 +1014,7 @@ impl Renderer {
 
                         let mut pass = begin_main_pass(&mut encoder, pass_target_view, load);
                         let mut active_uniform_offset: Option<u32> = None;
-                        let mut active_mask_image: Option<fret_core::ImageId> = None;
+                        let mut active_mask_image: Option<UniformMaskImageSelection> = None;
                         let mut active_scissor: Option<ScissorRect> = None;
 
                         let mut i = scene_pass.draw_range.start;
@@ -968,7 +1028,13 @@ impl Renderer {
                                         continue;
                                     }
 
-                                    if !matches!(active_pipeline, ActivePipeline::Quad) {
+                                    let quad_pipeline = self
+                                        .quad_pipelines
+                                        .get(&draw.pipeline)
+                                        .expect("quad pipeline must exist");
+                                    if !matches!(active_pipeline, ActivePipeline::Quad)
+                                        || active_quad_pipeline != Some(draw.pipeline)
+                                    {
                                         pass.set_pipeline(quad_pipeline);
                                         if perf_enabled {
                                             frame_perf.pipeline_switches =
@@ -976,12 +1042,16 @@ impl Renderer {
                                             frame_perf.pipeline_switches_quad =
                                                 frame_perf.pipeline_switches_quad.saturating_add(1);
                                         }
-                                        pass.set_bind_group(1, &quad_instance_bind_group, &[]);
-                                        if perf_enabled {
-                                            frame_perf.bind_group_switches =
-                                                frame_perf.bind_group_switches.saturating_add(1);
+                                        if !matches!(active_pipeline, ActivePipeline::Quad) {
+                                            pass.set_bind_group(1, &quad_instance_bind_group, &[]);
+                                            if perf_enabled {
+                                                frame_perf.bind_group_switches = frame_perf
+                                                    .bind_group_switches
+                                                    .saturating_add(1);
+                                            }
+                                            active_pipeline = ActivePipeline::Quad;
                                         }
-                                        active_pipeline = ActivePipeline::Quad;
+                                        active_quad_pipeline = Some(draw.pipeline);
                                     }
 
                                     let uniform_offset = (u64::from(draw.uniform_index)
@@ -992,14 +1062,8 @@ impl Renderer {
                                         .get(draw.uniform_index as usize)
                                         .copied()
                                         .flatten();
-                                    let uniform_bind_group = match mask_image {
-                                        Some(id) => self
-                                            .uniform_mask_image_bind_groups
-                                            .get(&id)
-                                            .map(|(_, bg)| bg)
-                                            .unwrap_or(&self.uniform_bind_group),
-                                        None => &self.uniform_bind_group,
-                                    };
+                                    let uniform_bind_group =
+                                        self.pick_uniform_bind_group_for_mask_image(mask_image);
 
                                     if active_uniform_offset != Some(uniform_offset)
                                         || active_mask_image != mask_image
@@ -1071,14 +1135,8 @@ impl Renderer {
                                         .get(draw.uniform_index as usize)
                                         .copied()
                                         .flatten();
-                                    let uniform_bind_group = match mask_image {
-                                        Some(id) => self
-                                            .uniform_mask_image_bind_groups
-                                            .get(&id)
-                                            .map(|(_, bg)| bg)
-                                            .unwrap_or(&self.uniform_bind_group),
-                                        None => &self.uniform_bind_group,
-                                    };
+                                    let uniform_bind_group =
+                                        self.pick_uniform_bind_group_for_mask_image(mask_image);
 
                                     if active_uniform_offset != Some(uniform_offset)
                                         || active_mask_image != mask_image
@@ -1165,14 +1223,8 @@ impl Renderer {
                                         .get(draw.uniform_index as usize)
                                         .copied()
                                         .flatten();
-                                    let uniform_bind_group = match mask_image {
-                                        Some(id) => self
-                                            .uniform_mask_image_bind_groups
-                                            .get(&id)
-                                            .map(|(_, bg)| bg)
-                                            .unwrap_or(&self.uniform_bind_group),
-                                        None => &self.uniform_bind_group,
-                                    };
+                                    let uniform_bind_group =
+                                        self.pick_uniform_bind_group_for_mask_image(mask_image);
 
                                     if active_uniform_offset != Some(uniform_offset)
                                         || active_mask_image != mask_image
@@ -1192,8 +1244,8 @@ impl Renderer {
                                         active_uniform_offset = Some(uniform_offset);
                                         active_mask_image = mask_image;
                                     }
-                                    let Some((_, bind_group)) =
-                                        self.image_bind_groups.get(&draw.image)
+                                    let Some(bind_group) =
+                                        self.pick_image_bind_group(draw.image, draw.sampling)
                                     else {
                                         i += 1;
                                         continue;
@@ -1256,14 +1308,8 @@ impl Renderer {
                                         .get(draw.uniform_index as usize)
                                         .copied()
                                         .flatten();
-                                    let uniform_bind_group = match mask_image {
-                                        Some(id) => self
-                                            .uniform_mask_image_bind_groups
-                                            .get(&id)
-                                            .map(|(_, bg)| bg)
-                                            .unwrap_or(&self.uniform_bind_group),
-                                        None => &self.uniform_bind_group,
-                                    };
+                                    let uniform_bind_group =
+                                        self.pick_uniform_bind_group_for_mask_image(mask_image);
 
                                     if active_uniform_offset != Some(uniform_offset)
                                         || active_mask_image != mask_image
@@ -1283,8 +1329,8 @@ impl Renderer {
                                         active_uniform_offset = Some(uniform_offset);
                                         active_mask_image = mask_image;
                                     }
-                                    let Some((_, bind_group)) =
-                                        self.image_bind_groups.get(&draw.image)
+                                    let Some(bind_group) =
+                                        self.pick_image_bind_group(draw.image, draw.sampling)
                                     else {
                                         i += 1;
                                         continue;
@@ -1351,6 +1397,7 @@ impl Renderer {
                                                         .mask_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
+                                                pass.set_bind_group(2, &text_paint_bind_group, &[]);
                                                 if perf_enabled {
                                                     frame_perf.bind_group_switches = frame_perf
                                                         .bind_group_switches
@@ -1404,6 +1451,7 @@ impl Renderer {
                                                         .color_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
+                                                pass.set_bind_group(2, &text_paint_bind_group, &[]);
                                                 if perf_enabled {
                                                     frame_perf.bind_group_switches = frame_perf
                                                         .bind_group_switches
@@ -1459,6 +1507,7 @@ impl Renderer {
                                                         .subpixel_atlas_bind_group(draw.atlas_page),
                                                     &[],
                                                 );
+                                                pass.set_bind_group(2, &text_paint_bind_group, &[]);
                                                 if perf_enabled {
                                                     frame_perf.bind_group_switches = frame_perf
                                                         .bind_group_switches
@@ -1499,14 +1548,8 @@ impl Renderer {
                                         .get(draw.uniform_index as usize)
                                         .copied()
                                         .flatten();
-                                    let uniform_bind_group = match mask_image {
-                                        Some(id) => self
-                                            .uniform_mask_image_bind_groups
-                                            .get(&id)
-                                            .map(|(_, bg)| bg)
-                                            .unwrap_or(&self.uniform_bind_group),
-                                        None => &self.uniform_bind_group,
-                                    };
+                                    let uniform_bind_group =
+                                        self.pick_uniform_bind_group_for_mask_image(mask_image);
 
                                     if active_uniform_offset != Some(uniform_offset)
                                         || active_mask_image != mask_image
@@ -1541,7 +1584,7 @@ impl Renderer {
                                     }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                        0..1,
+                                        draw.paint_index..(draw.paint_index + 1),
                                     );
                                     if perf_enabled {
                                         frame_perf.draw_calls =
@@ -1564,6 +1607,11 @@ impl Renderer {
                                             frame_perf.pipeline_switches_path =
                                                 frame_perf.pipeline_switches_path.saturating_add(1);
                                         }
+                                        pass.set_bind_group(1, &path_paint_bind_group, &[]);
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                        }
                                         pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Path;
                                     }
@@ -1576,14 +1624,8 @@ impl Renderer {
                                         .get(draw.uniform_index as usize)
                                         .copied()
                                         .flatten();
-                                    let uniform_bind_group = match mask_image {
-                                        Some(id) => self
-                                            .uniform_mask_image_bind_groups
-                                            .get(&id)
-                                            .map(|(_, bg)| bg)
-                                            .unwrap_or(&self.uniform_bind_group),
-                                        None => &self.uniform_bind_group,
-                                    };
+                                    let uniform_bind_group =
+                                        self.pick_uniform_bind_group_for_mask_image(mask_image);
 
                                     if active_uniform_offset != Some(uniform_offset)
                                         || active_mask_image != mask_image
@@ -1618,7 +1660,7 @@ impl Renderer {
                                     }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                        0..1,
+                                        draw.paint_index..(draw.paint_index + 1),
                                     );
                                     if perf_enabled {
                                         frame_perf.draw_calls =
@@ -1723,10 +1765,15 @@ impl Renderer {
                             frame_perf.pipeline_switches_path_msaa =
                                 frame_perf.pipeline_switches_path_msaa.saturating_add(1);
                         }
+                        path_pass_rp.set_bind_group(1, &path_paint_bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                        }
                         path_pass_rp.set_vertex_buffer(0, path_vertex_buffer.slice(..));
 
                         let mut active_uniform_offset: Option<u32> = None;
-                        let mut active_mask_image: Option<fret_core::ImageId> = None;
+                        let mut active_mask_image: Option<UniformMaskImageSelection> = None;
                         let mut active_scissor: Option<ScissorRect> = None;
                         for j in start..end {
                             let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
@@ -1755,14 +1802,8 @@ impl Renderer {
                                 .get(draw.uniform_index as usize)
                                 .copied()
                                 .flatten();
-                            let uniform_bind_group = match mask_image {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            };
+                            let uniform_bind_group =
+                                self.pick_uniform_bind_group_for_mask_image(mask_image);
 
                             if active_uniform_offset != Some(uniform_offset)
                                 || active_mask_image != mask_image
@@ -1783,7 +1824,7 @@ impl Renderer {
                             }
                             path_pass_rp.draw(
                                 draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                0..1,
+                                draw.paint_index..(draw.paint_index + 1),
                             );
                             if perf_enabled {
                                 frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
@@ -1832,14 +1873,8 @@ impl Renderer {
                         .get(path_pass.batch_uniform_index as usize)
                         .copied()
                         .flatten();
-                    let uniform_bind_group = match mask_image {
-                        Some(id) => self
-                            .uniform_mask_image_bind_groups
-                            .get(&id)
-                            .map(|(_, bg)| bg)
-                            .unwrap_or(&self.uniform_bind_group),
-                        None => &self.uniform_bind_group,
-                    };
+                    let uniform_bind_group =
+                        self.pick_uniform_bind_group_for_mask_image(mask_image);
                     pass.set_bind_group(
                         0,
                         uniform_bind_group,
@@ -2009,19 +2044,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -2094,19 +2123,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -2287,19 +2310,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -2383,19 +2400,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -2650,19 +2661,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -2737,19 +2742,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -2933,19 +2932,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -3020,19 +3013,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -3210,19 +3197,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -3297,19 +3278,13 @@ impl Renderer {
                         }
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -3512,19 +3487,13 @@ impl Renderer {
                             (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
                         rp.set_bind_group(
                             0,
-                            match encoding
-                                .uniform_mask_images
-                                .get(mask_uniform_index as usize)
-                                .copied()
-                                .flatten()
-                            {
-                                Some(id) => self
-                                    .uniform_mask_image_bind_groups
-                                    .get(&id)
-                                    .map(|(_, bg)| bg)
-                                    .unwrap_or(&self.uniform_bind_group),
-                                None => &self.uniform_bind_group,
-                            },
+                            self.pick_uniform_bind_group_for_mask_image(
+                                encoding
+                                    .uniform_mask_images
+                                    .get(mask_uniform_index as usize)
+                                    .copied()
+                                    .flatten(),
+                            ),
                             &[uniform_offset, render_space_offset_u32],
                         );
                         if perf_enabled {
@@ -3629,19 +3598,13 @@ impl Renderer {
                     }
                     rp.set_bind_group(
                         0,
-                        match encoding
-                            .uniform_mask_images
-                            .get(pass.uniform_index as usize)
-                            .copied()
-                            .flatten()
-                        {
-                            Some(id) => self
-                                .uniform_mask_image_bind_groups
-                                .get(&id)
-                                .map(|(_, bg)| bg)
-                                .unwrap_or(&self.uniform_bind_group),
-                            None => &self.uniform_bind_group,
-                        },
+                        self.pick_uniform_bind_group_for_mask_image(
+                            encoding
+                                .uniform_mask_images
+                                .get(pass.uniform_index as usize)
+                                .copied()
+                                .flatten(),
+                        ),
                         &[uniform_offset, render_space_offset_u32],
                     );
                     if perf_enabled {

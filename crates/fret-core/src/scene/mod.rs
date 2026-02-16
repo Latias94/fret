@@ -26,6 +26,15 @@ pub use paint::{
 pub use stroke::{DashPatternV1, StrokeStyleV1};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ImageSamplingHint {
+    /// Renderer-chosen default (typically linear filtering for UI content).
+    #[default]
+    Default,
+    Linear,
+    Nearest,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DrawOrder(pub u32);
 
@@ -452,6 +461,7 @@ pub enum SceneOp {
         rect: Rect,
         image: ImageId,
         fit: ViewportFit,
+        sampling: ImageSamplingHint,
         opacity: f32,
     },
 
@@ -460,6 +470,7 @@ pub enum SceneOp {
         rect: Rect,
         image: ImageId,
         uv: UvRect,
+        sampling: ImageSamplingHint,
         opacity: f32,
     },
 
@@ -471,6 +482,7 @@ pub enum SceneOp {
         rect: Rect,
         image: ImageId,
         uv: UvRect,
+        sampling: ImageSamplingHint,
         color: Color,
         opacity: f32,
     },
@@ -498,14 +510,14 @@ pub enum SceneOp {
         order: DrawOrder,
         origin: Point,
         text: TextBlobId,
-        color: Color,
+        paint: Paint,
     },
 
     Path {
         order: DrawOrder,
         origin: Point,
         path: PathId,
-        color: Color,
+        paint: Paint,
     },
 
     ViewportSurface {

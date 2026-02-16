@@ -1,0 +1,671 @@
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant, SystemTime};
+
+use serde::{Deserialize, Serialize};
+use tracing::{debug, info, warn};
+use winit::dpi::{LogicalSize, PhysicalPosition, PhysicalSize, Position};
+
+use fret_app::App;
+use fret_core::AppWindowId;
+
+use super::WindowCreateSpec;
+
+use crate::dev_state::{DevStateHooks, DevStateService, DevStateWindowKeyRegistry};
+
+#[derive(Debug, Clone, Copy)]
+struct MonitorRect {
+    origin: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+}
+
+impl MonitorRect {
+    fn contains_point_with_margin(self, pos: PhysicalPosition<i32>, margin: i32) -> bool {
+        let x0 = self.origin.x.saturating_sub(margin) as i64;
+        let y0 = self.origin.y.saturating_sub(margin) as i64;
+        let x1 = self.origin.x as i64 + self.size.width as i64 + margin as i64;
+        let y1 = self.origin.y as i64 + self.size.height as i64 + margin as i64;
+        let x = pos.x as i64;
+        let y = pos.y as i64;
+        x >= x0 && x <= x1 && y >= y0 && y <= y1
+    }
+}
+
+fn window_pos_is_visible(pos: PhysicalPosition<i32>, monitors: &[MonitorRect]) -> bool {
+    const MARGIN: i32 = 96;
+    monitors
+        .iter()
+        .copied()
+        .any(|m| m.contains_point_with_margin(pos, MARGIN))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RestoreOutcome {
+    Disabled,
+    ResetRequested,
+    FileNotFound,
+    ParseFailed,
+    Restored,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct MainWindowGeometry {
+    logical_size: LogicalSize<f64>,
+    position: Option<PhysicalPosition<i32>>,
+}
+
+#[derive(Debug)]
+pub(crate) struct DevStateController {
+    enabled: bool,
+    path: PathBuf,
+    poll_interval: Duration,
+    debounce: Duration,
+
+    restore_outcome: RestoreOutcome,
+    restored_main: Option<MainWindowGeometry>,
+    restore_logged: bool,
+    restore_printed: bool,
+    incoming_app: std::collections::HashMap<String, serde_json::Value>,
+
+    next_poll_at: Instant,
+    windows_state: std::collections::HashMap<String, MainWindowGeometry>,
+    dirty_since: Option<Instant>,
+    last_app_epoch: u64,
+    last_window_keys_epoch: u64,
+
+    window_keys: std::collections::HashMap<AppWindowId, String>,
+}
+
+impl DevStateController {
+    pub(crate) fn from_env(now: Instant) -> Self {
+        let enabled = cfg!(debug_assertions)
+            && (std::env::var_os("FRET_DEV_STATE").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_HOTPATCH").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("DIOXUS_CLI_ENABLED").is_some_and(|v| !v.is_empty()));
+
+        let path = std::env::var_os("FRET_DEV_STATE_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(".fret").join("dev_state.json"));
+
+        let poll_interval = std::env::var("FRET_DEV_STATE_POLL_MS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(Duration::from_millis)
+            .unwrap_or_else(|| Duration::from_millis(150));
+
+        let debounce = std::env::var("FRET_DEV_STATE_DEBOUNCE_MS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(Duration::from_millis)
+            .unwrap_or_else(|| Duration::from_millis(350));
+
+        let reset_requested =
+            std::env::var_os("FRET_DEV_STATE_RESET").is_some_and(|v| !v.is_empty());
+
+        let (restore_outcome, windows_state, incoming_app) = if !enabled {
+            (
+                RestoreOutcome::Disabled,
+                std::collections::HashMap::new(),
+                std::collections::HashMap::new(),
+            )
+        } else if reset_requested {
+            let _ = std::fs::remove_file(&path);
+            (
+                RestoreOutcome::ResetRequested,
+                std::collections::HashMap::new(),
+                std::collections::HashMap::new(),
+            )
+        } else {
+            match load_dev_state_file(&path) {
+                Ok(Some(file)) => {
+                    let mut windows: std::collections::HashMap<String, MainWindowGeometry> =
+                        std::collections::HashMap::new();
+                    for (key, geom) in file.windows {
+                        windows.insert(
+                            key,
+                            MainWindowGeometry {
+                                logical_size: LogicalSize::new(
+                                    geom.logical_size.width,
+                                    geom.logical_size.height,
+                                ),
+                                position: geom.position.map(|p| PhysicalPosition::new(p.x, p.y)),
+                            },
+                        );
+                    }
+                    (RestoreOutcome::Restored, windows, file.app)
+                }
+                Ok(None) => (
+                    RestoreOutcome::FileNotFound,
+                    std::collections::HashMap::new(),
+                    std::collections::HashMap::new(),
+                ),
+                Err(_) => (
+                    RestoreOutcome::ParseFailed,
+                    std::collections::HashMap::new(),
+                    std::collections::HashMap::new(),
+                ),
+            }
+        };
+
+        let restored_main = windows_state.get("main").copied();
+
+        Self {
+            enabled,
+            path,
+            poll_interval,
+            debounce,
+            restore_outcome,
+            restored_main,
+            restore_logged: false,
+            restore_printed: false,
+            incoming_app,
+            next_poll_at: now + poll_interval,
+            windows_state,
+            dirty_since: None,
+            last_app_epoch: 0,
+            last_window_keys_epoch: 0,
+            window_keys: std::collections::HashMap::new(),
+        }
+    }
+
+    pub(crate) fn install_into_app(&mut self, app: &mut App) {
+        if !self.enabled {
+            return;
+        }
+        let incoming = std::mem::take(&mut self.incoming_app);
+        app.set_global(DevStateService::new(incoming, self.path.clone()));
+    }
+
+    pub(crate) fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub(crate) fn sync_window_keys_from_app(
+        &mut self,
+        app: &App,
+        mut is_window_alive: impl FnMut(AppWindowId) -> bool,
+    ) {
+        if !self.enabled {
+            return;
+        }
+
+        let Some(reg) = app.global::<DevStateWindowKeyRegistry>() else {
+            return;
+        };
+        let epoch = reg.epoch();
+        if epoch == self.last_window_keys_epoch {
+            return;
+        }
+        self.last_window_keys_epoch = epoch;
+
+        for (window, key) in reg.snapshot() {
+            if !is_window_alive(window) {
+                continue;
+            }
+            self.register_window_key(window, key);
+        }
+    }
+
+    pub(crate) fn register_window_key(&mut self, window: AppWindowId, key: impl Into<String>) {
+        if !self.enabled {
+            return;
+        }
+        self.window_keys.insert(window, key.into());
+    }
+
+    pub(crate) fn window_key(&self, window: AppWindowId) -> Option<&str> {
+        self.window_keys.get(&window).map(|v| v.as_str())
+    }
+
+    pub(crate) fn unregister_window(&mut self, window: AppWindowId) {
+        if !self.enabled {
+            return;
+        }
+        self.window_keys.remove(&window);
+    }
+
+    pub(crate) fn window_keys_snapshot(&self) -> Vec<(AppWindowId, String)> {
+        self.window_keys
+            .iter()
+            .map(|(k, v)| (*k, v.clone()))
+            .collect()
+    }
+
+    pub(crate) fn export_app_state(&mut self, app: &mut App) {
+        if !self.enabled {
+            return;
+        }
+        DevStateHooks::export_all(app);
+    }
+
+    pub(crate) fn observe_window_geometry_now(
+        &mut self,
+        key: &str,
+        logical_size: LogicalSize<f64>,
+        position: Option<PhysicalPosition<i32>>,
+    ) {
+        if !self.enabled {
+            return;
+        }
+
+        let observed = MainWindowGeometry {
+            logical_size,
+            position,
+        };
+        if self.windows_state.get(key).copied() != Some(observed) {
+            self.windows_state.insert(key.to_string(), observed);
+        }
+    }
+
+    pub(crate) fn export_and_flush_now(&mut self, app: &mut App) {
+        if !self.enabled {
+            return;
+        }
+
+        self.export_app_state(app);
+        if let Err(err) = self.flush_file(app) {
+            warn!(path = %self.path.display(), error = %err, "dev_state: flush failed");
+        }
+        self.dirty_since = None;
+    }
+
+    pub(crate) fn apply_main_window_spec(&mut self, spec: &mut WindowCreateSpec) {
+        if !self.enabled {
+            return;
+        }
+
+        self.apply_window_spec("main", spec);
+
+        if !self.restore_logged {
+            self.restore_logged = true;
+            match self.restore_outcome {
+                RestoreOutcome::Disabled => {}
+                RestoreOutcome::ResetRequested => {
+                    info!(
+                        path = %self.path.display(),
+                        "dev_state: reset requested (restore skipped)"
+                    );
+                }
+                RestoreOutcome::FileNotFound => {
+                    debug!(
+                        path = %self.path.display(),
+                        "dev_state: no dev state file (restore skipped)"
+                    );
+                }
+                RestoreOutcome::ParseFailed => {
+                    warn!(
+                        path = %self.path.display(),
+                        "dev_state: failed to parse dev state (restore skipped)"
+                    );
+                }
+                RestoreOutcome::Restored => {
+                    let restored_position = self.restored_main.and_then(|g| g.position).is_some();
+                    info!(
+                        path = %self.path.display(),
+                        size = ?self.restored_main.map(|g| (g.logical_size.width, g.logical_size.height)),
+                        restored_position = restored_position,
+                        "dev_state: restored main window geometry",
+                    );
+                }
+            }
+        }
+
+        if !self.restore_printed {
+            self.restore_printed = true;
+            match self.restore_outcome {
+                RestoreOutcome::Disabled => {}
+                RestoreOutcome::ResetRequested => {
+                    eprintln!(
+                        "dev_state: reset requested (restore skipped): {}",
+                        self.path.display()
+                    );
+                }
+                RestoreOutcome::FileNotFound => {
+                    eprintln!(
+                        "dev_state: file not found (restore skipped): {}",
+                        self.path.display()
+                    );
+                }
+                RestoreOutcome::ParseFailed => {
+                    eprintln!(
+                        "dev_state: parse failed (restore skipped): {}",
+                        self.path.display()
+                    );
+                }
+                RestoreOutcome::Restored => {
+                    let restored_position = self.restored_main.and_then(|g| g.position).is_some();
+                    eprintln!(
+                        "dev_state: restored main window (restored_position={restored_position}) from {}",
+                        self.path.display()
+                    );
+                }
+            }
+        }
+    }
+
+    pub(crate) fn apply_window_spec(&mut self, key: &str, spec: &mut WindowCreateSpec) {
+        if !self.enabled {
+            return;
+        }
+
+        if let Some(geom) = self.windows_state.get(key).copied() {
+            spec.size = geom.logical_size;
+            if let Some(pos) = geom.position {
+                spec.position = Some(Position::Physical(pos));
+            }
+        }
+    }
+
+    pub(crate) fn sanitize_window_spec_position(
+        &mut self,
+        key: &str,
+        spec: &mut WindowCreateSpec,
+        monitors: impl IntoIterator<Item = (PhysicalPosition<i32>, PhysicalSize<u32>)>,
+    ) {
+        if !self.enabled {
+            return;
+        }
+        let Some(Position::Physical(pos)) = spec.position else {
+            return;
+        };
+
+        let monitors: Vec<MonitorRect> = monitors
+            .into_iter()
+            .map(|(origin, size)| MonitorRect { origin, size })
+            .collect();
+        if monitors.is_empty() {
+            return;
+        }
+
+        if window_pos_is_visible(pos, &monitors) {
+            return;
+        }
+
+        debug!(
+            key = %key,
+            x = pos.x,
+            y = pos.y,
+            "dev_state: restored window position is off-screen; dropping position"
+        );
+        spec.position = None;
+    }
+
+    pub(crate) fn observe_windows(
+        &mut self,
+        now: Instant,
+        app: &App,
+        windows: impl IntoIterator<Item = (String, LogicalSize<f64>, Option<PhysicalPosition<i32>>)>,
+    ) {
+        if !self.enabled {
+            return;
+        }
+
+        if now < self.next_poll_at {
+            return;
+        }
+        self.next_poll_at = now + self.poll_interval;
+
+        let app_epoch = app
+            .global::<DevStateService>()
+            .map(|svc| svc.outgoing_snapshot().epoch)
+            .unwrap_or(0);
+
+        let mut changed = app_epoch != self.last_app_epoch;
+        self.last_app_epoch = app_epoch;
+
+        for (key, logical_size, position) in windows {
+            let observed = MainWindowGeometry {
+                logical_size,
+                position,
+            };
+            if self.windows_state.get(&key).copied() != Some(observed) {
+                self.windows_state.insert(key, observed);
+                changed = true;
+            }
+        }
+
+        if !changed {
+            if let Some(since) = self.dirty_since
+                && now.saturating_duration_since(since) >= self.debounce
+            {
+                if let Err(err) = self.flush_file(app) {
+                    warn!(path = %self.path.display(), error = %err, "dev_state: flush failed");
+                }
+                self.dirty_since = None;
+            }
+            return;
+        }
+
+        self.dirty_since = Some(now);
+        if self.debounce == Duration::from_millis(0) {
+            if let Err(err) = self.flush_file(app) {
+                warn!(path = %self.path.display(), error = %err, "dev_state: flush failed");
+            }
+            self.dirty_since = None;
+        }
+    }
+
+    fn flush_file(&mut self, app: &App) -> Result<(), String> {
+        let app_data = app
+            .global::<DevStateService>()
+            .map(|svc| svc.outgoing_snapshot().data)
+            .unwrap_or_default();
+
+        let windows: std::collections::HashMap<String, WindowGeometryV1> = self
+            .windows_state
+            .iter()
+            .map(|(key, geom)| {
+                (
+                    key.clone(),
+                    WindowGeometryV1 {
+                        logical_size: LogicalSizeV1 {
+                            width: geom.logical_size.width,
+                            height: geom.logical_size.height,
+                        },
+                        position: geom.position.map(|p| PhysicalPositionV1 { x: p.x, y: p.y }),
+                    },
+                )
+            })
+            .collect();
+
+        let file = DevStateFileV1 {
+            version: 1,
+            updated_at_ms: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or_default(),
+            app: app_data,
+            windows,
+        };
+
+        write_json_atomic(&self.path, &file)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DevStateFileV1 {
+    version: u32,
+    #[serde(default)]
+    updated_at_ms: u64,
+    #[serde(default)]
+    app: std::collections::HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    windows: std::collections::HashMap<String, WindowGeometryV1>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+struct WindowGeometryV1 {
+    logical_size: LogicalSizeV1,
+    #[serde(default)]
+    position: Option<PhysicalPositionV1>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+struct LogicalSizeV1 {
+    width: f64,
+    height: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+struct PhysicalPositionV1 {
+    x: i32,
+    y: i32,
+}
+
+fn load_dev_state_file(path: &Path) -> Result<Option<DevStateFileV1>, String> {
+    let bytes = match std::fs::read(path) {
+        Ok(v) => v,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(err.to_string()),
+    };
+
+    let file: DevStateFileV1 = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    if file.version != 1 {
+        return Ok(None);
+    }
+    Ok(Some(file))
+}
+
+fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+    let Some(dir) = path.parent() else {
+        return Err("missing parent directory".to_string());
+    };
+    if !dir.as_os_str().is_empty() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+
+    let tmp = tmp_path_for(path);
+    let data = serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?;
+    std::fs::write(&tmp, data).map_err(|e| e.to_string())?;
+
+    replace_file_atomic(&tmp, path)?;
+    Ok(())
+}
+
+fn tmp_path_for(path: &Path) -> PathBuf {
+    let pid = std::process::id();
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("dev_state.json");
+    let tmp_name = format!("{file_name}.{pid}.tmp");
+    path.with_file_name(tmp_name)
+}
+
+#[cfg(not(windows))]
+fn replace_file_atomic(tmp: &Path, dest: &Path) -> Result<(), String> {
+    std::fs::rename(tmp, dest).map_err(|e| e.to_string())
+}
+
+#[cfg(windows)]
+fn replace_file_atomic(tmp: &Path, dest: &Path) -> Result<(), String> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt as _;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MOVEFILE_REPLACE_EXISTING, MoveFileExW, ReplaceFileW,
+    };
+
+    fn to_wide(s: &OsStr) -> Vec<u16> {
+        let mut v: Vec<u16> = s.encode_wide().collect();
+        v.push(0);
+        v
+    }
+
+    let dest_exists = dest.is_file();
+
+    let tmp_w = to_wide(tmp.as_os_str());
+    let dest_w = to_wide(dest.as_os_str());
+
+    unsafe {
+        if dest_exists {
+            let ok = ReplaceFileW(
+                dest_w.as_ptr(),
+                tmp_w.as_ptr(),
+                std::ptr::null(),
+                0,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            );
+            if ok != 0 {
+                return Ok(());
+            }
+        }
+
+        let ok = MoveFileExW(tmp_w.as_ptr(), dest_w.as_ptr(), MOVEFILE_REPLACE_EXISTING);
+        if ok != 0 {
+            return Ok(());
+        }
+    }
+
+    Err("failed to atomically replace dev-state file".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_v1_main_window_geometry() {
+        let json = r#"
+        {
+          "version": 1,
+          "updated_at_ms": 123,
+          "windows": {
+            "main": {
+              "logical_size": { "width": 1000.0, "height": 700.0 },
+              "position": { "x": 10, "y": 20 }
+            }
+          }
+        }"#;
+
+        let tmp = std::env::temp_dir().join("fret_dev_state_parse_test.json");
+        let _ = std::fs::write(&tmp, json);
+
+        let file = load_dev_state_file(&tmp).expect("parse").expect("present");
+        let geom = file.windows.get("main").copied().expect("main");
+        assert_eq!(geom.logical_size.width, 1000.0);
+        assert_eq!(geom.logical_size.height, 700.0);
+        assert_eq!(geom.position.map(|p| (p.x, p.y)), Some((10, 20)));
+    }
+
+    #[test]
+    fn ignores_unknown_version() {
+        let json = r#"{ "version": 999, "windows": { "main": { "logical_size": { "width": 1.0, "height": 2.0 } } } }"#;
+        let tmp = std::env::temp_dir().join("fret_dev_state_parse_test_unknown_version.json");
+        let _ = std::fs::write(&tmp, json);
+        let file = load_dev_state_file(&tmp).expect("read");
+        assert!(file.is_none());
+    }
+
+    #[test]
+    fn preserves_app_map() {
+        let json = r#"
+        {
+          "version": 1,
+          "app": { "docking.layout": { "layout_version": 2, "windows": [], "nodes": [] } },
+          "windows": {
+            "main": { "logical_size": { "width": 1.0, "height": 2.0 } }
+          }
+        }"#;
+        let tmp = std::env::temp_dir().join("fret_dev_state_parse_test_app.json");
+        let _ = std::fs::write(&tmp, json);
+        let file = load_dev_state_file(&tmp).expect("read").expect("present");
+        assert!(file.app.contains_key("docking.layout"));
+    }
+
+    #[test]
+    fn drops_offscreen_window_positions() {
+        let monitors = [MonitorRect {
+            origin: PhysicalPosition::new(0, 0),
+            size: PhysicalSize::new(1920, 1080),
+        }];
+        assert!(window_pos_is_visible(
+            PhysicalPosition::new(40, 40),
+            &monitors
+        ));
+        assert!(!window_pos_is_visible(
+            PhysicalPosition::new(99999, 99999),
+            &monitors
+        ));
+    }
+}

@@ -1,4 +1,4 @@
-use super::super::state::{EncodeState, transform_quad_points_px};
+use super::super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::super::*;
 
 pub(in super::super) fn encode_mask_image(
@@ -7,6 +7,7 @@ pub(in super::super) fn encode_mask_image(
     rect: Rect,
     image: fret_core::ImageId,
     uv: UvRect,
+    sampling: fret_core::scene::ImageSamplingHint,
     color: Color,
     opacity: f32,
 ) {
@@ -25,6 +26,16 @@ pub(in super::super) fn encode_mask_image(
     }
     let t_px = state.current_transform_px();
     let quad = transform_quad_points_px(t_px, x, y, w, h);
+    let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+    let Some(bounds_scissor) =
+        scissor_from_bounds_px(min_x, min_y, max_x, max_y, state.viewport_size)
+    else {
+        return;
+    };
+    let clipped_scissor = intersect_scissor(state.current_scissor, bounds_scissor);
+    if clipped_scissor.w == 0 || clipped_scissor.h == 0 {
+        return;
+    }
 
     let first_vertex = state.text_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
@@ -35,41 +46,48 @@ pub(in super::super) fn encode_mask_image(
     state.text_vertices.extend_from_slice(&[
         TextVertex {
             pos_px: [quad[0].0, quad[0].1],
+            local_pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[1].0, quad[1].1],
+            local_pos_px: [quad[1].0, quad[1].1],
             uv: [u1, v0],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[2].0, quad[2].1],
+            local_pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[0].0, quad[0].1],
+            local_pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[2].0, quad[2].1],
+            local_pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             color: premul,
         },
         TextVertex {
             pos_px: [quad[3].0, quad[3].1],
+            local_pos_px: [quad[3].0, quad[3].1],
             uv: [u0, v1],
             color: premul,
         },
     ]);
 
     state.ordered_draws.push(OrderedDraw::Mask(MaskDraw {
-        scissor: state.current_scissor,
+        scissor: clipped_scissor,
         uniform_index: state.current_uniform_index,
         first_vertex,
         vertex_count: 6,
         image,
+        sampling,
     }));
 }

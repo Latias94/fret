@@ -1,12 +1,180 @@
 //! Geometry helpers for caret/selection/pointer hit-testing.
 
 use std::ops::Range;
+use std::sync::Arc;
 
 use fret_code_editor_buffer::TextBuffer;
 use fret_code_editor_view::DisplayPoint;
-use fret_core::{Px, Rect, Size, TextBlobId};
+use fret_core::{
+    AttributedText, FontId, FontWeight, Px, Rect, Size, TextAlign, TextOverflow, TextSlant,
+    TextSpan, TextStyle, TextWrap,
+};
+use fret_runtime::TextFontStackKey;
 
 use super::{CodeEditorState, PreeditState};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) struct RowGeomConstraintsKey {
+    has_max_width: bool,
+    max_width_bits: u32,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    align: TextAlign,
+    scale_bits: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(super) struct RowGeomStyleKey {
+    font: FontId,
+    size_bits: u32,
+    weight: FontWeight,
+    slant: TextSlant,
+    has_line_height: bool,
+    line_height_bits: u32,
+    has_letter_spacing: bool,
+    letter_spacing_bits: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(super) struct RowGeomKey {
+    /// Pointer identity for the row `Arc<str>` used to shape the row.
+    ///
+    /// This is intentionally pointer-based: it keeps geometry cache hits cheap and ensures we never
+    /// accidentally equate different allocations that might carry different display mapping epochs.
+    text_ptr: usize,
+    text_len: usize,
+    font_stack_key: u64,
+    constraints: RowGeomConstraintsKey,
+    style: RowGeomStyleKey,
+    spans_shaping_key: u64,
+    attributed: bool,
+}
+
+fn f32_bits(v: f32) -> u32 {
+    if v.is_finite() { v.to_bits() } else { 0 }
+}
+
+fn px_bits(v: Px) -> u32 {
+    f32_bits(v.0)
+}
+
+fn max_width_bits_for_key(max_width: Option<Px>, wrap: TextWrap, align: TextAlign) -> (bool, u32) {
+    let Some(max_width) = max_width else {
+        return (false, 0);
+    };
+
+    // For unwrapped editor rows (wrap=None, align=Start) max width is an implementation detail used
+    // to keep cache keys stable under resize jitter. Quantize to an upper-bounded bucket so small
+    // width deltas do not thrash row geometry caches.
+    let bits = if wrap == TextWrap::None && align == TextAlign::Start {
+        const BUCKET_PX: f32 = 64.0;
+        let w = max_width.0.max(0.0);
+        let bucketed = (w / BUCKET_PX).ceil() * BUCKET_PX;
+        px_bits(Px(bucketed))
+    } else {
+        px_bits(max_width)
+    };
+
+    (true, bits)
+}
+
+fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    for s in spans {
+        s.len.hash(&mut h);
+        s.shaping.font.hash(&mut h);
+        s.shaping.weight.hash(&mut h);
+        s.shaping.slant.hash(&mut h);
+        s.shaping.letter_spacing_em.map(f32_bits).hash(&mut h);
+
+        s.shaping.features.len().hash(&mut h);
+        for f in &s.shaping.features {
+            f.tag.hash(&mut h);
+            f.value.hash(&mut h);
+        }
+
+        s.shaping.axes.len().hash(&mut h);
+        for a in &s.shaping.axes {
+            a.tag.hash(&mut h);
+            f32_bits(a.value).hash(&mut h);
+        }
+    }
+    h.finish()
+}
+
+impl RowGeomKey {
+    pub(super) fn for_plain(
+        text: &Arc<str>,
+        style: &TextStyle,
+        constraints: (Option<Px>, TextWrap, TextOverflow, TextAlign, f32),
+        font_stack_key: TextFontStackKey,
+    ) -> Self {
+        let (max_width, wrap, overflow, align, scale_factor) = constraints;
+        let (has_max_width, max_width_bits) = max_width_bits_for_key(max_width, wrap, align);
+        Self {
+            text_ptr: text.as_ref().as_ptr() as usize,
+            text_len: text.len(),
+            font_stack_key: font_stack_key.0,
+            constraints: RowGeomConstraintsKey {
+                has_max_width,
+                max_width_bits,
+                wrap,
+                overflow,
+                align,
+                scale_bits: f32_bits(scale_factor.max(1.0)),
+            },
+            style: RowGeomStyleKey {
+                font: style.font.clone(),
+                size_bits: px_bits(style.size),
+                weight: style.weight,
+                slant: style.slant,
+                has_line_height: style.line_height.is_some(),
+                line_height_bits: style.line_height.map(px_bits).unwrap_or(0),
+                has_letter_spacing: style.letter_spacing_em.is_some(),
+                letter_spacing_bits: style.letter_spacing_em.map(f32_bits).unwrap_or(0),
+            },
+            spans_shaping_key: 0,
+            attributed: false,
+        }
+    }
+
+    pub(super) fn for_attributed(
+        rich: &AttributedText,
+        style: &TextStyle,
+        constraints: (Option<Px>, TextWrap, TextOverflow, TextAlign, f32),
+        font_stack_key: TextFontStackKey,
+    ) -> Self {
+        let (max_width, wrap, overflow, align, scale_factor) = constraints;
+        let text = &rich.text;
+        let (has_max_width, max_width_bits) = max_width_bits_for_key(max_width, wrap, align);
+        Self {
+            text_ptr: text.as_ref().as_ptr() as usize,
+            text_len: text.len(),
+            font_stack_key: font_stack_key.0,
+            constraints: RowGeomConstraintsKey {
+                has_max_width,
+                max_width_bits,
+                wrap,
+                overflow,
+                align,
+                scale_bits: f32_bits(scale_factor.max(1.0)),
+            },
+            style: RowGeomStyleKey {
+                font: style.font.clone(),
+                size_bits: px_bits(style.size),
+                weight: style.weight,
+                slant: style.slant,
+                has_line_height: style.line_height.is_some(),
+                line_height_bits: style.line_height.map(px_bits).unwrap_or(0),
+                has_letter_spacing: style.letter_spacing_em.is_some(),
+                letter_spacing_bits: style.letter_spacing_em.map(f32_bits).unwrap_or(0),
+            },
+            spans_shaping_key: spans_shaping_fingerprint(rich.spans.as_ref()),
+            attributed: true,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct RowPreeditMapping {
@@ -20,8 +188,8 @@ pub(super) struct RowPreeditMapping {
 pub(super) struct RowGeom {
     /// Display-row range within the buffer (UTF-8 byte indices).
     pub(super) row_range: Range<usize>,
-    /// Prepared text blob that backs `caret_stops` and caret metrics.
-    pub(super) blob: TextBlobId,
+    /// Stable cache key for the shaped row geometry, ignoring paint-only changes.
+    pub(super) key: RowGeomKey,
     /// Caret stop table for the displayed row text (byte index -> x offset).
     pub(super) caret_stops: Vec<(usize, Px)>,
     /// Optional mapping between buffer-local and display-local indices when the row materializes
@@ -348,6 +516,63 @@ pub(super) fn caret_rect_for_selection(
             col = col.saturating_add(preedit_cursor_offset_cols(preedit));
         }
         Px(bounds.origin.x.0 + col as f32 * cell_w.0)
+    });
+    let y = Px(row_y.0 + caret_top.0);
+
+    Some(Rect::new(
+        fret_core::Point::new(x, y),
+        Size::new(Px(1.0), caret_h),
+    ))
+}
+
+pub(super) fn caret_rect_for_buffer_byte_boundary(
+    st: &CodeEditorState,
+    row_h: Px,
+    cell_w: Px,
+    bounds: Rect,
+    scroll_handle: &fret_ui::scroll::ScrollHandle,
+    byte: usize,
+) -> Option<Rect> {
+    let byte = byte.min(st.buffer.len_bytes());
+    let byte = st.buffer.clamp_to_char_boundary_left(byte);
+    let pt = st.display_map.byte_to_display_point(&st.buffer, byte);
+
+    let offset = scroll_handle.offset();
+    let row_y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
+
+    let caret_row = st
+        .display_map
+        .byte_to_display_point(&st.buffer, st.selection.caret().min(st.buffer.len_bytes()))
+        .row;
+    let row_has_preedit = st.preedit.is_some() && caret_row == pt.row;
+
+    let mut caret_top = Px(0.0);
+    let mut caret_h = row_h;
+    let mut x = None::<Px>;
+    if let Some((geom, _)) = st.row_geom_cache.get(&pt.row) {
+        if let (Some(top), Some(h)) = (geom.caret_rect_top, geom.caret_rect_height)
+            && h.0 > 0.0
+        {
+            caret_top = top;
+            caret_h = h;
+        }
+
+        if !geom.caret_stops.is_empty()
+            && byte >= geom.row_range.start
+            && geom.has_preedit == row_has_preedit
+        {
+            let mut local = byte.saturating_sub(geom.row_range.start);
+            if let Some(folds) = geom.fold_map.as_ref() {
+                local = folds.buffer_local_to_display_local(local);
+            }
+            let cx = caret_x_for_index(&geom.caret_stops, local);
+            x = Some(Px(bounds.origin.x.0 + cx.0));
+        }
+    }
+
+    let x = x.unwrap_or_else(|| {
+        let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+        Px(bounds.origin.x.0 + pt.col as f32 * cell_w.0)
     });
     let y = Px(row_y.0 + caret_top.0);
 

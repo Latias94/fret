@@ -20,12 +20,12 @@ pub(in super::super) fn encode_path(
     state: &mut EncodeState<'_>,
     origin: Point,
     path: fret_core::PathId,
-    color: Color,
+    paint: fret_core::scene::Paint,
 ) {
     state.flush_quad_batch();
 
     let group_opacity = state.current_opacity();
-    if color.a <= 0.0 || group_opacity <= 0.0 {
+    if group_opacity <= 0.0 {
         return;
     }
     let Some(prepared) = renderer.paths.get(path) else {
@@ -55,6 +55,140 @@ pub(in super::super) fn encode_path(
         return;
     }
     let t_px = state.current_transform_px();
+
+    fn mul_alpha(color: Color, opacity: f32) -> Color {
+        let mut c = color;
+        c.a = (c.a * opacity).clamp(0.0, 1.0);
+        c
+    }
+
+    fn tile_mode_to_u32(m: fret_core::scene::TileMode) -> u32 {
+        match m {
+            fret_core::scene::TileMode::Clamp => 0,
+            fret_core::scene::TileMode::Repeat => 1,
+            fret_core::scene::TileMode::Mirror => 2,
+        }
+    }
+
+    fn color_space_to_u32(c: fret_core::scene::ColorSpace) -> u32 {
+        match c {
+            fret_core::scene::ColorSpace::Srgb => 0,
+            fret_core::scene::ColorSpace::Oklab => 1,
+        }
+    }
+
+    fn paint_to_gpu(p: fret_core::scene::Paint, opacity: f32, scale_factor: f32) -> PaintGpu {
+        use fret_core::scene::{MAX_STOPS, Paint};
+
+        let mut out = PaintGpu {
+            kind: 0,
+            tile_mode: 0,
+            color_space: 0,
+            stop_count: 0,
+            params0: [0.0; 4],
+            params1: [0.0; 4],
+            params2: [0.0; 4],
+            params3: [0.0; 4],
+            stop_colors: [[0.0; 4]; MAX_STOPS],
+            stop_offsets0: [0.0; 4],
+            stop_offsets1: [0.0; 4],
+        };
+
+        // v1: path paint supports solid + gradients. Material is deterministically degraded to
+        // a solid base color (params.vec4s[0]).
+        let p = match p {
+            Paint::Material { params, .. } => {
+                let base = params.vec4s[0];
+                Paint::Solid(Color {
+                    r: base[0],
+                    g: base[1],
+                    b: base[2],
+                    a: base[3],
+                })
+            }
+            other => other,
+        };
+
+        match p {
+            Paint::Solid(c) => {
+                let c = mul_alpha(c, opacity);
+                out.kind = 0;
+                out.params0 = color_to_linear_rgba_premul(c);
+            }
+            Paint::LinearGradient(g) => {
+                out.kind = 1;
+                out.tile_mode = tile_mode_to_u32(g.tile_mode);
+                out.color_space = color_space_to_u32(g.color_space);
+                out.stop_count = u32::from(g.stop_count);
+                out.params0 = [
+                    g.start.x.0 * scale_factor,
+                    g.start.y.0 * scale_factor,
+                    g.end.x.0 * scale_factor,
+                    g.end.y.0 * scale_factor,
+                ];
+
+                let n = usize::from(g.stop_count).min(MAX_STOPS);
+                for i in 0..n {
+                    let stop = g.stops[i];
+                    let c = mul_alpha(stop.color, opacity);
+                    out.stop_colors[i] = color_to_linear_rgba_premul(c);
+                    let offset = stop.offset.clamp(0.0, 1.0);
+                    if i < 4 {
+                        out.stop_offsets0[i] = offset;
+                    } else {
+                        out.stop_offsets1[i - 4] = offset;
+                    }
+                }
+            }
+            Paint::RadialGradient(g) => {
+                out.kind = 2;
+                out.tile_mode = tile_mode_to_u32(g.tile_mode);
+                out.color_space = color_space_to_u32(g.color_space);
+                out.stop_count = u32::from(g.stop_count);
+                out.params0 = [
+                    g.center.x.0 * scale_factor,
+                    g.center.y.0 * scale_factor,
+                    g.radius.width.0 * scale_factor,
+                    g.radius.height.0 * scale_factor,
+                ];
+
+                let n = usize::from(g.stop_count).min(MAX_STOPS);
+                for i in 0..n {
+                    let stop = g.stops[i];
+                    let c = mul_alpha(stop.color, opacity);
+                    out.stop_colors[i] = color_to_linear_rgba_premul(c);
+                    let offset = stop.offset.clamp(0.0, 1.0);
+                    if i < 4 {
+                        out.stop_offsets0[i] = offset;
+                    } else {
+                        out.stop_offsets1[i - 4] = offset;
+                    }
+                }
+            }
+            Paint::Material { .. } => {}
+        }
+
+        out
+    }
+
+    let paint_gpu = paint_to_gpu(paint, group_opacity, state.scale_factor);
+    // Visibility early-out: for solid, alpha is encoded in params0.w (premul). For gradients,
+    // scan stop alphas cheaply.
+    let visible = if paint_gpu.kind == 0 {
+        paint_gpu.params0[3] > 0.0
+    } else {
+        let mut any = false;
+        for c in paint_gpu.stop_colors {
+            if c[3] > 0.0 {
+                any = true;
+                break;
+            }
+        }
+        any
+    };
+    if !visible {
+        return;
+    }
 
     let local_bounds = Rect::new(
         Point::new(
@@ -91,7 +225,7 @@ pub(in super::super) fn encode_path(
     if debug_path_draw_enabled() && debug_path_draw_should_log() {
         let b = prepared.metrics.bounds;
         eprintln!(
-            "encode_path: draw id={:?} origin=({:.1},{:.1}) bounds=({:.1},{:.1} {:.1}x{:.1}) tris={} color=({:.2},{:.2},{:.2},{:.2}) scissor={:?}",
+            "encode_path: draw id={:?} origin=({:.1},{:.1}) bounds=({:.1},{:.1} {:.1}x{:.1}) tris={} paint_kind={} scissor={:?}",
             path,
             origin.x.0,
             origin.y.0,
@@ -100,10 +234,7 @@ pub(in super::super) fn encode_path(
             b.size.width.0,
             b.size.height.0,
             prepared.triangles.len(),
-            color.r,
-            color.g,
-            color.b,
-            color.a,
+            paint_gpu.kind,
             clipped_scissor
         );
     }
@@ -111,7 +242,8 @@ pub(in super::super) fn encode_path(
     let first_vertex = state.path_vertices.len() as u32;
     let ox = origin.x.0 * state.scale_factor;
     let oy = origin.y.0 * state.scale_factor;
-    let premul = color_to_linear_rgba_premul(EncodeState::color_with_opacity(color, group_opacity));
+    let paint_index = state.path_paints.len().min(u32::MAX as usize) as u32;
+    state.path_paints.push(paint_gpu);
 
     for p in &prepared.triangles {
         let lx = ox + p[0] * state.scale_factor;
@@ -119,7 +251,7 @@ pub(in super::super) fn encode_path(
         let (wx, wy) = apply_transform_px(t_px, lx, ly);
         state.path_vertices.push(PathVertex {
             pos_px: [wx, wy],
-            color: premul,
+            local_pos_px: [lx, ly],
         });
     }
 
@@ -130,6 +262,7 @@ pub(in super::super) fn encode_path(
             uniform_index: state.current_uniform_index,
             first_vertex,
             vertex_count,
+            paint_index,
         }));
     }
 }
@@ -161,7 +294,7 @@ pub(in super::super) fn encode_clip_path_mask(
         let (wx, wy) = apply_transform_px(t_px, lx, ly);
         state.path_vertices.push(PathVertex {
             pos_px: [wx, wy],
-            color: [0.0; 4],
+            local_pos_px: [0.0; 2],
         });
     }
 

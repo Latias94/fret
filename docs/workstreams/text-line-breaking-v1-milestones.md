@@ -24,6 +24,12 @@ Evidence checklist:
 - `cargo nextest run -p fret-render-wgpu`
 - `cargo nextest run -p fret-render`
 
+Evidence anchors (initial baseline):
+
+- Wrap conformance fixtures:
+  - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
+  - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
+
 ## M1 — Wrapper heuristic upgrade (Unicode break opportunities)
 
 Exit criteria:
@@ -32,7 +38,7 @@ Exit criteria:
 - CJK punctuation handling improves for the conformance set (document known gaps).
 - Performance:
   - no O(n²) regressions on long paragraphs,
-  - resize jitter remains bounded (shape-once path still works).
+  - resize jitter remains bounded (guard with a dedicated long-paragraph probe if this regresses).
 
 Evidence checklist:
 
@@ -43,18 +49,42 @@ Evidence checklist:
 
 Exit criteria:
 
-- A Parley-backed “shape paragraph with wrap width” path exists and is used for LTR-only cases first.
-- Caret/selection mapping correctness:
-  - hit test,
-  - caret rect,
-  - selection rects,
-  - affinity at soft breaks.
-- The “selectable trailing whitespace” invariant holds under the new path.
+- A Parley-backed “shape paragraph with wrap width” path exists and is integrated into the renderer
+  wrapper for `TextWrap::Word` (replacing the legacy wrapper implementation).
+- Correctness gates:
+  - caret/selection mapping correctness across soft breaks:
+    - `hit_test_point` / `hit_test_x`
+    - `caret_rect` (affinity rules)
+    - `selection_rects(_clipped)`
+  - measurement/paint agree on wrapping inputs (no layout height drift).
+  - The editor-grade invariant holds:
+    - trailing whitespace at a soft wrap boundary remains selectable.
+- Conformance gates:
+  - the fixture-driven wrap conformance suite passes under the Parley path (or any gaps are
+    enumerated as explicit TODOs with concrete examples).
+- Performance:
+  - no O(n²) regressions on long paragraphs,
+  - resize jitter remains bounded under width oscillations.
+- Cleanup:
+  - the legacy wrapper implementation is deleted (no compatibility path retained).
 
 Evidence checklist:
 
 - `cargo nextest run -p fret-render-wgpu`
 - `cargo nextest run -p fret-ui` (sanity)
+
+Evidence anchors (expected):
+
+- Paragraph line breaking entry point:
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (new paragraph shaping helper)
+- Wrapper integration:
+  - `crates/fret-render-wgpu/src/text/wrapper.rs`
+- Invariants and geometry query tests:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (caret/hit-test/selection tests)
+  - `crates/fret-render-wgpu/src/text/mod.rs:6294` (trailing-whitespace selectable gate; do not regress)
+- Resize jitter perf/diag guard (catastrophic regression):
+  - `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`
+  - `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py`
 
 ## M3 — RTL + mixed-script staging
 
@@ -62,6 +92,12 @@ Exit criteria:
 
 - RTL/mixed-direction paragraphs are either:
   - fully supported, or
-  - explicitly routed to the compatibility wrapper path with documented limitations.
+  - explicitly documented as limited (with deterministic tests covering the limitation surface).
 - Additional mapping (if required) is implemented with tests.
 
+Evidence anchors (expected):
+
+- Wrapped RTL hit testing and geometry:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (tests exercising `TextSystem::prepare` + `hit_test_point`)
+- Mixed-direction wrapped selection geometry:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (selection rects for RTL ranges under wrapping)

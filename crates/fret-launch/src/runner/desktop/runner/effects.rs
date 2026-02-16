@@ -416,6 +416,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                 }
             }
 
+            did_work |= self.poll_watch_restart_trigger(now);
             did_work |= self.poll_hotpatch_trigger(now);
             did_work |= !effects.is_empty();
             let mut window_state_dirty: HashSet<fret_core::AppWindowId> = HashSet::new();
@@ -549,6 +550,30 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             && !self.driver.before_close_window(&mut self.app, window)
                         {
                             continue;
+                        }
+
+                        #[cfg(feature = "dev-state")]
+                        if self.dev_state.enabled() {
+                            let alive: std::collections::HashSet<fret_core::AppWindowId> =
+                                self.windows.keys().collect();
+                            self.dev_state
+                                .sync_window_keys_from_app(&self.app, |window| {
+                                    alive.contains(&window)
+                                });
+
+                            let keys = self.dev_state.window_keys_snapshot();
+                            for (window, key) in keys {
+                                let Some(state) = self.windows.get(window) else {
+                                    continue;
+                                };
+                                let physical = state.window.surface_size();
+                                let logical: winit::dpi::LogicalSize<f64> =
+                                    physical.to_logical(state.window.scale_factor());
+                                let position = state.window.outer_position().ok();
+                                self.dev_state
+                                    .observe_window_geometry_now(&key, logical, position);
+                            }
+                            self.dev_state.export_and_flush_now(&mut self.app);
                         }
 
                         let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();

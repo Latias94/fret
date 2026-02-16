@@ -191,6 +191,10 @@ P1 (robustness and testability):
 
 - Expand word-boundary + click-selection tests across widgets and scroll/transform cases.
 - Add regression checks around wrap boundaries (caret, selection, preedit, syntax spans) using the existing UI Gallery soft-wrap toggle.
+- Font invalidation: ensure editor-local geometry caches cannot answer stale caret/selection geometry
+  after `TextFontStackKey` changes (e.g. system font refresh, injected fonts, family overrides).
+  - Prefer an explicit cache key/epoch (observed global) over “eventually repainted rows”.
+  - Gate it with a focused unit test (simulate stack key bump → stale-cache query must miss).
 
 P2 (features):
 

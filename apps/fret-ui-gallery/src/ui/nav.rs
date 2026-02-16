@@ -74,11 +74,13 @@ pub(crate) fn sidebar_view(
             .test_id("ui-gallery-nav-search")
     };
 
-    let mut nav_sections: Vec<AnyElement> = Vec::new();
-    for group in PAGE_GROUPS {
-        let group_sections = cx.keyed(group.title, |cx| {
+    let push_group = |cx: &mut ElementContext<'_, App>,
+                      title: &'static str,
+                      items: &[&'static PageSpec],
+                      nav_sections: &mut Vec<AnyElement>| {
+        let group_sections = cx.keyed(title, |cx| {
             let mut group_items: Vec<AnyElement> = Vec::new();
-            for item in group.items {
+            for item in items {
                 if !matches_query(query, item) {
                     continue;
                 }
@@ -128,7 +130,7 @@ pub(crate) fn sidebar_view(
             vec![
                 cx.text_props(TextProps {
                     layout: Default::default(),
-                    text: Arc::from(group.title),
+                    text: Arc::from(title),
                     style: None,
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
@@ -146,6 +148,33 @@ pub(crate) fn sidebar_view(
         });
 
         nav_sections.extend(group_sections);
+    };
+
+    let mut nav_sections: Vec<AnyElement> = Vec::new();
+    let mut deferred_ai_items: Vec<&'static PageSpec> = Vec::new();
+    let mut inserted_ai_group = false;
+
+    for group in PAGE_GROUPS {
+        let mut group_items: Vec<&'static PageSpec> = Vec::new();
+        for item in group.items {
+            if item.id.starts_with("ai_") {
+                deferred_ai_items.push(item);
+                continue;
+            }
+            group_items.push(item);
+        }
+
+        push_group(cx, group.title, &group_items, &mut nav_sections);
+
+        if group.title == "Shadcn" && !inserted_ai_group {
+            push_group(cx, "AI Elements", &deferred_ai_items, &mut nav_sections);
+            deferred_ai_items.clear();
+            inserted_ai_group = true;
+        }
+    }
+
+    if !inserted_ai_group {
+        push_group(cx, "AI Elements", &deferred_ai_items, &mut nav_sections);
     }
 
     let nav_body = stack::vstack(

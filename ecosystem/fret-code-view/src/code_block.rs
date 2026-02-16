@@ -6,8 +6,8 @@ use std::{
 };
 
 use fret_core::{
-    AttributedText, Edges, FontId, FontWeight, Px, TextOverflow, TextPaintStyle, TextSpan,
-    TextStyle, TextWrap,
+    AttributedText, Edges, FontId, FontWeight, Px, TextOverflow, TextPaintStyle, TextShapingStyle,
+    TextSpan, TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, OpacityProps,
@@ -30,14 +30,31 @@ use crate::syntax::syntax_color;
 #[derive(Default)]
 struct CodeBlockTextCache {
     theme_revision: u64,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
     prepared: Option<Arc<crate::prepare::PreparedCodeBlock>>,
     rich: Option<AttributedText>,
     line_numbers: Option<Arc<str>>,
 }
 
+fn code_shaping_for_code_block_flags(
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
+) -> TextShapingStyle {
+    let mut shaping = TextShapingStyle::default();
+    if disable_ligatures {
+        shaping = shaping.with_feature("liga", 0);
+    }
+    if disable_contextual_alternates {
+        shaping = shaping.with_feature("calt", 0);
+    }
+    shaping
+}
+
 fn build_code_block_rich(
     theme: &Theme,
     prepared: &crate::prepare::PreparedCodeBlock,
+    code_shaping: &TextShapingStyle,
 ) -> AttributedText {
     let mut text = String::new();
     let mut spans: Vec<TextSpan> = Vec::new();
@@ -51,7 +68,7 @@ fn build_code_block_rich(
             text.push_str(seg.text.as_ref());
             spans.push(TextSpan {
                 len: seg.text.len(),
-                shaping: Default::default(),
+                shaping: code_shaping.clone(),
                 paint: TextPaintStyle {
                     fg: color,
                     ..Default::default()
@@ -62,6 +79,7 @@ fn build_code_block_rich(
             text.push('\n');
             spans.push(TextSpan {
                 len: 1,
+                shaping: code_shaping.clone(),
                 ..Default::default()
             });
         }
@@ -92,11 +110,15 @@ fn resolve_code_block_cached_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: &Arc<crate::prepare::PreparedCodeBlock>,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
 ) -> (AttributedText, Option<Arc<str>>) {
     cx.with_state(CodeBlockTextCache::default, |st| {
         let theme_revision = theme.revision();
         let needs_rebuild = st.rich.is_none()
             || st.theme_revision != theme_revision
+            || st.disable_ligatures != disable_ligatures
+            || st.disable_contextual_alternates != disable_contextual_alternates
             || st
                 .prepared
                 .as_ref()
@@ -104,8 +126,12 @@ fn resolve_code_block_cached_text<H: UiHost>(
 
         if needs_rebuild {
             st.theme_revision = theme_revision;
+            st.disable_ligatures = disable_ligatures;
+            st.disable_contextual_alternates = disable_contextual_alternates;
             st.prepared = Some(prepared.clone());
-            st.rich = Some(build_code_block_rich(theme, prepared.as_ref()));
+            let shaping =
+                code_shaping_for_code_block_flags(disable_ligatures, disable_contextual_alternates);
+            st.rich = Some(build_code_block_rich(theme, prepared.as_ref(), &shaping));
             st.line_numbers = prepared
                 .show_line_numbers
                 .then(|| build_line_numbers(prepared.as_ref()));
@@ -209,6 +235,8 @@ pub struct CodeBlock {
     scrollbar_x_on_hover: bool,
     show_scrollbar_y: bool,
     scrollbar_y_on_hover: bool,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
 }
 
 impl CodeBlock {
@@ -232,6 +260,8 @@ impl CodeBlock {
             scrollbar_x_on_hover: true,
             show_scrollbar_y: false,
             scrollbar_y_on_hover: true,
+            disable_ligatures: true,
+            disable_contextual_alternates: true,
         }
     }
 
@@ -320,6 +350,16 @@ impl CodeBlock {
         self
     }
 
+    pub fn disable_ligatures(mut self, disable: bool) -> Self {
+        self.disable_ligatures = disable;
+        self
+    }
+
+    pub fn disable_contextual_alternates(mut self, disable: bool) -> Self {
+        self.disable_contextual_alternates = disable;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         code_block_with(
@@ -343,6 +383,8 @@ impl CodeBlock {
                 scrollbar_x_on_hover: self.scrollbar_x_on_hover,
                 show_scrollbar_y: self.show_scrollbar_y,
                 scrollbar_y_on_hover: self.scrollbar_y_on_hover,
+                disable_ligatures: self.disable_ligatures,
+                disable_contextual_alternates: self.disable_contextual_alternates,
             },
         )
     }
@@ -380,6 +422,9 @@ pub struct CodeBlockUiOptions {
     pub scrollbar_x_on_hover: bool,
     pub show_scrollbar_y: bool,
     pub scrollbar_y_on_hover: bool,
+    /// Best-effort OpenType feature policy for code shaping.
+    pub disable_ligatures: bool,
+    pub disable_contextual_alternates: bool,
 }
 
 impl Default for CodeBlockUiOptions {
@@ -400,6 +445,9 @@ impl Default for CodeBlockUiOptions {
             scrollbar_x_on_hover: true,
             show_scrollbar_y: false,
             scrollbar_y_on_hover: true,
+            // Common editor baseline: disable `liga`/`calt` for code, best-effort.
+            disable_ligatures: true,
+            disable_contextual_alternates: true,
         }
     }
 }
@@ -519,6 +567,8 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
                         scrollbar_y_enabled,
                         scrollbar_y_visible,
                         options.max_height,
+                        options.disable_ligatures,
+                        options.disable_contextual_alternates,
                     ));
                     out
                 },
@@ -638,6 +688,8 @@ fn render_code_block_body<H: UiHost + 'static>(
     scrollbar_y_enabled: bool,
     scrollbar_y_visible: bool,
     max_height: Option<Px>,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
 ) -> AnyElement {
     let pad = MetricRef::space(Space::N2).resolve(theme);
 
@@ -677,9 +729,17 @@ fn render_code_block_body<H: UiHost + 'static>(
                     scrollbar_y_enabled,
                     scrollbar_y_visible,
                     max_height,
+                    disable_ligatures,
+                    disable_contextual_alternates,
                 )
             } else {
-                let (rich, line_numbers) = resolve_code_block_cached_text(cx, theme, &prepared);
+                let (rich, line_numbers) = resolve_code_block_cached_text(
+                    cx,
+                    theme,
+                    &prepared,
+                    disable_ligatures,
+                    disable_contextual_alternates,
+                );
                 let line_count = prepared.lines.len();
 
                 let content = if !prepared.show_line_numbers {
@@ -819,6 +879,7 @@ fn build_code_block_line_rich(
     row_theme: &CodeBlockLineRowTheme,
     prepared: &crate::prepare::PreparedCodeBlock,
     line_i: usize,
+    code_shaping: &TextShapingStyle,
 ) -> AttributedText {
     let Some(line) = prepared.lines.get(line_i) else {
         return AttributedText::new(Arc::<str>::from(""), Arc::<[TextSpan]>::from([]));
@@ -835,7 +896,7 @@ fn build_code_block_line_rich(
         text.push_str(seg.text.as_ref());
         spans.push(TextSpan {
             len: seg.text.len(),
-            shaping: Default::default(),
+            shaping: code_shaping.clone(),
             paint: TextPaintStyle {
                 fg: color,
                 ..Default::default()
@@ -850,6 +911,8 @@ fn build_code_block_line_rich(
 struct CodeBlockWindowedLineRichCache {
     theme_revision: u64,
     prepared_revision: u64,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
     tick: u64,
     max_entries: usize,
     entries: HashMap<usize, (AttributedText, u64)>,
@@ -861,6 +924,8 @@ impl CodeBlockWindowedLineRichCache {
         &mut self,
         theme_revision: u64,
         prepared_revision: u64,
+        disable_ligatures: bool,
+        disable_contextual_alternates: bool,
         row_theme: &CodeBlockLineRowTheme,
         prepared: &crate::prepare::PreparedCodeBlock,
         line_i: usize,
@@ -869,10 +934,14 @@ impl CodeBlockWindowedLineRichCache {
         let max_entries = max_entries.max(1);
         if self.theme_revision != theme_revision
             || self.prepared_revision != prepared_revision
+            || self.disable_ligatures != disable_ligatures
+            || self.disable_contextual_alternates != disable_contextual_alternates
             || self.max_entries != max_entries
         {
             self.theme_revision = theme_revision;
             self.prepared_revision = prepared_revision;
+            self.disable_ligatures = disable_ligatures;
+            self.disable_contextual_alternates = disable_contextual_alternates;
             self.tick = 0;
             self.max_entries = max_entries;
             self.entries.clear();
@@ -888,7 +957,9 @@ impl CodeBlockWindowedLineRichCache {
             return rich.clone();
         }
 
-        let rich = build_code_block_line_rich(row_theme, prepared, line_i);
+        let shaping =
+            code_shaping_for_code_block_flags(disable_ligatures, disable_contextual_alternates);
+        let rich = build_code_block_line_rich(row_theme, prepared, line_i, &shaping);
         self.entries.insert(line_i, (rich.clone(), tick));
         self.queue.push_back((line_i, tick));
 
@@ -1057,6 +1128,8 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     scrollbar_y_enabled: bool,
     scrollbar_y_visible: bool,
     max_height: Option<Px>,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
 ) -> AnyElement {
     let Some(max_height) = max_height else {
         return cx.text("windowed_lines requires max_height");
@@ -1101,6 +1174,8 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
             let rich = line_rich_cache_for_rows.borrow_mut().resolve(
                 theme_revision,
                 prepared_revision,
+                disable_ligatures,
+                disable_contextual_alternates,
                 row_theme_for_rows.as_ref(),
                 prepared_for_rows.as_ref(),
                 i,

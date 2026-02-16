@@ -170,10 +170,10 @@ impl AvatarImage {
                 vec![cx.container(wrapper, move |cx| {
                     vec![cx.image_props(ImageProps {
                         layout: image_layout,
-                        image,
                         fit: ViewportFit::Cover,
                         opacity,
                         uv: None,
+                        ..ImageProps::new(image)
                     })]
                 })]
             } else {

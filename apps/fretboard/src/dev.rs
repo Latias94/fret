@@ -1,6 +1,6 @@
 use std::path::Path;
-use std::process::Command;
-use std::time::{Duration, Instant};
+use std::process::{Child, Command};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::cli::{help, workspace_root};
 use crate::demos::{
@@ -191,6 +191,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let mut supervise: Option<bool> = None;
     let mut watch: Option<bool> = None;
     let mut watch_poll_ms: Option<u64> = None;
+    let mut dev_state_reset = false;
     let mut passthrough: Vec<String> = Vec::new();
 
     let mut it = args.into_iter();
@@ -237,6 +238,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             "--no-supervise" => supervise = Some(false),
             "--watch" => watch = Some(true),
             "--no-watch" => watch = Some(false),
+            "--dev-state-reset" => dev_state_reset = true,
             "--watch-poll-ms" => {
                 let raw = it
                     .next()
@@ -341,6 +343,18 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
 
     let mut cmd = Command::new("cargo");
     cmd.current_dir(&root);
+
+    if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() || dev_state_reset {
+        cmd.env("FRET_DEV_STATE", "1");
+    }
+    if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() {
+        // In watch/hotpatch workflows, favor a tighter "state is always there after restart"
+        // loop over minimizing JSON writes.
+        cmd.env("FRET_DEV_STATE_DEBOUNCE_MS", "0");
+    }
+    if dev_state_reset {
+        cmd.env("FRET_DEV_STATE_RESET", "1");
+    }
 
     // When `--watch` is enabled, prefer `cargo build` + running the produced binary directly so we can
     // reliably terminate and restart the app process on Windows.
@@ -531,6 +545,9 @@ fn dev_native_watch_build_and_run(
     let mut watcher = WorkspaceWatch::new(workspace_root, watch.poll_interval);
     watcher.baseline()?;
 
+    let restart_trigger_path = workspace_root.join(".fret").join("watch_restart.touch");
+    ensure_restart_trigger_file_initialized(&restart_trigger_path)?;
+
     loop {
         // Build step
         let status = build_cmd.status().map_err(|e| e.to_string())?;
@@ -553,6 +570,7 @@ fn dev_native_watch_build_and_run(
         let mut run_cmd = Command::new(&exe);
         run_cmd.current_dir(workspace_root);
         apply_captured_env(&mut run_cmd, &build_env);
+        run_cmd.env("FRET_WATCH_RESTART_TRIGGER_PATH", &restart_trigger_path);
         if !passthrough.is_empty() {
             run_cmd.args(passthrough.iter());
         }
@@ -563,8 +581,7 @@ fn dev_native_watch_build_and_run(
         loop {
             if watcher.poll_changed()? {
                 eprintln!("Watch: change detected, restarting...");
-                let _ = child.kill();
-                let _ = child.wait();
+                request_graceful_watch_restart(&mut child, &restart_trigger_path)?;
 
                 // Re-create the build command to ensure any transient state is cleared.
                 let mut next_build = Command::new("cargo");
@@ -597,6 +614,49 @@ fn dev_native_watch_build_and_run(
             std::thread::sleep(watch.poll_interval);
         }
     }
+}
+
+fn ensure_restart_trigger_file_initialized(path: &Path) -> Result<(), String> {
+    if path.is_file() {
+        return Ok(());
+    }
+    poke_restart_trigger_file(path)
+}
+
+fn poke_restart_trigger_file(path: &Path) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let marker = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|d| format!("restart-{}", d.as_millis()))
+        .unwrap_or_else(|_| "restart".to_string());
+    std::fs::write(path, marker).map_err(|e| e.to_string())
+}
+
+fn request_graceful_watch_restart(child: &mut Child, trigger_path: &Path) -> Result<(), String> {
+    // Best-effort: ask the app process to exit cleanly so it can flush dev-state, then fall back
+    // to killing it if it doesn't exit in time.
+    if child.try_wait().map_err(|e| e.to_string())?.is_some() {
+        return Ok(());
+    }
+
+    let _ = poke_restart_trigger_file(trigger_path);
+    let start = Instant::now();
+    let timeout = Duration::from_millis(1500);
+    loop {
+        if child.try_wait().map_err(|e| e.to_string())?.is_some() {
+            return Ok(());
+        }
+        if start.elapsed() >= timeout {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    let _ = child.kill();
+    let _ = child.wait();
+    Ok(())
 }
 
 fn dev_native_exe_path(workspace_root: &Path, bin: &str) -> std::path::PathBuf {

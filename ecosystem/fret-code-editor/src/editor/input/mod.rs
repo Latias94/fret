@@ -31,26 +31,6 @@ pub(super) fn scroll_caret_into_view(
     );
 }
 
-pub(super) fn push_caret_rect_effect(
-    host: &mut dyn UiActionHost,
-    action_cx: ActionCx,
-    st: &mut CodeEditorState,
-    row_h: Px,
-    cell_w: Px,
-    scroll_handle: &fret_ui::scroll::ScrollHandle,
-) {
-    let Some(bounds) = st.last_bounds else {
-        return;
-    };
-    let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-    if let Some(rect) = caret_rect_for_selection(st, row_h, cell_w, bounds, scroll_handle) {
-        host.push_effect(Effect::ImeSetCursorArea {
-            window: action_cx.window,
-            rect,
-        });
-    }
-}
-
 pub(super) fn insert_text(st: &mut CodeEditorState, text: &str) -> Option<()> {
     insert_text_with_kind(st, text, UndoGroupKind::Typing)
 }
@@ -295,7 +275,6 @@ pub(super) fn handle_key_down(
     }
 
     scroll_caret_into_view(&st, row_h, scroll_handle);
-    push_caret_rect_effect(host, action_cx, &mut st, row_h, cell_w_px, scroll_handle);
 
     host.notify(action_cx);
     host.request_redraw(action_cx.window);

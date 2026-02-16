@@ -130,6 +130,7 @@ pub(super) struct ViewportVertex {
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct TextVertex {
     pub(super) pos_px: [f32; 2],
+    pub(super) local_pos_px: [f32; 2],
     pub(super) uv: [f32; 2],
     pub(super) color: [f32; 4],
 }
@@ -138,7 +139,7 @@ pub(super) struct TextVertex {
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct PathVertex {
     pub(super) pos_px: [f32; 2],
-    pub(super) color: [f32; 4],
+    pub(super) local_pos_px: [f32; 2],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -501,11 +502,23 @@ impl SvgMaskAtlasPage {
     }
 }
 
-pub(super) struct DrawCall {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) struct QuadPipelineKey {
+    pub(super) fill_kind: u8,
+    pub(super) border_kind: u8,
+    pub(super) border_present: bool,
+    pub(super) dash_enabled: bool,
+    pub(super) fill_material_sampled: bool,
+    pub(super) border_material_sampled: bool,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct QuadDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
     pub(super) first_instance: u32,
     pub(super) instance_count: u32,
+    pub(super) pipeline: QuadPipelineKey,
 }
 
 pub(super) struct ViewportDraw {
@@ -516,6 +529,12 @@ pub(super) struct ViewportDraw {
     pub(super) target: fret_core::RenderTargetId,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct UniformMaskImageSelection {
+    pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct ImageDraw {
     pub(super) scissor: ScissorRect,
@@ -523,6 +542,7 @@ pub(super) struct ImageDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
 }
 
 #[derive(Clone, Copy)]
@@ -532,6 +552,7 @@ pub(super) struct MaskDraw {
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
     pub(super) image: fret_core::ImageId,
+    pub(super) sampling: fret_core::scene::ImageSamplingHint,
 }
 
 pub(super) struct TextDraw {
@@ -541,6 +562,7 @@ pub(super) struct TextDraw {
     pub(super) vertex_count: u32,
     pub(super) kind: TextDrawKind,
     pub(super) atlas_page: u16,
+    pub(super) paint_index: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -556,6 +578,7 @@ pub(super) struct PathDraw {
     pub(super) uniform_index: u32,
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
+    pub(super) paint_index: u32,
 }
 
 #[derive(Clone, Copy)]
@@ -578,7 +601,7 @@ pub(super) struct PathIntermediate {
 }
 
 pub(super) enum OrderedDraw {
-    Quad(DrawCall),
+    Quad(QuadDraw),
     Viewport(ViewportDraw),
     Image(ImageDraw),
     Mask(MaskDraw),
@@ -621,6 +644,8 @@ pub(super) struct EffectMarker {
 #[derive(Default)]
 pub(super) struct SceneEncoding {
     pub(super) instances: Vec<QuadInstance>,
+    pub(super) path_paints: Vec<PaintGpu>,
+    pub(super) text_paints: Vec<PaintGpu>,
     pub(super) viewport_vertices: Vec<ViewportVertex>,
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
@@ -629,7 +654,7 @@ pub(super) struct SceneEncoding {
     pub(super) masks: Vec<MaskGradientUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
     /// Per-uniform CPU-side mask-image selection used to pick the correct bind group for `Mask::Image`.
-    pub(super) uniform_mask_images: Vec<Option<fret_core::ImageId>>,
+    pub(super) uniform_mask_images: Vec<Option<UniformMaskImageSelection>>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
 
@@ -643,6 +668,8 @@ pub(super) struct SceneEncoding {
 impl SceneEncoding {
     pub(super) fn clear(&mut self) {
         self.instances.clear();
+        self.path_paints.clear();
+        self.text_paints.clear();
         self.viewport_vertices.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();

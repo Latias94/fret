@@ -1,14 +1,19 @@
 use crate::ids::ImageId;
 
 use super::{
-    Color, ColorSpace, GradientStop, LinearGradient, MAX_STOPS, RadialGradient, TileMode, UvRect,
+    Color, ColorSpace, GradientStop, ImageSamplingHint, LinearGradient, MAX_STOPS, RadialGradient,
+    TileMode, UvRect,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Mask {
     LinearGradient(LinearGradient),
     RadialGradient(RadialGradient),
-    Image { image: ImageId, uv: UvRect },
+    Image {
+        image: ImageId,
+        uv: UvRect,
+        sampling: ImageSamplingHint,
+    },
 }
 
 impl Mask {
@@ -21,7 +26,23 @@ impl Mask {
     }
 
     pub const fn image(image: ImageId, uv: UvRect) -> Self {
-        Self::Image { image, uv }
+        Self::Image {
+            image,
+            uv,
+            sampling: ImageSamplingHint::Default,
+        }
+    }
+
+    pub const fn image_with_sampling(
+        image: ImageId,
+        uv: UvRect,
+        sampling: ImageSamplingHint,
+    ) -> Self {
+        Self::Image {
+            image,
+            uv,
+            sampling,
+        }
     }
 
     pub fn sanitize(self) -> Option<Self> {
@@ -117,7 +138,11 @@ impl Mask {
                 g.stops = sort_stops(g.stop_count, g.stops);
                 Some(Mask::RadialGradient(g))
             }
-            Mask::Image { image, mut uv } => {
+            Mask::Image {
+                image,
+                mut uv,
+                sampling,
+            } => {
                 if !uv.u0.is_finite()
                     || !uv.v0.is_finite()
                     || !uv.u1.is_finite()
@@ -138,7 +163,11 @@ impl Mask {
                     std::mem::swap(&mut uv.v0, &mut uv.v1);
                 }
 
-                Some(Mask::Image { image, uv })
+                Some(Mask::Image {
+                    image,
+                    uv,
+                    sampling,
+                })
             }
         }
     }

@@ -372,7 +372,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
             if self.main_window.is_none() {
-                let spec = self.config.main_window_spec();
+                let mut spec = self.config.main_window_spec();
+                #[cfg(feature = "dev-state")]
+                self.dev_state.apply_main_window_spec(&mut spec);
                 let window = match self.create_os_window(
                     event_loop,
                     spec,
@@ -394,6 +396,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
                 };
                 self.main_window = Some(main_window);
+                #[cfg(feature = "dev-state")]
+                self.dev_state.register_window_key(main_window, "main");
             }
 
             self.init_renderdoc_if_needed();
@@ -608,7 +612,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
-            let spec = self.config.main_window_spec();
+            let mut spec = self.config.main_window_spec();
+            #[cfg(feature = "dev-state")]
+            {
+                self.dev_state.apply_main_window_spec(&mut spec);
+                self.dev_state.sanitize_window_spec_position(
+                    "main",
+                    &mut spec,
+                    event_loop
+                        .available_monitors()
+                        .filter_map(|m| Some((m.position()?, m.current_video_mode()?.size()))),
+                );
+            }
             let window = match self.create_os_window(
                 event_loop,
                 spec,
@@ -754,6 +769,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
             };
             self.main_window = Some(main_window);
+            #[cfg(feature = "dev-state")]
+            self.dev_state.register_window_key(main_window, "main");
             self.driver.init(&mut self.app, main_window);
             self.driver_initialized = true;
             self.maybe_deliver_startup_incoming_open(main_window);
@@ -1885,7 +1902,39 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
-        self.poll_window_environment_if_due(Instant::now());
+        let now = Instant::now();
+        self.poll_window_environment_if_due(now);
+
+        #[cfg(all(
+            feature = "dev-state",
+            not(any(target_os = "android", target_os = "ios"))
+        ))]
+        {
+            if self.dev_state.enabled() {
+                let alive: std::collections::HashSet<fret_core::AppWindowId> =
+                    self.windows.keys().collect();
+                self.dev_state
+                    .sync_window_keys_from_app(&self.app, |window| alive.contains(&window));
+                self.dev_state.export_app_state(&mut self.app);
+                let keys = self.dev_state.window_keys_snapshot();
+                let mut observed: Vec<(
+                    String,
+                    winit::dpi::LogicalSize<f64>,
+                    Option<winit::dpi::PhysicalPosition<i32>>,
+                )> = Vec::new();
+                for (window, key) in keys {
+                    let Some(state) = self.windows.get(window) else {
+                        continue;
+                    };
+                    let physical = state.window.surface_size();
+                    let logical: winit::dpi::LogicalSize<f64> =
+                        physical.to_logical(state.window.scale_factor());
+                    let position = state.window.outer_position().ok();
+                    observed.push((key, logical, position));
+                }
+                self.dev_state.observe_windows(now, &self.app, observed);
+            }
+        }
 
         #[cfg(target_os = "ios")]
         if self.ios_keyboard.is_none() {

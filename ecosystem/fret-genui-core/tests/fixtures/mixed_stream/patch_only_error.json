@@ -1,0 +1,7 @@
+{
+  "name": "patch_only_error",
+  "options": { "mode": "patch_only" },
+  "chunks": ["this is not jsonl\n"],
+  "expect": { "error_contains": "patch-only" }
+}
+

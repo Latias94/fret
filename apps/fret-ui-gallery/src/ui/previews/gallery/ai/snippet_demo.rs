@@ -1,0 +1,56 @@
+use super::super::super::super::*;
+
+pub(in crate::ui) fn preview_ai_snippet_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2),
+            move |cx| vec![cx.text(title), body],
+        )
+    };
+
+    let cmd = |cx: &mut ElementContext<'_, App>,
+               label: &'static str,
+               code: &'static str,
+               id: &'static str| {
+        ui_ai::Snippet::new([
+            ui_ai::SnippetText::new(label).into_element(cx),
+            ui_ai::SnippetInput::new(code).into_element(cx),
+            ui_ai::SnippetCopyButton::new(code)
+                .test_id(Arc::<str>::from(format!("{id}-copy")))
+                .copied_marker_test_id(Arc::<str>::from(format!("{id}-copied")))
+                .into_element(cx),
+        ])
+        .test_id(Arc::<str>::from(id))
+        .into_element(cx)
+    };
+
+    let simple = cmd(
+        cx,
+        "Run:",
+        "cargo nextest run -p fret-ui-gallery",
+        "ui-ai-snippet-demo-nextest",
+    );
+    let env = cmd(
+        cx,
+        "Env:",
+        "FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1",
+        "ui-ai-snippet-demo-env",
+    );
+
+    vec![
+        cx.text("Snippet (AI Elements): inline copyable surface with feedback timeout."),
+        section(cx, "Command", simple),
+        section(cx, "Environment", env),
+    ]
+}

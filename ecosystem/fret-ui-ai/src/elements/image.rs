@@ -77,10 +77,10 @@ impl Image {
 
         let img = cx.image_props(ImageProps {
             layout,
-            image: self.image,
             fit: ViewportFit::Contain,
             opacity: 1.0,
             uv: None,
+            ..ImageProps::new(self.image)
         });
 
         let mut el = cx.container(wrapper, move |_cx| vec![img]);

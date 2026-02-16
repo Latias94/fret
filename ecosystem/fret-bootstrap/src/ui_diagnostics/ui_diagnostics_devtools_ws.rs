@@ -63,7 +63,7 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(feature = "diagnostics-ws")]
-    fn drive_devtools_ws_requests_for_window(
+    pub(super) fn drive_devtools_ws_requests_for_window(
         &mut self,
         app: &App,
         window: AppWindowId,
@@ -281,7 +281,7 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send_bundle_dumped_v1(
+    pub(super) fn ws_send_bundle_dumped_v1(
         &mut self,
         exported_unix_ms: u64,
         dir: &Path,
@@ -383,13 +383,13 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send_script_result_v1(&mut self, result: &UiScriptResultV1) {
+    pub(super) fn ws_send_script_result_v1(&mut self, result: &UiScriptResultV1) {
         let payload = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
         self.ws_send("script.result", payload);
     }
 
     #[cfg(feature = "diagnostics-ws")]
-    fn ws_send_pick_result_v1(&mut self, result: &UiPickResultV1) {
+    pub(super) fn ws_send_pick_result_v1(&mut self, result: &UiPickResultV1) {
         let payload = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
         self.ws_send("pick.result", payload);
     }

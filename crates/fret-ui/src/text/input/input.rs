@@ -16,6 +16,10 @@ impl TextInput {
             text: String::new(),
             caret: 0,
             selection_anchor: 0,
+            offset_x: Px(0.0),
+            selection_dragging: false,
+            last_pointer_pos: None,
+            selection_autoscroll_timer: None,
             preedit: String::new(),
             preedit_cursor: None,
             ime_replace_range: None,
@@ -131,6 +135,9 @@ impl TextInput {
         self.text = text.into();
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
+        self.offset_x = Px(0.0);
+        self.selection_dragging = false;
+        self.last_pointer_pos = None;
         self
     }
 
@@ -143,6 +150,9 @@ impl TextInput {
         self.text = text.into();
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
+        self.offset_x = Px(0.0);
+        self.selection_dragging = false;
+        self.last_pointer_pos = None;
         self.clear_ime_composition();
         self.ime_deduper = crate::text_edit::ime::Deduper::default();
         self.text_blob = None;
@@ -318,7 +328,7 @@ impl TextInput {
             .map(|blob| cx.services.caret_x(blob, self.caret))
             .unwrap_or(Px(0.0));
 
-        let mut x = padding_left + caret_x;
+        let mut x = padding_left + caret_x - self.offset_x;
 
         if self.is_ime_composing() && !self.preedit.is_empty() {
             let cursor =

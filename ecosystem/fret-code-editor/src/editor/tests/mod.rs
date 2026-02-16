@@ -9,6 +9,7 @@ struct TestHost {
     models: fret_runtime::ModelStore,
     next_timer: u64,
     next_clipboard: u64,
+    next_share_sheet: u64,
 }
 
 impl fret_ui::action::UiActionHost for TestHost {
@@ -29,10 +30,30 @@ impl fret_ui::action::UiActionHost for TestHost {
         self.next_clipboard = self.next_clipboard.saturating_add(1);
         fret_runtime::ClipboardToken(self.next_clipboard)
     }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.next_share_sheet = self.next_share_sheet.saturating_add(1);
+        fret_runtime::ShareSheetToken(self.next_share_sheet)
+    }
 }
 
 impl fret_ui::action::UiFocusActionHost for TestHost {
     fn request_focus(&mut self, _target: fret_ui::GlobalElementId) {}
+}
+
+fn row_geom_key_for_tests(text: &Arc<str>) -> geom::RowGeomKey {
+    geom::RowGeomKey::for_plain(
+        text,
+        &TextStyle::default(),
+        (
+            None,
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        fret_runtime::TextFontStackKey(0),
+    )
 }
 
 #[test]
@@ -57,6 +78,7 @@ fn replace_buffer_resets_state() {
                     range: 0..5,
                     fold_map: None,
                     preedit_range: None,
+                    row_spans: Arc::from([]),
                 },
                 1,
             ),
@@ -67,7 +89,7 @@ fn replace_buffer_resets_state() {
             (
                 RowGeom {
                     row_range: 0..5,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("hello")),
                     caret_stops: vec![(0, Px(0.0))],
                     fold_map: None,
                     caret_rect_top: None,
@@ -98,6 +120,161 @@ fn replace_buffer_resets_state() {
     assert_eq!(st.row_text_cache_queue.len(), 0);
     assert_eq!(st.row_geom_cache.len(), 0);
     assert_eq!(st.row_geom_cache_queue.len(), 0);
+}
+
+#[test]
+fn composition_selection_replacement_is_reflected_in_a11y_window() {
+    let handle = CodeEditorHandle::new("hello world");
+    let text_cache_max_entries = 64;
+
+    let (base_value, base_selection, base_composition) = {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 6,
+            focus: 11,
+        };
+        super::a11y::a11y_composed_text_window(&mut st, text_cache_max_entries)
+    };
+
+    assert_eq!(base_value.as_str(), "hello world");
+    assert_eq!(base_selection, Some((6, 11)));
+    assert_eq!(base_composition, None);
+
+    let did = {
+        let mut st = handle.state.borrow_mut();
+        super::platform_replace_and_mark_text_in_range_utf16(
+            &mut st,
+            text_cache_max_entries,
+            base_value.as_str(),
+            fret_runtime::Utf16Range::new(6, 11),
+            "X",
+            Some(fret_runtime::Utf16Range::new(6, 7)),
+        )
+    };
+    assert!(did, "expected replace-and-mark to update editor state");
+
+    let (value, selection, composition) = {
+        let mut st = handle.state.borrow_mut();
+        super::a11y::a11y_composed_text_window(&mut st, text_cache_max_entries)
+    };
+    assert_eq!(value.as_str(), "hello X");
+    assert_eq!(selection, Some((6, 7)));
+    assert_eq!(composition, Some((6, 7)));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let start = super::a11y::map_a11y_offset_to_buffer_in_current_window(
+            &mut st,
+            text_cache_max_entries,
+            6,
+        );
+        let after_preedit = super::a11y::map_a11y_offset_to_buffer_in_current_window(
+            &mut st,
+            text_cache_max_entries,
+            7,
+        );
+        assert_eq!(start, 6);
+        assert_eq!(after_preedit, 11);
+    }
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.set_preedit(None);
+        assert!(st.preedit_replace_range.is_none());
+    }
+}
+
+#[test]
+fn cached_row_text_hits_and_reuses_arc_for_repeated_calls() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let (a, b, stats) = {
+        let mut st = handle.state.borrow_mut();
+        let (_range_a, a, _folds_a, _preedit_a, _spans_a) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
+        let (_range_b, b, _folds_b, _preedit_b, _spans_b) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
+        (a, b, st.cache_stats)
+    };
+
+    assert!(
+        Arc::ptr_eq(&a, &b),
+        "expected row text cache to reuse Arc<str>"
+    );
+    assert_eq!(stats.row_text_misses, 1);
+    assert_eq!(stats.row_text_hits, 1);
+}
+
+#[test]
+fn cached_row_text_invalidates_on_buffer_revision_change() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let (before, after, resets) = {
+        let mut st = handle.state.borrow_mut();
+        let (_range, before, _folds, _preedit, _spans) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
+
+        let mut tx = st.buffer.transaction_begin();
+        st.buffer
+            .transaction_update(
+                &mut tx,
+                Edit::Insert {
+                    at: 0,
+                    text: "!".to_string(),
+                },
+            )
+            .expect("edit");
+        let _ = st.buffer.transaction_commit(tx);
+        st.refresh_display_map();
+
+        let (_range, after, _folds, _preedit, _spans) =
+            paint::cached_row_text_with_range(&mut st, 0, 64);
+        (before, after, st.cache_stats.row_text_resets)
+    };
+
+    assert!(
+        !Arc::ptr_eq(&before, &after),
+        "expected row text cache to invalidate when buffer revision changes"
+    );
+    assert!(resets > 0, "expected row text cache resets to be recorded");
+}
+
+#[test]
+fn cached_row_text_lru_eviction_rebuilds_evicted_rows() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let (first0, first1, second0, stats) = {
+        let mut st = handle.state.borrow_mut();
+        let (_range0, first0, _folds0, _preedit0, _spans0) =
+            paint::cached_row_text_with_range(&mut st, 0, 1);
+        let (_range1, first1, _folds1, _preedit1, _spans1) =
+            paint::cached_row_text_with_range(&mut st, 1, 1);
+        let (_range0, second0, _folds0, _preedit0, _spans0) =
+            paint::cached_row_text_with_range(&mut st, 0, 1);
+        (first0, first1, second0, st.cache_stats)
+    };
+
+    assert_eq!(first0.as_ref(), "hello");
+    assert_eq!(first1.as_ref(), "world");
+    assert!(
+        !Arc::ptr_eq(&first0, &second0),
+        "expected row 0 to be rebuilt after eviction under max_entries=1"
+    );
+    assert!(
+        stats.row_text_evictions > 0,
+        "expected at least one eviction"
+    );
+}
+
+#[test]
+fn paint_source_does_not_materialize_whole_buffer_string() {
+    // Regression guard: the editor paint path should never call `TextBuffer::text_string()`.
+    // Materializing the entire rope would scale with document size and defeat row virtualization.
+    const SRC: &str = include_str!("../paint/mod.rs");
+    assert!(
+        !SRC.contains(".text_string("),
+        "paint/mod.rs must not call TextBuffer::text_string()"
+    );
 }
 
 #[test]
@@ -234,7 +411,7 @@ fn map_row_display_local_to_buffer_byte_snaps_inside_preedit() {
     let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
     let geom = RowGeom {
         row_range: 0..buffer.len_bytes(),
-        blob: fret_core::TextBlobId::default(),
+        key: row_geom_key_for_tests(&Arc::from("hello")),
         caret_stops: Vec::new(),
         fold_map: None,
         caret_rect_top: None,
@@ -411,7 +588,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 0..4,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("aaaa")),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -433,7 +610,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 5..9,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("bbbb")),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -455,7 +632,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 10..14,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("cccc")),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -504,7 +681,7 @@ fn row_geom_cache_is_shifted_across_single_line_soft_wrap_edits() {
                 (
                     RowGeom {
                         row_range: range.clone(),
-                        blob: fret_core::TextBlobId::default(),
+                        key: row_geom_key_for_tests(&Arc::from("")),
                         caret_stops: vec![(0, Px(0.0))],
                         fold_map: None,
                         caret_rect_top: None,
@@ -590,7 +767,7 @@ fn row_geom_cache_is_byte_shifted_for_single_line_non_wrap_edits() {
                 (
                     RowGeom {
                         row_range: range.clone(),
-                        blob: fret_core::TextBlobId::default(),
+                        key: row_geom_key_for_tests(&Arc::from("")),
                         caret_stops: vec![(0, Px(0.0))],
                         fold_map: None,
                         caret_rect_top: None,
@@ -834,6 +1011,277 @@ fn caret_rect_offsets_for_preedit_cursor() {
 }
 
 #[test]
+fn platform_marked_range_utf16_maps_to_preedit_cursor_bytes() {
+    let text = "a😀b";
+    let base = 10u32;
+
+    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(
+        base,
+        fret_runtime::Utf16Range::new(base + 1, base + 3),
+        text,
+    );
+    assert_eq!(&text[bs..be], "😀");
+
+    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(
+        base,
+        fret_runtime::Utf16Range::new(base + 2, base + 2),
+        text,
+    );
+    assert_eq!(&text[bs..be], "😀", "clamps inside surrogate pair");
+
+    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(
+        base,
+        fret_runtime::Utf16Range::new(base, base + 1),
+        text,
+    );
+    assert_eq!(&text[bs..be], "a");
+}
+
+#[test]
+fn platform_replace_and_mark_non_empty_range_replaces_in_composed_view_without_mutating_base() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 4,
+        };
+        st.preedit = None;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 4),
+        "XY",
+        Some(fret_runtime::Utf16Range::new(1, 3)),
+    );
+    assert!(did);
+    assert_eq!(st.buffer.text_string(), "hello");
+    assert_eq!(
+        st.preedit.as_ref().map(|p| p.text.as_str()),
+        Some("XY"),
+        "composing text remains preedit-only"
+    );
+    assert_eq!(st.selection.caret(), 1);
+
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "hXYo");
+    assert_eq!(composition, Some((1, 3)));
+    assert_eq!(selection, Some((1, 3)));
+
+    let (_range, row_text, _folds, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 0, 1024);
+    assert_eq!(
+        row_text.as_ref(),
+        "hXYo",
+        "expected view-composed row text to match the platform-facing composed window"
+    );
+    assert_eq!(preedit_range, Some(1..3));
+}
+
+#[test]
+fn platform_replace_and_mark_empty_text_cancels_and_restores_selection() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 4,
+        };
+        st.preedit = None;
+        st.preedit_replace_range = None;
+        st.preedit_saved_selection = None;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 4),
+        "XY",
+        Some(fret_runtime::Utf16Range::new(1, 3)),
+    );
+    assert!(did);
+    assert_eq!(st.buffer.text_string(), "hello");
+    assert!(st.preedit.is_some());
+    assert!(st.preedit_replace_range.is_some());
+
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "hXYo");
+    assert_eq!(composition, Some((1, 3)));
+    assert_eq!(selection, Some((1, 3)));
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 3),
+        "",
+        Some(fret_runtime::Utf16Range::new(1, 1)),
+    );
+    assert!(did, "cancel must update state");
+    assert_eq!(
+        st.buffer.text_string(),
+        "hello",
+        "cancel must not mutate base buffer"
+    );
+    assert_eq!(st.preedit, None);
+    assert!(st.preedit_replace_range.is_none());
+    assert!(st.preedit_saved_selection.is_none());
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 1,
+            focus: 4
+        },
+        "cancel must restore the pre-composition selection"
+    );
+
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "hello");
+    assert_eq!(composition, None);
+    assert_eq!(selection, Some((1, 4)));
+}
+
+#[test]
+fn platform_replace_and_mark_empty_text_cancels_and_restores_caret() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+        st.preedit = None;
+        st.preedit_replace_range = None;
+        st.preedit_saved_selection = None;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(2, 2),
+        "Z",
+        Some(fret_runtime::Utf16Range::new(2, 3)),
+    );
+    assert!(did);
+    assert!(st.preedit.is_some());
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(2, 3),
+        "",
+        Some(fret_runtime::Utf16Range::new(2, 2)),
+    );
+    assert!(did);
+    assert_eq!(st.preedit, None);
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 2,
+            focus: 2
+        },
+        "cancel must restore the pre-composition caret"
+    );
+}
+
+#[test]
+fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 4,
+        };
+        st.preedit = Some(PreeditState {
+            text: "AB".to_string(),
+            cursor: Some((0, 2)),
+        });
+        st.preedit_saved_selection = None;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 4),
+        "X",
+        None,
+    );
+    assert!(did);
+    assert_eq!(st.buffer.text_string(), "hXo");
+    assert_eq!(st.preedit, None);
+    assert_eq!(st.selection.caret(), 2);
+}
+
+#[test]
+fn font_stack_key_change_clears_geometry_caches() {
+    let handle = CodeEditorHandle::new("hello");
+    let mut st = handle.state.borrow_mut();
+
+    st.font_stack_key = fret_runtime::TextFontStackKey(1);
+    st.row_geom_cache.insert(
+        0,
+        (
+            RowGeom {
+                row_range: 0..5,
+                key: row_geom_key_for_tests(&Arc::from("hello")),
+                caret_stops: vec![(0, Px(0.0)), (5, Px(50.0))],
+                fold_map: None,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+    st.baseline_measure_cache = Some(BaselineMeasureCache {
+        max_width: Px(100.0),
+        row_h: Px(20.0),
+        scale_bits: 0,
+        text_style: TextStyle {
+            font: FontId::monospace(),
+            size: Px(12.0),
+            ..Default::default()
+        },
+        metrics: fret_core::TextMetrics {
+            size: Size::new(Px(0.0), Px(0.0)),
+            baseline: Px(0.0),
+        },
+        measured_h: Px(0.0),
+    });
+
+    st.update_font_stack_key(fret_runtime::TextFontStackKey(1));
+    assert!(!st.row_geom_cache.is_empty());
+    assert!(st.baseline_measure_cache.is_some());
+
+    st.update_font_stack_key(fret_runtime::TextFontStackKey(2));
+    assert!(st.row_geom_cache.is_empty());
+    assert!(st.baseline_measure_cache.is_none());
+}
+
+#[test]
 fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
     let handle = CodeEditorHandle::new("abc");
     let scroll = fret_ui::scroll::ScrollHandle::default();
@@ -854,7 +1302,7 @@ fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
             (
                 RowGeom {
                     row_range: 0..3,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("abc")),
                     caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
                     fold_map: None,
                     caret_rect_top: None,
@@ -892,7 +1340,7 @@ fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
             (
                 RowGeom {
                     row_range: 0..3,
-                    blob: fret_core::TextBlobId::default(),
+                    key: row_geom_key_for_tests(&Arc::from("abc")),
                     caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
                     fold_map: None,
                     caret_rect_top: None,
@@ -941,7 +1389,15 @@ fn preedit_rich_text_inserts_and_underlines() {
         a: 1.0,
     };
 
-    let rich = paint::materialize_preedit_rich_text("hello".into(), 2, &preedit, fg, selection_bg);
+    let shaping = fret_core::TextShapingStyle::default();
+    let rich = paint::materialize_preedit_rich_text(
+        "hello".into(),
+        2,
+        &shaping,
+        &preedit,
+        fg,
+        selection_bg,
+    );
     assert_eq!(rich.text.as_ref(), "he世界llo");
     assert!(rich.is_valid());
     assert!(
@@ -951,6 +1407,196 @@ fn preedit_rich_text_inserts_and_underlines() {
     assert!(
         rich.spans.iter().any(|s| s.paint.bg.is_some()),
         "expected cursor range to be highlighted"
+    );
+}
+
+#[test]
+fn preedit_rich_text_applies_code_shaping_to_all_spans() {
+    let preedit = PreeditState {
+        text: "ab".to_string(),
+        cursor: None,
+    };
+    let fg = Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    };
+    let selection_bg = Color {
+        r: 0.2,
+        g: 0.2,
+        b: 0.2,
+        a: 1.0,
+    };
+
+    let shaping = fret_core::TextShapingStyle::default()
+        .with_feature("liga", 0)
+        .with_feature("calt", 0);
+    let rich = paint::materialize_preedit_rich_text(
+        "hello".into(),
+        2,
+        &shaping,
+        &preedit,
+        fg,
+        selection_bg,
+    );
+    assert!(rich.is_valid());
+    assert!(
+        rich.spans.iter().all(|s| s
+            .shaping
+            .features
+            .iter()
+            .any(|f| f.tag == "liga" && f.value == 0)),
+        "expected `liga=0` to be applied to every span"
+    );
+    assert!(
+        rich.spans.iter().all(|s| s
+            .shaping
+            .features
+            .iter()
+            .any(|f| f.tag == "calt" && f.value == 0)),
+        "expected `calt=0` to be applied to every span"
+    );
+}
+
+#[test]
+fn row_geom_key_ignores_paint_only_changes() {
+    let text: Arc<str> = Arc::<str>::from("let x = 1;");
+    let base = TextStyle::default();
+    let constraints = (
+        Some(Px(200.0)),
+        TextWrap::None,
+        TextOverflow::Clip,
+        fret_core::TextAlign::Start,
+        1.0,
+    );
+    let font_stack_key = fret_runtime::TextFontStackKey(7);
+
+    let mk_rich = |kw: Color, ident: Color| {
+        let spans = vec![
+            TextSpan {
+                len: "let".len(),
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    fg: Some(kw),
+                    ..Default::default()
+                },
+            },
+            TextSpan::new(" ".len()),
+            TextSpan {
+                len: "x".len(),
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    fg: Some(ident),
+                    ..Default::default()
+                },
+            },
+            TextSpan::new(" = 1;".len()),
+        ];
+        AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans))
+    };
+
+    let rich_a = mk_rich(
+        Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    );
+    let rich_b = mk_rich(
+        Color {
+            r: 0.2,
+            g: 0.2,
+            b: 1.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.8,
+            g: 0.8,
+            b: 0.0,
+            a: 1.0,
+        },
+    );
+
+    assert!(
+        rich_a.shaping_eq(&rich_b),
+        "sanity: shaping_eq should ignore paint-only changes"
+    );
+
+    let key_a = geom::RowGeomKey::for_attributed(&rich_a, &base, constraints, font_stack_key);
+    let key_b = geom::RowGeomKey::for_attributed(&rich_b, &base, constraints, font_stack_key);
+    assert_eq!(
+        key_a, key_b,
+        "row geometry cache key must ignore paint-only changes"
+    );
+
+    let mut spans_c = rich_b.spans.as_ref().to_vec();
+    spans_c[0].shaping = spans_c[0]
+        .shaping
+        .clone()
+        .with_weight(fret_core::FontWeight(700));
+    let rich_c = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_c));
+    let key_c = geom::RowGeomKey::for_attributed(&rich_c, &base, constraints, font_stack_key);
+    assert_ne!(key_a, key_c, "shaping changes must affect geometry key");
+}
+
+#[test]
+fn row_geom_key_buckets_max_width_for_unwrapped_start_aligned_rows() {
+    let text: Arc<str> = Arc::<str>::from("hello");
+    let style = TextStyle::default();
+    let font_stack_key = fret_runtime::TextFontStackKey(1);
+
+    let key_a = geom::RowGeomKey::for_plain(
+        &text,
+        &style,
+        (
+            Some(Px(100.0)),
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        font_stack_key,
+    );
+    let key_b = geom::RowGeomKey::for_plain(
+        &text,
+        &style,
+        (
+            Some(Px(120.0)),
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        font_stack_key,
+    );
+    assert_eq!(
+        key_a, key_b,
+        "expected small max_width changes to be bucketed for unwrapped rows"
+    );
+
+    let key_c = geom::RowGeomKey::for_plain(
+        &text,
+        &style,
+        (
+            Some(Px(120.0)),
+            TextWrap::None,
+            TextOverflow::Clip,
+            fret_core::TextAlign::Center,
+            1.0,
+        ),
+        font_stack_key,
+    );
+    assert_ne!(
+        key_a, key_c,
+        "expected non-start alignment to preserve exact max_width bits"
     );
 }
 
@@ -979,14 +1625,14 @@ fn a11y_window_maps_offsets_back_to_buffer_selection() {
     let caret = st
         .buffer
         .clamp_to_char_boundary_left(st.selection.caret().min(text_len));
-    let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
+    let (start, end) = super::a11y::a11y_text_window_bounds(&st.buffer, caret);
     assert_eq!(start, 0);
     assert_eq!(end, text_len);
 
     let anchor = 0u32;
     let focus = u32::try_from("hello".len()).unwrap();
-    let new_anchor = map_a11y_offset_to_buffer(&st.buffer, start, end, anchor);
-    let new_focus = map_a11y_offset_to_buffer(&st.buffer, start, end, focus);
+    let new_anchor = super::a11y::map_a11y_offset_to_buffer(&st.buffer, start, end, anchor);
+    let new_focus = super::a11y::map_a11y_offset_to_buffer(&st.buffer, start, end, focus);
     assert_eq!(new_anchor, 0);
     assert_eq!(new_focus, "hello".len());
 }
@@ -1037,24 +1683,97 @@ fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
     let caret = st
         .buffer
         .clamp_to_char_boundary_left(st.selection.caret().min(text_len));
-    let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
+    let (start, end) = super::a11y::a11y_text_window_bounds(&st.buffer, caret);
 
-    let mapped = map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 3);
+    let mapped =
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 3);
     assert_eq!(
         mapped, 1,
         "display offset after preedit should map into base text"
     );
 
     let inside_preedit =
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 1);
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 1);
     assert_eq!(
         inside_preedit, 0,
         "display offset inside preedit snaps to insertion caret"
     );
 
-    let clamped_end =
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, u32::MAX);
+    let clamped_end = super::a11y::map_a11y_offset_to_buffer_with_preedit(
+        &st.buffer,
+        start,
+        end,
+        caret,
+        2,
+        u32::MAX,
+    );
     assert_eq!(clamped_end, st.buffer.len_bytes());
+}
+
+#[test]
+fn a11y_current_window_maps_buffer_offsets_and_roundtrips() {
+    let handle = CodeEditorHandle::new("hello 😀 world");
+    {
+        let mut st = handle.state.borrow_mut();
+        let caret = "hello 😀 ".len();
+        st.selection = Selection {
+            anchor: caret,
+            focus: caret,
+        };
+        st.preedit = None;
+        st.compose_inline_preedit = false;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(composition, None);
+    assert_eq!(value.as_str(), "hello 😀 world");
+
+    let byte = "hello".len();
+    let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, byte);
+    let back = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, a11y_offset);
+    assert_eq!(back, byte);
+}
+
+#[test]
+fn a11y_current_window_mapping_accounts_for_preedit_injection() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+        st.preedit = Some(PreeditState {
+            text: "AB".to_string(),
+            cursor: Some((0, 0)),
+        });
+        st.compose_inline_preedit = false;
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "heABllo");
+    assert_eq!(composition, Some((2, 4)));
+
+    let before = 1usize;
+    let before_a11y = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, before);
+    assert_eq!(before_a11y, 1);
+    let before_back = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, before_a11y);
+    assert_eq!(before_back, 1);
+
+    let after = 3usize;
+    let after_a11y = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, after);
+    assert_eq!(
+        after_a11y,
+        u32::try_from(after + "AB".len()).unwrap(),
+        "bytes after caret include injected preedit segment"
+    );
+    let inside_preedit = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, 3);
+    assert_eq!(
+        inside_preedit, 2,
+        "offset inside preedit snaps to insertion caret"
+    );
 }
 
 #[test]
@@ -1095,6 +1814,72 @@ fn a11y_window_includes_decorations_when_composed() {
 }
 
 #[test]
+fn a11y_window_composed_selection_preserves_direction_for_preedit_cursor() {
+    let handle = CodeEditorHandle::new("hello");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret("hello".len());
+    handle.set_preedit_debug("yo", Some((2, 0)));
+
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "helloyo");
+    assert_eq!(
+        composition,
+        Some(("hello".len() as u32, "helloyo".len() as u32))
+    );
+    assert_eq!(
+        selection,
+        Some(("helloyo".len() as u32, "hello".len() as u32)),
+        "ADR 0071: preserve (anchor, focus) directionality"
+    );
+}
+
+#[test]
+fn a11y_window_composed_mapping_clamps_inside_utf8_scalars() {
+    let handle = CodeEditorHandle::new("a😀b");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "a😀b");
+
+    // Offset 2 lands inside the UTF-8 bytes of 😀 (starts at 1, ends at 5).
+    let (mapped_anchor, mapped_focus) = map_a11y_offsets_to_buffer_composed(&mut st, 1024, 2, 2);
+    assert_eq!((mapped_anchor, mapped_focus), (1, 1));
+}
+
+#[test]
+fn a11y_window_composed_newline_offsets_map_to_line_end() {
+    let handle = CodeEditorHandle::new("ab\ncd");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "ab\ncd");
+
+    // In the composed display window, a newline is inserted between lines. Both the byte offset
+    // at the end of the first line and the offset "inside the inserted newline" should map to
+    // the same buffer boundary (the newline byte index).
+    let newline_byte = "ab".len();
+    let (at_end, _) = map_a11y_offsets_to_buffer_composed(
+        &mut st,
+        1024,
+        u32::try_from(newline_byte).unwrap(),
+        u32::try_from(newline_byte).unwrap(),
+    );
+    let (after_nl, _) = map_a11y_offsets_to_buffer_composed(
+        &mut st,
+        1024,
+        u32::try_from(newline_byte + 1).unwrap(),
+        u32::try_from(newline_byte + 1).unwrap(),
+    );
+    assert_eq!(at_end, newline_byte);
+    assert_eq!(after_nl, newline_byte);
+}
+
+#[test]
 fn a11y_preedit_offset_mapping_honors_window_start() {
     let handle = CodeEditorHandle::new("0123456789");
     let st = handle.state.borrow();
@@ -1105,27 +1890,69 @@ fn a11y_preedit_offset_mapping_honors_window_start() {
     let preedit_len = 2;
 
     assert_eq!(
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 0),
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(
+            &st.buffer,
+            start,
+            end,
+            caret,
+            preedit_len,
+            0,
+        ),
         start
     );
     assert_eq!(
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 3),
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(
+            &st.buffer,
+            start,
+            end,
+            caret,
+            preedit_len,
+            3,
+        ),
         caret
     );
     assert_eq!(
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 4),
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(
+            &st.buffer,
+            start,
+            end,
+            caret,
+            preedit_len,
+            4,
+        ),
         caret
     );
     assert_eq!(
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 5),
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(
+            &st.buffer,
+            start,
+            end,
+            caret,
+            preedit_len,
+            5,
+        ),
         caret
     );
     assert_eq!(
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 6),
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(
+            &st.buffer,
+            start,
+            end,
+            caret,
+            preedit_len,
+            6,
+        ),
         caret + 1
     );
     assert_eq!(
-        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 7),
+        super::a11y::map_a11y_offset_to_buffer_with_preedit(
+            &st.buffer,
+            start,
+            end,
+            caret,
+            preedit_len,
+            7,
+        ),
         caret + 2
     );
 }

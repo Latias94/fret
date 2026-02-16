@@ -40,6 +40,548 @@ fn declarative_text_sets_semantics_label() {
 }
 
 #[test]
+fn declarative_text_input_region_answers_platform_text_input_queries_in_utf16() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-text-input-region",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("a😀b".into());
+            // Select just the emoji (UTF-8 bytes [1,5)).
+            props.a11y_text_selection = Some((1, 1 + "😀".len() as u32));
+            // Mark the same range as a composition span.
+            props.a11y_text_composition = Some((1, 1 + "😀".len() as u32));
+            props.ime_cursor_area = Some(Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(1.0), Px(12.0)),
+            ));
+
+            let region = cx.text_input_region(props, |_cx| Vec::<AnyElement>::new());
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    let selected = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::SelectedTextRange,
+    );
+    assert_eq!(
+        selected,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            1, 3
+        )))
+    );
+
+    let marked = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::MarkedTextRange,
+    );
+    assert_eq!(
+        marked,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            1, 3
+        )))
+    );
+
+    let text_for = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::TextForRange {
+            range: fret_runtime::Utf16Range::new(1, 3),
+        },
+    );
+    assert_eq!(
+        text_for,
+        fret_runtime::PlatformTextInputQueryResult::Text(Some("😀".to_string()))
+    );
+
+    let text_for_reversed = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::TextForRange {
+            range: fret_runtime::Utf16Range::new(3, 1),
+        },
+    );
+    assert_eq!(
+        text_for_reversed,
+        fret_runtime::PlatformTextInputQueryResult::Text(Some("😀".to_string()))
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert_eq!(snapshot.text_len_utf16, 4, "a(1) 😀(2) b(1)");
+    assert_eq!(snapshot.selection_utf16, Some((1, 3)));
+    assert_eq!(snapshot.marked_utf16, Some((1, 3)));
+    assert_eq!(
+        snapshot.ime_cursor_area,
+        Some(Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(1.0), Px(12.0)),
+        ))
+    );
+}
+
+#[test]
+fn declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates()
+{
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let zwj_cluster = "👩\u{200D}💻";
+    let value = format!("a😀ב{zwj_cluster}✌\u{FE0F}e\u{0301}中");
+    let zwj_start = value.find(zwj_cluster).expect("ZWJ cluster start");
+    let laptop_start = zwj_start + "👩".len() + "\u{200D}".len();
+
+    // Force platform-facing selection/composition to exercise clamping:
+    // - anchor points inside the UTF-8 bytes of the first surrogate-pair scalar ("👩")
+    // - focus points inside the UTF-8 bytes of the second surrogate-pair scalar ("💻")
+    let anchor_utf8 = u32::try_from(zwj_start.saturating_add(1)).unwrap();
+    let focus_utf8 = u32::try_from(laptop_start.saturating_add(1)).unwrap();
+
+    fn utf16_len(s: &str) -> u32 {
+        u32::try_from(s.encode_utf16().count()).unwrap()
+    }
+
+    let woman_u16_start = utf16_len(&value[..zwj_start]);
+    let laptop_u16_start = utf16_len(&value[..laptop_start]);
+    let laptop_u16_end = utf16_len(&value[..laptop_start + "💻".len()]);
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-mixed-scripts-surrogates",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some(value.clone().into());
+            props.a11y_text_selection = Some((anchor_utf8, focus_utf8));
+            props.a11y_text_composition = Some((anchor_utf8, focus_utf8));
+            props.ime_cursor_area = Some(Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(1.0), Px(12.0)),
+            ));
+
+            let region = cx.text_input_region(props, |_cx| Vec::<AnyElement>::new());
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    let selected = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::SelectedTextRange,
+    );
+    assert_eq!(
+        selected,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            woman_u16_start,
+            laptop_u16_start
+        )))
+    );
+
+    let marked = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::MarkedTextRange,
+    );
+    assert_eq!(
+        marked,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            woman_u16_start,
+            laptop_u16_end
+        )))
+    );
+
+    // UTF-16 ranges that split inside surrogate pairs must clamp deterministically.
+    let emoji_u16_start = utf16_len("a");
+    for (label, inside_u16, expect) in [
+        ("emoji", emoji_u16_start + 1, "😀"),
+        ("woman", woman_u16_start + 1, "👩"),
+        ("laptop", laptop_u16_start + 1, "💻"),
+    ] {
+        let out = ui.platform_text_input_query(
+            &mut app,
+            &mut services,
+            1.0,
+            &fret_runtime::PlatformTextInputQuery::TextForRange {
+                range: fret_runtime::Utf16Range::new(inside_u16, inside_u16),
+            },
+        );
+        assert_eq!(
+            out,
+            fret_runtime::PlatformTextInputQueryResult::Text(Some(expect.to_string())),
+            "{label} range should clamp to the full scalar"
+        );
+    }
+
+    let cluster_text = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::TextForRange {
+            range: fret_runtime::Utf16Range::new(woman_u16_start, laptop_u16_end),
+        },
+    );
+    assert_eq!(
+        cluster_text,
+        fret_runtime::PlatformTextInputQueryResult::Text(Some(zwj_cluster.to_string()))
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert_eq!(snapshot.text_len_utf16, utf16_len(value.as_str()));
+    assert_eq!(
+        snapshot.selection_utf16,
+        Some((woman_u16_start, laptop_u16_start))
+    );
+    assert_eq!(
+        snapshot.marked_utf16,
+        Some((woman_u16_start, laptop_u16_end))
+    );
+}
+
+#[test]
+fn declarative_text_input_region_platform_query_hook_can_answer_bounds_and_index() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-query-hook",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("abc".into());
+            props.a11y_text_selection = Some((0, 0));
+
+            let region = cx.text_input_region(props, |cx| {
+                cx.text_input_region_on_platform_text_input_query(std::sync::Arc::new(
+                    move |_host, _action_cx, _services, _bounds, _scale_factor, _props, query| {
+                        match query {
+                            fret_runtime::PlatformTextInputQuery::BoundsForRange { .. } => {
+                                Some(fret_runtime::PlatformTextInputQueryResult::Bounds(Some(
+                                    Rect::new(
+                                        Point::new(Px(10.0), Px(20.0)),
+                                        Size::new(Px(1.0), Px(12.0)),
+                                    ),
+                                )))
+                            }
+                            fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint {
+                                point,
+                            } => {
+                                let idx = if point.x.0 < 0.0 { 0 } else { 1 };
+                                Some(fret_runtime::PlatformTextInputQueryResult::Index(Some(idx)))
+                            }
+                            _ => None,
+                        }
+                    },
+                ));
+                Vec::<AnyElement>::new()
+            });
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    let bounds_for = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::BoundsForRange {
+            range: fret_runtime::Utf16Range::new(0, 0),
+        },
+    );
+    assert_eq!(
+        bounds_for,
+        fret_runtime::PlatformTextInputQueryResult::Bounds(Some(Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(1.0), Px(12.0)),
+        )))
+    );
+
+    let idx = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint {
+            point: Point::new(Px(5.0), Px(5.0)),
+        },
+    );
+    assert_eq!(
+        idx,
+        fret_runtime::PlatformTextInputQueryResult::Index(Some(1))
+    );
+}
+
+#[test]
+fn declarative_text_input_region_platform_replace_hook_can_handle_replace_text() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(Vec::<(
+        fret_runtime::Utf16Range,
+        String,
+    )>::new()));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-replace-hook",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("abc".into());
+            props.a11y_text_selection = Some((0, 0));
+
+            let called = called.clone();
+            let region = cx.text_input_region(props, |cx| {
+                cx.text_input_region_on_platform_text_input_replace_text_in_range_utf16(
+                    std::sync::Arc::new(
+                        move |_host,
+                              _action_cx,
+                              _services,
+                              _bounds,
+                              _scale_factor,
+                              _props,
+                              range,
+                              text| {
+                            called.borrow_mut().push((range, text.to_string()));
+                            true
+                        },
+                    ),
+                );
+                Vec::<AnyElement>::new()
+            });
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    assert!(ui.platform_text_input_replace_text_in_range_utf16(
+        &mut app,
+        &mut services,
+        1.0,
+        fret_runtime::Utf16Range::new(0, 0),
+        "X"
+    ));
+    assert_eq!(
+        called.borrow().as_slice(),
+        &[(fret_runtime::Utf16Range::new(0, 0), "X".to_string())]
+    );
+}
+
+#[test]
+fn declarative_text_input_region_platform_replace_hook_can_handle_replace_and_mark() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(Vec::<(
+        fret_runtime::Utf16Range,
+        String,
+        Option<fret_runtime::Utf16Range>,
+    )>::new()));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "platform-text-input-replace-and-mark-hook",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("abc".into());
+            props.a11y_text_selection = Some((0, 0));
+
+            let called = called.clone();
+            let region = cx.text_input_region(props, |cx| {
+                cx.text_input_region_on_platform_text_input_replace_and_mark_text_in_range_utf16(
+                    std::sync::Arc::new(
+                        move |_host,
+                              _action_cx,
+                              _services,
+                              _bounds,
+                              _scale_factor,
+                              _props,
+                              range,
+                              text,
+                              marked| {
+                            called.borrow_mut().push((range, text.to_string(), marked));
+                            true
+                        },
+                    ),
+                );
+                Vec::<AnyElement>::new()
+            });
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    assert!(ui.platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut app,
+        &mut services,
+        1.0,
+        fret_runtime::Utf16Range::new(0, 0),
+        "X",
+        Some(fret_runtime::Utf16Range::new(0, 1))
+    ));
+    assert_eq!(
+        called.borrow().as_slice(),
+        &[(
+            fret_runtime::Utf16Range::new(0, 0),
+            "X".to_string(),
+            Some(fret_runtime::Utf16Range::new(0, 1))
+        )]
+    );
+}
+
+#[test]
 fn declarative_attach_semantics_overrides_role_label_and_sets_test_id() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

@@ -206,14 +206,34 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(window) = self.window {
                     let (_, text_snapshot_elapsed) = fret_perf::measure(self.debug_enabled, || {
                         let mut next = if focus_is_text_input {
-                            self.focus
-                                .and_then(|focus| self.nodes.get(focus))
-                                .and_then(|n| n.widget.as_ref())
-                                .and_then(|w| w.platform_text_input_snapshot())
-                                .unwrap_or_else(|| fret_runtime::WindowTextInputSnapshot {
-                                    focus_is_text_input: true,
-                                    ..Default::default()
-                                })
+                            if let Some(focus) = self.focus
+                                && let Some(snapshot) =
+                                    crate::declarative::frame::with_element_record_for_node(
+                                        app,
+                                        window,
+                                        focus,
+                                        |r| match &r.instance {
+                                            crate::declarative::ElementInstance::TextInputRegion(
+                                                props,
+                                            ) => Some(
+                                                super::super::ui_tree_text_input::text_input_region_platform_text_input_snapshot(props),
+                                            ),
+                                            _ => None,
+                                        },
+                                    )
+                                    .flatten()
+                            {
+                                snapshot
+                            } else {
+                                self.focus
+                                    .and_then(|focus| self.nodes.get(focus))
+                                    .and_then(|n| n.widget.as_ref())
+                                    .and_then(|w| w.platform_text_input_snapshot())
+                                    .unwrap_or_else(|| fret_runtime::WindowTextInputSnapshot {
+                                        focus_is_text_input: true,
+                                        ..Default::default()
+                                    })
+                            }
                         } else {
                             fret_runtime::WindowTextInputSnapshot::default()
                         };

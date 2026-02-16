@@ -209,6 +209,12 @@ pub struct TextInputRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
     pub text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
+    /// Optional IME cursor area in window visual space.
+    ///
+    /// When set, this is forwarded to `WindowTextInputSnapshot.ime_cursor_area` while the region
+    /// is focused. This is a data-only escape hatch for editor ecosystems that own the geometry
+    /// mapping (buffer ↔ rows ↔ caret rect) outside the mechanism layer.
+    pub ime_cursor_area: Option<fret_core::Rect>,
     /// Optional accessibility label for this text input region.
     pub a11y_label: Option<Arc<str>>,
     /// Optional accessibility value text for this text input region.
@@ -274,6 +280,7 @@ impl Default for TextInputRegionProps {
             layout: LayoutStyle::default(),
             enabled: true,
             text_boundary_mode_override: None,
+            ime_cursor_area: None,
             a11y_label: None,
             a11y_value: None,
             a11y_text_selection: None,
@@ -1439,6 +1446,7 @@ pub struct ImageProps {
     pub layout: LayoutStyle,
     pub image: ImageId,
     pub fit: ViewportFit,
+    pub sampling: fret_core::scene::ImageSamplingHint,
     pub opacity: f32,
     pub uv: Option<UvRect>,
 }
@@ -1449,9 +1457,15 @@ impl ImageProps {
             layout: LayoutStyle::default(),
             image,
             fit: ViewportFit::Stretch,
+            sampling: fret_core::scene::ImageSamplingHint::Default,
             opacity: 1.0,
             uv: None,
         }
+    }
+
+    pub fn sampling(mut self, sampling: fret_core::scene::ImageSamplingHint) -> Self {
+        self.sampling = sampling;
+        self
     }
 }
 

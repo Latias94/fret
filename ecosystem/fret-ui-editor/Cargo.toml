@@ -1,0 +1,39 @@
+[package]
+name = "fret-ui-editor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Editor-grade UI primitives, controls, and composites for Fret (ecosystem layer)."
+
+[features]
+default = []
+
+# Optional integration surfaces (kept separate to avoid coupling editor UI to a specific state stack).
+state-selector = ["dep:fret-selector", "fret-selector/ui"]
+state-query = ["dep:fret-query"]
+state-undo = ["dep:fret-undo"]
+state = ["state-selector", "state-query", "state-undo"]
+
+# Optional immediate-mode authoring facade adapters (must remain a thin layer).
+imui = ["dep:fret-authoring"]
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-headless = { path = "../fret-ui-headless" }
+fret-ui-kit = { path = "../fret-ui-kit", features = ["icons"] }
+fret-icons = { path = "../fret-icons" }
+
+fret-authoring = { path = "../fret-authoring", optional = true }
+fret-query = { path = "../fret-query", optional = true }
+fret-selector = { path = "../fret-selector", optional = true }
+fret-undo = { path = "../fret-undo", optional = true }
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }

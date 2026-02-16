@@ -1703,6 +1703,9 @@ dependencies = [
  "fret-code-editor-buffer",
  "fret-runtime",
  "fret-text-nav",
+ "serde",
+ "serde_json",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -1726,6 +1729,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slotmap",
+ "smol_str 0.2.2",
  "web-time",
 ]
 
@@ -1913,8 +1917,11 @@ dependencies = [
  "fret-docking",
  "fret-editor",
  "fret-executor",
+ "fret-genui-core",
+ "fret-genui-shadcn",
  "fret-gizmo",
  "fret-icons",
+ "fret-icons-lucide",
  "fret-imui",
  "fret-launch",
  "fret-markdown",
@@ -1930,6 +1937,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-app",
  "fret-ui-assets",
+ "fret-ui-editor",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
@@ -1982,6 +1990,35 @@ dependencies = [
  "fret-runner-winit",
  "fret-runtime",
  "fret-ui",
+]
+
+[[package]]
+name = "fret-genui-core"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "fret-genui-shadcn"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-genui-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -2083,6 +2120,7 @@ dependencies = [
  "objc2-ui-kit",
  "pollster",
  "renderdog",
+ "serde",
  "serde_json",
  "slotmap",
  "stacksafe",
@@ -2197,6 +2235,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-quad-material-stress"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-core",
+ "fret-render",
+ "pollster",
+ "wgpu",
+]
+
+[[package]]
 name = "fret-query"
 version = "0.1.0"
 dependencies = [
@@ -2249,6 +2298,7 @@ dependencies = [
  "unicode-script",
  "unicode-segmentation",
  "usvg",
+ "wasm-bindgen-test",
  "wgpu",
 ]
 
@@ -2462,6 +2512,23 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "fret-ui-editor"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-authoring",
+ "fret-core",
+ "fret-icons",
+ "fret-query",
+ "fret-runtime",
+ "fret-selector",
+ "fret-ui",
+ "fret-ui-headless",
+ "fret-ui-kit",
+ "fret-undo",
 ]
 
 [[package]]
@@ -6446,6 +6513,15 @@ dependencies = [
 
 [[package]]
 name = "smol_str"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd538fb6910ac1099850255cf94a94df6551fbdd602454387d0adb2d1ca6dead"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "smol_str"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f7a918bd2a9951d18ee6e48f076843e8e73a9a5d22cf05bcd4b7a81bdd04e17"
@@ -9036,7 +9112,7 @@ dependencies = [
  "libc",
  "raw-window-handle",
  "rustix 1.1.3",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "winit-android",
  "winit-appkit",
@@ -9061,7 +9137,7 @@ dependencies = [
  "dpi",
  "ndk",
  "raw-window-handle",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "winit-core",
 ]
@@ -9083,7 +9159,7 @@ dependencies = [
  "objc2-core-video",
  "objc2-foundation",
  "raw-window-handle",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "winit-common",
  "winit-core",
@@ -9098,7 +9174,7 @@ dependencies = [
  "memmap2",
  "objc2",
  "objc2-core-foundation",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "winit-core",
  "x11-dl",
@@ -9116,7 +9192,7 @@ dependencies = [
  "dpi",
  "keyboard-types",
  "raw-window-handle",
- "smol_str",
+ "smol_str 0.3.5",
  "web-time",
 ]
 
@@ -9131,7 +9207,7 @@ dependencies = [
  "orbclient",
  "raw-window-handle",
  "redox_syscall 0.5.18",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "winit-core",
 ]
@@ -9151,7 +9227,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-ui-kit",
  "raw-window-handle",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "winit-common",
  "winit-core",
@@ -9174,7 +9250,7 @@ dependencies = [
  "rustix 1.1.3",
  "sctk-adwaita",
  "smithay-client-toolkit",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "wayland-backend",
  "wayland-client",
@@ -9198,7 +9274,7 @@ dependencies = [
  "js-sys",
  "pin-project",
  "raw-window-handle",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -9217,7 +9293,7 @@ dependencies = [
  "cursor-icon",
  "dpi",
  "raw-window-handle",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "unicode-segmentation",
  "windows-sys 0.59.0",
@@ -9239,7 +9315,7 @@ dependencies = [
  "percent-encoding",
  "raw-window-handle",
  "rustix 1.1.3",
- "smol_str",
+ "smol_str 0.3.5",
  "tracing",
  "winit-common",
  "winit-core",

@@ -12,128 +12,260 @@ pub(crate) fn content_view(
     let page_test_id: Arc<str> =
         Arc::from(format!("ui-gallery-page-{}", selected.replace('_', "-")));
 
-    let header = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_between()
-            .items_center(),
-        |cx| {
-            let left = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().flex_1().min_w_0())
-                    .gap(Space::N1)
-                    .items_start(),
-                |cx| {
-                    vec![
-                        cx.text_props(TextProps {
-                            layout: {
-                                let mut layout = fret_ui::element::LayoutStyle::default();
-                                layout.size.width = fret_ui::element::Length::Fill;
-                                layout
-                            },
-                            text: Arc::from(title),
-                            style: None,
-                            color: None,
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: fret_core::TextAlign::Start,
-                        }),
-                        cx.text_props(TextProps {
-                            layout: {
-                                let mut layout = fret_ui::element::LayoutStyle::default();
-                                layout.size.width = fret_ui::element::Length::Fill;
-                                layout
-                            },
-                            text: Arc::from(origin),
-                            style: None,
-                            color: Some(theme.color_token("muted-foreground")),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: fret_core::TextAlign::Start,
-                        }),
-                    ]
-                },
-            );
+    let header_is_narrow = cx
+        .environment_viewport_bounds(fret_ui::Invalidation::Layout)
+        .size
+        .width
+        .0
+        < 980.0;
 
-            let theme_select = shadcn::Select::new(
-                models.theme_preset.clone(),
-                models.theme_preset_open.clone(),
-            )
-            .placeholder("Theme preset")
-            .trigger_test_id("ui-gallery-theme-preset-trigger")
-            .items([
-                shadcn::SelectItem::new("zinc/light", "Zinc (light)")
-                    .test_id("ui-gallery-theme-preset-item-zinc-light"),
-                shadcn::SelectItem::new("zinc/dark", "Zinc (dark)")
-                    .test_id("ui-gallery-theme-preset-item-zinc-dark"),
-                shadcn::SelectItem::new("slate/light", "Slate (light)")
-                    .test_id("ui-gallery-theme-preset-item-slate-light"),
-                shadcn::SelectItem::new("slate/dark", "Slate (dark)")
-                    .test_id("ui-gallery-theme-preset-item-slate-dark"),
-                shadcn::SelectItem::new("neutral/light", "Neutral (light)")
-                    .test_id("ui-gallery-theme-preset-item-neutral-light"),
-                shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
-                    .test_id("ui-gallery-theme-preset-item-neutral-dark"),
-            ])
-            .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
-            .into_element(cx);
+    let header = if header_is_narrow {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N2)
+                .items_start(),
+            |cx| {
+                let left = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N1)
+                        .items_start(),
+                    |cx| {
+                        vec![
+                            cx.text_props(TextProps {
+                                layout: {
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.size.width = fret_ui::element::Length::Fill;
+                                    layout
+                                },
+                                text: Arc::from(title),
+                                style: None,
+                                color: None,
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                                align: fret_core::TextAlign::Start,
+                            }),
+                            cx.text_props(TextProps {
+                                layout: {
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.size.width = fret_ui::element::Length::Fill;
+                                    layout
+                                },
+                                text: Arc::from(origin),
+                                style: None,
+                                color: Some(theme.color_token("muted-foreground")),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                                align: fret_core::TextAlign::Start,
+                            }),
+                        ]
+                    },
+                );
 
-            let motion_select = shadcn::Select::new(
-                models.motion_preset.clone(),
-                models.motion_preset_open.clone(),
-            )
-            .placeholder("Motion preset")
-            .trigger_test_id("ui-gallery-motion-preset-trigger")
-            .items([
-                shadcn::SelectItem::new("theme", "Theme (baseline)")
-                    .test_id("ui-gallery-motion-preset-item-theme"),
-                shadcn::SelectItem::new("reduced", "Reduced motion (0)")
-                    .test_id("ui-gallery-motion-preset-item-reduced"),
-                shadcn::SelectItem::new("snappy", "Snappy")
-                    .test_id("ui-gallery-motion-preset-item-snappy"),
-                shadcn::SelectItem::new("bouncy", "Bouncy")
-                    .test_id("ui-gallery-motion-preset-item-bouncy"),
-                shadcn::SelectItem::new("gentle", "Gentle")
-                    .test_id("ui-gallery-motion-preset-item-gentle"),
-            ])
-            .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
-            .into_element(cx);
+                let theme_select = shadcn::Select::new(
+                    models.theme_preset.clone(),
+                    models.theme_preset_open.clone(),
+                )
+                .placeholder("Theme preset")
+                .trigger_test_id("ui-gallery-theme-preset-trigger")
+                .items([
+                    shadcn::SelectItem::new("zinc/light", "Zinc (light)")
+                        .test_id("ui-gallery-theme-preset-item-zinc-light"),
+                    shadcn::SelectItem::new("zinc/dark", "Zinc (dark)")
+                        .test_id("ui-gallery-theme-preset-item-zinc-dark"),
+                    shadcn::SelectItem::new("slate/light", "Slate (light)")
+                        .test_id("ui-gallery-theme-preset-item-slate-light"),
+                    shadcn::SelectItem::new("slate/dark", "Slate (dark)")
+                        .test_id("ui-gallery-theme-preset-item-slate-dark"),
+                    shadcn::SelectItem::new("neutral/light", "Neutral (light)")
+                        .test_id("ui-gallery-theme-preset-item-neutral-light"),
+                    shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
+                        .test_id("ui-gallery-theme-preset-item-neutral-dark"),
+                ])
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .into_element(cx);
 
-            let copy_actions = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| {
-                    vec![
-                        shadcn::Button::new("Copy link")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CLIPBOARD_COPY_LINK)
-                            .into_element(cx),
-                        shadcn::Button::new("Copy usage")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CLIPBOARD_COPY_USAGE)
-                            .into_element(cx),
-                        shadcn::Button::new("Copy notes")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CLIPBOARD_COPY_NOTES)
-                            .into_element(cx),
-                    ]
-                },
-            );
+                let motion_select = shadcn::Select::new(
+                    models.motion_preset.clone(),
+                    models.motion_preset_open.clone(),
+                )
+                .placeholder("Motion preset")
+                .trigger_test_id("ui-gallery-motion-preset-trigger")
+                .items([
+                    shadcn::SelectItem::new("theme", "Theme (baseline)")
+                        .test_id("ui-gallery-motion-preset-item-theme"),
+                    shadcn::SelectItem::new("reduced", "Reduced motion (0)")
+                        .test_id("ui-gallery-motion-preset-item-reduced"),
+                    shadcn::SelectItem::new("snappy", "Snappy")
+                        .test_id("ui-gallery-motion-preset-item-snappy"),
+                    shadcn::SelectItem::new("bouncy", "Bouncy")
+                        .test_id("ui-gallery-motion-preset-item-bouncy"),
+                    shadcn::SelectItem::new("gentle", "Gentle")
+                        .test_id("ui-gallery-motion-preset-item-gentle"),
+                ])
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .into_element(cx);
 
-            let right = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N3).items_center(),
-                |_cx| [theme_select, motion_select, copy_actions],
-            );
+                let copy_actions = stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |cx| {
+                        vec![
+                            shadcn::Button::new("Copy link")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CLIPBOARD_COPY_LINK)
+                                .into_element(cx),
+                            shadcn::Button::new("Copy usage")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CLIPBOARD_COPY_USAGE)
+                                .into_element(cx),
+                            shadcn::Button::new("Copy notes")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CLIPBOARD_COPY_NOTES)
+                                .into_element(cx),
+                        ]
+                    },
+                );
 
-            [left, right]
-        },
-    );
+                let right = stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N3).items_center(),
+                    |_cx| [theme_select, motion_select, copy_actions],
+                );
+
+                vec![left, right]
+            },
+        )
+    } else {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_between()
+                .items_center(),
+            |cx| {
+                let left = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().flex_1().min_w_0())
+                        .gap(Space::N1)
+                        .items_start(),
+                    |cx| {
+                        vec![
+                            cx.text_props(TextProps {
+                                layout: {
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.size.width = fret_ui::element::Length::Fill;
+                                    layout
+                                },
+                                text: Arc::from(title),
+                                style: None,
+                                color: None,
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                                align: fret_core::TextAlign::Start,
+                            }),
+                            cx.text_props(TextProps {
+                                layout: {
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.size.width = fret_ui::element::Length::Fill;
+                                    layout
+                                },
+                                text: Arc::from(origin),
+                                style: None,
+                                color: Some(theme.color_token("muted-foreground")),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                                align: fret_core::TextAlign::Start,
+                            }),
+                        ]
+                    },
+                );
+
+                let theme_select = shadcn::Select::new(
+                    models.theme_preset.clone(),
+                    models.theme_preset_open.clone(),
+                )
+                .placeholder("Theme preset")
+                .trigger_test_id("ui-gallery-theme-preset-trigger")
+                .items([
+                    shadcn::SelectItem::new("zinc/light", "Zinc (light)")
+                        .test_id("ui-gallery-theme-preset-item-zinc-light"),
+                    shadcn::SelectItem::new("zinc/dark", "Zinc (dark)")
+                        .test_id("ui-gallery-theme-preset-item-zinc-dark"),
+                    shadcn::SelectItem::new("slate/light", "Slate (light)")
+                        .test_id("ui-gallery-theme-preset-item-slate-light"),
+                    shadcn::SelectItem::new("slate/dark", "Slate (dark)")
+                        .test_id("ui-gallery-theme-preset-item-slate-dark"),
+                    shadcn::SelectItem::new("neutral/light", "Neutral (light)")
+                        .test_id("ui-gallery-theme-preset-item-neutral-light"),
+                    shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
+                        .test_id("ui-gallery-theme-preset-item-neutral-dark"),
+                ])
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .into_element(cx);
+
+                let motion_select = shadcn::Select::new(
+                    models.motion_preset.clone(),
+                    models.motion_preset_open.clone(),
+                )
+                .placeholder("Motion preset")
+                .trigger_test_id("ui-gallery-motion-preset-trigger")
+                .items([
+                    shadcn::SelectItem::new("theme", "Theme (baseline)")
+                        .test_id("ui-gallery-motion-preset-item-theme"),
+                    shadcn::SelectItem::new("reduced", "Reduced motion (0)")
+                        .test_id("ui-gallery-motion-preset-item-reduced"),
+                    shadcn::SelectItem::new("snappy", "Snappy")
+                        .test_id("ui-gallery-motion-preset-item-snappy"),
+                    shadcn::SelectItem::new("bouncy", "Bouncy")
+                        .test_id("ui-gallery-motion-preset-item-bouncy"),
+                    shadcn::SelectItem::new("gentle", "Gentle")
+                        .test_id("ui-gallery-motion-preset-item-gentle"),
+                ])
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .into_element(cx);
+
+                let copy_actions = stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |cx| {
+                        vec![
+                            shadcn::Button::new("Copy link")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CLIPBOARD_COPY_LINK)
+                                .into_element(cx),
+                            shadcn::Button::new("Copy usage")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CLIPBOARD_COPY_USAGE)
+                                .into_element(cx),
+                            shadcn::Button::new("Copy notes")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CLIPBOARD_COPY_NOTES)
+                                .into_element(cx),
+                        ]
+                    },
+                );
+
+                let right = stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N3).items_center(),
+                    |_cx| [theme_select, motion_select, copy_actions],
+                );
+
+                [left, right]
+            },
+        )
+    };
 
     let preview_panel = page_preview(
         cx,
@@ -461,6 +593,7 @@ fn page_preview(
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
         PAGE_TEXT_MIXED_SCRIPT_FALLBACK => preview_text_mixed_script_fallback(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
+        PAGE_TEXT_FEATURE_TOGGLES => preview_text_feature_toggles(cx, theme),
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
@@ -492,7 +625,14 @@ fn page_preview(
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
+        PAGE_AI_CONVERSATION_DEMO => preview_ai_conversation_demo(cx, theme),
+        PAGE_AI_MESSAGE_DEMO => preview_ai_message_demo(cx, theme),
+        PAGE_AI_CONTEXT_DEMO => preview_ai_context_demo(cx, theme),
+        PAGE_AI_TERMINAL_DEMO => preview_ai_terminal_demo(cx, theme),
+        PAGE_AI_PACKAGE_INFO_DEMO => preview_ai_package_info_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
+        PAGE_AI_TASK_DEMO => preview_ai_task_demo(cx, theme),
+        PAGE_AI_AUDIO_PLAYER_DEMO => preview_ai_audio_player_demo(cx, theme),
         PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
         PAGE_AI_MIC_SELECTOR_DEMO => preview_ai_mic_selector_demo(cx, theme),
         PAGE_AI_SPEECH_INPUT_DEMO => preview_ai_speech_input_demo(cx, theme),
@@ -500,9 +640,51 @@ fn page_preview(
         PAGE_AI_AGENT_DEMO => preview_ai_agent_demo(cx, theme),
         PAGE_AI_SANDBOX_DEMO => preview_ai_sandbox_demo(cx, theme),
         PAGE_AI_PERSONA_DEMO => preview_ai_persona_demo(cx, theme),
+        PAGE_AI_OPEN_IN_CHAT_DEMO => preview_ai_open_in_chat_demo(cx, theme),
         PAGE_AI_WORKFLOW_CHROME_DEMO => preview_ai_workflow_chrome_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CANVAS_DEMO => preview_ai_workflow_canvas_demo(cx, theme),
+        PAGE_AI_WORKFLOW_NODE_DEMO => preview_ai_workflow_node_demo(cx, theme),
+        PAGE_AI_WORKFLOW_EDGE_DEMO => preview_ai_workflow_edge_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CONNECTION_DEMO => preview_ai_workflow_connection_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CONTROLS_DEMO => preview_ai_workflow_controls_demo(cx, theme),
+        PAGE_AI_WORKFLOW_PANEL_DEMO => preview_ai_workflow_panel_demo(cx, theme),
+        PAGE_AI_WORKFLOW_TOOLBAR_DEMO => preview_ai_workflow_toolbar_demo(cx, theme),
         PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO => preview_ai_workflow_node_graph_demo(cx, theme),
         PAGE_AI_CANVAS_WORLD_LAYER_SPIKE => preview_ai_canvas_world_layer_spike(cx, theme),
+        PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
+        PAGE_AI_ATTACHMENTS_DEMO => preview_ai_attachments_demo(cx, theme),
+        PAGE_AI_MESSAGE_BRANCH_DEMO => preview_ai_message_branch_demo(cx, theme),
+        PAGE_AI_MODEL_SELECTOR_DEMO => preview_ai_model_selector_demo(cx, theme),
+        PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
+        PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
+        PAGE_AI_COMMIT_LARGE_DEMO => preview_ai_commit_large_demo(cx, theme),
+        PAGE_AI_STACK_TRACE_DEMO => preview_ai_stack_trace_demo(cx, theme),
+        PAGE_AI_STACK_TRACE_LARGE_DEMO => preview_ai_stack_trace_large_demo(cx, theme),
+        PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
+        PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
+        PAGE_AI_SUGGESTIONS_DEMO => preview_ai_suggestions_demo(cx, theme),
+        PAGE_AI_REASONING_DEMO => preview_ai_reasoning_demo(cx, theme),
+        PAGE_AI_QUEUE_DEMO => preview_ai_queue_demo(cx, theme),
+        PAGE_AI_TEST_RESULTS_DEMO => preview_ai_test_results_demo(cx, theme),
+        PAGE_AI_TEST_RESULTS_LARGE_DEMO => preview_ai_test_results_large_demo(cx, theme),
+        PAGE_AI_CHECKPOINT_DEMO => preview_ai_checkpoint_demo(cx, theme),
+        PAGE_AI_CONFIRMATION_DEMO => preview_ai_confirmation_demo(cx, theme),
+        PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
+        PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
+        PAGE_AI_TOOL_DEMO => preview_ai_tool_demo(cx, theme),
+        PAGE_AI_WEB_PREVIEW_DEMO => preview_ai_web_preview_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
+            preview_ai_prompt_input_action_menu_demo(cx, theme)
+        }
+        PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO => {
+            preview_ai_prompt_input_referenced_sources_demo(cx, theme)
+        }
+        PAGE_AI_INLINE_CITATION_DEMO => preview_ai_inline_citation_demo(cx, theme),
+        PAGE_AI_SOURCES_DEMO => preview_ai_sources_demo(cx, theme),
+        PAGE_AI_CHAIN_OF_THOUGHT_DEMO => preview_ai_chain_of_thought_demo(cx, theme),
+        PAGE_AI_SNIPPET_DEMO => preview_ai_snippet_demo(cx, theme),
+        PAGE_AI_IMAGE_DEMO => preview_ai_image_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
