@@ -79,6 +79,8 @@ Evidence (current):
 - `apps/fretboard/src/scaffold/templates.rs` (`simple-todo` template)
 - `apps/fret-examples/src/assets_demo.rs` (example: `ui::children!` replaces `vec![...]` in panel builder)
 - `apps/fret-examples/src/cjk_conformance_demo.rs` (example: `ui::children!` replaces `vec![...]` root return)
+- `apps/fret-examples/src/emoji_conformance_demo.rs` (example: `ui::children!` replaces `vec![...]` root return)
+- `apps/fret-examples/src/genui_demo.rs` (example: replace `vec![...]` child lists with arrays/`ui::children!`)
 
 Acceptance:
 

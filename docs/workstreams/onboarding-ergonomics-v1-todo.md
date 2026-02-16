@@ -95,7 +95,7 @@ Design note:
     - `ecosystem/fret-ui-kit/src/ui.rs` (`*_build` iterator helpers)
     - `docs/first-hour.md`
 
-- [ ] ONB-auth-022 Audit top-level examples for avoidable `vec![...]` / `.collect()` boilerplate.
+- [~] ONB-auth-022 Audit top-level examples for avoidable `vec![...]` / `.collect()` boilerplate.
   - Target files (initial):
     - `apps/fret-examples/src/*_demo.rs`
     - `apps/fret-ui-gallery/src/ui/*`
@@ -104,6 +104,8 @@ Design note:
     - `apps/fret-examples/src/todo_demo.rs` (uses `ui::children!` for heterogeneous children)
     - `apps/fret-examples/src/assets_demo.rs` (replaced `vec![...]` with `ui::children!` in panel builder)
     - `apps/fret-examples/src/cjk_conformance_demo.rs` (replaced `vec![page]` with `ui::children!`)
+    - `apps/fret-examples/src/emoji_conformance_demo.rs` (replaced `vec![page]` with `ui::children!`)
+    - `apps/fret-examples/src/genui_demo.rs` (replaced `vec![...]` child lists with arrays/`ui::children!`)
 
 - [x] ONB-auth-023 Reduce call-site `.into_element(cx)` noise by teaching constructors to accept `UiIntoElement` children.
   - Goal: move adapter verbosity to ecosystem boundaries (GPUI-like composition).
