@@ -82,9 +82,13 @@ impl Snippet {
             InputTokenKeys::none(),
         );
         let mut layout = decl_style::layout_style(&theme, self.layout);
-        layout.size.height = Length::Auto;
+        layout.size.height = Length::Px(chrome.min_height);
 
-        let props = input_chrome_container_props(layout, chrome, chrome.border_color);
+        let mut props = input_chrome_container_props(layout, chrome, chrome.border_color);
+        props.shadow = Some(decl_style::shadow_xs(&theme, chrome.radius));
+        props.focus_within = true;
+        props.focus_border_color = Some(chrome.border_color_focused);
+        props.focus_ring = Some(decl_style::focus_ring(&theme, chrome.radius));
         let el = cx.container(props, move |cx| {
             vec![stack::hstack(
                 cx,
@@ -322,7 +326,6 @@ impl SnippetCopyButton {
 
         cx.pressable_with_id_props(move |cx, st, id| {
             let copied = feedback.lock().copied;
-            let label = if copied { "Copied" } else { "Copy" };
 
             cx.timer_on_timer_for(
                 id,
@@ -385,27 +388,38 @@ impl SnippetCopyButton {
             props.enabled = true;
             props.focusable = true;
             props.a11y.role = Some(SemanticsRole::Button);
-            props.a11y.label = Some(Arc::<str>::from(label));
+            props.a11y.label = Some(Arc::<str>::from("Copy"));
             props.a11y.test_id = test_id.clone();
 
-            let fg = theme.color_token("muted-foreground");
-            let bg_hover = theme
-                .color_by_key("color.menu.item.hover")
-                .unwrap_or_else(|| theme.color_token("secondary"));
-            let bg_pressed = theme
-                .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_token("secondary"));
+            let fg_default = theme.color_token("foreground");
+            let fg_hover = theme
+                .color_by_key("accent-foreground")
+                .unwrap_or(fg_default);
+            let fg = if st.hovered || st.pressed {
+                fg_hover
+            } else {
+                fg_default
+            };
+
+            let bg_hover = if theme.name.contains("/dark") {
+                theme
+                    .color_by_key("accent/50")
+                    .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.5))
+            } else {
+                theme.color_token("accent")
+            };
+            let bg_pressed = bg_hover;
 
             let bg = if st.pressed {
-                alpha(bg_pressed, 0.9)
+                bg_pressed
             } else if st.hovered {
-                alpha(bg_hover, 0.9)
+                bg_hover
             } else {
                 Color::TRANSPARENT
             };
 
-            let size = Px(28.0);
-            let radius = theme.metric_token("metric.radius.sm");
+            let size = Px(32.0);
+            let radius = theme.metric_token("metric.radius.md");
             let icon_id = if copied {
                 fret_icons::ids::ui::CHECK
             } else {

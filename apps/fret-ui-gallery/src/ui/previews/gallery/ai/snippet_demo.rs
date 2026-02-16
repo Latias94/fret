@@ -19,38 +19,43 @@ pub(in crate::ui) fn preview_ai_snippet_demo(
         )
     };
 
-    let cmd = |cx: &mut ElementContext<'_, App>,
-               label: &'static str,
-               code: &'static str,
-               id: &'static str| {
-        ui_ai::Snippet::new([
-            ui_ai::SnippetText::new(label).into_element(cx),
-            ui_ai::SnippetInput::new(code).into_element(cx),
+    let snippet = |cx: &mut ElementContext<'_, App>,
+                   with_prefix: bool,
+                   code: &'static str,
+                   id: &'static str| {
+        let mut children = Vec::new();
+        if with_prefix {
+            children.push(ui_ai::SnippetText::new("$").into_element(cx));
+        }
+        children.push(ui_ai::SnippetInput::new(code).into_element(cx));
+        children.push(
             ui_ai::SnippetCopyButton::new(code)
                 .test_id(Arc::<str>::from(format!("{id}-copy")))
                 .copied_marker_test_id(Arc::<str>::from(format!("{id}-copied")))
                 .into_element(cx),
-        ])
-        .test_id(Arc::<str>::from(id))
-        .into_element(cx)
+        );
+
+        ui_ai::Snippet::new(children)
+            .test_id(Arc::<str>::from(id))
+            .into_element(cx)
     };
 
-    let simple = cmd(
+    let with_prefix = snippet(
         cx,
-        "Run:",
+        true,
         "cargo nextest run -p fret-ui-gallery",
-        "ui-ai-snippet-demo-nextest",
+        "ui-ai-snippet-demo-with-prefix",
     );
-    let env = cmd(
+    let without_prefix = snippet(
         cx,
-        "Env:",
-        "FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1",
-        "ui-ai-snippet-demo-env",
+        false,
+        "npm i @ai-sdk/openai",
+        "ui-ai-snippet-demo-without-prefix",
     );
 
     vec![
-        cx.text("Snippet (AI Elements): inline copyable surface with feedback timeout."),
-        section(cx, "Command", simple),
-        section(cx, "Environment", env),
+        cx.text("Snippet (AI Elements): lightweight inline code display with copy button."),
+        section(cx, "With Prefix", with_prefix),
+        section(cx, "Without Prefix", without_prefix),
     ]
 }
