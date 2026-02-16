@@ -1358,7 +1358,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(21),
             origin: Point::new(Px(x), Px(y)),
             text: glyph.blob,
-            color: fg,
+            paint: (fg).into(),
         });
 
         if !self.hovered_float_zone {
@@ -1412,7 +1412,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(23),
             origin: text_origin,
             text: tooltip.blob,
-            color: theme.color_token("popover-foreground"),
+            paint: (theme.color_token("popover-foreground")).into(),
         });
     }
 
@@ -1535,7 +1535,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(1),
             origin: Point::new(Px(x), Px(y)),
             text: text.blob,
-            color: theme.color_token("muted-foreground"),
+            paint: (theme.color_token("muted-foreground")).into(),
         });
     }
 }
@@ -5416,7 +5416,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         order: fret_core::DrawOrder(3),
                         origin: Point::new(text_x, text_y),
                         text: glyph.blob,
-                        color,
+                        paint: (color).into(),
                     });
                 }
 

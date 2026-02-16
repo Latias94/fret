@@ -79,7 +79,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             order: DrawOrder(57),
             origin: Point::new(text_x, text_y),
             text: blob,
-            color: query_color,
+            paint: (query_color).into(),
         });
 
         let list_y0 = inner_y + item_h + pad;
@@ -128,7 +128,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(57),
                 origin: Point::new(text_x, text_y),
                 text: blob,
-                color,
+                paint: (color).into(),
             });
         }
     }
