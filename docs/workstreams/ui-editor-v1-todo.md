@@ -92,7 +92,7 @@ Exit criteria:
 ### M2 — Property grid + density + state glue
 
 - [~] `EditorDensity` token family (`editor.density.*`) and application in core controls.
-- [ ] `FieldStatus` glue (loading/error/mixed/dirty):
+- [x] `FieldStatus` glue (loading/error/mixed/dirty):
   - [x] simple badge/label helpers
   - [x] optional `state` module integration (feature-gated)
 - [x] `MiniSearchBox` control (for filtering property groups and palettes).
@@ -101,7 +101,8 @@ Exit criteria:
   - [x] two-column layout (via `PropertyRow` composition)
   - [x] label width policy (fixed width option, propagated to rows)
   - [ ] virtualization strategy decision:
-    - [ ] composable rows path (VirtualList)
+    - [x] composable rows path (VirtualList)
+      - Evidence: `ecosystem/fret-ui-editor/src/composites/property_grid_virtualized.rs`
     - [ ] windowed paint path for large inspectors (if needed)
 - [~] Demo: groups + filter + empty-state placeholders.
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
