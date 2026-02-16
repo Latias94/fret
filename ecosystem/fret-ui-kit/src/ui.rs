@@ -3,6 +3,8 @@ use std::sync::Arc;
 
 pub use crate::children;
 
+use smallvec::SmallVec;
+
 use fret_core::{Axis, Edges, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, LayoutStyle, Length, Overflow,
@@ -19,14 +21,19 @@ use crate::{
     UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
-fn collect_ui_children<H: UiHost, I>(cx: &mut ElementContext<'_, H>, iter: I) -> Vec<AnyElement>
+fn collect_ui_children<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    iter: I,
+) -> SmallVec<[AnyElement; 8]>
 where
     I: IntoIterator,
     I::Item: UiIntoElement,
 {
-    iter.into_iter()
-        .map(|child| crate::UiIntoElement::into_element(child, cx))
-        .collect()
+    let mut out: SmallVec<[AnyElement; 8]> = SmallVec::new();
+    for child in iter {
+        out.push(crate::UiIntoElement::into_element(child, cx));
+    }
+    out
 }
 
 /// A patchable flex layout constructor for authoring ergonomics.
