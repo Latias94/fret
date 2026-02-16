@@ -1028,12 +1028,26 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) top_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
+    pub(super) layout_hotspots: Vec<BundleStatsLayoutHotspot>,
     pub(super) paint_widget_hotspots: Vec<BundleStatsPaintWidgetHotspot>,
     pub(super) paint_text_prepare_hotspots: Vec<BundleStatsPaintTextPrepareHotspot>,
     pub(super) model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsLayoutHotspot {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) element_path: Option<String>,
+    pub(super) widget_type: Option<String>,
+    pub(super) layout_time_us: u64,
+    pub(super) inclusive_time_us: u64,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1853,6 +1867,50 @@ impl BundleStatsReport {
                     })
                     .collect();
                 println!("    top_layout_engine_solves: {}", items.join(" | "));
+            }
+            if !row.layout_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .layout_hotspots
+                    .iter()
+                    .take(3)
+                    .map(|h| {
+                        let mut out = format!(
+                            "us={} incl.us={} node={}",
+                            h.layout_time_us, h.inclusive_time_us, h.node
+                        );
+                        if let Some(test_id) = h.test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            out.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = h.role.as_deref()
+                            && !role.is_empty()
+                        {
+                            out.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(widget) = h.widget_type.as_deref()
+                            && !widget.is_empty()
+                        {
+                            out.push_str(&format!(" widget={widget}"));
+                        }
+                        if let Some(kind) = h.element_kind.as_deref()
+                            && !kind.is_empty()
+                        {
+                            out.push_str(&format!(" kind={kind}"));
+                        }
+                        if let Some(el) = h.element {
+                            out.push_str(&format!(" element={el}"));
+                        }
+                        if let Some(path) = h.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            let path = compact_debug_path(path);
+                            out.push_str(&format!(" path={path}"));
+                        }
+                        out
+                    })
+                    .collect();
+                println!("    layout_hotspots: {}", items.join(" | "));
             }
             if !row.model_change_hotspots.is_empty() {
                 let items: Vec<String> = row
@@ -3455,6 +3513,55 @@ impl BundleStatsReport {
                     "top_layout_engine_solves".to_string(),
                     Value::Array(top_layout_engine_solves),
                 );
+
+                let layout_hotspots = row
+                    .layout_hotspots
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("node".to_string(), Value::from(h.node));
+                        h_obj.insert(
+                            "element".to_string(),
+                            h.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_kind".to_string(),
+                            h.element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_path".to_string(),
+                            h.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "widget_type".to_string(),
+                            h.widget_type
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert("layout_time_us".to_string(), Value::from(h.layout_time_us));
+                        h_obj.insert(
+                            "inclusive_time_us".to_string(),
+                            Value::from(h.inclusive_time_us),
+                        );
+                        h_obj.insert(
+                            "role".to_string(),
+                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "test_id".to_string(),
+                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert("layout_hotspots".to_string(), Value::Array(layout_hotspots));
 
                 let paint_widget_hotspots = row
                     .paint_widget_hotspots
@@ -9628,6 +9735,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_contained_relayout_cache_roots,
             ) = snapshot_cache_root_stats(s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
+            let layout_hotspots = snapshot_layout_hotspots(s, 3);
             let paint_widget_hotspots = snapshot_paint_widget_hotspots(s, 3);
             let paint_text_prepare_hotspots = snapshot_paint_text_prepare_hotspots(s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
@@ -9983,6 +10091,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_cache_roots,
                 top_contained_relayout_cache_roots,
                 top_layout_engine_solves,
+                layout_hotspots,
                 paint_widget_hotspots,
                 paint_text_prepare_hotspots,
                 model_change_hotspots,
@@ -10678,6 +10787,63 @@ fn snapshot_paint_widget_hotspots(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32,
+            role: None,
+            test_id: None,
+        })
+        .collect();
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
+        item.role = role;
+        item.test_id = test_id;
+    }
+
+    out
+}
+
+fn snapshot_layout_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsLayoutHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("layout_hotspots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if hotspots.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+
+    let mut out: Vec<BundleStatsLayoutHotspot> = hotspots
+        .iter()
+        .take(max.max(1))
+        .map(|h| BundleStatsLayoutHotspot {
+            node: h.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+            element: h.get("element").and_then(|v| v.as_u64()),
+            element_kind: h
+                .get("element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            element_path: h
+                .get("element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            widget_type: h
+                .get("widget_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            layout_time_us: h
+                .get("layout_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            inclusive_time_us: h
+                .get("inclusive_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
             role: None,
             test_id: None,
         })
