@@ -92,6 +92,19 @@ Exit criteria:
   - a small set of common knobs is supported for app-specific tuning (paths/URLs, identifiers),
   - behavior is deterministic and covered by fixture-driven conformance tests.
 
+Status (baseline + no-drift gates exist):
+
+- Display-row segmentation uses the ecosystem policy:
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`compute_wrapped_row_start_cols`)
+- Policy conformance fixtures (JSON-driven):
+  - `ecosystem/fret-code-editor-view/tests/code_wrap_policy_fixtures.rs`
+  - `ecosystem/fret-code-editor-view/tests/fixtures/code_wrap_policy_v1.json`
+- Policy-aware byte ↔ display mapping gate:
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`byte_to_display_point_respects_code_wrap_policy_rows`)
+- No-drift navigation gates (selection + vertical movement):
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`move_caret_vertical_steps_through_code_wrap_policy_rows`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
+
 ## M4 — Platform text input interop (TextInputRegion UTF-16)
 
 Exit criteria:

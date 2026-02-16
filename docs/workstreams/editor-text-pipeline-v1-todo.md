@@ -111,6 +111,8 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`move_caret_vertical_clamps_in_display_row_space_when_wrapped`)
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`move_caret_vertical_steps_through_code_wrap_policy_rows`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`home_end_move_within_wrapped_display_rows`)
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
@@ -118,6 +120,8 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
       (`shift_home_end_extends_selection_within_wrapped_display_rows`)
     - `ecosystem/fret-code-editor-view/src/lib.rs`
       (`display_map_code_wrap_policy_does_not_split_arrow_operator_token`)
+    - `ecosystem/fret-code-editor-view/src/lib.rs`
+      (`byte_to_display_point_respects_code_wrap_policy_rows`)
 - [~] Add fixture-driven conformance tests for the policy (ecosystem-owned, deterministic):
   - Status: initial JSON suite landed; expand coverage as new edge-cases are found.
   - Evidence:

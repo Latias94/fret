@@ -1026,9 +1026,19 @@ impl DisplayMap {
                 let rows_for_line = line_last_excl.saturating_sub(line_first).max(1);
 
                 if folds_empty && inlays_empty && !has_preedit {
-                    let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
-                    let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
-                    return DisplayPoint::new(line_first + row_in_line, col_in_row);
+                    if self.code_wrap_policy.is_none() {
+                        let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
+                        let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
+                        return DisplayPoint::new(line_first + row_in_line, col_in_row);
+                    }
+
+                    let rows = self.line_display_row_range(line);
+                    let row_in_line =
+                        find_row_for_line_col(&self.row_start_col[rows.clone()], pt.col)
+                            .min(rows_for_line.saturating_sub(1));
+                    let display_row = rows.start.saturating_add(row_in_line);
+                    let row_start_col = *self.row_start_col.get(display_row).unwrap_or(&0);
+                    return DisplayPoint::new(display_row, pt.col.saturating_sub(row_start_col));
                 }
 
                 let line_start = buf.line_start(line).unwrap_or(0);
@@ -2635,5 +2645,18 @@ mod display_map_tests {
             11,
             "expected the composed line end to map to the end of the replaced range"
         );
+    }
+
+    #[test]
+    fn byte_to_display_point_respects_code_wrap_policy_rows() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "left->right->tail\nzzz".to_string()).unwrap();
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        let map = DisplayMap::new_with_code_wrap_policy(&buf, Some(6), Some(policy));
+
+        let seam = "left->right".len();
+        let pt = map.byte_to_display_point(&buf, seam);
+        assert_eq!(pt, DisplayPoint::new(2, 0));
     }
 }

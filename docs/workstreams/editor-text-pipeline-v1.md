@@ -79,7 +79,7 @@ Without a careful integration, the editor will regress into:
   - `crates/fret-render-wgpu/src/text/wrapper.rs`
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
 
-## Capability Snapshot (2026-02-15)
+## Capability Snapshot (2026-02-16)
 
 This is a **non-normative** status dashboard for editor/self-drawn UI consumers. The authoritative
 contracts are ADR-driven; use this section to keep “what works today” and “what is still missing”

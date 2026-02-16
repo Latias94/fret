@@ -2066,6 +2066,48 @@ fn move_caret_vertical_clamps_in_display_row_space_when_wrapped() {
 }
 
 #[test]
+fn move_caret_vertical_steps_through_code_wrap_policy_rows() {
+    let handle = CodeEditorHandle::new("left->right->tail\nzzz");
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    // Expect the first logical line to be split into three wrapped display rows.
+    let rows: Vec<String> = (0..st.display_map.row_count())
+        .map(|row| {
+            let range = st.display_map.display_row_byte_range(&st.buffer, row);
+            st.buffer.slice_to_string(range).unwrap_or_default()
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            "left->".to_string(),
+            "right".to_string(),
+            "->tail".to_string(),
+            "zzz".to_string()
+        ]
+    );
+
+    // Down should walk display rows (not logical lines) until it reaches the next line.
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
+    assert_eq!(st.selection.caret(), "left->".len());
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
+    assert_eq!(st.selection.caret(), "left->right".len());
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
+    assert_eq!(st.selection.caret(), "left->right->tail\n".len());
+}
+
+#[test]
 fn apply_and_record_edit_refreshes_display_map_only_when_needed() {
     let handle = CodeEditorHandle::new("ab\nc");
 
