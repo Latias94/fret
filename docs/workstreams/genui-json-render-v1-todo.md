@@ -108,4 +108,4 @@ Goal: reduce “demo confusion” and make the shadcn catalog output more consis
 - [ ] Demo spec ergonomics: add a small “Card as body” example and a “Box boundaries” example that LLMs can copy.
 - [ ] Validation presentation: add a second spec snippet that renders multiple issues per field (repeat + filter) with consistent spacing.
 - [ ] Catalog prompting: add one or two shadcn-specific notes that steer output away from “glued-to-edge” layouts (prefer `Box.p` + `VStack.gap`).
-- [ ] Gates: add an e2e smoke test that asserts validation issues appear/disappear deterministically (no visual assertions).
+- [x] Gates: add an e2e smoke test that asserts validation issues appear/disappear deterministically (no visual assertions). (2026-02-16)
