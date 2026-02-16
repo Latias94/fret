@@ -1,13 +1,17 @@
 use fret_genui_core::props::ResolvedProps;
-use fret_genui_core::render::ComponentResolver;
+use fret_genui_core::render::{ComponentResolver, RenderedChildV1};
 use fret_genui_core::spec::{ElementKey, ElementV1};
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
 mod basic;
+mod choice;
+mod compound;
+mod feedback;
 mod forms;
 mod helpers;
+mod numeric;
 mod responsive;
 
 #[derive(Debug, thiserror::Error)]
@@ -34,11 +38,21 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
         key: &ElementKey,
         element: &ElementV1,
         props: &ResolvedProps,
-        children: Vec<AnyElement>,
+        children: Vec<RenderedChildV1>,
         on_event: &dyn Fn(&str) -> Option<OnActivate>,
     ) -> Result<AnyElement, ShadcnResolverError> {
-        let resolved_props = &props.props;
         match element.ty.as_str() {
+            "Tabs" => return Ok(self.render_tabs(cx, key, props, children)),
+            "Accordion" => return Ok(self.render_accordion(cx, key, props, children)),
+            _ => {}
+        }
+
+        let resolved_props = &props.props;
+        let children: Vec<AnyElement> = children.into_iter().map(|c| c.rendered).collect();
+
+        match element.ty.as_str() {
+            "TabContent" => Ok(self.render_tab_content(cx, children)),
+            "AccordionItem" => Ok(self.render_accordion_item(cx, children)),
             "Card" => Ok(self.render_card(cx, resolved_props, children)),
             "CardHeader" => Ok(self.render_card_header(cx, children)),
             "CardContent" => Ok(self.render_card_content(cx, children)),
@@ -53,7 +67,17 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
             "ScrollArea" => Ok(self.render_scroll_area(cx, resolved_props, children)),
             "Button" => Ok(self.render_button(cx, resolved_props, children, on_event)),
             "Input" => Ok(self.render_input(cx, key, props, children)),
+            "Textarea" => Ok(self.render_textarea(cx, key, props, children)),
             "Switch" => Ok(self.render_switch(cx, key, props, children)),
+            "Checkbox" => Ok(self.render_checkbox(cx, key, props, children)),
+            "Select" => Ok(self.render_select(cx, key, props, children)),
+            "RadioGroup" => Ok(self.render_radio_group(cx, key, props, children)),
+            "Slider" => Ok(self.render_slider(cx, key, props, children)),
+            "Label" => Ok(self.render_label(cx, resolved_props, children)),
+            "Alert" => Ok(self.render_alert(cx, key, props, children)),
+            "Progress" => Ok(self.render_progress(cx, props, children)),
+            "Spinner" => Ok(self.render_spinner(cx, props, children)),
+            "Skeleton" => Ok(self.render_skeleton(cx, props, children)),
             "Badge" => Ok(self.render_badge(cx, resolved_props, children)),
             "ResponsiveGrid" => Ok(self.render_responsive_grid(cx, resolved_props, children)),
             "ResponsiveStack" => Ok(self.render_responsive_stack(cx, resolved_props, children)),

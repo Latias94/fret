@@ -4,6 +4,7 @@ use fret_genui_core::actions;
 use fret_genui_core::render::{GenUiActionInvocation, GenUiActionQueue, GenUiRenderScope};
 use fret_genui_core::spec::ElementKey;
 use fret_runtime::Model;
+use fret_ui::action::{ActionCx, UiActionHost, UiActionHostExt};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use serde_json::Value;
@@ -26,6 +27,19 @@ impl ShadcnResolver {
             return Arc::<str>::from(s);
         }
         Arc::<str>::from(v.to_string())
+    }
+
+    pub(super) fn json_to_option_arc_str(v: Option<&serde_json::Value>) -> Option<Arc<str>> {
+        let Some(v) = v else {
+            return None;
+        };
+        if v.is_null() {
+            return None;
+        }
+        if let Some(s) = v.as_str() {
+            return Some(Arc::<str>::from(s));
+        }
+        Some(Arc::<str>::from(v.to_string()))
     }
 
     pub(super) fn unknown_component<H: UiHost>(
@@ -74,6 +88,38 @@ impl ShadcnResolver {
             "secondary" => BadgeVariant::Secondary,
             "destructive" => BadgeVariant::Destructive,
             "outline" => BadgeVariant::Outline,
+            _ => return None,
+        })
+    }
+
+    pub(super) fn parse_button_variant(
+        v: Option<&serde_json::Value>,
+    ) -> Option<fret_ui_shadcn::ButtonVariant> {
+        let s = v?.as_str()?;
+        use fret_ui_shadcn::ButtonVariant;
+        Some(match s {
+            "default" => ButtonVariant::Default,
+            "destructive" => ButtonVariant::Destructive,
+            "outline" => ButtonVariant::Outline,
+            "secondary" => ButtonVariant::Secondary,
+            "ghost" => ButtonVariant::Ghost,
+            "link" => ButtonVariant::Link,
+            _ => return None,
+        })
+    }
+
+    pub(super) fn parse_button_size(
+        v: Option<&serde_json::Value>,
+    ) -> Option<fret_ui_shadcn::ButtonSize> {
+        let s = v?.as_str()?;
+        use fret_ui_shadcn::ButtonSize;
+        Some(match s {
+            "default" => ButtonSize::Default,
+            "sm" => ButtonSize::Sm,
+            "lg" => ButtonSize::Lg,
+            "icon" => ButtonSize::Icon,
+            "iconSm" => ButtonSize::IconSm,
+            "iconLg" => ButtonSize::IconLg,
             _ => return None,
         })
     }
@@ -145,6 +191,68 @@ impl ShadcnResolver {
         cx.app.request_redraw(cx.window);
     }
 
+    pub(super) fn emit_set_state_action(
+        host: &mut dyn UiActionHost,
+        cx: ActionCx,
+        queue: Option<&Model<GenUiActionQueue>>,
+        state_model: Option<&Model<Value>>,
+        auto_apply_standard_actions: bool,
+        element_key: &Arc<str>,
+        event: &str,
+        state_path: &Arc<str>,
+        value: Value,
+    ) {
+        let params = Value::Object(
+            [
+                (
+                    "statePath".to_string(),
+                    Value::String(state_path.to_string()),
+                ),
+                ("value".to_string(), value),
+            ]
+            .into_iter()
+            .collect(),
+        );
+
+        // Preferred path: emit into the queue (app decides when/how to apply).
+        if let Some(queue) = queue {
+            if auto_apply_standard_actions {
+                if let Some(state_model) = state_model {
+                    let _ = host.update_model(state_model, |state| {
+                        actions::apply_standard_action(state, "setState", &params)
+                    });
+                }
+            }
+
+            let inv = GenUiActionInvocation {
+                window: cx.window,
+                source: cx.target,
+                element_key: element_key.clone(),
+                event: Arc::from(event),
+                action: Arc::from("setState"),
+                params,
+                confirm: None,
+                on_success: None,
+                on_error: None,
+                repeat_base_path: None,
+                repeat_index: None,
+            };
+
+            let _ = host.update_model(queue, |q| q.invocations.push(inv));
+            host.request_redraw(cx.window);
+            return;
+        }
+
+        // Fallback: apply directly if no queue is available.
+        let Some(state_model) = state_model else {
+            return;
+        };
+        let _ = host.update_model(state_model, |state| {
+            actions::apply_standard_action(state, "setState", &params)
+        });
+        host.request_redraw(cx.window);
+    }
+
     pub(super) fn ensure_string_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         initial: String,
@@ -162,6 +270,57 @@ impl ShadcnResolver {
         model
     }
 
+    pub(super) fn ensure_optional_arc_str_model<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        initial: Option<Arc<str>>,
+    ) -> Model<Option<Arc<str>>> {
+        #[derive(Default)]
+        struct ModelState {
+            model: Option<Model<Option<Arc<str>>>>,
+        }
+        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
+        if let Some(model) = existing {
+            return model;
+        }
+        let model = cx.app.models_mut().insert(initial);
+        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
+        model
+    }
+
+    pub(super) fn ensure_vec_f32_model<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        initial: Vec<f32>,
+    ) -> Model<Vec<f32>> {
+        #[derive(Default)]
+        struct ModelState {
+            model: Option<Model<Vec<f32>>>,
+        }
+        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
+        if let Some(model) = existing {
+            return model;
+        }
+        let model = cx.app.models_mut().insert(initial);
+        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
+        model
+    }
+
+    pub(super) fn ensure_f32_model<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        initial: f32,
+    ) -> Model<f32> {
+        #[derive(Default)]
+        struct ModelState {
+            model: Option<Model<f32>>,
+        }
+        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
+        if let Some(model) = existing {
+            return model;
+        }
+        let model = cx.app.models_mut().insert(initial);
+        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
+        model
+    }
+
     pub(super) fn ensure_bool_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         initial: bool,
@@ -169,6 +328,23 @@ impl ShadcnResolver {
         #[derive(Default)]
         struct ModelState {
             model: Option<Model<bool>>,
+        }
+        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
+        if let Some(model) = existing {
+            return model;
+        }
+        let model = cx.app.models_mut().insert(initial);
+        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
+        model
+    }
+
+    pub(super) fn ensure_vec_arc_str_model<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        initial: Vec<Arc<str>>,
+    ) -> Model<Vec<Arc<str>>> {
+        #[derive(Default)]
+        struct ModelState {
+            model: Option<Model<Vec<Arc<str>>>>,
         }
         let existing = cx.with_state(ModelState::default, |st| st.model.clone());
         if let Some(model) = existing {

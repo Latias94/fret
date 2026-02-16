@@ -53,6 +53,18 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
             .build(),
     );
     out.insert(
+        "Label".to_string(),
+        component("Form label text (medium weight)")
+            .prop(
+                "text",
+                desc(
+                    CatalogPropV1::any().required(true),
+                    "Label text (string or expression).",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
         "VStack".to_string(),
         component("Vertical stack (flex column)")
             .prop(
@@ -308,6 +320,36 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 desc(CatalogPropV1::any(), "Button label (string or expression)."),
             )
             .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction (UI-only; action policy is app-owned).",
+                ),
+            )
+            .prop(
+                "variant",
+                desc(
+                    CatalogPropV1::enum_values([
+                        "default",
+                        "destructive",
+                        "outline",
+                        "secondary",
+                        "ghost",
+                        "link",
+                    ])
+                    .default_value(json!("default")),
+                    "Button variant (shadcn).",
+                ),
+            )
+            .prop(
+                "size",
+                desc(
+                    CatalogPropV1::enum_values(["default", "sm", "lg", "icon", "iconSm", "iconLg"])
+                        .default_value(json!("default")),
+                    "Button size (shadcn).",
+                ),
+            )
+            .prop(
                 "wFull",
                 desc(
                     CatalogPropV1::boolean().default_value(json!(false)),
@@ -357,6 +399,65 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 ),
             )
             .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction.",
+                ),
+            )
+            .prop(
+                "ariaInvalid",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Apply error chrome (aria-invalid).",
+                ),
+            )
+            .prop(
+                "checks",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional([
+                        (
+                            "type",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Validation check type (e.g. required, email, minLength).",
+                            ),
+                        ),
+                        (
+                            "message",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Error message for this check.",
+                            ),
+                        ),
+                        (
+                            "args",
+                            desc(
+                                CatalogPropV1::object_fields_allowing_additional(
+                                    std::iter::empty::<(String, CatalogPropV1)>(),
+                                ),
+                                "Optional check arguments (values or {\"$state\":\"/path\"}).",
+                            ),
+                        ),
+                    ])),
+                    "Optional validation checks (json-render-style).",
+                ),
+            )
+            .prop(
+                "validateOn",
+                desc(
+                    CatalogPropV1::enum_values(["change", "blur", "submit"]),
+                    "When to run validation (UI policy).",
+                ),
+            )
+            .prop(
+                "validateEnabled",
+                desc(
+                    CatalogPropV1::any(),
+                    "Optional condition to enable validation (VisibilityConditionV1 shape).",
+                ),
+            )
+            .prop(
                 "wFull",
                 desc(
                     CatalogPropV1::boolean().default_value(json!(false)),
@@ -381,6 +482,139 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
             .build(),
     );
     out.insert(
+        "Textarea".to_string(),
+        component("Multi-line text input")
+            .prop(
+                "value",
+                desc(
+                    CatalogPropV1::string(),
+                    "Textarea value (string or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "minHeightPx",
+                desc(
+                    CatalogPropV1::integer().default_value(json!(64)),
+                    "Minimum height in px.",
+                ),
+            )
+            .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction.",
+                ),
+            )
+            .prop(
+                "ariaInvalid",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Apply error chrome (aria-invalid).",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent width.",
+                ),
+            )
+            .prop(
+                "flex1",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Expand to fill available space in a row.",
+                ),
+            )
+            .prop(
+                "minW0",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (use with flex1=true inside HStack).",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Select".to_string(),
+        component("Select dropdown")
+            .prop(
+                "value",
+                desc(
+                    CatalogPropV1::string().nullable(true),
+                    "Selected value (string or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "placeholder",
+                desc(CatalogPropV1::string(), "Placeholder when no value is selected."),
+            )
+            .prop(
+                "options",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional([
+                        (
+                            "value",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Option value (string).",
+                            ),
+                        ),
+                        (
+                            "label",
+                            desc(
+                                CatalogPropV1::any().required(true),
+                                "Option label (string or expression).",
+                            ),
+                        ),
+                        (
+                            "disabled",
+                            desc(CatalogPropV1::boolean(), "Disable this option."),
+                        ),
+                    ]))
+                    .required(true),
+                    "Options list.",
+                ),
+            )
+            .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction.",
+                ),
+            )
+            .prop(
+                "ariaInvalid",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Apply error chrome (aria-invalid).",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent width.",
+                ),
+            )
+            .prop(
+                "flex1",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Expand to fill available space in a row.",
+                ),
+            )
+            .prop(
+                "minW0",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (use with flex1=true inside HStack).",
+                ),
+            )
+            .note("Row pattern: HStack(items=center, wrap=true) + Select(flex1=true, minW0=true) to avoid overflow.")
+            .build(),
+    );
+    out.insert(
         "Switch".to_string(),
         component("Boolean toggle")
             .prop(
@@ -388,6 +622,179 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 desc(
                     CatalogPropV1::boolean(),
                     "Checked value (boolean or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Checkbox".to_string(),
+        component("Checkbox toggle (boolean)")
+            .prop(
+                "checked",
+                desc(
+                    CatalogPropV1::boolean(),
+                    "Checked value (boolean or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "label",
+                desc(CatalogPropV1::any(), "Optional label shown next to the checkbox."),
+            )
+            .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "RadioGroup".to_string(),
+        component("Radio group (single choice)")
+            .prop(
+                "value",
+                desc(
+                    CatalogPropV1::string().nullable(true),
+                    "Selected value (string or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "options",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional([
+                        (
+                            "value",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Option value (string).",
+                            ),
+                        ),
+                        (
+                            "label",
+                            desc(
+                                CatalogPropV1::any().required(true),
+                                "Option label (string or expression).",
+                            ),
+                        ),
+                        (
+                            "disabled",
+                            desc(CatalogPropV1::boolean(), "Disable this option."),
+                        ),
+                    ]))
+                    .required(true),
+                    "Options list.",
+                ),
+            )
+            .prop(
+                "orientation",
+                desc(
+                    CatalogPropV1::enum_values(["vertical", "horizontal"])
+                        .default_value(json!("vertical")),
+                    "Layout orientation.",
+                ),
+            )
+            .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction.",
+                ),
+            )
+            .prop(
+                "ariaInvalid",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Apply error chrome to items (aria-invalid).",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent width.",
+                ),
+            )
+            .prop(
+                "flex1",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Expand to fill available space in a row.",
+                ),
+            )
+            .prop(
+                "minW0",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (use with flex1=true inside HStack).",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Slider".to_string(),
+        component("Slider (single value; commits on release)")
+            .prop(
+                "value",
+                desc(
+                    CatalogPropV1::number(),
+                    "Slider value (number or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "min",
+                desc(
+                    CatalogPropV1::number().default_value(json!(0)),
+                    "Minimum value.",
+                ),
+            )
+            .prop(
+                "max",
+                desc(
+                    CatalogPropV1::number().default_value(json!(100)),
+                    "Maximum value.",
+                ),
+            )
+            .prop(
+                "step",
+                desc(
+                    CatalogPropV1::number().default_value(json!(1)),
+                    "Step size.",
+                ),
+            )
+            .prop(
+                "disabled",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Disable interaction.",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Fill parent width.",
+                ),
+            )
+            .prop(
+                "flex1",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Expand to fill available space in a row.",
+                ),
+            )
+            .prop(
+                "minW0",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Allow shrinking in width (use with flex1=true inside HStack).",
                 ),
             )
             .build(),
@@ -407,6 +814,116 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         component("Scroll container")
             .prop("axis", CatalogPropV1::enum_values(["x", "y", "both"]))
             .prop("showScrollbar", CatalogPropV1::boolean())
+            .build(),
+    );
+    out.insert(
+        "Alert".to_string(),
+        component("Alert box")
+            .prop(
+                "variant",
+                desc(
+                    CatalogPropV1::enum_values(["default", "destructive"])
+                        .default_value(json!("default")),
+                    "Alert variant.",
+                ),
+            )
+            .prop("title", desc(CatalogPropV1::any(), "Optional title text."))
+            .prop(
+                "description",
+                desc(CatalogPropV1::any(), "Optional description text."),
+            )
+            .build(),
+    );
+    out.insert(
+        "Progress".to_string(),
+        component("Progress indicator")
+            .prop(
+                "value",
+                desc(
+                    CatalogPropV1::number(),
+                    "Progress value (number or expression).",
+                ),
+            )
+            .prop(
+                "min",
+                desc(
+                    CatalogPropV1::number().default_value(json!(0)),
+                    "Minimum value.",
+                ),
+            )
+            .prop(
+                "max",
+                desc(
+                    CatalogPropV1::number().default_value(json!(100)),
+                    "Maximum value.",
+                ),
+            )
+            .prop(
+                "mirrorInRtl",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Mirror fill direction in RTL.",
+                ),
+            )
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(true)),
+                    "Fill parent width.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Spinner".to_string(),
+        component("Spinner")
+            .prop(
+                "sizePx",
+                desc(
+                    CatalogPropV1::integer().default_value(json!(16)),
+                    "Icon size in px.",
+                ),
+            )
+            .prop(
+                "speed",
+                desc(
+                    CatalogPropV1::number().default_value(json!(0.12)),
+                    "Rotation speed in radians per frame (0 disables animation).",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Skeleton".to_string(),
+        component("Skeleton block")
+            .prop(
+                "wFull",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(true)),
+                    "Fill parent width.",
+                ),
+            )
+            .prop(
+                "hPx",
+                desc(
+                    CatalogPropV1::integer().default_value(json!(16)),
+                    "Height in px.",
+                ),
+            )
+            .prop(
+                "secondary",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(false)),
+                    "Reduced opacity variant.",
+                ),
+            )
+            .prop(
+                "animatePulse",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(true)),
+                    "Enable pulse animation.",
+                ),
+            )
             .build(),
     );
 
@@ -457,6 +974,113 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
             CatalogPropV1::enum_values(SPACE_TOKENS).default_value(json!("N2")),
         )
         .build(),
+    );
+
+    out.insert(
+        "Tabs".to_string(),
+        component("Tabs (macro component): builds a shadcn TabsRoot from TabContent children.")
+            .prop(
+                "defaultValue",
+                desc(CatalogPropV1::string(), "Initial tab value (uncontrolled)."),
+            )
+            .prop(
+                "forceMountContent",
+                desc(
+                    CatalogPropV1::boolean().default_value(json!(true)),
+                    "Keep all panels mounted and gate interactivity when inactive.",
+                ),
+            )
+            .prop(
+                "tabs",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional([
+                        (
+                            "value",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Tab value (stable id). Must match a TabContent.value.",
+                            ),
+                        ),
+                        (
+                            "label",
+                            desc(
+                                CatalogPropV1::string().required(true),
+                                "Trigger label text.",
+                            ),
+                        ),
+                    ]))
+                    .required(true),
+                    "Tab trigger definitions (order + labels).",
+                ),
+            )
+            .note("Children must be TabContent elements; Tabs assembles the final widget from child meta.")
+            .build(),
+    );
+
+    out.insert(
+        "TabContent".to_string(),
+        component("Tab panel content (used by Tabs macro component).")
+            .prop(
+                "value",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Tab value this panel belongs to.",
+                ),
+            )
+            .note("Use as a child of Tabs. The TabContent element itself is treated as the panel content wrapper.")
+            .build(),
+    );
+
+    out.insert(
+        "Accordion".to_string(),
+        component(
+            "Accordion (macro component): builds a shadcn Accordion from AccordionItem children.",
+        )
+        .prop(
+            "type",
+            desc(
+                CatalogPropV1::enum_values(["single", "multiple"]).default_value(json!("single")),
+                "Accordion kind.",
+            ),
+        )
+        .prop(
+            "collapsible",
+            desc(
+                CatalogPropV1::boolean().default_value(json!(true)),
+                "Single-mode only: allow collapsing the open item.",
+            ),
+        )
+        .prop(
+            "defaultValue",
+            desc(CatalogPropV1::string(), "Single-mode only: initial open value."),
+        )
+        .prop(
+            "defaultValues",
+            desc(
+                CatalogPropV1::array_of(CatalogPropV1::string()),
+                "Multiple-mode only: initial open values.",
+            ),
+        )
+        .note("Children must be AccordionItem elements; Accordion assembles the final widget from child meta.")
+        .build(),
+    );
+
+    out.insert(
+        "AccordionItem".to_string(),
+        component("Accordion item content wrapper (used by Accordion macro component).")
+            .prop(
+                "value",
+                desc(CatalogPropV1::string().required(true), "Item value (stable id)."),
+            )
+            .prop(
+                "title",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Trigger title text.",
+                ),
+            )
+            .note("Use as a child of Accordion. The AccordionItem element itself is treated as the item content wrapper.")
+            .build(),
     );
 
     out

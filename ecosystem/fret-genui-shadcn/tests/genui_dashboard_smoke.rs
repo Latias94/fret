@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 use std::sync::Arc;
 
 use fret_app::App;
@@ -33,7 +35,7 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
         "schema_version": 1,
         "root": "root",
         "elements": {
-            "root": { "type": "VStack", "props": { "gap": "N3" }, "children": ["title", "card", "grid_title", "grid"] },
+            "root": { "type": "VStack", "props": { "gap": "N3" }, "children": ["title", "card", "grid_title", "grid", "tabs_title", "tabs", "accordion_title", "accordion", "feedback_title", "feedback_box"] },
             "title": { "type": "Text", "props": { "text": "GenUI Dashboard Smoke" }, "children": [] },
             "card": { "type": "Card", "props": { "wrapContent": false }, "children": ["card_header", "card_content"] },
             "card_header": { "type": "CardHeader", "props": {}, "children": ["card_title", "card_desc"] },
@@ -66,9 +68,69 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
             "g5": { "type": "Card", "props": { "wrapContent": true }, "children": ["g5t"] },
             "g5t": { "type": "Text", "props": { "text": "Card 5" }, "children": [] },
             "g6": { "type": "Card", "props": { "wrapContent": true }, "children": ["g6t"] },
-            "g6t": { "type": "Text", "props": { "text": "Card 6" }, "children": [] }
+            "g6t": { "type": "Text", "props": { "text": "Card 6" }, "children": [] },
+
+            "tabs_title": { "type": "Text", "props": { "text": "Tabs" }, "children": [] },
+            "tabs": {
+                "type": "Tabs",
+                "props": {
+                    "defaultValue": "a",
+                    "tabs": [
+                        { "value": "a", "label": "Tab A" },
+                        { "value": "b", "label": "Tab B" }
+                    ]
+                },
+                "children": ["tab_a", "tab_b"]
+            },
+            "tab_a": { "type": "TabContent", "props": { "value": "a" }, "children": ["tab_a_text"] },
+            "tab_a_text": { "type": "Text", "props": { "text": "Panel A" }, "children": [] },
+            "tab_b": { "type": "TabContent", "props": { "value": "b" }, "children": ["tab_b_text"] },
+            "tab_b_text": { "type": "Text", "props": { "text": "Panel B" }, "children": [] },
+
+            "accordion_title": { "type": "Text", "props": { "text": "Accordion" }, "children": [] },
+            "accordion": {
+                "type": "Accordion",
+                "props": { "type": "single", "collapsible": true, "defaultValue": "one" },
+                "children": ["acc_one", "acc_two"]
+            },
+            "acc_one": {
+                "type": "AccordionItem",
+                "props": { "value": "one", "title": "First" },
+                "children": ["acc_one_text"]
+            },
+            "acc_one_text": { "type": "Text", "props": { "text": "Accordion body 1" }, "children": [] },
+            "acc_two": {
+                "type": "AccordionItem",
+                "props": { "value": "two", "title": "Second" },
+                "children": ["acc_two_text"]
+            },
+            "acc_two_text": { "type": "Text", "props": { "text": "Accordion body 2" }, "children": [] },
+
+            "feedback_title": { "type": "Text", "props": { "text": "Feedback" }, "children": [] },
+            "feedback_box": {
+                "type": "Box",
+                "props": { "p": "N3", "wFull": true, "minW0": true },
+                "children": ["feedback_stack"]
+            },
+            "feedback_stack": {
+                "type": "VStack",
+                "props": { "gap": "N2", "wFull": true, "minW0": true },
+                "children": ["alert", "progress", "spinner", "skeleton"]
+            },
+            "alert": {
+                "type": "Alert",
+                "props": { "variant": "destructive", "title": "Heads up", "description": "This is a GenUI alert." },
+                "children": []
+            },
+            "progress": {
+                "type": "Progress",
+                "props": { "value": { "$state": "/progress" }, "min": 0, "max": 100, "wFull": true, "mirrorInRtl": true },
+                "children": []
+            },
+            "spinner": { "type": "Spinner", "props": { "sizePx": 16 }, "children": [] },
+            "skeleton": { "type": "Skeleton", "props": { "hPx": 16, "wFull": true }, "children": [] }
         },
-        "state": { "count": 1 }
+        "state": { "count": 1, "progress": 42 }
     }))
     .unwrap();
 
@@ -114,6 +176,12 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
             joined.contains("GenUI Dashboard Smoke"),
             "expected title text to be present; got:\n{joined}"
         );
+        assert!(joined.contains("Tab A"));
+        assert!(joined.contains("Tab B"));
+        assert!(joined.contains("Panel A"));
+        assert!(joined.contains("Panel B"));
+        assert!(joined.contains("First"));
+        assert!(joined.contains("Second"));
         assert!(
             !joined.contains("Unknown GenUI component"),
             "unexpected unknown component placeholder text; got:\n{joined}"
