@@ -5,6 +5,8 @@ pub(in crate::ui) fn preview_select(
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
 ) -> Vec<AnyElement> {
+    use super::super::doc_layout::{self, DocSection};
+
     #[derive(Default)]
     struct SelectPageModels {
         align_item_with_trigger: Option<Model<bool>>,
@@ -23,48 +25,6 @@ pub(in crate::ui) fn preview_select(
             model
         }
     };
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(820.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
 
     let demo = {
         // Keep the primary demo select stable for existing diag scripts.
@@ -117,7 +77,7 @@ pub(in crate::ui) fn preview_select(
                 .test_id("ui-gallery-select-selected-label")
         });
 
-        let content = stack::vstack(
+        stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
@@ -125,9 +85,7 @@ pub(in crate::ui) fn preview_select(
                 .layout(LayoutRefinement::default().w_full().min_w_0()),
             |_cx| vec![select, selected_label],
         )
-        .test_id("ui-gallery-select-demo");
-
-        section_card(cx, "Demo", content)
+        .test_id("ui-gallery-select-demo")
     };
 
     let align_item = {
@@ -178,7 +136,7 @@ pub(in crate::ui) fn preview_select(
         .into_element(cx)
         .test_id("ui-gallery-select-align-item");
 
-        section_card(cx, "Align Item With Trigger", content)
+        content
     };
 
     let groups = {
@@ -204,8 +162,7 @@ pub(in crate::ui) fn preview_select(
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(192.0)))
             .into_element(cx)
             .test_id("ui-gallery-select-groups");
-
-        section_card(cx, "Groups", select)
+        select
     };
 
     let scrollable = {
@@ -270,8 +227,7 @@ pub(in crate::ui) fn preview_select(
             .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
             .into_element(cx)
             .test_id("ui-gallery-select-scrollable");
-
-        section_card(cx, "Scrollable", select)
+        select
     };
 
     let disabled = {
@@ -291,12 +247,11 @@ pub(in crate::ui) fn preview_select(
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(192.0)))
             .into_element(cx)
             .test_id("ui-gallery-select-disabled");
-
-        section_card(cx, "Disabled", select)
+        select
     };
 
     let invalid = {
-        let content = shadcn::Field::new([
+        shadcn::Field::new([
             shadcn::FieldLabel::new("Fruit").into_element(cx),
             shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
                 .placeholder("Select a fruit")
@@ -312,9 +267,7 @@ pub(in crate::ui) fn preview_select(
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(192.0)))
         .into_element(cx)
-        .test_id("ui-gallery-select-invalid");
-
-        section_card(cx, "Invalid", content)
+        .test_id("ui-gallery-select-invalid")
     };
 
     let rtl = {
@@ -346,31 +299,110 @@ pub(in crate::ui) fn preview_select(
             },
         )
         .test_id("ui-gallery-select-rtl");
-
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let body = stack::vstack(
+    let body = doc_layout::render_doc_page(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Select docs order: Demo, Align Item With Trigger, Groups, Scrollable, Disabled, Invalid, RTL.",
+        Some(
+            "Preview follows shadcn Select docs order: Demo, Align Item With Trigger, Groups, Scrollable, Disabled, Invalid, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .test_id_prefix("ui-gallery-select-demo")
+                .code(
+                    "rust",
+                    r#"let entries: Vec<shadcn::SelectEntry> = vec![
+    shadcn::SelectGroup::new([
+        shadcn::SelectLabel::new("Fruits").into(),
+        shadcn::SelectItem::new("apple", "Apple").into(),
+        shadcn::SelectItem::new("banana", "Banana").into(),
+    ])
+    .into(),
+];
+
+let select = shadcn::Select::new(value, open)
+    .placeholder("Select a fruit")
+    .entries(entries)
+    .into_element(cx);"#,
                 ),
-                demo,
-                align_item,
-                groups,
-                scrollable,
-                disabled,
-                invalid,
-                rtl,
-            ]
-        },
+            DocSection::new("Align Item With Trigger", align_item)
+                .test_id_prefix("ui-gallery-select-align-item")
+                .code(
+                    "rust",
+                    r#"use fret_ui_shadcn::select::SelectPosition;
+
+let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, false)
+    .position(SelectPosition::ItemAligned)
+    .entries([...])
+    .into_element(cx);"#,
+                )
+                .max_w(Px(540.0)),
+            DocSection::new("Groups", groups)
+                .test_id_prefix("ui-gallery-select-groups")
+                .code(
+                    "rust",
+                    r#"let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+    .placeholder("Select a fruit")
+    .entries([
+        shadcn::SelectGroup::new([...]).into(),
+        shadcn::SelectSeparator::default().into(),
+        shadcn::SelectGroup::new([...]).into(),
+    ])
+    .into_element(cx);"#,
+                )
+                .max_w(Px(540.0)),
+            DocSection::new("Scrollable", scrollable)
+                .test_id_prefix("ui-gallery-select-scrollable")
+                .code(
+                    "rust",
+                    r#"let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+    .placeholder("Select a timezone")
+    .entries([...])
+    .into_element(cx);"#,
+                )
+                .max_w(Px(620.0)),
+            DocSection::new("Disabled", disabled)
+                .test_id_prefix("ui-gallery-select-disabled")
+                .code(
+                    "rust",
+                    r#"let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+    .placeholder("Select a fruit")
+    .disabled(true)
+    .entries([...])
+    .into_element(cx);"#,
+                )
+                .max_w(Px(540.0)),
+            DocSection::new("Invalid", invalid)
+                .test_id_prefix("ui-gallery-select-invalid")
+                .description("Invalid styling is typically shown with a Field + error message.")
+                .code(
+                    "rust",
+                    r#"let field = shadcn::Field::new([
+    shadcn::FieldLabel::new("Fruit").into_element(cx),
+    shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+        .aria_invalid(true)
+        .entries([...])
+        .into_element(cx),
+    shadcn::FieldError::new("Please select a fruit.").into_element(cx),
+])
+.into_element(cx);"#,
+                )
+                .max_w(Px(620.0)),
+            DocSection::new("RTL", rtl)
+                .test_id_prefix("ui-gallery-select-rtl")
+                .description("All shadcn components should work under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+        .placeholder("اختر فاكهة")
+        .entries([...])
+        .into_element(cx)
+});"#,
+                )
+                .max_w(Px(620.0)),
+        ],
     );
 
     vec![body]
