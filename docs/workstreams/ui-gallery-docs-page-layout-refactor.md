@@ -56,7 +56,7 @@ Legend:
 | Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json` (1) | Keeps existing `test_id`s for triggers and demo items. |
 | Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
 | Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (5) | Adds a page-level docs smoke; existing overlay scripts still gate right-click/keyboard paths. |
-| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-tooltip-hovercard-*.json` (1) | Candidate: alignment + delay + pointer leave. |
+| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-hover-card-docs-smoke.json` (1) | Overlay-level clamp gating lives in `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`. |
 
 ### Shadcn/navigation + misc
 
