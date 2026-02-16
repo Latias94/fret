@@ -13602,13 +13602,20 @@ fn run_script_over_transport(
         }
 
         if Instant::now() >= deadline {
+            let ws_hint = match connected.devtools.client().kind() {
+                crate::transport::DiagTransportKind::WebSocket => Some(
+                    "devtools_ws_hint=keep the app actively rendering (web: tab must be visible; background tabs may throttle rAF) and ensure the page URL includes fret_devtools_ws + fret_devtools_token",
+                ),
+                _ => None,
+            };
             let note = format!(
-                "source={} prev_run_id={} target_run_id={:?} last_seen_stage={} last_seen_step_index={:?}",
+                "source={} prev_run_id={} target_run_id={:?} last_seen_stage={} last_seen_step_index={:?} {}",
                 connected.source,
                 prev_run_id,
                 target_run_id,
                 last_seen_stage.unwrap_or("none"),
-                last_seen_step_index
+                last_seen_step_index,
+                ws_hint.unwrap_or(""),
             );
             write_tooling_failure_script_result_if_missing(
                 script_result_path,
@@ -13617,7 +13624,10 @@ fn run_script_over_transport(
                 "tooling_timeout",
                 Some(note),
             );
-            return Err("timeout waiting for script result".to_string());
+            return Err(
+                "timeout waiting for script result (DevTools WS: keep the app actively rendering; web tabs may be throttled in the background)"
+                    .to_string(),
+            );
         }
 
         if connected.devtools.client().kind() == crate::transport::DiagTransportKind::FileSystem
