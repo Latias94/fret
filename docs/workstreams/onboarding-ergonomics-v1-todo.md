@@ -101,6 +101,7 @@ Design note:
     - `apps/fret-ui-gallery/src/ui/*`
   - Partial evidence (started):
     - `apps/fret-ui-gallery/src/ui/pages/alert.rs` (migrated to `ui::children!`)
+    - `apps/fret-examples/src/todo_demo.rs` (uses `ui::children!` for heterogeneous children)
 
 - [x] ONB-auth-023 Reduce call-site `.into_element(cx)` noise by teaching constructors to accept `UiIntoElement` children.
   - Goal: move adapter verbosity to ecosystem boundaries (GPUI-like composition).
