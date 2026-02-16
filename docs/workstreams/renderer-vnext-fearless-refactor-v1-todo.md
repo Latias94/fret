@@ -256,9 +256,14 @@ milestones) when implementation begins.
     - Landed (v1): `SceneOp::Text` carries `paint: Paint` with bounded, deterministic degradations.
     - Landed (v1): GPU readback conformance gate for text gradient paint.
     - Landed (adoption): ui-gallery probe uses `Paint::LinearGradient` for text.
+    - Landed (prep): unified paint→GPU encoding helper (quad/path/text) with explicit material policy
+      (text/path still deterministically degrade materials to a solid base color).
     - Deferred (v2+): text outline/stroke and text shadow as first-class contract surfaces.
   - Tracking: `docs/workstreams/text-paint-surface-v1.md` (purpose/TODO/milestones)
   - ADR: `docs/adr/0279-text-paint-surface-v1.md`
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`paint_to_gpu`, `PaintMaterialPolicy`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (uses shared helper; material still degrades)
 - [ ] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` and/or image/pattern paints.
   - Current: sanitize degrades repeat/mirror to clamp for determinism.
 - [ ] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).

@@ -29,6 +29,8 @@ Current status (as of 2026-02-16):
   - Renderer implementation landed (solid + gradients; bounded batching via `paint_index`).
   - GPU readback conformance gate landed (`crates/fret-render-wgpu/tests/text_paint_conformance.rs`).
   - Adoption is tracked as optional in `docs/workstreams/text-paint-surface-v1.md` (M3).
+- Paint→GPU encoding for solid/gradients/material is now shared across quad/path/text encode paths,
+  with an explicit policy that keeps v1 text/path material behavior deterministic (degrade to solid base).
 - Renderer per-frame GPU buffer rotation is now ring-buffered (quad instances + viewport/text/path vertices),
   reducing duplicated resize/rotation code without changing any public contract.
 - A cheap headless perf gate exists and has a checked-in baseline:
