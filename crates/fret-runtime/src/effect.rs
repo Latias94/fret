@@ -29,6 +29,30 @@ pub enum DiagIncomingOpenItem {
 ///
 /// Effects are collected by the host (e.g. `fret-app::App`) and are expected to be handled by a
 /// runner/backend integration layer (native or web).
+///
+/// ## Completion events (runner contract)
+///
+/// Many effects represent an *asynchronous* request to the platform and are completed later by a
+/// corresponding [`fret_core::Event`]. Runners/backends should treat these as best-effort.
+///
+/// Common mappings:
+///
+/// - `ClipboardGetText { token, .. }` → `fret_core::Event::ClipboardText { token, .. }` or
+///   `fret_core::Event::ClipboardTextUnavailable { token, .. }`
+/// - `PrimarySelectionGetText { token, .. }` → `fret_core::Event::PrimarySelectionText { token, .. }`
+///   or `fret_core::Event::PrimarySelectionTextUnavailable { token, .. }`
+/// - `ShareSheetShow { token, .. }` → `fret_core::Event::ShareSheetCompleted { token, .. }`
+/// - `FileDialogOpen { .. }` → `fret_core::Event::FileDialogSelection(..)` or
+///   `fret_core::Event::FileDialogCanceled`
+/// - `FileDialogReadAll { token, .. }` → `fret_core::Event::FileDialogData(..)`
+/// - `IncomingOpenReadAll { token, .. }` → `fret_core::Event::IncomingOpenData(..)` or
+///   `fret_core::Event::IncomingOpenUnavailable { token, .. }`
+/// - `SetTimer { token, .. }` → `fret_core::Event::Timer { token }`
+/// - `ImageRegister* { token, .. }` → `fret_core::Event::ImageRegistered { token, .. }` or
+///   `fret_core::Event::ImageRegisterFailed { token, .. }`
+/// - `ImageUpdate* { token, .. }` → optionally `fret_core::Event::ImageUpdateApplied { token, .. }`
+///   or `fret_core::Event::ImageUpdateDropped { token, .. }` when the runner supports these acks
+///   (capability-gated to avoid flooding the event loop).
 pub enum Effect {
     /// Request a window redraw (one-shot).
     ///
