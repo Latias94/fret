@@ -45,3 +45,11 @@ It builds on v1’s contract-path closure:
 3. Land native/mobile low-copy improvements behind capabilities + counters.
 4. Keep web zero-copy explicitly blocked until the backend supports it; keep copy-path perf baselines green.
 
+## Web DevTools WS notes (practical)
+
+- Scripted diagnostics over DevTools WS still require the app to be **actively rendering** so inbound
+  WS messages are processed deterministically.
+- Browsers may throttle timers and `requestAnimationFrame` when the tab is backgrounded; keep the
+  demo tab visible during `diag perf` runs.
+- If multiple sessions exist, pass `--devtools-session-id <id>` (list via
+  `cargo run -p fret-diag-export -- --list-sessions --token <token>`).
