@@ -27,4 +27,4 @@ pub use numeric_input::{
 pub use slider::{Slider, SliderOptions};
 pub use text_field::{TextField, TextFieldOptions};
 pub use transform_edit::{TransformEdit, TransformEditLayoutVariant, TransformEditOptions};
-pub use vec_edit::{Vec2Edit, Vec3Edit, Vec4Edit, VecEditOptions};
+pub use vec_edit::{Vec2Edit, Vec3Edit, Vec4Edit, VecEditLayoutVariant, VecEditOptions};
