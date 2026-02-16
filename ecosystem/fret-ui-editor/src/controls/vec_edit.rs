@@ -5,19 +5,24 @@
 //! - axis color tokens (`editor.axis.*`)
 //! - shared numeric formatting/parsing policies
 
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
     MainAlign, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
-use crate::controls::{DragValue, NumericFormatFn, NumericParseFn, NumericValidateFn};
+use crate::controls::{
+    AxisDragValue, AxisDragValueOptions, NumericFormatFn, NumericParseFn, NumericValidateFn,
+};
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 fn axis_color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
@@ -66,62 +71,12 @@ impl AxisReset {
     }
 }
 
-fn axis_label_el<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    density: EditorDensity,
-    label: Arc<str>,
-    tint: Color,
-    fg: Color,
-) -> AnyElement {
-    let bg = Color { a: 0.22, ..tint };
-    let border = Color { a: 0.55, ..tint };
-    cx.container(
-        ContainerProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Px(density.hit_thickness),
-                    height: Length::Px(density.row_height),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            padding: Edges::all(Px(0.0)),
-            background: Some(bg),
-            border: Edges::all(Px(1.0)),
-            border_color: Some(border),
-            corner_radii: Corners::all(Px(4.0)),
-            ..Default::default()
-        },
-        move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                text: label.clone(),
-                style: Some(TextStyle {
-                    size: Px(10.0),
-                    line_height: Some(density.row_height),
-                    ..Default::default()
-                }),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: TextAlign::Center,
-            })]
-        },
-    )
-}
-
 fn axis_group<H: UiHost, T>(
     cx: &mut ElementContext<'_, H>,
     density: EditorDensity,
     axis_gap: Px,
     reset: Option<AxisReset>,
+    grow: bool,
     label: Arc<str>,
     color: Color,
     model: Model<T>,
@@ -141,12 +96,15 @@ where
         let a11y_label = reset.options.a11y_label.clone();
         let on_reset = reset.on_reset.clone();
 
-        let theme = Theme::global(&*cx.app);
-        let reset_fg = theme
-            .color_by_key("muted-foreground")
-            .or_else(|| theme.color_by_key("muted_foreground"))
-            .unwrap_or_else(|| theme.color_token("foreground"));
+        let reset_fg = {
+            let theme = Theme::global(&*cx.app);
+            theme
+                .color_by_key("muted-foreground")
+                .or_else(|| theme.color_by_key("muted_foreground"))
+                .unwrap_or_else(|| theme.color_token("foreground"))
+        };
 
+        let reset_fg_for_paint = reset_fg;
         let mut el = cx.pressable(
             PressableProps {
                 layout: LayoutStyle {
@@ -165,7 +123,7 @@ where
                 },
                 ..Default::default()
             },
-            move |cx, _st| {
+            move |cx, st| {
                 let on_activate: OnActivate = Arc::new({
                     let on_reset = on_reset.clone();
                     move |host, action_cx, _reason: ActivateReason| {
@@ -174,26 +132,53 @@ where
                 });
                 cx.pressable_add_on_activate(on_activate);
 
-                vec![cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
+                let theme = Theme::global(&*cx.app);
+                let hovered = st.hovered || st.hovered_raw;
+                let pressed = st.pressed;
+                let bg = editor_icon_button_bg(theme, true, hovered, pressed);
+                let border = editor_icon_button_border(theme, true, hovered, pressed);
+                let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
+                        background: bg,
+                        border: Edges::all(border_width),
+                        border_color: border,
+                        corner_radii: Corners::all(Px(6.0)),
                         ..Default::default()
                     },
-                    text: glyph.clone(),
-                    style: Some(TextStyle {
-                        size: Px(10.0),
-                        line_height: Some(density.row_height),
-                        ..Default::default()
-                    }),
-                    color: Some(reset_fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: TextAlign::Center,
-                })]
+                    move |cx| {
+                        vec![cx.text_props(TextProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            text: glyph.clone(),
+                            style: Some(TextStyle {
+                                size: Px(11.0),
+                                weight: FontWeight::SEMIBOLD,
+                                line_height: Some(density.row_height),
+                                ..Default::default()
+                            }),
+                            color: Some(reset_fg_for_paint),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            align: TextAlign::Center,
+                        })]
+                    },
+                )]
             },
         );
 
@@ -212,8 +197,12 @@ where
                     ..Default::default()
                 },
                 flex: FlexItemStyle {
-                    grow: 1.0,
-                    basis: Length::Px(Px(0.0)),
+                    grow: if grow { 1.0 } else { 0.0 },
+                    basis: if grow {
+                        Length::Px(Px(0.0))
+                    } else {
+                        Length::Auto
+                    },
                     ..Default::default()
                 },
                 ..Default::default()
@@ -230,12 +219,13 @@ where
             if let Some(reset) = reset_el {
                 out.push(reset);
             }
-            let theme = Theme::global(&*cx.app);
-            let label_fg = theme.color_token("foreground");
-            out.push(axis_label_el(cx, density, label, color, label_fg));
             out.push(
-                DragValue::new(model, format, parse)
+                AxisDragValue::new(label, color, model, format, parse)
                     .validate(validate)
+                    .options(AxisDragValueOptions {
+                        size: fret_ui_kit::Size::Small,
+                        ..Default::default()
+                    })
                     .into_element(cx),
             );
             out
@@ -246,8 +236,14 @@ where
 #[derive(Debug, Clone)]
 pub struct VecEditOptions {
     pub layout: LayoutStyle,
+    /// Explicit identity source for internal element keys.
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    pub id_source: Option<Arc<str>>,
+    pub variant: VecEditLayoutVariant,
     pub gap: Px,
     pub axis_gap: Px,
+    pub auto_stack_below: Option<Px>,
     pub test_id: Option<Arc<str>>,
 }
 
@@ -262,10 +258,30 @@ impl Default for VecEditOptions {
                 },
                 ..Default::default()
             },
+            id_source: None,
+            variant: VecEditLayoutVariant::Auto,
             gap: Px(6.0),
             axis_gap: Px(4.0),
+            auto_stack_below: None,
             test_id: None,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VecEditLayoutVariant {
+    Row,
+    Column,
+    /// Choose `Row` vs `Column` based on last frame bounds.
+    ///
+    /// This is a policy-only heuristic intended to avoid “tiny inputs” when a property grid is
+    /// narrow (common in editor sidebars).
+    Auto,
+}
+
+impl Default for VecEditLayoutVariant {
+    fn default() -> Self {
+        Self::Auto
     }
 }
 
@@ -325,38 +341,89 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app);
-        let density = EditorDensity::resolve(theme);
+        let x_id = self.x.id();
+        let y_id = self.y.id();
+        let model_ids = (x_id, y_id);
 
-        let x_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_X_COLOR,
-            Color {
-                r: 0.95,
-                g: 0.35,
-                b: 0.35,
-                a: 1.0,
-            },
-        );
-        let y_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_Y_COLOR,
-            Color {
-                r: 0.35,
-                g: 0.95,
-                b: 0.35,
-                a: 1.0,
-            },
-        );
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.vec2_edit", id_source, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.vec2_edit", callsite, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
+
+        let (density, x_color, y_color, auto_below) = {
+            let theme = Theme::global(&*cx.app);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+
+            let x_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_X_COLOR,
+                Color {
+                    r: 0.95,
+                    g: 0.35,
+                    b: 0.35,
+                    a: 1.0,
+                },
+            );
+            let y_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_Y_COLOR,
+                Color {
+                    r: 0.35,
+                    g: 0.95,
+                    b: 0.35,
+                    a: 1.0,
+                },
+            );
+
+            let auto_below = self
+                .options
+                .auto_stack_below
+                .unwrap_or(style.vec_auto_stack_below);
+
+            (density, x_color, y_color, auto_below)
+        };
+        let variant = match self.options.variant {
+            VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
+            VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
+            VecEditLayoutVariant::Auto => bounds
+                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0)
+                .then_some(VecEditLayoutVariant::Column)
+                .unwrap_or(VecEditLayoutVariant::Row),
+        };
+
+        let grow = variant == VecEditLayoutVariant::Row;
+        let direction = match variant {
+            VecEditLayoutVariant::Row => Axis::Horizontal,
+            VecEditLayoutVariant::Column => Axis::Vertical,
+            VecEditLayoutVariant::Auto => Axis::Horizontal,
+        };
 
         let mut el = cx.flex(
             FlexProps {
                 layout: self.options.layout,
-                direction: Axis::Horizontal,
+                direction,
                 gap: self.options.gap,
                 padding: Edges::all(Px(0.0)),
                 justify: MainAlign::Start,
-                align: CrossAlign::Center,
+                align: if direction == Axis::Horizontal {
+                    CrossAlign::Center
+                } else {
+                    CrossAlign::Stretch
+                },
                 wrap: false,
             },
             move |cx| {
@@ -366,6 +433,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_x.clone(),
+                        grow,
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
@@ -378,6 +446,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_y.clone(),
+                        grow,
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
@@ -462,48 +531,100 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app);
-        let density = EditorDensity::resolve(theme);
+        let x_id = self.x.id();
+        let y_id = self.y.id();
+        let z_id = self.z.id();
+        let model_ids = (x_id, y_id, z_id);
 
-        let x_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_X_COLOR,
-            Color {
-                r: 0.95,
-                g: 0.35,
-                b: 0.35,
-                a: 1.0,
-            },
-        );
-        let y_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_Y_COLOR,
-            Color {
-                r: 0.35,
-                g: 0.95,
-                b: 0.35,
-                a: 1.0,
-            },
-        );
-        let z_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_Z_COLOR,
-            Color {
-                r: 0.35,
-                g: 0.55,
-                b: 0.95,
-                a: 1.0,
-            },
-        );
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.vec3_edit", id_source, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.vec3_edit", callsite, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
+
+        let (density, x_color, y_color, z_color, auto_below) = {
+            let theme = Theme::global(&*cx.app);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+
+            let x_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_X_COLOR,
+                Color {
+                    r: 0.95,
+                    g: 0.35,
+                    b: 0.35,
+                    a: 1.0,
+                },
+            );
+            let y_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_Y_COLOR,
+                Color {
+                    r: 0.35,
+                    g: 0.95,
+                    b: 0.35,
+                    a: 1.0,
+                },
+            );
+            let z_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_Z_COLOR,
+                Color {
+                    r: 0.35,
+                    g: 0.55,
+                    b: 0.95,
+                    a: 1.0,
+                },
+            );
+
+            let auto_below = self
+                .options
+                .auto_stack_below
+                .unwrap_or(style.vec_auto_stack_below);
+
+            (density, x_color, y_color, z_color, auto_below)
+        };
+        let variant = match self.options.variant {
+            VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
+            VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
+            VecEditLayoutVariant::Auto => bounds
+                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0)
+                .then_some(VecEditLayoutVariant::Column)
+                .unwrap_or(VecEditLayoutVariant::Row),
+        };
+
+        let grow = variant == VecEditLayoutVariant::Row;
+        let direction = match variant {
+            VecEditLayoutVariant::Row => Axis::Horizontal,
+            VecEditLayoutVariant::Column => Axis::Vertical,
+            VecEditLayoutVariant::Auto => Axis::Horizontal,
+        };
 
         let mut el = cx.flex(
             FlexProps {
                 layout: self.options.layout,
-                direction: Axis::Horizontal,
+                direction,
                 gap: self.options.gap,
                 padding: Edges::all(Px(0.0)),
                 justify: MainAlign::Start,
-                align: CrossAlign::Center,
+                align: if direction == Axis::Horizontal {
+                    CrossAlign::Center
+                } else {
+                    CrossAlign::Stretch
+                },
                 wrap: false,
             },
             move |cx| {
@@ -513,6 +634,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_x.clone(),
+                        grow,
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
@@ -525,6 +647,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_y.clone(),
+                        grow,
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
@@ -537,6 +660,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_z.clone(),
+                        grow,
                         Arc::from("Z"),
                         z_color,
                         self.z.clone(),
@@ -631,58 +755,111 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app);
-        let density = EditorDensity::resolve(theme);
+        let x_id = self.x.id();
+        let y_id = self.y.id();
+        let z_id = self.z.id();
+        let w_id = self.w.id();
+        let model_ids = (x_id, y_id, z_id, w_id);
 
-        let x_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_X_COLOR,
-            Color {
-                r: 0.95,
-                g: 0.35,
-                b: 0.35,
-                a: 1.0,
-            },
-        );
-        let y_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_Y_COLOR,
-            Color {
-                r: 0.35,
-                g: 0.95,
-                b: 0.35,
-                a: 1.0,
-            },
-        );
-        let z_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_Z_COLOR,
-            Color {
-                r: 0.35,
-                g: 0.55,
-                b: 0.95,
-                a: 1.0,
-            },
-        );
-        let w_color = axis_color(
-            theme,
-            EditorTokenKeys::AXIS_W_COLOR,
-            Color {
-                r: 0.8,
-                g: 0.8,
-                b: 0.8,
-                a: 1.0,
-            },
-        );
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.vec4_edit", id_source, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.vec4_edit", callsite, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
+
+        let (density, x_color, y_color, z_color, w_color, auto_below) = {
+            let theme = Theme::global(&*cx.app);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+
+            let x_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_X_COLOR,
+                Color {
+                    r: 0.95,
+                    g: 0.35,
+                    b: 0.35,
+                    a: 1.0,
+                },
+            );
+            let y_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_Y_COLOR,
+                Color {
+                    r: 0.35,
+                    g: 0.95,
+                    b: 0.35,
+                    a: 1.0,
+                },
+            );
+            let z_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_Z_COLOR,
+                Color {
+                    r: 0.35,
+                    g: 0.55,
+                    b: 0.95,
+                    a: 1.0,
+                },
+            );
+            let w_color = axis_color(
+                theme,
+                EditorTokenKeys::AXIS_W_COLOR,
+                Color {
+                    r: 0.8,
+                    g: 0.8,
+                    b: 0.8,
+                    a: 1.0,
+                },
+            );
+
+            let auto_below = self
+                .options
+                .auto_stack_below
+                .unwrap_or(style.vec_auto_stack_below);
+
+            (density, x_color, y_color, z_color, w_color, auto_below)
+        };
+        let variant = match self.options.variant {
+            VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
+            VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
+            VecEditLayoutVariant::Auto => bounds
+                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0)
+                .then_some(VecEditLayoutVariant::Column)
+                .unwrap_or(VecEditLayoutVariant::Row),
+        };
+
+        let grow = variant == VecEditLayoutVariant::Row;
+        let direction = match variant {
+            VecEditLayoutVariant::Row => Axis::Horizontal,
+            VecEditLayoutVariant::Column => Axis::Vertical,
+            VecEditLayoutVariant::Auto => Axis::Horizontal,
+        };
 
         let mut el = cx.flex(
             FlexProps {
                 layout: self.options.layout,
-                direction: Axis::Horizontal,
+                direction,
                 gap: self.options.gap,
                 padding: Edges::all(Px(0.0)),
                 justify: MainAlign::Start,
-                align: CrossAlign::Center,
+                align: if direction == Axis::Horizontal {
+                    CrossAlign::Center
+                } else {
+                    CrossAlign::Stretch
+                },
                 wrap: false,
             },
             move |cx| {
@@ -692,6 +869,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_x.clone(),
+                        grow,
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
@@ -704,6 +882,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_y.clone(),
+                        grow,
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
@@ -716,6 +895,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_z.clone(),
+                        grow,
                         Arc::from("Z"),
                         z_color,
                         self.z.clone(),
@@ -728,6 +908,7 @@ where
                         density,
                         self.options.axis_gap,
                         self.reset_w.clone(),
+                        grow,
                         Arc::from("W"),
                         w_color,
                         self.w.clone(),

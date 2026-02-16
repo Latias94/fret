@@ -17,7 +17,12 @@ pub mod theme;
 #[cfg(feature = "imui")]
 pub mod imui;
 
-#[cfg(feature = "state")]
+#[cfg(any(
+    feature = "state",
+    feature = "state-selector",
+    feature = "state-query",
+    feature = "state-undo"
+))]
 pub mod state;
 
 pub mod prelude {
