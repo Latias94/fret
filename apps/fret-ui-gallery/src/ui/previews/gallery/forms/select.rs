@@ -309,6 +309,7 @@ pub(in crate::ui) fn preview_select(
         ),
         vec![
             DocSection::new("Demo", demo)
+                .description("Basic select with groups, separators, and a disabled item.")
                 .test_id_prefix("ui-gallery-select-demo")
                 .code(
                     "rust",
@@ -327,6 +328,7 @@ let select = shadcn::Select::new(value, open)
     .into_element(cx);"#,
                 ),
             DocSection::new("Align Item With Trigger", align_item)
+                .description("Toggle between item-aligned positioning and popper-style positioning.")
                 .test_id_prefix("ui-gallery-select-align-item")
                 .code(
                     "rust",
@@ -339,6 +341,7 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                 )
                 .max_w(Px(540.0)),
             DocSection::new("Groups", groups)
+                .description("Group labels + separator patterns used by shadcn Select.")
                 .test_id_prefix("ui-gallery-select-groups")
                 .code(
                     "rust",
@@ -353,6 +356,7 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                 )
                 .max_w(Px(540.0)),
             DocSection::new("Scrollable", scrollable)
+                .description("Long lists should clamp height and expose scroll affordances.")
                 .test_id_prefix("ui-gallery-select-scrollable")
                 .code(
                     "rust",
@@ -363,6 +367,7 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                 )
                 .max_w(Px(620.0)),
             DocSection::new("Disabled", disabled)
+                .description("Disabled state should block open + selection and use muted styling.")
                 .test_id_prefix("ui-gallery-select-disabled")
                 .code(
                     "rust",

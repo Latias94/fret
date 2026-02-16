@@ -2,7 +2,7 @@ use super::*;
 
 pub(in crate::ui) struct DocSection {
     pub title: &'static str,
-    pub description: Option<&'static str>,
+    pub description: Vec<&'static str>,
     pub preview: AnyElement,
     pub code: Option<DocCodeBlock>,
     pub max_w: Px,
@@ -18,7 +18,7 @@ impl DocSection {
     pub(in crate::ui) fn new(title: &'static str, preview: AnyElement) -> Self {
         Self {
             title,
-            description: None,
+            description: Vec::new(),
             preview,
             code: None,
             max_w: Px(820.0),
@@ -27,7 +27,15 @@ impl DocSection {
     }
 
     pub(in crate::ui) fn description(mut self, description: &'static str) -> Self {
-        self.description = Some(description);
+        self.description.push(description);
+        self
+    }
+
+    pub(in crate::ui) fn descriptions(
+        mut self,
+        descriptions: impl IntoIterator<Item = &'static str>,
+    ) -> Self {
+        self.description.extend(descriptions);
         self
     }
 
@@ -100,8 +108,21 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(3);
             out.push(section_title(cx, title));
-            if let Some(description) = description {
-                out.push(shadcn::typography::muted(cx, description));
+            if !description.is_empty() {
+                let description_stack = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N1)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0()),
+                    move |cx| {
+                        description
+                            .into_iter()
+                            .map(|line| shadcn::typography::muted(cx, line))
+                            .collect::<Vec<_>>()
+                    },
+                );
+                out.push(description_stack);
             }
             out.push(content);
             out

@@ -275,6 +275,7 @@ pub(super) fn preview_alert_dialog(
         ),
         vec![
             DocSection::new("Demo", demo_content)
+                .description("Default-sized modal alert dialog.")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialog::new(open).into_element(
@@ -303,8 +304,11 @@ pub(super) fn preview_alert_dialog(
 )"#,
                 )
                 .max_w(Px(760.0)),
-            DocSection::new("Basic", basic_content).max_w(Px(760.0)),
+            DocSection::new("Basic", basic_content)
+                .description("A minimal alert dialog with default buttons.")
+                .max_w(Px(760.0)),
             DocSection::new("Small", small_content)
+                .description("Compact dialog size for short copy.")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialogContent::new([...])
@@ -313,6 +317,7 @@ pub(super) fn preview_alert_dialog(
                 )
                 .max_w(Px(760.0)),
             DocSection::new("Media", media_content)
+                .description("Dialogs can optionally show a leading media/icon in the header.")
                 .code(
                     "rust",
                     r#"let icon = shadcn::icon::icon_with(
@@ -326,8 +331,11 @@ let header = shadcn::AlertDialogHeader::new([title, description])
     .media(shadcn::AlertDialogMedia::new(icon).into_element(cx));"#,
                 )
                 .max_w(Px(760.0)),
-            DocSection::new("Small with Media", small_with_media_content).max_w(Px(760.0)),
+            DocSection::new("Small with Media", small_with_media_content)
+                .description("Small size + media variant.")
+                .max_w(Px(760.0)),
             DocSection::new("Destructive", destructive_content)
+                .description("Destructive styling for irreversible actions.")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialogAction::new("Delete", open.clone())
@@ -338,7 +346,9 @@ let header = shadcn::AlertDialogHeader::new([title, description])
             DocSection::new("RTL", rtl_dialog)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .max_w(Px(760.0)),
-            DocSection::new("Notes", notes).max_w(Px(760.0)),
+            DocSection::new("Notes", notes)
+                .description("Guidelines and best practices for alert dialogs.")
+                .max_w(Px(760.0)),
         ],
     );
 
