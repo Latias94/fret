@@ -57,15 +57,15 @@ ColumnDef keys referenced by upstream feature implementations:
 ## Baseline (scope + references)
 
 - [x] HTP-base-001 Record the exact upstream `table-core` commit/version used for parity fixtures.
-  - Evidence: a short 鈥渧ersion stamp鈥?section in `docs/workstreams/headless-table-tanstack-parity.md`.
-- [x] HTP-base-002 Add a minimal 鈥減arity fixture schema鈥?doc section (JSON layout for core outputs).
+- Evidence: a short "version stamp" section in `docs/workstreams/headless-table-tanstack-parity.md`.
+- [x] HTP-base-002 Add a minimal "parity fixture schema" doc section (JSON layout for core outputs).
   - Target: stable enough to survive refactors.
-- [x] HTP-base-003 Add a 鈥渇eature-by-feature parity matrix鈥?section (one row per upstream feature file).
+- [x] HTP-base-003 Add a "feature-by-feature parity matrix" section (one row per upstream feature file).
   - Include: current status, blocking gaps, and evidence anchors (tests/fixtures).
   - Evidence: `docs/workstreams/headless-table-tanstack-parity.md`.
 - [x] HTP-base-004 Extend the upstream inventory to include non-option parity surfaces:
   - column/header/cell/row method inventories (where feasible),
-  - state 鈥渞eset鈥?and 鈥渁uto-reset鈥?behavior inventory.
+  - state "reset" and "auto-reset" behavior inventory.
   - In progress: core + pinning inventories are tracked in
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
   - Update: added a raw upstream instance member dump (table/column/row/header/cell) as an appendix in
@@ -119,13 +119,13 @@ P2 (engineering guardrails for sustained parity):
 
 ---
 
-## M0.5 鈥?Capability parity contract (API inventory)
+## M0.5 - Capability parity contract (API inventory)
 
-Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upstream public API surfaces
+Goal: ensure we are "not weaker than TanStack" by explicitly tracking upstream public API surfaces
 (table/row/column/header/cell) and mapping them to Fret equivalents.
 
 - [x] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
-  - Evidence target: expand 鈥淐apability Inventory鈥?in `docs/workstreams/headless-table-tanstack-parity.md`
+  - Evidence target: expand "Capability Inventory" in `docs/workstreams/headless-table-tanstack-parity.md`
     with an explicit Table/Row/Column/Header/Cell checklist and per-item status.
   - In progress: initial core + pinning mapping is tracked in
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
@@ -160,8 +160,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Features: `repo-ref/table/packages/table-core/src/features/*.ts`
     - Glue/types: `repo-ref/table/packages/table-core/src/types.ts`
   - Deliverables:
-    - A minimal list of 鈥渕ust-have鈥?APIs required by `DataTable` (`fret-ui-shadcn`) and `table_virtualized` (`fret-ui-kit`).
-    - A second list of 鈥渃apability parity鈥?APIs that must exist to avoid being weaker than upstream.
+    - A minimal list of "must-have" APIs required by `DataTable` (`fret-ui-shadcn`) and `table_virtualized` (`fret-ui-kit`).
+    - A second list of "capability parity" APIs that must exist to avoid being weaker than upstream.
   - Update: started a consumer-driven must-have surface section in
     `docs/workstreams/headless-table-tanstack-parity-capability.md` (references `fret-ui-kit` virtualized table usage).
   - Update: documented the current TanStack → Fret mapping strategy in
@@ -181,7 +181,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Rationale: today, DataTable recipes primarily mutate `TableState` and rely on `fret-ui-kit` for rendering; once that
     integration changes, we should update the consumer-driven must-have list and add any missing helper surfaces.
   - Evidence target: `docs/workstreams/headless-table-tanstack-parity-capability.md` must-have section + a focused smoke gate.
-- [x] HTP-cap-020 Add 鈥渃apability smoke鈥?gates (compile-time + runtime).
+- [x] HTP-cap-020 Add "capability smoke" gates (compile-time + runtime).
   - Done (compile-time, smoke): a minimal API-call coverage gate exists.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
   - Done (runtime, smoke): RowId-based state resolution and pinning-by-id helpers are covered.
@@ -252,7 +252,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ---
 
-## M1 鈥?Core types (columns/headers/rows/cells)
+## M1 - Core types (columns/headers/rows/cells)
 
 - [x] HTP-core-010 Add TanStack-like column tree representation (nested columns).
   - Done (scaffolding): grouped column defs via `ColumnDef::columns(...)` and leaf flattening.
@@ -277,7 +277,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-headless/src/table/cells.rs`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
-- [x] HTP-core-040 Define a stable, JSON-serializable 鈥渃ore model鈥?snapshot (columns/headers/rows/cells).
+- [x] HTP-core-040 Define a stable, JSON-serializable "core model" snapshot (columns/headers/rows/cells).
   - Done (parity-gated): initial core snapshot schema (column tree + leaf sets + header groups + row ids + cell ids).
     - Evidence: `ecosystem/fret-ui-headless/src/table/core_model.rs`
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::core_model_snapshot`)
@@ -362,7 +362,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ---
 
-## M2 鈥?State-shape parity + reset semantics
+## M2 - State-shape parity + reset semantics
 
 - [x] HTP-state-010 Define TanStack-compatible JSON schema for:
   - sorting, columnFilters, globalFilter, pagination, grouping, expanded, rowSelection,
@@ -391,7 +391,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 - [x] HTP-state-021 Add fixtures that assert state-shape parity for:
   - grouping, expanded, rowPinning, and cross-feature interactions (e.g. pinning + sizing + visibility).
   - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_shapes.json`
-- [x] HTP-state-030 Implement 鈥渞esetX(defaultState?)鈥?semantics where TanStack exposes them.
+- [x] HTP-state-030 Implement `resetX(defaultState?)` semantics where TanStack exposes them.
   - Done (parity-gated): a dedicated reset parity fixture covering core reset surfaces:
     `resetSorting`, `resetColumnFilters`, `resetGlobalFilter`, `resetGrouping`,
     `resetColumnVisibility`, `resetColumnOrder`, `resetRowSelection`.
@@ -406,10 +406,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ---
 
-## M3 鈥?Filtering parity (typed values + meta)
+## M3 - Filtering parity (typed values + meta)
 
 - [x] HTP-filt-010 Generalize filter values beyond `Arc<str>` (TanStack `unknown` equivalent).
-  - Constraint: keep a cheap 鈥渟tring fast-path鈥?for common UI filters.
+  - Constraint: keep a cheap "string fast-path" for common UI filters.
   - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`ColumnFilter.value: serde_json::Value`)
 - [x] HTP-filt-020 Implement option gates: `enableFilters`, `enableColumnFilters`, `enableGlobalFilter`.
   - Done (parity-gated): `enableFilters` + `enableGlobalFilter` gate global filtering application in `filtered_row_model`.
@@ -440,7 +440,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - `manualFiltering` (and `getFilteredRowModel` override) behavior matches upstream.
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::filtered_row_model`, `Table::faceted_row_model`)
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`manual_filtering_skips_filtered_row_model`, `filtered_row_model_override_skips_filtered_and_faceted_row_models`)
-- [x] HTP-filt-080 Align 鈥済lobal filtering can-apply鈥?semantics:
+- [x] HTP-filt-080 Align "global filtering can-apply" semantics:
   - `getColumnCanGlobalFilter` default behavior and override hooks.
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
   - Fixture snapshot: `filtering_fns_global_filter_default_excludes_bool` in `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
@@ -475,7 +475,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ---
 
-## M3 鈥?Sorting parity (multi-sort + edge semantics)
+## M3 - Sorting parity (multi-sort + edge semantics)
 
 - [x] HTP-sort-010 Implement `sortUndefined` semantics (`false | -1 | 1 | first | last`).
   - Done (parity-gated): `first | last | -1 | 1`.
@@ -530,7 +530,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ---
 
-## M4 鈥?Column sizing/resizing parity
+## M4 - Column sizing/resizing parity
 
 - [x] HTP-size-010 Implement option gates and transitions:
   - `enableColumnResizing`, `columnResizeMode`, `columnResizeDirection`.
@@ -566,7 +566,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): group-header `columnSizingStart` fan-out (multiple leaf headers + group entry) matches TanStack.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json`
-- [x] HTP-size-050 Align 鈥渃ontrolled state鈥?hooks:
+- [x] HTP-size-050 Align "controlled state" hooks:
   - `onColumnSizingChange` and `onColumnSizingInfoChange` equivalence.
   - Done (parity-gated): controlled no-op semantics using fixture-only markers:
     - `__onColumnSizingChange="noop"` (sizing stays unchanged) and `__onColumnSizingInfoChange="noop"`
@@ -582,7 +582,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ---
 
-## M5 鈥?Grouping + aggregation parity
+## M5 - Grouping + aggregation parity
 
 - [x] HTP-grp-010 Implement grouped row model parity (including placeholder/aggregated cell flags).
   - Done (parity-gated, grouped row model structure + flat rows ordering): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
@@ -632,7 +632,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ---
 
-## M6 鈥?Pinning/expanding/selection/pagination interactions parity
+## M6 - Pinning/expanding/selection/pagination interactions parity
 
 - [x] HTP-rowpin-010 Align `keepPinnedRows` behavior and its interactions with filtering/sorting/pagination.
   - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json` +
@@ -640,7 +640,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Covered: `row.getPinnedIndex()`-equivalent visible ordering (`row_pinning.pinned_index` in fixture snapshots).
     - Snapshots: `pinning_keep_true_multi_pinned_index_page_0`, `pinning_keep_false_multi_pinned_index_page_0`.
   - Covered: `enableRowPinning: (row) => boolean` predicate (fixture marker `__enableRowPinning=odd_ids`).
-  - Hardened gate coverage: pinning fixtures now also assert the 鈥渇ull derived snapshot surface鈥?    (core/filtered/sorted/expanded/paginated models, selection/expanding flags, and column sizing totals + start/after offsets),
+  - Hardened gate coverage: pinning fixtures now also assert the "full derived snapshot surface" (core/filtered/sorted/expanded/paginated models, selection/expanding flags, and column sizing totals + start/after offsets),
     preventing drift that manifests as misaligned widths/offsets in UI consumers.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Bugfix: TanStack option defaults are `true` for `keepPinnedRows` and `paginateExpandedRows` when omitted.
@@ -862,7 +862,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 - [x] HTP-ui-rowpin-010 Wire `TableState.row_pinning` into `table_virtualized` (flat rows + grouped path).
   - Done (initial integration): when row pinning is active, `ecosystem/fret-ui-kit` now computes
-     top/center/bottom display rows via the headless engine鈥檚 pinned row helpers so 鈥渒eepPinnedRows鈥?     and pagination interactions match the engine contract.
+     top/center/bottom display rows via the headless engine's pinned row helpers so `keepPinnedRows` and pagination interactions match the engine contract.
      - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
    - Done (grouped rows path, initial): when grouping is active, the grouped display cache now
      surfaces pinned rows outside pagination by reordering the flattened visible list into
@@ -1018,14 +1018,14 @@ Next UI parity targets (capability, not exact DOM behavior):
 
 ---
 
-## M6.5 鈥?Faceting parity
+## M6.5 - Faceting parity
 
 - [x] HTP-face-010 Gate faceting surfaces (`ColumnFaceting` / `GlobalFaceting`).
   - Parity-gated:
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json`
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs`
   - Notes:
-    - `GlobalFaceting` unique/minmax are empty/null with TanStack鈥檚 built-in helpers because
+    - `GlobalFaceting` unique/minmax are empty/null with TanStack's built-in helpers because
       `__global__` is not a real column (upstream warns; fixture captures this).
 - [x] HTP-face-020 Add first-class “global faceting” capability surfaces (consumer-unblocking).
   - Goal: avoid being weaker when consumers rely on `getGlobalFaceted*` instance surfaces (even if built-ins
@@ -1038,11 +1038,11 @@ Next UI parity targets (capability, not exact DOM behavior):
 
 ---
 
-## M7 鈥?Engine memoization parity + perf gates
+## M7 - Engine memoization parity + perf gates
 
 - [x] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
   - Done (first building block, unit-gated): a TanStack-aligned dependency snapshot + memo cache for
-    鈥渇iltered + sorted root row order鈥?
+    "filtered + sorted root row order"?
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`
     - Tests: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs` (`sorted_flat_row_order_cache_*`)
   - Done (ungrouped pipeline): lift this pattern across the full derived row model pipeline
@@ -1063,7 +1063,7 @@ Next UI parity targets (capability, not exact DOM behavior):
       - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_memo_rebuild_each_frame_expanded_paginated_gate.rs`
     - [x] HTP-memo-014 Add broader guardrail gates for rebuild-each-frame callers (recompute-count expectations).
       - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_memo_rebuild_each_frame_guardrail_gate.rs`
-- [x] HTP-memo-020 Provide an integration pattern for 鈥渞ebuild each frame鈥?while retaining memo cache.
+- [x] HTP-memo-020 Provide an integration pattern for "rebuild each frame" while retaining memo cache.
   - Done: `Table::tanstack_sorted_flat_row_order_with_cache(items_revision, cache)` integrates a persistent
     memo cache with ephemeral `Table` rebuilds.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::tanstack_sorted_flat_row_order_with_cache`)
@@ -1073,7 +1073,7 @@ Next UI parity targets (capability, not exact DOM behavior):
 
 ---
 
-## M8 鈥?Parity harness (fixtures)
+## M8 - Parity harness (fixtures)
 
 - [x] HTP-fixt-010 Add a Node-based fixture generator that runs upstream `table-core` and emits JSON.
   - Input: deterministic datasets + deterministic option/state transitions.
@@ -1085,7 +1085,7 @@ Next UI parity targets (capability, not exact DOM behavior):
 
 ### Fixture coverage matrix (keep this in sync)
 
-Each row is a 鈥減arity gate鈥? a committed TanStack fixture + at least one Rust test that asserts the
+Each row is a "parity gate": a committed TanStack fixture + at least one Rust test that asserts the
 fixture outcomes.
 
 | Fixture (JSON) | `case_id` | Upstream feature(s) covered | Rust parity gate | Status |

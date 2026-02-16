@@ -15,9 +15,9 @@ TODO tracker: `docs/workstreams/ai-elements-port-todo.md`.
 
 ## Upstream snapshot
 
-Local checkout (developer machine asset, not part of this repo):
+Local checkout (optional repo-ref checkout):
 
-- `F:\SourceCodes\Rust\fret\repo-ref\ai-elements`
+- `repo-ref/ai-elements`
 
 Version stamp:
 
@@ -28,7 +28,7 @@ Version stamp:
 
 Upstream exports each `.tsx` file directly:
 
-- `F:\SourceCodes\Rust\fret\repo-ref\ai-elements\packages\elements\src\*.tsx`
+- `repo-ref/ai-elements/packages/elements/src/*.tsx`
 
 ## Naming notes (TSX → Rust)
 
@@ -108,8 +108,9 @@ As of the snapshot above, **all** upstream `.tsx` surfaces are accounted for in 
 PowerShell snippet used for the inventory diff (update paths as needed):
 
 ```powershell
-$up = 'F:\SourceCodes\Rust\fret\repo-ref\ai-elements\packages\elements\src'
-$rs = 'F:\SourceCodes\Rust\fret-worktrees\ai-elements-port\ecosystem\fret-ui-ai\src\elements'
+$ws = git rev-parse --show-toplevel
+$up = Join-Path $ws 'repo-ref/ai-elements/packages/elements/src'
+$rs = Join-Path $ws 'ecosystem/fret-ui-ai/src/elements'
 
 $upNorm = (Get-ChildItem $up -File -Filter '*.tsx').BaseName | ForEach-Object { $_ -replace '-', '_' }
 $rsNames = (Get-ChildItem $rs -File -Filter '*.rs').BaseName | Where-Object { $_ -ne 'mod' }

@@ -144,8 +144,8 @@ P0/P1:
 
 ## References
 
-- ECharts `connectNulls` option: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\chart\\line\\LineSeries.ts`
-- ECharts polyline handling with gaps: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\chart\\line\\poly.ts`
+- ECharts `connectNulls` option: `repo-ref/echarts/src/chart/line/LineSeries.ts`
+- ECharts polyline handling with gaps: `repo-ref/echarts/src/chart/line/poly.ts`
 - ADR 0191: `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ADR 0194: `docs/adr/0194-delinea-large-data-and-progressive-rendering.md`
 - ADR 0195: `docs/adr/0195-delinea-interaction-and-hit-testing-contract.md`

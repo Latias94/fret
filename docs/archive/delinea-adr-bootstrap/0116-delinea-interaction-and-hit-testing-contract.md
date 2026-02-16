@@ -123,4 +123,4 @@ P1:
 
 - ADR 0109: `docs/archive/delinea-adr-bootstrap/0190-delinea-headless-chart-engine.md`
 - ADR 0110: `docs/archive/delinea-adr-bootstrap/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
-- ECharts axisPointer/tooltip concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\echarts.all.ts`
+- ECharts axisPointer/tooltip concepts: `repo-ref/echarts/src/echarts.all.ts`

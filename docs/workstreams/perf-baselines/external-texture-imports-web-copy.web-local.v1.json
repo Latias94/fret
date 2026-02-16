@@ -2,7 +2,7 @@
   "generated_unix_ms": 1771138500618,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "F:\\SourceCodes\\Rust\\fret-worktrees\\ws\\external-texture-imports-v1\\docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json",
+  "out_path": "docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json",
   "repeat": 2,
   "rows": [
     {

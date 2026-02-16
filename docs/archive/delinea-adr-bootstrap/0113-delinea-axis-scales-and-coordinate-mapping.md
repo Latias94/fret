@@ -128,8 +128,8 @@ P1 follow-ups:
 
 ## References
 
-- ECharts scales: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Interval.ts`,
-  `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Ordinal.ts`
+- ECharts scales: `repo-ref/echarts/src/scale/Interval.ts`,
+  `repo-ref/echarts/src/scale/Ordinal.ts`
 - ADR 0109: `docs/archive/delinea-adr-bootstrap/0190-delinea-headless-chart-engine.md`
 - ADR 0110: `docs/archive/delinea-adr-bootstrap/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ADR 0098: `docs/adr/0098-plot-architecture-and-performance.md`

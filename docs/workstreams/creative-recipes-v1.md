@@ -50,7 +50,7 @@ fallbacks and diagnostics.
 
 Avoid a single mega-branch. Split by “high-conflict kernel churn” vs “ecosystem surface”.
 
-Suggested worktrees under `F:\SourceCodes\Rust\fret-worktrees\`:
+Suggested worktrees under `fret-worktrees/` (a sibling directory to this repo):
 
 - `ws/creative-recipes-foundation`:
   - only `ecosystem/fret-ui-kit` recipe trait + reporting + catalog scaffolding

@@ -17,9 +17,9 @@ to existing Fret layers and note what is missing.
 
 ## Version stamp (upstream reference)
 
-Local snapshot (developer machine asset, not part of this repo):
+Local snapshot (optional repo-ref checkout):
 
-- `F:\SourceCodes\Rust\fret\repo-ref\xyflow`
+- `repo-ref/xyflow`
 
 Pinned commit:
 

@@ -531,20 +531,20 @@ Command:
 Results (us):
 | script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3193 | 3321 | 3321 | 2964 | 81 | 17 | 340 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3847 | 3888 | 3888 | 3139 | 202 | 20 | 769 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3596 | 4166 | 4166 | 3378 | 184 | 17 | 771 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2939 | 3181 | 3181 | 2557 | 46 | 20 | 654 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1811 | 2150 | 2150 | 1623 | 51 | 13 | 515 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3935 | 6928 | 6928 | 4041 | 332 | 20 | 2867 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10923 | 11260 | 11260 | 9935 | 393 | 51 | 1284 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6608 | 7515 | 7515 | 6201 | 807 | 31 | 1408 |
-| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13707 | 13762 | 13762 | 11160 | 1888 | 55 | 2597 |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3193 | 3321 | 3321 | 2964 | 81 | 17 | 340 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3847 | 3888 | 3888 | 3139 | 202 | 20 | 769 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3596 | 4166 | 4166 | 3378 | 184 | 17 | 771 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2939 | 3181 | 3181 | 2557 | 46 | 20 | 654 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1811 | 2150 | 2150 | 1623 | 51 | 13 | 515 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3935 | 6928 | 6928 | 4041 | 332 | 20 | 2867 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10923 | 11260 | 11260 | 9935 | 393 | 51 | 1284 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6608 | 7515 | 7515 | 6201 | 807 | 31 | 1408 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13707 | 13762 | 13762 | 11160 | 1888 | 55 | 2597 |
 
 Worst overall:
-- script: `/Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
 - top_total_time_us: `13762`
-- bundle: `/Users/frankorz/codes/rust/fret-perf-448c34ad/target/fret-diag-perf/ui-gallery-steady.448c34ad.rerun/1770072315614-ui-gallery-window-resize-stress-steady/bundle.json`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.448c34ad.rerun/1770072315614-ui-gallery-window-resize-stress-steady/bundle.json`
 
 Notes:
 - This rerun suggests the earlier “`a540829e` regressed vs `448c34ad`” signal was mostly noise. On the same machine:
@@ -7990,7 +7990,7 @@ Notes (measurement hygiene):
 - The primary workspace had unrelated, in-progress refactors in the working tree that changed perf characteristics.
   To keep this A/B reversible and commit-addressable, the measurements below were run from a detached worktree
   at the same commit hash:
-  - worktree root: `/Users/frankorz/codes/rust/fret-perf-lab-06a16`
+  - worktree root: `<local path>`
 
 Commands (from the detached worktree root):
 ```powershell
@@ -8020,10 +8020,10 @@ FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
 
 Artifacts (absolute paths; see the detached worktree note above):
 - Off (`ENTRIES=0`):
-  - `ui-code-editor-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/summary.json`
+  - `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/summary.json`
 - On (`ENTRIES=2048`):
-  - `ui-code-editor-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/summary.json`
-  - `ui-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-unwrapped-on-clean-r1/summary.json`
+  - `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/summary.json`
+  - `ui-resize-probes`: `target/fret-diag-resize-probes-gate-ui-unwrapped-on-clean-r1/summary.json`
 
 Results:
 - Off (`ENTRIES=0`): `ui-code-editor-resize-probes` FAIL (passes=0/3; required=2).
@@ -8037,10 +8037,10 @@ Results:
     `ui-gallery-window-resize-drag-jitter-steady.json`; attempts=3 majority-pass mitigates this tail.
 
 Worst-frame attribution (editor jitter script; max solve snapshot within bundle):
-- Off bundle: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/attempt-1/1770541531439-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- Off bundle: `target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/attempt-1/1770541531439-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - `layout_engine_solve_time_us`: `488`
   - `paint_text_prepare_time_us`: `6812` (width-changed prepares: `13`)
-- On bundle: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/attempt-1/1770541992598-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- On bundle: `target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/attempt-1/1770541992598-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - `layout_engine_solve_time_us`: `347`
   - `paint_text_prepare_time_us`: `1275` (width-changed prepares: `30`)
 
@@ -8152,11 +8152,11 @@ Results (us; selected pass attempts):
 
 Worst bundles (for tail attribution):
 - Editor resize jitter:
-  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800/attempt-1/1770562400418-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800/attempt-1/1770562400418-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - Window resize drag jitter:
-  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564174496-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - `target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564174496-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - Window resize stress:
-  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564003407-ui-gallery-window-resize-stress-steady/bundle.json`
+  - `target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564003407-ui-gallery-window-resize-stress-steady/bundle.json`
 
 Notes:
 - The `ui-resize-probes` `drag-jitter` script can still produce rare, near-threshold tail attempts on a busy system.
@@ -8204,8 +8204,8 @@ Tail delta (drag-jitter; max across runs; baseline pass attempt vs worst-case at
   - `max paint`: `8927` (−20%)
 
 Worst bundles (for tail attribution):
-- Baseline drag-jitter (worst run): `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.baseline.20260209-0200/attempt-1/1770595376269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
-- This run drag-jitter (worst run): `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/attempt-1/1770598036992-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Baseline drag-jitter (worst run): `target/perf-gates/ui-resize-probes.baseline.20260209-0200/attempt-1/1770595376269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- This run drag-jitter (worst run): `target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/attempt-1/1770598036992-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 
 Notes:
 - The steady-state medians for resize probes are already close to the baseline; this change primarily reduces
@@ -8247,18 +8247,18 @@ Tail failures (to keep the gate honest; worst bundles via `diag triage --sort ti
 
 - `ui-resize-probes` attempt-2 drag-jitter threshold failure:
   - `top_total_time_us=19477` (threshold `19128`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-2/1770602292281-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-2/1770602292281-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - `ui-resize-probes` attempt-5 drag-jitter threshold failure:
   - `top_total_time_us=22347` (threshold `19128`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-5/1770603193223-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-5/1770603193223-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 
 - `ui-code-editor-resize-probes` attempt-1 threshold failures:
   - `top_total_time_us=18560` (threshold `16308`)
   - `top_layout_time_us=4115` (threshold `3432`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-1/1770601859375-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-1/1770601859375-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - `ui-code-editor-resize-probes` attempt-3 threshold failure:
   - `top_total_time_us=17684` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-3/1770602132829-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-3/1770602132829-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Notes:
 - `ui-resize-probes` is “majority-pass stable” at attempts=5, but `drag-jitter` still produces intermittent tail
@@ -8301,15 +8301,15 @@ Tail failures (worst bundles resolved via `fret-perf-workflow` gate triage helpe
 
 - `ui-resize-probes` attempt-2 drag-jitter threshold failure:
   - `top_total_time_us=19523` (threshold `19128`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770604637202-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770604637202-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 
 - `ui-code-editor-resize-probes` (all attempts failed; paint-dominant):
   - attempt-1 worst: `top_total_time_us=41576` (threshold `16308`)
-    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-1/1770604939155-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+    - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-1/1770604939155-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - attempt-2 worst: `top_total_time_us=41326` (threshold `16308`)
-    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770605012001-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+    - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770605012001-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - attempt-3 worst: `top_total_time_us=41379` (threshold `16308`)
-    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-3/1770605182675-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+    - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-3/1770605182675-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Notes:
 - This run’s `ui-code-editor-resize-probes` failure is not a subtle tail flake: it is a large, repeatable `paint`
@@ -8346,12 +8346,12 @@ Artifacts:
 
 Tail failures (worst bundles via `fret-perf-workflow` gate triage helper):
 - attempt-1 worst: `top_total_time_us=36479` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-1/1770607132312-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-1/1770607132312-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-2 worst: `top_total_time_us=41411` (threshold `16308`)
   - also exceeded: `top_layout_time_us=3960` (threshold `3432`), `top_layout_engine_solve_time_us=606` (threshold `372`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-2/1770607261026-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-2/1770607261026-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-3 worst: `top_total_time_us=38409` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-3/1770607377132-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-3/1770607377132-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Quick attribution (attempt-2 worst bundle via `diag stats --sort time --top 1`):
 - Worst frame: `total=41411us`, `paint=37394us`, `paint_text_prepare=7641us`, `layout=3960us`.
@@ -8379,11 +8379,11 @@ Artifacts:
 
 Tail failures:
 - attempt-1 worst: `top_total_time_us=38578` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-1/1770607944238-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-1/1770607944238-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-2 worst: `top_total_time_us=39756` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-2/1770607975974-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-2/1770607975974-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-3 worst: `top_total_time_us=42334` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-3/1770608160800-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-3/1770608160800-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Quick attribution (attempt-2 worst bundle via `diag stats --sort time --top 1`):
 - Worst frame: `total=39756us`, `paint=37945us`, `paint_text_prepare=5601us`, `layout=2818us`.
@@ -8412,11 +8412,11 @@ Artifacts:
 Tail failures:
 - attempt-1 worst: `top_total_time_us=39957` (threshold `16308`)
   - also exceeded: `top_layout_time_us=4408` (threshold `3432`), `top_layout_engine_solve_time_us=793` (threshold `372`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-1/1770608515863-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-1/1770608515863-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-2 worst: `top_total_time_us=40191` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-2/1770608702801-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-2/1770608702801-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-3 worst: `top_total_time_us=38826` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-3/1770608759500-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-3/1770608759500-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Quick attribution (attempt-3 worst bundle via `diag stats --sort time --top 1`):
 - Worst frame: `total=38826us`, `paint=36296us`, `paint_text_prepare=4647us`, `layout=2483us`.
@@ -8444,11 +8444,11 @@ Artifacts:
 
 Tail failures:
 - attempt-1 worst: `top_total_time_us=46310` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-1/1770609303441-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-1/1770609303441-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-2 worst: `top_total_time_us=43600` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-2/1770609418535-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-2/1770609418535-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-3 worst: `top_total_time_us=37108` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-3/1770609561484-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-3/1770609561484-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Quick attribution (attempt-3 worst bundle via `diag stats --sort time --top 1`):
 - Worst frame: `total=37108us`, `paint=35205us`, `paint_text_prepare=5130us`, `layout=2596us`.
@@ -8481,11 +8481,11 @@ Artifacts:
 
 Tail failures:
 - attempt-1 worst: `top_total_time_us=38098` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-1/1770610982603-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-1/1770610982603-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-2 worst: `top_total_time_us=40934` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-2/1770611097508-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-2/1770611097508-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-3 worst: `top_total_time_us=42129` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-3/1770611282853-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-3/1770611282853-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Attribution (attempt-3 worst bundle):
 - Worst frame: `total=42129us`, `paint=40174us`, `layout=2709us`.
@@ -8519,11 +8519,11 @@ Artifacts:
 
 Results:
 - attempt-1 worst: `top_total_time_us=15953` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-1/1770611691494-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-1/1770611691494-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-2 worst: `top_total_time_us=15563` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-2/1770611764113-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-2/1770611764113-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 - attempt-3 worst: `top_total_time_us=16006` (threshold `16308`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-3/1770611803894-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-3/1770611803894-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Delta (attempt-3 worst vs `f664ead2d` attempt-3 worst):
 - `top_total_time_us`: `42129us → 16006us` (Δ `-26123us`, `-62.0%`, `2.63×` speedup).
@@ -8632,7 +8632,7 @@ Notes:
   - `top_total_time_us=20292us` (threshold `19128us`)
   - `top_layout_time_us=12704us` (threshold `12264us`)
   - `top_layout_engine_solve_time_us=3561us` (threshold `2816us`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700/attempt-3/1770618416688-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700/attempt-3/1770618416688-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 
 ## 2026-02-09 18:05:00 (commit `498147790`)
 
@@ -8658,7 +8658,7 @@ Finding (attempt-2 failing drag-jitter worst frame):
 - `top_total_time_us=20715us` exceeded threshold `19128us` in `ui-gallery-window-resize-drag-jitter-steady`.
 - Attribution now shows a heavy barrier root solve:
   - `root=4294968378` `solve_us=1876` `measure_calls=960` `measure_cache_hits=0`
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.498147790.20260209-1805/attempt-2/1770619359780-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-resize-probes.498147790.20260209-1805/attempt-2/1770619359780-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 
 ## 2026-02-09 19:15:00 (commit `58db05d7c`)
 
@@ -8718,11 +8718,11 @@ Artifacts:
 
 Finding (drag-jitter probe; selected attempt):
 - Max `top_total_time_us=18665us` (threshold `19128us`).
-  - Worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.96661c49c.20260209-1528/attempt-1/1770622160308-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Worst bundle: `target/perf-gates/ui-resize-probes.96661c49c.20260209-1528/attempt-1/1770622160308-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - `layout_request_build_roots_time_us` regressed in this bundle vs the prior commit (`58db05d7c`) for the same probe:
   - `96661c49c`: mean/p95/max = `2367/2517/4042us`
   - `58db05d7c`: mean/p95/max = `2173/2302/2346us`
-  - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Prior bundle reference: `target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - Hypothesis: the added per-frame `HashMap` memoization overhead outweighs the saved wrapper-chain scans. This is a
   good candidate to revert, and instead pursue the broader M1 direction (hashing → dense tables) in the layout engine.
 
@@ -8749,12 +8749,12 @@ Artifacts:
 Finding:
 - Attempt-1 exceeded `drag-jitter` total threshold:
   - `top_total_time_us=19826us` (threshold `19128us`)
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-1/1770623967894-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-1/1770623967894-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - Attempts 2/3 exceeded `stress` solve-time threshold:
   - `top_layout_engine_solve_time_us=3087us` / `3535us` (threshold `3060us`)
   - bundles:
-    - `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-2/1770623996413-ui-gallery-window-resize-stress-steady/bundle.json`
-    - `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-3/1770624057366-ui-gallery-window-resize-stress-steady/bundle.json`
+    - `target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-2/1770623996413-ui-gallery-window-resize-stress-steady/bundle.json`
+    - `target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-3/1770624057366-ui-gallery-window-resize-stress-steady/bundle.json`
 - Conclusion: the `seen` generation-stamp approach is a likely regression source; keep the dense tables but revert
   `seen` to the prior `HashSet` tracking.
 
@@ -8782,11 +8782,11 @@ Artifacts:
 
 Finding (drag-jitter probe; selected attempt):
 - Max `top_total_time_us=17087us` (threshold `19128us`).
-  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610/attempt-1/1770624678123-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - worst bundle: `target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610/attempt-1/1770624678123-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - `layout_request_build_roots_time_us` improved vs the prior stable run (`58db05d7c`) for the same probe:
   - `e9ea4522a`: mean/p95/max = `1962/2116/2136us`
   - `58db05d7c`: mean/p95/max = `2173/2302/2346us`
-  - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Prior bundle reference: `target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 
 ## 2026-02-09 16:37:00 (commit `0de40863f`)
 
@@ -8822,11 +8822,11 @@ Worst overall:
 - `ui-resize-probes`:
   - script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
   - top_total_time_us: `16775`
-  - bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626170/attempt-1/1770626188635-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - bundle: `target/fret-diag-resize-probes-gate-1770626170/attempt-1/1770626188635-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - `ui-code-editor-resize-probes`:
   - script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
   - top_total_time_us: `15613`
-  - bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626237/attempt-1/1770626249820-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - bundle: `target/fret-diag-resize-probes-gate-1770626237/attempt-1/1770626249820-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
 
 Notes:
 - Compared to the prior dense-tables stable run (`e9ea4522a`, attempt-1, same probes):

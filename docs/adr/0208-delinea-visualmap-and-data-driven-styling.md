@@ -154,7 +154,7 @@ P1:
 ## References
 
 - Apache ECharts VisualMap implementation:
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMap\\VisualMapModel.ts`
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMap\\visualEncoding.ts`
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMapContinuous.ts`
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMapPiecewise.ts`
+  - `repo-ref/echarts/src/component/visualMap/VisualMapModel.ts`
+  - `repo-ref/echarts/src/component/visualMap/visualEncoding.ts`
+  - `repo-ref/echarts/src/component/visualMapContinuous.ts`
+  - `repo-ref/echarts/src/component/visualMapPiecewise.ts`

@@ -496,12 +496,13 @@ This is a **raw** inventory of instance members assigned on upstream `table`, `c
 objects. It is intentionally redundant and includes some underscore-prefixed internals, because those often correspond
 to observable behavior (memo caches / queues / derived model hooks).
 
-Source (local): `F:/SourceCodes/Rust/fret/repo-ref/table/packages/table-core/src/**/*.ts`.
+Source (repo-ref): `repo-ref/table/packages/table-core/src/**/*.ts`.
 
 Extraction command (PowerShell; requires ripgrep `rg` with `--pcre2`):
 
 ```ps1
-$root='F:\SourceCodes\Rust\fret\repo-ref\table\packages\table-core\src'
+$ws = git rev-parse --show-toplevel
+$root = Join-Path $ws 'repo-ref/table/packages/table-core/src'
 cd $root
 rg --pcre2 -o "table\.[A-Za-z0-9_]+"  -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique
 rg --pcre2 -o "column\.[A-Za-z0-9_]+" -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique

@@ -125,8 +125,8 @@ P1:
 
 ## References
 
-- ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
+- ECharts scheduler/progressive pipeline: `repo-ref/echarts/src/core/Scheduler.ts`
 - ADR 0190: `docs/adr/0190-delinea-headless-chart-engine.md`
 - ADR 0191: `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
-- Zed/GPUI reference: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\zed\\crates\\gpui\\src\\window.rs` (`Window::request_animation_frame`)
+- Zed/GPUI reference: `repo-ref/zed/crates/gpui/src/window.rs` (`Window::request_animation_frame`)

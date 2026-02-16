@@ -79,7 +79,7 @@ Mechanism vs policy:
 - shadcn/ui v4 usage (durations + easings in recipes):
   - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/*.tsx` (e.g. `sheet.tsx`, `sidebar.tsx`)
 - Animata (recipe inspiration; Framer Motion / DOM-based, treat as “spec” not “runtime”):
-  - Local mirror root (this workstation): `F:\SourceCodes\Rust\fret\repo-ref\animata`
+  - Local repo-ref checkout (optional): `repo-ref/animata/`
   - `repo-ref/animata/README.md`
   - `repo-ref/animata/animata/overlay/*.tsx`
 

@@ -102,5 +102,5 @@ This ADR explicitly leaves space for ECharts-class behaviors:
 ## References
 
 - Apache ECharts brush component and selection output:
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\brush\\*`
+  - `repo-ref/echarts/src/component/brush/*`
 - Selection/filter contract baseline: `docs/adr/0199-delinea-row-selection-and-filtering-contract.md`

@@ -159,7 +159,7 @@ P1:
 
 ## References
 
-- ECharts stack processor (calculation dimensions and `modify`): `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\processor\\dataStack.ts`
-- ECharts `DataStore.ensureCalculationDimension(...)`: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\data\\DataStore.ts`
+- ECharts stack processor (calculation dimensions and `modify`): `repo-ref/echarts/src/processor/dataStack.ts`
+- ECharts `DataStore.ensureCalculationDimension(...)`: `repo-ref/echarts/src/data/DataStore.ts`
 - ADR 0191: `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ADR 0199: `docs/adr/0199-delinea-row-selection-and-filtering-contract.md`
