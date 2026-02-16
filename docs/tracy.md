@@ -57,6 +57,16 @@ If you enable `fret_ui=trace`, you should also see:
 - cache-root spans under `ui.cache_root.*` (when view cache is active)
   - `ui.cache_root.mount` / `ui.cache_root.reuse` (cache-root mount decisions)
 
+If you enable `fret_render_wgpu=trace`, you should also see renderer internals nested under
+`fret.runner.render_scene`:
+
+- `fret.renderer.render_scene`
+- `fret.renderer.ensure_pipelines`
+- `fret.renderer.text.prepare`, `fret.renderer.svg.prepare_ops`
+- `fret.renderer.scene.encode`, `fret.renderer.plan.compile`
+- `fret.renderer.upload`, `fret.renderer.record_passes`, `fret.renderer.pass`
+- `fret.renderer.encoder.finish`
+
 ## Correlating Tracy with `diag perf` / `bundle.json`
 
 Recommended workflow:
@@ -117,5 +127,6 @@ If you need **minimal perturbation**, prefer:
 - Prefer narrowing scope over enabling `trace` globally:
   - `RUST_LOG="info,fret_ui=trace"` (UI tree internals)
   - `RUST_LOG="info,fret_launch=trace"` (runner internals, if needed)
+  - `RUST_LOG="info,fret_render_wgpu=trace"` (renderer internals)
 
 If Tracy becomes noisy, disable `TRACE` and rely on the higher-level `info` spans first.
