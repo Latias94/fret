@@ -68,6 +68,7 @@ Deliverables:
 - [~] `NumericInput` control (typed editing path):
   - [x] parse/format hooks
   - [x] validation/error affordance slot
+  - [x] joined input-group chrome (matches `TextField` / `MiniSearchBox`)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/numeric_input.rs`
 - [~] `DragValue<T>` control:
   - [x] scalar abstraction (`DragValueScalar` for `f32`/`f64`/`i32`)

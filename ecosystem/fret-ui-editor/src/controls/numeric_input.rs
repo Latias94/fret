@@ -15,14 +15,19 @@ use fret_core::{Axis, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, TextInputProps,
-    TextProps,
+    AnyElement, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length, MainAlign, SizeStyle,
+    TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::chrome::resolve_editor_text_field_style;
-use crate::primitives::{EditorDensity, EditorTokenKeys};
+use crate::primitives::EditorTokenKeys;
+use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
+use crate::primitives::input_group::{
+    editor_input_group_frame, editor_input_group_inset, editor_input_group_row,
+};
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::EditorFrameState;
 
 #[derive(Debug, Clone)]
 pub struct NumericInputOptions {
@@ -134,144 +139,194 @@ where
     }
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let model = self.model.clone();
+        let parse = self.parse.clone();
+        let format = self.format.clone();
+        let validate = self.validate.clone();
+        let on_outcome = self.on_outcome.clone();
+        let options = self.options.clone();
+
         let draft = draft_model(cx);
         let error = error_model(cx);
         let current_value = cx
-            .get_model_copied(&self.model, Invalidation::Paint)
+            .get_model_copied(&model, Invalidation::Paint)
             .unwrap_or_default();
-        let current_text = (self.format)(current_value);
+        let current_text = (format)(current_value);
 
-        let density = {
+        let (density, frame_chrome, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
-            EditorDensity::resolve(theme)
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+            let frame_chrome = style.frame_chrome(options.size);
+            let (chrome, text_style) =
+                resolve_editor_text_field_style(theme, options.size, &ChromeRefinement::default());
+            (density, frame_chrome, chrome, text_style)
         };
 
-        let (chrome, text_style) = {
-            let theme = Theme::global(&*cx.app);
-            let (chrome, text_style) = resolve_editor_text_field_style(
-                theme,
-                self.options.size,
-                &ChromeRefinement::default(),
-            );
-            (chrome, text_style)
-        };
+        let enabled_for_paint = options.enabled;
+        let error_for_field = error.clone();
+        let text_style_for_field = text_style.clone();
 
-        let mut props = TextInputProps::new(draft.clone());
-        props.layout = LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                min_height: Some(density.row_height),
-                ..Default::default()
+        let field = cx.hover_region(
+            HoverRegionProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
             },
-            ..Default::default()
-        };
-        props.enabled = self.options.enabled;
-        props.focusable = self.options.focusable;
-        props.placeholder = self.options.placeholder.clone();
-        props.test_id = self.options.test_id.clone();
-        props.chrome = chrome;
-        props.text_style = text_style.clone();
+            move |cx, hovered| {
+                let mut props = TextInputProps::new(draft.clone());
+                props.layout = LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        min_height: Some(density.row_height),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                props.enabled = options.enabled;
+                props.focusable = options.focusable;
+                props.placeholder = options.placeholder.clone();
+                props.test_id = None;
+                props.chrome = joined_text_input_style(chrome);
+                props.text_style = text_style_for_field.clone();
 
-        let input = cx.text_input(props);
-        let input_id = input.id;
-        let is_focused = cx.is_focused_element(input_id);
+                let input = cx.text_input(props);
+                let input_id = input.id;
+                let is_focused = cx.is_focused_element(input_id);
 
-        if !is_focused {
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&draft, |s| *s = current_text.as_ref().to_string());
-            let _ = cx.app.models_mut().update(&error, |e| *e = None);
-            cx.with_state(
-                || String::new(),
-                |last| {
-                    *last = current_text.as_ref().to_string();
-                },
-            );
-        }
-
-        let model_for_key = self.model.clone();
-        let draft_for_key = draft.clone();
-        let error_for_key = error.clone();
-        let parse_for_key = self.parse.clone();
-        let format_for_key = self.format.clone();
-        let validate_for_key = self.validate.clone();
-        let on_outcome_for_key = self.on_outcome.clone();
-        cx.key_add_on_key_down_capture_for(
-            input_id,
-            Arc::new(move |host, action_cx: ActionCx, down| match down.key {
-                KeyCode::Enter | KeyCode::NumpadEnter => {
-                    let text = host
+                if !is_focused {
+                    let _ = cx
+                        .app
                         .models_mut()
-                        .read(&draft_for_key, |s| s.clone())
-                        .unwrap_or_default();
-                    if let Some(v) = (parse_for_key)(&text) {
-                        if let Some(validate) = validate_for_key.as_ref() {
-                            if let Some(msg) = validate(v) {
-                                let _ =
-                                    host.models_mut().update(&error_for_key, |e| *e = Some(msg));
-                                host.request_redraw(action_cx.window);
-                                return true;
+                        .update(&draft, |s| *s = current_text.as_ref().to_string());
+                    let _ = cx.app.models_mut().update(&error_for_field, |e| *e = None);
+                    cx.with_state(
+                        || String::new(),
+                        |last| {
+                            *last = current_text.as_ref().to_string();
+                        },
+                    );
+                }
+
+                let model_for_key = model.clone();
+                let draft_for_key = draft.clone();
+                let error_for_key = error_for_field.clone();
+                let parse_for_key = parse.clone();
+                let format_for_key = format.clone();
+                let validate_for_key = validate.clone();
+                let on_outcome_for_key = on_outcome.clone();
+                cx.key_add_on_key_down_capture_for(
+                    input_id,
+                    Arc::new(move |host, action_cx: ActionCx, down| match down.key {
+                        KeyCode::Enter | KeyCode::NumpadEnter => {
+                            let text = host
+                                .models_mut()
+                                .read(&draft_for_key, |s| s.clone())
+                                .unwrap_or_default();
+                            if let Some(v) = (parse_for_key)(&text) {
+                                if let Some(validate) = validate_for_key.as_ref() {
+                                    if let Some(msg) = validate(v) {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&error_for_key, |e| *e = Some(msg));
+                                        host.request_redraw(action_cx.window);
+                                        return true;
+                                    }
+                                }
+
+                                let _ = host.models_mut().update(&model_for_key, |m| *m = v);
+                                let formatted = (format_for_key)(v);
+                                let _ = host.models_mut().update(&draft_for_key, |s| {
+                                    *s = formatted.as_ref().to_string()
+                                });
+                                let _ = host.models_mut().update(&error_for_key, |e| *e = None);
+                                if let Some(cb) = on_outcome_for_key.as_ref() {
+                                    cb(host, action_cx, NumericInputOutcome::Committed);
+                                }
+                            } else {
+                                let _ = host.models_mut().update(&error_for_key, |e| {
+                                    *e = Some(Arc::from("Invalid number"))
+                                });
                             }
+                            host.request_redraw(action_cx.window);
+                            true
                         }
+                        KeyCode::Escape => {
+                            let current = host
+                                .models_mut()
+                                .get_copied(&model_for_key)
+                                .unwrap_or_default();
+                            let formatted = (format_for_key)(current);
+                            let _ = host
+                                .models_mut()
+                                .update(&draft_for_key, |s| *s = formatted.as_ref().to_string());
+                            let _ = host.models_mut().update(&error_for_key, |e| *e = None);
+                            if let Some(cb) = on_outcome_for_key.as_ref() {
+                                cb(host, action_cx, NumericInputOutcome::Canceled);
+                            }
+                            host.request_redraw(action_cx.window);
+                            true
+                        }
+                        _ => false,
+                    }),
+                );
 
-                        let _ = host.models_mut().update(&model_for_key, |m| *m = v);
-                        let formatted = (format_for_key)(v);
-                        let _ = host
-                            .models_mut()
-                            .update(&draft_for_key, |s| *s = formatted.as_ref().to_string());
-                        let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                        if let Some(cb) = on_outcome_for_key.as_ref() {
-                            cb(host, action_cx, NumericInputOutcome::Committed);
-                        }
-                    } else {
-                        let _ = host
-                            .models_mut()
-                            .update(&error_for_key, |e| *e = Some(Arc::from("Invalid number")));
-                    }
-                    host.request_redraw(action_cx.window);
-                    true
-                }
-                KeyCode::Escape => {
-                    let current = host
-                        .models_mut()
-                        .get_copied(&model_for_key)
+                if is_focused {
+                    let draft_text = cx
+                        .get_model_cloned(&draft, Invalidation::Paint)
                         .unwrap_or_default();
-                    let formatted = (format_for_key)(current);
-                    let _ = host
-                        .models_mut()
-                        .update(&draft_for_key, |s| *s = formatted.as_ref().to_string());
-                    let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                    if let Some(cb) = on_outcome_for_key.as_ref() {
-                        cb(host, action_cx, NumericInputOutcome::Canceled);
+                    let changed = cx.with_state(
+                        || String::new(),
+                        |last| {
+                            if *last == draft_text {
+                                false
+                            } else {
+                                *last = draft_text;
+                                true
+                            }
+                        },
+                    );
+                    if changed {
+                        let _ = cx.app.models_mut().update(&error_for_field, |e| *e = None);
                     }
-                    host.request_redraw(action_cx.window);
-                    true
                 }
-                _ => false,
-            }),
-        );
 
-        if is_focused {
-            let draft_text = cx
-                .get_model_cloned(&draft, Invalidation::Paint)
-                .unwrap_or_default();
-            let changed = cx.with_state(
-                || String::new(),
-                |last| {
-                    if *last == draft_text {
-                        false
-                    } else {
-                        *last = draft_text;
-                        true
-                    }
-                },
-            );
-            if changed {
-                let _ = cx.app.models_mut().update(&error, |e| *e = None);
-            }
-        }
+                let input = editor_input_group_inset(cx, frame_chrome.padding, input);
+                let mut frame = editor_input_group_frame(
+                    cx,
+                    LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    density,
+                    frame_chrome,
+                    EditorFrameState {
+                        enabled: enabled_for_paint,
+                        hovered,
+                        pressed: false,
+                        focused: is_focused,
+                        open: false,
+                    },
+                    move |cx, _visuals| vec![editor_input_group_row(cx, Px(0.0), vec![input])],
+                );
+
+                if let Some(test_id) = options.test_id.as_ref() {
+                    frame = frame.test_id(test_id.clone());
+                }
+
+                vec![frame]
+            },
+        );
 
         let error_msg = cx
             .get_model_cloned(&error, Invalidation::Paint)
@@ -306,7 +361,7 @@ where
             })
         });
 
-        let mut layout = self.options.layout;
+        let mut layout = options.layout;
         if layout.size.min_height.is_none() {
             layout.size.min_height = Some(density.row_height);
         }
@@ -322,7 +377,7 @@ where
                 wrap: false,
             },
             move |_cx| {
-                let mut out = vec![input];
+                let mut out = vec![field];
                 if let Some(error) = error_el {
                     out.push(error);
                 }
