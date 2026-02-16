@@ -2655,8 +2655,20 @@ mod display_map_tests {
             code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
         let map = DisplayMap::new_with_code_wrap_policy(&buf, Some(6), Some(policy));
 
-        let seam = "left->right".len();
-        let pt = map.byte_to_display_point(&buf, seam);
-        assert_eq!(pt, DisplayPoint::new(2, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 0), DisplayPoint::new(0, 0));
+        assert_eq!(
+            map.byte_to_display_point(&buf, "left->".len()),
+            DisplayPoint::new(1, 0)
+        );
+        assert_eq!(
+            map.byte_to_display_point(&buf, "left->right".len()),
+            DisplayPoint::new(2, 0)
+        );
+
+        let line0_end = buf.line_byte_range(0).expect("line 0").end;
+        assert_eq!(
+            map.byte_to_display_point(&buf, line0_end),
+            DisplayPoint::new(2, 6)
+        );
     }
 }

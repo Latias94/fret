@@ -2314,6 +2314,43 @@ fn home_end_respects_code_wrap_policy_row_boundaries() {
 }
 
 #[test]
+fn set_code_wrap_policy_clears_row_geom_cache_when_wrapped() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.row_geom_cache.insert(
+            0,
+            (
+                geom::RowGeom {
+                    row_range: 0.."left->".len(),
+                    key: row_geom_key_for_tests(&Arc::from("left->")),
+                    caret_stops: vec![(0, Px(0.0))],
+                    fold_map: None,
+                    caret_rect_top: None,
+                    caret_rect_height: None,
+                    has_preedit: false,
+                    preedit: None,
+                },
+                0,
+            ),
+        );
+        assert!(!st.row_geom_cache.is_empty());
+    }
+
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Conservative,
+        ),
+    ));
+
+    let st = handle.state.borrow();
+    assert!(st.row_geom_cache.is_empty());
+    assert_eq!(st.row_geom_cache_wrap_cols, st.display_wrap_cols);
+}
+
+#[test]
 fn page_down_moves_by_viewport_rows_and_scrolls() {
     let handle = CodeEditorHandle::new("abcd\nefgh\nijkl\nmnop\nqrst\n");
     handle.set_soft_wrap_cols(Some(2));
