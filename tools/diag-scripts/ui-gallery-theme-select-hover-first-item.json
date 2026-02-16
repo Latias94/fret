@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-theme-select-hover-first-item",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2", "diag.overlay_placement_trace"]
   },
   "steps": [
     {
@@ -18,6 +18,20 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "timeout_frames": 240,
+      "query": { "kind": "placed_rect", "anchor_test_id": "ui-gallery-theme-preset-trigger" }
+    },
+    { "type": "wait_frames", "n": 16 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-light" }
       },
       "timeout_frames": 240
@@ -28,7 +42,11 @@
       "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-light" }
     },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_overlay_placement_trace",
+      "timeout_frames": 240,
+      "query": { "kind": "placed_rect", "anchor_test_id": "ui-gallery-theme-preset-trigger" }
+    },
     { "type": "capture_bundle", "label": "ui-gallery-theme-select-after-hover" }
   ]
 }
-

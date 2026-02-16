@@ -1327,6 +1327,11 @@ fn select_impl<H: UiHost>(
             alignment_item_pos: Option<usize>,
             alignment_item_has_leading_non_item: bool,
             width_probe: Option<GlobalElementId>,
+            // Item-aligned select placement can be sensitive to sub-frame layout settling (e.g.
+            // text measurement, scroll affordances). To avoid visible "jitter" on hover/focus
+            // changes, lock the first stable item-aligned layout for the duration of a single
+            // open session (cleared on close/unmount).
+            last_item_aligned_layout: Option<radix_select::SelectItemAlignedLayout>,
             pending_item_aligned_scroll_to_y: Option<Px>,
             last_item_aligned_scroll_to_y: Option<Px>,
             item_aligned_user_scrolled: bool,
@@ -1357,6 +1362,7 @@ fn select_impl<H: UiHost>(
                     alignment_item_pos: None,
                     alignment_item_has_leading_non_item: false,
                     width_probe: None,
+                    last_item_aligned_layout: None,
                     pending_item_aligned_scroll_to_y: None,
                     last_item_aligned_scroll_to_y: None,
                     item_aligned_user_scrolled: false,
@@ -1876,6 +1882,8 @@ fn select_impl<H: UiHost>(
                         _did_item_aligned_scroll_initial,
                         _did_item_aligned_scroll_reposition,
                         _item_aligned_scroll_up_visible,
+                        last_item_aligned_layout,
+                        width_probe_ready_for_lock,
                     ) = if position == SelectPosition::ItemAligned {
                         let (
                             value_node,
@@ -1890,6 +1898,7 @@ fn select_impl<H: UiHost>(
                             did_item_aligned_scroll_initial,
                             did_item_aligned_scroll_reposition,
                             item_aligned_scroll_up_visible,
+                            last_item_aligned_layout,
                         ) = {
                             let state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
                             (
@@ -1905,6 +1914,7 @@ fn select_impl<H: UiHost>(
                                 state.did_item_aligned_scroll_initial,
                                 state.did_item_aligned_scroll_reposition,
                                 state.item_aligned_scroll_up_visible,
+                                state.last_item_aligned_layout,
                             )
                         };
 
@@ -1989,14 +1999,22 @@ fn select_impl<H: UiHost>(
                         } else {
                             None
                         };
+                        let width_probe_ready_for_lock = match width_probe {
+                            None => true,
+                            Some(id) => cx
+                                .last_bounds_for_element(id)
+                                .is_some_and(|rect| rect.size.width.0.is_finite() && rect.size.width.0 > 0.0),
+                        };
                         (
                             item_aligned_inputs,
                             did_item_aligned_scroll_initial,
                             did_item_aligned_scroll_reposition,
                             item_aligned_scroll_up_visible,
+                            last_item_aligned_layout,
+                            width_probe_ready_for_lock,
                         )
                     } else {
-                        (None, false, false, false)
+                        (None, false, false, false, None, false)
                     };
 
                     let side_offset = side_offset_override.unwrap_or_else(|| {
@@ -2107,7 +2125,7 @@ fn select_impl<H: UiHost>(
                     let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
-                    let resolved = radix_select::select_resolve_content_placement_from_elements(
+                    let mut resolved = radix_select::select_resolve_content_placement_from_elements(
                         cx,
                         anchor,
                         outer,
@@ -2116,8 +2134,43 @@ fn select_impl<H: UiHost>(
                         arrow.then_some(arrow_size),
                         item_aligned_inputs,
                     );
+                    let mut item_aligned_layout_is_cached_fallback = false;
+                    let mut item_aligned_layout_locked_this_frame = false;
+                    if position == SelectPosition::ItemAligned && is_open {
+                        if let Some(layout) = last_item_aligned_layout {
+                            // Lock placement for the duration of the open session (Base UI's
+                            // `alignItemWithTrigger` disables anchor tracking; model the outcome
+                            // by reusing the first stable solved layout).
+                            item_aligned_layout_is_cached_fallback = true;
+                            resolved = radix_select::SelectResolvedContentPlacement {
+                                placement: radix_select::select_content_placement_item_aligned(
+                                    anchor, layout,
+                                ),
+                                item_aligned_layout: Some(layout),
+                            };
+                        } else if let Some(layout) = resolved.item_aligned_layout
+                            && width_probe_ready_for_lock
+                        {
+                            let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                            if state.last_item_aligned_layout.is_none() {
+                                state.last_item_aligned_layout = Some(layout);
+                                item_aligned_layout_locked_this_frame = true;
+                            }
+                        }
+                    }
+                    if debug_item_aligned {
+                        eprintln!(
+                            "select item-aligned placement: computed_layout={} cached_layout_present={} cached_used={} locked_now={} placed_y={}",
+                            resolved.item_aligned_layout.is_some(),
+                            last_item_aligned_layout.is_some(),
+                            item_aligned_layout_is_cached_fallback,
+                            item_aligned_layout_locked_this_frame,
+                            resolved.placement.placed.origin.y.0,
+                        );
+                    }
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
+                        && !item_aligned_layout_is_cached_fallback
                     {
                         // Radix repositions once after the scroll-up button mounts (it shifts the
                         // viewport down in the normal flow). Model this as an initial scroll plus
@@ -2323,6 +2376,7 @@ fn select_impl<H: UiHost>(
                                  state.was_open = false;
                                  state.content.set_active_row(None);
                                  state.pending_active_align_top_scroll = false;
+                                 state.last_item_aligned_layout = None;
                                 state.opened_by_pointer = false;
                                 state.opened_by_touch = false;
                             }
