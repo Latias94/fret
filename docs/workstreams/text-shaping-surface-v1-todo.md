@@ -44,6 +44,13 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 
 ## Open questions
 
+- [x] Add a feature behavior conformance gate beyond cache-key correctness.
+  - Gate: toggling `liga`/`calt` must change shaped glyph output for at least one known ligature
+    candidate string, using a bundled font fixture (no system font dependency).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+  - Note: this supersedes the deferred question below; keep it for historical rationale.
+
 - [~] Do we need a feature behavior conformance fixture beyond “keying correctness”?
   - Status: deferred until we add a stable, bundled-font-backed fixture that is guaranteed to
     visibly change shaping under a feature toggle (e.g. `liga`).
