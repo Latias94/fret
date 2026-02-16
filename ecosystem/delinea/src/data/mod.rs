@@ -67,6 +67,10 @@ impl Column {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn as_f64_slice(&self) -> Option<&[f64]> {
         match self {
             Self::F64(v) => Some(v),

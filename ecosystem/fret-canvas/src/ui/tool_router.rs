@@ -140,22 +140,13 @@ pub struct CanvasToolEntry {
     pub handlers: CanvasToolHandlers,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct CanvasToolRouterProps {
     /// Pan/zoom substrate props used for the canvas surface.
     pub pan_zoom: PanZoomCanvasSurfacePanelProps,
 
     /// Optional externally-controlled active tool id.
     pub active_tool: Option<Model<Option<CanvasToolId>>>,
-}
-
-impl Default for CanvasToolRouterProps {
-    fn default() -> Self {
-        Self {
-            pan_zoom: PanZoomCanvasSurfacePanelProps::default(),
-            active_tool: None,
-        }
-    }
 }
 
 fn compute_tool_cx(
@@ -178,7 +169,7 @@ fn compute_tool_cx(
     }
 }
 
-fn tool_by_id<'a>(tools: &'a [CanvasToolEntry], id: CanvasToolId) -> Option<&'a CanvasToolEntry> {
+fn tool_by_id(tools: &[CanvasToolEntry], id: CanvasToolId) -> Option<&CanvasToolEntry> {
     tools.iter().find(|t| t.id == id)
 }
 
@@ -217,7 +208,7 @@ pub fn canvas_tool_router_panel<H: UiHost>(
                 .models_mut()
                 .read(&view_model_c, |v| *v)
                 .ok()
-                .unwrap_or(PanZoom2D::default());
+                .unwrap_or_default();
             let bounds = host.bounds();
             let cx2 = compute_tool_cx(
                 view,
@@ -260,7 +251,7 @@ pub fn canvas_tool_router_panel<H: UiHost>(
                 .models_mut()
                 .read(&view_model_c, |v| *v)
                 .ok()
-                .unwrap_or(PanZoom2D::default());
+                .unwrap_or_default();
             let bounds = host.bounds();
             let cx2 = compute_tool_cx(view, bounds, mv.position, mv.pixels_per_point, mv.modifiers);
 
@@ -303,7 +294,7 @@ pub fn canvas_tool_router_panel<H: UiHost>(
                 .models_mut()
                 .read(&view_model_c, |v| *v)
                 .ok()
-                .unwrap_or(PanZoom2D::default());
+                .unwrap_or_default();
             let bounds = host.bounds();
             let cx2 = compute_tool_cx(view, bounds, up.position, up.pixels_per_point, up.modifiers);
 
@@ -346,7 +337,7 @@ pub fn canvas_tool_router_panel<H: UiHost>(
                 .models_mut()
                 .read(&view_model_c, |v| *v)
                 .ok()
-                .unwrap_or(PanZoom2D::default());
+                .unwrap_or_default();
             let bounds = host.bounds();
             let cx2 = compute_tool_cx(
                 view,
@@ -395,7 +386,7 @@ pub fn canvas_tool_router_panel<H: UiHost>(
                 .models_mut()
                 .read(&view_model_c, |v| *v)
                 .ok()
-                .unwrap_or(PanZoom2D::default());
+                .unwrap_or_default();
             let bounds = host.bounds();
             let cx2 = compute_tool_cx(
                 view,

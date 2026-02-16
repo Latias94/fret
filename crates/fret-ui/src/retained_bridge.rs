@@ -16,6 +16,8 @@ pub use crate::widget::{
     MeasureCx, PaintCx, PrepaintCx, SemanticsCx, Widget,
 };
 
+type RetainedSubtreeBuildFn<H> = dyn Fn(&mut UiTree<H>) -> NodeId;
+
 /// Extension trait that exposes a feature-gated node creation API for retained widgets.
 pub trait UiTreeRetainedExt<H: UiHost> {
     fn create_node_retained(&mut self, widget: impl Widget<H> + 'static) -> NodeId;
@@ -45,15 +47,12 @@ impl std::fmt::Debug for RetainedSubtreeFactory {
 
 impl RetainedSubtreeFactory {
     pub fn new<H: UiHost + 'static>(f: impl Fn(&mut UiTree<H>) -> NodeId + 'static) -> Self {
-        let f: Arc<dyn Fn(&mut UiTree<H>) -> NodeId> = Arc::new(f);
+        let f: Arc<RetainedSubtreeBuildFn<H>> = Arc::new(f);
         Self { inner: Arc::new(f) }
     }
 
     pub(crate) fn build<H: UiHost + 'static>(&self, ui: &mut UiTree<H>) -> NodeId {
-        let Some(f) = self
-            .inner
-            .downcast_ref::<Arc<dyn Fn(&mut UiTree<H>) -> NodeId>>()
-        else {
+        let Some(f) = self.inner.downcast_ref::<Arc<RetainedSubtreeBuildFn<H>>>() else {
             if crate::strict_runtime::strict_runtime_enabled() {
                 panic!("retained subtree factory type mismatch (host type changed?)");
             }

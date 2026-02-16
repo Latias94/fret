@@ -1095,38 +1095,48 @@ impl ElementHostWidget {
                     }
                 }
 
-                if focused {
-                    let (anchor, caret) = crate::elements::with_element_state(
-                        &mut *cx.app,
-                        window,
-                        self.element,
-                        crate::element::SelectableTextState::default,
-                        |state| (state.selection_anchor, state.caret),
-                    );
-                    let start = anchor.min(caret);
-                    let end = anchor.max(caret);
-                    if start < end {
-                        let mut rects: Vec<fret_core::Rect> = Vec::new();
-                        cx.services
-                            .selection_rects_clipped(blob, (start, end), clip, &mut rects);
-                        let sel_color = cx.theme().color_token("selection.background");
-                        for r in rects {
-                            let rect = fret_core::Rect::new(
-                                fret_core::Point::new(
-                                    fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
-                                    fret_core::Px(cx.bounds.origin.y.0 + r.origin.y.0),
-                                ),
-                                r.size,
-                            );
-                            cx.scene.push(SceneOp::Quad {
-                                order: DrawOrder(0),
-                                rect,
-                                background: Paint::Solid(sel_color),
-                                border: fret_core::Edges::all(fret_core::Px(0.0)),
-                                border_paint: Paint::Solid(Color::TRANSPARENT),
-                                corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
-                            });
-                        }
+                let (anchor, caret) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| (state.selection_anchor, state.caret),
+                );
+                let start = anchor.min(caret);
+                let end = anchor.max(caret);
+                if start < end {
+                    let window_focused = cx
+                        .app
+                        .global::<fret_core::WindowMetricsService>()
+                        .and_then(|svc| svc.focused(window))
+                        .unwrap_or(true);
+                    let mut rects: Vec<fret_core::Rect> = Vec::new();
+                    cx.services
+                        .selection_rects_clipped(blob, (start, end), clip, &mut rects);
+                    let sel_color = if focused {
+                        cx.theme().color_token("selection.background")
+                    } else if !window_focused {
+                        cx.theme()
+                            .color_token("selection.window_inactive.background")
+                    } else {
+                        cx.theme().color_token("selection.inactive.background")
+                    };
+                    for r in rects {
+                        let rect = fret_core::Rect::new(
+                            fret_core::Point::new(
+                                fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
+                                fret_core::Px(cx.bounds.origin.y.0 + r.origin.y.0),
+                            ),
+                            r.size,
+                        );
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(0),
+                            rect,
+                            background: Paint::Solid(sel_color),
+                            border: fret_core::Edges::all(fret_core::Px(0.0)),
+                            border_paint: Paint::Solid(Color::TRANSPARENT),
+                            corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+                        });
                     }
                 }
 

@@ -138,8 +138,6 @@ fn y_percent_extents_cache_hits_and_invalidates() {
     assert_eq!(extents.get(&y_axis).copied(), Some((123.0, 456.0)));
 
     // Changing the selection must invalidate the cached signature.
-    let view_series_index = view_series_index;
-    let mut view = view;
     view.series[0].selection = RowSelection::Range(RowRange {
         start: 50,
         end: 101,

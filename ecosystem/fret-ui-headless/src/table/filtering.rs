@@ -226,10 +226,10 @@ pub fn evaluate_row_filter_state<'a, TData>(
     impl<TData> ResolvedFilterFn<TData> {
         fn resolve_filter_value(&self, value: &Value) -> Value {
             match self {
-                Self::BuiltIn { builtin, .. } => match builtin {
-                    BuiltInFilterFn::InNumberRange => resolve_in_number_range(value),
-                    _ => value.clone(),
-                },
+                Self::BuiltIn {
+                    builtin: BuiltInFilterFn::InNumberRange,
+                    ..
+                } => resolve_in_number_range(value),
                 _ => value.clone(),
             }
         }
@@ -368,100 +368,99 @@ pub fn evaluate_row_filter_state<'a, TData>(
     }
 
     let mut resolved_global_filters: Vec<ResolvedGlobalFilter<TData>> = Vec::new();
-    if let Some(global_filter_value) = global_filter.as_ref() {
-        if options.enable_filters && options.enable_global_filter {
-            let first_row_original = row_model
-                .flat_rows()
-                .first()
-                .and_then(|&i| row_model.row(i))
-                .map(|r| r.original);
+    if let Some(global_filter_value) = global_filter.as_ref()
+        && options.enable_filters
+        && options.enable_global_filter
+    {
+        let first_row_original = row_model
+            .flat_rows()
+            .first()
+            .and_then(|&i| row_model.row(i))
+            .map(|r| r.original);
 
-            for col in columns {
-                if !col.enable_global_filter {
-                    continue;
-                }
+        for col in columns {
+            if !col.enable_global_filter {
+                continue;
+            }
 
-                let can_global_filter = match get_column_can_global_filter {
-                    Some(f) => first_row_original.is_some_and(|first| f(col, first)),
-                    None => match first_row_original {
-                        Some(first) => match column_value_getter(col) {
-                            Some(get_value) => matches!(
-                                get_value.get(first),
-                                TanStackValue::String(_) | TanStackValue::Number(_)
-                            ),
-                            None => col.filter_fn.is_some() || col.filter_fn_with_meta.is_some(),
-                        },
-                        _ => false,
+            let can_global_filter = match get_column_can_global_filter {
+                Some(f) => first_row_original.is_some_and(|first| f(col, first)),
+                None => match first_row_original {
+                    Some(first) => match column_value_getter(col) {
+                        Some(get_value) => matches!(
+                            get_value.get(first),
+                            TanStackValue::String(_) | TanStackValue::Number(_)
+                        ),
+                        None => col.filter_fn.is_some() || col.filter_fn_with_meta.is_some(),
                     },
-                };
+                    _ => false,
+                },
+            };
 
-                if !can_global_filter {
-                    continue;
-                }
+            if !can_global_filter {
+                continue;
+            }
 
-                if let Some(getter) = column_value_getter(col) {
-                    let resolved_global = match global_filter_fn {
-                        FilteringFnSpec::Auto => ResolvedFilterFn::BuiltIn {
-                            builtin: BuiltInFilterFn::IncludesString,
-                            getter: getter.clone(),
-                        },
-                        FilteringFnSpec::BuiltIn(builtin) => ResolvedFilterFn::BuiltIn {
+            if let Some(getter) = column_value_getter(col) {
+                let resolved_global = match global_filter_fn {
+                    FilteringFnSpec::Auto => ResolvedFilterFn::BuiltIn {
+                        builtin: BuiltInFilterFn::IncludesString,
+                        getter: getter.clone(),
+                    },
+                    FilteringFnSpec::BuiltIn(builtin) => ResolvedFilterFn::BuiltIn {
+                        builtin: *builtin,
+                        getter: getter.clone(),
+                    },
+                    FilteringFnSpec::Named(key) => match filter_fns.get(key) {
+                        Some(FilterFnDef::BuiltIn(builtin)) => ResolvedFilterFn::BuiltIn {
                             builtin: *builtin,
                             getter: getter.clone(),
                         },
-                        FilteringFnSpec::Named(key) => match filter_fns.get(key) {
-                            Some(FilterFnDef::BuiltIn(builtin)) => ResolvedFilterFn::BuiltIn {
-                                builtin: *builtin,
-                                getter: getter.clone(),
-                            },
-                            Some(FilterFnDef::Value(f)) => ResolvedFilterFn::Value {
-                                getter: getter.clone(),
-                                f: f.clone(),
-                            },
-                            Some(FilterFnDef::ValueWithMeta(f)) => {
-                                ResolvedFilterFn::ValueWithMeta {
-                                    getter: getter.clone(),
-                                    f: f.clone(),
-                                }
-                            }
-                            None => {
-                                let builtin = builtin_filter_key(key.as_ref())
-                                    .unwrap_or(BuiltInFilterFn::IncludesString);
-                                ResolvedFilterFn::BuiltIn { builtin, getter }
-                            }
+                        Some(FilterFnDef::Value(f)) => ResolvedFilterFn::Value {
+                            getter: getter.clone(),
+                            f: f.clone(),
                         },
-                    };
+                        Some(FilterFnDef::ValueWithMeta(f)) => ResolvedFilterFn::ValueWithMeta {
+                            getter: getter.clone(),
+                            f: f.clone(),
+                        },
+                        None => {
+                            let builtin = builtin_filter_key(key.as_ref())
+                                .unwrap_or(BuiltInFilterFn::IncludesString);
+                            ResolvedFilterFn::BuiltIn { builtin, getter }
+                        }
+                    },
+                };
 
-                    let resolved_value = resolved_global.resolve_filter_value(global_filter_value);
-                    resolved_global_filters.push(ResolvedGlobalFilter {
-                        column_id: col.id.clone(),
-                        f: resolved_global,
-                        resolved_value,
-                    });
-                    continue;
-                }
+                let resolved_value = resolved_global.resolve_filter_value(global_filter_value);
+                resolved_global_filters.push(ResolvedGlobalFilter {
+                    column_id: col.id.clone(),
+                    f: resolved_global,
+                    resolved_value,
+                });
+                continue;
+            }
 
-                if let Some(custom) = col.filter_fn_with_meta.as_ref() {
-                    let f = ResolvedFilterFn::CustomWithMeta(custom.clone());
-                    let resolved_value = f.resolve_filter_value(global_filter_value);
-                    resolved_global_filters.push(ResolvedGlobalFilter {
-                        column_id: col.id.clone(),
-                        f,
-                        resolved_value,
-                    });
-                    continue;
-                }
+            if let Some(custom) = col.filter_fn_with_meta.as_ref() {
+                let f = ResolvedFilterFn::CustomWithMeta(custom.clone());
+                let resolved_value = f.resolve_filter_value(global_filter_value);
+                resolved_global_filters.push(ResolvedGlobalFilter {
+                    column_id: col.id.clone(),
+                    f,
+                    resolved_value,
+                });
+                continue;
+            }
 
-                if let Some(custom) = col.filter_fn.as_ref() {
-                    let f = ResolvedFilterFn::Custom(custom.clone());
-                    let resolved_value = f.resolve_filter_value(global_filter_value);
-                    resolved_global_filters.push(ResolvedGlobalFilter {
-                        column_id: col.id.clone(),
-                        f,
-                        resolved_value,
-                    });
-                    continue;
-                }
+            if let Some(custom) = col.filter_fn.as_ref() {
+                let f = ResolvedFilterFn::Custom(custom.clone());
+                let resolved_value = f.resolve_filter_value(global_filter_value);
+                resolved_global_filters.push(ResolvedGlobalFilter {
+                    column_id: col.id.clone(),
+                    f,
+                    resolved_value,
+                });
+                continue;
             }
         }
     }
@@ -836,7 +835,7 @@ pub fn contains_ascii_case_insensitive(haystack: &str, needle: &str) -> bool {
         if needle
             .iter()
             .enumerate()
-            .all(|(i, &b)| hay[start + i].to_ascii_lowercase() == b.to_ascii_lowercase())
+            .all(|(i, &b)| hay[start + i].eq_ignore_ascii_case(&b))
         {
             return true;
         }

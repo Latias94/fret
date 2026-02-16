@@ -100,10 +100,7 @@ impl TextInputStyle {
             corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
             text_color: theme.color_token("foreground"),
             placeholder_color: theme.color_token("muted-foreground"),
-            selection_color: Color {
-                a: 1.0,
-                ..theme.color_token("selection.background")
-            },
+            selection_color: theme.color_token("selection.background"),
             caret_color: theme.color_token("foreground"),
             preedit_color: theme.color_token("primary"),
         }

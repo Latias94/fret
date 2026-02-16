@@ -773,10 +773,12 @@ impl ParleyShaper {
             )];
         }
 
-        let mut root_style = ParleyTextStyle::default();
-        root_style.word_break = word_break;
-        root_style.overflow_wrap = overflow_wrap;
-        root_style.text_wrap_mode = text_wrap_mode;
+        let root_style = ParleyTextStyle {
+            word_break,
+            overflow_wrap,
+            text_wrap_mode,
+            ..Default::default()
+        };
 
         let mut builder = self
             .lcx
@@ -1027,7 +1029,7 @@ fn shaping_properties_for_span(
         let variations = font_variations_for_axes(&axes_for_variations);
         if !variations.is_empty() {
             out.push(StyleProperty::FontVariations(FontSettings::List(
-                Cow::Owned(variations.into()),
+                Cow::Owned(variations),
             )));
         }
     }
@@ -1035,7 +1037,7 @@ fn shaping_properties_for_span(
         let features = font_features_for_settings(features);
         if !features.is_empty() {
             out.push(StyleProperty::FontFeatures(FontSettings::List(Cow::Owned(
-                features.into(),
+                features,
             ))));
         }
     }

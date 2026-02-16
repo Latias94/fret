@@ -59,8 +59,10 @@ fn test_view_projection_ortho(viewport_px: (f32, f32), eye: Vec3) -> Mat4 {
 }
 
 fn base_gizmo(mode: GizmoMode) -> Gizmo {
-    let mut config = GizmoConfig::default();
-    config.mode = mode;
+    let mut config = GizmoConfig {
+        mode,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     // Keep tests deterministic: axis flip + visibility thresholds are UX heuristics that can
@@ -251,8 +253,10 @@ fn operation_mask_translate_view_picks_screen_handle_at_origin() {
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
     let view_proj = test_view_projection((800.0, 600.0));
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Universal;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Universal,
+        ..Default::default()
+    };
     config.operation_mask = Some(GizmoOps::translate_view());
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
@@ -296,8 +300,10 @@ fn operation_mask_scale_uniform_picks_uniform_handle_at_origin() {
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
     let view_proj = test_view_projection((800.0, 600.0));
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Universal;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Universal,
+        ..Default::default()
+    };
     config.operation_mask = Some(GizmoOps::scale_uniform());
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
@@ -341,8 +347,10 @@ fn operation_mask_translate_axis_tip_wins_over_rotate_rings() {
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
     let view_proj = test_view_projection((800.0, 600.0));
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Universal;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Universal,
+        ..Default::default()
+    };
     config.operation_mask = Some(GizmoOps::translate_axis() | GizmoOps::rotate_all());
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
@@ -1230,8 +1238,10 @@ fn rotate_and_scale_are_not_pickable_when_origin_is_behind_camera() {
 
 #[test]
 fn axis_mask_hides_translate_axis_pick() {
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Translate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Translate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;
@@ -1283,8 +1293,10 @@ fn axis_mask_hides_translate_axis_pick() {
 
 #[test]
 fn axis_mask_single_axis_shows_only_perp_plane() {
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Translate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Translate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;
@@ -1374,8 +1386,10 @@ fn axis_mask_single_axis_shows_only_perp_plane() {
 
 #[test]
 fn translate_plane_inside_wins_over_axis_when_both_hit() {
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Translate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Translate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;
@@ -1478,8 +1492,10 @@ fn translate_plane_inside_wins_over_axis_when_both_hit() {
 
 #[test]
 fn allow_axis_flip_prefers_more_visible_direction() {
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Translate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Translate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = true;
@@ -1544,8 +1560,10 @@ fn fade_reduces_scale_axis_edge_pick_radius() {
     let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
     let origin = Vec3::ZERO;
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Scale;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Scale,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;
@@ -1812,8 +1830,10 @@ fn rotate_axis_drag_sign_flips_with_handedness() {
         local_bounds: None,
     }];
 
-    let mut base_cfg = GizmoConfig::default();
-    base_cfg.mode = GizmoMode::Rotate;
+    let mut base_cfg = GizmoConfig {
+        mode: GizmoMode::Rotate,
+        ..Default::default()
+    };
     base_cfg.depth_range = DepthRange::ZeroToOne;
     base_cfg.drag_start_threshold_px = 0.0;
     base_cfg.allow_axis_flip = false;
@@ -2001,8 +2021,10 @@ fn rotate_ring_fade_hides_edge_on_axis_ring() {
     let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
     let origin = Vec3::ZERO;
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Rotate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Rotate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;
@@ -2066,8 +2088,10 @@ fn rotate_view_ring_does_not_steal_axis_ring_when_both_hit() {
     let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
     let origin = Vec3::ZERO;
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Rotate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Rotate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.pick_radius_px = 18.0;
     config.drag_start_threshold_px = 0.0;
@@ -2256,8 +2280,10 @@ fn rotate_axis_ring_is_pickable_when_partially_behind_camera() {
     let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.20, 0.0, 0.20));
     let origin = Vec3::ZERO;
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Rotate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Rotate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.pick_radius_px = 18.0;
     config.drag_start_threshold_px = 0.0;
@@ -2760,8 +2786,10 @@ fn bounds_face_scale_returns_to_one_when_cursor_returns() {
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
     let view_proj = test_view_projection((800.0, 600.0));
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Scale;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Scale,
+        ..Default::default()
+    };
     config.pivot_mode = GizmoPivotMode::Center;
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
@@ -2896,8 +2924,10 @@ fn bounds_face_scale_snaps_to_extent_step_when_enabled() {
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
     let view_proj = test_view_projection((800.0, 600.0));
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Scale;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Scale,
+        ..Default::default()
+    };
     config.pivot_mode = GizmoPivotMode::Center;
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
@@ -2990,8 +3020,10 @@ fn scale_prefers_bounds_face_handle_over_axis_end_box_when_overlapping() {
     let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
     let view_proj = test_view_projection((800.0, 600.0));
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Scale;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Scale,
+        ..Default::default()
+    };
     config.pivot_mode = GizmoPivotMode::Center;
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
@@ -3970,8 +4002,10 @@ fn size_policy_pixels_clamped_by_selection_bounds_clamps_world_length() {
     let view_proj = test_view_projection((800.0, 600.0));
     let origin = Vec3::ZERO;
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Translate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Translate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;
@@ -4021,8 +4055,10 @@ fn size_policy_pixels_clamped_by_selection_bounds_can_clamp_down() {
     let view_proj = test_view_projection((800.0, 600.0));
     let origin = Vec3::ZERO;
 
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Translate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Translate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;
@@ -4068,8 +4104,10 @@ fn size_policy_pixels_clamped_by_selection_bounds_can_clamp_down() {
 
 #[test]
 fn pivot_center_uses_selection_bounds_center_when_bounds_present() {
-    let mut config = GizmoConfig::default();
-    config.mode = GizmoMode::Translate;
+    let mut config = GizmoConfig {
+        mode: GizmoMode::Translate,
+        ..Default::default()
+    };
     config.depth_range = DepthRange::ZeroToOne;
     config.drag_start_threshold_px = 0.0;
     config.allow_axis_flip = false;

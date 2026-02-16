@@ -2187,7 +2187,14 @@ fn ui_app_render<S>(
             if svc.poll_exit_trigger() {
                 app.push_effect(Effect::QuitApp);
             } else if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
+                // Diagnostics are driven per-window after paint, but multi-window scripts may
+                // need a non-active window to continue ticking (e.g. tear-off creates a new
+                // window and focus shifts). Keep all known windows in the RAF set so scripted
+                // playback and timeouts remain deterministic.
+                for w in svc.known_windows().iter().copied() {
+                    app.request_redraw(w);
+                    app.push_effect(Effect::RequestAnimationFrame(w));
+                }
             }
         });
     }
@@ -2614,6 +2621,12 @@ fn ui_app_window_created<S>(
             f(app, request, new_window);
         }
     }
+
+    // Ensure newly created windows get at least one frame. This is particularly important for
+    // diagnostics/scripted playback, which discovers windows opportunistically during per-window
+    // ticks (e.g. multi-window tear-off scripts waiting for `known_window_count_ge`).
+    app.request_redraw(new_window);
+    app.push_effect(Effect::RequestAnimationFrame(new_window));
 }
 
 fn ui_app_before_close_window<S>(

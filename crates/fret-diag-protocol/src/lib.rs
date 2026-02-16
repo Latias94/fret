@@ -671,6 +671,37 @@ pub enum UiActionStepV2 {
         x_px: f32,
         y_px: f32,
     },
+    /// Set a runner-level cursor screen position override using window-local client coordinates.
+    ///
+    /// This is identical to `set_cursor_in_window`, except the coordinates are in window-client
+    /// **logical pixels** (pre-DPI scale). The runner converts to physical pixels using the
+    /// current window scale factor.
+    ///
+    /// Prefer this for deterministic scripts that already express geometry in logical pixels.
+    SetCursorInWindowLogical {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        x_px: f32,
+        y_px: f32,
+    },
+    /// Set a runner-level mouse button state override.
+    ///
+    /// This is intended for scripted diagnostics that need to exercise runner-level fallback
+    /// behavior that depends on OS button state (e.g. "release outside all windows" poll-up
+    /// paths) without requiring real OS input.
+    ///
+    /// Desktop runners may choose to apply this only while certain interactions are active
+    /// (e.g. cross-window dock drags).
+    SetMouseButtons {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        left: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        right: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        middle: Option<bool>,
+    },
     RaiseWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,

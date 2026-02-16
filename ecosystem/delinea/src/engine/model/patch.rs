@@ -52,11 +52,11 @@ impl ChartPatch {
         let mut report = PatchReport::default();
         let mut series_replace_order: Option<Vec<SeriesId>> = None;
 
-        if mode == PatchMode::Replace || self.replace_families.contains(&ReplaceFamily::Viewport) {
-            if self.viewport.is_some() || !self.plot_viewports_by_grid.is_empty() {
-                report.viewport_changed = true;
-                report.marks_changed = true;
-            }
+        if (mode == PatchMode::Replace || self.replace_families.contains(&ReplaceFamily::Viewport))
+            && (self.viewport.is_some() || !self.plot_viewports_by_grid.is_empty())
+        {
+            report.viewport_changed = true;
+            report.marks_changed = true;
         }
 
         match mode {
@@ -456,12 +456,12 @@ impl ChartPatch {
                         report.structure_changed = true;
                     }
 
-                    if let Some(visible) = series.visible {
-                        if existing.visible != visible {
-                            existing.visible = visible;
-                            model.revs.bump_visual();
-                            report.marks_changed = true;
-                        }
+                    if let Some(visible) = series.visible
+                        && existing.visible != visible
+                    {
+                        existing.visible = visible;
+                        model.revs.bump_visual();
+                        report.marks_changed = true;
                     }
 
                     if let Some(baseline) = series.area_baseline
@@ -516,10 +516,10 @@ impl ChartPatch {
 fn desired_dataset_ids(ops: &[DatasetOp]) -> Result<BTreeSet<DatasetId>, ModelError> {
     let mut desired = BTreeSet::<DatasetId>::new();
     for op in ops {
-        if let DatasetOp::Upsert(dataset) = op {
-            if !desired.insert(dataset.id) {
-                return Err(ModelError::DuplicateId { kind: "dataset" });
-            }
+        if let DatasetOp::Upsert(dataset) = op
+            && !desired.insert(dataset.id)
+        {
+            return Err(ModelError::DuplicateId { kind: "dataset" });
         }
     }
     Ok(desired)
@@ -528,10 +528,10 @@ fn desired_dataset_ids(ops: &[DatasetOp]) -> Result<BTreeSet<DatasetId>, ModelEr
 fn desired_grid_ids(ops: &[GridOp]) -> Result<BTreeSet<GridId>, ModelError> {
     let mut desired = BTreeSet::<GridId>::new();
     for op in ops {
-        if let GridOp::Upsert { id } = op {
-            if !desired.insert(*id) {
-                return Err(ModelError::DuplicateId { kind: "grid" });
-            }
+        if let GridOp::Upsert { id } = op
+            && !desired.insert(*id)
+        {
+            return Err(ModelError::DuplicateId { kind: "grid" });
         }
     }
     Ok(desired)
@@ -540,10 +540,10 @@ fn desired_grid_ids(ops: &[GridOp]) -> Result<BTreeSet<GridId>, ModelError> {
 fn desired_axis_ids(ops: &[AxisOp]) -> Result<BTreeSet<AxisId>, ModelError> {
     let mut desired = BTreeSet::<AxisId>::new();
     for op in ops {
-        if let AxisOp::Upsert(axis) = op {
-            if !desired.insert(axis.id) {
-                return Err(ModelError::DuplicateId { kind: "axis" });
-            }
+        if let AxisOp::Upsert(axis) = op
+            && !desired.insert(axis.id)
+        {
+            return Err(ModelError::DuplicateId { kind: "axis" });
         }
     }
     Ok(desired)
@@ -633,10 +633,10 @@ fn validate_references(model: &ChartModel) -> Result<(), ModelError> {
             continue;
         };
         let key = (s.x_axis, s.y_axis, s.dataset, s.encode.x, s.stack_strategy);
-        if let Some(existing) = stack_groups.insert(stack, key) {
-            if existing != key {
-                return Err(ModelError::StackGroupMismatch { stack });
-            }
+        if let Some(existing) = stack_groups.insert(stack, key)
+            && existing != key
+        {
+            return Err(ModelError::StackGroupMismatch { stack });
         }
     }
 

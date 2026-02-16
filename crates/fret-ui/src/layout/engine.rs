@@ -411,7 +411,7 @@ impl TaffyLayoutEngine {
                     root,
                     available,
                     sf,
-                    |n, c| measure(n, c),
+                    &mut measure,
                 );
             }
             return;
@@ -453,7 +453,7 @@ impl TaffyLayoutEngine {
                         root,
                         available,
                         sf,
-                        |n, c| measure(n, c),
+                        &mut measure,
                     );
                 }
                 return;
@@ -487,7 +487,7 @@ impl TaffyLayoutEngine {
                     root,
                     available,
                     sf,
-                    |n, c| measure(n, c),
+                    &mut measure,
                 );
             }
             return;
@@ -502,7 +502,7 @@ impl TaffyLayoutEngine {
                     root,
                     available,
                     sf,
-                    |n, c| measure(n, c),
+                    &mut measure,
                 );
             }
             return;

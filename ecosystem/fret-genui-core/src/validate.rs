@@ -133,53 +133,53 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
     }
 
     for (key, element) in spec.elements.iter() {
-        if let Some(catalog) = catalog.as_deref() {
-            if let Some(severity) = catalog_issue_severity(catalog_mode) {
-                let component = catalog.components.get(element.ty.as_str());
-                if component.is_none() {
-                    issues.push(SpecIssue {
-                        severity,
-                        code: SpecIssueCode::UnknownComponent,
-                        message: format!(
-                            "Element {:?} uses unknown component type: {}",
-                            key, element.ty
-                        ),
-                        element_key: Some(key.clone()),
-                    });
+        if let (Some(catalog), Some(severity)) =
+            (catalog.as_deref(), catalog_issue_severity(catalog_mode))
+        {
+            let component = catalog.components.get(element.ty.as_str());
+            if component.is_none() {
+                issues.push(SpecIssue {
+                    severity,
+                    code: SpecIssueCode::UnknownComponent,
+                    message: format!(
+                        "Element {:?} uses unknown component type: {}",
+                        key, element.ty
+                    ),
+                    element_key: Some(key.clone()),
+                });
+            }
+
+            if let Some(component) = component {
+                for (prop_key, prop_def) in component.props.iter() {
+                    if prop_def.required && !element.props.contains_key(prop_key) {
+                        issues.push(SpecIssue {
+                            severity,
+                            code: SpecIssueCode::MissingRequiredProp,
+                            message: format!(
+                                "Element {:?} is missing required prop key {:?} for component {}",
+                                key, prop_key, element.ty
+                            ),
+                            element_key: Some(key.clone()),
+                        });
+                    }
                 }
 
-                if let Some(component) = component {
-                    for (prop_key, prop_def) in component.props.iter() {
-                        if prop_def.required && !element.props.contains_key(prop_key) {
-                            issues.push(SpecIssue {
-                                severity,
-                                code: SpecIssueCode::MissingRequiredProp,
-                                message: format!(
-                                    "Element {:?} is missing required prop key {:?} for component {}",
-                                    key, prop_key, element.ty
-                                ),
-                                element_key: Some(key.clone()),
-                            });
-                        }
-                    }
+                for (prop_key, prop_value) in element.props.iter() {
+                    let Some(prop_def) = component.props.get(prop_key) else {
+                        issues.push(SpecIssue {
+                            severity,
+                            code: SpecIssueCode::InvalidPropKey,
+                            message: format!(
+                                "Element {:?} has unsupported prop key {:?} for component {}",
+                                key, prop_key, element.ty
+                            ),
+                            element_key: Some(key.clone()),
+                        });
+                        continue;
+                    };
 
-                    for (prop_key, prop_value) in element.props.iter() {
-                        let Some(prop_def) = component.props.get(prop_key) else {
-                            issues.push(SpecIssue {
-                                severity,
-                                code: SpecIssueCode::InvalidPropKey,
-                                message: format!(
-                                    "Element {:?} has unsupported prop key {:?} for component {}",
-                                    key, prop_key, element.ty
-                                ),
-                                element_key: Some(key.clone()),
-                            });
-                            continue;
-                        };
-
-                        if !value_matches_type(prop_value, &prop_def.value_type, prop_def.nullable)
-                        {
-                            issues.push(SpecIssue {
+                    if !value_matches_type(prop_value, &prop_def.value_type, prop_def.nullable) {
+                        issues.push(SpecIssue {
                                 severity,
                                 code: SpecIssueCode::InvalidPropType,
                                 message: format!(
@@ -191,50 +191,49 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                                 ),
                                 element_key: Some(key.clone()),
                             });
+                    }
+                }
+
+                if let Some(on) = element.on.as_ref() {
+                    for event in on.keys() {
+                        if !component.events.contains(event.as_str()) {
+                            issues.push(SpecIssue {
+                                severity,
+                                code: SpecIssueCode::UnknownEvent,
+                                message: format!(
+                                    "Element {:?} binds unknown event {:?} for component {}",
+                                    key, event, element.ty
+                                ),
+                                element_key: Some(key.clone()),
+                            });
                         }
                     }
 
-                    if let Some(on) = element.on.as_ref() {
-                        for event in on.keys() {
-                            if !component.events.contains(event.as_str()) {
+                    for (event, binding) in on.iter() {
+                        for b in binding.iter() {
+                            let Some(action_def) = catalog.actions.get(b.action.as_str()) else {
                                 issues.push(SpecIssue {
                                     severity,
-                                    code: SpecIssueCode::UnknownEvent,
+                                    code: SpecIssueCode::UnknownAction,
                                     message: format!(
-                                        "Element {:?} binds unknown event {:?} for component {}",
-                                        key, event, element.ty
+                                        "Element {:?} binds unknown action {:?} for event {:?}",
+                                        key, b.action, event
                                     ),
                                     element_key: Some(key.clone()),
                                 });
-                            }
-                        }
+                                continue;
+                            };
 
-                        for (event, binding) in on.iter() {
-                            for b in binding.iter() {
-                                let Some(action_def) = catalog.actions.get(b.action.as_str())
-                                else {
-                                    issues.push(SpecIssue {
-                                        severity,
-                                        code: SpecIssueCode::UnknownAction,
-                                        message: format!(
-                                            "Element {:?} binds unknown action {:?} for event {:?}",
-                                            key, b.action, event
-                                        ),
-                                        element_key: Some(key.clone()),
-                                    });
-                                    continue;
-                                };
+                            // If the action declares param keys, enforce them. If it declares no keys,
+                            // allow any params (action semantics are app-owned).
+                            if !action_def.params.is_empty() {
+                                let params = b.params.as_ref();
 
-                                // If the action declares param keys, enforce them. If it declares no keys,
-                                // allow any params (action semantics are app-owned).
-                                if !action_def.params.is_empty() {
-                                    let params = b.params.as_ref();
-
-                                    for (param_key, param_def) in action_def.params.iter() {
-                                        if param_def.required
-                                            && params.and_then(|p| p.get(param_key)).is_none()
-                                        {
-                                            issues.push(SpecIssue {
+                                for (param_key, param_def) in action_def.params.iter() {
+                                    if param_def.required
+                                        && params.and_then(|p| p.get(param_key)).is_none()
+                                    {
+                                        issues.push(SpecIssue {
                                                 severity,
                                                 code: SpecIssueCode::MissingRequiredActionParam,
                                                 message: format!(
@@ -243,14 +242,14 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                                                 ),
                                                 element_key: Some(key.clone()),
                                             });
-                                        }
                                     }
+                                }
 
-                                    if let Some(params) = params {
-                                        for (param_key, param_value) in params.iter() {
-                                            let Some(param_def) = action_def.params.get(param_key)
-                                            else {
-                                                issues.push(SpecIssue {
+                                if let Some(params) = params {
+                                    for (param_key, param_value) in params.iter() {
+                                        let Some(param_def) = action_def.params.get(param_key)
+                                        else {
+                                            issues.push(SpecIssue {
                                                     severity,
                                                     code: SpecIssueCode::InvalidActionParamKey,
                                                     message: format!(
@@ -259,15 +258,15 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                                                     ),
                                                     element_key: Some(key.clone()),
                                                 });
-                                                continue;
-                                            };
+                                            continue;
+                                        };
 
-                                            if !value_matches_type(
-                                                param_value,
-                                                &param_def.value_type,
-                                                param_def.nullable,
-                                            ) {
-                                                issues.push(SpecIssue {
+                                        if !value_matches_type(
+                                            param_value,
+                                            &param_def.value_type,
+                                            param_def.nullable,
+                                        ) {
+                                            issues.push(SpecIssue {
                                                     severity,
                                                     code: SpecIssueCode::InvalidActionParamType,
                                                     message: format!(
@@ -279,7 +278,6 @@ pub fn validate_spec(spec: &SpecV1, options: ValidateSpecOptions) -> SpecValidat
                                                     ),
                                                     element_key: Some(key.clone()),
                                                 });
-                                            }
                                         }
                                     }
                                 }
@@ -484,7 +482,7 @@ mod tests {
             state: None,
         };
         let out = validate_spec(&spec, ValidateSpecOptions::default());
-        assert_eq!(out.valid, false);
+        assert!(!out.valid);
         assert!(
             out.issues
                 .iter()
@@ -513,7 +511,7 @@ mod tests {
             state: None,
         };
         let out = validate_spec(&spec, ValidateSpecOptions::default());
-        assert_eq!(out.valid, false);
+        assert!(!out.valid);
         assert!(
             out.issues
                 .iter()
@@ -544,7 +542,7 @@ mod tests {
             state: None,
         };
         let out = validate_spec(&spec, ValidateSpecOptions::default());
-        assert_eq!(out.valid, false);
+        assert!(!out.valid);
         assert!(
             out.issues
                 .iter()

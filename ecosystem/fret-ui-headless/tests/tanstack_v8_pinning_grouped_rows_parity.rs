@@ -148,7 +148,7 @@ fn tanstack_state_to_table_state_with_row_models(
         .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
         .initial_state(initial_state.clone())
         .state(state_for_models.clone())
-        .options(options.clone())
+        .options(options)
         .build();
 
     let core = model_table.core_row_model();
@@ -201,7 +201,7 @@ fn tanstack_v8_pinning_grouped_rows_parity() {
         let mut state = tanstack_state_to_table_state_with_row_models(
             &data,
             &columns,
-            options.clone(),
+            options,
             &initial_state,
             &snap.state,
         );
@@ -213,7 +213,7 @@ fn tanstack_v8_pinning_grouped_rows_parity() {
                 .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .initial_state(initial_state.clone())
                 .state(state.clone())
-                .options(options.clone())
+                .options(options)
                 .build();
 
             match action {
@@ -242,7 +242,7 @@ fn tanstack_v8_pinning_grouped_rows_parity() {
             let expected_state = tanstack_state_to_table_state_with_row_models(
                 &data,
                 &columns,
-                options.clone(),
+                options,
                 &initial_state,
                 expected_next,
             );
@@ -498,7 +498,7 @@ fn tanstack_v8_pinning_grouped_rows_parity() {
                     RowPinPosition::Bottom => "bottom",
                 });
                 assert_eq!(
-                    pos.as_deref(),
+                    pos,
                     expected_pos.as_deref(),
                     "snapshot {} pin_position[{}] mismatch",
                     snap.id,

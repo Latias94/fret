@@ -29,6 +29,30 @@ pub enum DiagIncomingOpenItem {
 ///
 /// Effects are collected by the host (e.g. `fret-app::App`) and are expected to be handled by a
 /// runner/backend integration layer (native or web).
+///
+/// ## Completion events (runner contract)
+///
+/// Many effects represent an *asynchronous* request to the platform and are completed later by a
+/// corresponding [`fret_core::Event`]. Runners/backends should treat these as best-effort.
+///
+/// Common mappings:
+///
+/// - `ClipboardGetText { token, .. }` → `fret_core::Event::ClipboardText { token, .. }` or
+///   `fret_core::Event::ClipboardTextUnavailable { token, .. }`
+/// - `PrimarySelectionGetText { token, .. }` → `fret_core::Event::PrimarySelectionText { token, .. }`
+///   or `fret_core::Event::PrimarySelectionTextUnavailable { token, .. }`
+/// - `ShareSheetShow { token, .. }` → `fret_core::Event::ShareSheetCompleted { token, .. }`
+/// - `FileDialogOpen { .. }` → `fret_core::Event::FileDialogSelection(..)` or
+///   `fret_core::Event::FileDialogCanceled`
+/// - `FileDialogReadAll { token, .. }` → `fret_core::Event::FileDialogData(..)`
+/// - `IncomingOpenReadAll { token, .. }` → `fret_core::Event::IncomingOpenData(..)` or
+///   `fret_core::Event::IncomingOpenUnavailable { token, .. }`
+/// - `SetTimer { token, .. }` → `fret_core::Event::Timer { token }`
+/// - `ImageRegister* { token, .. }` → `fret_core::Event::ImageRegistered { token, .. }` or
+///   `fret_core::Event::ImageRegisterFailed { token, .. }`
+/// - `ImageUpdate* { token, .. }` → optionally `fret_core::Event::ImageUpdateApplied { token, .. }`
+///   or `fret_core::Event::ImageUpdateDropped { token, .. }` when the runner supports these acks
+///   (capability-gated to avoid flooding the event loop).
 pub enum Effect {
     /// Request a window redraw (one-shot).
     ///
@@ -79,9 +103,14 @@ pub enum Effect {
         window: Option<AppWindowId>,
         menu_bar: MenuBar,
     },
+    /// Sets the platform clipboard text (best-effort).
     ClipboardSetText {
         text: String,
     },
+    /// Requests reading platform clipboard text (best-effort).
+    ///
+    /// Runners/backends should eventually complete this request by emitting a corresponding event
+    /// carrying `token` (see `ClipboardToken` contract in `fret-core`).
     ClipboardGetText {
         window: AppWindowId,
         token: ClipboardToken,
@@ -110,6 +139,10 @@ pub enum Effect {
     ExternalDropRelease {
         token: ExternalDropToken,
     },
+    /// Requests opening a URL using the platform's default handler (best-effort).
+    ///
+    /// Callers should ensure the URL is safe/expected. Component-layer helpers may apply
+    /// additional policies (e.g. `rel="noreferrer"`).
     OpenUrl {
         url: String,
         target: Option<String>,
@@ -121,10 +154,17 @@ pub enum Effect {
         token: ShareSheetToken,
         items: Vec<fret_core::ShareItem>,
     },
+    /// Opens a platform-native file dialog (best-effort).
+    ///
+    /// Runners/backends typically respond by delivering one of:
+    /// - `fret_core::Event::FileDialogSelection` (token + names), followed by
+    ///   `Effect::FileDialogReadAll` to obtain bytes, or
+    /// - `fret_core::Event::FileDialogCanceled` if the user cancels.
     FileDialogOpen {
         window: AppWindowId,
         options: FileDialogOptions,
     },
+    /// Requests reading all selected file bytes for a previously opened file dialog.
     FileDialogReadAll {
         window: AppWindowId,
         token: FileDialogToken,
@@ -134,6 +174,7 @@ pub enum Effect {
         token: FileDialogToken,
         limits: ExternalDropReadLimits,
     },
+    /// Releases runner-owned resources associated with a file dialog token (best-effort).
     FileDialogRelease {
         token: FileDialogToken,
     },
@@ -147,6 +188,7 @@ pub enum Effect {
         token: IncomingOpenToken,
         limits: ExternalDropReadLimits,
     },
+    /// Releases runner-owned resources associated with an incoming-open token (best-effort).
     IncomingOpenRelease {
         token: IncomingOpenToken,
     },
@@ -307,12 +349,14 @@ pub enum Effect {
     /// - Desktop backends typically translate this into a "redraw on the next event-loop turn"
     ///   request (and may coalesce multiple requests).
     RequestAnimationFrame(AppWindowId),
+    /// Requests a timer callback to be delivered as `fret_core::Event::Timer` (best-effort).
     SetTimer {
         window: Option<AppWindowId>,
         token: TimerToken,
         after: Duration,
         repeat: Option<Duration>,
     },
+    /// Cancels a previously requested timer (best-effort).
     CancelTimer {
         token: TimerToken,
     },

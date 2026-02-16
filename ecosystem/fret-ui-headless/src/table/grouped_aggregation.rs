@@ -67,10 +67,7 @@ pub fn compute_grouped_u64_aggregations<TData>(
                 let item = &data[data_index];
 
                 for (col_i, col) in agg_columns.iter().enumerate() {
-                    let extract_u64 = col
-                        .value_u64_fn
-                        .as_ref()
-                        .or_else(|| col.facet_key_fn.as_ref());
+                    let extract_u64 = col.value_u64_fn.as_ref().or(col.facet_key_fn.as_ref());
                     let Some(extract_u64) = extract_u64 else {
                         continue;
                     };
@@ -218,10 +215,7 @@ pub fn compute_grouped_u64_aggregations_from_core<'a, TData>(
                 };
 
                 for (col_i, col) in agg_columns.iter().enumerate() {
-                    let extract_u64 = col
-                        .value_u64_fn
-                        .as_ref()
-                        .or_else(|| col.facet_key_fn.as_ref());
+                    let extract_u64 = col.value_u64_fn.as_ref().or(col.facet_key_fn.as_ref());
                     let Some(extract_u64) = extract_u64 else {
                         continue;
                     };

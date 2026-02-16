@@ -29,6 +29,14 @@ pub struct DragSession {
     pub kind: DragKindId,
     pub start_position: Point,
     pub position: Point,
+    /// Cursor grab offset in window-local logical coordinates.
+    ///
+    /// Runners may use this to keep an OS window under the cursor during docking interactions
+    /// (ImGui-style multi-viewport behavior), without needing to downcast the typed payload.
+    pub cursor_grab_offset: Option<Point>,
+    /// If set, requests the runner to treat this drag as a "move the OS window" interaction for
+    /// the given window id, while still allowing cross-window docking hover/drop routing.
+    pub follow_window: Option<AppWindowId>,
     pub dragging: bool,
     pub phase: DragPhase,
     payload: Box<dyn Any>,
@@ -52,6 +60,8 @@ impl DragSession {
             kind,
             start_position,
             position: start_position,
+            cursor_grab_offset: None,
+            follow_window: None,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),
@@ -75,6 +85,8 @@ impl DragSession {
             kind,
             start_position,
             position: start_position,
+            cursor_grab_offset: None,
+            follow_window: None,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),

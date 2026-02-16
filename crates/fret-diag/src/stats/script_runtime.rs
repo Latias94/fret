@@ -42,7 +42,7 @@ pub(crate) fn run_script_and_wait(
         // If the external driver touches the file before the app has observed it once, the touch
         // can be consumed as the baseline and the script will never run unless the stamp advances
         // again. We mitigate this by re-touching once after a short grace period if no run starts.
-        let baseline_race_ms = poll_ms.saturating_mul(4).max(250).min(5_000);
+        let baseline_race_ms = poll_ms.saturating_mul(4).clamp(250, 5_000);
         baseline_race_ms.min(timeout_ms.saturating_div(2).max(250))
     }
 
@@ -147,18 +147,16 @@ pub(crate) fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
                 } else {
                     eprintln!("FAIL (run_id={}) reason={reason}", result.run_id);
                 }
+            } else if let Some(step) = result.step_index {
+                eprintln!(
+                    "FAIL (run_id={}) step={} reason={reason} last_bundle_dir={last_bundle_dir}",
+                    result.run_id, step
+                );
             } else {
-                if let Some(step) = result.step_index {
-                    eprintln!(
-                        "FAIL (run_id={}) step={} reason={reason} last_bundle_dir={last_bundle_dir}",
-                        result.run_id, step
-                    );
-                } else {
-                    eprintln!(
-                        "FAIL (run_id={}) reason={reason} last_bundle_dir={last_bundle_dir}",
-                        result.run_id
-                    );
-                }
+                eprintln!(
+                    "FAIL (run_id={}) reason={reason} last_bundle_dir={last_bundle_dir}",
+                    result.run_id
+                );
             }
             std::process::exit(1);
         }
@@ -178,7 +176,7 @@ pub(crate) fn run_pick_and_wait(
 ) -> Result<PickResultSummary, String> {
     fn start_grace_ms(timeout_ms: u64, poll_ms: u64) -> u64 {
         // Same baseline-race mitigation as `run_script_and_wait`.
-        let baseline_race_ms = poll_ms.saturating_mul(4).max(250).min(5_000);
+        let baseline_race_ms = poll_ms.saturating_mul(4).clamp(250, 5_000);
         baseline_race_ms.min(timeout_ms.saturating_div(2).max(250))
     }
 
@@ -309,7 +307,7 @@ pub(crate) fn wait_for_failure_dump_bundle(
         return None;
     }
 
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
     while Instant::now() < deadline {
         for suffix in &suffixes {
             if let Some(dir) = find_latest_export_dir_with_suffix(out_dir, suffix)

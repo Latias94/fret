@@ -186,8 +186,9 @@ fn print_summary(resp_path: &Path, format: SummaryFormat, top: usize) -> Result<
     Ok(())
 }
 
-fn parse_args()
--> Result<(Option<PathBuf>, DumpRequest, Option<(SummaryFormat, usize)>), anyhow::Error> {
+type ParsedArgs = (Option<PathBuf>, DumpRequest, Option<(SummaryFormat, usize)>);
+
+fn parse_args() -> Result<ParsedArgs, anyhow::Error> {
     let mut renderdoc_dir: Option<PathBuf> = None;
     let mut capture_path: Option<String> = None;
     let mut marker_contains: Option<String> = None;

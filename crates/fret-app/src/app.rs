@@ -150,6 +150,13 @@ impl App {
         self.mark_global_changed(id);
     }
 
+    /// Returns and clears the list of globals that were marked changed since the last call.
+    ///
+    /// This is used by UI drivers to propagate global changes into window trees.
+    ///
+    /// Notes:
+    /// - Only *tracked* mutations participate (e.g. `set_global`, `with_global_mut`). Untracked
+    ///   mutations (`with_global_mut_untracked`) are intentionally excluded.
     pub fn take_changed_globals(&mut self) -> Vec<TypeId> {
         self.changed_globals_dedup.clear();
         std::mem::take(&mut self.changed_globals)
@@ -287,6 +294,13 @@ impl App {
         value.downcast_ref::<T>()
     }
 
+    /// Mutates a global service/value, participating in global-change tracking.
+    ///
+    /// This is the "tracked" path:
+    /// - callers mutating globals via this API should expect the host to mark the global as
+    ///   changed, so UI drivers can propagate global changes and schedule invalidation.
+    /// - nested mutable access to the same global type is guarded by the lease marker; in strict
+    ///   runtime mode this will panic to surface contract violations early.
     #[track_caller]
     pub fn with_global_mut<T: Any, R>(
         &mut self,
@@ -297,6 +311,11 @@ impl App {
         self.with_global_mut_impl(init, f, leased_at, true)
     }
 
+    /// Mutates a global service/value without participating in global-change tracking.
+    ///
+    /// This is intended for caches/registries whose internal mutations should not, by themselves,
+    /// trigger UI invalidation. For example: frame-local memoization tables, debug-only stores, or
+    /// host-maintained registries that are invalidated by other signals.
     #[track_caller]
     pub fn with_global_mut_untracked<T: Any, R>(
         &mut self,
@@ -593,6 +612,11 @@ impl App {
         }
     }
 
+    /// Drains queued effects and materializes deferred redraw requests.
+    ///
+    /// This app-level helper:
+    /// - appends one-shot `Effect::Redraw` for any windows requested via `request_redraw`,
+    /// - filters some platform-specific effects based on current settings (e.g. OS menubar).
     pub fn flush_effects(&mut self) -> Vec<Effect> {
         let mut effects = std::mem::take(&mut self.effects);
         for window in self.redraw_requests.drain() {

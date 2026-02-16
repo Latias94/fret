@@ -20,9 +20,7 @@ impl super::TransformGraph {
         series_id: SeriesId,
         series_view_index: usize,
     ) -> Option<RowSelection> {
-        let Some(series_model) = model.series.get(&series_id) else {
-            return None;
-        };
+        let series_model = model.series.get(&series_id)?;
 
         let series_view = &view.series[series_view_index];
 
@@ -44,24 +42,14 @@ impl super::TransformGraph {
             return None;
         }
 
-        let Some(dataset_view) = view.dataset_view(series_model.dataset) else {
-            return None;
-        };
+        let dataset_view = view.dataset_view(series_model.dataset)?;
         let base_range = dataset_view.row_range;
 
         let root = model.root_dataset_id(series_model.dataset);
-        let Some(table) = datasets.dataset(root) else {
-            return None;
-        };
-        let Some(dataset) = model.datasets.get(&series_model.dataset) else {
-            return None;
-        };
-        let Some(x_col) = dataset.fields.get(&series_model.encode.x).copied() else {
-            return None;
-        };
-        let Some(x_values) = table.column_f64(x_col) else {
-            return None;
-        };
+        let table = datasets.dataset(root)?;
+        let dataset = model.datasets.get(&series_model.dataset)?;
+        let x_col = dataset.fields.get(&series_model.encode.x).copied()?;
+        let x_values = table.column_f64(x_col)?;
 
         let signature = x_range_signature(
             model.revs.spec,
@@ -123,8 +111,8 @@ fn x_range_signature(
     x_filter: AxisFilter1D,
 ) -> u64 {
     let mut h = FNV1A_OFFSET;
-    h = fnv1a_step(h, model_rev.0 as u64);
-    h = fnv1a_step(h, data_rev.0 as u64);
+    h = fnv1a_step(h, model_rev.0);
+    h = fnv1a_step(h, data_rev.0);
     h = fnv1a_step(h, series_id.0);
     h = fnv1a_step(h, x_col as u64);
     h = fnv1a_step(h, base_range.start as u64);

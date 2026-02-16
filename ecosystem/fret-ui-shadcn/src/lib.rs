@@ -165,6 +165,8 @@ pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
 pub use media_image::MediaImage;
 pub use text_edit_context_menu::{
     text_edit_context_menu, text_edit_context_menu_controllable, text_edit_context_menu_entries,
+    text_selection_context_menu, text_selection_context_menu_controllable,
+    text_selection_context_menu_entries,
 };
 /// Default high-performance data grid surface (canvas-rendered).
 ///

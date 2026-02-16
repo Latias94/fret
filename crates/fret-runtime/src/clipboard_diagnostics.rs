@@ -27,10 +27,7 @@ impl WindowClipboardDiagnosticsStore {
         frame_id: FrameId,
         token: ClipboardToken,
     ) {
-        let entry = self
-            .per_window
-            .entry(window)
-            .or_insert_with(WindowClipboardDiagnosticsFrame::default);
+        let entry = self.per_window.entry(window).or_default();
         if entry.frame_id != frame_id {
             entry.frame_id = frame_id;
             entry.last_read = None;
@@ -49,10 +46,7 @@ impl WindowClipboardDiagnosticsStore {
         token: ClipboardToken,
         message: Option<String>,
     ) {
-        let entry = self
-            .per_window
-            .entry(window)
-            .or_insert_with(WindowClipboardDiagnosticsFrame::default);
+        let entry = self.per_window.entry(window).or_default();
         if entry.frame_id != frame_id {
             entry.frame_id = frame_id;
             entry.last_read = None;

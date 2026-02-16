@@ -401,7 +401,7 @@ fn path_segments(path: &str) -> Vec<&str> {
         .collect()
 }
 
-fn params_by_name<'a>(params: &'a [PathParam]) -> HashMap<&'a str, &'a str> {
+fn params_by_name(params: &[PathParam]) -> HashMap<&str, &str> {
     let mut out = HashMap::new();
     for param in params {
         out.insert(param.name.as_str(), param.value.as_str());

@@ -58,10 +58,10 @@ impl<H: UiHost> ComponentResolver<H> for TestResolver {
             }
         };
 
-        if element.ty == "ItemBox" {
-            if let Some(tid) = props.props.get("testId").and_then(|v| v.as_str()) {
-                el = el.test_id(tid);
-            }
+        if element.ty == "ItemBox"
+            && let Some(tid) = props.props.get("testId").and_then(|v| v.as_str())
+        {
+            el = el.test_id(tid);
         }
 
         Ok(el)
@@ -89,7 +89,7 @@ fn frame_item_ids(
             catalog: None,
             catalog_validation: ValidationMode::Ignore,
         };
-        let mut resolver = TestResolver::default();
+        let mut resolver = TestResolver;
         let rendered = render_spec(cx, spec, &runtime, &mut resolver).expect("render ok");
         let root = rendered.roots.into_iter().next().expect("root exists");
         TestResolver::collect_test_ids(&root, &mut out);

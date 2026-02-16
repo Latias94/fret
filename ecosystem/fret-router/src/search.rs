@@ -272,11 +272,11 @@ mod tests {
 
     #[test]
     fn search_map_first_typed_parses_values() {
-        let location = RouteLocation::parse("/?count=12&debug=true&pi=3.14");
+        let location = RouteLocation::parse("/?count=12&debug=true&pi=1.5");
         let map = SearchMap::from_location(&location);
         assert_eq!(map.first_typed::<u32>("count"), Some(12));
         assert_eq!(map.first_typed::<bool>("debug"), Some(true));
-        assert_eq!(map.first_typed::<f64>("pi"), Some(3.14));
+        assert_eq!(map.first_typed::<f64>("pi"), Some(1.5));
     }
 
     #[test]

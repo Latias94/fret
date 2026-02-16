@@ -6,7 +6,9 @@ use fret_core::{AppWindowId, Point, PointerId};
 use crate::{CommandRegistry, DragKindId, DragSession, Effect, ModelHost, ModelId};
 
 pub trait GlobalsHost {
+    /// Sets a global value, replacing any existing value of the same type.
     fn set_global<T: Any>(&mut self, value: T);
+    /// Reads a global value by type.
     fn global<T: Any>(&self) -> Option<&T>;
 
     /// Returns a monotonically-increasing token for a global type.
@@ -132,6 +134,32 @@ pub trait DragHost {
 ///
 /// Note: the individual service traits are intentionally split so hosts can implement them
 /// independently. `UiHost` remains the single bound used throughout `fret-ui`.
+///
+/// ## Typical driver flow (outline)
+///
+/// Runners/drivers typically perform the following steps on each tick/frame:
+///
+/// - Feed platform input into the UI runtime (event routing / command dispatch).
+/// - Drain incremental changes from the host:
+///   - model changes via [`ModelsHost::take_changed_models`],
+///   - global changes via host-specific tracking (either revision tokens from
+///     [`GlobalsHost::global_revision`] or an explicit changed-list if the host provides one).
+/// - Run layout/paint for the affected window(s).
+/// - Drain effects emitted by UI/services and forward them to the platform (clipboard, file
+///   dialogs, open-url, quit requests, etc.). The exact "drain" API is host-specific; for
+///   app-level hosts, this often looks like a `flush_effects()` method that returns a `Vec<Effect>`.
+///
+/// ```ignore
+/// // Pseudocode (simplified):
+/// let changed_models = host.take_changed_models();
+/// let theme_rev = host.global_revision_of::<fret_ui::ThemeConfig>();
+///
+/// // ...propagate changes into the window's UiTree and render...
+///
+/// for effect in host.flush_effects() {
+///     runner.handle_effect(effect);
+/// }
+/// ```
 pub trait UiHost:
     GlobalsHost + ModelsHost + CommandsHost + EffectSink + TimeHost + DragHost
 {

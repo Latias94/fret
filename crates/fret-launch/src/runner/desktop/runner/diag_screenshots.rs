@@ -43,9 +43,7 @@ pub(crate) struct DiagScreenshotCapture {
 impl DiagScreenshotCapture {
     fn read_config_json() -> Option<serde_json::Value> {
         let path = std::env::var_os("FRET_DIAG_CONFIG_PATH").filter(|v| !v.is_empty());
-        let Some(path) = path else {
-            return None;
-        };
+        let path = path?;
         let Ok(bytes) = std::fs::read(&path) else {
             return None;
         };

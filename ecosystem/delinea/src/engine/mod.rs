@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::action::Action;
@@ -1410,20 +1412,17 @@ impl ChartEngine {
                     );
 
                     let mut hovered_grid_viewport: Option<Rect> = None;
-                    if let Some(hit) = raw_hit {
-                        if let Some(series) = self.model.series.get(&hit.series)
-                            && let Some(x_axis) = self.model.axes.get(&series.x_axis)
-                        {
-                            if let Some(viewport) = self
-                                .output
-                                .plot_viewports_by_grid
-                                .get(&x_axis.grid)
-                                .copied()
-                                && rect_contains_point(viewport, hover_px)
-                            {
-                                hovered_grid_viewport = Some(viewport);
-                            }
-                        }
+                    if let Some(hit) = raw_hit
+                        && let Some(series) = self.model.series.get(&hit.series)
+                        && let Some(x_axis) = self.model.axes.get(&series.x_axis)
+                        && let Some(viewport) = self
+                            .output
+                            .plot_viewports_by_grid
+                            .get(&x_axis.grid)
+                            .copied()
+                        && rect_contains_point(viewport, hover_px)
+                    {
+                        hovered_grid_viewport = Some(viewport);
                     }
                     if hovered_grid_viewport.is_none() {
                         hovered_grid_viewport = self
@@ -1686,8 +1685,8 @@ fn compute_axis_axis_pointer_output(
     }
     let mut hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
 
-    if spec.snap {
-        if let Some((snapped_axis_value, snapped_hit)) = snap_axis_pointer_to_nearest_sample(
+    if spec.snap
+        && let Some((snapped_axis_value, snapped_hit)) = snap_axis_pointer_to_nearest_sample(
             model,
             datasets,
             participation,
@@ -1702,20 +1701,20 @@ fn compute_axis_axis_pointer_output(
             trigger_window,
             axis_value,
             hover_px,
-        ) {
-            axis_value = snapped_axis_value;
+        )
+    {
+        axis_value = snapped_axis_value;
 
-            // For `trigger=Axis`, `trigger_distance_px` only gates whether a marker dot is shown.
-            // The tooltip/crosshair remain active and use the snapped axis value regardless.
-            if let Some(snapped_hit) = snapped_hit {
-                if snapped_hit.dist2_px <= trigger2 {
-                    hit_for_marker = Some(snapped_hit);
-                } else {
-                    hit_for_marker = None;
-                }
+        // For `trigger=Axis`, `trigger_distance_px` only gates whether a marker dot is shown.
+        // The tooltip/crosshair remain active and use the snapped axis value regardless.
+        if let Some(snapped_hit) = snapped_hit {
+            if snapped_hit.dist2_px <= trigger2 {
+                hit_for_marker = Some(snapped_hit);
             } else {
                 hit_for_marker = None;
             }
+        } else {
+            hit_for_marker = None;
         }
     }
     if !axis_value.is_finite() {
@@ -1964,15 +1963,9 @@ fn compute_axis_axis_pointer_output(
             if series.kind == crate::spec::SeriesKind::Bar {
                 return None;
             }
-            let Some(x) = x else {
-                return None;
-            };
-            let Some(y0) = y0 else {
-                return None;
-            };
-            let Some(table_view) = table_view.as_ref() else {
-                return None;
-            };
+            let x = x?;
+            let y0 = y0?;
+            let table_view = table_view.as_ref()?;
             if series.kind == crate::spec::SeriesKind::Scatter {
                 sample_scatter_at_x_view(
                     model,
@@ -2173,17 +2166,8 @@ fn snap_axis_pointer_x_to_series(
     let (raw_index, x_raw) =
         nearest_raw_index_at_x_view(axis_value, x, filter, &table_view, nearest_index)?;
     let sampled = sample_at_raw_index_with_empty_mask(
-        primary.id,
-        empty_mask,
-        model,
-        datasets,
-        stack_dims,
-        model_rev,
-        table_rev,
-        raw_index,
-        x,
-        y0,
-        y1.as_deref(),
+        primary.id, empty_mask, model, datasets, stack_dims, model_rev, table_rev, raw_index, x,
+        y0, y1,
     )?;
 
     let y_window = axis_windows
@@ -2218,14 +2202,12 @@ fn nearest_raw_index_at_x_view(
     table_view: &crate::data::DataTableView<'_>,
     nearest_index: Option<&[crate::engine::stages::NearestXIndexItem]>,
 ) -> Option<(usize, f64)> {
-    if let Some(index) = nearest_index {
-        if let Some(hit) =
+    if let Some(index) = nearest_index
+        && let Some(hit) =
             crate::engine::stages::nearest_raw_index_in_sorted_x_index(index, x_value)
-        {
-            if x_filter.contains(hit.1) {
-                return Some(hit);
-            }
-        }
+        && x_filter.contains(hit.1)
+    {
+        return Some(hit);
     }
 
     let view_len = table_view.len();
@@ -2401,17 +2383,8 @@ fn snap_axis_pointer_y_to_series(
         }
 
         let Some(sampled) = sample_at_raw_index_with_empty_mask(
-            primary.id,
-            empty_mask,
-            model,
-            datasets,
-            stack_dims,
-            model_rev,
-            table_rev,
-            raw_index,
-            x,
-            y0,
-            y1.as_deref(),
+            primary.id, empty_mask, model, datasets, stack_dims, model_rev, table_rev, raw_index,
+            x, y0, y1,
         ) else {
             continue;
         };

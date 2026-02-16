@@ -411,7 +411,7 @@ fn wait_for_bundle_dumped(
                         dumped.bundle_json_chunk_index,
                         dumped.bundle_json_chunk_count,
                     ) {
-                        let chunk_count = chunk_count.max(1).min(10_000);
+                        let chunk_count = chunk_count.clamp(1, 10_000);
                         let need_reset = chunk_exported_unix_ms != Some(dumped.exported_unix_ms)
                             || chunk_dir.as_deref() != Some(dumped.dir.as_str())
                             || chunks.len() != chunk_count as usize;
@@ -433,7 +433,7 @@ fn wait_for_bundle_dumped(
                             }
                             let bundle = serde_json::from_str::<serde_json::Value>(&json)
                                 .context("bundle.dumped chunked JSON was not valid JSON")?;
-                            let dir = chunk_dir.clone().unwrap_or_else(|| dumped.dir);
+                            let dir = chunk_dir.clone().unwrap_or(dumped.dir);
                             return Ok((dir, bundle));
                         }
                     }

@@ -225,12 +225,11 @@ pub fn toggle_row_selected<'a, TData>(
     if let Some(i) = row_model
         .row_by_key(row_key)
         .and_then(|i| row_model.row(i).map(|_| i))
+        && let Some(row) = row_model.row(i)
+        && row_can_select(row_key, row)
+        && current == value
     {
-        if let Some(row) = row_model.row(i) {
-            if row_can_select(row_key, row) && current == value {
-                return next;
-            }
-        }
+        return next;
     }
 
     mutate_row_is_selected(

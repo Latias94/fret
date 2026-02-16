@@ -297,7 +297,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     return;
                 }
 
-                // On macOS, releasing the mouse button outside any window may not deliver a
+                // Releasing the mouse button outside any window may not deliver a
                 // `WindowEvent::MouseInput` to the source window. Use device events to still
                 // terminate cross-window dock drags (Unity/ImGui-style tear-off).
                 let (source_window, current_window, dragging) = {
@@ -314,24 +314,36 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
                 ));
 
-                #[cfg(target_os = "macos")]
+                if self.saw_left_mouse_release_this_turn
+                    || !self.is_left_mouse_down_for_window(source_window)
                 {
-                    if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
-                        return;
-                    }
-                    if let Some(d) = self.app.drag_mut(pointer_id)
-                        && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
-                    {
-                        d.dragging = true;
-                    }
-                    // Route the drop using the current cursor position, so docking into another
-                    // window works even when the `MouseInput` event is missing.
-                    self.route_internal_drag_drop_from_cursor();
-                    dock_tearoff_log(format_args!(
-                        "[device-drop] dispatched target={:?}",
-                        source_window
-                    ));
+                    return;
                 }
+
+                #[cfg(target_os = "macos")]
+                if macos_is_left_mouse_down() {
+                    return;
+                }
+
+                // We didn't observe a window-scoped mouse release, so clear the runner's cached
+                // button state to avoid getting stuck in a "mouse down" state.
+                self.left_mouse_down = false;
+                for state in self.windows.values_mut() {
+                    state.platform.input.pressed_buttons.left = false;
+                }
+
+                if let Some(d) = self.app.drag_mut(pointer_id)
+                    && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
+                {
+                    d.dragging = true;
+                }
+                // Route the drop using the current cursor position, so docking into another
+                // window works even when the `MouseInput` event is missing.
+                self.route_internal_drag_drop_from_cursor();
+                dock_tearoff_log(format_args!(
+                    "[device-drop] dispatched target={:?}",
+                    source_window
+                ));
                 if self
                     .app
                     .drag(pointer_id)
@@ -613,9 +625,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
-            let mut spec = self.config.main_window_spec();
+            let spec = self.config.main_window_spec();
             #[cfg(feature = "dev-state")]
-            {
+            let spec = {
+                let mut spec = spec;
                 self.dev_state.apply_main_window_spec(&mut spec);
                 self.dev_state.sanitize_window_spec_position(
                     "main",
@@ -624,7 +637,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .available_monitors()
                         .filter_map(|m| Some((m.position()?, m.current_video_mode()?.size()))),
                 );
-            }
+                spec
+            };
             let window = match self.create_os_window(
                 event_loop,
                 spec,
@@ -877,12 +891,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
             WindowEvent::ThemeChanged(_theme) => {
                 let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
-                if let Some(window_ref) = window_ref {
-                    if self
+                if let Some(window_ref) = window_ref
+                    && self
                         .update_window_environment_for_window_ref(app_window, window_ref.as_ref())
-                    {
-                        self.app.request_redraw(app_window);
-                    }
+                {
+                    self.app.request_redraw(app_window);
                 }
             }
             WindowEvent::Focused(focused) => {
@@ -1612,14 +1625,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         #[cfg(feature = "diag-screenshots")]
                         if let (Some(diag), Some(inflight)) =
                             (self.diag_screenshots.as_mut(), screenshot_inflight)
+                            && let Err(err) = diag.finish_capture(&context.device, inflight)
                         {
-                            if let Err(err) = diag.finish_capture(&context.device, inflight) {
-                                tracing::warn!(
-                                    error = %err,
-                                    window = ?app_window,
-                                    "diag screenshot: capture failed"
-                                );
-                            }
+                            tracing::warn!(
+                                error = %err,
+                                window = ?app_window,
+                                "diag screenshot: capture failed"
+                            );
                         }
 
                         if let Some((pending, dir)) = pending_bundle_screenshot {
@@ -1822,6 +1834,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         // tree (bypassing OS cursor events), so poll a best-effort cursor override surface once
         // per event-loop turn while a dock drag is active.
         if self.dock_drag_pointer_id().is_some() {
+            let _ = self.poll_diag_mouse_buttons_override();
             let _ = self.poll_diag_cursor_screen_pos_override();
             let _ = self.route_internal_drag_hover_from_cursor();
             let _ = self.update_dock_tearoff_follow();
@@ -2138,6 +2151,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         #[cfg(target_os = "macos")]
         {
             if self.maybe_finish_dock_drag_released_outside() {
+                self.drain_effects(event_loop);
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            if self.maybe_finish_dock_drag_released_outside_windows() {
                 self.drain_effects(event_loop);
             }
         }

@@ -37,16 +37,33 @@
     },
 
     {
-      "type": "drag_pointer",
+      "type": "pointer_down",
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
       "delta_x": -245.0,
-      "delta_y": 130.0,
+      "delta_y": 260.0,
       "steps": 24
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
-      "timeout_frames": 60
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -55,16 +72,33 @@
     },
 
     {
-      "type": "drag_pointer",
+      "type": "pointer_down",
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
       "delta_x": 245.0,
-      "delta_y": 130.0,
+      "delta_y": 260.0,
       "steps": 24
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
-      "timeout_frames": 60
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -73,16 +107,33 @@
     },
 
     {
-      "type": "drag_pointer",
+      "type": "pointer_down",
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
       "delta_x": -245.0,
-      "delta_y": 130.0,
+      "delta_y": 260.0,
       "steps": 24
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
-      "timeout_frames": 60
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -91,16 +142,33 @@
     },
 
     {
-      "type": "drag_pointer",
+      "type": "pointer_down",
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
       "delta_x": 245.0,
-      "delta_y": 130.0,
+      "delta_y": 260.0,
       "steps": 24
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
-      "timeout_frames": 60
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",

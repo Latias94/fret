@@ -1480,6 +1480,22 @@ impl<H: UiHost> Widget<H> for TextArea {
             selection_clip,
             &mut self.selection_rects,
         );
+        let window_focused = cx
+            .window
+            .and_then(|window| {
+                cx.app
+                    .global::<fret_core::WindowMetricsService>()
+                    .and_then(|svc| svc.focused(window))
+            })
+            .unwrap_or(true);
+        let selection_color = if cx.focus == Some(cx.node) || self.style_override {
+            self.style.selection_color
+        } else if !window_focused {
+            cx.theme()
+                .color_token("selection.window_inactive.background")
+        } else {
+            cx.theme().color_token("selection.inactive.background")
+        };
         for r in &self.selection_rects {
             let rect = Rect::new(
                 fret_core::Point::new(
@@ -1491,7 +1507,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect,
-                background: Paint::Solid(self.style.selection_color),
+                background: Paint::Solid(selection_color),
                 border: Edges::all(Px(0.0)),
                 border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::all(Px(0.0)),
