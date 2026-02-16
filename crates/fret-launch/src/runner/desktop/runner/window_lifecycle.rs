@@ -449,6 +449,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         {
             self.stop_dock_tearoff_follow(Instant::now(), false);
         }
+        self.dock_floating_windows.remove(&window);
 
         if self.internal_drag_hover_window == Some(window) {
             self.internal_drag_hover_window = None;

@@ -1750,7 +1750,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
             active: usize,
             grab_offset: Point,
             start_tick: fret_runtime::TickId,
-            tear_off_requested: bool,
             tear_off_oob_start_frame: Option<fret_runtime::FrameId>,
             dock_previews_enabled: bool,
         }
@@ -2521,7 +2520,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     active: p.active,
                     grab_offset: p.grab_offset,
                     start_tick: p.start_tick,
-                    tear_off_requested: p.tear_off_requested,
                     tear_off_oob_start_frame: p.tear_off_oob_start_frame,
                     dock_previews_enabled: p.dock_previews_enabled,
                 })
@@ -2568,7 +2566,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
             .is_some();
 
-        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point)> = None;
+        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point, bool)> = None;
         let mut start_dock_tabs_drag: Option<(Point, DockTabsDragPayload, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
         let mut end_dock_drag = false;
@@ -3416,6 +3414,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         let wants_dock_previews = docking_interaction_settings
                                             .drag_inversion
                                             .wants_dock_previews(*modifiers);
+                                        let last_tab_in_source_tabs = dock
+                                            .graph
+                                            .find_panel_in_window(self.window, &pending.panel)
+                                            .and_then(|(tabs_node, _)| match dock.graph.node(tabs_node)
+                                            {
+                                                Some(DockNode::Tabs { tabs, .. }) => Some(tabs.len() == 1),
+                                                _ => None,
+                                            })
+                                            .unwrap_or(false);
+                                        let follow_window =
+                                            dock.graph.windows().len() > 1 && last_tab_in_source_tabs;
                                         if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
                                             .is_some_and(|v| !v.is_empty())
                                         {
@@ -3445,6 +3454,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
+                                            follow_window,
                                         ));
                                         request_pointer_capture = Some(None);
                                     }
@@ -4448,56 +4458,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     }
                                                 }
 
-                                                let stable_oob = oob
+                                                let _stable_oob = oob
                                                     && drag
                                                         .tear_off_oob_start_frame
                                                         .is_some_and(|f| f != now_frame);
-
-                                                let disallow_chained_tear_off =
-                                                    dock.graph.windows().len() > 1
-                                                        && drag.tabs.len() == 1;
-
-                                                if let Some(panel) =
-                                                    drag.tabs.get(drag.active).cloned()
-                                                {
-                                                    let allow_tear_off = allow_tear_off_for_panel(
-                                                        drag.source_window,
-                                                        &panel,
-                                                    );
-                                                    let requested_tear_off = allow_tear_off
-                                                        && drag.source_window == self.window
-                                                        && stable_oob
-                                                        // Avoid creating chains of empty 1-tab windows: if this tab strip only has
-                                                        // one panel and we're already in a multi-window session, treat out-of-bounds
-                                                        // movement as a cross-window drag instead of requesting another tear-off.
-                                                        && !disallow_chained_tear_off
-                                                        && !drag.tear_off_requested
-                                                        && !mark_drag_tear_off_requested;
-
-                                                    if requested_tear_off {
-                                                        mark_drag_tear_off_requested = true;
-                                                        pending_effects.push(Effect::Dock(
-                                                            DockOp::RequestFloatPanelToNewWindow {
-                                                                source_window: drag.source_window,
-                                                                panel: panel.clone(),
-                                                                anchor: Some(
-                                                                    fret_core::WindowAnchor {
-                                                                        window: self.window,
-                                                                        position: drag.grab_offset,
-                                                                    },
-                                                                ),
-                                                            },
-                                                        ));
-                                                        invalidate_layout = true;
-                                                        dock.hover = None;
-                                                        pending_redraws.push(self.window);
-                                                        invalidate_paint = true;
-                                                    }
-
-                                                    requested_tear_off
-                                                } else {
-                                                    false
-                                                }
+                                                // Dragging a tab group's title bar should not request a new OS window.
+                                                // Use a panel drag (single tab) to tear-off; group drags remain "move/cross-window"
+                                                // interactions (ImGui-style).
+                                                false
                                             }
                                         };
 
@@ -4792,7 +4760,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             request_focus = panel_nodes.get(&panel).copied();
         }
 
-        if let Some((start, payload, position)) = start_dock_drag {
+        if let Some((start, payload, position, follow_window)) = start_dock_drag {
+            let grab_offset = payload.grab_offset;
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_PANEL,
@@ -4803,9 +4772,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
                 drag.position = position;
                 drag.dragging = true;
+                drag.cursor_grab_offset = Some(grab_offset);
+                if follow_window {
+                    drag.follow_window = Some(self.window);
+                }
             }
         }
         if let Some((start, payload, position)) = start_dock_tabs_drag {
+            let grab_offset = payload.grab_offset;
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_TABS,
@@ -4816,6 +4790,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
                 drag.position = position;
                 drag.dragging = true;
+                drag.cursor_grab_offset = Some(grab_offset);
             }
         }
 

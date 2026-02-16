@@ -204,6 +204,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     saw_left_mouse_release_this_turn: bool,
     left_mouse_down: bool,
     dock_tearoff_follow: Option<DockTearoffFollow>,
+    dock_floating_windows: HashSet<fret_core::AppWindowId>,
 
     tick_id: TickId,
     frame_id: FrameId,

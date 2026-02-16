@@ -136,10 +136,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // When a dock tear-off window is following the cursor, the cursor is always "inside" that
         // moving window. Prefer other windows under the cursor so we can dock back into the main
         // window (ImGui-style).
-        let prefer_not = self
-            .dock_tearoff_follow
-            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
-            .map(|f| f.window);
+        let prefer_not = self.dock_tearoff_follow.map(|f| f.window);
 
         // Prefer the window we already hovered, if the cursor is still inside it. This makes
         // cross-window drag hover stable even when OS windows overlap and we don't have z-order.
@@ -262,10 +259,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let allow_window_under_cursor =
             caps.ui.window_hover_detection != fret_runtime::WindowHoverDetectionQuality::None;
 
-        let prefer_not = self
-            .dock_tearoff_follow
-            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
-            .map(|f| f.window);
+        let prefer_not = self.dock_tearoff_follow.map(|f| f.window);
 
         // Prefer the last hovered window if possible; window overlap makes hit-testing ambiguous.
         let target = self

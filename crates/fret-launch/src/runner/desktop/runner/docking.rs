@@ -4,7 +4,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn dock_drag_pointer_id(&self) -> Option<fret_core::PointerId> {
         use fret_runtime::DragHost as _;
         self.app.find_drag_pointer_id(|d| {
-            d.cross_window_hover && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
+            d.cross_window_hover
+                && (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
         })
     }
 
@@ -19,7 +21,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 return false;
             };
             if !drag.cross_window_hover
-                || drag.kind != fret_app::DRAG_KIND_DOCK_PANEL
+                || (drag.kind != fret_runtime::DRAG_KIND_DOCK_PANEL
+                    && drag.kind != fret_runtime::DRAG_KIND_DOCK_TABS)
                 || macos_is_left_mouse_down()
                 || self.saw_left_mouse_release_this_turn
             {
@@ -37,7 +40,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // event to any window. Use the regular cursor-based drop routing so docking back into an
         // existing window still works (ImGui-style).
         if let Some(d) = self.app.drag_mut(pointer_id)
-            && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
+            && (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
         {
             d.dragging = true;
         }
@@ -61,11 +65,36 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     pub(super) fn update_dock_tearoff_follow(&mut self) -> bool {
-        if self.dock_tearoff_follow.is_some() && self.dock_drag_pointer_id().is_none() {
+        let pointer_id = self.dock_drag_pointer_id();
+        if self.dock_tearoff_follow.is_some() && pointer_id.is_none() {
             // If the dock drag session was canceled (e.g. Escape), ensure we do not keep moving a
             // dock tear-off window indefinitely.
             self.stop_dock_tearoff_follow(Instant::now(), false);
             return true;
+        }
+
+        if self.dock_tearoff_follow.is_none()
+            && let Some(pointer_id) = pointer_id
+            && let Some(drag) = self.app.drag(pointer_id)
+            && let Some(grab_offset) = drag.cursor_grab_offset
+        {
+            let follow_window = if drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                && self.dock_floating_windows.contains(&drag.source_window)
+            {
+                Some(drag.source_window)
+            } else {
+                drag.follow_window
+            };
+
+            if let Some(window) = follow_window {
+                self.dock_tearoff_follow = Some(super::DockTearoffFollow {
+                    window,
+                    source_window: drag.source_window,
+                    grab_offset,
+                    manual_follow: true,
+                    last_outer_pos: None,
+                });
+            }
         }
 
         let (window, grab_offset, manual_follow, last_outer_pos) = match self.dock_tearoff_follow {

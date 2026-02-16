@@ -1477,6 +1477,13 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         continue;
                                     }
                                 };
+                            if matches!(
+                                create.kind,
+                                CreateWindowKind::DockFloating { .. }
+                                    | CreateWindowKind::DockRestore { .. }
+                            ) {
+                                self.dock_floating_windows.insert(new_window);
+                            }
 
                             if let CreateWindowKind::DockFloating { source_window, .. } =
                                 &create.kind
