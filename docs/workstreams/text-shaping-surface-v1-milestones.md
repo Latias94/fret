@@ -38,8 +38,9 @@ Evidence anchors (M0):
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`font_features_for_settings`)
 - Shaping key participation:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)
-- Behavior conformance gate:
+- Behavior conformance gates:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
 
 ## M1 — Editor-grade policy adoption (ecosystem)
 

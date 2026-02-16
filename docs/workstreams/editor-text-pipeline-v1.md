@@ -90,7 +90,7 @@ easy to audit.
 | Area | Capability | Status | Evidence / Notes |
 | --- | --- | --- | --- |
 | Shaping engine | Parley shaping + metrics | Supported | `crates/fret-render-wgpu/src/text/parley_shaper.rs` |
-| OpenType features | `calt`/`liga`/`ssXX` etc via `TextShapingStyle.features` | Supported (best-effort) | Unknown tags are ignored by the resolved face; keep it deterministic via tests. |
+| OpenType features | `calt`/`liga`/`ssXX` etc via `TextShapingStyle.features` | Supported (best-effort) | Unknown tags are ignored by the resolved face; keep it deterministic via tests (glyph + `TextWrap::Word` behavior gates in `crates/fret-render-wgpu/src/text/mod.rs`). |
 | Variable axes | `wght`/`wdth` etc via `TextShapingStyle.axes` | Supported (best-effort) | Same “best-effort” contract as features. |
 | Rich text shaping | per-span font/weight/slant/letter spacing overrides | Supported | `crates/fret-core/src/text/mod.rs` (`TextSpan.shaping`) |
 | Rich text paint | `fg`/`bg`/underline/strikethrough spans | Supported | `crates/fret-core/src/text/mod.rs` (`TextSpan`, `TextPaintStyle`) |
