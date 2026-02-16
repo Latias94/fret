@@ -8,9 +8,9 @@ use fret_core::{
     dock::DropZone, geometry::Px,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService, DockingRuntime,
-    create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockSpace,
+    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
+    DockingRuntime, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, WindowCreateSpec,
@@ -1700,7 +1700,14 @@ impl DockingArbitrationDriver {
         OverlayController::begin_frame(app, window);
 
         let dock_space = state.dock_space.get_or_insert_with(|| {
-            create_dock_space_node_with_test_id(&mut state.ui, window, "dock-arb-dock-space")
+            use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+            let allow_chained_tear_off =
+                std::env::var_os("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF").is_some();
+            state.ui.create_node_retained(
+                DockSpace::new(window)
+                    .with_allow_multi_window_tear_off(allow_chained_tear_off)
+                    .with_semantics_test_id("dock-arb-dock-space"),
+            )
         });
         let _ = state.root.get_or_insert_with(|| {
             let left_anchor = state
