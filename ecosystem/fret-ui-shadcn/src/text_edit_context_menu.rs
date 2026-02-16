@@ -61,7 +61,6 @@ pub fn text_edit_context_menu_controllable<H: UiHost>(
     default_open: bool,
     trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
 ) -> AnyElement {
-    ContextMenu::new_controllable(cx, open, default_open).into_element(cx, trigger, |_cx| {
-        text_edit_context_menu_entries()
-    })
+    ContextMenu::new_controllable(cx, open, default_open)
+        .into_element(cx, trigger, |_cx| text_edit_context_menu_entries())
 }
