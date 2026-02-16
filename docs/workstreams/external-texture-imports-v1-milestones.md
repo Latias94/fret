@@ -83,6 +83,17 @@ Evidence:
     - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)
     - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - Repro commands (local web, DevTools WS transport):
+    - Terminal 1 (DevTools WS server):
+      - `cargo run -p fret-devtools-ws`
+      - Copy the printed `token` (and keep the server running).
+    - Terminal 2 (Trunk dev server):
+      - `cargo run -p fretboard -- dev web --demo external_texture_imports_web_demo`
+      - Open the printed URL and append:
+        - `&fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
+        - (The web runtime reads these from the query string.)
+    - Terminal 3 (run the steady script + compare to baseline):
+      - `cargo run -p fretboard -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
   - Baseline record:
     - Date: 2026-02-15
     - Exports:
