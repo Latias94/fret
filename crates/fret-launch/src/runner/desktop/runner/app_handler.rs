@@ -612,9 +612,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
-            let mut spec = self.config.main_window_spec();
+            let spec = self.config.main_window_spec();
             #[cfg(feature = "dev-state")]
-            {
+            let spec = {
+                let mut spec = spec;
                 self.dev_state.apply_main_window_spec(&mut spec);
                 self.dev_state.sanitize_window_spec_position(
                     "main",
@@ -623,7 +624,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .available_monitors()
                         .filter_map(|m| Some((m.position()?, m.current_video_mode()?.size()))),
                 );
-            }
+                spec
+            };
             let window = match self.create_os_window(
                 event_loop,
                 spec,
