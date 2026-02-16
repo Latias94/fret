@@ -184,3 +184,8 @@ Acceptance:
 
 - `fretboard dev web --demo simple_todo` (name TBD) works.
 - Native has an equivalent runnable path (either `--bin simple_todo` or `fret-demo -- <id>`).
+
+Evidence (current):
+
+- `apps/fret-demo/src/bin/ui_gallery.rs` (native bin, feature-gated)
+- `apps/fret-demo-web/src/wasm.rs` (wasm selection already supports `ui_gallery`)

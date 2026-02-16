@@ -239,10 +239,11 @@ Design note:
   - Decision gate:
     - land only after we have an explicit deprecation story + doc updates.
 
-- [ ] ONB-demo-063 Add `ui_gallery` to the native demo selection surface (`apps/fret-demo`).
+- [x] ONB-demo-063 Add `ui_gallery` to the native demo selection surface (`apps/fret-demo`).
   - Goal: one canonical shell works on both native and wasm (native CLI + wasm URL selection).
   - Evidence:
     - wasm already supports `ui_gallery`: `apps/fret-demo-web/src/wasm.rs`
+    - native bin: `apps/fret-demo/src/bin/ui_gallery.rs` (run with `cargo run -p fret-demo --features ui-gallery --bin ui_gallery`)
 
 ---
 
