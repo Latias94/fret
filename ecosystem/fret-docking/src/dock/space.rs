@@ -4352,6 +4352,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     && drag
                                                         .tear_off_oob_start_frame
                                                         .is_some_and(|f| f != now_frame);
+                                                let disallow_chained_tear_off =
+                                                    dock.graph.windows().len() > 1
+                                                        && dock
+                                                            .graph
+                                                            .collect_panels_in_window(self.window)
+                                                            .len()
+                                                            == 1;
                                                 let allow_tear_off = allow_tear_off
                                                     && docking_policy.as_deref().is_none_or(
                                                         |policy| {
@@ -4365,6 +4372,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 let requested_tear_off = allow_tear_off
                                                     && drag.source_window == self.window
                                                     && stable_oob
+                                                    // Stable OOB tear-off is currently single-window-only: once any additional
+                                                    // docking OS window exists, rely on cross-window drag/drop instead of
+                                                    // chaining more tear-off requests.
+                                                    && dock.graph.windows().len() <= 1
+                                                    // Avoid creating chains of empty 1-panel windows when already in a multi-window
+                                                    // session. Dragging the only panel out of a window should behave like a
+                                                    // cross-window drag / window move, not a new tear-off.
+                                                    && !disallow_chained_tear_off
                                                     && !drag.tear_off_requested
                                                     && !mark_drag_tear_off_requested;
 
@@ -4415,6 +4430,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                         .tear_off_oob_start_frame
                                                         .is_some_and(|f| f != now_frame);
 
+                                                let disallow_chained_tear_off =
+                                                    dock.graph.windows().len() > 1
+                                                        && drag.tabs.len() == 1;
+
                                                 if let Some(panel) =
                                                     drag.tabs.get(drag.active).cloned()
                                                 {
@@ -4431,6 +4450,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     let requested_tear_off = allow_tear_off
                                                         && drag.source_window == self.window
                                                         && stable_oob
+                                                        // Stable OOB tear-off is currently single-window-only: once any additional
+                                                        // docking OS window exists, rely on cross-window drag/drop instead of
+                                                        // chaining more tear-off requests.
+                                                        && dock.graph.windows().len() <= 1
+                                                        // Avoid creating chains of empty 1-tab windows: if this tab strip only has
+                                                        // one panel and we're already in a multi-window session, treat out-of-bounds
+                                                        // movement as a cross-window drag instead of requesting another tear-off.
+                                                        && !disallow_chained_tear_off
                                                         && !drag.tear_off_requested
                                                         && !mark_drag_tear_off_requested;
 

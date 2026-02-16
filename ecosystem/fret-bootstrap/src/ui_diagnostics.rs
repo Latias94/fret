@@ -735,6 +735,10 @@ impl UiDiagnosticsService {
         cfg!(target_arch = "wasm32") && self.ws_is_configured()
     }
 
+    pub fn known_windows(&self) -> &[AppWindowId] {
+        &self.known_windows
+    }
+
     fn poll_ws_inbox_and_is_wasm_ws_only(&mut self) -> bool {
         self.poll_ws_inbox();
         self.is_wasm_ws_only()
@@ -1314,6 +1318,18 @@ impl UiDiagnosticsService {
             });
         }
 
+        // Multi-window scripts can create additional OS windows (tear-off). Depending on platform
+        // scheduling, the newly created window may become the only one receiving redraw callbacks
+        // while a drag is active. Keep scripted playback progressing by migrating the single
+        // active script to whichever window is currently being driven.
+        if !self.active_scripts.contains_key(&window) && self.active_scripts.len() == 1 {
+            if let Some(&other_window) = self.active_scripts.keys().next() {
+                if let Some(active) = self.active_scripts.remove(&other_window) {
+                    self.active_scripts.insert(window, active);
+                }
+            }
+        }
+
         let Some(mut active) = self.active_scripts.remove(&window) else {
             let mut output = UiScriptFrameOutput::default();
             output.request_redraw = self.cfg.script_keepalive || devtools_request_redraw;
@@ -1618,16 +1634,14 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let payload = format!(
-                    "schema_version=1\nkind=window_client_logical\nwindow={}\nx_px={}\ny_px={}\n",
-                    target_window.data().as_ffi(),
+                if write_cursor_override_window_client_logical(
+                    &self.cfg.out_dir,
+                    target_window,
                     x_px,
-                    y_px
-                );
-                let text_path = self.cfg.out_dir.join("cursor_screen_pos.override.txt");
-                let trigger_path = self.cfg.out_dir.join("cursor_screen_pos.touch");
-                let _ = std::fs::create_dir_all(&self.cfg.out_dir);
-                if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    y_px,
+                )
+                .is_ok()
+                {
                     active.wait_until = None;
                     active.screenshot_wait = None;
                     active.next_step = active.next_step.saturating_add(1);
@@ -3382,6 +3396,12 @@ impl UiDiagnosticsService {
                         click_count: 1,
                         pointer_type,
                     }));
+                    let _ = write_cursor_override_window_client_logical(
+                        &self.cfg.out_dir,
+                        window,
+                        pos.x.0,
+                        pos.y.0,
+                    );
 
                     active.pointer_session = Some(V2PointerSessionState {
                         window,
@@ -3532,6 +3552,12 @@ impl UiDiagnosticsService {
 
                         session.position = position;
                         active.pointer_session = Some(session);
+                        let _ = write_cursor_override_window_client_logical(
+                            &self.cfg.out_dir,
+                            window,
+                            position.x.0,
+                            position.y.0,
+                        );
 
                         state.frame = state.frame.saturating_add(1);
                         active.v2_step_state = Some(V2StepState::PointerMove(state));
@@ -3540,6 +3566,12 @@ impl UiDiagnosticsService {
                     } else {
                         session.position = state.end;
                         active.pointer_session = Some(session);
+                        let _ = write_cursor_override_window_client_logical(
+                            &self.cfg.out_dir,
+                            window,
+                            state.end.x.0,
+                            state.end.y.0,
+                        );
 
                         active.v2_step_state = None;
                         active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
@@ -3654,6 +3686,12 @@ impl UiDiagnosticsService {
                             kind: fret_core::InternalDragKind::Drop,
                             modifiers: session.modifiers,
                         }));
+                    let _ = write_cursor_override_window_client_logical(
+                        &self.cfg.out_dir,
+                        window,
+                        session.position.x.0,
+                        session.position.y.0,
+                    );
 
                     active.pointer_session = None;
                     active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
@@ -3680,11 +3718,6 @@ impl UiDiagnosticsService {
                     self.resolve_window_target(window, target_window.as_ref())
                 {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::DragPointer { window, .. } = step_mut {
-                                *window = None;
-                            }
-                        }
                         handoff_to = Some(target_window);
                         output
                             .effects
@@ -3872,11 +3905,6 @@ impl UiDiagnosticsService {
                     self.resolve_window_target(window, target_window.as_ref())
                 {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::DragPointerUntil { window, .. } = step_mut {
-                                *window = None;
-                            }
-                        }
                         handoff_to = Some(target_window);
                         output
                             .effects
@@ -17033,6 +17061,26 @@ fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Eve
     }
 }
 
+fn write_cursor_override_window_client_logical(
+    out_dir: &Path,
+    window: AppWindowId,
+    x_px: f32,
+    y_px: f32,
+) -> Result<(), std::io::Error> {
+    let payload = format!(
+        "schema_version=1\nkind=window_client_logical\nwindow={}\nx_px={}\ny_px={}\n",
+        window.data().as_ffi(),
+        x_px,
+        y_px
+    );
+    let text_path = out_dir.join("cursor_screen_pos.override.txt");
+    let trigger_path = out_dir.join("cursor_screen_pos.touch");
+    std::fs::create_dir_all(out_dir)?;
+    std::fs::write(text_path, payload)?;
+    touch_file(&trigger_path)?;
+    Ok(())
+}
+
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
     let modifiers = core_modifiers_from_ui(Some(modifiers));
     let down = Event::KeyDown {
@@ -17305,13 +17353,39 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
+    // `fret-diag`'s filesystem transport uses a monotonically increasing stamp written into
+    // `*.touch` files. `SystemTime` millisecond resolution is not sufficient on all platforms
+    // (multiple writes can occur within the same millisecond), so ensure the stamp is strictly
+    // increasing within the current process.
+    //
+    // The stamp is used only for edge detection (not for wall-clock semantics), so it's safe to
+    // synthesize values above `unix_ms_now()` when needed.
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static LAST_TOUCH_STAMP: AtomicU64 = AtomicU64::new(0);
+    let mut stamp = unix_ms_now();
+    loop {
+        let prev = LAST_TOUCH_STAMP.load(Ordering::Relaxed);
+        let next = stamp.max(prev.saturating_add(1));
+        match LAST_TOUCH_STAMP.compare_exchange_weak(
+            prev,
+            next,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => {
+                stamp = next;
+                break;
+            }
+            Err(_) => continue,
+        }
+    }
     use std::io::Write as _;
     let mut f = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
         .open(path)?;
-    writeln!(f, "{}", unix_ms_now())?;
+    writeln!(f, "{stamp}")?;
     let _ = f.flush();
     Ok(())
 }
