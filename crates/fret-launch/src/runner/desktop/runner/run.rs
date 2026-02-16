@@ -112,6 +112,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             diag_window_insets_overrides: HashMap::new(),
             diag_cursor_screen_pos_override:
                 super::diag_cursor_override::DiagCursorScreenPosOverride::from_env(),
+            diag_mouse_buttons_override:
+                super::diag_mouse_buttons_override::DiagMouseButtonsOverride::from_env(),
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
             macos_cursor_transform: MacCursorTransformTable::default(),

@@ -273,6 +273,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(step, UiActionStepV2::WaitOverlayPlacementTrace { .. }) {
             push_cap(&mut caps, "diag.overlay_placement_trace");
         }
+        if matches!(step, UiActionStepV2::SetMouseButtons { .. }) {
+            push_cap(&mut caps, "diag.mouse_buttons_override");
+        }
     }
     caps
 }

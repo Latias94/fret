@@ -1655,6 +1655,60 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
+            UiActionStepV2::SetMouseButtons {
+                window: target_window,
+                left,
+                right,
+                middle,
+            } => {
+                let resolved_window = if let Some(target_window) = target_window.as_ref() {
+                    let Some(target_window) =
+                        self.resolve_window_target(window, Some(target_window))
+                    else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-set_mouse_buttons-window-not-found"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("window_target_unresolved".to_string());
+                        output.request_redraw = true;
+                        return output;
+                    };
+                    Some(target_window)
+                } else {
+                    None
+                };
+
+                let mut payload = String::from("schema_version=1\n");
+                if let Some(window) = resolved_window {
+                    payload.push_str(&format!("window={}\n", window.data().as_ffi()));
+                }
+                if let Some(left) = left {
+                    payload.push_str(&format!("left={left}\n"));
+                }
+                if let Some(right) = right {
+                    payload.push_str(&format!("right={right}\n"));
+                }
+                if let Some(middle) = middle {
+                    payload.push_str(&format!("middle={middle}\n"));
+                }
+
+                let text_path = self.cfg.out_dir.join("mouse_buttons.override.txt");
+                let trigger_path = self.cfg.out_dir.join("mouse_buttons.touch");
+                let _ = std::fs::create_dir_all(&self.cfg.out_dir);
+                if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_mouse_buttons-write-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("mouse_buttons_override_write_failed".to_string());
+                    output.request_redraw = true;
+                }
+            }
             UiActionStepV2::RaiseWindow {
                 window: target_window,
             } => {
@@ -5982,6 +6036,13 @@ impl UiDiagnosticsService {
         caps.push("diag.window_insets_override".to_string());
         caps.push("diag.clipboard_force_unavailable".to_string());
         caps.push("diag.incoming_open_inject".to_string());
+        if cfg!(any(
+            target_os = "windows",
+            target_os = "macos",
+            target_os = "linux"
+        )) {
+            caps.push("diag.mouse_buttons_override".to_string());
+        }
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -7357,6 +7418,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::SetCursorScreenPos { .. }
         | UiActionStepV2::SetCursorInWindow { .. }
         | UiActionStepV2::SetCursorInWindowLogical { .. }
+        | UiActionStepV2::SetMouseButtons { .. }
         | UiActionStepV2::RaiseWindow { .. }
         | UiActionStepV2::PointerMove { .. }
         | UiActionStepV2::PointerUp { .. } => false,

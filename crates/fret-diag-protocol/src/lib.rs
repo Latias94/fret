@@ -684,6 +684,24 @@ pub enum UiActionStepV2 {
         x_px: f32,
         y_px: f32,
     },
+    /// Set a runner-level mouse button state override.
+    ///
+    /// This is intended for scripted diagnostics that need to exercise runner-level fallback
+    /// behavior that depends on OS button state (e.g. "release outside all windows" poll-up
+    /// paths) without requiring real OS input.
+    ///
+    /// Desktop runners may choose to apply this only while certain interactions are active
+    /// (e.g. cross-window dock drags).
+    SetMouseButtons {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        left: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        right: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        middle: Option<bool>,
+    },
     RaiseWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
