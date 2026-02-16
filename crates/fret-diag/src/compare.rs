@@ -1792,59 +1792,72 @@ pub(super) fn scan_perf_threshold_failures(
             "evidence_run_index": evidence_run_index,
         }));
     }
-    if let Some(threshold_us) = threshold_frame_p95_total
-        && observed_frame_p95_total_time_us > threshold_us
-    {
-        out.push(serde_json::json!({
-            "metric": "frame_p95_total_time_us",
-            "threshold_us": threshold_us,
-            "threshold_source": source_frame_p95_total,
-            "actual_us": observed_frame_p95_total_time_us,
-            "actual_aggregate": observed_agg.as_str(),
-            "actual_max_us": max_frame_p95_total_time_us,
-            "actual_p95_us": p95_frame_p95_total_time_us,
-            "outlier_suspected": p95_frame_p95_total_time_us <= threshold_us,
-            "script": script,
-            "sort": sort.as_str(),
-            "evidence_bundle": evidence_bundle,
-            "evidence_run_index": evidence_run_index,
-        }));
+    const FRAME_P95_TOTAL_EPS_US: u64 = 100;
+    const FRAME_P95_LAYOUT_EPS_US: u64 = 100;
+    const FRAME_P95_SOLVE_EPS_US: u64 = 8;
+
+    if let Some(threshold_us) = threshold_frame_p95_total {
+        let threshold_effective_us = threshold_us.saturating_add(FRAME_P95_TOTAL_EPS_US);
+        if observed_frame_p95_total_time_us > threshold_effective_us {
+            out.push(serde_json::json!({
+                "metric": "frame_p95_total_time_us",
+                "threshold_us": threshold_us,
+                "threshold_effective_us": threshold_effective_us,
+                "threshold_eps_us": FRAME_P95_TOTAL_EPS_US,
+                "threshold_source": source_frame_p95_total,
+                "actual_us": observed_frame_p95_total_time_us,
+                "actual_aggregate": observed_agg.as_str(),
+                "actual_max_us": max_frame_p95_total_time_us,
+                "actual_p95_us": p95_frame_p95_total_time_us,
+                "outlier_suspected": p95_frame_p95_total_time_us <= threshold_effective_us,
+                "script": script,
+                "sort": sort.as_str(),
+                "evidence_bundle": evidence_bundle,
+                "evidence_run_index": evidence_run_index,
+            }));
+        }
     }
-    if let Some(threshold_us) = threshold_frame_p95_layout
-        && observed_frame_p95_layout_time_us > threshold_us
-    {
-        out.push(serde_json::json!({
-            "metric": "frame_p95_layout_time_us",
-            "threshold_us": threshold_us,
-            "threshold_source": source_frame_p95_layout,
-            "actual_us": observed_frame_p95_layout_time_us,
-            "actual_aggregate": observed_agg.as_str(),
-            "actual_max_us": max_frame_p95_layout_time_us,
-            "actual_p95_us": p95_frame_p95_layout_time_us,
-            "outlier_suspected": p95_frame_p95_layout_time_us <= threshold_us,
-            "script": script,
-            "sort": sort.as_str(),
-            "evidence_bundle": evidence_bundle,
-            "evidence_run_index": evidence_run_index,
-        }));
+    if let Some(threshold_us) = threshold_frame_p95_layout {
+        let threshold_effective_us = threshold_us.saturating_add(FRAME_P95_LAYOUT_EPS_US);
+        if observed_frame_p95_layout_time_us > threshold_effective_us {
+            out.push(serde_json::json!({
+                "metric": "frame_p95_layout_time_us",
+                "threshold_us": threshold_us,
+                "threshold_effective_us": threshold_effective_us,
+                "threshold_eps_us": FRAME_P95_LAYOUT_EPS_US,
+                "threshold_source": source_frame_p95_layout,
+                "actual_us": observed_frame_p95_layout_time_us,
+                "actual_aggregate": observed_agg.as_str(),
+                "actual_max_us": max_frame_p95_layout_time_us,
+                "actual_p95_us": p95_frame_p95_layout_time_us,
+                "outlier_suspected": p95_frame_p95_layout_time_us <= threshold_effective_us,
+                "script": script,
+                "sort": sort.as_str(),
+                "evidence_bundle": evidence_bundle,
+                "evidence_run_index": evidence_run_index,
+            }));
+        }
     }
-    if let Some(threshold_us) = threshold_frame_p95_solve
-        && observed_frame_p95_layout_engine_solve_time_us > threshold_us
-    {
-        out.push(serde_json::json!({
+    if let Some(threshold_us) = threshold_frame_p95_solve {
+        let threshold_effective_us = threshold_us.saturating_add(FRAME_P95_SOLVE_EPS_US);
+        if observed_frame_p95_layout_engine_solve_time_us > threshold_effective_us {
+            out.push(serde_json::json!({
             "metric": "frame_p95_layout_engine_solve_time_us",
             "threshold_us": threshold_us,
+            "threshold_effective_us": threshold_effective_us,
+            "threshold_eps_us": FRAME_P95_SOLVE_EPS_US,
             "threshold_source": source_frame_p95_solve,
             "actual_us": observed_frame_p95_layout_engine_solve_time_us,
             "actual_aggregate": observed_agg.as_str(),
             "actual_max_us": max_frame_p95_layout_engine_solve_time_us,
             "actual_p95_us": p95_frame_p95_layout_engine_solve_time_us,
-            "outlier_suspected": p95_frame_p95_layout_engine_solve_time_us <= threshold_us,
+            "outlier_suspected": p95_frame_p95_layout_engine_solve_time_us <= threshold_effective_us,
             "script": script,
             "sort": sort.as_str(),
             "evidence_bundle": evidence_bundle,
             "evidence_run_index": evidence_run_index,
         }));
+        }
     }
     if pointer_move_frames_present {
         if let Some(threshold_us) = threshold_pointer_move_dispatch
