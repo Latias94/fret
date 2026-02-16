@@ -180,6 +180,11 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     selection-replacing preedit (no drift between platform queries and editor geometry).
     - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap`)
+  - [x] Regression gate: `BoundsForRange` round-trips with `CharacterIndexForPoint` under wrap +
+    inline preedit composed window (`compose_inline_preedit=true`) so offsets after the injected
+    preedit segment remain stable.
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap`)
 - [x] Add ecosystem-owned replace support for platform text input (not `fret-ui` mechanism):
   - `replace_text_in_range_utf16` via window mapping + buffer ops.
   - `replace_and_mark_text_in_range_utf16` supports composing for:
