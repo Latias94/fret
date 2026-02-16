@@ -384,5 +384,7 @@ Staging note:
   `InlinePreedit { anchor, replace_range, text }` so shaping/paint can converge with platform
   queries during composition.
 - Known gap (staging): replacement ranges that span newlines are currently clamped to the anchor
-  logical line in the view display map. Keep it behind tests and revisit if multi-line composition
-  becomes a required input mode.
+  logical line (single-line composition staging). Keep it behind tests and revisit if multi-line
+  composition becomes a required input mode.
+  - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
