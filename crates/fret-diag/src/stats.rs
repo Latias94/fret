@@ -782,6 +782,14 @@ pub(super) struct BundleStatsReport {
     pub(super) max_ui_thread_cpu_time_us: u64,
     pub(super) max_ui_thread_cpu_cycle_time_delta_cycles: u64,
     pub(super) max_layout_engine_solve_time_us: u64,
+    pub(super) max_renderer_encode_scene_us: u64,
+    pub(super) max_renderer_ensure_pipelines_us: u64,
+    pub(super) max_renderer_plan_compile_us: u64,
+    pub(super) max_renderer_upload_us: u64,
+    pub(super) max_renderer_record_passes_us: u64,
+    pub(super) max_renderer_encoder_finish_us: u64,
+    pub(super) max_renderer_prepare_svg_us: u64,
+    pub(super) max_renderer_prepare_text_us: u64,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -831,6 +839,22 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_paint_widget_time_us: u64,
     pub(super) p50_paint_text_prepare_time_us: u64,
     pub(super) p95_paint_text_prepare_time_us: u64,
+    pub(super) p50_renderer_encode_scene_us: u64,
+    pub(super) p95_renderer_encode_scene_us: u64,
+    pub(super) p50_renderer_ensure_pipelines_us: u64,
+    pub(super) p95_renderer_ensure_pipelines_us: u64,
+    pub(super) p50_renderer_plan_compile_us: u64,
+    pub(super) p95_renderer_plan_compile_us: u64,
+    pub(super) p50_renderer_upload_us: u64,
+    pub(super) p95_renderer_upload_us: u64,
+    pub(super) p50_renderer_record_passes_us: u64,
+    pub(super) p95_renderer_record_passes_us: u64,
+    pub(super) p50_renderer_encoder_finish_us: u64,
+    pub(super) p95_renderer_encoder_finish_us: u64,
+    pub(super) p50_renderer_prepare_svg_us: u64,
+    pub(super) p95_renderer_prepare_svg_us: u64,
+    pub(super) p50_renderer_prepare_text_us: u64,
+    pub(super) p95_renderer_prepare_text_us: u64,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
@@ -1326,6 +1350,33 @@ impl BundleStatsReport {
             self.p50_paint_text_prepare_time_us,
             self.p95_paint_text_prepare_time_us
         );
+        if self.p50_renderer_encode_scene_us > 0
+            || self.p95_renderer_encode_scene_us > 0
+            || self.p50_renderer_upload_us > 0
+            || self.p95_renderer_upload_us > 0
+            || self.p50_renderer_record_passes_us > 0
+            || self.p95_renderer_record_passes_us > 0
+        {
+            println!(
+                "renderer p50/p95 (us): encode={}/{} ensure={}/{} plan={}/{} upload={}/{} record={}/{} finish={}/{} svg={}/{} text={}/{}",
+                self.p50_renderer_encode_scene_us,
+                self.p95_renderer_encode_scene_us,
+                self.p50_renderer_ensure_pipelines_us,
+                self.p95_renderer_ensure_pipelines_us,
+                self.p50_renderer_plan_compile_us,
+                self.p95_renderer_plan_compile_us,
+                self.p50_renderer_upload_us,
+                self.p95_renderer_upload_us,
+                self.p50_renderer_record_passes_us,
+                self.p95_renderer_record_passes_us,
+                self.p50_renderer_encoder_finish_us,
+                self.p95_renderer_encoder_finish_us,
+                self.p50_renderer_prepare_svg_us,
+                self.p95_renderer_prepare_svg_us,
+                self.p50_renderer_prepare_text_us,
+                self.p95_renderer_prepare_text_us,
+            );
+        }
         println!(
             "layout breakdown p50/p95 (us): roots={}/{} request_build_roots={}/{} view_cache={}/{} collapse_obs={}/{} prepaint_after_layout={}/{}",
             self.p50_layout_roots_time_us,
@@ -1377,6 +1428,22 @@ impl BundleStatsReport {
             self.max_prepaint_time_us,
             self.max_paint_time_us
         );
+        if self.max_renderer_encode_scene_us > 0
+            || self.max_renderer_upload_us > 0
+            || self.max_renderer_record_passes_us > 0
+        {
+            println!(
+                "renderer max (us): encode={} ensure={} plan={} upload={} record={} finish={} svg={} text={}",
+                self.max_renderer_encode_scene_us,
+                self.max_renderer_ensure_pipelines_us,
+                self.max_renderer_plan_compile_us,
+                self.max_renderer_upload_us,
+                self.max_renderer_record_passes_us,
+                self.max_renderer_encoder_finish_us,
+                self.max_renderer_prepare_svg_us,
+                self.max_renderer_prepare_text_us,
+            );
+        }
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
             self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
@@ -1454,7 +1521,7 @@ impl BundleStatsReport {
                 .timestamp_unix_ms
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
-            println!(
+            let mut line = format!(
                 "  window={} tick={} frame={} ts={} cpu.us={} cpu.cycles={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
@@ -1507,6 +1574,25 @@ impl BundleStatsReport {
                 row.propagated_global_change_observation_edges,
                 row.propagated_global_change_unobserved_globals
             );
+            if row.renderer_encode_scene_us > 0
+                || row.renderer_prepare_text_us > 0
+                || row.renderer_prepare_svg_us > 0
+                || row.renderer_upload_us > 0
+                || row.renderer_record_passes_us > 0
+            {
+                line.push_str(&format!(
+                    " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
+                    row.renderer_encode_scene_us,
+                    row.renderer_ensure_pipelines_us,
+                    row.renderer_plan_compile_us,
+                    row.renderer_upload_us,
+                    row.renderer_record_passes_us,
+                    row.renderer_encoder_finish_us,
+                    row.renderer_prepare_svg_us,
+                    row.renderer_prepare_text_us,
+                ));
+            }
+            println!("{line}");
             if row.layout_observation_record_time_us > 0
                 || row.layout_observation_record_models_items > 0
                 || row.layout_observation_record_globals_items > 0
@@ -2341,6 +2427,38 @@ impl BundleStatsReport {
             Value::from(self.max_layout_engine_solve_time_us),
         );
         max.insert(
+            "renderer_encode_scene_us".to_string(),
+            Value::from(self.max_renderer_encode_scene_us),
+        );
+        max.insert(
+            "renderer_ensure_pipelines_us".to_string(),
+            Value::from(self.max_renderer_ensure_pipelines_us),
+        );
+        max.insert(
+            "renderer_plan_compile_us".to_string(),
+            Value::from(self.max_renderer_plan_compile_us),
+        );
+        max.insert(
+            "renderer_upload_us".to_string(),
+            Value::from(self.max_renderer_upload_us),
+        );
+        max.insert(
+            "renderer_record_passes_us".to_string(),
+            Value::from(self.max_renderer_record_passes_us),
+        );
+        max.insert(
+            "renderer_encoder_finish_us".to_string(),
+            Value::from(self.max_renderer_encoder_finish_us),
+        );
+        max.insert(
+            "renderer_prepare_svg_us".to_string(),
+            Value::from(self.max_renderer_prepare_svg_us),
+        );
+        max.insert(
+            "renderer_prepare_text_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_us),
+        );
+        max.insert(
             "invalidation_walk_calls".to_string(),
             Value::from(self.max_invalidation_walk_calls),
         );
@@ -2600,6 +2718,38 @@ impl BundleStatsReport {
             "paint_text_prepare_time_us".to_string(),
             Value::from(self.p50_paint_text_prepare_time_us),
         );
+        p50.insert(
+            "renderer_encode_scene_us".to_string(),
+            Value::from(self.p50_renderer_encode_scene_us),
+        );
+        p50.insert(
+            "renderer_ensure_pipelines_us".to_string(),
+            Value::from(self.p50_renderer_ensure_pipelines_us),
+        );
+        p50.insert(
+            "renderer_plan_compile_us".to_string(),
+            Value::from(self.p50_renderer_plan_compile_us),
+        );
+        p50.insert(
+            "renderer_upload_us".to_string(),
+            Value::from(self.p50_renderer_upload_us),
+        );
+        p50.insert(
+            "renderer_record_passes_us".to_string(),
+            Value::from(self.p50_renderer_record_passes_us),
+        );
+        p50.insert(
+            "renderer_encoder_finish_us".to_string(),
+            Value::from(self.p50_renderer_encoder_finish_us),
+        );
+        p50.insert(
+            "renderer_prepare_svg_us".to_string(),
+            Value::from(self.p50_renderer_prepare_svg_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_us),
+        );
         root.insert("p50".to_string(), Value::Object(p50));
 
         let mut p95 = Map::new();
@@ -2691,6 +2841,38 @@ impl BundleStatsReport {
             "paint_text_prepare_time_us".to_string(),
             Value::from(self.p95_paint_text_prepare_time_us),
         );
+        p95.insert(
+            "renderer_encode_scene_us".to_string(),
+            Value::from(self.p95_renderer_encode_scene_us),
+        );
+        p95.insert(
+            "renderer_ensure_pipelines_us".to_string(),
+            Value::from(self.p95_renderer_ensure_pipelines_us),
+        );
+        p95.insert(
+            "renderer_plan_compile_us".to_string(),
+            Value::from(self.p95_renderer_plan_compile_us),
+        );
+        p95.insert(
+            "renderer_upload_us".to_string(),
+            Value::from(self.p95_renderer_upload_us),
+        );
+        p95.insert(
+            "renderer_record_passes_us".to_string(),
+            Value::from(self.p95_renderer_record_passes_us),
+        );
+        p95.insert(
+            "renderer_encoder_finish_us".to_string(),
+            Value::from(self.p95_renderer_encoder_finish_us),
+        );
+        p95.insert(
+            "renderer_prepare_svg_us".to_string(),
+            Value::from(self.p95_renderer_prepare_svg_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_us),
+        );
         root.insert("p95".to_string(), Value::Object(p95));
 
         root.insert(
@@ -2766,6 +2948,46 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_time_us".to_string(),
                     Value::from(row.layout_time_us),
+                );
+                obj.insert(
+                    "renderer_tick_id".to_string(),
+                    Value::from(row.renderer_tick_id),
+                );
+                obj.insert(
+                    "renderer_frame_id".to_string(),
+                    Value::from(row.renderer_frame_id),
+                );
+                obj.insert(
+                    "renderer_encode_scene_us".to_string(),
+                    Value::from(row.renderer_encode_scene_us),
+                );
+                obj.insert(
+                    "renderer_ensure_pipelines_us".to_string(),
+                    Value::from(row.renderer_ensure_pipelines_us),
+                );
+                obj.insert(
+                    "renderer_plan_compile_us".to_string(),
+                    Value::from(row.renderer_plan_compile_us),
+                );
+                obj.insert(
+                    "renderer_upload_us".to_string(),
+                    Value::from(row.renderer_upload_us),
+                );
+                obj.insert(
+                    "renderer_record_passes_us".to_string(),
+                    Value::from(row.renderer_record_passes_us),
+                );
+                obj.insert(
+                    "renderer_encoder_finish_us".to_string(),
+                    Value::from(row.renderer_encoder_finish_us),
+                );
+                obj.insert(
+                    "renderer_prepare_svg_us".to_string(),
+                    Value::from(row.renderer_prepare_svg_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_us".to_string(),
+                    Value::from(row.renderer_prepare_text_us),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),
@@ -10137,6 +10359,27 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_engine_solve_time_us = out
                 .max_layout_engine_solve_time_us
                 .max(layout_engine_solve_time_us);
+            out.max_renderer_encode_scene_us = out
+                .max_renderer_encode_scene_us
+                .max(renderer_encode_scene_us);
+            out.max_renderer_ensure_pipelines_us = out
+                .max_renderer_ensure_pipelines_us
+                .max(renderer_ensure_pipelines_us);
+            out.max_renderer_plan_compile_us = out
+                .max_renderer_plan_compile_us
+                .max(renderer_plan_compile_us);
+            out.max_renderer_upload_us = out.max_renderer_upload_us.max(renderer_upload_us);
+            out.max_renderer_record_passes_us = out
+                .max_renderer_record_passes_us
+                .max(renderer_record_passes_us);
+            out.max_renderer_encoder_finish_us = out
+                .max_renderer_encoder_finish_us
+                .max(renderer_encoder_finish_us);
+            out.max_renderer_prepare_svg_us =
+                out.max_renderer_prepare_svg_us.max(renderer_prepare_svg_us);
+            out.max_renderer_prepare_text_us = out
+                .max_renderer_prepare_text_us
+                .max(renderer_prepare_text_us);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
@@ -10468,6 +10711,36 @@ pub(super) fn bundle_stats_from_json_with_options(
         out.p50_paint_text_prepare_time_us,
         out.p95_paint_text_prepare_time_us,
     ) = p50_p95(rows.iter().map(|r| r.paint_text_prepare_time_us));
+    (
+        out.p50_renderer_encode_scene_us,
+        out.p95_renderer_encode_scene_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_encode_scene_us));
+    (
+        out.p50_renderer_ensure_pipelines_us,
+        out.p95_renderer_ensure_pipelines_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_ensure_pipelines_us));
+    (
+        out.p50_renderer_plan_compile_us,
+        out.p95_renderer_plan_compile_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_plan_compile_us));
+    (out.p50_renderer_upload_us, out.p95_renderer_upload_us) =
+        p50_p95(rows.iter().map(|r| r.renderer_upload_us));
+    (
+        out.p50_renderer_record_passes_us,
+        out.p95_renderer_record_passes_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_record_passes_us));
+    (
+        out.p50_renderer_encoder_finish_us,
+        out.p95_renderer_encoder_finish_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_encoder_finish_us));
+    (
+        out.p50_renderer_prepare_svg_us,
+        out.p95_renderer_prepare_svg_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_svg_us));
+    (
+        out.p50_renderer_prepare_text_us,
+        out.p95_renderer_prepare_text_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_us));
 
     match sort {
         BundleStatsSort::Invalidation => {
