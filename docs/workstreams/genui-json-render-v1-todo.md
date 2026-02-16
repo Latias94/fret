@@ -104,7 +104,7 @@ Goal: improve spec expressiveness for spacing/typography without leaking policy 
 
 Goal: reduce “demo confusion” and make the shadcn catalog output more consistently good-looking without changing the SpecV1 grammar.
 
-- [ ] Demo UX: make queue-only vs auto-apply mode impossible to miss (copy + affordances + “why didn’t my counter change?” hints).
+- [x] Demo UX: make queue-only vs auto-apply mode impossible to miss (copy + affordances + “why didn’t my counter change?” hints). (2026-02-16)
 - [ ] Demo spec ergonomics: add a small “Card as body” example and a “Box boundaries” example that LLMs can copy.
 - [ ] Validation presentation: add a second spec snippet that renders multiple issues per field (repeat + filter) with consistent spacing.
 - [ ] Catalog prompting: add one or two shadcn-specific notes that steer output away from “glued-to-edge” layouts (prefer `Box.p` + `VStack.gap`).
