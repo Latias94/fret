@@ -1098,7 +1098,8 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let profile_layout = crate::runtime_config::ui_runtime_config().layout_profile;
+        let runtime_cfg = crate::runtime_config::ui_runtime_config();
+        let profile_layout = runtime_cfg.layout_profile;
         let total_started = profile_layout.then(Instant::now);
 
         let sf = scale_factor;
@@ -1112,25 +1113,33 @@ impl<H: UiHost> UiTree<H> {
 
         let phase1_started = profile_layout.then(Instant::now);
         let reuse_cached_flow = self.interactive_resize_active();
+        let allow_translation_only_skip = runtime_cfg.layout_skip_request_build_translation_only;
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
-            if self
-                .nodes
-                .get(root)
-                .is_none_or(|node| node.element.is_none())
-            {
+            let Some((has_element, layout_invalidated, prev_bounds, measured)) =
+                self.nodes.get(root).map(|node| {
+                    (
+                        node.element.is_some(),
+                        node.invalidation.layout,
+                        node.bounds,
+                        node.measured_size,
+                    )
+                })
+            else {
+                continue;
+            };
+            if !has_element {
                 continue;
             }
-            let layout_invalidated = self
-                .nodes
-                .get(root)
-                .is_some_and(|node| node.invalidation.layout);
-            if engine.layout_id_for_node(root).is_some()
-                && self
-                    .nodes
-                    .get(root)
-                    .is_some_and(|node| !node.invalidation.layout && node.bounds == bounds)
-            {
+
+            let needs_layout = layout_invalidated || prev_bounds != bounds;
+            let is_translation_only = allow_translation_only_skip
+                && !layout_invalidated
+                && prev_bounds.size == bounds.size
+                && prev_bounds.origin != bounds.origin
+                && measured != Size::default();
+
+            if engine.layout_id_for_node(root).is_some() && (!needs_layout || is_translation_only) {
                 engine.mark_seen_subtree_from_cached_children(root);
                 continue;
             }
