@@ -76,15 +76,14 @@ Upstream reference: `repo-ref/json-render/examples/dashboard/lib/render/catalog.
 GenUI v1 intentionally started with a conservative shadcn surface. The dashboard example highlights the next
 high-ROI components to add to `ecosystem/fret-genui-shadcn`:
 
-- Layout primitives: `Stack` (direction + gap presets) — **partially covered** by `VStack/HStack` (typed spacing) and `ResponsiveStack`.
-- Compound composition components: `Accordion`, `Tabs` — **not yet covered** in a json-render-equivalent way.
+- Layout primitives: `Stack` (direction + gap presets) — ✅ covered via `Stack` (compat alias) + `VStack/HStack` + `ResponsiveStack`.
+- Compound composition components: `Accordion`, `Tabs` — ✅ covered via resolver-level macro assembly using child metadata (no SpecV1 grammar change).
   - In json-render/React, these are composed via nested child components and context.
   - In Fret, many shadcn compounds are builder-style and require the parent to see child props to assemble items.
-  - GenUI v1 currently passes only rendered child `AnyElement`s into the resolver, which is not enough to build
-    itemized compounds without ad-hoc data-only APIs.
-- Overlay surfaces: `Dialog`, `Drawer`, `Popover`, `Tooltip`, `DropdownMenu` — **not yet covered**.
-- Data display: `Table` — **not yet covered** (recommended: a single data-driven `Table` GenUI component like upstream).
-- Charts: `BarChart`, `LineChart` — **not yet covered** (likely map to `fret-ui-shadcn::chart` + `recharts_geometry` later).
+  - GenUI v1 passes child type + resolved props + rendered element into the resolver so compound parents can assemble items deterministically.
+- Overlay surfaces: `Dialog`, `Drawer`, `Popover`, `Tooltip`, `DropdownMenu` — ✅ covered (trigger-only rendering by default; overlay bodies show when opened).
+- Data display: `Table` — ✅ covered via a single data-driven component (columns + data + optional rowActions).
+- Charts: `BarChart`, `LineChart` — ⚠️ only placeholders today (render titles + a stub card); future work can map to in-tree chart ecosystem.
 
 ## Recommended next steps (least-refactor order)
 
@@ -94,7 +93,7 @@ Keep SpecV1 stable; iterate in ecosystem/app surfaces.
   - Improve demo spec examples so LLMs can copy good spacing patterns (`Box.p`, `VStack/HStack.gap`, `Card.wrapContent`).
   - Add a clearer validation presentation snippet (multi-issue per field, consistent spacing).
   - Add one or two catalog notes that bias output away from “glued-to-edge” layouts.
-  - Start closing the `repo-ref/json-render/examples/dashboard` parity gaps: add a small set of data-driven/overlay components (`Dialog`, `Popover`, `DropdownMenu`, `Table`) and one compound (`Accordion` or `Tabs`) once the child-meta plumbing exists.
+  - Close remaining dashboard parity gaps: Pagination behavior/visuals, Avatar `src` ingestion, and chart rendering (or a deliberate “not supported” story).
 
 - v1.2+ optional parity (nice-to-have):
   - Spec-authored validation configs (e.g. `Input.checks`) collected into an app-owned validator registry helper (policy stays app-owned).

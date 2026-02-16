@@ -114,16 +114,19 @@ Goal: reduce “demo confusion” and make the shadcn catalog output more consis
 
 Goal: reduce the gap vs `repo-ref/json-render/examples/dashboard` without changing SpecV1 grammar.
 
-- [ ] Core plumbing: pass child node metadata into `ComponentResolver` (at least: child type name + resolved props + rendered element) so resolver-level “macro components” can assemble compound UIs (Tabs/Accordion) without fragile, data-only fallbacks.
+- [x] Core plumbing: pass child node metadata into `ComponentResolver` (at least: child type name + resolved props + rendered element) so resolver-level “macro components” can assemble compound UIs (Tabs/Accordion) without fragile, data-only fallbacks. (2026-02-16)
 - [ ] Resolver parity (shadcn-backed):
-  - [ ] `Dialog` (trigger label + content children).
-  - [ ] `Drawer` (trigger label + side + content children).
-  - [ ] `Popover` (trigger child + content children).
-  - [ ] `Tooltip` (trigger child + content text).
-  - [ ] `DropdownMenu` (trigger label + items[] mapped to shadcn entries).
-  - [ ] `Avatar` (src/alt/fallback).
-  - [ ] `Table` (data-driven: columns[] + data[] + optional rowActions[]).
-  - [ ] One compound: `Tabs` + `TabContent` or `Accordion` + `AccordionItem` (macro-assembled from child meta).
+  - [x] `Dialog` (trigger label + content children). (2026-02-16)
+  - [x] `Drawer` (trigger label + side + content children). (2026-02-16)
+  - [x] `Popover` (trigger label + content children). (2026-02-16)
+  - [x] `Tooltip` (trigger child + content text). (2026-02-16)
+  - [x] `DropdownMenu` (trigger label + items[] mapped to shadcn entries). (2026-02-16)
+  - [x] `Avatar` (src/alt/fallback) — fallback-only today (no URL → ImageId yet). (2026-02-16)
+  - [x] `Table` (data-driven: columns[] + data[] + optional rowActions[]). (2026-02-16)
+  - [x] One compound: `Tabs` + `TabContent` and `Accordion` + `AccordionItem` (macro-assembled from child meta). (2026-02-16)
+  - [x] json-render compat: `Stack`, `Heading`, `Pagination`, chart placeholders (`BarChart`, `LineChart`). (2026-02-16)
+  - [ ] Follow-up: implement real chart rendering (or document as unsupported for v1).
+  - [ ] Follow-up: add URL → `ImageId` ingestion for `Avatar.src` (policy + caching app-owned).
 
 ## Next (v1.2+ optional parity — keep SpecV1 stable)
 
