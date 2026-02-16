@@ -1792,6 +1792,8 @@ pub struct PromptInputButton {
     children: Vec<AnyElement>,
     disabled: bool,
     on_activate: Option<OnActivate>,
+    variant: ButtonVariant,
+    size: Option<ButtonSize>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -1803,6 +1805,8 @@ impl PromptInputButton {
             children: Vec::new(),
             disabled: false,
             on_activate: None,
+            variant: ButtonVariant::Ghost,
+            size: None,
             test_id: None,
             layout: LayoutRefinement::default(),
         }
@@ -1823,6 +1827,16 @@ impl PromptInputButton {
         self
     }
 
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn size(mut self, size: ButtonSize) -> Self {
+        self.size = Some(size);
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -1834,9 +1848,16 @@ impl PromptInputButton {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let size = self.size.unwrap_or_else(|| {
+            if self.children.len() > 1 {
+                ButtonSize::Sm
+            } else {
+                ButtonSize::IconSm
+            }
+        });
         let mut btn = Button::new(self.label)
-            .variant(ButtonVariant::Ghost)
-            .size(ButtonSize::IconSm)
+            .variant(self.variant)
+            .size(size)
             .disabled(self.disabled)
             .children(self.children)
             .refine_layout(self.layout);
@@ -2409,44 +2430,56 @@ impl PromptInputSubmit {
             .map(|v| v.len())
             .unwrap_or(0);
 
-        if loading {
-            let mut btn = Button::new("Stop")
-                .variant(ButtonVariant::Secondary)
-                .size(ButtonSize::Sm)
-                .disabled(disabled || on_stop.is_none())
-                .refine_layout(self.layout);
+        let (label, icon, activate, test_id) = if loading {
+            let icon = if on_stop.is_some() {
+                decl_icon::icon(cx, IconId::new("lucide.square"))
+            } else {
+                fret_ui_shadcn::Spinner::new().into_element(cx)
+            };
+            (
+                Arc::<str>::from("Stop"),
+                icon,
+                on_stop,
+                cfg.as_ref().and_then(|c| c.test_id_stop.clone()),
+            )
+        } else {
+            let send_disabled = disabled || on_send.is_none() || (is_empty && attachments_len == 0);
+            let icon = decl_icon::icon(cx, IconId::new("lucide.corner-down-left"));
+            let activate = if send_disabled {
+                None
+            } else {
+                match (text_model, on_send) {
+                    (Some(text_model), Some(on_send)) => Some(prompt_input_send_activate(
+                        text_model,
+                        attachments_model,
+                        cfg.as_ref().map(|c| c.clear_on_send).unwrap_or(true),
+                        cfg.as_ref()
+                            .map(|c| c.clear_attachments_on_send)
+                            .unwrap_or(true),
+                        Some(on_send),
+                    )),
+                    _ => None,
+                }
+            };
+            (
+                Arc::<str>::from("Submit"),
+                icon,
+                activate,
+                cfg.as_ref().and_then(|c| c.test_id_send.clone()),
+            )
+        };
 
-            if let Some(on_stop) = on_stop {
-                btn = btn.on_activate(on_stop);
-            }
-            if let Some(id) = cfg.as_ref().and_then(|c| c.test_id_stop.clone()) {
-                btn = btn.test_id(id);
-            }
-            return btn.into_element(cx);
-        }
-
-        let send_disabled = disabled || on_send.is_none() || (is_empty && attachments_len == 0);
-
-        let mut btn = Button::new("Send")
+        let mut btn = Button::new(label)
             .variant(ButtonVariant::Default)
-            .size(ButtonSize::Sm)
-            .disabled(send_disabled)
+            .size(ButtonSize::IconSm)
+            .disabled(disabled || activate.is_none())
+            .children([icon])
             .refine_layout(self.layout);
 
-        if let (Some(text_model), Some(on_send)) = (text_model, on_send) {
-            let send_activate = prompt_input_send_activate(
-                text_model,
-                attachments_model,
-                cfg.as_ref().map(|c| c.clear_on_send).unwrap_or(true),
-                cfg.as_ref()
-                    .map(|c| c.clear_attachments_on_send)
-                    .unwrap_or(true),
-                Some(on_send),
-            );
-            btn = btn.on_activate(send_activate);
+        if let Some(activate) = activate {
+            btn = btn.on_activate(activate);
         }
-
-        if let Some(id) = cfg.as_ref().and_then(|c| c.test_id_send.clone()) {
+        if let Some(id) = test_id {
             btn = btn.test_id(id);
         }
         btn.into_element(cx)
