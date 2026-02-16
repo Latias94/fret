@@ -2187,6 +2187,10 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::RunnerAccessibilityActivated => app
+                            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                            .and_then(|store| store.snapshot(window))
+                            .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
                         }
@@ -2407,6 +2411,10 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::RunnerAccessibilityActivated => app
+                            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                            .and_then(|store| store.snapshot(window))
+                            .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
                         }
@@ -9404,6 +9412,11 @@ pub struct UiTreeDebugSnapshotV1 {
     /// are dropping and recreating surfaces as expected.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner_surface_lifecycle: Option<UiRunnerSurfaceLifecycleSnapshotV1>,
+    /// Runner accessibility activation evidence, sourced from `RunnerAccessibilityDiagnosticsStore`.
+    ///
+    /// This records when the OS accessibility stack activates the AccessKit adapter for a window.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_accessibility: Option<UiRunnerAccessibilitySnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -9442,6 +9455,15 @@ pub struct UiRunnerSurfaceLifecycleSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_destroy_surfaces_unix_ms: Option<u64>,
     pub surfaces_available: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiRunnerAccessibilitySnapshotV1 {
+    pub activation_requests: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_activation_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_activation_frame_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9636,6 +9658,18 @@ impl UiTreeDebugSnapshotV1 {
                 last_destroy_surfaces_unix_ms: snapshot.last_destroy_surfaces_unix_ms,
                 surfaces_available: snapshot.surfaces_available,
             });
+
+        let runner_accessibility = Some({
+            let snapshot = app
+                .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                .and_then(|store| store.snapshot(window))
+                .unwrap_or_default();
+            UiRunnerAccessibilitySnapshotV1 {
+                activation_requests: snapshot.activation_requests,
+                last_activation_unix_ms: snapshot.last_activation_unix_ms,
+                last_activation_frame_id: snapshot.last_activation_frame_id.map(|id| id.0),
+            }
+        });
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -9816,6 +9850,7 @@ impl UiTreeDebugSnapshotV1 {
             window_insets,
             text_input,
             runner_surface_lifecycle,
+            runner_accessibility,
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
@@ -16188,6 +16223,7 @@ fn eval_predicate(
         }
         UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
         UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
+        UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
