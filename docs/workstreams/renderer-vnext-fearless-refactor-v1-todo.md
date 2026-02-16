@@ -223,8 +223,18 @@ milestones) when implementation begins.
   - Landed: join/cap/miter + dash for vector path strokes (deterministic, scale-aware).
   - Deferred: constant-px stroke width under non-uniform transforms (requires a transform-aware contract).
   - Tracking: `docs/workstreams/path-stroke-style-v2.md`.
-- [ ] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient` (or a minimal equivalent).
-  - Current: only linear + radial gradients exist.
+- [x] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient`.
+  - Contract: `docs/adr/0280-sweep-gradient-paint-v1.md`
+  - Evidence:
+    - `crates/fret-core/src/scene/paint.rs` (`SweepGradient`, sanitize)
+    - `crates/fret-core/src/scene/{validate.rs,fingerprint.rs}`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/{quad.rs,path.rs,text.rs}`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`paint_eval*`, `paint_eval_{fill,border}`)
+    - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (`gpu_sweep_gradient_smoke_conformance`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo test -p fret-render-wgpu --test paint_gradient_conformance`
 - [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
 - [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.

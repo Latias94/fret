@@ -47,6 +47,13 @@ pub(in super::super) fn encode_text(
                 }
                 g.stops[n - 1].color
             }
+            Paint::SweepGradient(g) => {
+                let n = usize::from(g.stop_count).clamp(0, MAX_STOPS);
+                if n == 0 {
+                    return Color::TRANSPARENT;
+                }
+                g.stops[n - 1].color
+            }
             Paint::Material { params, .. } => {
                 let base = params.vec4s[0];
                 Color {
@@ -153,6 +160,31 @@ pub(in super::super) fn encode_text(
                     g.center.y.0 * scale_factor,
                     g.radius.width.0 * scale_factor,
                     g.radius.height.0 * scale_factor,
+                ];
+
+                let n = usize::from(g.stop_count).min(MAX_STOPS);
+                for i in 0..n {
+                    let stop = g.stops[i];
+                    let c = mul_alpha(stop.color, opacity);
+                    out.stop_colors[i] = color_to_linear_rgba_premul(c);
+                    let offset = stop.offset.clamp(0.0, 1.0);
+                    if i < 4 {
+                        out.stop_offsets0[i] = offset;
+                    } else {
+                        out.stop_offsets1[i - 4] = offset;
+                    }
+                }
+            }
+            Paint::SweepGradient(g) => {
+                out.kind = 4;
+                out.tile_mode = tile_mode_to_u32(g.tile_mode);
+                out.color_space = color_space_to_u32(g.color_space);
+                out.stop_count = u32::from(g.stop_count);
+                out.params0 = [
+                    g.center.x.0 * scale_factor,
+                    g.center.y.0 * scale_factor,
+                    g.start_angle_turns,
+                    (g.end_angle_turns - g.start_angle_turns).max(1e-6),
                 ];
 
                 let n = usize::from(g.stop_count).min(MAX_STOPS);

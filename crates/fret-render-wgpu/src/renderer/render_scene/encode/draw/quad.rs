@@ -99,6 +99,15 @@ pub(in super::super) fn encode_quad(
                 }
                 false
             }
+            Paint::SweepGradient(g) => {
+                let n = usize::from(g.stop_count).min(MAX_STOPS);
+                for i in 0..n {
+                    if (g.stops[i].color.a * opacity) > 0.0 {
+                        return true;
+                    }
+                }
+                false
+            }
             Paint::Material { params, .. } => {
                 let (base, fg) = material_colors_from_params(params);
                 (base.a * opacity) > 0.0 || (fg.a * opacity) > 0.0
@@ -168,6 +177,31 @@ pub(in super::super) fn encode_quad(
                     g.center.y.0 * scale_factor,
                     g.radius.width.0 * scale_factor,
                     g.radius.height.0 * scale_factor,
+                ];
+
+                let n = usize::from(g.stop_count).min(MAX_STOPS);
+                for i in 0..n {
+                    let stop = g.stops[i];
+                    let c = mul_alpha(stop.color, opacity);
+                    out.stop_colors[i] = color_to_linear_rgba_premul(c);
+                    let offset = stop.offset.clamp(0.0, 1.0);
+                    if i < 4 {
+                        out.stop_offsets0[i] = offset;
+                    } else {
+                        out.stop_offsets1[i - 4] = offset;
+                    }
+                }
+            }
+            Paint::SweepGradient(g) => {
+                out.kind = 4;
+                out.tile_mode = tile_mode_to_u32(g.tile_mode);
+                out.color_space = color_space_to_u32(g.color_space);
+                out.stop_count = u32::from(g.stop_count.min(MAX_STOPS as u8));
+                out.params0 = [
+                    g.center.x.0 * scale_factor,
+                    g.center.y.0 * scale_factor,
+                    g.start_angle_turns,
+                    (g.end_angle_turns - g.start_angle_turns).max(1e-6),
                 ];
 
                 let n = usize::from(g.stop_count).min(MAX_STOPS);
@@ -315,9 +349,9 @@ pub(in super::super) fn encode_quad(
 
     let dash_enabled = border_present && dash_params[3] > 0.5;
 
-    let fill_kind = fill_paint_gpu.kind.min(3) as u8;
+    let fill_kind = fill_paint_gpu.kind.min(4) as u8;
     let border_kind = if border_present {
-        border_paint_gpu.kind.min(3) as u8
+        border_paint_gpu.kind.min(4) as u8
     } else {
         0
     };
