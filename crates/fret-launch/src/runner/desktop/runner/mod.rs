@@ -11,7 +11,7 @@ use std::{
 mod hotpatch;
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect};
-use fret_core::time::Instant;
+use fret_core::time::{Duration, Instant};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Point, Px,
     Rect, Scene, Size, UiServices, WindowMetricsService,
