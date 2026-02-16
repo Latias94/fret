@@ -83,6 +83,14 @@ muscle memory:
 
 The goal is that "worst bundle" always has enough timeline context to answer "which phase spiked".
 
+Implementation note (keep refactors safe):
+
+- Prefer routing new/updated sub-phase timers through `crates/fret-perf` helpers (e.g.
+  `fret_perf::measure_span`) so a single call site can:
+  - update per-frame `debug.stats` timings (used by `diag perf` / baselines), and
+  - emit a matching `tracing` span name (used by Tracy).
+- This reduces the chance that stats buckets and timeline span boundaries drift apart over time.
+
 ### C) CPU-time vs schedule noise (Windows-friendly)
 
 When ETW/WPR is unavailable:
@@ -114,6 +122,22 @@ In practice, this should be a one-command workflow:
 5) Document the standard workflow:
    - "typical perf" review (p50/p95)
    - "tail regression" triage (max + worst bundle + trace)
+
+## Quick workflow (today)
+
+Typical-perf review from a single evidence bundle:
+
+- `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
+- Focus on:
+  - `time p50/p95 (us)` for overall frame-time distribution.
+  - `layout breakdown p50/p95 (us)` to see which layout sub-phase dominates typical vs tail-ish frames.
+  - `paint breakdown p50/p95 (us)` for paint-side attribution without opening a trace.
+
+Tail-spike triage:
+
+- `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
+- If wall time is high but CPU looks low, re-run with:
+  - `--sort cpu_cycles` (Windows) or `--sort cpu_time` (fallback)
 
 ## Comparative notes (how other stacks succeed)
 

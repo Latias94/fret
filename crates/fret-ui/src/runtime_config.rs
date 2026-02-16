@@ -50,6 +50,9 @@ pub(crate) struct UiRuntimeEnvConfig {
 
     pub(crate) layout_all_profile: bool,
     pub(crate) layout_profile: bool,
+    pub(crate) layout_engine_sweep_policy: LayoutEngineSweepPolicy,
+    pub(crate) layout_skip_request_build_translation_only: bool,
+    pub(crate) layout_flow_skip_barrier_clean_children: bool,
     pub(crate) debug_focus_repair: bool,
     pub(crate) taffy_dump: Option<RuntimeTaffyDumpConfig>,
     pub(crate) taffy_dump_once: bool,
@@ -70,6 +73,12 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) text_wrap_width_bucket_px: u8,
     pub(crate) text_wrap_width_small_step_bucket_px: u8,
     pub(crate) text_wrap_width_small_step_max_dw_px: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LayoutEngineSweepPolicy {
+    Always,
+    OnDemand,
 }
 
 pub(crate) fn ui_runtime_config() -> &'static UiRuntimeEnvConfig {
@@ -149,6 +158,32 @@ impl UiRuntimeEnvConfig {
 
         let layout_all_profile = env_enabled("FRET_LAYOUT_ALL_PROFILE");
         let layout_profile = env_enabled("FRET_LAYOUT_PROFILE");
+        let layout_engine_sweep_policy = match std::env::var("FRET_UI_LAYOUT_ENGINE_SWEEP")
+            .ok()
+            .as_deref()
+        {
+            Some("always") => LayoutEngineSweepPolicy::Always,
+            Some("on_demand") => LayoutEngineSweepPolicy::OnDemand,
+            Some(v) => {
+                tracing::warn!(
+                    "invalid FRET_UI_LAYOUT_ENGINE_SWEEP={v:?} (expected always|on_demand); defaulting to on_demand"
+                );
+                LayoutEngineSweepPolicy::OnDemand
+            }
+            None => LayoutEngineSweepPolicy::OnDemand,
+        };
+        // Default-on: these are perf knobs intended to keep the request/build phase cheap on
+        // steady-state frames. Set to "0" to disable.
+        let layout_skip_request_build_translation_only =
+            std::env::var("FRET_UI_LAYOUT_SKIP_REQUEST_BUILD_TRANSLATION_ONLY")
+                .ok()
+                .map(|v| v != "0")
+                .unwrap_or(true);
+        let layout_flow_skip_barrier_clean_children =
+            std::env::var("FRET_UI_LAYOUT_FLOW_SKIP_BARRIER_CLEAN_CHILDREN")
+                .ok()
+                .map(|v| v != "0")
+                .unwrap_or(true);
         let debug_focus_repair = env_present("FRET_DEBUG_FOCUS_REPAIR");
 
         let taffy_dump = env_present("FRET_TAFFY_DUMP").then(|| RuntimeTaffyDumpConfig {
@@ -254,6 +289,9 @@ impl UiRuntimeEnvConfig {
             validate_semantics_panic,
             layout_all_profile,
             layout_profile,
+            layout_engine_sweep_policy,
+            layout_skip_request_build_translation_only,
+            layout_flow_skip_barrier_clean_children,
             debug_focus_repair,
             taffy_dump,
             taffy_dump_once,

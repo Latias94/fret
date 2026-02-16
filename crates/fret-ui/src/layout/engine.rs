@@ -11,6 +11,7 @@ use slotmap::SecondaryMap;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+use crate::runtime_config::{LayoutEngineSweepPolicy, ui_runtime_config};
 
 mod flow;
 pub(crate) use flow::{build_viewport_flow_subtree, layout_children_from_engine_if_solved};
@@ -41,6 +42,7 @@ pub struct TaffyLayoutEngine {
     parent: SecondaryMap<NodeId, NodeId>,
     seen_generation: u32,
     seen_stamp: SecondaryMap<NodeId, u32>,
+    seen_count: usize,
     child_nodes_scratch: Vec<TaffyNodeId>,
     child_unique_scratch: Vec<NodeId>,
     child_dedupe_set_scratch: HashSet<NodeId>,
@@ -104,6 +106,7 @@ impl Default for TaffyLayoutEngine {
             parent: SecondaryMap::new(),
             seen_generation: 1,
             seen_stamp: SecondaryMap::new(),
+            seen_count: 0,
             child_nodes_scratch: Vec::new(),
             child_unique_scratch: Vec::new(),
             child_dedupe_set_scratch: HashSet::new(),
@@ -152,7 +155,10 @@ impl TaffyLayoutEngine {
 
     #[inline]
     fn mark_seen(&mut self, node: NodeId) {
-        self.seen_stamp.insert(node, self.seen_generation);
+        let prev = self.seen_stamp.insert(node, self.seen_generation);
+        if prev != Some(self.seen_generation) {
+            self.seen_count = self.seen_count.saturating_add(1);
+        }
     }
 
     #[inline]
@@ -176,6 +182,7 @@ impl TaffyLayoutEngine {
                 self.seen_generation = 1;
                 self.seen_stamp.clear();
             }
+            self.seen_count = 0;
             self.solve_generation = 0;
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
@@ -189,6 +196,12 @@ impl TaffyLayoutEngine {
     }
 
     pub fn end_frame(&mut self) {
+        if ui_runtime_config().layout_engine_sweep_policy == LayoutEngineSweepPolicy::OnDemand
+            && self.seen_count == self.node_to_layout.len()
+        {
+            return;
+        }
+
         let stale: Vec<NodeId> = self
             .node_to_layout
             .iter()
@@ -779,8 +792,8 @@ impl TaffyLayoutEngine {
     }
 
     pub fn request_layout_node(&mut self, node: NodeId) -> Option<LayoutId> {
-        self.mark_seen(node);
         if let Some(id) = self.node_to_layout.get(node).copied() {
+            self.mark_seen(node);
             return Some(id);
         }
 
@@ -800,6 +813,7 @@ impl TaffyLayoutEngine {
         let id = LayoutId(taffy_id);
         self.node_to_layout.insert(node, id);
         self.layout_to_node.insert(id, node);
+        self.mark_seen(node);
         Some(id)
     }
 

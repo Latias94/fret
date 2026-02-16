@@ -566,7 +566,7 @@ mod tests {
             order: fret_core::DrawOrder(0),
             origin: fret_core::Point::new(Px(0.0), Px(0.0)),
             text: prepared.blob,
-            color: fret_core::Color::TRANSPARENT,
+            paint: fret_core::Color::TRANSPARENT.into(),
         }];
 
         cache.begin_frame(); // frame 2

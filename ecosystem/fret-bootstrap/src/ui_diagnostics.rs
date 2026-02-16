@@ -11730,6 +11730,12 @@ impl UiCacheRootStatsV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineSolveV1 {
     pub root_node: u64,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub root_element_kind: Option<String>,
+    #[serde(default)]
+    pub root_element_path: Option<String>,
     pub solve_time_us: u64,
     pub measure_calls: u64,
     pub measure_cache_hits: u64,
@@ -11743,6 +11749,9 @@ impl UiLayoutEngineSolveV1 {
     fn from_solve(s: &fret_ui::tree::UiDebugLayoutEngineSolve) -> Self {
         Self {
             root_node: s.root.data().as_ffi(),
+            root_element: s.root_element.map(|id| id.0),
+            root_element_kind: s.root_element_kind.map(|s| s.to_string()),
+            root_element_path: s.root_element_path.clone(),
             solve_time_us: s.solve_time.as_micros().min(u64::MAX as u128) as u64,
             measure_calls: s.measure_calls,
             measure_cache_hits: s.measure_cache_hits,
@@ -11780,6 +11789,10 @@ pub struct UiLayoutHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub layout_time_us: u64,
     #[serde(default)]
@@ -11791,6 +11804,8 @@ impl UiLayoutHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             layout_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -11803,6 +11818,10 @@ pub struct UiWidgetMeasureHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub measure_time_us: u64,
     #[serde(default)]
@@ -11814,6 +11833,8 @@ impl UiWidgetMeasureHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             measure_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -12636,6 +12657,16 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_encode_scene_us: u64,
     #[serde(default)]
+    pub renderer_ensure_pipelines_us: u64,
+    #[serde(default)]
+    pub renderer_plan_compile_us: u64,
+    #[serde(default)]
+    pub renderer_upload_us: u64,
+    #[serde(default)]
+    pub renderer_record_passes_us: u64,
+    #[serde(default)]
+    pub renderer_encoder_finish_us: u64,
+    #[serde(default)]
     pub renderer_prepare_svg_us: u64,
     #[serde(default)]
     pub renderer_prepare_text_us: u64,
@@ -13018,6 +13049,11 @@ impl UiFrameStatsV1 {
             renderer_frame_id: 0,
             renderer_frames: 0,
             renderer_encode_scene_us: 0,
+            renderer_ensure_pipelines_us: 0,
+            renderer_plan_compile_us: 0,
+            renderer_upload_us: 0,
+            renderer_record_passes_us: 0,
+            renderer_encoder_finish_us: 0,
             renderer_prepare_svg_us: 0,
             renderer_prepare_text_us: 0,
             renderer_svg_uploads: 0,
@@ -13094,6 +13130,11 @@ impl UiFrameStatsV1 {
             out.renderer_frame_id = sample.frame_id;
             out.renderer_frames = sample.perf.frames;
             out.renderer_encode_scene_us = sample.perf.encode_scene_us;
+            out.renderer_ensure_pipelines_us = sample.perf.ensure_pipelines_us;
+            out.renderer_plan_compile_us = sample.perf.plan_compile_us;
+            out.renderer_upload_us = sample.perf.upload_us;
+            out.renderer_record_passes_us = sample.perf.record_passes_us;
+            out.renderer_encoder_finish_us = sample.perf.encoder_finish_us;
             out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
             out.renderer_prepare_text_us = sample.perf.prepare_text_us;
             out.renderer_svg_uploads = sample.perf.svg_uploads;

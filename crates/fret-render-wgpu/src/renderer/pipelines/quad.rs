@@ -19,6 +19,22 @@ impl Renderer {
     ) -> &wgpu::RenderPipeline {
         self.ensure_quad_pipelines(format);
         if !self.quad_pipelines.contains_key(&key) {
+            let create_span = tracing::enabled!(tracing::Level::TRACE)
+                .then(|| {
+                    tracing::trace_span!(
+                        "fret.renderer.pipeline.create.quad",
+                        format = ?format,
+                        fill_kind = key.fill_kind,
+                        border_kind = key.border_kind,
+                        border_present = key.border_present,
+                        dash_enabled = key.dash_enabled,
+                        fill_material_sampled = key.fill_material_sampled,
+                        border_material_sampled = key.border_material_sampled,
+                    )
+                })
+                .unwrap_or_else(tracing::Span::none);
+            let _create_guard = create_span.enter();
+
             let quad_shader_source = quad_shader_source();
             let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("fret quad shader"),

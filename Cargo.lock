@@ -2330,6 +2330,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-perf"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "tracing",
+]
+
+[[package]]
 name = "fret-platform"
 version = "0.1.0"
 dependencies = [
@@ -2429,6 +2437,7 @@ dependencies = [
  "etagere",
  "fret-core",
  "fret-fonts",
+ "fret-perf",
  "fret-render-core",
  "glam 0.30.10",
  "lyon",
@@ -2442,6 +2451,7 @@ dependencies = [
  "slotmap",
  "swash",
  "thiserror 2.0.18",
+ "tracing",
  "unicode-script",
  "unicode-segmentation",
  "usvg",
@@ -2599,6 +2609,7 @@ name = "fret-ui"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-perf",
  "fret-runtime",
  "fret-text-nav",
  "rustc-hash 2.1.1",
