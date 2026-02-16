@@ -185,6 +185,10 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     preedit segment remain stable.
     - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap`)
+  - [x] Regression gate: the same round-trip holds when the composed window includes editor
+    decorations (fold placeholders + inlays) under inline preedit.
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap`)
 - [x] Add ecosystem-owned replace support for platform text input (not `fret-ui` mechanism):
   - `replace_text_in_range_utf16` via window mapping + buffer ops.
   - `replace_and_mark_text_in_range_utf16` supports composing for:

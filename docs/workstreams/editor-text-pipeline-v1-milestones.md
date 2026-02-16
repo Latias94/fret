@@ -155,6 +155,8 @@ Evidence anchors:
     (`platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap`)
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
     (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap`)
 - Diag gates:
   - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`
   - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_a11y_composition_json`)
