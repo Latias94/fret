@@ -3,9 +3,9 @@ use std::sync::Arc;
 use fret::kernel::core::{ImageColorSpace, SvgId};
 use fret::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret::prelude::*;
-use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
-use fret_ui_kit::declarative::GlobalWatchExt as _;
+use fret_ui_assets::{image_asset_state, svg_asset_state, UiAssets};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::GlobalWatchExt as _;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
 
 static DEMO_SVG: &[u8] = br##"
@@ -281,7 +281,7 @@ fn render_image_panel(
     .into_element(cx);
 
     ui::v_flex(cx, |cx| {
-        let mut children = vec![shadcn::Label::new(title).into_element(cx), image_box];
+        let mut children = ui::children![cx; shadcn::Label::new(title), image_box];
             if let Some(msg) = error {
                 children.push(
                     shadcn::Alert::new([

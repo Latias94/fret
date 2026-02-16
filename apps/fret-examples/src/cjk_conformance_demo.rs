@@ -9,8 +9,8 @@ use fret_launch::{
     WinitRunnerConfig,
 };
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
-use fret_ui::UiTree;
 use fret_ui::declarative;
+use fret_ui::UiTree;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -218,7 +218,7 @@ impl CjkConformanceDriver {
             .h_full()
             .into_element(cx);
 
-            vec![page]
+            ui::children![cx; page]
         });
 
         state.ui.set_root(root);
