@@ -53,7 +53,8 @@ Evidence anchors:
   - Files: `crates/fret-runner-winit/src/state/window.rs`
 - Accessibility (AccessKit integration)
   - Files: `crates/fret-runner-winit/src/accessibility.rs`
-  - Note: `crates/fret-runner-winit/src/accessibility_accesskit_winit.rs` is intentionally disabled while we are on `winit` beta and waiting for `accesskit_winit` compatibility.
+  - Platform adapter: `crates/fret-runner-winit/src/accessibility_accesskit_platform.rs` (RawWindowHandle-based; avoids `accesskit_winit` version coupling).
+  - Legacy adapter: `crates/fret-runner-winit/src/accessibility_accesskit_winit.rs` (kept for reference; not used).
 - External drag/drop glue
   - Files: `crates/fret-runner-winit/src/external_drag.rs`
 - Window registry/bookkeeping

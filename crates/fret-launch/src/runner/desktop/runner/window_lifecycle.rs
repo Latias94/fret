@@ -8,10 +8,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         style: WindowStyleRequest,
         _parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
     ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
+        let accessibility_enabled = self.config.accessibility_enabled
+            && !std::env::var_os("FRET_A11Y_DISABLE").is_some_and(|v| !v.is_empty());
+
         let mut attrs = winit::window::WindowAttributes::default()
             .with_title(spec.title)
             .with_surface_size(spec.size)
-            .with_visible(if self.config.accessibility_enabled {
+            .with_visible(if accessibility_enabled {
                 false
             } else {
                 spec.visible
@@ -49,12 +52,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         macos_window_log(format_args!("[create] winit={:?}", window.id()));
 
-        let accessibility = self
-            .config
-            .accessibility_enabled
+        let accessibility = accessibility_enabled
             .then(|| accessibility::WinitAccessibility::new(event_loop, window.as_ref()));
 
-        if self.config.accessibility_enabled && spec.visible {
+        if accessibility_enabled && spec.visible {
             window.set_visible(true);
         }
 
