@@ -61,7 +61,7 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
             "drawer_text": { "type": "Text", "props": { "text": "Drawer body" }, "children": [] },
 
             "nav_title": { "type": "Text", "props": { "text": "Pagination" }, "children": [] },
-            "pagination": { "type": "Pagination", "props": { "currentPage": 2, "totalPages": 5, "onPageChange": "openUrl" }, "children": [] },
+            "pagination": { "type": "Pagination", "props": { "currentPage": 10, "totalPages": 20, "onPageChange": "openUrl" }, "children": [] },
 
             "charts_title": { "type": "Text", "props": { "text": "Charts" }, "children": [] },
             "bar_chart": { "type": "BarChart", "props": { "title": "Sales", "data": [{ "day": "Mon", "value": 10 }], "xKey": "day", "yKey": "value", "aggregate": null, "color": null, "height": 120 }, "children": [] },
@@ -250,6 +250,9 @@ fn genui_dashboard_smoke_renders_with_strict_catalog_validation() {
         assert!(joined.contains("Open Drawer"));
         assert!(joined.contains("Prev"));
         assert!(joined.contains("Next"));
+        assert!(joined.contains("First"));
+        assert!(joined.contains("Last"));
+        assert!(joined.contains("…"));
         assert!(joined.contains("BarChart placeholder"));
         assert!(joined.contains("Tab A"));
         assert!(joined.contains("Tab B"));

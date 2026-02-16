@@ -20,6 +20,60 @@ fn clamp_page(page: u32, total: u32) -> u32 {
     page.clamp(1, total)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PaginationToken {
+    Page(u32),
+    Ellipsis,
+}
+
+fn pagination_tokens(current: u32, total: u32) -> Vec<PaginationToken> {
+    let total = total.max(1);
+    let current = clamp_page(current, total);
+
+    let boundary_count: u32 = 1;
+    let sibling_count: u32 = 1;
+
+    if total <= (boundary_count * 2 + sibling_count * 2 + 3) {
+        return (1..=total).map(PaginationToken::Page).collect();
+    }
+
+    let left_boundary_end = boundary_count;
+    let right_boundary_start = total.saturating_sub(boundary_count).saturating_add(1);
+
+    let siblings_start = current
+        .saturating_sub(sibling_count)
+        .max(left_boundary_end + 2);
+    let siblings_end = (current + sibling_count).min(right_boundary_start.saturating_sub(2));
+
+    let mut out: Vec<PaginationToken> = Vec::new();
+
+    for p in 1..=left_boundary_end {
+        out.push(PaginationToken::Page(p));
+    }
+
+    if siblings_start > left_boundary_end + 2 {
+        out.push(PaginationToken::Ellipsis);
+    } else if left_boundary_end + 1 < right_boundary_start {
+        out.push(PaginationToken::Page(left_boundary_end + 1));
+    }
+
+    for p in siblings_start..=siblings_end {
+        out.push(PaginationToken::Page(p));
+    }
+
+    if siblings_end + 1 < right_boundary_start - 1 {
+        out.push(PaginationToken::Ellipsis);
+    } else if right_boundary_start > left_boundary_end + 1 {
+        out.push(PaginationToken::Page(right_boundary_start - 1));
+    }
+
+    for p in right_boundary_start..=total {
+        out.push(PaginationToken::Page(p));
+    }
+
+    out
+}
+
 impl ShadcnResolver {
     pub(super) fn render_pagination<H: UiHost>(
         &mut self,
@@ -68,6 +122,19 @@ impl ShadcnResolver {
 
         let mut buttons: Vec<AnyElement> = Vec::new();
 
+        // First
+        {
+            let disabled = current == 1 || action.is_none();
+            let mut b = fret_ui_shadcn::Button::new(Arc::<str>::from("First"))
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .disabled(disabled);
+            if let Some(on_activate) = mk_activate(1) {
+                b = b.on_activate(on_activate);
+            }
+            buttons.push(b.into_element(cx));
+        }
+
         // Previous
         {
             let target = current.saturating_sub(1).max(1);
@@ -82,27 +149,37 @@ impl ShadcnResolver {
             buttons.push(b.into_element(cx));
         }
 
-        // Page links (simple window around current)
-        let window: u32 = 2;
-        let start = current.saturating_sub(window).max(1);
-        let end = (current + window).min(total);
-        for page in start..=end {
-            let active = page == current;
-            let disabled = action.is_none();
-            let label = Arc::<str>::from(page.to_string());
-            let variant = if active {
-                fret_ui_shadcn::ButtonVariant::Secondary
-            } else {
-                fret_ui_shadcn::ButtonVariant::Ghost
-            };
-            let mut b = fret_ui_shadcn::Button::new(label)
-                .variant(variant)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
-                .disabled(disabled);
-            if let Some(on_activate) = mk_activate(page) {
-                b = b.on_activate(on_activate);
+        // Page links with ellipsis
+        for token in pagination_tokens(current, total) {
+            match token {
+                PaginationToken::Page(page) => {
+                    let active = page == current;
+                    let disabled = action.is_none();
+                    let label = Arc::<str>::from(page.to_string());
+                    let variant = if active {
+                        fret_ui_shadcn::ButtonVariant::Secondary
+                    } else {
+                        fret_ui_shadcn::ButtonVariant::Ghost
+                    };
+                    let mut b = fret_ui_shadcn::Button::new(label)
+                        .variant(variant)
+                        .size(fret_ui_shadcn::ButtonSize::Sm)
+                        .disabled(disabled);
+                    if let Some(on_activate) = mk_activate(page) {
+                        b = b.on_activate(on_activate);
+                    }
+                    buttons.push(b.into_element(cx));
+                }
+                PaginationToken::Ellipsis => {
+                    buttons.push(
+                        fret_ui_shadcn::Button::new(Arc::<str>::from("…"))
+                            .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                            .size(fret_ui_shadcn::ButtonSize::Sm)
+                            .disabled(true)
+                            .into_element(cx),
+                    );
+                }
             }
-            buttons.push(b.into_element(cx));
         }
 
         // Next
@@ -114,6 +191,19 @@ impl ShadcnResolver {
                 .size(fret_ui_shadcn::ButtonSize::Sm)
                 .disabled(disabled);
             if let Some(on_activate) = mk_activate(target) {
+                b = b.on_activate(on_activate);
+            }
+            buttons.push(b.into_element(cx));
+        }
+
+        // Last
+        {
+            let disabled = current >= total || action.is_none();
+            let mut b = fret_ui_shadcn::Button::new(Arc::<str>::from("Last"))
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .disabled(disabled);
+            if let Some(on_activate) = mk_activate(total) {
                 b = b.on_activate(on_activate);
             }
             buttons.push(b.into_element(cx));
