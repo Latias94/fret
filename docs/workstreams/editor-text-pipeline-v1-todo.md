@@ -176,6 +176,10 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     (`ime_cursor_area_matches_caret_rect_for_selection_under_preedit_and_wrap`)
 - [x] Add ecosystem-owned bounds/hit-test support for `TextInputRegion` (not `fret-ui` mechanism):
   - `BoundsForRange` / `CharacterIndexForPoint` via cached row geometry + fallbacks.
+  - [x] Regression gate: `BoundsForRange` round-trips with `CharacterIndexForPoint` under wrap +
+    selection-replacing preedit (no drift between platform queries and editor geometry).
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap`)
 - [x] Add ecosystem-owned replace support for platform text input (not `fret-ui` mechanism):
   - `replace_text_in_range_utf16` via window mapping + buffer ops.
   - `replace_and_mark_text_in_range_utf16` supports composing for:
