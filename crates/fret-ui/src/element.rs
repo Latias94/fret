@@ -39,6 +39,19 @@ impl AnyElement {
     /// Prefer this over wrapping a subtree in `Semantics` when you only need to stamp
     /// `test_id` / `label` / `role` / `value` for diagnostics or UI automation, since `Semantics`
     /// introduces a real layout node.
+    ///
+    /// ```ignore
+    /// use fret_core::SemanticsRole;
+    /// use fret_ui::element::SemanticsDecoration;
+    ///
+    /// // `some_element` is any `AnyElement` produced by your view constructors:
+    /// let el = some_element.attach_semantics(
+    ///     SemanticsDecoration::default()
+    ///         .role(SemanticsRole::Button)
+    ///         .label("Save")
+    ///         .test_id("toolbar.save"),
+    /// );
+    /// ```
     pub fn attach_semantics(mut self, decoration: SemanticsDecoration) -> Self {
         self.semantics_decoration = Some(match self.semantics_decoration.take() {
             Some(existing) => existing.merge(decoration),
@@ -48,6 +61,12 @@ impl AnyElement {
     }
 
     /// Attach a debug/test-only identifier for diagnostics and deterministic UI automation.
+    ///
+    /// This is shorthand for attaching a [`SemanticsDecoration`] with `test_id` set.
+    ///
+    /// ```ignore
+    /// let el = some_element.test_id("settings.theme.toggle");
+    /// ```
     pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
         self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
     }
