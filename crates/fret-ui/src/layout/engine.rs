@@ -878,7 +878,7 @@ impl TaffyLayoutEngine {
             child_unique_scratch.clear();
             child_unique_scratch.reserve(children.len());
             for &child in children {
-                if child_unique_scratch.iter().any(|&seen| seen == child) {
+                if child_unique_scratch.contains(&child) {
                     had_dupes = true;
                     continue;
                 }

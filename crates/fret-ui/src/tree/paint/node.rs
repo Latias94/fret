@@ -116,9 +116,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             let (replay_ctx, hit_check_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                let Some(prev) = prev_cache else {
-                    return None;
-                };
+                let prev = prev_cache?;
                 if prev.generation != self.paint_cache.source_generation {
                     return None;
                 }
