@@ -56,6 +56,19 @@ Rule of thumb:
 
 - If the list can change shape over time, assume it needs keys.
 
+Why this matters:
+
+- Keys make element identity stable across frames, so per-row state stays attached to the same item.
+- Without keys, inserting/removing/reordering rows can cause state to “jump” between rows (focus, hover, local state, etc.).
+
+Minimal pattern:
+
+```rust
+for item in items {
+    cx.keyed(item.id, |cx| render_row(cx, item));
+}
+```
+
 ### B) Heterogeneous children without adapter noise
 
 When building a list of children, prefer:
@@ -69,11 +82,20 @@ remain explicit at the ecosystem boundary.
 
 Fret uses explicit invalidation (this is a contract, not an optimization detail).
 
-When observing models:
+When observing models (via `cx.watch_model(...)`):
 
-- Visual-only changes → `Paint`
-- Affects sizing/flow/scroll extents → `Layout`
-- Affects hit regions only → `HitTest`
+| If the value affects… | Choose | Notes |
+| --- | --- | --- |
+| visuals only | `Paint` | default; cheapest |
+| layout (size/flow/scroll extents) | `Layout` | safe when in doubt |
+| hit regions only | `HitTest` | pointer-only changes without layout changes |
+
+Examples:
+
+```rust
+let clicks = cx.watch_model(&models.clicks).paint().copied_or_default();
+let label = cx.watch_model(&models.label).layout().cloned_or_default();
+```
 
 If you are unsure, start with `Layout` and tighten later.
 
@@ -86,4 +108,3 @@ If you are unsure, start with `Layout` and tighten later.
 4) **Interop (Tier A embedding)**: viewport surfaces + input forwarding
    - See: `docs/ui-ergonomics-and-interop.md`
    - See: `ecosystem/fret/src/interop/embedded_viewport.rs`
-

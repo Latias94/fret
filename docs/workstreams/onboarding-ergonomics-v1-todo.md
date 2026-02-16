@@ -38,18 +38,20 @@ Design note:
   - “simple-todo” as the Step 1 baseline (Model + MVU),
   - “todo” as Step 2/3 (selector + query).
 
-- [ ] ONB-docs-003 Add a short “Invalidation rules of thumb” section.
+- [x] ONB-docs-003 Add a short “Invalidation rules of thumb” section.
   - Table:
     - value affects only visuals → `Paint`
     - affects sizing/flow/scroll extents → `Layout`
     - affects hit regions only → `HitTest`
   - Evidence:
+    - `docs/first-hour.md`
     - `ecosystem/fret-ui-kit/src/declarative/model_watch.rs`
     - `crates/fret-ui/src/elements/cx.rs` (`observe_model`)
 
-- [ ] ONB-docs-004 Add a short “Identity rules of thumb” section.
+- [x] ONB-docs-004 Add a short “Identity rules of thumb” section.
   - Must teach `cx.keyed(...)` for dynamic lists and why.
   - Evidence:
+    - `docs/first-hour.md`
     - `crates/fret-ui/src/elements/cx.rs` (`scope`, `keyed`)
 
 ---
