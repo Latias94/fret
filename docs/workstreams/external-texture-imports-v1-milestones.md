@@ -90,8 +90,12 @@ Evidence:
     - Terminal 2 (Trunk dev server):
       - `cargo run -p fretboard -- dev web --demo external_texture_imports_web_demo --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token>`
       - Open the printed URL (it already includes `fret_devtools_ws` + `fret_devtools_token`).
+      - If you opened the demo earlier, refresh using the printed URL so the app actually connects to DevTools WS.
     - Terminal 3 (run the steady script + compare to baseline):
       - `cargo run -p fretboard -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+      - Troubleshooting:
+        - `error: no DevTools sessions available (is the app connected?)` means the demo page is not connected to the WS server (missing query params, wrong token, or the page is not open).
+        - If multiple sessions exist, pass `--devtools-session-id <id>` (or list sessions via `cargo run -p fret-diag-export -- --list-sessions`).
   - Baseline record:
     - Date: 2026-02-15
     - Exports:
