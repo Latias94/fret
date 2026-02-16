@@ -107,6 +107,40 @@ ingestion strategy:
 If a backend cannot preserve a metadata property for a given strategy (e.g. colorspace metadata is
 not representable), it must degrade deterministically and record a diagnostic counter.
 
+### Metadata field rules (v2 scope, executable)
+
+This ADR intentionally keeps the portable metadata surface **small**. The “executable” part of v2
+is that *every* field we do carry has a clear preserve/degrade rule, and any non-preservable field
+becomes observable via a counter/hint (workstream TODOs).
+
+**RenderTargetDescriptor**
+
+- `color_space: RenderTargetColorSpace` (`srgb|linear`)
+  - Preserve across all strategies.
+  - If a backend cannot represent the requested value, degrade deterministically to `srgb` and
+    record a counter/hint (see workstream `EXTV2-diag-040`).
+
+**RenderTargetMetadata**
+
+- `alpha_mode: RenderTargetAlphaMode` (`premultiplied|straight`)
+  - Preserve across all strategies.
+  - If a producer cannot provide the declared alpha mode for a given frame, it must not “lie”:
+    it should switch to the correct declared mode for that frame (or fall back to a copy path that
+    can normalize alpha), and record a counter/hint if a requested mode could not be honored.
+- `orientation: RenderTargetOrientation` (`rotation` + `mirror_x`)
+  - Preserve across all strategies.
+  - If a backend cannot apply the requested orientation, degrade deterministically to the identity
+    orientation (`r0`, `mirror_x=false`) and record a counter/hint.
+- `requested_ingest_strategy` vs `ingest_strategy`
+  - Always populate both (or keep `unknown`) so capability-gated fallbacks are observable in perf
+    snapshots/bundles.
+- `frame_timestamp_ns`
+  - Diagnostics-only. If not available, set `None`. No correctness semantics depend on it.
+
+**Explicit deferral (non-goal):** real video colorimetry (transfer/matrix/range, ICC, HDR) is
+intentionally out of scope for v2. If/when we add it, it must be introduced as bounded enums with
+deterministic degradations and perf gates (this ADR’s exit criteria still applies).
+
 ## Capability matrix (expected reality)
 
 This ADR assumes the following *typical* capability picture. Implementations must treat this as

@@ -12,7 +12,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Design lock
 
-- [~] EXTV2-adr-010 Lock ADR 0282 to “executable” detail:
+- [x] EXTV2-adr-010 Lock ADR 0282 to “executable” detail:
       bounded strategy set, capability gating rules, deterministic fallback chain, and
       wasm/mobile correctness checklist.
   - ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md`
@@ -20,6 +20,10 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - every strategy has explicit prerequisites + fallback,
     - every metadata field has an explicit “preserve or degrade” rule,
     - perf gate checklist is explicit per target (native/wasm/mobile).
+  - Evidence anchors:
+    - `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md` (strategy set, fallback chain, metadata rules)
+    - `docs/workstreams/external-texture-imports-v2-zero-low-copy.md` (execution order + web WS notes)
+    - `crates/fret-render-core/src/lib.rs` (`RenderTargetMetadata`, `RenderTargetIngestStrategy`)
 
 ## Metadata semantics
 
@@ -66,4 +70,3 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Keep v1 copy-path baselines green:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
-

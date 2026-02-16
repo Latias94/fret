@@ -51,5 +51,7 @@ It builds on v1’s contract-path closure:
   WS messages are processed deterministically.
 - Browsers may throttle timers and `requestAnimationFrame` when the tab is backgrounded; keep the
   demo tab visible during `diag perf` runs.
+- `--perf-baseline` expects a **JSON file path**, not a directory. If you keep baselines under
+  `docs/workstreams/perf-baselines/`, pass the full file name.
 - If multiple sessions exist, pass `--devtools-session-id <id>` (list via
   `cargo run -p fret-diag-export -- --list-sessions --token <token>`).
