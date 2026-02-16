@@ -66,12 +66,12 @@ Legend:
 | Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: state matrix sections. |
 | Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: single/multi + orientation. |
 | Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: sections per token preset + truncation/wrap behavior. |
-| Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: short page; easy migration. |
+| Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-kbd-docs-smoke.json` (1) | Keeps existing `test_id`s for demo/group/button/input-group. |
 | Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: list item patterns + icons + truncation. |
 | Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Candidate: accordion/collapsible behavior notes. |
 | Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: minimal surface. |
 | Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
-| Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: quick conversion. |
+| Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-empty-docs-smoke.json` (1) | Keeps existing `test_id`s for each recipe. |
 
 ## Suggested Migration Order (next)
 
