@@ -67,10 +67,12 @@ Design note:
   - Evidence:
     - `apps/fretboard/src/scaffold/templates.rs`
 
-- [ ] ONB-tpl-011 Keep `todo` template as the “best practice baseline”.
+- [x] ONB-tpl-011 Keep `todo` template as the “best practice baseline”.
   - Ensure it remains aligned with:
     - `apps/fret-examples/src/todo_demo.rs`
     - `docs/examples/todo-app-golden-path.md`
+  - Evidence:
+    - `apps/fretboard/src/scaffold/templates.rs` (`todo` template)
 
 - [x] ONB-tpl-012 Add a “template matrix” doc section (what each template teaches).
   - Where:

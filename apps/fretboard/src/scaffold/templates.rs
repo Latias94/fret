@@ -213,10 +213,10 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 use std::time::Duration;
 
-	use fret::prelude::*;
-use fret_query::ui::QueryElementContextExt as _;
-use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
-use fret_selector::ui::SelectorElementContextExt as _;
+use fret::prelude::*;
+ use fret_query::ui::QueryElementContextExt as _;
+ use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+ use fret_selector::ui::SelectorElementContextExt as _;
 
 #[derive(Clone)]
 struct TodoItem {
@@ -228,6 +228,7 @@ struct TodoItem {
 struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
+    filter: Model<TodoFilter>,
     next_id: u64,
 }
 
@@ -236,7 +237,33 @@ enum Msg {
     Add,
     ClearDone,
     RefreshTip,
+    SetFilter(TodoFilter),
     Remove(u64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TodoFilter {
+    All,
+    Active,
+    Completed,
+}
+
+impl TodoFilter {
+    fn matches(self, done: bool) -> bool {
+        match self {
+            Self::All => true,
+            Self::Active => !done,
+            Self::Completed => done,
+        }
+    }
+
+    fn as_label(self) -> &'static str {
+        match self {
+            Self::All => "All",
+            Self::Active => "Active",
+            Self::Completed => "Completed",
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -261,6 +288,23 @@ fn tip_policy() -> QueryPolicy {
 struct TodoDerivedDeps {
     todos_rev: u64,
     done_revs: Vec<u64>,
+    filter: TodoFilter,
+}
+
+#[derive(Clone)]
+struct TodoDerived {
+    rows: Arc<[TodoRowSnapshot]>,
+    total: usize,
+    active: usize,
+    completed: usize,
+}
+
+#[derive(Clone)]
+struct TodoRowSnapshot {
+    id: u64,
+    done: bool,
+    done_model: Model<bool>,
+    text: Arc<str>,
 }
 
 struct TodoProgram;
@@ -300,18 +344,19 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
         TodoItem {
             id: 1,
             done: done_1,
-            text: Arc::from("Try the shadcn theme"),
+            text: Arc::from("Try the shadcn New York style"),
         },
         TodoItem {
             id: 2,
             done: done_2,
-            text: Arc::from("Build a tiny todo app"),
+            text: Arc::from("Validate selector derived state"),
         },
     ]);
 
     TodoState {
         todos,
         draft: app.models_mut().insert(String::new()),
+        filter: app.models_mut().insert(TodoFilter::All),
         next_id: 3,
     }
 }
@@ -321,19 +366,23 @@ fn view(
     st: &mut TodoState,
     msg: &mut MessageRouter<Msg>,
 ) -> Elements {
-    let todos = cx
-        .watch_model(&st.todos)
-        .layout()
-        .cloned_or_default();
     let draft_value = cx
         .watch_model(&st.draft)
         .layout()
         .cloned_or_default();
+    let filter_value = cx
+        .watch_model(&st.filter)
+        .layout()
+        .copied_or(TodoFilter::All);
 
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let (done_count, total_count) = cx.use_selector(
+    let derived = cx.use_selector(
         |cx| {
+            let filter = cx
+                .watch_model(&st.filter)
+                .layout()
+                .copied_or(TodoFilter::All);
             let (todos_rev, done) = cx
                 .watch_model(&st.todos)
                 .layout()
@@ -355,23 +404,45 @@ fn view(
             TodoDerivedDeps {
                 todos_rev,
                 done_revs: done.into_iter().map(|(_, rev)| rev).collect(),
+                filter,
             }
         },
         |cx| {
             cx.watch_model(&st.todos)
                 .layout()
                 .read(|host, todos| {
-                    let mut done_count = 0usize;
+                    let filter = host.models().get_copied(&st.filter).unwrap_or(TodoFilter::All);
+                    let mut rows = Vec::new();
+                    let mut completed = 0usize;
                     for t in todos {
                         let done = host.models().get_copied(&t.done).unwrap_or(false);
                         if done {
-                            done_count += 1;
+                            completed += 1;
+                        }
+                        if filter.matches(done) {
+                            rows.push(TodoRowSnapshot {
+                                id: t.id,
+                                done,
+                                done_model: t.done.clone(),
+                                text: t.text.clone(),
+                            });
                         }
                     }
-                    (done_count, todos.len())
+                    let total = todos.len();
+                    TodoDerived {
+                        rows: rows.into(),
+                        total,
+                        active: total.saturating_sub(completed),
+                        completed,
+                    }
                 })
                 .ok()
-                .unwrap_or((0, 0))
+                .unwrap_or_else(|| TodoDerived {
+                    rows: Arc::from([]),
+                    total: 0,
+                    active: 0,
+                    completed: 0,
+                })
         },
     );
 
@@ -413,14 +484,17 @@ fn view(
     let add_cmd = msg.cmd(Msg::Add);
     let clear_done_cmd = msg.cmd(Msg::ClearDone);
     let refresh_tip_cmd = msg.cmd(Msg::RefreshTip);
+    let filter_all_cmd = msg.cmd(Msg::SetFilter(TodoFilter::All));
+    let filter_active_cmd = msg.cmd(Msg::SetFilter(TodoFilter::Active));
+    let filter_completed_cmd = msg.cmd(Msg::SetFilter(TodoFilter::Completed));
 
-    let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
+    let progress = shadcn::Badge::new(format!("{}/{} done", derived.completed, derived.total))
         .variant(shadcn::BadgeVariant::Secondary)
         .into_element(cx);
 
-    let clear_done_btn = shadcn::Button::new("Clear done")
+    let clear_done_btn = shadcn::Button::new("Clear completed")
         .variant(shadcn::ButtonVariant::Secondary)
-        .disabled(done_count == 0)
+        .disabled(derived.completed == 0)
         .on_click(clear_done_cmd)
         .into_element(cx);
 
@@ -432,6 +506,22 @@ fn view(
     let header_actions = ui::h_flex(cx, |_cx| [progress, clear_done_btn, refresh_tip_btn])
         .gap(Space::N2)
         .items_center()
+        .into_element(cx);
+
+    let filter_all = filter_chip(cx, "All", filter_all_cmd, filter_value == TodoFilter::All);
+    let filter_active =
+        filter_chip(cx, "Active", filter_active_cmd, filter_value == TodoFilter::Active);
+    let filter_completed = filter_chip(
+        cx,
+        "Completed",
+        filter_completed_cmd,
+        filter_value == TodoFilter::Completed,
+    );
+
+    let filter_row = ui::h_flex(cx, |_cx| [filter_all, filter_active, filter_completed])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
         .into_element(cx);
 
     let tip_line = ui::raw_text(cx, tip_text)
@@ -452,9 +542,17 @@ __ADD_BTN_DEF__
         .into_element(cx);
 
     let rows = ui::v_flex_build(cx, |cx, out| {
-        for t in &todos {
-            let remove_cmd = msg.cmd(Msg::Remove(t.id));
-            out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t, remove_cmd.clone())));
+        for row in derived.rows.iter() {
+            let remove_cmd = msg.cmd(Msg::Remove(row.id));
+            out.push(cx.keyed(row.id, |cx| todo_row(cx, theme, row, remove_cmd.clone())));
+        }
+
+        if derived.rows.is_empty() {
+            out.push(
+                ui::text(cx, format!("No {} tasks", filter_value.as_label().to_lowercase()))
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+                    .into_element(cx),
+            );
         }
     })
         .gap(Space::N3)
@@ -464,13 +562,14 @@ __ADD_BTN_DEF__
     let card = shadcn::Card::new([
         shadcn::CardHeader::new([
             shadcn::CardTitle::new("Todo").into_element(cx),
-            shadcn::CardDescription::new("A minimal Fret + shadcn template.").into_element(cx),
+            shadcn::CardDescription::new("Best-practice baseline: model + selector + query.")
+                .into_element(cx),
             header_actions,
             tip_line,
         ])
         .into_element(cx),
         shadcn::CardContent::new([
-            ui::v_flex(cx, |_cx| [input_row, rows])
+            ui::v_flex(cx, |_cx| [input_row, filter_row, rows])
                 .gap(Space::N4)
                 .w_full()
                 .into_element(cx),
@@ -506,20 +605,16 @@ __ADD_BTN_DEF__
 fn todo_row(
     cx: &mut ElementContext<'_, App>,
     theme: ThemeSnapshot,
-    item: &TodoItem,
+    row: &TodoRowSnapshot,
     remove_cmd: CommandId,
 ) -> AnyElement {
-    let done = cx
-        .watch_model(&item.done)
-        .layout()
-        .copied_or_default();
-
-    let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
-__REMOVE_BTN_DEF__
+    let done = row.done;
+    let checkbox = shadcn::Checkbox::new(row.done_model.clone()).into_element(cx);
+ __REMOVE_BTN_DEF__
 
     let label = cx.text_props(TextProps {
         layout: Default::default(),
-        text: item.text.clone(),
+        text: row.text.clone(),
         style: None,
         color: Some(theme.color_token(if done {
             "muted-foreground"
@@ -549,6 +644,23 @@ __REMOVE_BTN_DEF__
         .rounded(Radius::Md)
         .p(Space::N3)
         .w_full()
+        .into_element(cx)
+}
+
+fn filter_chip(
+    cx: &mut ElementContext<'_, App>,
+    label: &'static str,
+    cmd: CommandId,
+    selected: bool,
+) -> AnyElement {
+    shadcn::Button::new(label)
+        .variant(if selected {
+            shadcn::ButtonVariant::Secondary
+        } else {
+            shadcn::ButtonVariant::Ghost
+        })
+        .size(shadcn::ButtonSize::Sm)
+        .on_click(cmd)
         .into_element(cx)
 }
 
@@ -603,6 +715,11 @@ fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
         Msg::RefreshTip => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, tip_key());
+            });
+        }
+        Msg::SetFilter(filter) => {
+            let _ = app.models_mut().update(&state.filter, |value| {
+                *value = filter;
             });
         }
         Msg::Remove(id) => {

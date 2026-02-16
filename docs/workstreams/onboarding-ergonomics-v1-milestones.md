@@ -55,6 +55,8 @@ Evidence (current):
 
 - `apps/fretboard/src/scaffold/templates.rs`
 - `docs/first-hour.md` (template matrix + progressive disclosure ladder)
+- `docs/examples/todo-app-golden-path.md` (baseline intent)
+- `apps/fret-examples/src/todo_demo.rs` (baseline reference implementation)
 
 ---
 
