@@ -1,6 +1,6 @@
 # GenUI Spec Rendering (json-render-inspired) v1 — TODO
 
-Status: In progress
+Status: MVP landed (polish in progress)
 
 Tracking doc for implementing the GenUI spec renderer and shadcn-backed catalog.
 
@@ -109,3 +109,26 @@ Goal: reduce “demo confusion” and make the shadcn catalog output more consis
 - [ ] Validation presentation: add a second spec snippet that renders multiple issues per field (repeat + filter) with consistent spacing.
 - [ ] Catalog prompting: add one or two shadcn-specific notes that steer output away from “glued-to-edge” layouts (prefer `Box.p` + `VStack.gap`).
 - [x] Gates: add an e2e smoke test that asserts validation issues appear/disappear deterministically (no visual assertions). (2026-02-16)
+
+## Next (v1.1.x — dashboard parity, minimal contract risk)
+
+Goal: reduce the gap vs `repo-ref/json-render/examples/dashboard` without changing SpecV1 grammar.
+
+- [ ] Core plumbing: pass child node metadata into `ComponentResolver` (at least: child type name + resolved props + rendered element) so resolver-level “macro components” can assemble compound UIs (Tabs/Accordion) without fragile, data-only fallbacks.
+- [ ] Resolver parity (shadcn-backed):
+  - [ ] `Dialog` (trigger label + content children).
+  - [ ] `Drawer` (trigger label + side + content children).
+  - [ ] `Popover` (trigger child + content children).
+  - [ ] `Tooltip` (trigger child + content text).
+  - [ ] `DropdownMenu` (trigger label + items[] mapped to shadcn entries).
+  - [ ] `Avatar` (src/alt/fallback).
+  - [ ] `Table` (data-driven: columns[] + data[] + optional rowActions[]).
+  - [ ] One compound: `Tabs` + `TabContent` or `Accordion` + `AccordionItem` (macro-assembled from child meta).
+
+## Next (v1.2+ optional parity — keep SpecV1 stable)
+
+These are “nice-to-have” parity items from upstream json-render, but not required for a shippable in-tree demo.
+
+- [x] Docs: add an upstream package mapping section (`@json-render/*` → `fret-genui-*`). (2026-02-16)
+- [ ] Validation ergonomics: optionally allow spec-authored `Input.checks` (json-render-style) to be collected into an app-owned validator registry (still app-owned policy for when/how to validate).
+- [ ] Spec transforms: optionally add a `nested_to_flat` helper for human-authored nested trees (do not change the canonical flat SpecV1 shape).

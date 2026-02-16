@@ -40,6 +40,21 @@ Workstream tracking:
 - TODO: `docs/workstreams/genui-json-render-v1-todo.md`
 - Milestones: `docs/workstreams/genui-json-render-v1-milestones.md`
 
+## Upstream package mapping (json-render → Fret)
+
+This section answers: “what did we actually replicate?” and “what is intentionally skipped?”.
+
+**Authoritative upstream reference**: `repo-ref/json-render` (semantics, not code).
+
+| Upstream package | What it provides | Fret equivalent | Status / notes |
+|---|---|---|---|
+| `@json-render/core` | Spec types, catalog/schema, props/visibility/expressions, actions, SpecStream, prompt helpers | `ecosystem/fret-genui-core` | Parity for core semantics; intentionally no Zod integration; no `createJsonRenderTransform` helper (transport is app-owned). |
+| `@json-render/react` | React renderer + contexts/hooks + streaming helpers | `ecosystem/fret-genui-core` renderer + `apps/fret-examples/src/genui_demo.rs` | We do not ship a generic HTTP streaming hook; the demo is the closure reference for UX + inspector wiring. |
+| `@json-render/ui` | Standard styled components for React | `ecosystem/fret-ui-shadcn` + `ecosystem/fret-genui-shadcn` | Similar intent; component coverage is intentionally conservative in v1. |
+| `@json-render/react-native` | Mobile renderer + standard mobile components | (Not applicable) | Fret targets native + wasm; “mobile-first” catalogs can be added later as separate resolvers. |
+| `@json-render/remotion` | Video/timeline schema + renderer | (Not applicable) | Out of scope for this workstream. |
+| `@json-render/codegen` | TS codegen utilities around schemas/catalogs | (Deferred) | Consider only after spec/catalog contracts settle; Rust already has typed resolver surfaces. |
+
 ## Gaps vs upstream json-render (what we still do not have)
 
 The current MVP matches the core **shape and semantics** (flat spec + catalog guardrails + streaming patches), but is still missing some upstream ergonomics and “product surface” pieces:
@@ -51,8 +66,39 @@ The current MVP matches the core **shape and semantics** (flat spec + catalog gu
 - Catalog type expressiveness: json-render uses Zod schemas (nested objects, arrays, unions, optional fields); GenUI v1 supports a typed surface (primitive + enum + nullable + object/array/oneOf + required/default metadata) plus dynamic expressions, but still lacks richer unions and deeper schema composition (e.g. strict discriminated unions and refinement-like “repair hints”).
 - Devtools/playground: ✅ the in-tree demo includes a basic inspector + editor + stream ingest, but there is no standalone, reusable playground app package yet.
 - Mixed stream transforms: ✅ GenUI v1 includes `mixed_stream` utilities (`MixedStreamParser`, `MixedSpecStreamCompiler`) with ```spec fence support, inspired by `pipeJsonRender`.
-- Spec transforms: json-render includes flat↔tree helpers; GenUI v1 focuses on the flat map and does not provide general tree conversion utilities yet.
+- Spec transforms: json-render includes flat↔tree helpers (notably `nestedToFlat()`); GenUI v1 focuses on the flat map and does not provide general tree conversion utilities yet.
 - “Shipped product” surfaces: json-render has a polished web UI and documentation site; GenUI v1 currently ships as an in-tree demo plus workstream docs.
+
+### Resolver gaps vs json-render dashboard example
+
+Upstream reference: `repo-ref/json-render/examples/dashboard/lib/render/catalog.ts` and `.../registry.tsx`.
+
+GenUI v1 intentionally started with a conservative shadcn surface. The dashboard example highlights the next
+high-ROI components to add to `ecosystem/fret-genui-shadcn`:
+
+- Layout primitives: `Stack` (direction + gap presets) — **partially covered** by `VStack/HStack` (typed spacing) and `ResponsiveStack`.
+- Compound composition components: `Accordion`, `Tabs` — **not yet covered** in a json-render-equivalent way.
+  - In json-render/React, these are composed via nested child components and context.
+  - In Fret, many shadcn compounds are builder-style and require the parent to see child props to assemble items.
+  - GenUI v1 currently passes only rendered child `AnyElement`s into the resolver, which is not enough to build
+    itemized compounds without ad-hoc data-only APIs.
+- Overlay surfaces: `Dialog`, `Drawer`, `Popover`, `Tooltip`, `DropdownMenu` — **not yet covered**.
+- Data display: `Table` — **not yet covered** (recommended: a single data-driven `Table` GenUI component like upstream).
+- Charts: `BarChart`, `LineChart` — **not yet covered** (likely map to `fret-ui-shadcn::chart` + `recharts_geometry` later).
+
+## Recommended next steps (least-refactor order)
+
+Keep SpecV1 stable; iterate in ecosystem/app surfaces.
+
+- v1.1 polish (highest ROI):
+  - Improve demo spec examples so LLMs can copy good spacing patterns (`Box.p`, `VStack/HStack.gap`, `Card.wrapContent`).
+  - Add a clearer validation presentation snippet (multi-issue per field, consistent spacing).
+  - Add one or two catalog notes that bias output away from “glued-to-edge” layouts.
+  - Start closing the `repo-ref/json-render/examples/dashboard` parity gaps: add a small set of data-driven/overlay components (`Dialog`, `Popover`, `DropdownMenu`, `Table`) and one compound (`Accordion` or `Tabs`) once the child-meta plumbing exists.
+
+- v1.2+ optional parity (nice-to-have):
+  - Spec-authored validation configs (e.g. `Input.checks`) collected into an app-owned validator registry helper (policy stays app-owned).
+  - Optional nested-to-flat helper for human-authored nested trees (flat SpecV1 remains canonical).
 
 ## 0. Motivation
 
