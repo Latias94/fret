@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -127,48 +128,6 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let paragraph_block = |cx: &mut ElementContext<'_, App>, prefix: &'static str, rows: usize| {
         stack::vstack(
             cx,
@@ -224,7 +183,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             },
         );
 
-        section_card(cx, "Demo", drawer).test_id("ui-gallery-drawer-demo")
+        drawer
     };
 
     let snap_points = {
@@ -268,7 +227,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 },
             );
 
-        section_card(cx, "Snap Points", drawer).test_id("ui-gallery-drawer-snap-points")
+        drawer
     };
 
     let scrollable_content = {
@@ -331,7 +290,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 },
             );
 
-        section_card(cx, "Scrollable Content", drawer).test_id("ui-gallery-drawer-scrollable")
+        drawer
     };
 
     let sides = {
@@ -412,7 +371,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .into_element(cx)
         .test_id("ui-gallery-drawer-sides");
 
-        section_card(cx, "Sides", buttons)
+        buttons
     };
 
     let responsive_dialog = {
@@ -488,31 +447,14 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             .items_center()
             .into_element(cx);
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| {
-                vec![
-                    row,
-                    shadcn::typography::muted(
-                        cx,
-                        "Current gallery renders both branches explicitly for deterministic testing instead of runtime viewport switches.",
-                    ),
-                ]
-            },
-        );
-
-        section_card(cx, "Responsive Dialog", body)
+        row
     };
 
     let rtl = {
         let open_for_trigger = rtl_open.clone();
         let open_for_close = rtl_open.clone();
 
-        let drawer = fret_ui_kit::primitives::direction::with_direction_provider(
+        fret_ui_kit::primitives::direction::with_direction_provider(
             cx,
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             move |cx| {
@@ -547,114 +489,16 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 )
             },
         )
-        .test_id("ui-gallery-drawer-rtl");
-
-        section_card(cx, "RTL", drawer)
     };
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Drawer docs order with an extra snap-points recipe: Demo, Snap Points, Scrollable Content, Sides, Responsive Dialog, RTL.",
-    );
-
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                snap_points,
-                scrollable_content,
-                sides,
-                responsive_dialog,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-drawer-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic Drawer",
-                    r#"let drawer = shadcn::Drawer::new(open).into_element(
-    cx,
-    |cx| shadcn::Button::new("Open Drawer").toggle_model(open.clone()).into_element(cx),
-    |cx| {
-        shadcn::DrawerContent::new([
-            shadcn::DrawerHeader::new([title, description]).into_element(cx),
-            shadcn::DrawerFooter::new([submit, cancel]).into_element(cx),
-        ]).into_element(cx)
-    },
-);"#,
-                ),
-                code_block(
-                    cx,
-                    "Sides",
-                    r#"shadcn::Drawer::new(open)
-    .side(shadcn::DrawerSide::Right)
-    .into_element(cx, trigger, content);"#,
-                ),
-                code_block(
-                    cx,
-                    "Scrollable Content",
-                    r#"let body = shadcn::ScrollArea::new([rows])
-    .refine_layout(LayoutRefinement::default().h_px(Px(220.0)))
-    .into_element(cx);
-
-shadcn::DrawerContent::new([
-    shadcn::DrawerHeader::new([title, description]).into_element(cx),
-    body,
-    shadcn::DrawerFooter::new([submit, cancel]).into_element(cx),
-]).into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "Snap Points",
-                    r#"shadcn::Drawer::new(open)
-    .snap_points(vec![
-        shadcn::DrawerSnapPoint::Fraction(0.25),
-        shadcn::DrawerSnapPoint::Fraction(0.5),
-        shadcn::DrawerSnapPoint::Fraction(1.0),
-    ])
-    .into_element(cx, trigger, content);"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Docs parity follows the upstream order: scrollable content and sides are explicit recipes after the basic demo.",
@@ -674,13 +518,74 @@ shadcn::DrawerContent::new([
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-drawer",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Drawer docs order with an extra snap-points recipe: Demo, Snap Points, Scrollable Content, Sides, Responsive Dialog, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Basic drawer with header copy and footer actions.")
+                .code(
+                    "rust",
+                    r#"let drawer = shadcn::Drawer::new(open).into_element(
+    cx,
+    |cx| shadcn::Button::new("Open Drawer").toggle_model(open.clone()).into_element(cx),
+    |cx| {
+        shadcn::DrawerContent::new([
+            shadcn::DrawerHeader::new([title, description]).into_element(cx),
+            shadcn::DrawerFooter::new([submit, cancel]).into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
+            DocSection::new("Snap Points", snap_points)
+                .description("Drag settles to the nearest snap point (Vaul-style).")
+                .code(
+                    "rust",
+                    r#"shadcn::Drawer::new(open)
+    .snap_points(vec![
+        shadcn::DrawerSnapPoint::Fraction(0.25),
+        shadcn::DrawerSnapPoint::Fraction(0.5),
+        shadcn::DrawerSnapPoint::Fraction(1.0),
+    ])
+    .into_element(cx, trigger, content);"#,
+                ),
+            DocSection::new("Scrollable Content", scrollable_content)
+                .description("Keep actions visible while the content area scrolls.")
+                .code(
+                    "rust",
+                    r#"let body = shadcn::ScrollArea::new([rows])
+    .refine_layout(LayoutRefinement::default().h_px(Px(220.0)))
+    .into_element(cx);
+
+shadcn::DrawerContent::new([
+    shadcn::DrawerHeader::new([title, description]).into_element(cx),
+    body,
+    shadcn::DrawerFooter::new([submit, cancel]).into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Sides", sides)
+                .description("Use the `side` prop to control drawer placement.")
+                .code(
+                    "rust",
+                    r#"shadcn::Drawer::new(open)
+    .side(shadcn::DrawerSide::Right)
+    .into_element(cx, trigger, content);"#,
+                ),
+            DocSection::new("Responsive Dialog", responsive_dialog).descriptions([
+                "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
+                "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
+            ]),
+            DocSection::new("RTL", rtl)
+                .description("Drawer layout should follow right-to-left direction context."),
+            DocSection::new("Notes", notes)
+                .description("Implementation notes and regression guidelines."),
+        ],
+    );
+
+    vec![body]
 }
