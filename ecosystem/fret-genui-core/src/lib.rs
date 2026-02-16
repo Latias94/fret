@@ -15,4 +15,5 @@ pub mod spec;
 pub mod spec_fixer;
 pub mod spec_stream;
 pub mod validate;
+pub mod validation_checks;
 pub mod visibility;
