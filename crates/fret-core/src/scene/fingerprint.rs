@@ -364,6 +364,9 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                     BlendMode::Add => 2,
                     BlendMode::Multiply => 3,
                     BlendMode::Screen => 4,
+                    BlendMode::Darken => 5,
+                    BlendMode::Lighten => 6,
+                    BlendMode::Subtract => 7,
                 },
             );
             mix_u64(

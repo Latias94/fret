@@ -46,6 +46,42 @@ impl Renderer {
                         operation: wgpu::BlendOperation::Add,
                     },
                 },
+                fret_core::BlendMode::Darken => wgpu::BlendState {
+                    color: wgpu::BlendComponent {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::One,
+                        operation: wgpu::BlendOperation::Min,
+                    },
+                    alpha: wgpu::BlendComponent {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                        operation: wgpu::BlendOperation::Add,
+                    },
+                },
+                fret_core::BlendMode::Lighten => wgpu::BlendState {
+                    color: wgpu::BlendComponent {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::One,
+                        operation: wgpu::BlendOperation::Max,
+                    },
+                    alpha: wgpu::BlendComponent {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                        operation: wgpu::BlendOperation::Add,
+                    },
+                },
+                fret_core::BlendMode::Subtract => wgpu::BlendState {
+                    color: wgpu::BlendComponent {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::One,
+                        operation: wgpu::BlendOperation::ReverseSubtract,
+                    },
+                    alpha: wgpu::BlendComponent {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                        operation: wgpu::BlendOperation::Add,
+                    },
+                },
             }
         }
 
@@ -139,13 +175,8 @@ impl Renderer {
             ],
         }];
 
-        let modes = [
-            fret_core::BlendMode::Over,
-            fret_core::BlendMode::Add,
-            fret_core::BlendMode::Multiply,
-            fret_core::BlendMode::Screen,
-        ];
-        for (ix, mode) in modes.into_iter().enumerate() {
+        for mode in fret_core::BlendMode::ALL {
+            let ix = mode.pipeline_index();
             let blend = blend_state_for_mode(mode);
             let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("fret composite pipeline"),

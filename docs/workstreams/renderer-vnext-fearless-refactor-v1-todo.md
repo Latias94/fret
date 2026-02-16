@@ -235,7 +235,17 @@ milestones) when implementation begins.
     - `python3 tools/check_layering.py`
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
     - `cargo test -p fret-render-wgpu --test paint_gradient_conformance`
-- [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
+- [x] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
+  - Landed (v2 fixed-function subset): `Darken`, `Lighten`, `Subtract`.
+  - Contract: `docs/adr/0281-compositing-blend-modes-v2-bounded.md`
+  - Evidence:
+    - `crates/fret-core/src/scene/composite.rs` (`BlendMode` + `pipeline_index`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/composite.rs` (`blend_state_for_mode`)
+    - `crates/fret-render-wgpu/tests/composite_group_conformance.rs` (`gpu_composite_group_blend_modes_v2_smoke_conformance`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo test -p fret-render-wgpu --test composite_group_conformance`
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
 - [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
   - Status (2026-02-16): v1 landed for painted text fills (solid + gradients), staged by ADR 0279.

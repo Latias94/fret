@@ -14,6 +14,9 @@ Current status (as of 2026-02-16):
 - Sweep gradient paint v1 landed:
   - ADR 0280 (`Paint::SweepGradient`).
   - GPU readback conformance is exercised via `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`.
+- Compositing blend modes v2 (bounded) landed:
+  - ADR 0281 (`BlendMode::{Darken, Lighten, Subtract}`).
+  - Conformance is exercised via `crates/fret-render-wgpu/tests/composite_group_conformance.rs`.
 - Text paint surface v1 landed:
   - ADR 0279 (`SceneOp::Text` upgrades from solid `Color` to `Paint`).
   - Renderer implementation landed (solid + gradients; bounded batching via `paint_index`).

@@ -3326,12 +3326,7 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::CompositePremul(pass) => {
-                    let pipeline_ix = match pass.blend_mode {
-                        fret_core::BlendMode::Over => 0,
-                        fret_core::BlendMode::Add => 1,
-                        fret_core::BlendMode::Multiply => 2,
-                        fret_core::BlendMode::Screen => 3,
-                    };
+                    let pipeline_ix = pass.blend_mode.pipeline_index();
 
                     let src_view = match pass.src {
                         PlanTarget::Output

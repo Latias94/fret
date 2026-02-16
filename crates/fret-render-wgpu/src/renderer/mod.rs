@@ -119,8 +119,8 @@ pub struct Renderer {
     path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
-    composite_pipelines: [Option<wgpu::RenderPipeline>; 4],
-    composite_mask_pipelines: [Option<wgpu::RenderPipeline>; 4],
+    composite_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
+    composite_mask_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
     composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     clip_mask_pipeline: Option<wgpu::RenderPipeline>,
