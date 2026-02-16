@@ -80,6 +80,37 @@ Tip: after identifying the bundle, you can also inspect the slowest snapshots di
 cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20
 ```
 
+## Instrumentation overhead (what happens when it's "off")
+
+The profiling story in this repository intentionally separates **span emission** (via `tracing`)
+from **per-frame debug counters/timers** (diagnostics `debug_stats`), so the default experience
+remains fast.
+
+### `tracing` / Tracy spans
+
+- When Tracy is disabled (`FRET_TRACY` unset) and `TRACE` level is not enabled for a module,
+  spans are gated behind `tracing::enabled!(Level::TRACE)` (or equivalent checks).
+- In the "off" case, a scope typically becomes a single cheap branch, and avoids:
+  span allocation, entering/exiting zones, and field recording.
+
+Recommended defaults:
+
+- Day-to-day runs: do not enable `fret_ui=trace` unless you are actively investigating a
+  timeline issue.
+- Profiling runs: enable Tracy + selectively enable `TRACE` for the module you're investigating
+  (e.g. `fret_ui=trace`).
+
+### `debug_stats` timing
+
+- Frame stats (`debug_stats`) are only measured and accumulated when the UI debug/perf stats
+  mode is enabled.
+- When it is disabled, `fret_perf` helpers return early without calling `Instant::now()`.
+
+If you need **minimal perturbation**, prefer:
+
+1. Tracy timeline with a narrow set of `TRACE` spans enabled, and
+2. avoid enabling broad debug/perf stats unless you need the counters for attribution.
+
 ## Tuning trace volume
 
 - Default `RUST_LOG` may not include `TRACE` spans.
