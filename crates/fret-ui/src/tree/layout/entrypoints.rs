@@ -1125,8 +1125,14 @@ impl<H: UiHost> UiTree<H> {
 
         // If both an ancestor and a descendant cache root are invalidated in the same frame, only
         // relayout the ancestor; it will already relayout the subtree.
+        //
+        // Hot path: avoid scanning the whole node store. Cache-root invalidations are tracked in
+        // `dirty_cache_roots`, so we can restrict this pass to the subset that actually changed.
         let mut candidates: Vec<NodeId> = Vec::with_capacity(16);
-        for (id, node) in self.nodes.iter() {
+        for &id in &self.dirty_cache_roots {
+            let Some(node) = self.nodes.get(id) else {
+                continue;
+            };
             if !node.view_cache.enabled || !node.view_cache.contained_layout {
                 continue;
             }
