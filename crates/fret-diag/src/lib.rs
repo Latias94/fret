@@ -188,6 +188,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
+    let mut reuse_launch_per_script: bool = false;
     let mut launch_high_priority: bool = false;
     let mut keep_open: bool = false;
     let mut script_tool_write: bool = false;
@@ -1746,6 +1747,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--reuse-launch" => {
                 reuse_launch = true;
+                i += 1;
+            }
+            "--reuse-launch-per-script" => {
+                reuse_launch_per_script = true;
                 i += 1;
             }
             "--launch-high-priority" => {
@@ -7068,6 +7073,21 @@ See: `docs/tracy.md`.\n";
                 );
             }
             let reuse_process = launch.is_none() || reuse_launch;
+            if reuse_launch_per_script {
+                if !reuse_launch {
+                    return Err("--reuse-launch-per-script requires --reuse-launch".to_string());
+                }
+                if launch.is_none() {
+                    return Err("--reuse-launch-per-script requires --launch".to_string());
+                }
+                if keep_open {
+                    return Err(
+                        "--reuse-launch-per-script is not supported with --keep-open".to_string(),
+                    );
+                }
+            }
+            let reuse_process_per_script =
+                reuse_process && reuse_launch_per_script && scripts.len() > 1;
             let perf_hint_gate_opts = parse_perf_hint_gate_options(
                 check_perf_hints,
                 &check_perf_hints_deny,
@@ -7139,6 +7159,8 @@ See: `docs/tracy.md`.\n";
                         | "ui-gallery-steady"
                         | "ui-gallery-complex-steady"
                         | "ui-gallery-complex-typical"
+                        | "ui-resize-probes"
+                        | "ui-code-editor-resize-probes"
                 ) {
                     let _ = ensure_env_var(
                         &mut perf_launch_env,
@@ -7257,7 +7279,7 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
-            if launched_by_fretboard {
+            if launched_by_fretboard && !reuse_process_per_script {
                 child = maybe_launch_demo(
                     &launch,
                     &perf_launch_env,
@@ -7272,13 +7294,38 @@ See: `docs/tracy.md`.\n";
                 )?;
             }
 
-            if reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+            if reuse_process && !reuse_process_per_script && !perf_suite_prewarm_scripts.is_empty()
+            {
                 for prewarm in &perf_suite_prewarm_scripts {
                     run_suite_aux_script_must_pass(prewarm, &mut child)?;
                 }
             }
 
-            for src in scripts {
+            for (script_index, src) in scripts.into_iter().enumerate() {
+                if reuse_process_per_script && launched_by_fretboard && script_index > 0 {
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    child = None;
+                }
+                if reuse_process_per_script && launched_by_fretboard && child.is_none() {
+                    child = maybe_launch_demo(
+                        &launch,
+                        &perf_launch_env,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_ready_path,
+                        &resolved_exit_path,
+                        false,
+                        timeout_ms,
+                        poll_ms,
+                        launch_high_priority,
+                    )?;
+                    if !perf_suite_prewarm_scripts.is_empty() {
+                        for prewarm in &perf_suite_prewarm_scripts {
+                            run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                        }
+                    }
+                }
+
                 if repeat == 1 {
                     if !reuse_process {
                         child = maybe_launch_demo(

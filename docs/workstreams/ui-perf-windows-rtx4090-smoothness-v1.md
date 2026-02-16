@@ -70,6 +70,9 @@ suite normalization hooks to reduce cross-script state contamination:
 - `--suite-prewarm <script.json>...`: run once per launched process before the suite.
 - `--suite-prelude <script.json>...`: run before each measured script (and per-run when combined with
   `--suite-prelude-each-run`).
+- If the suite still drifts (or you hit a long-run crash), consider isolating scripts by relaunching
+  once per script:
+  - `--reuse-launch --reuse-launch-per-script --launch -- <cmd...>`
 
 Suggested defaults for UI-gallery perf work:
 
