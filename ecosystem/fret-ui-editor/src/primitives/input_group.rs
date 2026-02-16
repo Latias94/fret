@@ -96,16 +96,30 @@ pub(crate) fn editor_input_group_inset<H: UiHost>(
     padding: Edges,
     child: AnyElement,
 ) -> AnyElement {
-    cx.container(
-        ContainerProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Fill,
-                    ..Default::default()
-                },
+    editor_input_group_segment(
+        cx,
+        LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Fill,
                 ..Default::default()
             },
+            ..Default::default()
+        },
+        padding,
+        child,
+    )
+}
+
+pub(crate) fn editor_input_group_segment<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutStyle,
+    padding: Edges,
+    child: AnyElement,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout,
             padding,
             ..Default::default()
         },

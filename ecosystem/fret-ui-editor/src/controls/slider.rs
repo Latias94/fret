@@ -9,6 +9,17 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
+use crate::controls::numeric_input::{
+    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
+    NumericValidateFn,
+};
+use crate::primitives::EditorTokenKeys;
+use crate::primitives::drag_value_core::DragValueScalar;
+use crate::primitives::input_group::{
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_segment,
+};
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::EditorFrameState;
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{
     Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign, TextStyle,
@@ -21,17 +32,6 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::recipes::input::InputTokenKeys;
-use fret_ui_kit::{ChromeRefinement, Size};
-
-use crate::controls::numeric_input::{
-    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
-    NumericValidateFn,
-};
-use crate::primitives::chrome::resolve_editor_frame_chrome;
-use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
-use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
@@ -275,26 +275,9 @@ where
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
-        let density = EditorDensity::resolve(theme);
-
-        let frame = resolve_editor_frame_chrome(
-            theme,
-            Size::Small,
-            &ChromeRefinement::default(),
-            InputTokenKeys {
-                padding_x: Some("component.text_field.padding_x"),
-                padding_y: Some("component.text_field.padding_y"),
-                min_height: Some("component.text_field.min_height"),
-                radius: Some("component.text_field.radius"),
-                border_width: Some("component.text_field.border_width"),
-                bg: Some("component.text_field.bg"),
-                border: Some("component.text_field.border"),
-                border_focus: Some("component.text_field.border_focus"),
-                fg: Some("component.text_field.fg"),
-                text_px: Some("component.text_field.text_px"),
-                selection: Some("component.text_field.selection"),
-            },
-        );
+        let style = EditorStyle::resolve(theme);
+        let density = style.density;
+        let frame = style.frame_chrome_small();
 
         let track_h = theme
             .metric_by_key(EditorTokenKeys::SLIDER_TRACK_HEIGHT)
@@ -414,17 +397,21 @@ where
 
                     let bounds = host.bounds();
                     let width = bounds.size.width.0 as f64;
-                    let inner_w =
-                        (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
-                            .max(0.0);
-                    let label_w = if show_value {
-                        value_width.0 as f64 + density.padding_x.0 as f64
-                    } else {
-                        0.0
-                    };
-                    let interactive_w = (inner_w - label_w).max(0.0);
-                    let inner_x = (down.position_local.x.0 as f64 - frame.padding.left.0 as f64)
-                        .clamp(0.0, interactive_w);
+                    let divider_w = if show_value { 1.0 } else { 0.0 };
+                    let track_outer_w = (width
+                        - divider_w
+                        - if show_value {
+                            value_width.0 as f64
+                        } else {
+                            0.0
+                        })
+                    .max(0.0);
+                    let x_outer = (down.position_local.x.0 as f64).clamp(0.0, track_outer_w);
+                    let interactive_w = (track_outer_w
+                        - frame.padding.left.0 as f64
+                        - frame.padding.right.0 as f64)
+                        .max(0.0);
+                    let inner_x = (x_outer - frame.padding.left.0 as f64).clamp(0.0, interactive_w);
 
                     let next = value_from_x(
                         min,
@@ -465,17 +452,21 @@ where
 
                     let bounds = host.bounds();
                     let width = bounds.size.width.0 as f64;
-                    let inner_w =
-                        (width - frame.padding.left.0 as f64 - frame.padding.right.0 as f64)
-                            .max(0.0);
-                    let label_w = if show_value {
-                        value_width.0 as f64 + density.padding_x.0 as f64
-                    } else {
-                        0.0
-                    };
-                    let interactive_w = (inner_w - label_w).max(0.0);
-                    let inner_x = (mv.position_local.x.0 as f64 - frame.padding.left.0 as f64)
-                        .clamp(0.0, interactive_w);
+                    let divider_w = if show_value { 1.0 } else { 0.0 };
+                    let track_outer_w = (width
+                        - divider_w
+                        - if show_value {
+                            value_width.0 as f64
+                        } else {
+                            0.0
+                        })
+                    .max(0.0);
+                    let x_outer = (mv.position_local.x.0 as f64).clamp(0.0, track_outer_w);
+                    let interactive_w = (track_outer_w
+                        - frame.padding.left.0 as f64
+                        - frame.padding.right.0 as f64)
+                        .max(0.0);
+                    let inner_x = (x_outer - frame.padding.left.0 as f64).clamp(0.0, interactive_w);
 
                     let next = value_from_x(
                         min,
@@ -506,17 +497,6 @@ where
                 let hovered = st.hovered || st.hovered_raw;
                 let pressed = st.pressed;
                 let focused = st.focused;
-
-                let frame_visuals = EditorWidgetVisuals::new(theme).frame_visuals(
-                    frame,
-                    EditorFrameState {
-                        enabled: interactive_enabled,
-                        hovered,
-                        pressed,
-                        focused,
-                        open: false,
-                    },
-                );
 
                 let accent = theme.color_token("accent");
                 let disabled_alpha = if interactive_enabled { 1.0 } else { 0.55 };
@@ -555,27 +535,28 @@ where
                 let left_grow = t.clamp(0.0, 1.0);
                 let right_grow = (1.0 - left_grow).max(0.0);
 
-                vec![cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                min_height: Some(density.row_height),
-                                ..Default::default()
-                            },
-                            overflow: Overflow::Clip,
+                vec![editor_input_group_frame(
+                    cx,
+                    LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            min_height: Some(density.row_height),
                             ..Default::default()
                         },
-                        padding: frame.padding,
-                        background: Some(frame_visuals.bg),
-                        border: Edges::all(frame.border_width),
-                        border_color: Some(frame_visuals.border),
-                        focus_border_color: Some(frame.border_focus),
-                        corner_radii: Corners::all(frame.radius),
+                        overflow: Overflow::Clip,
                         ..Default::default()
                     },
-                    move |cx| {
+                    density,
+                    frame,
+                    EditorFrameState {
+                        enabled: interactive_enabled,
+                        hovered,
+                        pressed,
+                        focused,
+                        open: false,
+                    },
+                    move |cx, frame_visuals| {
                         let track = cx.flex(
                             FlexProps {
                                 layout: LayoutStyle {
@@ -673,18 +654,12 @@ where
                         );
 
                         let value_el = if show_value {
-                            Some(cx.text_props(TextProps {
+                            let value_text_el = cx.text_props(TextProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
-                                        width: Length::Px(value_width),
+                                        width: Length::Fill,
                                         height: Length::Fill,
                                         ..Default::default()
-                                    },
-                                    flex: FlexItemStyle {
-                                        grow: 0.0,
-                                        shrink: 0.0,
-                                        basis: Length::Px(value_width),
-                                        align_self: None,
                                     },
                                     ..Default::default()
                                 },
@@ -698,13 +673,55 @@ where
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: TextAlign::End,
-                            }))
+                            });
+
+                            let value_seg = editor_input_group_segment(
+                                cx,
+                                LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Px(value_width),
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    flex: FlexItemStyle {
+                                        grow: 0.0,
+                                        shrink: 0.0,
+                                        basis: Length::Px(value_width),
+                                        align_self: None,
+                                    },
+                                    ..Default::default()
+                                },
+                                frame.padding,
+                                value_text_el,
+                            );
+                            Some(value_seg)
                         } else {
                             None
                         };
 
-                        let mut children = vec![track];
+                        let track_seg = editor_input_group_segment(
+                            cx,
+                            LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                flex: FlexItemStyle {
+                                    grow: 1.0,
+                                    shrink: 1.0,
+                                    basis: Length::Px(Px(0.0)),
+                                    align_self: None,
+                                },
+                                ..Default::default()
+                            },
+                            frame.padding,
+                            track,
+                        );
+
+                        let mut children = vec![track_seg];
                         if let Some(value_el) = value_el {
+                            children.push(editor_input_group_divider(cx, frame_visuals.border));
                             children.push(value_el);
                         }
 
@@ -719,11 +736,7 @@ where
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: if show_value {
-                                    density.padding_x
-                                } else {
-                                    Px(0.0)
-                                },
+                                gap: Px(0.0),
                                 padding: Edges::all(Px(0.0)),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
