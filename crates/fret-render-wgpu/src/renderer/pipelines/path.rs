@@ -11,6 +11,18 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.path_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!("fret.renderer.pipeline.create.path", format = ?format, reason)
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret path shader"),
             source: wgpu::ShaderSource::Wgsl(PATH_SHADER.into()),
@@ -91,6 +103,25 @@ impl Renderer {
         {
             return;
         }
+
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.path_msaa_pipeline.is_none() {
+                    "missing"
+                } else if self.path_msaa_pipeline_format != Some(format) {
+                    "format_changed"
+                } else {
+                    "sample_count_changed"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.path_msaa",
+                    format = ?format,
+                    sample_count,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret path msaa shader"),

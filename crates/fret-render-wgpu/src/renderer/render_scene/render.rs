@@ -92,6 +92,11 @@ impl Renderer {
                     viewport_h = viewport_size.1,
                     scale_factor,
                     format = ?format,
+                    encoding_cache_hit = tracing::field::Empty,
+                    plan_passes = tracing::field::Empty,
+                    plan_segments = tracing::field::Empty,
+                    plan_degradations = tracing::field::Empty,
+                    plan_estimated_peak_intermediate_bytes = tracing::field::Empty,
                 )
             })
             .unwrap_or_else(tracing::Span::none);
@@ -230,6 +235,7 @@ impl Renderer {
         };
 
         let cache_hit = self.scene_encoding_cache_key == Some(key);
+        render_scene_span.record("encoding_cache_hit", &cache_hit);
         if perf_enabled {
             if cache_hit {
                 frame_perf.scene_encoding_cache_hits =
@@ -347,6 +353,13 @@ impl Renderer {
                 self.intermediate_budget_bytes,
             )
         };
+        render_scene_span.record("plan_passes", &(plan.passes.len() as u64));
+        render_scene_span.record("plan_segments", &(plan.segments.len() as u64));
+        render_scene_span.record("plan_degradations", &(plan.degradations.len() as u64));
+        render_scene_span.record(
+            "plan_estimated_peak_intermediate_bytes",
+            &plan.compile_stats.estimated_peak_intermediate_bytes,
+        );
         if perf_enabled {
             use super::super::render_plan::{
                 RenderPlanDegradationKind as DegradationKind,

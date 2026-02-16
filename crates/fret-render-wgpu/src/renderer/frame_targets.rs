@@ -44,6 +44,29 @@ impl FrameTargets {
             return slot.as_ref().unwrap().view.clone();
         }
 
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        let ensure_span = trace_enabled
+            .then(|| {
+                let (old_w, old_h, old_bytes) = slot
+                    .as_ref()
+                    .map(|existing| (existing.size.0, existing.size.1, existing.texture.bytes))
+                    .unwrap_or((0, 0, 0));
+                tracing::trace_span!(
+                    "fret.renderer.targets.ensure_target",
+                    target = ?target,
+                    old_w,
+                    old_h,
+                    new_w = size.0,
+                    new_h = size.1,
+                    old_bytes,
+                    new_bytes = tracing::field::Empty,
+                    format = ?format,
+                    usage_bits = usage.bits(),
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _ensure_guard = ensure_span.enter();
+
         if let Some(existing) = slot.take() {
             self.bytes_in_use = self.bytes_in_use.saturating_sub(existing.texture.bytes);
             pool.release(existing.texture);
@@ -51,6 +74,7 @@ impl FrameTargets {
 
         let texture =
             pool.acquire_texture(device, "fret intermediate target", size, format, usage, 1);
+        ensure_span.record("new_bytes", &texture.bytes);
         self.bytes_in_use = self.bytes_in_use.saturating_add(texture.bytes);
         self.peak_bytes_in_use = self.peak_bytes_in_use.max(self.bytes_in_use);
         let view = texture

@@ -7,6 +7,11 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| tracing::trace_span!("fret.renderer.pipeline.create.clip_mask"))
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let clip_mask_shader_source = clip_mask_shader_source();
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret clip-mask shader"),

@@ -57,6 +57,22 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.composite_pipeline_format != Some(format) {
+                    "format_changed"
+                } else {
+                    "missing"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.composite",
+                    format = ?format,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret composite premul shader"),
             source: wgpu::ShaderSource::Wgsl(COMPOSITE_PREMUL_SHADER.into()),
