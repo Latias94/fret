@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.overlay_placement_trace"
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-select" }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+
+    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }, "type": "click" },
+    {
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-select-trigger"
+      },
+      "timeout_frames": 240,
+      "type": "wait_overlay_placement_trace"
+    },
+    {
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "min_h_px": 60.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    { "target": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }, "type": "move_pointer" },
+    { "n": 2, "type": "wait_frames" },
+    { "label": "ui-gallery-select-reopen-probe-open-1", "type": "capture_bundle" },
+    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }, "type": "click" },
+    {
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+
+    { "n": 2, "type": "wait_frames" },
+    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }, "type": "click" },
+    {
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-select-trigger"
+      },
+      "timeout_frames": 240,
+      "type": "wait_overlay_placement_trace"
+    },
+    {
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "min_h_px": 60.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    { "target": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }, "type": "move_pointer" },
+    { "n": 2, "type": "wait_frames" },
+    { "label": "ui-gallery-select-reopen-probe-open-2", "type": "capture_bundle" },
+    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }, "type": "click" },
+    {
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+
+    { "n": 2, "type": "wait_frames" },
+    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }, "type": "click" },
+    {
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-select-trigger"
+      },
+      "timeout_frames": 240,
+      "type": "wait_overlay_placement_trace"
+    },
+    {
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "min_h_px": 60.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    { "target": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }, "type": "move_pointer" },
+    { "n": 2, "type": "wait_frames" },
+    { "label": "ui-gallery-select-reopen-probe-open-3", "type": "capture_bundle" }
+  ]
+}
