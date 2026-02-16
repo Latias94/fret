@@ -1009,15 +1009,18 @@ pub(super) fn paint_row(
     let wrap_cols = st.display_wrap_cols;
     let folds_epoch = st.folds_epoch;
     let inlays_epoch = st.inlays_epoch;
+    let display_map_epoch = st.display_map_epoch;
     if st.row_geom_cache_rev != rev
         || st.row_geom_cache_wrap_cols != wrap_cols
         || st.row_geom_cache_folds_epoch != folds_epoch
         || st.row_geom_cache_inlays_epoch != inlays_epoch
+        || st.row_geom_cache_display_map_epoch != display_map_epoch
     {
         st.row_geom_cache_rev = rev;
         st.row_geom_cache_wrap_cols = wrap_cols;
         st.row_geom_cache_folds_epoch = folds_epoch;
         st.row_geom_cache_inlays_epoch = inlays_epoch;
+        st.row_geom_cache_display_map_epoch = display_map_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -1087,15 +1090,18 @@ pub(super) fn cached_row_text_with_range(
     let wrap_cols = st.display_wrap_cols;
     let folds_epoch = st.folds_epoch;
     let inlays_epoch = st.inlays_epoch;
+    let display_map_epoch = st.display_map_epoch;
     if st.row_text_cache_rev != rev
         || st.row_text_cache_wrap_cols != wrap_cols
         || st.row_text_cache_folds_epoch != folds_epoch
         || st.row_text_cache_inlays_epoch != inlays_epoch
+        || st.row_text_cache_display_map_epoch != display_map_epoch
     {
         st.row_text_cache_rev = rev;
         st.row_text_cache_wrap_cols = wrap_cols;
         st.row_text_cache_folds_epoch = folds_epoch;
         st.row_text_cache_inlays_epoch = inlays_epoch;
+        st.row_text_cache_display_map_epoch = display_map_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();

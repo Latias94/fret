@@ -138,6 +138,12 @@ Exit criteria:
       - `ecosystem/fret-code-editor-view/src/lib.rs`
       - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
 
+Future work (deferred):
+
+- Multi-line selection replacement composition (cross-newline ranges) is not implemented yet.
+  - Current v1 staging clamps cross-newline ranges to the anchor logical line for determinism.
+  - Track implementation in `docs/workstreams/editor-text-pipeline-v1-todo.md` (M4).
+
 Evidence anchors:
 
 - Implementation:
@@ -148,7 +154,19 @@ Evidence anchors:
   - `crates/fret-ui/src/declarative/tests/semantics.rs`
     (`declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates`)
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_source_does_not_materialize_whole_buffer_string`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_composed_window_is_bounded_for_large_documents`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
     (`platform_replace_and_mark_empty_text_cancels_and_restores_selection`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap`)
 - Diag gates:
   - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`
   - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_a11y_composition_json`)
@@ -172,6 +190,8 @@ Evidence anchors (initial):
 - Geometry cache key:
   - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
+- Display-map epoch gate:
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`code_wrap_policy_change_invalidates_row_text_cache`)
 - Paint-only stability gate:
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
 

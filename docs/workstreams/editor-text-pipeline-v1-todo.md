@@ -164,6 +164,12 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - surrogate pairs (e.g. 😀) clamp correctly,
   - selection/composition map from UTF-8 (ADR 0071) to UTF-16 (platform bridge).
   - Evidence: `crates/fret-ui/src/declarative/tests/semantics.rs`
+- [x] Keep the editor-facing composed a11y window bounded for large documents:
+  - the a11y path must not materialize the entire rope for platform queries.
+  - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_source_does_not_materialize_whole_buffer_string`)
+  - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_composed_window_is_bounded_for_large_documents`)
 - [x] Wire `TextInputRegionProps.ime_cursor_area` from the editor caret geometry (data-only):
   - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs`
 - [x] Add a regression gate for `ime_cursor_area` correctness and stability:
@@ -176,11 +182,41 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     (`ime_cursor_area_matches_caret_rect_for_selection_under_preedit_and_wrap`)
 - [x] Add ecosystem-owned bounds/hit-test support for `TextInputRegion` (not `fret-ui` mechanism):
   - `BoundsForRange` / `CharacterIndexForPoint` via cached row geometry + fallbacks.
+  - [x] Regression gate: `BoundsForRange` round-trips with `CharacterIndexForPoint` under wrap +
+    selection-replacing preedit (no drift between platform queries and editor geometry).
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap`)
+  - [x] Regression gate: `BoundsForRange` round-trips with `CharacterIndexForPoint` under wrap +
+    inline preedit composed window (`compose_inline_preedit=true`) so offsets after the injected
+    preedit segment remain stable.
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap`)
+  - [x] Regression gate: the same round-trip holds when the composed window includes editor
+    decorations (fold placeholders + inlays) under inline preedit.
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap`)
 - [x] Add ecosystem-owned replace support for platform text input (not `fret-ui` mechanism):
   - `replace_text_in_range_utf16` via window mapping + buffer ops.
   - `replace_and_mark_text_in_range_utf16` supports composing for:
     - empty `range` (caret-only), and
     - non-empty `range` (selection replacement represented in the composed view; composing text remains preedit-only).
+  - [x] Staging: selection replacement is currently single-line.
+    - Replacement ranges that span a newline are clamped to the anchor logical line.
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
+  - [ ] Future: multi-line selection replacement composition (cross-newline ranges).
+    - Goal: accept replacement ranges that span logical lines without clamping, while keeping
+      mapping deterministic across the composed a11y window and the display-row paint path.
+    - Exit criteria:
+      - `replace_and_mark_text_in_range_utf16` supports cross-newline ranges in the composed view.
+      - The display-row preedit replacement materialization matches the platform-facing composed
+        window for the multi-line range (no measurement/paint drift during composition).
+      - Cancel/unmark semantics remain deterministic (restore saved selection; base buffer remains
+        unchanged until commit).
+      - Bounds/hit-test roundtrip gates remain green under multi-line composition.
+    - Required new gates (suggested):
+      - `platform_replace_and_mark_range_spanning_newline_updates_composed_view_deterministically`
+      - `platform_text_input_bounds_and_index_roundtrip_under_multiline_preedit_replacement_and_wrap`
 - [x] (Staging) Unify selection-replacing preedit across paint + platform-facing composed view:
   - the display-row text used for shaping/paint matches the platform-facing composed window while
     `preedit_replace_range` is active.
@@ -210,8 +246,12 @@ Goal: make editor geometry queries (caret/hit-test/IME bounds) **cache-stable an
 folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
 
 - [~] Define the stable cache key for row geometry:
-  - [~] text revision + display window mapping epoch (handled by cache invalidation on
-    `(revision, wrap_cols, folds_epoch, inlays_epoch)` and by pointer-identity row keys),
+  - [x] text revision + display window mapping epoch:
+    - model `DisplayMap` rebuilds as a monotonic `display_map_epoch`,
+    - include `display_map_epoch` in row text/geometry cache invalidation checks to prevent stale
+      `row -> text/range` materialization after policy-only display-map changes (e.g. code wrap).
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`code_wrap_policy_change_invalidates_row_text_cache`)
   - [x] shaping-relevant style key (font/axes/features/letter spacing) via `RowGeomKey`,
   - [x] constraints key (wrap/overflow/max width bucket, scale factor) via `RowGeomKey` (64px ceil bucket for wrap=None + align=Start),
   - [x] `TextFontStackKey` revision via `RowGeomKey` + cache clears on font stack change.

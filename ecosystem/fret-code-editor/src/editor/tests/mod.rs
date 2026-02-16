@@ -278,6 +278,44 @@ fn paint_source_does_not_materialize_whole_buffer_string() {
 }
 
 #[test]
+fn a11y_source_does_not_materialize_whole_buffer_string() {
+    // Regression guard: the editor a11y composed-window path should never call
+    // `TextBuffer::text_string()`. Materializing the entire rope would scale with document size
+    // and defeat windowed platform text input.
+    const SRC: &str = include_str!("../a11y/mod.rs");
+    assert!(
+        !SRC.contains(".text_string("),
+        "a11y/mod.rs must not call TextBuffer::text_string()"
+    );
+}
+
+#[test]
+fn a11y_composed_window_is_bounded_for_large_documents() {
+    // Regression guard: the composed a11y window must remain bounded even for large documents.
+    // This defends against accidental full-document materialization during platform queries.
+    let mut text = String::with_capacity(300_000);
+    for _ in 0..50_000 {
+        text.push_str("abcd\n");
+    }
+    assert!(text.len() > 200_000);
+
+    let handle = CodeEditorHandle::new(text.clone());
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(text.len() / 2);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 8);
+    assert!(
+        value.len() < text.len() / 10,
+        "expected composed a11y value to be a bounded window, not a full-document snapshot"
+    );
+    assert!(
+        value.len() < 20_000,
+        "expected composed a11y value to remain bounded by window budgets"
+    );
+}
+
+#[test]
 fn drag_autoscroll_delta_y_is_zero_inside_safe_band() {
     let delta = drag_autoscroll_delta_y(Px(100.0), Px(30.0), Px(50.0));
     assert_eq!(delta, Px(0.0));
@@ -848,6 +886,45 @@ fn row_text_cache_stats_tracks_hits_and_misses() {
 }
 
 #[test]
+fn code_wrap_policy_change_invalidates_row_text_cache() {
+    let handle = CodeEditorHandle::new("ab_cd_ef");
+    handle.set_soft_wrap_cols(Some(4));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Conservative,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 8);
+        assert_eq!(range, 0..4);
+        assert_eq!(
+            text.as_ref(),
+            "ab_c",
+            "conservative wrap falls back to grapheme boundaries (no identifier knob)"
+        );
+    }
+
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 8);
+        assert_eq!(range, 0..3);
+        assert_eq!(
+            text.as_ref(),
+            "ab_",
+            "balanced wrap prefers breaking after '_' when near the wrap width"
+        );
+    }
+}
+
+#[test]
 fn ctrl_page_down_bubbles_and_keeps_preedit() {
     let handle = CodeEditorHandle::new("hello\nworld");
     let preedit = PreeditState {
@@ -1269,6 +1346,409 @@ fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
     assert_eq!(st.buffer.text_string(), "hXo");
     assert_eq!(st.preedit, None);
     assert_eq!(st.selection.caret(), 2);
+}
+
+#[test]
+fn platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line() {
+    // Staging contract: selection-replacing composition ranges that span a newline in the
+    // platform-facing composed window are clamped to the anchor logical line in the view model.
+    // This keeps IME replacement deterministic while we stage multi-line composition support.
+    let handle = CodeEditorHandle::new("ab\ncd");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(0);
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+    st.preedit = None;
+    st.preedit_replace_range = None;
+    st.preedit_saved_selection = None;
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "ab\ncd");
+
+    // Range 1..4 covers "b\nc" in UTF-16 (ASCII here), i.e. it spans the newline boundary.
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 4),
+        "X",
+        Some(fret_runtime::Utf16Range::new(1, 2)),
+    );
+    assert!(did);
+    assert_eq!(
+        st.buffer.text_string(),
+        "ab\ncd",
+        "base buffer stays unchanged"
+    );
+
+    // Clamp to the end of the first line (newline byte index == 2), replacing only "b".
+    assert_eq!(st.preedit_replace_range, Some(1..2));
+    assert_eq!(
+        st.preedit.as_ref().map(|p| p.text.as_str()),
+        Some("X"),
+        "composing text remains preedit-only"
+    );
+    assert_eq!(st.selection.caret(), 1);
+
+    let (next_value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(next_value.as_str(), "aX\ncd");
+    assert_eq!(composition, Some((1, 2)));
+    assert_eq!(selection, Some((1, 2)));
+}
+
+#[test]
+fn platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap() {
+    let text = "a😀bcdefghij";
+    let handle = CodeEditorHandle::new(text);
+    handle.set_soft_wrap_cols(Some(6));
+
+    let replace_start = text.find('b').expect("expected 'b' in text");
+    let replace_end = replace_start.saturating_add("bc".len()).min(text.len());
+    handle.set_selection(Selection {
+        anchor: replace_start,
+        focus: replace_end,
+    });
+    handle.debug_platform_set_marked_text_for_selection("XY");
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let row_h = Px(20.0);
+    let cell_w = Px(10.0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    let after_preedit = value
+        .find("XY")
+        .map(|start| start + "XY".len())
+        .expect("expected preedit text in composed a11y value");
+
+    let end_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        after_preedit,
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    let (_, end_byte) = fret_core::utf::utf16_range_to_utf8_byte_range(
+        value.as_str(),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+    );
+    let end_byte = u32::try_from(end_byte.min(value.len())).unwrap_or(u32::MAX);
+
+    let buf_byte = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, end_byte);
+
+    // Seed geometry cache for the row so platform queries exercise the cached caret-stop path.
+    let pt = st.display_map.byte_to_display_point(&st.buffer, buf_byte);
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, pt.row, 1024);
+
+    let mut caret_stops: Vec<(usize, Px)> = Vec::with_capacity(row_text.len().saturating_add(2));
+    caret_stops.push((0, Px(0.0)));
+    for (i, _) in row_text.char_indices() {
+        caret_stops.push((i, Px(i as f32 * cell_w.0)));
+    }
+    caret_stops.push((row_text.len(), Px(row_text.len() as f32 * cell_w.0)));
+    caret_stops.sort_by_key(|(i, _)| *i);
+    caret_stops.dedup_by_key(|(i, _)| *i);
+
+    st.row_geom_cache.insert(
+        pt.row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: Some(Px(0.0)),
+                caret_rect_height: Some(row_h),
+                has_preedit: preedit_range.is_some(),
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    // BoundsForRange-like path: map a11y value UTF-16 -> a11y UTF-8 -> buffer byte -> caret rect.
+    let rect =
+        geom::caret_rect_for_buffer_byte_boundary(&st, row_h, cell_w, bounds, &scroll, buf_byte)
+            .expect("caret rect for buffer byte boundary");
+
+    // CharacterIndexForPoint-like path: hit test back to a UTF-16 index and ensure it round-trips.
+    let point = Point::new(
+        Px(rect.origin.x.0 + 1.0),
+        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+    );
+    let local_y = (point.y.0 - bounds.origin.y.0 + scroll.offset().y.0).max(0.0);
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+
+    let hit_byte = geom::caret_for_pointer(&mut st, row, bounds, point, cell_w);
+    assert_eq!(
+        hit_byte, buf_byte,
+        "expected hit-testing inside the caret rect to map back to the same buffer byte boundary"
+    );
+
+    let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, hit_byte);
+    let got_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(a11y_offset).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    assert_eq!(got_utf16, end_utf16);
+}
+
+#[test]
+fn platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap() {
+    let text = "a😀bcdefghij";
+    let handle = CodeEditorHandle::new(text);
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_compose_inline_preedit(true);
+
+    let caret = text.find('b').expect("expected 'b' in text");
+    handle.set_caret(caret);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let row_h = Px(20.0);
+    let cell_w = Px(10.0);
+
+    let mut st = handle.state.borrow_mut();
+    assert!(
+        st.compose_inline_preedit,
+        "expected inline preedit composition enabled"
+    );
+    assert!(
+        st.preedit_replace_range
+            .as_ref()
+            .map_or(true, |r| r.is_empty()),
+        "expected non-replacing preedit so a11y uses the composed display window"
+    );
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(
+        value.contains("XY"),
+        "expected preedit injection in a11y value"
+    );
+
+    // Pick a boundary that is after the injected preedit segment so the mapping must account
+    // for the global offset shift (bytes after caret include the preedit string).
+    let after_target = value
+        .find('h')
+        .map(|start| start + 'h'.len_utf8())
+        .expect("expected 'h' in composed a11y value");
+
+    let end_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        after_target,
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    let (_, end_byte) = fret_core::utf::utf16_range_to_utf8_byte_range(
+        value.as_str(),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+    );
+    let end_byte = u32::try_from(end_byte.min(value.len())).unwrap_or(u32::MAX);
+
+    let buf_byte = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, end_byte);
+    let expected_buf_byte = text
+        .find('h')
+        .map(|start| start + 'h'.len_utf8())
+        .expect("expected 'h' in base buffer text");
+    assert_eq!(
+        buf_byte, expected_buf_byte,
+        "expected mapping from composed a11y offset to land on the matching buffer boundary"
+    );
+
+    // Seed geometry cache for the row so platform queries exercise the cached caret-stop path.
+    let pt = st.display_map.byte_to_display_point(&st.buffer, buf_byte);
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, pt.row, 1024);
+
+    let mut caret_stops: Vec<(usize, Px)> = Vec::with_capacity(row_text.len().saturating_add(2));
+    caret_stops.push((0, Px(0.0)));
+    for (i, _) in row_text.char_indices() {
+        caret_stops.push((i, Px(i as f32 * cell_w.0)));
+    }
+    caret_stops.push((row_text.len(), Px(row_text.len() as f32 * cell_w.0)));
+    caret_stops.sort_by_key(|(i, _)| *i);
+    caret_stops.dedup_by_key(|(i, _)| *i);
+
+    st.row_geom_cache.insert(
+        pt.row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: Some(Px(0.0)),
+                caret_rect_height: Some(row_h),
+                has_preedit: preedit_range.is_some(),
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    // BoundsForRange-like path: map a11y value UTF-16 -> a11y UTF-8 -> buffer byte -> caret rect.
+    let rect =
+        geom::caret_rect_for_buffer_byte_boundary(&st, row_h, cell_w, bounds, &scroll, buf_byte)
+            .expect("caret rect for buffer byte boundary");
+
+    // CharacterIndexForPoint-like path: hit test back to a UTF-16 index and ensure it round-trips.
+    let point = Point::new(
+        Px(rect.origin.x.0 + 1.0),
+        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+    );
+    let local_y = (point.y.0 - bounds.origin.y.0 + scroll.offset().y.0).max(0.0);
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+
+    let hit_byte = geom::caret_for_pointer(&mut st, row, bounds, point, cell_w);
+    assert_eq!(
+        hit_byte, buf_byte,
+        "expected hit-testing inside the caret rect to map back to the same buffer byte boundary"
+    );
+
+    let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, hit_byte);
+    let got_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(a11y_offset).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    assert_eq!(got_utf16, end_utf16);
+}
+
+#[test]
+fn platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap()
+ {
+    let text = "ab_cd_efghij😀kl";
+    let handle = CodeEditorHandle::new(text);
+    handle.set_soft_wrap_cols(Some(6));
+    handle.set_compose_inline_preedit(true);
+    handle.set_allow_decorations_under_inline_preedit(true);
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 2..5,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 1,
+            text: Arc::<str>::from("<inlay>"),
+        }],
+    );
+
+    let caret = text.find('e').expect("expected 'e' in text");
+    handle.set_caret(caret);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let row_h = Px(20.0);
+    let cell_w = Px(10.0);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(value.contains("<inlay>"));
+    assert!(value.contains("…"));
+    assert!(value.contains("XY"));
+
+    let buf_byte = text
+        .find('h')
+        .map(|start| start + 'h'.len_utf8())
+        .expect("expected 'h' in base buffer text");
+
+    let a11y_offset = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, buf_byte);
+    let end_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(a11y_offset).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    let (_, end_byte) = fret_core::utf::utf16_range_to_utf8_byte_range(
+        value.as_str(),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+        usize::try_from(end_utf16).unwrap_or(usize::MAX),
+    );
+    let end_byte = u32::try_from(end_byte.min(value.len())).unwrap_or(u32::MAX);
+
+    let mapped_buf = a11y::map_a11y_offset_to_buffer_in_current_window(&mut st, 1024, end_byte);
+    assert_eq!(
+        mapped_buf, buf_byte,
+        "expected composed a11y offset mapping to round-trip for buffer boundaries beyond folds/inlays/preedit"
+    );
+
+    // Seed geometry cache for the row so platform queries exercise the cached caret-stop path.
+    let pt = st.display_map.byte_to_display_point(&st.buffer, buf_byte);
+    let (row_range, row_text, fold_map, preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, pt.row, 1024);
+
+    let mut caret_stops: Vec<(usize, Px)> = Vec::with_capacity(row_text.len().saturating_add(2));
+    caret_stops.push((0, Px(0.0)));
+    for (i, _) in row_text.char_indices() {
+        caret_stops.push((i, Px(i as f32 * cell_w.0)));
+    }
+    caret_stops.push((row_text.len(), Px(row_text.len() as f32 * cell_w.0)));
+    caret_stops.sort_by_key(|(i, _)| *i);
+    caret_stops.dedup_by_key(|(i, _)| *i);
+
+    st.row_geom_cache.insert(
+        pt.row,
+        (
+            RowGeom {
+                row_range,
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: Some(Px(0.0)),
+                caret_rect_height: Some(row_h),
+                has_preedit: preedit_range.is_some(),
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    let rect =
+        geom::caret_rect_for_buffer_byte_boundary(&st, row_h, cell_w, bounds, &scroll, buf_byte)
+            .expect("caret rect for buffer byte boundary");
+    let point = Point::new(
+        Px(rect.origin.x.0 + 1.0),
+        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+    );
+    let local_y = (point.y.0 - bounds.origin.y.0 + scroll.offset().y.0).max(0.0);
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+
+    let hit_byte = geom::caret_for_pointer(&mut st, row, bounds, point, cell_w);
+    assert_eq!(hit_byte, buf_byte);
+
+    let got_a11y = a11y::map_buffer_offset_to_a11y_offset(&mut st, 1024, hit_byte);
+    let got_utf16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+        value.as_str(),
+        usize::try_from(got_a11y).unwrap_or(usize::MAX),
+        fret_core::utf::UtfIndexClamp::Down,
+    ) as u32;
+    assert_eq!(got_utf16, end_utf16);
 }
 
 #[test]

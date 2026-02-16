@@ -61,6 +61,15 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
   - [x] delete the legacy wrapper implementation once the Parley path passes the gates above (no
     compatibility branch retained).
 
+## M3 — RTL + mixed-script staging
+
+- [x] Add deterministic wrapped RTL hit testing and geometry gates.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends`)
+- [x] Add mixed-direction wrapped selection geometry gates.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty`)
+
 ## Customization seam (recommended)
 
 - [x] Define and document the supported customization approach:

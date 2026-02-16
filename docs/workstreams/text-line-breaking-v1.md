@@ -1,6 +1,6 @@
 # Workstream: Text Line Breaking v1 (Wrap Quality + Editor-Grade Rules)
 
-Status: M0 implemented (fixture-driven conformance harness); M1 implemented (Unicode break opportunities via `swash::text::analyze`, with small heuristic fallback); M2 implemented (Parley paragraph line breaking for `TextWrap::Word`).
+Status: M0 implemented (fixture-driven conformance harness); M1 implemented (Unicode break opportunities); M2 implemented (Parley paragraph line breaking for `TextWrap::Word`); M3 implemented (wrapped RTL/mixed-direction staging gates).
 
 This document is **non-normative**. It complements:
 
@@ -9,13 +9,20 @@ This document is **non-normative**. It complements:
 
 ## Problem Statement
 
-Fret currently performs wrapping by:
+Historically, Fret performed wrapping by:
 
 1) shaping a slice as a single line, then
 2) choosing “cut points” using heuristic rules, then
 3) re-shaping per line (or shape-once and slice clusters/glyphs for LTR-only paths).
 
-Evidence: `crates/fret-render-wgpu/src/text/wrapper.rs`.
+That approach shipped quickly and enabled early editor-grade caret/selection semantics, but it
+produced editor-visible issues (CJK punctuation, identifiers, URLs) and was hard to audit.
+
+In v1, `TextWrap::Word` migrates to **Parley paragraph line breaking** and locks behavior behind
+fixtures + invariants.
+
+Evidence: `crates/fret-render-wgpu/src/text/wrapper.rs`, `crates/fret-render-wgpu/src/text/mod.rs`,
+`docs/workstreams/text-line-breaking-v1-*.md`.
 
 This approach is fast to ship and offers direct control over caret/selection semantics, but it
 produces editor-visible issues:
@@ -47,14 +54,16 @@ produces editor-visible issues:
 Key files:
 
 - Wrapper: `crates/fret-render-wgpu/src/text/wrapper.rs`
-  - word wrap candidate selection:
-    - prefers Unicode line-break opportunities (UAX#14-like) via `swash::text::analyze`
-      (`line_break_positions`),
-    - keeps a small heuristic fallback (`is_word_char`, whitespace boundaries) for now.
-  - grapheme wrap uses `unicode_segmentation` boundaries.
+  - `TextWrap::Word` uses Parley paragraph line breaking (wrap width drives line breaks).
+  - `TextWrap::Grapheme` uses `unicode_segmentation` grapheme cluster boundaries as the emergency
+    break surface.
+  - newline splitting (`\n`) is an outer paragraph boundary.
  - Invariants already gated by tests:
   - trailing whitespace at soft wrap is selectable:
     - `crates/fret-render-wgpu/src/text/mod.rs:6294`
+  - wrapped RTL/mixed-direction staging gates:
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends`)
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty`)
 - Conformance harness:
   - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
   - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`

@@ -44,16 +44,25 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 
 ## Open questions
 
-- [~] Do we need a feature behavior conformance fixture beyond “keying correctness”?
-  - Status: deferred until we add a stable, bundled-font-backed fixture that is guaranteed to
-    visibly change shaping under a feature toggle (e.g. `liga`).
-  - Rationale: current tests validate deterministic canonicalization + cache invalidation. Behavior
-    assertions are fragile if they depend on system fonts or on subset font bundles that may not
-    contain the necessary GSUB/ligature tables.
-  - Trigger to revisit:
-    - add a small test-only font fixture under `crates/fret-fonts/assets/` (or similar) with a
-      known ligature substitution, and gate on a glyph/cluster delta; or
-    - switch the relevant test suite to `bootstrap-full` (accepting the payload increase).
+- [x] Add a feature behavior conformance gate beyond cache-key correctness.
+  - Gate: toggling `liga`/`calt` must be **behavior-visible** (not only key-visible) under a
+    bundled-font-only environment (no system font dependency):
+    - shaping output changes for at least one known ligature candidate string.
+    - word wrap breakpoints can change under `TextWrap::Word` for at least one known candidate.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
+  - Note: this supersedes the deferred question below; keep it for historical rationale.
+
+- [x] Do we need a feature behavior conformance fixture beyond “keying correctness”?
+  - Answer: yes — and we now have one.
+  - Rationale: keying correctness alone is not enough; we also want to know that feature overrides
+    are actually applied by the shaping pipeline.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
 - [~] Do we want to support a CSS-like `font-feature-settings` parser, or keep the struct-only API?
   - Status: deferred.
   - Recommendation: keep the struct-only API for v1. Introduce a parser only when there is a
