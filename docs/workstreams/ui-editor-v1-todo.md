@@ -1,7 +1,7 @@
 # `fret-ui-editor` v1 — TODO Tracker
 
 Status: Active tracker (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 Related:
 
@@ -153,7 +153,7 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
 Goal: close the largest usability/polish gaps identified in `ui-editor-egui-imgui-gap-v1.md` without
 adding new runtime contracts unless evidence demands it.
 
-- [~] Define `EditorWidgetVisuals` (policy) analogous to `egui::Visuals::widgets`:
+- [x] Define `EditorWidgetVisuals` (policy) analogous to `egui::Visuals::widgets`:
   - inactive / hovered / active / open / disabled palettes
   - resolved from theme tokens + `editor.*` density defaults
   - consumed by all editor controls to avoid drift

@@ -1,7 +1,7 @@
 # `fret-ui-editor` v1 — Egui / ImGui Capability Gap Matrix
 
 Status: Active gap analysis (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ## Purpose
 

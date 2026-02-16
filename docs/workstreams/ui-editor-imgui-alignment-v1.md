@@ -1,7 +1,7 @@
 # `fret-ui-editor` — ImGui / `fret-ui-precision` Alignment Inventory v1
 
 Status: Active inventory (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ## Purpose
 

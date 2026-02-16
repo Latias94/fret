@@ -1,7 +1,7 @@
 # Editor Component Surface (`fret-ui-editor`) v1
 
 Status: Proposed (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ## Summary
 
