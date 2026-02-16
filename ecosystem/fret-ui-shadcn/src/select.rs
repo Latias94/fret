@@ -111,6 +111,9 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
     should_focus_selected_item: impl Fn() -> bool + Clone + 'static,
     on_focused_selected_item: impl Fn() + Clone + 'static,
+    clear_active_row_on_scroll_arrow_hover: impl Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx)
+    + Clone
+    + 'static,
     content: C,
 ) -> AnyElement
 where
@@ -176,6 +179,7 @@ where
                 let handle_for_pressable = handle.clone();
                 let handle_for_wheel = handle.clone();
                 let theme = theme.clone();
+                let clear_active_for_hover = clear_active_row_on_scroll_arrow_hover.clone();
                 let pressable = cx.pressable(
                     PressableProps {
                         layout: {
@@ -216,6 +220,17 @@ where
                             host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                             fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
                         }));
+
+                        cx.pressable_add_on_hover_change(Arc::new(
+                            move |host, action_cx, hovered| {
+                                if hovered {
+                                    // Base UI clears the active index when the pointer moves over
+                                    // scroll arrows. Mirror the outcome so item highlights don't
+                                    // "stick" while the pointer is on the arrow strip.
+                                    clear_active_for_hover(host, action_cx);
+                                }
+                            },
+                        ));
 
                         vec![cx.container(
                             ContainerProps {
@@ -2414,6 +2429,20 @@ fn select_impl<H: UiHost>(
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
                                                 state.did_item_aligned_focus_scroll = true;
+                                            },
+                                            {
+                                                let state_for_arrow_hover =
+                                                    trigger_state_for_overlay_in_content.clone();
+                                                move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                      action_cx: ActionCx| {
+                                                    let mut state = state_for_arrow_hover
+                                                        .lock()
+                                                        .unwrap_or_else(|e| e.into_inner());
+                                                    if state.content.active_row().is_some() {
+                                                        state.content.set_active_row(None);
+                                                        host.request_redraw(action_cx.window);
+                                                    }
+                                                }
                                             },
                                             move |cx, active_element| {
                                                                 let mut out = Vec::with_capacity(rows.len());
