@@ -2,7 +2,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -37,6 +37,7 @@ use fret_ui_kit::{
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -2635,36 +2636,91 @@ fn select_impl<H: UiHost>(
                                                                                         );
                                                                                     }
 
-                                                                                     if !item_disabled {
-                                                                                         cx.pressable_add_on_hover_change(Arc::new(
-                                                                                             move |host, action_cx, hovered| {
-                                                                                                 let mut state = state_for_hover
-                                                                                                     .lock()
-                                                                                                     .unwrap_or_else(|e| e.into_inner());
-                                                                                                 if hovered {
-                                                                                                     if state.content.active_row()
-                                                                                                         != Some(row_idx_for_hover)
-                                                                                                     {
-                                                                                                         state.content.set_active_row(
-                                                                                                             Some(row_idx_for_hover),
-                                                                                                         );
-                                                                                                         host.request_redraw(
-                                                                                                             action_cx.window,
-                                                                                                         );
-                                                                                                     }
-                                                                                                 } else if state.content.active_row()
-                                                                                                     == Some(row_idx_for_hover)
-                                                                                                 {
-                                                                                                     // Base UI clears the active index when the pointer leaves the
-                                                                                                     // popup so the highlight does not become "stuck" on the last
-                                                                                                     // hovered option. Mirror that behavior per-row by clearing when
-                                                                                                     // the active row stops being hovered.
-                                                                                                     state.content.set_active_row(None);
-                                                                                                     host.request_redraw(action_cx.window);
-                                                                                                 }
-                                                                                             },
-                                                                                         ));
-                                                                                     }
+                                                                                    if !item_disabled {
+                                                                                        let hover_clear_token: Arc<
+                                                                                            Mutex<Option<TimerToken>>,
+                                                                                        > = cx.with_state_for(
+                                                                                            id,
+                                                                                            || {
+                                                                                                Arc::new(Mutex::new(
+                                                                                                    None::<TimerToken>,
+                                                                                                ))
+                                                                                            },
+                                                                                            |s| s.clone(),
+                                                                                        );
+
+                                                                                        let hover_clear_token_for_timer =
+                                                                                            hover_clear_token.clone();
+                                                                                        let state_for_timer =
+                                                                                            state_for_hover.clone();
+                                                                                        let row_idx_for_timer =
+                                                                                            row_idx_for_hover;
+                                                                                        cx.timer_on_timer_for(
+                                                                                            id,
+                                                                                            Arc::new(
+                                                                                                move |host, action_cx, token| {
+                                                                                                    let mut hover_token = hover_clear_token_for_timer
+                                                                                                        .lock()
+                                                                                                        .unwrap_or_else(|e| e.into_inner());
+                                                                                                    if hover_token.as_ref()
+                                                                                                        != Some(&token)
+                                                                                                    {
+                                                                                                        return false;
+                                                                                                    }
+                                                                                                    *hover_token = None;
+
+                                                                                                    let mut state = state_for_timer
+                                                                                                        .lock()
+                                                                                                        .unwrap_or_else(|e| e.into_inner());
+                                                                                                    if state.content.active_row()
+                                                                                                        == Some(row_idx_for_timer)
+                                                                                                    {
+                                                                                                        state.content.set_active_row(None);
+                                                                                                        host.request_redraw(action_cx.window);
+                                                                                                    }
+                                                                                                    true
+                                                                                                },
+                                                                                            ),
+                                                                                        );
+
+                                                                                        let hover_clear_token_for_hover =
+                                                                                            hover_clear_token.clone();
+                                                                                        cx.pressable_add_on_hover_change(Arc::new(
+                                                                                            move |host, action_cx, hovered| {
+                                                                                                let mut hover_token = hover_clear_token_for_hover
+                                                                                                    .lock()
+                                                                                                    .unwrap_or_else(|e| e.into_inner());
+                                                                                                if let Some(token) = hover_token.take() {
+                                                                                                    host.push_effect(Effect::CancelTimer { token });
+                                                                                                }
+
+                                                                                                let mut state = state_for_hover
+                                                                                                    .lock()
+                                                                                                    .unwrap_or_else(|e| e.into_inner());
+                                                                                                if hovered {
+                                                                                                    if state.content.active_row()
+                                                                                                        != Some(row_idx_for_hover)
+                                                                                                    {
+                                                                                                        state.content.set_active_row(Some(row_idx_for_hover));
+                                                                                                        host.request_redraw(action_cx.window);
+                                                                                                    }
+                                                                                                } else if state.content.active_row()
+                                                                                                    == Some(row_idx_for_hover)
+                                                                                                {
+                                                                                                    // Base UI clears the active index on pointer leave via `setTimeout(0)`
+                                                                                                    // to avoid flicker when moving between adjacent rows.
+                                                                                                    let token = host.next_timer_token();
+                                                                                                    *hover_token = Some(token);
+                                                                                                    host.push_effect(Effect::SetTimer {
+                                                                                                        window: Some(action_cx.window),
+                                                                                                        token,
+                                                                                                        after: Duration::from_millis(0),
+                                                                                                        repeat: None,
+                                                                                                    });
+                                                                                                }
+                                                                                            },
+                                                                                        ));
+                                                                                    }
 
                                                                                     let theme = Theme::global(&*cx.app).clone();
                                                                                     // new-york-v4: items highlight on focus/hover via `bg-accent`.
@@ -4480,6 +4536,30 @@ mod tests {
                 pointer_type: fret_core::PointerType::Mouse,
             }),
         );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let effects = app.flush_effects();
+        let token = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(0) => {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("hover leave timer token");
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
 
         let _ = render_frame(
             &mut ui,
