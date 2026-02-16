@@ -196,7 +196,9 @@ adding new runtime contracts unless evidence demands it.
 - [x] `Vec2Edit` / `Vec3Edit` / `Vec4Edit` (built on `DragValue<T>`):
   - [x] axis labels + axis color tokens
   - [x] per-axis reset hooks
-  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `ecosystem/fret-ui-editor/src/controls/drag_value.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
+  - [x] responsive layout: auto-stack axes vertically in narrow inspectors (token: `editor.vec.auto_stack_below`)
+  - [x] per-instance internal state keying (`id_source` or default `(callsite, model ids)`) to prevent cross-widget interference
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `ecosystem/fret-ui-editor/src/theme.rs`, `ecosystem/fret-ui-editor/src/controls/drag_value.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
 - [~] `TransformEdit` (position/rotation/scale composite):
   - [x] layout variants (row/column)
   - [x] link scale toggle (optional)

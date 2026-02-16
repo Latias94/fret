@@ -172,6 +172,7 @@ Suggested v1 key families:
 - `editor.slider.*` (track height, thumb size)
 - `editor.axis.*` (axis label colors for vec/transform controls)
 - `editor.color.*` (swatch size, popup padding)
+- `editor.vec.*` (responsive vec layout)
 
 ### Minimal v1 token table (proposed)
 
@@ -202,6 +203,7 @@ Notes:
 | `editor.axis.y_color` | color | Axis label color (Y) | green-ish |
 | `editor.axis.z_color` | color | Axis label color (Z) | blue-ish |
 | `editor.axis.w_color` | color | Axis label color (W) | muted |
+| `editor.vec.auto_stack_below` | metric | Stack vec axes vertically below this width | tuned per inspector width |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
 | `editor.slider.track_height` | metric | Slider track thickness | small (3–6px) |

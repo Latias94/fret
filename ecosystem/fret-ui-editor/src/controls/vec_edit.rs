@@ -5,6 +5,7 @@
 //! - axis color tokens (`editor.axis.*`)
 //! - shared numeric formatting/parsing policies
 
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -312,6 +313,10 @@ where
 #[derive(Debug, Clone)]
 pub struct VecEditOptions {
     pub layout: LayoutStyle,
+    /// Explicit identity source for internal element keys.
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    pub id_source: Option<Arc<str>>,
     pub variant: VecEditLayoutVariant,
     pub gap: Px,
     pub axis_gap: Px,
@@ -330,6 +335,7 @@ impl Default for VecEditOptions {
                 },
                 ..Default::default()
             },
+            id_source: None,
             variant: VecEditLayoutVariant::Auto,
             gap: Px(6.0),
             axis_gap: Px(4.0),
@@ -412,6 +418,26 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let x_id = self.x.id();
+        let y_id = self.y.id();
+        let model_ids = (x_id, y_id);
+
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.vec2_edit", id_source, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.vec2_edit", callsite, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
 
         let (density, x_color, y_color, auto_below) = {
@@ -582,6 +608,27 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let x_id = self.x.id();
+        let y_id = self.y.id();
+        let z_id = self.z.id();
+        let model_ids = (x_id, y_id, z_id);
+
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.vec3_edit", id_source, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.vec3_edit", callsite, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
 
         let (density, x_color, y_color, z_color, auto_below) = {
@@ -785,6 +832,28 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let x_id = self.x.id();
+        let y_id = self.y.id();
+        let z_id = self.z.id();
+        let w_id = self.w.id();
+        let model_ids = (x_id, y_id, z_id, w_id);
+
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(("fret-ui-editor.vec4_edit", id_source, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        } else {
+            cx.keyed(("fret-ui-editor.vec4_edit", callsite, model_ids), |cx| {
+                self.into_element_keyed(cx)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
 
         let (density, x_color, y_color, z_color, w_color, auto_below) = {
