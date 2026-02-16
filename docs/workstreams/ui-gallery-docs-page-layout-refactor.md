@@ -74,7 +74,7 @@ Legend:
 | Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-kbd-docs-smoke.json` (1) | Keeps existing `test_id`s for demo/group/button/input-group. |
 | Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | None yet | Candidate: list item patterns + icons + truncation. |
 | Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Keeps `ui-gallery-collapsible-component` + demo/basic trigger/content test IDs for existing diag gates. |
-| Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | None yet | Candidate: minimal surface. |
+| Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | None yet | Keeps `ui-gallery-aspect-ratio-*` test IDs stable for future diag scripts. |
 | Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
 | Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-empty-docs-smoke.json` (1) | Keeps existing `test_id`s for each recipe. |
 
