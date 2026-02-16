@@ -1393,7 +1393,7 @@ fn view(
             ])
             .into_element(cx);
 
-        let body = ui::v_flex(cx, move |_cx| vec![tabs])
+        let body = ui::v_flex(cx, move |_cx| [tabs])
             .gap(Space::N0)
             .w_full()
             .h_full()
@@ -1408,7 +1408,7 @@ fn view(
     };
 
     let page = ui::container(cx, move |cx| {
-        [ui::h_flex(cx, move |_cx| vec![left, right])
+        [ui::h_flex(cx, move |_cx| [left, right])
             .gap(Space::N3)
             .w_full()
             .h_full()
@@ -1420,7 +1420,7 @@ fn view(
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    ui::children![cx; page].into()
 }
 
 fn maybe_auto_fix_spec(enabled: bool, spec: &SpecV1) -> (SpecV1, SpecFixups) {

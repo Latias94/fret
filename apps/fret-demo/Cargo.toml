@@ -15,6 +15,7 @@ default-run = "fret-demo"
 alloc-profile = ["fret-examples/alloc-profile"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
 devtools-ws = ["fret-examples/devtools-ws"]
+ui-gallery = ["dep:fret-ui-gallery"]
 hotpatch = [
     "fret-examples/hotpatch",
     "dep:fret-app",
@@ -31,6 +32,7 @@ node-graph-demos = ["fret-examples/node-graph-demos"]
 [dependencies]
 anyhow.workspace = true
 fret-examples = { path = "../fret-examples" }
+fret-ui-gallery = { path = "../fret-ui-gallery", optional = true }
 fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core", optional = true }
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
@@ -39,3 +41,8 @@ fret-ui-literals = { path = "../../ecosystem/fret-ui-literals", optional = true 
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", optional = true }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide"] }
+
+[[bin]]
+name = "ui_gallery"
+path = "src/bin/ui_gallery.rs"
+required-features = ["ui-gallery"]

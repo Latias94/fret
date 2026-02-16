@@ -27,7 +27,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            vec![
+            ui::children![
+                cx;
                 build_alert(
                     cx,
                     "ui-gallery-alert-demo-success",
@@ -77,11 +78,10 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .layout(LayoutRefinement::default().w_full())
                 .justify_end(),
             |cx| {
-                vec![
+                ui::children![cx;
                     shadcn::Button::new("Enable")
                         .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .into_element(cx),
+                        .size(shadcn::ButtonSize::Sm),
                 ]
             },
         );
@@ -137,7 +137,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 cx,
                 stack::VStackProps::default().gap(Space::N3).items_start(),
                 |cx| {
-                    vec![build_alert(
+                    ui::children![cx; build_alert(
                         cx,
                         "ui-gallery-alert-rtl",
                         shadcn::AlertVariant::Default,
@@ -158,7 +158,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
-            vec![
+            ui::children![
+                cx;
                 shadcn::typography::muted(
                     cx,
                     "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",

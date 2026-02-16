@@ -50,6 +50,7 @@ Usage:
   fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette]
   fretboard new             # interactive wizard
   fretboard new todo        # non-interactive (template shortcut)
+  fretboard new simple-todo # non-interactive (template shortcut)
   fretboard new hello       # non-interactive (template shortcut)
   fretboard new empty       # minimal Cargo-like project
   fretboard init <template> [...]    # alias for `new` (compat)
@@ -84,6 +85,7 @@ Usage:
   fretboard list native-demos
   fretboard list web-demos
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-reload] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
+  fretboard dev native --demo <demo> [--dev-state-reset] [--hotpatch|--watch] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--no-supervise] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [--dev-state-reset] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
@@ -92,6 +94,7 @@ Usage:
 
 Examples:
   fretboard new todo --name my-todo
+  fretboard new simple-todo --name my-simple-todo
   fretboard new hello --name hello-world
   fretboard new hello --name hello-world --command-palette
   fretboard new todo --name my-todo --icons none
@@ -101,6 +104,8 @@ Examples:
   fretboard dev native --bin todo_demo
   fretboard dev native --bin assets_demo
   fretboard dev native --bin hotpatch_smoke_demo
+  fretboard dev native --demo simple-todo
+  fretboard dev native --demo simple-todo --hotpatch
   fretboard dev native --choose
   fretboard dev native --bin image_upload_demo -- --help
   fretboard dev native --hotpatch --choose   # hotpatch (prefers `dx serve --hotpatch` when `dx` is available; otherwise falls back to reload-boundary mode)

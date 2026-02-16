@@ -76,7 +76,7 @@ pub(in crate::ui) fn render_doc_page(
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(sections.len() + 1);
             if let Some(intro) = intro {
-                out.push(shadcn::typography::muted(cx, intro));
+                out.push(muted_full_width(cx, intro));
             }
             out.extend(
                 sections
@@ -86,6 +86,43 @@ pub(in crate::ui) fn render_doc_page(
             out
         },
     )
+}
+
+pub(in crate::ui) fn muted_full_width<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: &'static str,
+) -> AnyElement {
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let line_height = theme.metric_by_key("font.line_height");
+        let style = fret_core::TextStyle {
+            font: fret_core::FontId::default(),
+            size: Px(12.0),
+            weight: fret_core::FontWeight::NORMAL,
+            slant: fret_core::TextSlant::Normal,
+            line_height,
+            letter_spacing_em: None,
+        };
+        let color = theme
+            .color_by_key("muted-foreground")
+            .or_else(|| theme.color_by_key("muted_foreground"))
+            .unwrap_or_else(|| theme.color_token("foreground"));
+        (style, color)
+    };
+
+    cx.text_props(TextProps {
+        layout: {
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.size.width = fret_ui::element::Length::Fill;
+            layout
+        },
+        text: Arc::from(text),
+        style: Some(style),
+        color: Some(color),
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+    })
 }
 
 fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyElement {
@@ -131,7 +168,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
                     move |cx| {
                         description
                             .into_iter()
-                            .map(|line| shadcn::typography::muted(cx, line))
+                            .map(|line| muted_full_width(cx, line))
                             .collect::<Vec<_>>()
                     },
                 );

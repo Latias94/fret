@@ -231,12 +231,12 @@ pub(super) fn preview_alert_dialog(
                 cx,
                 "ui-gallery-alert-dialog-rtl",
                 rtl_open,
-                "????? ??????",
+                "عرض الحوار",
                 shadcn::ButtonVariant::Outline,
-                "?? ??? ????? ???????",
-                "?? ???? ??????? ?? ??? ???????. ????? ??? ??? ??? ?????? ??????? ?? ???????.",
-                "?????",
-                "??????",
+                "هل أنت متأكد تمامًا؟",
+                "لا يمكن التراجع عن هذا الإجراء. سيؤدي ذلك إلى حذف حسابك نهائيًا من خوادمنا.",
+                "إلغاء",
+                "متابعة",
                 shadcn::ButtonVariant::Default,
                 shadcn::AlertDialogContentSize::Default,
                 None,
@@ -252,15 +252,15 @@ pub(super) fn preview_alert_dialog(
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::muted(
+                doc_layout::muted_full_width(
                     cx,
                     "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
                 ),
-                shadcn::typography::muted(
+                doc_layout::muted_full_width(
                     cx,
                     "Use `AlertDialogCancel` + `AlertDialogAction` with the same open model to guarantee close behavior stays predictable.",
                 ),
-                shadcn::typography::muted(
+                doc_layout::muted_full_width(
                     cx,
                     "Keep dialog copy concise and explicit, and ensure destructive actions have clear labels and visual hierarchy.",
                 ),
@@ -276,6 +276,7 @@ pub(super) fn preview_alert_dialog(
         vec![
             DocSection::new("Demo", demo_content)
                 .description("Default-sized modal alert dialog.")
+                .test_id_prefix("ui-gallery-alert-dialog-demo")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialog::new(open).into_element(
@@ -309,6 +310,7 @@ pub(super) fn preview_alert_dialog(
                 .max_w(Px(760.0)),
             DocSection::new("Small", small_content)
                 .description("Compact dialog size for short copy.")
+                .test_id_prefix("ui-gallery-alert-dialog-small")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialogContent::new([...])
@@ -318,6 +320,7 @@ pub(super) fn preview_alert_dialog(
                 .max_w(Px(760.0)),
             DocSection::new("Media", media_content)
                 .description("Dialogs can optionally show a leading media/icon in the header.")
+                .test_id_prefix("ui-gallery-alert-dialog-media")
                 .code(
                     "rust",
                     r#"let icon = shadcn::icon::icon_with(
@@ -336,6 +339,7 @@ let header = shadcn::AlertDialogHeader::new([title, description])
                 .max_w(Px(760.0)),
             DocSection::new("Destructive", destructive_content)
                 .description("Destructive styling for irreversible actions.")
+                .test_id_prefix("ui-gallery-alert-dialog-destructive")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialogAction::new("Delete", open.clone())

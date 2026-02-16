@@ -60,7 +60,7 @@ impl Message {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let justify = if self.from == MessageRole::User {
             Justify::End
         } else {
@@ -156,7 +156,7 @@ impl MessageContent {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_chrome = if self.from == MessageRole::User {
@@ -206,5 +206,31 @@ impl MessageContent {
             },
             move |_cx| vec![content],
         )
+    }
+}
+
+fret_ui_kit::ui_component_layout_only!(Message);
+fret_ui_kit::ui_component_chrome_layout!(MessageContent);
+
+#[cfg(test)]
+mod ui_builder_integration_tests {
+    use super::*;
+
+    #[test]
+    fn message_components_opt_into_ui_builder_traits() {
+        fn assert_layout_only<T: fret_ui_kit::UiPatchTarget + fret_ui_kit::UiSupportsLayout>() {}
+        fn assert_chrome_layout<
+            T: fret_ui_kit::UiPatchTarget
+                + fret_ui_kit::UiSupportsChrome
+                + fret_ui_kit::UiSupportsLayout,
+        >() {
+        }
+        fn assert_into_element<T: fret_ui_kit::UiIntoElement>() {}
+
+        assert_layout_only::<Message>();
+        assert_into_element::<Message>();
+
+        assert_chrome_layout::<MessageContent>();
+        assert_into_element::<MessageContent>();
     }
 }

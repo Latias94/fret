@@ -11,6 +11,7 @@ thread_local! {
 enum Demo {
     UiGallery,
     ComponentsGallery,
+    SimpleTodo,
     ExternalTextureImportsWebDemo,
     EmojiConformanceDemo,
     CjkConformanceDemo,
@@ -41,6 +42,7 @@ fn demo_from_id(id: &str) -> Option<Demo> {
     match id {
         "ui_gallery" => Some(Demo::UiGallery),
         "components_gallery" => Some(Demo::ComponentsGallery),
+        "simple-todo" | "simple_todo" | "simple_todo_demo" => Some(Demo::SimpleTodo),
         "external_texture_imports_web_demo" => Some(Demo::ExternalTextureImportsWebDemo),
         "emoji_conformance_demo" => Some(Demo::EmojiConformanceDemo),
         "cjk_conformance_demo" => Some(Demo::CjkConformanceDemo),
@@ -90,6 +92,8 @@ fn select_demo() -> Demo {
     // Keep compatibility with older hash forms that matched by substring.
     for id in [
         "ui_gallery",
+        "simple-todo",
+        "simple_todo",
         "chart_demo",
         "chart_multi_axis_demo",
         "horizontal_bars_demo",
@@ -145,6 +149,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::components_gallery::build_runner_config();
             config.main_window_title = "fret-demo components_gallery (web)".to_string();
             let driver = fret_examples::components_gallery::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::SimpleTodo => {
+            let app = fret_examples::simple_todo_demo::build_app();
+            let mut config = fret_examples::simple_todo_demo::build_runner_config();
+            config.main_window_title = "fret-demo simple-todo (web)".to_string();
+            let driver = fret_examples::simple_todo_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ExternalTextureImportsWebDemo => {

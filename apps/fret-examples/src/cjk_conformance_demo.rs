@@ -218,7 +218,7 @@ impl CjkConformanceDriver {
             .h_full()
             .into_element(cx);
 
-            vec![page]
+            ui::children![cx; page]
         });
 
         state.ui.set_root(root);
