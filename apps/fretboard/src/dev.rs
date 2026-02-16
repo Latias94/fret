@@ -24,6 +24,19 @@ enum HotpatchModeSummary {
 fn demo_id_to_native_bin(demo: &str, native_bins: &[String]) -> Option<String> {
     // `--demo` is intended to be aligned with web IDs where possible. Native demo binaries are
     // snake_case and often end in `_demo`, so we try a small set of conservative candidates.
+    //
+    // Some demos have intentionally different ids across platforms; handle those explicitly.
+    let override_bin = match demo {
+        // Web uses a wasm-only copy-path demo; native uses a different implementation id.
+        "external_texture_imports_web_demo" => Some("external_texture_imports_demo"),
+        _ => None,
+    };
+    if let Some(bin) = override_bin {
+        if native_bins.iter().any(|b| b == bin) {
+            return Some(bin.to_string());
+        }
+    }
+
     let normalized = demo.replace('-', "_");
     let mut candidates: Vec<String> = Vec::new();
 
@@ -294,6 +307,16 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         return Err("cannot combine --demo and --choose (use --demo <name>)".to_string());
     }
 
+    // Prefer running native demos by `--bin` even when the user passed a web-style `--demo` id.
+    // This keeps behavior consistent (feature flags, hotpatch/watch support, etc.), and avoids
+    // relying on the `apps/fret-demo` selection shell having perfect parity with web ids.
+    if let Some(demo_id) = demo.as_deref() {
+        if let Some(mapped) = demo_id_to_native_bin(demo_id, &demos) {
+            bin = Some(mapped);
+            demo = None;
+        }
+    }
+
     let demo_needs_bin = demo.is_some()
         && (hotpatch
             || hotpatch_devserver_ws.is_some()
@@ -305,18 +328,9 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
 
     if demo_needs_bin {
         let demo_id = demo.as_deref().unwrap_or_default();
-        // Keep `--demo` aligned with web demo IDs when possible.
-        if demo_id != "todo_demo" {
-            validate_web_demo(demo_id)?;
-        }
-
-        let mapped = demo_id_to_native_bin(demo_id, &demos).ok_or_else(|| {
-            format!(
-                "cannot use `--demo {demo_id}` with --hotpatch/--watch because no matching native demo binary was found.\n  hint: try `fretboard list native-demos` and use `--bin <name>`.\n  note: demo ids are usually web-style (e.g. `simple-todo`), binaries are usually snake_case (e.g. `simple_todo_demo`)."
-            )
-        })?;
-        bin = Some(mapped);
-        demo = None;
+        return Err(format!(
+            "cannot combine `--demo {demo_id}` with --hotpatch/--watch because it does not map to a native demo binary.\n  hint: try `fretboard list native-demos` and use `--bin <name>`.\n  hint: if you only want to run the demo shell, omit --hotpatch/--watch."
+        ));
     }
 
     // `--demo` runs the `apps/fret-demo` demo-selection shell (mirrors web's `?demo=...`).
