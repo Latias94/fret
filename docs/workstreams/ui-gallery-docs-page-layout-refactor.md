@@ -54,7 +54,7 @@ Legend:
 | Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dialog-*.json` (3) | `docs-order-smoke` targets this page; `escape-focus-restore*` targets the Overlay page dialog widget. |
 | Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Candidate: sections for side + focus/escape behavior. |
 | Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: sections for checkbox/radio/submenus. |
-| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (2) | Candidate: hover intent + delay knobs + placement. |
+| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
 | Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (4) | Candidate: right-click vs long-press + keyboard. |
 | Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-tooltip-hovercard-*.json` (1) | Candidate: alignment + delay + pointer leave. |
 
