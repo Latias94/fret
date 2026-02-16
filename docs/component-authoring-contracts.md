@@ -75,13 +75,30 @@ prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
 
 - `fret_ui_kit::ui_component_chrome_layout!(MyType);`
 - `fret_ui_kit::ui_component_layout_only!(MyType);`
-- `fret_ui_kit::ui_component_*_patch_only!(MyType);` (when a type should be patchable but not renderable)
+- `fret_ui_kit::ui_component_*_patch_only!(MyType);` (patch-only; see below)
 - `fret_ui_kit::ui_into_element_render_once!(MyType);` (when a type implements `RenderOnce`)
 
 In-tree example:
 
 - `ecosystem/fret-ui-ai/src/elements/message.rs`
 - `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs`
+
+### Patch-only types (when you should use them)
+
+Sometimes a type should be **patchable** (so it can participate in the `.ui()` dialect and accept
+`LayoutRefinement` / `ChromeRefinement`), but should **not** be directly renderable as an element.
+Typical examples:
+
+- configuration structs ("props") that are passed into another function/component,
+- “part” configuration for a composite component (content/trigger/viewport styles),
+- surfaces that must not be used as children directly (to avoid accidental tree structure changes).
+
+In these cases:
+
+- implement `UiPatchTarget` (+ `UiSupports*`) **without** implementing `UiIntoElement`,
+- use `UiBuilder::build()` to produce the patched value, then pass it into the owning component.
+
+The `ui_component_*_patch_only!` macros exist to make this a 1-liner.
 
 ### Children collection rule (ecosystem convention)
 
