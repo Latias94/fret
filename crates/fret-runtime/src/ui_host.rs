@@ -6,7 +6,9 @@ use fret_core::{AppWindowId, Point, PointerId};
 use crate::{CommandRegistry, DragKindId, DragSession, Effect, ModelHost, ModelId};
 
 pub trait GlobalsHost {
+    /// Sets a global value, replacing any existing value of the same type.
     fn set_global<T: Any>(&mut self, value: T);
+    /// Reads a global value by type.
     fn global<T: Any>(&self) -> Option<&T>;
 
     /// Returns a monotonically-increasing token for a global type.

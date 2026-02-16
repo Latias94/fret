@@ -2094,6 +2094,9 @@ pub struct ScrollbarState {
 }
 
 /// Authoring conversion boundary (ADR 0039).
+///
+/// Most application code does not implement this directly; component crates typically expose
+/// ergonomic constructors that return `AnyElement` (or helpers that build `Elements`).
 pub trait IntoElement {
     fn into_element(self, id: GlobalElementId) -> AnyElement;
 }
@@ -2102,6 +2105,8 @@ pub trait IntoElement {
 ///
 /// This is intended for authoring-facing APIs that want an "iterator-friendly" return type without
 /// forcing callers into `Vec<AnyElement>` as the only option.
+///
+/// This type is commonly used as a view return value (e.g. `ViewElements` in `fret-bootstrap`).
 #[derive(Debug, Clone, Default)]
 pub struct Elements(pub Vec<AnyElement>);
 
