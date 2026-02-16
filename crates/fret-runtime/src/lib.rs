@@ -68,7 +68,9 @@ pub use capabilities::{
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
     WindowHoverDetectionQuality, WindowSetOuterPositionQuality, WindowZLevelQuality,
 };
-pub use clipboard_diagnostics::{ClipboardReadDiagnostics, WindowClipboardDiagnosticsStore};
+pub use clipboard_diagnostics::{
+    ClipboardReadDiagnostics, ClipboardWriteDiagnostics, WindowClipboardDiagnosticsStore,
+};
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
 pub use docking_settings::{
