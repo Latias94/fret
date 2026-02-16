@@ -35,6 +35,20 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 desc(CatalogPropV1::any(), "Text content (string or expression)."),
             )
             .prop(
+                "content",
+                desc(
+                    CatalogPropV1::any(),
+                    "json-render alias for `text` (string or expression).",
+                ),
+            )
+            .prop(
+                "muted",
+                desc(
+                    CatalogPropV1::boolean(),
+                    "json-render alias: when true and `variant` is unset, renders as muted text.",
+                ),
+            )
+            .prop(
                 "variant",
                 CatalogPropV1::enum_values([
                     "body",
@@ -49,6 +63,46 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                     "inlineCode",
                 ])
                 .default_value(json!("body")),
+            )
+            .note("Prefer `text` + `variant`; `content`/`muted` are compatibility aliases.")
+            .build(),
+    );
+    out.insert(
+        "Heading".to_string(),
+        component("json-render Heading (typography alias)")
+            .prop(
+                "text",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Heading text content.",
+                ),
+            )
+            .prop(
+                "level",
+                desc(
+                    CatalogPropV1::enum_values(["h1", "h2", "h3", "h4"]).default_value(json!("h2")),
+                    "Heading level (mapped to shadcn typography).",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Stack".to_string(),
+        component("json-render Stack (layout alias)")
+            .prop(
+                "direction",
+                desc(
+                    CatalogPropV1::enum_values(["horizontal", "vertical"])
+                        .default_value(json!("vertical")),
+                    "Flex direction.",
+                ),
+            )
+            .prop(
+                "gap",
+                desc(
+                    CatalogPropV1::enum_values(["sm", "md", "lg"]).default_value(json!("md")),
+                    "Gap token mapped to Space (sm=N2, md=N4, lg=N6).",
+                ),
             )
             .build(),
     );
@@ -378,6 +432,13 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         component("Badge label")
             .prop("label", CatalogPropV1::any())
             .prop(
+                "text",
+                desc(
+                    CatalogPropV1::any(),
+                    "json-render alias for `label` (string or expression).",
+                ),
+            )
+            .prop(
                 "variant",
                 CatalogPropV1::enum_values(["default", "secondary", "destructive", "outline"]),
             )
@@ -388,6 +449,13 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
         "Input".to_string(),
         component("Single-line input")
             .prop(
+                "label",
+                desc(
+                    CatalogPropV1::string(),
+                    "Optional label rendered above the input (json-render compatibility).",
+                ),
+            )
+            .prop(
                 "placeholder",
                 desc(CatalogPropV1::string(), "Placeholder text."),
             )
@@ -396,6 +464,14 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 desc(
                     CatalogPropV1::string(),
                     "Input value (string or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "type",
+                desc(
+                    CatalogPropV1::enum_values(["text", "email", "password", "number", "tel"])
+                        .nullable(true),
+                    "Input type (parsed by apps; currently UI-only compatibility).",
                 ),
             )
             .prop(
@@ -482,13 +558,38 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
             .build(),
     );
     out.insert(
+        "Form".to_string(),
+        component("json-render Form (Enter key submit wrapper)")
+            .events(["submit"])
+            .note("Form listens for Enter/NumpadEnter and emits `submit` (no implicit submit button).")
+            .build(),
+    );
+    out.insert(
         "Textarea".to_string(),
         component("Multi-line text input")
+            .prop(
+                "label",
+                desc(
+                    CatalogPropV1::string(),
+                    "Optional label rendered above the textarea (json-render compatibility).",
+                ),
+            )
+            .prop(
+                "placeholder",
+                desc(CatalogPropV1::string(), "Placeholder text."),
+            )
             .prop(
                 "value",
                 desc(
                     CatalogPropV1::string(),
                     "Textarea value (string or expression). Use {\"$bindState\": \"/path\"} for two-way binding.",
+                ),
+            )
+            .prop(
+                "rows",
+                desc(
+                    CatalogPropV1::integer().nullable(true),
+                    "Row count hint (json-render compatibility; currently ignored).",
                 ),
             )
             .prop(
@@ -625,6 +726,17 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 ),
             )
             .prop(
+                "defaultChecked",
+                desc(
+                    CatalogPropV1::boolean().nullable(true),
+                    "Uncontrolled default (json-render compatibility).",
+                ),
+            )
+            .prop(
+                "label",
+                desc(CatalogPropV1::any(), "Optional label shown next to the switch."),
+            )
+            .prop(
                 "disabled",
                 desc(
                     CatalogPropV1::boolean().default_value(json!(false)),
@@ -644,6 +756,13 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                 ),
             )
             .prop(
+                "defaultChecked",
+                desc(
+                    CatalogPropV1::boolean().nullable(true),
+                    "Uncontrolled default (json-render compatibility).",
+                ),
+            )
+            .prop(
                 "label",
                 desc(CatalogPropV1::any(), "Optional label shown next to the checkbox."),
             )
@@ -654,6 +773,296 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                     "Disable interaction.",
                 ),
             )
+            .build(),
+    );
+    out.insert(
+        "Avatar".to_string(),
+        component("json-render Avatar (fallback-only for now)")
+            .prop(
+                "src",
+                desc(
+                    CatalogPropV1::string().nullable(true),
+                    "Image URL (currently ignored; Avatar renders fallback text).",
+                ),
+            )
+            .prop(
+                "alt",
+                desc(
+                    CatalogPropV1::string().nullable(true),
+                    "Alt text (currently ignored).",
+                ),
+            )
+            .prop(
+                "fallback",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Fallback initials/text rendered when no image is available.",
+                ),
+            )
+            .note("URL → ImageId ingestion is not implemented in GenUI yet; `src` is ignored.")
+            .build(),
+    );
+    out.insert(
+        "Tooltip".to_string(),
+        component("Tooltip on hover (json-render)")
+            .prop(
+                "content",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Tooltip content text.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Popover".to_string(),
+        component("Popover overlay with trigger (json-render)")
+            .prop(
+                "trigger",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Trigger button label.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "DropdownMenu".to_string(),
+        component("Dropdown menu with action items (json-render)")
+            .prop(
+                "trigger",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Trigger button label.",
+                ),
+            )
+            .prop(
+                "items",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional([
+                        (
+                            "label",
+                            desc(CatalogPropV1::string().required(true), "Menu item label."),
+                        ),
+                        (
+                            "action",
+                            desc(
+                                CatalogPropV1::string().nullable(true),
+                                "Action name (app-owned). When null, item is inert.",
+                            ),
+                        ),
+                        (
+                            "actionParams",
+                            desc(
+                                CatalogPropV1::object_fields_allowing_additional(
+                                    std::iter::empty::<(String, CatalogPropV1)>(),
+                                )
+                                .nullable(true),
+                                "Action params (values or expressions).",
+                            ),
+                        ),
+                        (
+                            "params",
+                            desc(
+                                CatalogPropV1::object_fields_allowing_additional(
+                                    std::iter::empty::<(String, CatalogPropV1)>(),
+                                )
+                                .nullable(true),
+                                "Alias for actionParams.",
+                            ),
+                        ),
+                        (
+                            "disabled",
+                            desc(
+                                CatalogPropV1::boolean().default_value(json!(false)),
+                                "Disable interaction.",
+                            ),
+                        ),
+                        (
+                            "variant",
+                            desc(
+                                CatalogPropV1::enum_values(["default", "destructive"])
+                                    .default_value(json!("default")),
+                                "Visual variant.",
+                            ),
+                        ),
+                        (
+                            "type",
+                            desc(
+                                CatalogPropV1::enum_values(["item", "separator"])
+                                    .default_value(json!("item")),
+                                "Structural item type.",
+                            ),
+                        ),
+                    ]))
+                    .required(true),
+                    "Menu entries.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Dialog".to_string(),
+        component("Modal dialog with trigger (json-render)")
+            .prop(
+                "trigger",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Trigger button label.",
+                ),
+            )
+            .prop(
+                "title",
+                desc(CatalogPropV1::string().required(true), "Dialog title."),
+            )
+            .prop(
+                "description",
+                desc(
+                    CatalogPropV1::string().nullable(true),
+                    "Optional description text.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Drawer".to_string(),
+        component("Slide-out drawer panel with trigger (json-render)")
+            .prop(
+                "trigger",
+                desc(
+                    CatalogPropV1::string().required(true),
+                    "Trigger button label.",
+                ),
+            )
+            .prop(
+                "title",
+                desc(CatalogPropV1::string().required(true), "Drawer title."),
+            )
+            .prop(
+                "description",
+                desc(
+                    CatalogPropV1::string().nullable(true),
+                    "Optional description text.",
+                ),
+            )
+            .prop(
+                "side",
+                desc(
+                    CatalogPropV1::enum_values(["top", "bottom", "left", "right"])
+                        .default_value(json!("bottom")),
+                    "Drawer side.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "Pagination".to_string(),
+        component("Page navigation (json-render)")
+            .prop(
+                "currentPage",
+                desc(
+                    CatalogPropV1::integer().required(true),
+                    "Current page (1-based).",
+                ),
+            )
+            .prop(
+                "totalPages",
+                desc(
+                    CatalogPropV1::integer().required(true),
+                    "Total pages (>= 1).",
+                ),
+            )
+            .prop(
+                "onPageChange",
+                desc(
+                    CatalogPropV1::string().nullable(true),
+                    "Action name (app-owned). Params: { page: number }.",
+                ),
+            )
+            .build(),
+    );
+    out.insert(
+        "BarChart".to_string(),
+        component("Bar chart (json-render; placeholder in GenUI for now)")
+            .prop(
+                "title",
+                desc(CatalogPropV1::string().nullable(true), "Optional title."),
+            )
+            .prop(
+                "data",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional(
+                        std::iter::empty::<(String, CatalogPropV1)>(),
+                    )),
+                    "Data array (objects).",
+                ),
+            )
+            .prop(
+                "xKey",
+                desc(CatalogPropV1::string().required(true), "X axis key."),
+            )
+            .prop(
+                "yKey",
+                desc(CatalogPropV1::string().required(true), "Y axis key."),
+            )
+            .prop(
+                "aggregate",
+                desc(
+                    CatalogPropV1::enum_values(["sum", "count", "avg"]).nullable(true),
+                    "Aggregation policy.",
+                ),
+            )
+            .prop(
+                "color",
+                desc(CatalogPropV1::string().nullable(true), "Color hint."),
+            )
+            .prop(
+                "height",
+                desc(CatalogPropV1::integer().nullable(true), "Height hint."),
+            )
+            .note("Chart rendering is not implemented yet; this component is a placeholder.")
+            .build(),
+    );
+    out.insert(
+        "LineChart".to_string(),
+        component("Line chart (json-render; placeholder in GenUI for now)")
+            .prop(
+                "title",
+                desc(CatalogPropV1::string().nullable(true), "Optional title."),
+            )
+            .prop(
+                "data",
+                desc(
+                    CatalogPropV1::array_of(CatalogPropV1::object_fields_allowing_additional(
+                        std::iter::empty::<(String, CatalogPropV1)>(),
+                    )),
+                    "Data array (objects).",
+                ),
+            )
+            .prop(
+                "xKey",
+                desc(CatalogPropV1::string().required(true), "X axis key."),
+            )
+            .prop(
+                "yKey",
+                desc(CatalogPropV1::string().required(true), "Y axis key."),
+            )
+            .prop(
+                "aggregate",
+                desc(
+                    CatalogPropV1::enum_values(["sum", "count", "avg"]).nullable(true),
+                    "Aggregation policy.",
+                ),
+            )
+            .prop(
+                "color",
+                desc(CatalogPropV1::string().nullable(true), "Color hint."),
+            )
+            .prop(
+                "height",
+                desc(CatalogPropV1::integer().nullable(true), "Height hint."),
+            )
+            .note("Chart rendering is not implemented yet; this component is a placeholder.")
             .build(),
     );
     out.insert(

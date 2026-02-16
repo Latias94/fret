@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_genui_core::props::ResolvedProps;
 use fret_genui_core::spec::ElementKey;
+use fret_ui::action::{ActivateReason, OnActivate, OnKeyDown};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use serde_json::Value;
@@ -129,19 +130,28 @@ impl ShadcnResolver {
         input = input.refine_layout(layout);
 
         let input = input.into_element(cx);
-        if children.is_empty() {
-            input
-        } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
-                let mut out = Vec::with_capacity(children.len().saturating_add(1));
-                out.push(input);
-                out.extend(children);
-                out
-            })
-            .gap(fret_ui_kit::Space::N2)
-            .items_start()
-            .into_element(cx)
+        let label = resolved_props
+            .get("label")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(Arc::<str>::from);
+
+        if children.is_empty() && label.is_none() {
+            return input;
         }
+
+        fret_ui_kit::ui::v_flex(cx, move |_cx| {
+            let mut out = Vec::with_capacity(children.len().saturating_add(2));
+            if let Some(label) = label.clone() {
+                out.push(fret_ui_shadcn::Label::new(label).into_element(_cx));
+            }
+            out.push(input);
+            out.extend(children);
+            out
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_start()
+        .into_element(cx)
     }
 
     pub(super) fn render_textarea<H: UiHost>(
@@ -237,19 +247,61 @@ impl ShadcnResolver {
             .refine_layout(layout)
             .into_element(cx);
 
-        if children.is_empty() {
-            textarea
-        } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
-                let mut out = Vec::with_capacity(children.len().saturating_add(1));
-                out.push(textarea);
-                out.extend(children);
-                out
-            })
-            .gap(fret_ui_kit::Space::N2)
-            .items_start()
-            .into_element(cx)
+        let label = resolved_props
+            .get("label")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(Arc::<str>::from);
+
+        if children.is_empty() && label.is_none() {
+            return textarea;
         }
+
+        fret_ui_kit::ui::v_flex(cx, move |_cx| {
+            let mut out = Vec::with_capacity(children.len().saturating_add(2));
+            if let Some(label) = label.clone() {
+                out.push(fret_ui_shadcn::Label::new(label).into_element(_cx));
+            }
+            out.push(textarea);
+            out.extend(children);
+            out
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_start()
+        .into_element(cx)
+    }
+
+    pub(super) fn render_form<H: UiHost>(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        _key: &ElementKey,
+        children: Vec<AnyElement>,
+        on_event: &dyn Fn(&str) -> Option<OnActivate>,
+    ) -> AnyElement {
+        let on_submit = on_event("submit");
+
+        let out = fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+            .gap(fret_ui_kit::Space::N4)
+            .items_start()
+            .w_full()
+            .into_element(cx);
+
+        if let Some(on_submit) = on_submit {
+            let handler: OnKeyDown = Arc::new(move |host, acx, down| {
+                let enter = matches!(
+                    down.key,
+                    fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter
+                );
+                if !enter || down.repeat || down.modifiers != fret_core::Modifiers::default() {
+                    return false;
+                }
+                on_submit(host, acx, ActivateReason::Keyboard);
+                true
+            });
+            cx.key_on_key_down_for(out.id, handler);
+        }
+
+        out
     }
 
     pub(super) fn render_switch<H: UiHost>(
@@ -263,6 +315,11 @@ impl ShadcnResolver {
         let desired = resolved_props
             .get("checked")
             .and_then(|v| v.as_bool())
+            .or_else(|| {
+                resolved_props
+                    .get("defaultChecked")
+                    .and_then(|v| v.as_bool())
+            })
             .unwrap_or(false);
         let disabled = resolved_props
             .get("disabled")
@@ -304,18 +361,36 @@ impl ShadcnResolver {
         let sw = fret_ui_shadcn::Switch::new(model)
             .disabled(disabled)
             .into_element(cx);
-        if children.is_empty() {
-            sw
+
+        let label = resolved_props
+            .get("label")
+            .and_then(|v| (!v.is_null()).then(|| Self::json_to_label(Some(v))));
+
+        let mut out_children: Vec<AnyElement> = Vec::new();
+        if let Some(label) = label {
+            out_children.push(
+                fret_ui_kit::ui::h_flex(cx, move |_cx| {
+                    vec![
+                        sw.clone(),
+                        fret_ui_kit::ui::text(_cx, label).into_element(_cx),
+                    ]
+                })
+                .gap(fret_ui_kit::Space::N2)
+                .items_center()
+                .into_element(cx),
+            );
         } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
-                let mut out = Vec::with_capacity(children.len().saturating_add(1));
-                out.push(sw);
-                out.extend(children);
-                out
-            })
-            .gap(fret_ui_kit::Space::N2)
-            .items_start()
-            .into_element(cx)
+            out_children.push(sw);
+        }
+        out_children.extend(children);
+
+        if out_children.len() == 1 {
+            out_children.pop().expect("single child")
+        } else {
+            fret_ui_kit::ui::v_flex(cx, move |_cx| out_children)
+                .gap(fret_ui_kit::Space::N2)
+                .items_start()
+                .into_element(cx)
         }
     }
 }

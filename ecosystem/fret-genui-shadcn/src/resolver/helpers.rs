@@ -253,6 +253,55 @@ impl ShadcnResolver {
         host.request_redraw(cx.window);
     }
 
+    pub(super) fn emit_action_invocation_action(
+        host: &mut dyn UiActionHost,
+        cx: ActionCx,
+        queue: Option<&Model<GenUiActionQueue>>,
+        state_model: Option<&Model<Value>>,
+        auto_apply_standard_actions: bool,
+        element_key: &Arc<str>,
+        event: &str,
+        action: &Arc<str>,
+        params: Value,
+    ) {
+        if let Some(queue) = queue {
+            if auto_apply_standard_actions {
+                if let Some(state_model) = state_model {
+                    let _ = host.update_model(state_model, |state| {
+                        actions::apply_standard_action(state, action.as_ref(), &params)
+                    });
+                }
+            }
+
+            let inv = GenUiActionInvocation {
+                window: cx.window,
+                source: cx.target,
+                element_key: element_key.clone(),
+                event: Arc::from(event),
+                action: action.clone(),
+                params,
+                confirm: None,
+                on_success: None,
+                on_error: None,
+                repeat_base_path: None,
+                repeat_index: None,
+            };
+            let _ = host.update_model(queue, |q| q.invocations.push(inv));
+            host.request_redraw(cx.window);
+            return;
+        }
+
+        if auto_apply_standard_actions {
+            if let Some(state_model) = state_model {
+                let _ = host.update_model(state_model, |state| {
+                    actions::apply_standard_action(state, action.as_ref(), &params)
+                });
+            }
+        }
+
+        host.request_redraw(cx.window);
+    }
+
     pub(super) fn ensure_string_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         initial: String,

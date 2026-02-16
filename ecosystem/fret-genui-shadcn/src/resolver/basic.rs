@@ -88,12 +88,21 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         resolved_props: &serde_json::Map<String, serde_json::Value>,
     ) -> AnyElement {
-        let text = Self::json_to_label(resolved_props.get("text"));
-        match resolved_props
+        let text = Self::json_to_label(
+            resolved_props
+                .get("text")
+                .or_else(|| resolved_props.get("content")),
+        );
+        let muted = resolved_props
+            .get("muted")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let variant = resolved_props
             .get("variant")
             .and_then(|v| v.as_str())
-            .unwrap_or("body")
-        {
+            .unwrap_or(if muted { "muted" } else { "body" });
+
+        match variant {
             "body" => fret_ui_shadcn::typography::p(cx, text),
             "muted" => fret_ui_shadcn::typography::muted(cx, text),
             "small" => fret_ui_shadcn::typography::small(cx, text),
@@ -415,7 +424,11 @@ impl ShadcnResolver {
         resolved_props: &serde_json::Map<String, serde_json::Value>,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        let label = Self::json_to_label(resolved_props.get("label"));
+        let label = Self::json_to_label(
+            resolved_props
+                .get("label")
+                .or_else(|| resolved_props.get("text")),
+        );
         let variant = Self::parse_badge_variant(resolved_props.get("variant")).unwrap_or_default();
         fret_ui_shadcn::Badge::new(label)
             .variant(variant)

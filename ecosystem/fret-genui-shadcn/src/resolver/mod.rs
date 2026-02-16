@@ -7,12 +7,15 @@ use fret_ui::{ElementContext, UiHost};
 
 mod basic;
 mod choice;
+mod compat;
 mod compound;
 mod data;
 mod feedback;
 mod forms;
 mod helpers;
+mod navigation;
 mod numeric;
+mod overlay;
 mod responsive;
 
 #[derive(Debug, thiserror::Error)]
@@ -61,12 +64,15 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
             "CardTitle" => Ok(self.render_card_title(cx, resolved_props)),
             "CardDescription" => Ok(self.render_card_description(cx, resolved_props)),
             "Text" => Ok(self.render_text(cx, resolved_props)),
+            "Heading" => Ok(self.render_heading(cx, resolved_props)),
+            "Stack" => Ok(self.render_stack(cx, resolved_props, children)),
             "VStack" => Ok(self.render_vstack(cx, resolved_props, children)),
             "HStack" => Ok(self.render_hstack(cx, resolved_props, children)),
             "Box" => Ok(self.render_box(cx, resolved_props, children)),
             "Separator" => Ok(self.render_separator(cx, resolved_props)),
             "ScrollArea" => Ok(self.render_scroll_area(cx, resolved_props, children)),
             "Button" => Ok(self.render_button(cx, resolved_props, children, on_event)),
+            "Form" => Ok(self.render_form(cx, key, children, on_event)),
             "Input" => Ok(self.render_input(cx, key, props, children)),
             "Textarea" => Ok(self.render_textarea(cx, key, props, children)),
             "Switch" => Ok(self.render_switch(cx, key, props, children)),
@@ -81,6 +87,15 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
             "Skeleton" => Ok(self.render_skeleton(cx, props, children)),
             "Badge" => Ok(self.render_badge(cx, resolved_props, children)),
             "Table" => Ok(self.render_table(cx, key, props)),
+            "Avatar" => Ok(self.render_avatar(cx, resolved_props, children)),
+            "Pagination" => Ok(self.render_pagination(cx, key, resolved_props)),
+            "Tooltip" => Ok(self.render_tooltip(cx, resolved_props, children)),
+            "Popover" => Ok(self.render_popover(cx, resolved_props, children)),
+            "DropdownMenu" => Ok(self.render_dropdown_menu(cx, key, props)),
+            "Dialog" => Ok(self.render_dialog(cx, resolved_props, children)),
+            "Drawer" => Ok(self.render_drawer(cx, resolved_props, children)),
+            "BarChart" => Ok(self.render_bar_chart(cx, key, props)),
+            "LineChart" => Ok(self.render_line_chart(cx, key, props)),
             "ResponsiveGrid" => Ok(self.render_responsive_grid(cx, resolved_props, children)),
             "ResponsiveStack" => Ok(self.render_responsive_stack(cx, resolved_props, children)),
             other => Ok(self.unknown_component(cx, key, other)),

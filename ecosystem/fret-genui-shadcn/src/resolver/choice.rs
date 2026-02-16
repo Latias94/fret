@@ -20,6 +20,11 @@ impl ShadcnResolver {
         let desired = resolved_props
             .get("checked")
             .and_then(|v| v.as_bool())
+            .or_else(|| {
+                resolved_props
+                    .get("defaultChecked")
+                    .and_then(|v| v.as_bool())
+            })
             .unwrap_or(false);
 
         let model = Self::ensure_bool_model(cx, desired);
