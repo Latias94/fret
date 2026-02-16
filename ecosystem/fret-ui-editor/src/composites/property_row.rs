@@ -1,5 +1,5 @@
 //! Inspector-style property row composite (label + value + actions).
-
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -9,10 +9,11 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
     MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
+use crate::primitives::EditorTokenKeys;
+use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
-use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 pub type OnPropertyRowReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
 
@@ -61,6 +62,13 @@ pub struct PropertyRowOptions {
     pub layout: LayoutStyle,
     pub label_width: Option<Px>,
     pub gap: Option<Px>,
+    pub variant: PropertyRowLayoutVariant,
+    pub auto_stack_below: Option<Px>,
+    /// Explicit identity source for internal policy state (auto layout heuristics).
+    ///
+    /// This is the editor-composite equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when building rows in a loop where the callsite is not unique per row.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
 }
 
@@ -77,8 +85,25 @@ impl Default for PropertyRowOptions {
             },
             label_width: None,
             gap: None,
+            variant: PropertyRowLayoutVariant::Row,
+            auto_stack_below: None,
+            id_source: None,
             test_id: None,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PropertyRowLayoutVariant {
+    Row,
+    Column,
+    /// Choose `Row` vs `Column` based on last frame bounds.
+    Auto,
+}
+
+impl Default for PropertyRowLayoutVariant {
+    fn default() -> Self {
+        Self::Row
     }
 }
 
@@ -111,9 +136,34 @@ impl PropertyRow {
         value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
         actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
     ) -> AnyElement {
-        let (density, gap, reset_fg) = {
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(
+                ("fret-ui-editor.property_row", id_source, callsite),
+                move |cx| self.into_element_keyed(cx, label, value, actions),
+            )
+        } else {
+            cx.keyed(("fret-ui-editor.property_row", callsite), move |cx| {
+                self.into_element_keyed(cx, label, value, actions)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
+    ) -> AnyElement {
+        let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
+
+        let (density, gap, reset_fg, auto_below) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
             let gap = self
                 .options
                 .gap
@@ -123,8 +173,21 @@ impl PropertyRow {
                 .color_by_key("muted-foreground")
                 .or_else(|| theme.color_by_key("muted_foreground"))
                 .unwrap_or_else(|| theme.color_token("foreground"));
+            let auto_below = self
+                .options
+                .auto_stack_below
+                .unwrap_or(style.property_auto_stack_below);
 
-            (density, gap, reset_fg)
+            (density, gap, reset_fg, auto_below)
+        };
+
+        let variant = match self.options.variant {
+            PropertyRowLayoutVariant::Row => PropertyRowLayoutVariant::Row,
+            PropertyRowLayoutVariant::Column => PropertyRowLayoutVariant::Column,
+            PropertyRowLayoutVariant::Auto => bounds
+                .is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0)
+                .then_some(PropertyRowLayoutVariant::Column)
+                .unwrap_or(PropertyRowLayoutVariant::Row),
         };
 
         let label_w = self.options.label_width.unwrap_or(Px(160.0));
@@ -230,73 +293,164 @@ impl PropertyRow {
             Some(el)
         });
 
-        let row = cx.flex(
-            FlexProps {
-                layout,
-                direction: Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: false,
-            },
-            move |cx| {
-                let label = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(label_w),
-                                height: Length::Auto,
-                                min_height: Some(density.row_height),
+        let row = match variant {
+            PropertyRowLayoutVariant::Row => cx.flex(
+                FlexProps {
+                    layout,
+                    direction: Axis::Horizontal,
+                    gap,
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    let label = cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Px(label_w),
+                                    height: Length::Auto,
+                                    min_height: Some(density.row_height),
+                                    ..Default::default()
+                                },
+                                flex: FlexItemStyle {
+                                    grow: 0.0,
+                                    shrink: 0.0,
+                                    basis: Length::Px(label_w),
+                                    align_self: None,
+                                },
+                                overflow: Overflow::Clip,
                                 ..Default::default()
                             },
-                            flex: FlexItemStyle {
-                                grow: 0.0,
-                                shrink: 0.0,
-                                basis: Length::Px(label_w),
-                                align_self: None,
-                            },
-                            overflow: Overflow::Clip,
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    |cx| vec![label(cx)],
-                );
+                        |cx| vec![label(cx)],
+                    );
 
-                let value = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                min_height: Some(density.row_height),
+                    let value = cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    min_height: Some(density.row_height),
+                                    ..Default::default()
+                                },
+                                flex: FlexItemStyle {
+                                    grow: 1.0,
+                                    shrink: 1.0,
+                                    basis: Length::Fill,
+                                    align_self: None,
+                                },
+                                overflow: Overflow::Clip,
                                 ..Default::default()
                             },
-                            flex: FlexItemStyle {
-                                grow: 1.0,
-                                shrink: 1.0,
-                                basis: Length::Fill,
-                                align_self: None,
-                            },
-                            overflow: Overflow::Clip,
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    |cx| vec![value(cx)],
-                );
+                        |cx| vec![value(cx)],
+                    );
 
-                let mut out = vec![label, value];
-                if let Some(reset) = reset_el {
-                    out.push(reset);
-                }
-                if let Some(actions) = actions(cx) {
-                    out.push(actions);
-                }
-                out
-            },
-        );
+                    let mut out = vec![label, value];
+                    if let Some(reset) = reset_el {
+                        out.push(reset);
+                    }
+                    if let Some(actions) = actions(cx) {
+                        out.push(actions);
+                    }
+                    out
+                },
+            ),
+            PropertyRowLayoutVariant::Column => {
+                let header_gap = Px(6.0);
+                let stack_gap = Px(density.padding_y.0.max(4.0));
+
+                cx.flex(
+                    FlexProps {
+                        layout,
+                        direction: Axis::Vertical,
+                        gap: stack_gap,
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let header = cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Auto,
+                                        min_height: Some(density.row_height),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                direction: Axis::Horizontal,
+                                gap: header_gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |cx| {
+                                let label = cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Auto,
+                                                min_height: Some(density.row_height),
+                                                ..Default::default()
+                                            },
+                                            flex: FlexItemStyle {
+                                                grow: 1.0,
+                                                shrink: 1.0,
+                                                basis: Length::Px(Px(0.0)),
+                                                align_self: None,
+                                            },
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![label(cx)],
+                                );
+
+                                let mut out = vec![label];
+                                if let Some(reset) = reset_el {
+                                    out.push(reset);
+                                }
+                                if let Some(actions) = actions(cx) {
+                                    out.push(actions);
+                                }
+                                out
+                            },
+                        );
+
+                        let value = cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Auto,
+                                        min_height: Some(density.row_height),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |cx| vec![value(cx)],
+                        );
+
+                        vec![header, value]
+                    },
+                )
+            }
+            PropertyRowLayoutVariant::Auto => unreachable!("auto is resolved above"),
+        };
 
         if let Some(test_id) = self.options.test_id.as_ref() {
             row.test_id(test_id.clone())

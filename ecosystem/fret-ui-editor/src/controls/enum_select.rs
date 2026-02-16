@@ -19,14 +19,17 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::popper;
-use fret_ui_kit::recipes::input::InputTokenKeys;
-use fret_ui_kit::{ChromeRefinement, Size};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
-use crate::primitives::chrome::{resolve_editor_frame_chrome, sanitize_editor_surface_bg};
+use crate::primitives::chrome::sanitize_editor_surface_bg;
 use crate::primitives::icons::editor_icon_with;
-use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
+use crate::primitives::input_group::{
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
+    editor_input_group_row,
+};
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::EditorFrameState;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -155,25 +158,9 @@ impl EnumSelect {
 
         let (density, frame_chrome, ring, bg, border) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
-            let frame_chrome = resolve_editor_frame_chrome(
-                theme,
-                Size::Small,
-                &ChromeRefinement::default(),
-                InputTokenKeys {
-                    padding_x: Some("component.text_field.padding_x"),
-                    padding_y: Some("component.text_field.padding_y"),
-                    min_height: Some("component.text_field.min_height"),
-                    radius: Some("component.text_field.radius"),
-                    border_width: Some("component.text_field.border_width"),
-                    bg: Some("component.input.bg"),
-                    border: Some("component.input.border"),
-                    border_focus: Some("component.input.border_focus"),
-                    fg: Some("component.input.fg"),
-                    text_px: Some("component.text_field.text_px"),
-                    ..InputTokenKeys::none()
-                },
-            );
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+            let frame_chrome = style.frame_chrome_small();
             let bg = theme
                 .color_by_key("popover")
                 .or_else(|| theme.color_by_key("component.input.bg"))
@@ -233,19 +220,6 @@ impl EnumSelect {
                 ..Default::default()
             },
             move |cx, _st| {
-                let theme = Theme::global(&*cx.app);
-                let visuals = editor_frame_visuals(
-                    theme,
-                    frame_chrome,
-                    EditorFrameState {
-                        enabled: enabled_for_paint,
-                        hovered: _st.hovered,
-                        pressed: _st.pressed,
-                        focused: _st.focused,
-                        open: is_open,
-                    },
-                );
-
                 let open = open_for_overlay.clone();
                 let on_activate: OnActivate =
                     Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
@@ -261,112 +235,97 @@ impl EnumSelect {
                     fret_icons::ids::ui::CHEVRON_DOWN
                 };
 
-                vec![cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
+                let divider = frame_chrome.border;
+
+                vec![editor_input_group_frame(
+                    cx,
+                    LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
                             ..Default::default()
                         },
-                        padding: frame_chrome.padding,
-                        background: Some(visuals.bg),
-                        border: Edges::all(frame_chrome.border_width),
-                        border_color: Some(visuals.border),
-                        corner_radii: Corners::all(frame_chrome.radius),
                         ..Default::default()
                     },
-                    move |cx| {
-                        vec![cx.flex(
-                            FlexProps {
+                    density,
+                    frame_chrome,
+                    EditorFrameState {
+                        enabled: enabled_for_paint,
+                        hovered: _st.hovered,
+                        pressed: _st.pressed,
+                        focused: _st.focused,
+                        open: is_open,
+                    },
+                    move |cx, visuals| {
+                        let text_el = cx.text_props(TextProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            text: trigger_text.clone(),
+                            style: Some(TextStyle {
+                                size: Px(12.0),
+                                line_height: Some(density.row_height),
+                                ..Default::default()
+                            }),
+                            color: Some(visuals.fg),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Ellipsis,
+                            align: TextAlign::Start,
+                        });
+                        let text = editor_input_group_inset(cx, frame_chrome.padding, text_el);
+
+                        let sep = editor_input_group_divider(cx, divider);
+
+                        let caret = cx.container(
+                            ContainerProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
-                                        width: Length::Fill,
+                                        width: Length::Px(density.hit_thickness),
                                         height: Length::Fill,
                                         ..Default::default()
                                     },
                                     ..Default::default()
                                 },
-                                direction: Axis::Horizontal,
-                                gap: Px(6.0),
                                 padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Center,
-                                wrap: false,
+                                ..Default::default()
                             },
                             move |cx| {
-                                vec![
-                                    cx.text_props(TextProps {
+                                vec![cx.flex(
+                                    FlexProps {
                                         layout: LayoutStyle {
                                             size: SizeStyle {
                                                 width: Length::Fill,
-                                                height: Length::Auto,
+                                                height: Length::Fill,
                                                 ..Default::default()
                                             },
                                             ..Default::default()
                                         },
-                                        text: trigger_text.clone(),
-                                        style: Some(TextStyle {
-                                            size: Px(12.0),
-                                            line_height: Some(density.row_height),
-                                            ..Default::default()
-                                        }),
-                                        color: Some(visuals.fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Ellipsis,
-                                        align: TextAlign::Start,
-                                    }),
-                                    cx.spacer(Default::default()),
-                                    cx.container(
-                                        ContainerProps {
-                                            layout: LayoutStyle {
-                                                size: SizeStyle {
-                                                    width: Length::Px(density.hit_thickness),
-                                                    height: Length::Fill,
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
-                                            padding: Edges::all(Px(0.0)),
-                                            ..Default::default()
-                                        },
-                                        move |cx| {
-                                            vec![cx.flex(
-                                                FlexProps {
-                                                    layout: LayoutStyle {
-                                                        size: SizeStyle {
-                                                            width: Length::Fill,
-                                                            height: Length::Fill,
-                                                            ..Default::default()
-                                                        },
-                                                        ..Default::default()
-                                                    },
-                                                    direction: Axis::Horizontal,
-                                                    gap: Px(0.0),
-                                                    padding: Edges::all(Px(0.0)),
-                                                    justify: MainAlign::Center,
-                                                    align: CrossAlign::Center,
-                                                    wrap: false,
-                                                },
-                                                move |cx| {
-                                                    vec![editor_icon_with(
-                                                        cx,
-                                                        density,
-                                                        caret_icon,
-                                                        Some(Px(12.0)),
-                                                        Some(fret_ui_kit::ColorRef::Color(
-                                                            visuals.icon,
-                                                        )),
-                                                    )]
-                                                },
-                                            )]
-                                        },
-                                    ),
-                                ]
+                                        direction: Axis::Horizontal,
+                                        gap: Px(0.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Center,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        vec![editor_icon_with(
+                                            cx,
+                                            density,
+                                            caret_icon,
+                                            Some(Px(12.0)),
+                                            Some(fret_ui_kit::ColorRef::Color(visuals.icon)),
+                                        )]
+                                    },
+                                )]
                             },
-                        )]
+                        );
+
+                        vec![editor_input_group_row(cx, Px(0.0), vec![text, sep, caret])]
                     },
                 )]
             },

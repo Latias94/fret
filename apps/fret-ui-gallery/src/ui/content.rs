@@ -85,7 +85,12 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
                         .test_id("ui-gallery-theme-preset-item-neutral-dark"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .max_w(Px(220.0))
+                        .min_w_0()
+                        .flex_shrink(1.0),
+                )
                 .into_element(cx);
 
                 let motion_select = shadcn::Select::new(
@@ -106,7 +111,12 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("gentle", "Gentle")
                         .test_id("ui-gallery-motion-preset-item-gentle"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .max_w(Px(220.0))
+                        .min_w_0()
+                        .flex_shrink(1.0),
+                )
                 .into_element(cx);
 
                 let copy_actions = stack::hstack(
@@ -133,10 +143,21 @@ pub(crate) fn content_view(
                     },
                 );
 
-                let right = stack::hstack(
+                let presets = stack::hstack(
                     cx,
-                    stack::HStackProps::default().gap(Space::N3).items_center(),
-                    |_cx| [theme_select, motion_select, copy_actions],
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N3)
+                        .items_center(),
+                    |_cx| [theme_select, motion_select],
+                );
+                let right = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N2)
+                        .items_start(),
+                    |_cx| [presets, copy_actions],
                 );
 
                 vec![left, right]
@@ -208,7 +229,12 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
                         .test_id("ui-gallery-theme-preset-item-neutral-dark"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .max_w(Px(220.0))
+                        .min_w_0()
+                        .flex_shrink(1.0),
+                )
                 .into_element(cx);
 
                 let motion_select = shadcn::Select::new(
@@ -229,7 +255,12 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("gentle", "Gentle")
                         .test_id("ui-gallery-motion-preset-item-gentle"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .max_w(Px(220.0))
+                        .min_w_0()
+                        .flex_shrink(1.0),
+                )
                 .into_element(cx);
 
                 let copy_actions = stack::hstack(

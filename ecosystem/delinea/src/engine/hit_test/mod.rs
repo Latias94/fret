@@ -175,19 +175,15 @@ pub fn hover_hit_test(
                     let current_rank = best_rank.unwrap_or(u32::MAX);
 
                     let eps = 1e-6_f32;
-                    if hit.dist2_px + eps < current.dist2_px {
+                    // Deterministic tie-break: prefer earlier `series_order` so hover/tooltip does
+                    // not flicker across refactors that may reorder marks.
+                    if hit.dist2_px + eps < current.dist2_px
+                        || ((hit.dist2_px - current.dist2_px).abs() <= eps
+                            && (rank < current_rank
+                                || (rank == current_rank && hit.data_index < current.data_index)))
+                    {
                         best = Some(hit);
                         best_rank = Some(rank);
-                    } else if (hit.dist2_px - current.dist2_px).abs() <= eps {
-                        // Deterministic tie-break: prefer earlier `series_order` so hover/tooltip
-                        // does not flicker across refactors that may reorder marks.
-                        if rank < current_rank {
-                            best = Some(hit);
-                            best_rank = Some(rank);
-                        } else if rank == current_rank && hit.data_index < current.data_index {
-                            best = Some(hit);
-                            best_rank = Some(rank);
-                        }
                     }
                 }
             }
@@ -251,17 +247,13 @@ pub fn hover_hit_test(
                     let current_rank = best_rank.unwrap_or(u32::MAX);
 
                     let eps = 1e-6_f32;
-                    if hit.dist2_px + eps < current.dist2_px {
+                    if hit.dist2_px + eps < current.dist2_px
+                        || ((hit.dist2_px - current.dist2_px).abs() <= eps
+                            && (rank < current_rank
+                                || (rank == current_rank && hit.data_index < current.data_index)))
+                    {
                         best = Some(hit);
                         best_rank = Some(rank);
-                    } else if (hit.dist2_px - current.dist2_px).abs() <= eps {
-                        if rank < current_rank {
-                            best = Some(hit);
-                            best_rank = Some(rank);
-                        } else if rank == current_rank && hit.data_index < current.data_index {
-                            best = Some(hit);
-                            best_rank = Some(rank);
-                        }
                     }
                 }
             }
@@ -345,17 +337,13 @@ pub fn hover_hit_test(
                     let current_rank = best_rank.unwrap_or(u32::MAX);
 
                     let eps = 1e-6_f32;
-                    if hit.dist2_px + eps < current.dist2_px {
+                    if hit.dist2_px + eps < current.dist2_px
+                        || ((hit.dist2_px - current.dist2_px).abs() <= eps
+                            && (rank < current_rank
+                                || (rank == current_rank && hit.data_index < current.data_index)))
+                    {
                         best = Some(hit);
                         best_rank = Some(rank);
-                    } else if (hit.dist2_px - current.dist2_px).abs() <= eps {
-                        if rank < current_rank {
-                            best = Some(hit);
-                            best_rank = Some(rank);
-                        } else if rank == current_rank && hit.data_index < current.data_index {
-                            best = Some(hit);
-                            best_rank = Some(rank);
-                        }
                     }
                 }
             }

@@ -11,7 +11,7 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active gap analysis (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ## Purpose
 

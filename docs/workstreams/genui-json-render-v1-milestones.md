@@ -1,6 +1,6 @@
 # GenUI Spec Rendering (json-render-inspired) v1 — Milestones
 
-Status: In progress
+Status: MVP landed (polish in progress)
 
 This plan intentionally locks the spec shape early to avoid future refactors.
 
@@ -103,3 +103,17 @@ Candidate exit criteria:
 - Demo clearly communicates auto-apply vs queue-only mode (no “why doesn’t it change?” confusion).
 - Demo spec examples consistently avoid “glued-to-edge” layouts via `Box.p` + `VStack/HStack.gap`.
 - At least one end-to-end smoke test covers validation issue presentation via repeat + `$item` (strict catalog validation).
+
+## M10.1 — Dashboard parity baseline (json-render example closure)
+
+Candidate exit criteria:
+
+- `fret-genui-core` passes child node metadata into the resolver so compound UI patterns can be assembled safely (no SpecV1 grammar changes).
+- `fret-genui-shadcn` covers the core dashboard example vocabulary: overlay surfaces (`Dialog`/`Drawer`/`Popover`/`Tooltip`/`DropdownMenu`), data-driven `Table`, and at least one compound (`Tabs` or `Accordion`).
+
+## M11 — Optional upstream parity (post-v1, no SpecV1 changes)
+
+Candidate exit criteria:
+
+- Add an app-owned helper to collect json-render-style validation checks from spec-authored configs (e.g. `Input.checks`) into a `ValidationRegistryV1`.
+- Add an optional `nested_to_flat` helper for human-authored nested trees (keep flat SpecV1 canonical).

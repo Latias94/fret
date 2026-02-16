@@ -84,7 +84,7 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
     where
         I: IntoIterator<Item = AnyElement>,
     {
-        self.out.extend(f(self.cx).into_iter());
+        self.out.extend(f(self.cx));
     }
 
     pub fn id<K: Hash>(&mut self, key: K, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {

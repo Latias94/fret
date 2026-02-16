@@ -124,8 +124,9 @@ pub enum QueryRetryOn {
     Any,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum QueryRetryPolicy {
+    #[default]
     None,
     Fixed {
         max_retries: u32,
@@ -233,27 +234,11 @@ impl QueryRetryPolicy {
     }
 }
 
-impl Default for QueryRetryPolicy {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct QueryRetryState {
     pub failures: u32,
     pub max_retries: u32,
     pub next_retry_at: Option<Instant>,
-}
-
-impl Default for QueryRetryState {
-    fn default() -> Self {
-        Self {
-            failures: 0,
-            max_retries: 0,
-            next_retry_at: None,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -493,21 +478,11 @@ pub struct QuerySnapshotEntry {
 type ApplyFn = fn(&mut dyn Any, QueryApplyMsg) -> bool;
 type ApplyRetryFn = fn(&mut dyn Any, QueryRetryState);
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct QueryRuntimeRetry {
     failures: u32,
     next_retry_at: Option<Instant>,
     scheduled_wake: Option<CancellationToken>,
-}
-
-impl Default for QueryRuntimeRetry {
-    fn default() -> Self {
-        Self {
-            failures: 0,
-            next_retry_at: None,
-            scheduled_wake: None,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -699,7 +674,7 @@ impl QueryRuntime {
                     entry.last_error_message = Some(err.message().clone());
                     entry.retry.failures = entry.retry.failures.saturating_add(1);
                     let failures = entry.retry.failures;
-                    let delay = entry.policy.retry.next_retry_delay(failures, &err);
+                    let delay = entry.policy.retry.next_retry_delay(failures, err);
                     retry_delay = delay;
 
                     entry.retry.next_retry_at = delay.map(|d| Instant::now() + d);
@@ -1536,6 +1511,7 @@ impl QueryClient {
         remounted
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn start_fetch<H, T>(
         &mut self,
         app: &mut H,
@@ -1657,6 +1633,7 @@ impl QueryClient {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn start_fetch_async<H, T, Fut>(
         &mut self,
         app: &mut H,
@@ -1772,6 +1749,7 @@ impl QueryClient {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn start_fetch_async_local<H, T, Fut>(
         &mut self,
         app: &mut H,

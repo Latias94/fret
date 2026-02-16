@@ -434,12 +434,8 @@ fn stack_group_inputs(
             return None;
         }
 
-        let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
-            return None;
-        };
-        let Some(dataset) = model.datasets.get(&series.dataset) else {
-            return None;
-        };
+        let table = datasets.dataset(model.root_dataset_id(series.dataset))?;
+        let dataset = model.datasets.get(&series.dataset)?;
 
         let (category_axis_id, value_axis_id, series_category_col, series_value_col) =
             if series.kind == crate::spec::SeriesKind::Bar {

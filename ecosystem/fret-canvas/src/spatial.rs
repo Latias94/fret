@@ -277,10 +277,10 @@ impl<T: Copy + Eq + Hash> GridIndexWithBackrefs<T> {
                 let removed = items.swap_remove(index);
                 if index < items.len() {
                     let moved = items[index];
-                    if let Some(moved_entries) = self.item_cells.get_mut(&moved) {
-                        if let Some(entry) = moved_entries.iter_mut().find(|e| e.0 == key) {
-                            entry.1 = index;
-                        }
+                    if let Some(moved_entries) = self.item_cells.get_mut(&moved)
+                        && let Some(entry) = moved_entries.iter_mut().find(|e| e.0 == key)
+                    {
+                        entry.1 = index;
                     }
                 }
                 debug_assert!(

@@ -81,7 +81,7 @@ fn paint_for_kind(kind: u8, rect: Rect, seed: u32, mats: Materials, sampled: boo
         _ => {
             let id = if sampled {
                 mats.noise_sampled.unwrap_or(mats.dot_grid)
-            } else if seed % 2 == 0 {
+            } else if seed.is_multiple_of(2) {
                 mats.dot_grid
             } else {
                 mats.checker

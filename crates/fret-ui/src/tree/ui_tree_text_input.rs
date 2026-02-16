@@ -47,22 +47,21 @@ impl<H: UiHost> UiTree<H> {
 
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
-        if let Some(window) = self.window {
-            if let Some(record) = crate::declarative::element_record_for_node(app, window, focus) {
-                let element = record.element;
-                if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance
-                {
-                    return text_input_region_platform_text_input_query_with_hooks(
-                        app,
-                        services,
-                        window,
-                        element,
-                        bounds,
-                        scale_factor,
-                        &props,
-                        query,
-                    );
-                }
+        if let Some(window) = self.window
+            && let Some(record) = crate::declarative::element_record_for_node(app, window, focus)
+        {
+            let element = record.element;
+            if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance {
+                let ctx = TextInputRegionPlatformCtx {
+                    window,
+                    element,
+                    bounds,
+                    scale_factor,
+                    props: &props,
+                };
+                return text_input_region_platform_text_input_query_with_hooks(
+                    app, services, ctx, query,
+                );
             }
         }
 
@@ -138,29 +137,27 @@ impl<H: UiHost> UiTree<H> {
         };
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
-        if let Some(window) = self.window {
-            if let Some(record) = crate::declarative::element_record_for_node(app, window, focus) {
-                let element = record.element;
-                if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance
-                {
-                    let changed =
-                        text_input_region_platform_text_input_replace_text_in_range_utf16_with_hooks(
-                            app,
-                            services,
-                            window,
-                            element,
-                            bounds,
-                            scale_factor,
-                            &props,
-                            range,
-                            text,
-                        );
-                    if changed {
-                        self.invalidate(focus, Invalidation::Layout);
-                        self.request_redraw_coalesced(app);
-                    }
-                    return changed;
+        if let Some(window) = self.window
+            && let Some(record) = crate::declarative::element_record_for_node(app, window, focus)
+        {
+            let element = record.element;
+            if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance {
+                let ctx = TextInputRegionPlatformCtx {
+                    window,
+                    element,
+                    bounds,
+                    scale_factor,
+                    props: &props,
+                };
+                let changed =
+                    text_input_region_platform_text_input_replace_text_in_range_utf16_with_hooks(
+                        app, services, ctx, range, text,
+                    );
+                if changed {
+                    self.invalidate(focus, Invalidation::Layout);
+                    self.request_redraw_coalesced(app);
                 }
+                return changed;
             }
         }
 
@@ -199,30 +196,27 @@ impl<H: UiHost> UiTree<H> {
         };
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
-        if let Some(window) = self.window {
-            if let Some(record) = crate::declarative::element_record_for_node(app, window, focus) {
-                let element = record.element;
-                if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance
-                {
-                    let changed =
-                        text_input_region_platform_text_input_replace_and_mark_text_in_range_utf16_with_hooks(
-                            app,
-                            services,
-                            window,
-                            element,
-                            bounds,
-                            scale_factor,
-                            &props,
-                            range,
-                            text,
-                            marked,
-                        );
-                    if changed {
-                        self.invalidate(focus, Invalidation::Layout);
-                        self.request_redraw_coalesced(app);
-                    }
-                    return changed;
+        if let Some(window) = self.window
+            && let Some(record) = crate::declarative::element_record_for_node(app, window, focus)
+        {
+            let element = record.element;
+            if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance {
+                let ctx = TextInputRegionPlatformCtx {
+                    window,
+                    element,
+                    bounds,
+                    scale_factor,
+                    props: &props,
+                };
+                let changed =
+                    text_input_region_platform_text_input_replace_and_mark_text_in_range_utf16_with_hooks(
+                        app, services, ctx, range, text, marked,
+                    );
+                if changed {
+                    self.invalidate(focus, Invalidation::Layout);
+                    self.request_redraw_coalesced(app);
                 }
+                return changed;
             }
         }
 
@@ -379,14 +373,19 @@ fn text_input_region_platform_text_input_query(
     }
 }
 
-pub(in crate::tree) fn text_input_region_platform_text_input_query_with_hooks<H: UiHost>(
-    app: &mut H,
-    services: &mut dyn UiServices,
+#[derive(Clone, Copy)]
+pub(in crate::tree) struct TextInputRegionPlatformCtx<'a> {
     window: fret_core::AppWindowId,
     element: crate::GlobalElementId,
     bounds: Rect,
     scale_factor: f32,
-    props: &crate::element::TextInputRegionProps,
+    props: &'a crate::element::TextInputRegionProps,
+}
+
+pub(in crate::tree) fn text_input_region_platform_text_input_query_with_hooks<H: UiHost>(
+    app: &mut H,
+    services: &mut dyn UiServices,
+    ctx: TextInputRegionPlatformCtx<'_>,
     query: &fret_runtime::PlatformTextInputQuery,
 ) -> fret_runtime::PlatformTextInputQueryResult {
     match query {
@@ -394,8 +393,8 @@ pub(in crate::tree) fn text_input_region_platform_text_input_query_with_hooks<H:
         | fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint { .. } => {
             let hook = crate::elements::with_element_state(
                 app,
-                window,
-                element,
+                ctx.window,
+                ctx.element,
                 crate::action::TextInputRegionActionHooks::default,
                 |hooks| hooks.on_platform_text_input_query.clone(),
             );
@@ -435,16 +434,16 @@ pub(in crate::tree) fn text_input_region_platform_text_input_query_with_hooks<H:
 
                 let mut host = TextInputRegionPlatformQueryHost { app };
                 let action_cx = crate::action::ActionCx {
-                    window,
-                    target: element,
+                    window: ctx.window,
+                    target: ctx.element,
                 };
                 if let Some(out) = hook(
                     &mut host,
                     action_cx,
                     services,
-                    bounds,
-                    scale_factor,
-                    props,
+                    ctx.bounds,
+                    ctx.scale_factor,
+                    ctx.props,
                     query,
                 ) {
                     return out;
@@ -461,7 +460,7 @@ pub(in crate::tree) fn text_input_region_platform_text_input_query_with_hooks<H:
                 _ => unreachable!(),
             }
         }
-        _ => text_input_region_platform_text_input_query(props, query),
+        _ => text_input_region_platform_text_input_query(ctx.props, query),
     }
 }
 
@@ -470,18 +469,14 @@ pub(in crate::tree) fn text_input_region_platform_text_input_replace_text_in_ran
 >(
     app: &mut H,
     services: &mut dyn UiServices,
-    window: fret_core::AppWindowId,
-    element: crate::GlobalElementId,
-    bounds: Rect,
-    scale_factor: f32,
-    props: &crate::element::TextInputRegionProps,
+    ctx: TextInputRegionPlatformCtx<'_>,
     range: fret_runtime::Utf16Range,
     text: &str,
 ) -> bool {
     let hook = crate::elements::with_element_state(
         app,
-        window,
-        element,
+        ctx.window,
+        ctx.element,
         crate::action::TextInputRegionActionHooks::default,
         |hooks| {
             hooks
@@ -528,16 +523,16 @@ pub(in crate::tree) fn text_input_region_platform_text_input_replace_text_in_ran
 
     let mut host = TextInputRegionPlatformReplaceHost { app };
     let action_cx = crate::action::ActionCx {
-        window,
-        target: element,
+        window: ctx.window,
+        target: ctx.element,
     };
     hook(
         &mut host,
         action_cx,
         services,
-        bounds,
-        scale_factor,
-        props,
+        ctx.bounds,
+        ctx.scale_factor,
+        ctx.props,
         range,
         text,
     )
@@ -548,19 +543,15 @@ pub(in crate::tree) fn text_input_region_platform_text_input_replace_and_mark_te
 >(
     app: &mut H,
     services: &mut dyn UiServices,
-    window: fret_core::AppWindowId,
-    element: crate::GlobalElementId,
-    bounds: Rect,
-    scale_factor: f32,
-    props: &crate::element::TextInputRegionProps,
+    ctx: TextInputRegionPlatformCtx<'_>,
     range: fret_runtime::Utf16Range,
     text: &str,
     marked: Option<fret_runtime::Utf16Range>,
 ) -> bool {
     let hook = crate::elements::with_element_state(
         app,
-        window,
-        element,
+        ctx.window,
+        ctx.element,
         crate::action::TextInputRegionActionHooks::default,
         |hooks| {
             hooks
@@ -607,16 +598,16 @@ pub(in crate::tree) fn text_input_region_platform_text_input_replace_and_mark_te
 
     let mut host = TextInputRegionPlatformReplaceHost { app };
     let action_cx = crate::action::ActionCx {
-        window,
-        target: element,
+        window: ctx.window,
+        target: ctx.element,
     };
     hook(
         &mut host,
         action_cx,
         services,
-        bounds,
-        scale_factor,
-        props,
+        ctx.bounds,
+        ctx.scale_factor,
+        ctx.props,
         range,
         text,
         marked,

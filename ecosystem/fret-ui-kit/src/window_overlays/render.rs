@@ -1,7 +1,7 @@
+use core::time::Duration;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::Duration;
 
 use fret_core::{
     AppWindowId, Color, FontId, FontWeight, NodeId, Point, Px, Rect, SemanticsRole, TextStyle,
@@ -357,11 +357,11 @@ fn should_suspend_pointer_gating_for_capture(
     // open. If another layer is currently capturing the pointer (viewport drags, resizers, etc.),
     // enabling occlusion can change routing semantics in surprising ways.
     //
-    // `consume_outside_pointer_events` only affects "outside press" dispatch (and suppresses
-    // underlay hit-test dispatch on outside press), which is safe to keep enabled while another
-    // layer is capturing the pointer.
-    let _ = consume_outside_pointer_events;
-    open && capture_conflicts_with_layer && disable_outside_pointer_events
+    // `consume_outside_pointer_events` also changes pointer-down routing while open (by consuming
+    // outside presses and suppressing underlay dispatch). During an active pointer capture in a
+    // different layer, keep routing stable by suspending these policies until capture is released.
+    open && capture_conflicts_with_layer
+        && (disable_outside_pointer_events || consume_outside_pointer_events)
 }
 
 struct OverlayFocusHost<'a, H: UiHost> {

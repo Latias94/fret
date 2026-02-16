@@ -2,21 +2,25 @@ use super::super::*;
 
 pub(super) fn preview_command_palette(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-    query: Model<String>,
+    _open: Model<bool>,
+    _query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     #[derive(Default)]
     struct CommandPageModels {
+        basic_open: Option<Model<bool>>,
+        basic_query: Option<Model<String>>,
         shortcuts_query: Option<Model<String>>,
         groups_query: Option<Model<String>>,
         scroll_query: Option<Model<String>>,
         rtl_query: Option<Model<String>>,
     }
 
-    let (shortcuts_query, groups_query, scroll_query, rtl_query) =
-        cx.with_state(CommandPageModels::default, |st| {
+    let (basic_open, basic_query, shortcuts_query, groups_query, scroll_query, rtl_query) = cx
+        .with_state(CommandPageModels::default, |st| {
             (
+                st.basic_open.clone(),
+                st.basic_query.clone(),
                 st.shortcuts_query.clone(),
                 st.groups_query.clone(),
                 st.scroll_query.clone(),
@@ -24,25 +28,54 @@ pub(super) fn preview_command_palette(
             )
         });
 
-    let (shortcuts_query, groups_query, scroll_query, rtl_query) =
-        match (shortcuts_query, groups_query, scroll_query, rtl_query) {
-            (Some(shortcuts_query), Some(groups_query), Some(scroll_query), Some(rtl_query)) => {
-                (shortcuts_query, groups_query, scroll_query, rtl_query)
-            }
-            _ => {
-                let shortcuts_query = cx.app.models_mut().insert(String::new());
-                let groups_query = cx.app.models_mut().insert(String::new());
-                let scroll_query = cx.app.models_mut().insert(String::new());
-                let rtl_query = cx.app.models_mut().insert(String::new());
-                cx.with_state(CommandPageModels::default, |st| {
-                    st.shortcuts_query = Some(shortcuts_query.clone());
-                    st.groups_query = Some(groups_query.clone());
-                    st.scroll_query = Some(scroll_query.clone());
-                    st.rtl_query = Some(rtl_query.clone());
-                });
-                (shortcuts_query, groups_query, scroll_query, rtl_query)
-            }
-        };
+    let (basic_open, basic_query, shortcuts_query, groups_query, scroll_query, rtl_query) = match (
+        basic_open,
+        basic_query,
+        shortcuts_query,
+        groups_query,
+        scroll_query,
+        rtl_query,
+    ) {
+        (
+            Some(basic_open),
+            Some(basic_query),
+            Some(shortcuts_query),
+            Some(groups_query),
+            Some(scroll_query),
+            Some(rtl_query),
+        ) => (
+            basic_open,
+            basic_query,
+            shortcuts_query,
+            groups_query,
+            scroll_query,
+            rtl_query,
+        ),
+        _ => {
+            let basic_open = cx.app.models_mut().insert(false);
+            let basic_query = cx.app.models_mut().insert(String::new());
+            let shortcuts_query = cx.app.models_mut().insert(String::new());
+            let groups_query = cx.app.models_mut().insert(String::new());
+            let scroll_query = cx.app.models_mut().insert(String::new());
+            let rtl_query = cx.app.models_mut().insert(String::new());
+            cx.with_state(CommandPageModels::default, |st| {
+                st.basic_open = Some(basic_open.clone());
+                st.basic_query = Some(basic_query.clone());
+                st.shortcuts_query = Some(shortcuts_query.clone());
+                st.groups_query = Some(groups_query.clone());
+                st.scroll_query = Some(scroll_query.clone());
+                st.rtl_query = Some(rtl_query.clone());
+            });
+            (
+                basic_open,
+                basic_query,
+                shortcuts_query,
+                groups_query,
+                scroll_query,
+                rtl_query,
+            )
+        }
+    };
 
     let on_select = |tag: Arc<str>| {
         let last_action = last_action.clone();
@@ -118,17 +151,18 @@ pub(super) fn preview_command_palette(
             .on_select_action(on_select(Arc::from("command.basic.calculator"))),
     ];
 
-    let basic_dialog = shadcn::CommandDialog::new(open.clone(), query.clone(), basic_items)
-        .a11y_label("Basic command dialog")
-        .empty_text("No results found.")
-        .into_element(cx, |cx| {
-            shadcn::Button::new("Open Command Menu")
-                .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open.clone())
-                .test_id("ui-gallery-command-basic-trigger")
-                .into_element(cx)
-        })
-        .test_id("ui-gallery-command-basic");
+    let basic_dialog =
+        shadcn::CommandDialog::new(basic_open.clone(), basic_query.clone(), basic_items)
+            .a11y_label("Basic command dialog")
+            .empty_text("No results found.")
+            .into_element(cx, |cx| {
+                shadcn::Button::new("Open Command Menu")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(basic_open.clone())
+                    .test_id("ui-gallery-command-basic-trigger")
+                    .into_element(cx)
+            })
+            .test_id("ui-gallery-command-basic");
     let basic = section_card(cx, "Basic", basic_dialog);
 
     let shortcuts_entries = vec![

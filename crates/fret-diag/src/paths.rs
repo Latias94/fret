@@ -12,7 +12,7 @@ pub(crate) fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
 fn normalize_host_path_separators(path: PathBuf) -> PathBuf {
     #[cfg(windows)]
     {
-        return PathBuf::from(path.to_string_lossy().replace('/', "\\"));
+        PathBuf::from(path.to_string_lossy().replace('/', "\\"))
     }
     #[cfg(not(windows))]
     {

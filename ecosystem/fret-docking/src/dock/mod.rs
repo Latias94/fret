@@ -88,6 +88,23 @@ pub trait DockingPolicy: Send + Sync + 'static {
         true
     }
 
+    /// Whether tear-off (new OS window) is allowed once docking is already in a multi-window
+    /// session.
+    ///
+    /// By default, docking avoids creating additional OS windows after the first tear-off. This
+    /// keeps scripted playback deterministic and prevents "chains" of empty one-panel windows.
+    ///
+    /// Editors/apps may opt into chained tear-offs by overriding this hook (and/or enabling it
+    /// per dock space via `DockSpace::with_allow_multi_window_tear_off(true)`).
+    fn allow_multi_window_tear_off(
+        &self,
+        _source_window: AppWindowId,
+        _panel: &PanelKey,
+        _info: Option<&DockPanel>,
+    ) -> bool {
+        false
+    }
+
     /// Whether a panel tab is allowed to start a dock drag (tear-off / docking previews).
     ///
     /// This is the "group locking" escape hatch: editors can prevent dragging certain panels

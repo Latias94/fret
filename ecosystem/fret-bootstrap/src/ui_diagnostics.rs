@@ -735,6 +735,10 @@ impl UiDiagnosticsService {
         cfg!(target_arch = "wasm32") && self.ws_is_configured()
     }
 
+    pub fn known_windows(&self) -> &[AppWindowId] {
+        &self.known_windows
+    }
+
     fn poll_ws_inbox_and_is_wasm_ws_only(&mut self) -> bool {
         self.poll_ws_inbox();
         self.is_wasm_ws_only()
@@ -1253,11 +1257,10 @@ impl UiDiagnosticsService {
         #[cfg(not(feature = "diagnostics-ws"))]
         let devtools_request_redraw = false;
 
-        if !self.active_scripts.contains_key(&window)
-            && let Some(script) = self.pending_script.clone()
+        if self.active_scripts.is_empty()
+            && let Some(script) = self.pending_script.take()
         {
             let run_id = self.pending_script_run_id.take().unwrap_or(0);
-            self.pending_script = None;
             let mut active_script = ActiveScript {
                 steps: script.steps,
                 run_id,
@@ -1315,14 +1318,61 @@ impl UiDiagnosticsService {
             });
         }
 
+        // Multi-window scripts can create additional OS windows (tear-off). Depending on platform
+        // scheduling, the newly created window may become the only one receiving redraw callbacks
+        // while a drag is active. Keep scripted playback progressing by migrating the single
+        // active script to whichever window is currently being driven.
+        if !self.active_scripts.contains_key(&window) && self.active_scripts.len() == 1 {
+            if let Some(&other_window) = self.active_scripts.keys().next() {
+                if let Some(active) = self.active_scripts.remove(&other_window) {
+                    self.active_scripts.insert(window, active);
+                }
+            }
+        }
+
         let Some(mut active) = self.active_scripts.remove(&window) else {
-            return UiScriptFrameOutput {
-                request_redraw: self.cfg.script_keepalive || devtools_request_redraw,
-                ..UiScriptFrameOutput::default()
-            };
+            let mut output = UiScriptFrameOutput::default();
+            output.request_redraw = self.cfg.script_keepalive || devtools_request_redraw;
+
+            if !self.active_scripts.is_empty() {
+                let windows: Vec<AppWindowId> = self.active_scripts.keys().copied().collect();
+                for other in windows {
+                    output.effects.push(Effect::RequestAnimationFrame(other));
+                }
+            }
+
+            return output;
         };
 
         if active.next_step >= active.steps.len() {
+            let passed_step_index = active.steps.len().saturating_sub(1) as u32;
+            push_script_event_log(
+                &mut active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_passed".to_string(),
+                    step_index: Some(passed_step_index),
+                    note: Some("script_already_complete".to_string()),
+                    bundle_dir: None,
+                },
+            );
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Passed,
+                step_index: Some(passed_step_index),
+                reason_code: None,
+                reason: None,
+                evidence: script_evidence_for_active(&active),
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+            });
             return UiScriptFrameOutput {
                 request_redraw: devtools_request_redraw,
                 ..UiScriptFrameOutput::default()
@@ -1564,6 +1614,98 @@ impl UiDiagnosticsService {
                     ));
                     stop_script = true;
                     failure_reason = Some("cursor_override_write_failed".to_string());
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::SetCursorInWindowLogical {
+                window: target_window,
+                x_px,
+                y_px,
+            } => {
+                let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_in_window_logical-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                    return output;
+                };
+
+                if write_cursor_override_window_client_logical(
+                    &self.cfg.out_dir,
+                    target_window,
+                    x_px,
+                    y_px,
+                )
+                .is_ok()
+                {
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_in_window_logical-write-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("cursor_override_write_failed".to_string());
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::SetMouseButtons {
+                window: target_window,
+                left,
+                right,
+                middle,
+            } => {
+                let resolved_window = if let Some(target_window) = target_window.as_ref() {
+                    let Some(target_window) =
+                        self.resolve_window_target(window, Some(target_window))
+                    else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-set_mouse_buttons-window-not-found"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("window_target_unresolved".to_string());
+                        output.request_redraw = true;
+                        return output;
+                    };
+                    Some(target_window)
+                } else {
+                    None
+                };
+
+                let mut payload = String::from("schema_version=1\n");
+                if let Some(window) = resolved_window {
+                    payload.push_str(&format!("window={}\n", window.data().as_ffi()));
+                }
+                if let Some(left) = left {
+                    payload.push_str(&format!("left={left}\n"));
+                }
+                if let Some(right) = right {
+                    payload.push_str(&format!("right={right}\n"));
+                }
+                if let Some(middle) = middle {
+                    payload.push_str(&format!("middle={middle}\n"));
+                }
+
+                let text_path = self.cfg.out_dir.join("mouse_buttons.override.txt");
+                let trigger_path = self.cfg.out_dir.join("mouse_buttons.touch");
+                let _ = std::fs::create_dir_all(&self.cfg.out_dir);
+                if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_mouse_buttons-write-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("mouse_buttons_override_write_failed".to_string());
                     output.request_redraw = true;
                 }
             }
@@ -3308,6 +3450,12 @@ impl UiDiagnosticsService {
                         click_count: 1,
                         pointer_type,
                     }));
+                    let _ = write_cursor_override_window_client_logical(
+                        &self.cfg.out_dir,
+                        window,
+                        pos.x.0,
+                        pos.y.0,
+                    );
 
                     active.pointer_session = Some(V2PointerSessionState {
                         window,
@@ -3458,6 +3606,12 @@ impl UiDiagnosticsService {
 
                         session.position = position;
                         active.pointer_session = Some(session);
+                        let _ = write_cursor_override_window_client_logical(
+                            &self.cfg.out_dir,
+                            window,
+                            position.x.0,
+                            position.y.0,
+                        );
 
                         state.frame = state.frame.saturating_add(1);
                         active.v2_step_state = Some(V2StepState::PointerMove(state));
@@ -3466,6 +3620,12 @@ impl UiDiagnosticsService {
                     } else {
                         session.position = state.end;
                         active.pointer_session = Some(session);
+                        let _ = write_cursor_override_window_client_logical(
+                            &self.cfg.out_dir,
+                            window,
+                            state.end.x.0,
+                            state.end.y.0,
+                        );
 
                         active.v2_step_state = None;
                         active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
@@ -3580,6 +3740,12 @@ impl UiDiagnosticsService {
                             kind: fret_core::InternalDragKind::Drop,
                             modifiers: session.modifiers,
                         }));
+                    let _ = write_cursor_override_window_client_logical(
+                        &self.cfg.out_dir,
+                        window,
+                        session.position.x.0,
+                        session.position.y.0,
+                    );
 
                     active.pointer_session = None;
                     active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
@@ -3606,11 +3772,6 @@ impl UiDiagnosticsService {
                     self.resolve_window_target(window, target_window.as_ref())
                 {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::DragPointer { window, .. } = step_mut {
-                                *window = None;
-                            }
-                        }
                         handoff_to = Some(target_window);
                         output
                             .effects
@@ -3798,11 +3959,6 @@ impl UiDiagnosticsService {
                     self.resolve_window_target(window, target_window.as_ref())
                 {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::DragPointerUntil { window, .. } = step_mut {
-                                *window = None;
-                            }
-                        }
                         handoff_to = Some(target_window);
                         output
                             .effects
@@ -5758,6 +5914,11 @@ impl UiDiagnosticsService {
                     last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                 });
             } else if active.next_step < active.steps.len() {
+                // Keep the app ticking while a script is active, even if the last injected events
+                // did not invalidate UI state. This ensures `wait_until`/timeouts progress and
+                // cross-window gates (tear-off, hover detection) do not stall.
+                output.request_redraw = true;
+                output.effects.push(Effect::RequestAnimationFrame(window));
                 self.active_scripts.insert(window, active);
             }
         }
@@ -5875,6 +6036,13 @@ impl UiDiagnosticsService {
         caps.push("diag.window_insets_override".to_string());
         caps.push("diag.clipboard_force_unavailable".to_string());
         caps.push("diag.incoming_open_inject".to_string());
+        if cfg!(any(
+            target_os = "windows",
+            target_os = "macos",
+            target_os = "linux"
+        )) {
+            caps.push("diag.mouse_buttons_override".to_string());
+        }
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -6472,11 +6640,20 @@ impl UiDiagnosticsService {
 
         let clipboard = app
             .global::<fret_runtime::WindowClipboardDiagnosticsStore>()
-            .and_then(|store| store.last_read_for_window(window, app.frame_id()))
-            .map(|entry| UiClipboardDiagnosticsSnapshotV1 {
-                last_read_token: entry.token.0,
-                last_read_unavailable: entry.unavailable,
-                last_read_message: entry.message.clone(),
+            .and_then(|store| {
+                let frame_id = app.frame_id();
+                let last_read = store.last_read_for_window(window, frame_id);
+                let last_write = store.last_write_for_window(window, frame_id);
+                if last_read.is_none() && last_write.is_none() {
+                    return None;
+                }
+                Some(UiClipboardDiagnosticsSnapshotV1 {
+                    last_read_token: last_read.map(|e| e.token.0),
+                    last_read_unavailable: last_read.map(|e| e.unavailable),
+                    last_read_message: last_read.and_then(|e| e.message.clone()),
+                    last_write_unavailable: last_write.map(|e| e.unavailable),
+                    last_write_message: last_write.and_then(|e| e.message.clone()),
+                })
             });
 
         let wgpu_adapter = app
@@ -6513,6 +6690,8 @@ impl UiDiagnosticsService {
                 platform: c.platform.as_str().to_string(),
                 ui_window_hover_detection: c.caps.ui.window_hover_detection.as_str().to_string(),
                 clipboard_text: c.caps.clipboard.text.read && c.caps.clipboard.text.write,
+                clipboard_text_read: c.caps.clipboard.text.read,
+                clipboard_text_write: c.caps.clipboard.text.write,
                 clipboard_primary_text: c.caps.clipboard.primary_text,
                 ime: c.caps.ime.enabled,
                 ime_set_cursor_area: c.caps.ime.set_cursor_area,
@@ -7249,6 +7428,8 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }
         | UiActionStepV2::SetCursorInWindow { .. }
+        | UiActionStepV2::SetCursorInWindowLogical { .. }
+        | UiActionStepV2::SetMouseButtons { .. }
         | UiActionStepV2::RaiseWindow { .. }
         | UiActionStepV2::PointerMove { .. }
         | UiActionStepV2::PointerUp { .. } => false,
@@ -7612,10 +7793,16 @@ pub struct UiDiagnosticsSnapshotV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiClipboardDiagnosticsSnapshotV1 {
-    pub last_read_token: u64,
-    pub last_read_unavailable: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_read_token: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_read_unavailable: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_read_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_write_unavailable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_write_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -7623,6 +7810,8 @@ pub struct UiPlatformCapabilitiesSummaryV1 {
     pub platform: String,
     pub ui_window_hover_detection: String,
     pub clipboard_text: bool,
+    pub clipboard_text_read: bool,
+    pub clipboard_text_write: bool,
     pub clipboard_primary_text: bool,
     pub ime: bool,
     pub ime_set_cursor_area: bool,
@@ -17039,6 +17228,26 @@ fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Eve
     }
 }
 
+fn write_cursor_override_window_client_logical(
+    out_dir: &Path,
+    window: AppWindowId,
+    x_px: f32,
+    y_px: f32,
+) -> Result<(), std::io::Error> {
+    let payload = format!(
+        "schema_version=1\nkind=window_client_logical\nwindow={}\nx_px={}\ny_px={}\n",
+        window.data().as_ffi(),
+        x_px,
+        y_px
+    );
+    let text_path = out_dir.join("cursor_screen_pos.override.txt");
+    let trigger_path = out_dir.join("cursor_screen_pos.touch");
+    std::fs::create_dir_all(out_dir)?;
+    std::fs::write(text_path, payload)?;
+    touch_file(&trigger_path)?;
+    Ok(())
+}
+
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
     let modifiers = core_modifiers_from_ui(Some(modifiers));
     let down = Event::KeyDown {
@@ -17311,13 +17520,39 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
+    // `fret-diag`'s filesystem transport uses a monotonically increasing stamp written into
+    // `*.touch` files. `SystemTime` millisecond resolution is not sufficient on all platforms
+    // (multiple writes can occur within the same millisecond), so ensure the stamp is strictly
+    // increasing within the current process.
+    //
+    // The stamp is used only for edge detection (not for wall-clock semantics), so it's safe to
+    // synthesize values above `unix_ms_now()` when needed.
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static LAST_TOUCH_STAMP: AtomicU64 = AtomicU64::new(0);
+    let mut stamp = unix_ms_now();
+    loop {
+        let prev = LAST_TOUCH_STAMP.load(Ordering::Relaxed);
+        let next = stamp.max(prev.saturating_add(1));
+        match LAST_TOUCH_STAMP.compare_exchange_weak(
+            prev,
+            next,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => {
+                stamp = next;
+                break;
+            }
+            Err(_) => continue,
+        }
+    }
     use std::io::Write as _;
     let mut f = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
         .open(path)?;
-    writeln!(f, "{}", unix_ms_now())?;
+    writeln!(f, "{stamp}")?;
     let _ = f.flush();
     Ok(())
 }

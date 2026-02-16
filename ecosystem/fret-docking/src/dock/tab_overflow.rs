@@ -97,6 +97,8 @@ mod tests {
                 text_disabled: Color::TRANSPARENT,
                 accent: Color::TRANSPARENT,
                 selection_background: Color::TRANSPARENT,
+                selection_inactive_background: Color::TRANSPARENT,
+                selection_window_inactive_background: Color::TRANSPARENT,
                 hover_background: Color::TRANSPARENT,
                 focus_ring: Color::TRANSPARENT,
                 menu_background: Color::TRANSPARENT,

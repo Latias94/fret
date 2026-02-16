@@ -154,7 +154,7 @@ impl ViewState {
     pub fn rebuild(&mut self, model: &ChartModel, datasets: &DatasetStore, state: &ChartState) {
         self.datasets.clear();
         self.series.clear();
-        for (id, _dataset_model) in &model.datasets {
+        for id in model.datasets.keys() {
             let table = datasets.dataset(model.root_dataset_id(*id));
             let Some(table) = table else { continue };
             let mut row_range = state
@@ -368,10 +368,7 @@ fn view_state_signature(model: &ChartModel, state: &ChartState) -> u64 {
     hash
 }
 
-pub fn table_row_range<'a>(
-    table: &'a DataTable,
-    view: Option<&DatasetView>,
-) -> core::ops::Range<usize> {
+pub fn table_row_range(table: &DataTable, view: Option<&DatasetView>) -> core::ops::Range<usize> {
     let mut range = RowRange {
         start: 0,
         end: table.row_count(),

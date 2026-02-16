@@ -103,8 +103,10 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     let next_filters = updater.apply(&table.state().column_filters);
     assert!(!next_filters.is_empty());
 
-    let mut next_state = TableState::default();
-    next_state.column_filters = next_filters;
+    let next_state = TableState {
+        column_filters: next_filters,
+        ..Default::default()
+    };
     let table_with_filter = Table::builder(&data)
         .columns(table.columns().to_vec())
         .get_row_key(|row, _idx, _parent| RowKey(row.id))
@@ -286,8 +288,10 @@ fn tanstack_v8_capability_smoke_grouped_row_ids_exist_and_resolve_to_row_keys() 
         ColumnDef::<GroupRow>::new("id").value_u64_by(|r| r.id),
     ];
 
-    let mut state = TableState::default();
-    state.grouping = vec![Arc::<str>::from("role")];
+    let state = TableState {
+        grouping: vec![Arc::<str>::from("role")],
+        ..Default::default()
+    };
 
     let table = Table::builder(&data)
         .columns(columns)

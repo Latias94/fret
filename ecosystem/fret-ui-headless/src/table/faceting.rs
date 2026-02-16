@@ -86,9 +86,7 @@ pub fn faceted_min_max_u64<'a, TData>(
     row_model: &RowModel<'a, TData>,
     column: &ColumnDef<TData>,
 ) -> Option<(u64, u64)> {
-    let Some(facet_key_fn) = column.facet_key_fn.as_ref() else {
-        return None;
-    };
+    let facet_key_fn = column.facet_key_fn.as_ref()?;
 
     let mut iter = row_model
         .flat_rows()

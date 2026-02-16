@@ -271,7 +271,7 @@ impl DisplayMap {
                     continue;
                 } else {
                     let cols = buf.line_char_count(line);
-                    let rows_for_line = ((cols.max(1) + wrap - 1) / wrap).max(1);
+                    let rows_for_line = cols.max(1).div_ceil(wrap).max(1);
                     for row_in_line in 0..rows_for_line {
                         row_to_line.push(line);
                         row_start_col.push(row_in_line * wrap);
@@ -282,14 +282,16 @@ impl DisplayMap {
 
             let line_text_owned = buf.line_text(line).unwrap_or_default();
             let line_text = line_text_owned.as_str();
-            let folds = validate_fold_spans(line_text, folds)
-                .is_ok()
-                .then_some(folds)
-                .unwrap_or(&[]);
-            let inlays = validate_inlay_spans(line_text, inlays)
-                .is_ok()
-                .then_some(inlays)
-                .unwrap_or(&[]);
+            let folds = if validate_fold_spans(line_text, folds).is_ok() {
+                folds
+            } else {
+                &[]
+            };
+            let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+                inlays
+            } else {
+                &[]
+            };
 
             let preedit_for_line =
                 inline_preedit_for_line(buf, line, line_text, folds, preedit.as_ref());
@@ -357,7 +359,7 @@ impl DisplayMap {
             .line_to_first_row
             .get(line + 1)
             .copied()
-            .unwrap_or_else(|| self.row_to_line.len());
+            .unwrap_or(self.row_to_line.len());
         start..end.max(start)
     }
 
@@ -470,9 +472,11 @@ impl DisplayMap {
 
                         let before = base.get(..local_start).unwrap_or("");
                         let after = base.get(local_end..).unwrap_or("");
-                        let inserted = show_preedit_text
-                            .then_some(preedit.text.as_ref())
-                            .unwrap_or("");
+                        let inserted = if show_preedit_text {
+                            preedit.text.as_ref()
+                        } else {
+                            ""
+                        };
 
                         let mut out =
                             String::with_capacity(before.len() + inserted.len() + after.len());
@@ -682,10 +686,10 @@ impl DisplayMap {
         for span in row_inlays.iter() {
             added = added.saturating_add(span.text.len());
         }
-        if let Some(preedit) = preedit {
-            if preedit_event_inserts_text {
-                added = added.saturating_add(preedit.text.len());
-            }
+        if let Some(preedit) = preedit
+            && preedit_event_inserts_text
+        {
+            added = added.saturating_add(preedit.text.len());
         }
 
         let cap = base
@@ -714,9 +718,11 @@ impl DisplayMap {
                 && start == cursor
             {
                 let start = display_cursor;
-                let inserted = preedit_event_inserts_text
-                    .then_some(preedit.text.as_ref())
-                    .unwrap_or("");
+                let inserted = if preedit_event_inserts_text {
+                    preedit.text.as_ref()
+                } else {
+                    ""
+                };
                 let len = inserted.len();
                 out.push_str(inserted);
                 spans.push(DisplayRowSpan {
@@ -1005,14 +1011,16 @@ impl DisplayMap {
                     .get(line)
                     .map(|v| v.as_ref())
                     .unwrap_or(&[]);
-                let folds = validate_fold_spans(line_text, folds)
-                    .is_ok()
-                    .then_some(folds)
-                    .unwrap_or(&[]);
-                let inlays = validate_inlay_spans(line_text, inlays)
-                    .is_ok()
-                    .then_some(inlays)
-                    .unwrap_or(&[]);
+                let folds = if validate_fold_spans(line_text, folds).is_ok() {
+                    folds
+                } else {
+                    &[]
+                };
+                let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+                    inlays
+                } else {
+                    &[]
+                };
 
                 let preedit_for_line =
                     inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
@@ -1030,7 +1038,7 @@ impl DisplayMap {
                     .line_to_first_row
                     .get(line + 1)
                     .copied()
-                    .unwrap_or_else(|| self.row_to_line.len());
+                    .unwrap_or(self.row_to_line.len());
                 let rows_for_line = line_last_excl.saturating_sub(line_first).max(1);
 
                 if folds_empty && inlays_empty && !has_preedit {
@@ -1061,14 +1069,16 @@ impl DisplayMap {
                     .get(line)
                     .map(|v| v.as_ref())
                     .unwrap_or(&[]);
-                let folds = validate_fold_spans(line_text, folds)
-                    .is_ok()
-                    .then_some(folds)
-                    .unwrap_or(&[]);
-                let inlays = validate_inlay_spans(line_text, inlays)
-                    .is_ok()
-                    .then_some(inlays)
-                    .unwrap_or(&[]);
+                let folds = if validate_fold_spans(line_text, folds).is_ok() {
+                    folds
+                } else {
+                    &[]
+                };
+                let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+                    inlays
+                } else {
+                    &[]
+                };
 
                 let preedit_for_line =
                     inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
@@ -1132,14 +1142,16 @@ impl DisplayMap {
             .get(line)
             .map(|v| v.as_ref())
             .unwrap_or(&[]);
-        let folds = validate_fold_spans(line_text, folds)
-            .is_ok()
-            .then_some(folds)
-            .unwrap_or(&[]);
-        let inlays = validate_inlay_spans(line_text, inlays)
-            .is_ok()
-            .then_some(inlays)
-            .unwrap_or(&[]);
+        let folds = if validate_fold_spans(line_text, folds).is_ok() {
+            folds
+        } else {
+            &[]
+        };
+        let inlays = if validate_inlay_spans(line_text, inlays).is_ok() {
+            inlays
+        } else {
+            &[]
+        };
 
         let preedit_for_line =
             inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
@@ -1507,9 +1519,7 @@ fn inline_preedit_for_line(
         .unwrap_or(anchor)
         .min(buf.len_bytes())
         .max(replace_start);
-    let Some(line_range) = buf.line_byte_range(line) else {
-        return None;
-    };
+    let line_range = buf.line_byte_range(line)?;
     let replace_start = replace_start.max(line_range.start).min(line_range.end);
     let replace_end = replace_end
         .max(line_range.start)

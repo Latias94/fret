@@ -9,6 +9,11 @@ use fret_ui_headless::table::{
 };
 use serde::Deserialize;
 
+type RowIndexByKey = std::collections::HashMap<RowKey, usize>;
+type GroupAggsU64 = std::collections::HashMap<RowKey, Arc<[(Arc<str>, u64)]>>;
+type GroupAggsAny =
+    std::collections::HashMap<RowKey, Arc<[(Arc<str>, fret_ui_headless::table::TanStackValue)]>>;
+
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureRow {
     id: u64,
@@ -259,38 +264,45 @@ fn snapshot_sorted_grouped_row_model<TData>(
     sorting: &[fret_ui_headless::table::SortSpec],
     columns: &[ColumnDef<TData>],
     data: &[TData],
-    row_index_by_key: &std::collections::HashMap<RowKey, usize>,
-    group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(Arc<str>, u64)]>>,
-    group_aggs_any: &std::collections::HashMap<
-        RowKey,
-        Arc<[(Arc<str>, fret_ui_headless::table::TanStackValue)]>,
-    >,
+    row_index_by_key: &RowIndexByKey,
+    group_aggs_u64: &GroupAggsU64,
+    group_aggs_any: &GroupAggsAny,
 ) -> (Vec<GroupedRowNodeExpect>, Vec<GroupedRowNodeExpect>) {
     let mut roots: Vec<usize> = model.root_rows().to_vec();
 
-    sort_grouped_row_indices_in_place(
-        model,
-        roots.as_mut_slice(),
+    struct WalkCtx<'a, TData> {
+        sorting: &'a [fret_ui_headless::table::SortSpec],
+        columns: &'a [ColumnDef<TData>],
+        data: &'a [TData],
+        row_index_by_key: &'a RowIndexByKey,
+        group_aggs_u64: &'a GroupAggsU64,
+        group_aggs_any: &'a GroupAggsAny,
+    }
+
+    let ctx = WalkCtx {
         sorting,
         columns,
         data,
         row_index_by_key,
         group_aggs_u64,
         group_aggs_any,
+    };
+
+    sort_grouped_row_indices_in_place(
+        model,
+        roots.as_mut_slice(),
+        ctx.sorting,
+        ctx.columns,
+        ctx.data,
+        ctx.row_index_by_key,
+        ctx.group_aggs_u64,
+        ctx.group_aggs_any,
     );
 
     fn walk_root<TData>(
         model: &GroupedRowModel,
         indices: &[usize],
-        sorting: &[fret_ui_headless::table::SortSpec],
-        columns: &[ColumnDef<TData>],
-        data: &[TData],
-        row_index_by_key: &std::collections::HashMap<RowKey, usize>,
-        group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(Arc<str>, u64)]>>,
-        group_aggs_any: &std::collections::HashMap<
-            RowKey,
-            Arc<[(Arc<str>, fret_ui_headless::table::TanStackValue)]>,
-        >,
+        ctx: &WalkCtx<'_, TData>,
         out: &mut Vec<GroupedRowNodeExpect>,
     ) {
         for &index in indices {
@@ -305,39 +317,19 @@ fn snapshot_sorted_grouped_row_model<TData>(
             sort_grouped_row_indices_in_place(
                 model,
                 children.as_mut_slice(),
-                sorting,
-                columns,
-                data,
-                row_index_by_key,
-                group_aggs_u64,
-                group_aggs_any,
+                ctx.sorting,
+                ctx.columns,
+                ctx.data,
+                ctx.row_index_by_key,
+                ctx.group_aggs_u64,
+                ctx.group_aggs_any,
             );
-            walk_root(
-                model,
-                children.as_slice(),
-                sorting,
-                columns,
-                data,
-                row_index_by_key,
-                group_aggs_u64,
-                group_aggs_any,
-                out,
-            );
+            walk_root(model, children.as_slice(), ctx, out);
         }
     }
 
     let mut root: Vec<GroupedRowNodeExpect> = Vec::new();
-    walk_root(
-        model,
-        roots.as_slice(),
-        sorting,
-        columns,
-        data,
-        row_index_by_key,
-        group_aggs_u64,
-        group_aggs_any,
-        &mut root,
-    );
+    walk_root(model, roots.as_slice(), &ctx, &mut root);
 
     let flat = if sorting.is_empty() {
         // TanStack `getSortedRowModel` returns the pre-sorted model when no sorting is active,
@@ -563,7 +555,7 @@ fn tanstack_v8_grouping_parity() {
                     RowPinPosition::Bottom => "bottom",
                 });
                 assert_eq!(
-                    pos.as_deref(),
+                    pos,
                     expected_pos.as_deref(),
                     "snapshot {} pin_position[{}] mismatch",
                     snap.id,

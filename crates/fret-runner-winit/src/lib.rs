@@ -4,6 +4,7 @@
 //! platform-specific integrations (IME, accessibility) that should not leak into core crates.
 
 pub mod accessibility;
+mod accessibility_accesskit_platform;
 
 #[cfg(windows)]
 pub mod windows_ime;

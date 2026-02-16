@@ -95,21 +95,21 @@ pub(crate) fn mark_existing_script_result_tooling_failure(
     kind: &str,
     note: Option<String>,
 ) {
-    if let Ok(bytes) = std::fs::read(script_result_path) {
-        if let Ok(mut parsed) = serde_json::from_slice::<UiScriptResultV1>(&bytes) {
-            push_tooling_event_log_entry(&mut parsed, kind, note.clone());
-            if matches!(parsed.stage, UiScriptStageV1::Passed) {
-                parsed.stage = UiScriptStageV1::Failed;
-                parsed.reason_code = Some(reason_code.to_string());
-                parsed.reason = Some(reason.to_string());
-            }
-            let _ = write_json_value(
-                script_result_path,
-                &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
-            );
-            write_run_id_script_result(out_dir, parsed.run_id, &parsed);
-            return;
+    if let Ok(bytes) = std::fs::read(script_result_path)
+        && let Ok(mut parsed) = serde_json::from_slice::<UiScriptResultV1>(&bytes)
+    {
+        push_tooling_event_log_entry(&mut parsed, kind, note.clone());
+        if matches!(parsed.stage, UiScriptStageV1::Passed) {
+            parsed.stage = UiScriptStageV1::Failed;
+            parsed.reason_code = Some(reason_code.to_string());
+            parsed.reason = Some(reason.to_string());
         }
+        let _ = write_json_value(
+            script_result_path,
+            &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
+        );
+        write_run_id_script_result(out_dir, parsed.run_id, &parsed);
+        return;
     }
 
     write_tooling_failure_script_result(script_result_path, reason_code, reason, kind, note);

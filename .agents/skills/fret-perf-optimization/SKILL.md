@@ -1,6 +1,6 @@
 ---
 name: fret-perf-optimization
-description: "Performance optimization workflow for Fret UI: turn 'jank' into a repeatable perf contract (tail vs typical), normalize suites, attribute worst bundles, and land reversible optimizations with evidence and gates."
+description: "This skill should be used when the user asks to \"optimize UI performance\", \"investigate jank\", \"create a perf baseline\", or \"attribute worst-frame hitches\". Provides a perf workflow (tail vs typical, suite normalization, worst-bundle attribution) to land reversible optimizations with evidence and gates."
 ---
 
 # Fret performance optimization (contracts + attribution + reversible fixes)

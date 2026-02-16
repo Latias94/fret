@@ -1485,6 +1485,18 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
+        let window_focused = cx
+            .app
+            .global::<fret_core::WindowMetricsService>()
+            .and_then(|svc| svc.focused(window))
+            .unwrap_or(true);
+        let selection_color = if focused || self.chrome_override {
+            self.chrome_style.selection_color
+        } else if !window_focused {
+            theme.color_token("selection.window_inactive.background")
+        } else {
+            theme.color_token("selection.inactive.background")
+        };
         if self.has_selection() && !self.is_ime_composing() {
             let (a, b) = self.selection_range();
             let start_x = self
@@ -1508,7 +1520,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0).max(0.0)),
                     ),
                 ),
-                background: Paint::Solid(self.chrome_style.selection_color),
+                background: Paint::Solid(selection_color),
                 border: fret_core::geometry::Edges::all(Px(0.0)),
                 border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: self.chrome_style.corner_radii,

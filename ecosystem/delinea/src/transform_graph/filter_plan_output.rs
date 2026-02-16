@@ -33,8 +33,7 @@ impl TransformGraph {
 
         let plan = self.filter_plan(model);
 
-        let mut grids: Vec<GridFilterOutput> = Vec::new();
-        grids.reserve(plan.grids.len());
+        let mut grids: Vec<GridFilterOutput> = Vec::with_capacity(plan.grids.len());
         for (grid, series) in &plan.grids {
             grids.push(GridFilterOutput {
                 grid: *grid,
@@ -46,8 +45,7 @@ impl TransformGraph {
             });
         }
 
-        let mut series: Vec<SeriesFilterOutput> = Vec::new();
-        series.reserve(model.series_order.len());
+        let mut series: Vec<SeriesFilterOutput> = Vec::with_capacity(model.series_order.len());
         for series_id in &model.series_order {
             let Some(series_model) = model.series.get(series_id) else {
                 series.push(SeriesFilterOutput {

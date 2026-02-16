@@ -1,6 +1,6 @@
 ---
 name: fret-release-check-and-publish
-description: "Run Fret release readiness checks and publish with `release-plz` + crates.io safely. Use when preparing `v0.1+` release waves, deciding which workspace crates should be published, debugging release PR/publish failures, or validating `release-plz.toml` and `.github/workflows/release-plz.yml`."
+description: "This skill should be used when the user asks to \"prepare a release\", \"publish crates\", \"debug release-plz failures\", or \"validate release-plz config/workflows\". Provides a release readiness and publish workflow for Fret using `release-plz` + crates.io (scope selection, dry runs, CI troubleshooting)."
 ---
 
 # Fret release check and publish

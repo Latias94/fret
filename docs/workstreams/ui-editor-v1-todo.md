@@ -1,7 +1,7 @@
 # `fret-ui-editor` v1 — TODO Tracker
 
 Status: Active tracker (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 Related:
 
@@ -68,14 +68,20 @@ Deliverables:
 - [~] `NumericInput` control (typed editing path):
   - [x] parse/format hooks
   - [x] validation/error affordance slot
+  - [x] joined input-group chrome (matches `TextField` / `MiniSearchBox`)
+  - [x] error state tints the joined frame border/bg (tokens)
+  - [x] configurable error presentation (inline text vs trailing status icon)
+  - [x] derive a stable error icon test anchor (`${test_id}.error`) when `test_id` is provided
   - Evidence: `ecosystem/fret-ui-editor/src/controls/numeric_input.rs`
 - [~] `DragValue<T>` control:
   - [x] scalar abstraction (`DragValueScalar` for `f32`/`f64`/`i32`)
   - [x] double-click to type (switch to `NumericInput`)
+  - [x] use trailing-icon error display for typing mode (avoid row height changes)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
 - [~] `PropertyRow` composite:
   - [x] label slot + value slot + actions slot
   - [x] reset-to-default affordance (UI only; callback provided by caller)
+  - [x] stable identity for auto layout heuristics (`id_source` for loop-built rows)
   - Evidence: `ecosystem/fret-ui-editor/src/composites/property_row.rs`
 
 Optional (if `fret-undo` integration is ready):
@@ -92,16 +98,18 @@ Exit criteria:
 ### M2 — Property grid + density + state glue
 
 - [~] `EditorDensity` token family (`editor.density.*`) and application in core controls.
-- [ ] `FieldStatus` glue (loading/error/mixed/dirty):
+- [x] `FieldStatus` glue (loading/error/mixed/dirty):
   - [x] simple badge/label helpers
-  - [ ] optional `state` module integration (feature-gated)
+  - [x] optional `state` module integration (feature-gated)
 - [x] `MiniSearchBox` control (for filtering property groups and palettes).
 - [x] `PropertyGroup` composite (collapsible group header + section).
 - [~] `PropertyGrid` composite:
   - [x] two-column layout (via `PropertyRow` composition)
   - [x] label width policy (fixed width option, propagated to rows)
+  - [x] responsive rows: auto-stack label/value vertically in narrow inspectors (token: `editor.property.auto_stack_below`)
   - [ ] virtualization strategy decision:
-    - [ ] composable rows path (VirtualList)
+    - [x] composable rows path (VirtualList)
+      - Evidence: `ecosystem/fret-ui-editor/src/composites/property_grid_virtualized.rs`
     - [ ] windowed paint path for large inspectors (if needed)
 - [~] Demo: groups + filter + empty-state placeholders.
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
@@ -143,6 +151,7 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - [~] Define a shared `EditorChrome` recipe (optional): centralize token keys and defaults so controls don’t drift.
     - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
+    - Evidence: `ecosystem/fret-ui-editor/src/primitives/style.rs`
   - [x] Ensure docking tabs remain legible under the demo theme (tab text, hover/active states, close/overflow icons).
     - Evidence anchor: `apps/fret-examples/src/imui_editor_proof_demo.rs`
     - Implementation evidence: `ecosystem/fret-docking/src/dock/paint.rs`
@@ -153,7 +162,7 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
 Goal: close the largest usability/polish gaps identified in `ui-editor-egui-imgui-gap-v1.md` without
 adding new runtime contracts unless evidence demands it.
 
-- [~] Define `EditorWidgetVisuals` (policy) analogous to `egui::Visuals::widgets`:
+- [x] Define `EditorWidgetVisuals` (policy) analogous to `egui::Visuals::widgets`:
   - inactive / hovered / active / open / disabled palettes
   - resolved from theme tokens + `editor.*` density defaults
   - consumed by all editor controls to avoid drift
@@ -167,18 +176,22 @@ adding new runtime contracts unless evidence demands it.
   - input-like frame chrome (bg/border/radius/padding) + state variants
   - icon sizing + spacing defaults
   - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
+  - Evidence: `ecosystem/fret-ui-editor/src/primitives/style.rs`
 - [x] Add an editor-facing `Slider<T>` control:
   - horizontal first; clamping + step policy
   - value display + double-click typing mode (via `NumericInput`)
+  - [x] use trailing-icon error display for typing mode (avoid row height changes)
   - [x] Key internal state per slider instance (avoid cross-widget drag/typing interference).
   - Evidence: `ecosystem/fret-ui-editor/src/controls/slider.rs`
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.material.roughness`, `imui-editor-proof.editor.material.metallic`)
   - [x] Proof demo model helpers are keyed by stable names (avoid accidental model sharing across fields).
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`named_demo_state`)
 - [~] Add a reusable `TextField` control surface:
-  - single-line + multi-line
-  - password mode (masking + copy policy)
-  - optional clear button + completion/history hook placeholders
+  - [x] single-line + multi-line
+  - [x] joined input-group chrome (frame + segments; avoids style drift)
+  - [x] optional clear button (+ stable `clear_test_id`)
+  - [ ] password mode (masking + copy policy)
+  - [ ] completion/history hook placeholders
   - Evidence: `ecosystem/fret-ui-editor/src/controls/text_field.rs`
 
 ### M3 — Core editor controls (Color / Vec / Transform / Asset refs)
@@ -195,7 +208,9 @@ adding new runtime contracts unless evidence demands it.
 - [x] `Vec2Edit` / `Vec3Edit` / `Vec4Edit` (built on `DragValue<T>`):
   - [x] axis labels + axis color tokens
   - [x] per-axis reset hooks
-  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `ecosystem/fret-ui-editor/src/controls/drag_value.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
+  - [x] responsive layout: auto-stack axes vertically in narrow inspectors (token: `editor.vec.auto_stack_below`)
+  - [x] per-instance internal state keying (`id_source` or default `(callsite, model ids)`) to prevent cross-widget interference
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `ecosystem/fret-ui-editor/src/theme.rs`, `ecosystem/fret-ui-editor/src/controls/drag_value.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
 - [~] `TransformEdit` (position/rotation/scale composite):
   - [x] layout variants (row/column)
   - [x] link scale toggle (optional)
@@ -206,7 +221,9 @@ adding new runtime contracts unless evidence demands it.
 - [ ] `AssetRefField` (UI shell):
   - [ ] supports async loading states via optional query glue
   - [ ] does not define an asset system; caller supplies data and callbacks
-- [ ] `InspectorPanel` recipe (search + grid + toolbar slots).
+- [x] `InspectorPanel` recipe (search + grid + toolbar slots).
+  - Evidence: `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs`
+  - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
 
 Exit criteria:
 
@@ -216,11 +233,13 @@ Exit criteria:
 
 Goal: validate that editor primitives can scale to canvas-like controls without runtime changes.
 
-- [ ] `GradientEditor` spike:
-  - [ ] stop list + drag stop position
-  - [ ] stop color edit reuse (`ColorEdit`)
-  - [ ] angle edit reuse (`DragValue`)
-- [ ] Identify what this spike forces on other ecosystems (tokens/slots/hooks).
+- [x] `GradientEditor` spike (v1 composition proof):
+  - [x] stop list + stop position editing (via `DragValue`)
+  - [x] stop color edit reuse (`ColorEdit`)
+  - [x] angle edit reuse (`DragValue`)
+  - Evidence: `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs`
+  - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.gradient.*`, `imui-editor-proof.editor.gradient.add-stop`)
+- [ ] Identify what this spike forces on other ecosystems (tokens/slots/hooks) beyond existing editor tokens.
 
 Exit criteria:
 

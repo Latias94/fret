@@ -11,18 +11,13 @@ pub struct ViewGizmoLabel {
     pub color: Color,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ViewGizmoAnchor {
     TopLeft,
+    #[default]
     TopRight,
     BottomLeft,
     BottomRight,
-}
-
-impl Default for ViewGizmoAnchor {
-    fn default() -> Self {
-        Self::TopRight
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -816,16 +811,16 @@ fn faces_for_snap(snap: ViewGizmoSnap) -> Vec<ViewGizmoFace> {
         }
     };
 
-    for axis in 0..3 {
-        if let Some(face) = face_for(axis, local[axis]) {
+    for (axis, &sign) in local.iter().enumerate() {
+        if let Some(face) = face_for(axis, sign) {
             out.push(face);
         }
     }
 
-    if out.is_empty() {
-        if let Some(face) = snap.face() {
-            out.push(face);
-        }
+    if out.is_empty()
+        && let Some(face) = snap.face()
+    {
+        out.push(face);
     }
 
     out
@@ -917,8 +912,10 @@ mod tests {
     }
 
     fn centered_gizmo(viewport: ViewportRect) -> ViewGizmo {
-        let mut cfg = ViewGizmoConfig::default();
-        cfg.anchor = ViewGizmoAnchor::TopLeft;
+        let mut cfg = ViewGizmoConfig {
+            anchor: ViewGizmoAnchor::TopLeft,
+            ..Default::default()
+        };
         let half = cfg.size_px.max(1.0) * 0.5;
         let desired_center = viewport.min + viewport.size * 0.5;
         cfg.margin_px = desired_center - Vec2::splat(half);

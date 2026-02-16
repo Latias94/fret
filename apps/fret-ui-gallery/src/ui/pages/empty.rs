@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -23,48 +24,6 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             (search_query, rtl_search_query)
         }
     };
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(820.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
 
     let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
         shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
@@ -99,7 +58,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
         .test_id("ui-gallery-empty-demo");
-        section_card(cx, "Demo", empty)
+        empty
     };
 
     let outline = {
@@ -126,7 +85,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
         .test_id("ui-gallery-empty-outline");
-        section_card(cx, "Outline", empty)
+        empty
     };
 
     let background = {
@@ -156,7 +115,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
         .test_id("ui-gallery-empty-background");
-        section_card(cx, "Background", empty)
+        empty
     };
 
     let avatar = {
@@ -184,7 +143,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)
         .test_id("ui-gallery-empty-avatar");
 
-        section_card(cx, "Avatar", empty)
+        empty
     };
 
     let avatar_group = {
@@ -229,7 +188,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)
         .test_id("ui-gallery-empty-avatar-group");
 
-        section_card(cx, "Avatar Group", empty)
+        empty
     };
 
     let input_group = {
@@ -261,7 +220,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)
         .test_id("ui-gallery-empty-input-group");
 
-        section_card(cx, "InputGroup", empty)
+        empty
     };
 
     let rtl = {
@@ -299,99 +258,17 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         )
         .test_id("ui-gallery-empty-rtl");
 
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Empty docs order: Demo, Outline, Background, Avatar, Avatar Group, InputGroup, RTL.",
-                ),
-                demo,
-                outline,
-                background,
-                avatar,
-                avatar_group,
-                input_group,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-empty-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Basic Empty").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"shadcn::Empty::new([
-    shadcn::empty::EmptyHeader::new([
-        shadcn::empty::EmptyMedia::new([icon]).variant(shadcn::empty::EmptyMediaVariant::Icon).into_element(cx),
-        shadcn::empty::EmptyTitle::new("No data").into_element(cx),
-        shadcn::empty::EmptyDescription::new("No data found").into_element(cx),
-    ]).into_element(cx),
-    shadcn::empty::EmptyContent::new([
-        shadcn::Button::new("Create").into_element(cx),
-    ]).into_element(cx),
-]).into_element(cx);"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Avatar Group + InputGroup").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"let avatars = stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |cx| {
-    vec![avatar_a, avatar_b, avatar_c]
-});
-
-let search = shadcn::InputGroup::new(query)
-    .leading([shadcn::InputGroupText::new("Search").into_element(cx)])
-    .trailing([shadcn::InputGroupText::new("/").into_element(cx)])
-    .into_element(cx);"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
@@ -407,13 +284,42 @@ let search = shadcn::InputGroup::new(query)
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-empty",
-        component_panel,
-        code_panel,
-        notes_panel,
+        Some(
+            "Preview follows shadcn Empty docs order: Demo, Outline, Background, Avatar, Avatar Group, InputGroup, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("A primary empty state with actions and a secondary link.")
+                .code(
+                    "rust",
+                    r#"let empty = shadcn::Empty::new([header, content]).into_element(cx);"#,
+                ),
+            DocSection::new("Outline", outline)
+                .description("Outlined empty state for low-emphasis surfaces."),
+            DocSection::new("Background", background)
+                .description("Muted background recipe for empty states embedded in cards."),
+            DocSection::new("Avatar", avatar)
+                .description("Empty state media can be an avatar instead of an icon."),
+            DocSection::new("Avatar Group", avatar_group)
+                .description("Media can also be a composed row of avatars."),
+            DocSection::new("InputGroup", input_group)
+                .description("Empty states can include search inputs and trailing affordances.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(query)
+    .leading([shadcn::InputGroupText::new("Search").into_element(cx)])
+    .trailing([shadcn::InputGroupText::new("/").into_element(cx)]);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .description("Empty layout should follow right-to-left direction context."),
+            DocSection::new("Notes", notes)
+                .description("Implementation notes and regression guidelines."),
+        ],
     )
+    .test_id("ui-gallery-empty-component");
+
+    vec![body]
 }

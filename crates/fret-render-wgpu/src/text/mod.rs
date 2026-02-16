@@ -5292,8 +5292,10 @@ mod tests {
             .or_else(|| names.first().cloned())
             .expect("expected at least one system font family name");
 
-        let mut config = fret_core::TextFontFamilyConfig::default();
-        config.ui_sans = vec![requested.clone()];
+        let config = fret_core::TextFontFamilyConfig {
+            ui_sans: vec![requested.clone()],
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config);
 
         let requested_id = text
@@ -8072,23 +8074,27 @@ mod tests {
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
 
-        let mut config0 = fret_core::TextFontFamilyConfig::default();
-        config0.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
-        config0.ui_sans = vec!["  Inter  ".to_string()];
-        config0.common_fallback = vec![
-            " Noto Color Emoji ".to_string(),
-            "Noto Sans CJK SC".to_string(),
-        ];
+        let config0 = fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+            ui_sans: vec!["  Inter  ".to_string()],
+            common_fallback: vec![
+                " Noto Color Emoji ".to_string(),
+                "Noto Sans CJK SC".to_string(),
+            ],
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config0);
         let key0 = text.fallback_policy.fallback_policy_key;
 
-        let mut config1 = fret_core::TextFontFamilyConfig::default();
-        config1.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
-        config1.ui_sans = vec!["inter".to_string()];
-        config1.common_fallback = vec![
-            "noto color emoji".to_string(),
-            "  noto sans cjk sc  ".to_string(),
-        ];
+        let config1 = fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+            ui_sans: vec!["inter".to_string()],
+            common_fallback: vec![
+                "noto color emoji".to_string(),
+                "  noto sans cjk sc  ".to_string(),
+            ],
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config1);
         let key1 = text.fallback_policy.fallback_policy_key;
 
@@ -8103,8 +8109,10 @@ mod tests {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
 
-        let mut config0 = fret_core::TextFontFamilyConfig::default();
-        config0.common_fallback_injection = fret_core::TextCommonFallbackInjection::PlatformDefault;
+        let config0 = fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::PlatformDefault,
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config0);
         let snap0 = text.fallback_policy_snapshot(fret_core::FrameId(1));
         assert!(
@@ -8120,8 +8128,10 @@ mod tests {
             "expected no explicit common fallback candidates when prefer_common_fallback=false"
         );
 
-        let mut config1 = fret_core::TextFontFamilyConfig::default();
-        config1.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
+        let config1 = fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+            ..Default::default()
+        };
         let changed = text.set_font_families(&config1);
         assert!(
             changed,

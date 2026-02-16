@@ -48,14 +48,16 @@ fn tanstack_v8_memo_rebuild_each_frame_guardrail_sorted_flat_row_order_ignores_p
 
     let mut cache = TanStackSortedFlatRowOrderCache::default();
 
-    let mut state = TableState::default();
-    state.sorting = vec![SortSpec {
-        column: "name".into(),
-        desc: false,
-    }];
-    state.pagination = PaginationState {
-        page_index: 0,
-        page_size: 1,
+    let mut state = TableState {
+        sorting: vec![SortSpec {
+            column: "name".into(),
+            desc: false,
+        }],
+        pagination: PaginationState {
+            page_index: 0,
+            page_size: 1,
+        },
+        ..Default::default()
     };
 
     let table = Table::builder(&data)
@@ -116,11 +118,13 @@ fn tanstack_v8_memo_rebuild_each_frame_guardrail_ungrouped_row_model_order_recom
 
     let mut cache = TanStackUngroupedRowModelOrderCache::default();
 
-    let mut state = TableState::default();
-    state.expanding = [RowKey(1)].into_iter().collect();
-    state.pagination = PaginationState {
-        page_index: 0,
-        page_size: 1,
+    let mut state = TableState {
+        expanding: [RowKey(1)].into_iter().collect(),
+        pagination: PaginationState {
+            page_index: 0,
+            page_size: 1,
+        },
+        ..Default::default()
     };
 
     // Stable rebuilds do not recompute.

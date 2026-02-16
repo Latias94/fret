@@ -4,7 +4,7 @@ use std::sync::Arc;
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
 use fret_genui_core::render::{
-    ComponentResolver, GenUiActionQueue, GenUiRuntime, RenderLimits, render_spec,
+    ComponentResolver, GenUiActionQueue, GenUiRuntime, RenderLimits, RenderedChildV1, render_spec,
 };
 use fret_genui_core::spec::{ElementKey, ElementV1, SpecV1};
 use fret_genui_core::validate::ValidationMode;
@@ -44,9 +44,10 @@ impl<H: UiHost> ComponentResolver<H> for TestResolver {
         _key: &ElementKey,
         element: &ElementV1,
         props: &fret_genui_core::props::ResolvedProps,
-        children: Vec<AnyElement>,
+        children: Vec<RenderedChildV1>,
         on_event: &dyn Fn(&str) -> Option<OnActivate>,
     ) -> Result<AnyElement, Self::Error> {
+        let children: Vec<AnyElement> = children.into_iter().map(|c| c.rendered).collect();
         match element.ty.as_str() {
             "Button" => {
                 let label = props

@@ -126,6 +126,40 @@ pub(crate) fn resolve_editor_text_input_style(
     (chrome, text_style)
 }
 
+pub(crate) fn joined_text_input_style(mut chrome: TextInputStyle) -> TextInputStyle {
+    chrome.padding = Edges::all(Px(0.0));
+    chrome.border = Edges::all(Px(0.0));
+    chrome.corner_radii = Corners::all(Px(0.0));
+    chrome.background = Color {
+        a: 0.0,
+        ..chrome.background
+    };
+    chrome.border_color = Color {
+        a: 0.0,
+        ..chrome.border_color
+    };
+    chrome.border_color_focused = chrome.border_color;
+    chrome.focus_ring = None;
+    chrome
+}
+
+pub(crate) fn joined_text_area_style(mut chrome: TextAreaStyle) -> TextAreaStyle {
+    chrome.padding_x = Px(0.0);
+    chrome.padding_y = Px(0.0);
+    chrome.border = Edges::all(Px(0.0));
+    chrome.corner_radii = Corners::all(Px(0.0));
+    chrome.background = Color {
+        a: 0.0,
+        ..chrome.background
+    };
+    chrome.border_color = Color {
+        a: 0.0,
+        ..chrome.border_color
+    };
+    chrome.focus_ring = None;
+    chrome
+}
+
 pub(crate) fn resolve_editor_text_area_style(
     theme: &Theme,
     size: Size,

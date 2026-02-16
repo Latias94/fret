@@ -49,8 +49,7 @@ impl DataZoomYNode {
             return None;
         }
 
-        let mut indices: Vec<u32> = Vec::new();
-        indices.reserve(view_len.min(4096));
+        let mut indices: Vec<u32> = Vec::with_capacity(view_len.min(4096));
 
         let mut kept = 0usize;
         for view_index in 0..view_len {

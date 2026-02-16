@@ -248,6 +248,7 @@ pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     semantics_test_id: Option<&'static str>,
     diag_env_enabled: bool,
+    allow_multi_window_tear_off: bool,
     last_bounds: Rect,
     prepaint_wants_animation_frames: bool,
     dock_drop_resolve_diagnostics: Option<fret_runtime::DockDropResolveDiagnostics>,
@@ -357,6 +358,7 @@ impl DockSpace {
             window,
             semantics_test_id: None,
             diag_env_enabled,
+            allow_multi_window_tear_off: false,
             last_bounds: Rect::default(),
             prepaint_wants_animation_frames: false,
             dock_drop_resolve_diagnostics: None,
@@ -423,6 +425,11 @@ impl DockSpace {
             last_active_tabs: None,
             hovered_float_zone: false,
         }
+    }
+
+    pub fn with_allow_multi_window_tear_off(mut self, allow: bool) -> Self {
+        self.allow_multi_window_tear_off = allow;
+        self
     }
 
     fn prefers_reduced_motion<H: UiHost>(app: &H, window: fret_core::AppWindowId) -> bool {
@@ -1743,6 +1750,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             active: usize,
             grab_offset: Point,
             start_tick: fret_runtime::TickId,
+            tear_off_oob_start_frame: Option<fret_runtime::FrameId>,
             dock_previews_enabled: bool,
         }
 
@@ -1832,18 +1840,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             // Reduce preview flicker: only show/allow docking previews when hovering over a
             // tab bar or one of the hint-pad rectangles (inner/outer).
-            if let Some(&root_rect) = layout.get(&root)
-                && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
-                && root != leaf_tabs
-                && let Some(zone) = super::layout::dock_hint_pick_zone(
-                    root_rect,
-                    hint_font_size_outer,
-                    true,
-                    position,
-                )
-                && zone != DropZone::Center
-            {
-                if let Some(candidates) = candidates.as_deref_mut() {
+            //
+            // Diagnostics note: always publish the hint-pad rectangles as candidates when
+            // possible, even if the current pointer position does not currently select a hint.
+            // This keeps bundle triage explainable and makes scripted repro adjustments easier.
+            if let Some(candidates) = candidates.as_deref_mut() {
+                if let Some(&root_rect) = layout.get(&root) {
                     candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                         kind: fret_runtime::DockDropCandidateRectKind::RootRect,
                         zone: None,
@@ -1861,6 +1863,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         });
                     }
                 }
+                if let Some((_tabs_node, rect, _tab_count)) = leaf {
+                    for (z, r) in
+                        super::layout::dock_hint_rects_with_font(rect, hint_font_size_inner, false)
+                    {
+                        candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                            kind: fret_runtime::DockDropCandidateRectKind::InnerHintRect,
+                            zone: Some(z),
+                            rect: r,
+                        });
+                    }
+                }
+            }
+
+            if let Some(&root_rect) = layout.get(&root)
+                && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
+                && root != leaf_tabs
+                && let Some(zone) = super::layout::dock_hint_pick_zone(
+                    root_rect,
+                    hint_font_size_outer,
+                    true,
+                    position,
+                )
+                && zone != DropZone::Center
+            {
                 return Some((
                     HoverTarget {
                         tabs: root,
@@ -1879,17 +1905,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 && let Some(zone) =
                     super::layout::dock_hint_pick_zone(rect, hint_font_size_inner, false, position)
             {
-                if let Some(candidates) = candidates.as_deref_mut() {
-                    for (z, r) in
-                        super::layout::dock_hint_rects_with_font(rect, hint_font_size_inner, false)
-                    {
-                        candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
-                            kind: fret_runtime::DockDropCandidateRectKind::InnerHintRect,
-                            zone: Some(z),
-                            rect: r,
-                        });
-                    }
-                }
                 return Some((
                     HoverTarget {
                         tabs: tabs_node,
@@ -2310,7 +2325,25 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
                     }
                 }
-                None => DockDropIntent::None,
+                None => {
+                    let wants_tear_off = allow_tear_off && !window_bounds.contains(position);
+                    if wants_tear_off {
+                        if drag.tear_off_requested || mark_drag_tear_off_requested {
+                            DockDropIntent::None
+                        } else {
+                            DockDropIntent::RequestFloatPanelToNewWindow {
+                                source_window: drag.source_window,
+                                panel: drag.panel.clone(),
+                                anchor: Some(fret_core::WindowAnchor {
+                                    window: target_window,
+                                    position: drag.grab_offset,
+                                }),
+                            }
+                        }
+                    } else {
+                        DockDropIntent::None
+                    }
+                }
             }
         }
 
@@ -2487,6 +2520,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     active: p.active,
                     grab_offset: p.grab_offset,
                     start_tick: p.start_tick,
+                    tear_off_oob_start_frame: p.tear_off_oob_start_frame,
                     dock_previews_enabled: p.dock_previews_enabled,
                 })
             })
@@ -2532,7 +2566,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
             .is_some();
 
-        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point)> = None;
+        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point, bool)> = None;
         let mut start_dock_tabs_drag: Option<(Point, DockTabsDragPayload, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
         let mut end_dock_drag = false;
@@ -2592,6 +2626,38 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 let docking_policy = app
                     .global::<DockingPolicyService>()
                     .and_then(|svc| svc.policy());
+
+                let allow_tear_off_for_panel =
+                    |source_window: fret_core::AppWindowId, panel: &PanelKey| -> bool {
+                        if !allow_tear_off {
+                            return false;
+                        }
+
+                        // Avoid creating chains of empty one-panel windows once docking is already
+                        // in a multi-window session. Moving the only panel out of a window should
+                        // behave like a cross-window drag/drop (or window move), not a new tear-off.
+                        if dock.graph.windows().len() > 1
+                            && dock.graph.collect_panels_in_window(source_window).len() == 1
+                        {
+                            return false;
+                        }
+
+                        let info = dock.panels.get(panel);
+                        let policy_allows = docking_policy.as_deref().is_none_or(|policy| {
+                            policy.allow_tear_off(source_window, panel, info)
+                        });
+                        if !policy_allows {
+                            return false;
+                        }
+
+                        if dock.graph.windows().len() <= 1 || self.allow_multi_window_tear_off {
+                            return true;
+                        }
+
+                        docking_policy.as_deref().is_some_and(|policy| {
+                            policy.allow_multi_window_tear_off(source_window, panel, info)
+                        })
+                    };
 
                 match event {
                     fret_core::Event::Pointer(p) => match p {
@@ -3348,6 +3414,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         let wants_dock_previews = docking_interaction_settings
                                             .drag_inversion
                                             .wants_dock_previews(*modifiers);
+                                        let last_tab_in_source_tabs = dock
+                                            .graph
+                                            .find_panel_in_window(self.window, &pending.panel)
+                                            .and_then(|(tabs_node, _)| match dock.graph.node(tabs_node)
+                                            {
+                                                Some(DockNode::Tabs { tabs, .. }) => Some(tabs.len() == 1),
+                                                _ => None,
+                                            })
+                                            .unwrap_or(false);
+                                        let follow_window =
+                                            dock.graph.windows().len() > 1 && last_tab_in_source_tabs;
                                         if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
                                             .is_some_and(|v| !v.is_empty())
                                         {
@@ -3377,6 +3454,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
+                                            follow_window,
                                         ));
                                         request_pointer_capture = Some(None);
                                     }
@@ -3425,6 +3503,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 active,
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
+                                                tear_off_requested: false,
+                                                tear_off_oob_start_frame: None,
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
@@ -4143,16 +4223,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                                         let intent = match drag {
                                             DockDragSnapshot::Panel(drag) => {
-                                                let allow_tear_off = allow_tear_off
-                                                    && docking_policy.as_deref().is_none_or(
-                                                        |policy| {
-                                                            policy.allow_tear_off(
-                                                                drag.source_window,
-                                                                &drag.panel,
-                                                                dock.panels.get(&drag.panel),
-                                                            )
-                                                        },
-                                                    );
+                                                let allow_tear_off = allow_tear_off_for_panel(
+                                                    drag.source_window,
+                                                    &drag.panel,
+                                                );
                                                 resolve_dock_drop_intent_panel(
                                                     target,
                                                     drag,
@@ -4321,19 +4395,24 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     && drag
                                                         .tear_off_oob_start_frame
                                                         .is_some_and(|f| f != now_frame);
-                                                let allow_tear_off = allow_tear_off
-                                                    && docking_policy.as_deref().is_none_or(
-                                                        |policy| {
-                                                            policy.allow_tear_off(
-                                                                drag.source_window,
-                                                                &drag.panel,
-                                                                dock.panels.get(&drag.panel),
-                                                            )
-                                                        },
-                                                    );
+                                                let disallow_chained_tear_off =
+                                                    dock.graph.windows().len() > 1
+                                                        && dock
+                                                            .graph
+                                                            .collect_panels_in_window(self.window)
+                                                            .len()
+                                                            == 1;
+                                                let allow_tear_off = allow_tear_off_for_panel(
+                                                    drag.source_window,
+                                                    &drag.panel,
+                                                );
                                                 let requested_tear_off = allow_tear_off
                                                     && drag.source_window == self.window
                                                     && stable_oob
+                                                    // Avoid creating chains of empty 1-panel windows when already in a multi-window
+                                                    // session. Dragging the only panel out of a window should behave like a
+                                                    // cross-window drag / window move, not a new tear-off.
+                                                    && !disallow_chained_tear_off
                                                     && !drag.tear_off_requested
                                                     && !mark_drag_tear_off_requested;
 
@@ -4357,7 +4436,37 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                                                 requested_tear_off
                                             }
-                                            DockDragSnapshot::Tabs(_) => false,
+                                            DockDragSnapshot::Tabs(drag) => {
+                                                let margin = Px(10.0);
+                                                let oob = is_outside_bounds_with_margin(
+                                                    window_bounds,
+                                                    position,
+                                                    margin,
+                                                );
+                                                if allow_tear_off && drag.source_window == self.window
+                                                {
+                                                    match (oob, drag.tear_off_oob_start_frame) {
+                                                        (true, None) => {
+                                                            set_drag_tear_off_oob_start_frame =
+                                                                Some(Some(now_frame));
+                                                        }
+                                                        (false, Some(_)) => {
+                                                            set_drag_tear_off_oob_start_frame =
+                                                                Some(None);
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                }
+
+                                                let _stable_oob = oob
+                                                    && drag
+                                                        .tear_off_oob_start_frame
+                                                        .is_some_and(|f| f != now_frame);
+                                                // Dragging a tab group's title bar should not request a new OS window.
+                                                // Use a panel drag (single tab) to tear-off; group drags remain "move/cross-window"
+                                                // interactions (ImGui-style).
+                                                false
+                                            }
                                         };
 
                                         if !requested_tear_off {
@@ -4531,16 +4640,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
                                         let intent = match drag {
                                             DockDragSnapshot::Panel(drag) => {
-                                                let allow_tear_off = allow_tear_off
-                                                    && docking_policy.as_deref().is_none_or(
-                                                        |policy| {
-                                                            policy.allow_tear_off(
-                                                                drag.source_window,
-                                                                &drag.panel,
-                                                                dock.panels.get(&drag.panel),
-                                                            )
-                                                        },
-                                                    );
+                                                let allow_tear_off = allow_tear_off_for_panel(
+                                                    drag.source_window,
+                                                    &drag.panel,
+                                                );
                                                 resolve_dock_drop_intent_panel(
                                                     target,
                                                     drag,
@@ -4657,7 +4760,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             request_focus = panel_nodes.get(&panel).copied();
         }
 
-        if let Some((start, payload, position)) = start_dock_drag {
+        if let Some((start, payload, position, follow_window)) = start_dock_drag {
+            let grab_offset = payload.grab_offset;
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_PANEL,
@@ -4668,9 +4772,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
                 drag.position = position;
                 drag.dragging = true;
+                drag.cursor_grab_offset = Some(grab_offset);
+                if follow_window {
+                    drag.follow_window = Some(self.window);
+                }
             }
         }
         if let Some((start, payload, position)) = start_dock_tabs_drag {
+            let grab_offset = payload.grab_offset;
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_TABS,
@@ -4681,6 +4790,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
                 drag.position = position;
                 drag.dragging = true;
+                drag.cursor_grab_offset = Some(grab_offset);
             }
         }
 
@@ -4699,6 +4809,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
             drag.position = position;
             drag.dragging = dragging;
             if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
+                if mark_drag_tear_off_requested {
+                    payload.tear_off_requested = true;
+                    payload.tear_off_oob_start_frame = None;
+                }
+                if let Some(next) = set_drag_tear_off_oob_start_frame {
+                    payload.tear_off_oob_start_frame = next;
+                }
+            } else if let Some(payload) = drag.payload_mut::<DockTabsDragPayload>() {
                 if mark_drag_tear_off_requested {
                     payload.tear_off_requested = true;
                     payload.tear_off_oob_start_frame = None;
@@ -4860,7 +4978,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         };
         let now_tick = cx.app.tick_id();
         let now_frame = cx.app.frame_id();
-        let allow_split_motion = self.divider_drag.is_none();
+        let allow_split_motion = self.divider_drag.is_none()
+            && frame_delta.is_some_and(|dt| dt >= std::time::Duration::from_millis(1));
 
         fret_ui::internal_drag::set_route(
             cx.app,
@@ -5091,7 +5210,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         };
         let now_tick = cx.app.tick_id();
         let now_frame = cx.app.frame_id();
-        let allow_split_motion = self.divider_drag.is_none();
+        let allow_split_motion = self.divider_drag.is_none()
+            && frame_delta.is_some_and(|dt| dt >= std::time::Duration::from_millis(1));
         let (split_overrides, split_motion_active) = cx
             .app
             .global::<DockManager>()

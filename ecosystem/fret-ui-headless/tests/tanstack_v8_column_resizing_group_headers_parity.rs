@@ -90,11 +90,11 @@ struct FixtureExpect {
 #[serde(tag = "type")]
 enum FixtureAction {
     #[serde(rename = "columnResizeBegin")]
-    ColumnResizeBegin { column_id: String, client_x: f32 },
+    Begin { column_id: String, client_x: f32 },
     #[serde(rename = "columnResizeMove")]
-    ColumnResizeMove { client_x: f32 },
+    Move { client_x: f32 },
     #[serde(rename = "columnResizeEnd")]
-    ColumnResizeEnd { client_x: f32 },
+    End { client_x: f32 },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -276,12 +276,14 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
         let subset: TanStackStateSubset =
             serde_json::from_value(snap.state.clone()).expect("tanstack state subset");
 
-        let mut state = TableState::default();
-        state.column_order = subset
-            .column_order
-            .iter()
-            .map(|s| Arc::<str>::from(s.as_str()))
-            .collect();
+        let mut state = TableState {
+            column_order: subset
+                .column_order
+                .iter()
+                .map(|s| Arc::<str>::from(s.as_str()))
+                .collect(),
+            ..Default::default()
+        };
         if let Some(pin) = subset.column_pinning {
             state.column_pinning.left = pin
                 .left
@@ -301,7 +303,7 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
         let mut active_resize: Option<ColumnId> = None;
         for action in &snap.actions {
             match action {
-                FixtureAction::ColumnResizeBegin {
+                FixtureAction::Begin {
                     column_id,
                     client_x,
                 } => {
@@ -357,7 +359,7 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
                     );
                     active_resize = Some(Arc::<str>::from(column_id.as_str()));
                 }
-                FixtureAction::ColumnResizeMove { client_x } => {
+                FixtureAction::Move { client_x } => {
                     assert!(
                         active_resize.is_some(),
                         "snapshot {} columnResizeMove without begin",
@@ -371,7 +373,7 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
                         *client_x,
                     );
                 }
-                FixtureAction::ColumnResizeEnd { client_x } => {
+                FixtureAction::End { client_x } => {
                     assert!(
                         active_resize.is_some(),
                         "snapshot {} columnResizeEnd without begin",

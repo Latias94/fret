@@ -1337,6 +1337,258 @@ fn dock_drag_tear_off_request_respects_policy() {
         "expected tear-off request to be blocked by policy, got: {effects:?}"
     );
 }
+
+#[test]
+fn dock_drag_does_not_request_tear_off_in_multi_window_session_by_default() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(slotmap::KeyData::from_ffi(42));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window_b);
+
+    let root = ui.create_node_retained(DockSpace::new(window_b));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let a_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.a")],
+            active: 0,
+        });
+        let b_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.b")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_a, a_tabs);
+        dock.graph.set_window_root(window_b, b_tabs);
+
+        dock.panels.insert(
+            PanelKey::new("core.a"),
+            DockPanel {
+                title: "A".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            PanelKey::new("core.b"),
+            DockPanel {
+                title: "B".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    {
+        let dock = app.global::<DockManager>().expect("dock manager");
+        let windows = dock.graph.windows();
+        assert_eq!(
+            windows.len(),
+            2,
+            "expected a multi-window dock graph setup, got windows={windows:?}"
+        );
+    }
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window_b,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.b"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let outside = Point::new(Px(-32.0), Px(12.0));
+
+    // Frame N: first OOB hover should not request a tear-off yet (debounce).
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let _ = app.take_effects();
+
+    // Frame N+1: still OOB -> default policy still blocks chained tear-off in a multi-window session.
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.b")
+        )),
+        "expected no chained tear-off request in multi-window session by default, got: {effects:?}"
+    );
+
+    // Drop-time tear-off should also be gated in a multi-window session.
+    {
+        let dock = app.global::<DockManager>().expect("dock manager");
+        assert!(
+            dock.graph.windows().len() > 1,
+            "expected multi-window session before drop"
+        );
+        assert_eq!(
+            dock.graph.collect_panels_in_window(window_b).len(),
+            1,
+            "expected window_b to contain a single panel before drop"
+        );
+    }
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.b")
+        )),
+        "expected no tear-off request on drop in multi-window session by default, got: {effects:?}"
+    );
+}
+
+#[test]
+fn dock_drag_can_request_tear_off_in_multi_window_session_when_enabled() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(slotmap::KeyData::from_ffi(42));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window_a);
+
+    let root =
+        ui.create_node_retained(DockSpace::new(window_a).with_allow_multi_window_tear_off(true));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let a_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.a1"), PanelKey::new("core.a2")],
+            active: 0,
+        });
+        let b_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.b")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_a, a_tabs);
+        dock.graph.set_window_root(window_b, b_tabs);
+
+        for (key, title) in [
+            (PanelKey::new("core.a1"), "A1"),
+            (PanelKey::new("core.a2"), "A2"),
+            (PanelKey::new("core.b"), "B"),
+        ] {
+            dock.panels.insert(
+                key.clone(),
+                DockPanel {
+                    title: title.to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window_a,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.a1"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let outside = Point::new(Px(-32.0), Px(12.0));
+
+    // Frame N: first OOB hover should not request a tear-off yet (debounce).
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let _ = app.take_effects();
+
+    // Frame N+1: stable OOB -> request tear-off (explicitly enabled for multi-window sessions).
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.a1")
+        )),
+        "expected multi-window tear-off request when enabled, got: {effects:?}"
+    );
+}
 #[test]
 fn dock_drag_over_floating_title_bar_resolves_center_dock_target() {
     let window = AppWindowId::default();

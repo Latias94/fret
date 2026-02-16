@@ -1,6 +1,6 @@
 ---
 name: fret-skill-evolution
-description: "Capture reusable Fret learnings as agent skills: turn fixes into repeatable workflows by writing/refreshing skills, adding invariant tests, and adding `fretboard diag` scripted repro gates. Use after resolving a tricky bug or discovering a new stable pattern."
+description: "This skill should be used when the user asks to \"turn a fix into a skill\", \"capture reusable learnings\", \"write/refresh a Fret skill\", or \"add a regression gate + evidence\". Provides a workflow to convert tricky fixes into repeatable skills with tests/diag scripts and evidence anchors."
 ---
 
 # Fret skill evolution (capture learnings)
@@ -94,9 +94,13 @@ Keep SKILL bodies short. Prefer “just enough workflow” + evidence anchors.
 
 ## Quality bar (do this every time)
 
+- Ensure frontmatter triggers are strong (concrete “should be used when …” phrases; avoid vague summaries).
+- Keep `SKILL.md` procedural and lean; move deep details into `references/`.
+- Avoid duplication: pick one “owner skill” per concept and link from others.
 - Prefer the **smallest** reproducible target (UI gallery page or demo binary).
 - Prefer stable selectors (`test_id` / semantics) over pixel coordinates.
-- Land at least one “red-to-green” artifact: test, script, or parity gate.
+- Land at least one “red-to-green” artifact when appropriate: test, script, or parity gate.
+- Validate locally: `python3 .agents/skills/fret_skills.py validate --strict`
 
 ## Definition of done (what to leave behind)
 

@@ -41,37 +41,37 @@ pub fn auto_fix_spec(spec: &SpecV1) -> (SpecV1, SpecFixups) {
 fn auto_fix_element(element: &mut ElementV1, fixups: &mut SpecFixups) -> usize {
     let mut moved: usize = 0;
 
-    if let Some(v) = element.props.get("visible").cloned() {
-        if let Ok(cond) = serde_json::from_value::<VisibilityConditionV1>(v) {
-            element.visible = Some(cond);
-            let _ = element.props.remove("visible");
-            moved = moved.saturating_add(1);
-            fixups
-                .fixes
-                .push("Moved \"visible\" from props to element level.".to_string());
-        }
+    if let Some(v) = element.props.get("visible").cloned()
+        && let Ok(cond) = serde_json::from_value::<VisibilityConditionV1>(v)
+    {
+        element.visible = Some(cond);
+        let _ = element.props.remove("visible");
+        moved = moved.saturating_add(1);
+        fixups
+            .fixes
+            .push("Moved \"visible\" from props to element level.".to_string());
     }
 
-    if let Some(v) = element.props.get("on").cloned() {
-        if let Ok(on) = parse_on(v) {
-            element.on = Some(on);
-            let _ = element.props.remove("on");
-            moved = moved.saturating_add(1);
-            fixups
-                .fixes
-                .push("Moved \"on\" from props to element level.".to_string());
-        }
+    if let Some(v) = element.props.get("on").cloned()
+        && let Ok(on) = parse_on(v)
+    {
+        element.on = Some(on);
+        let _ = element.props.remove("on");
+        moved = moved.saturating_add(1);
+        fixups
+            .fixes
+            .push("Moved \"on\" from props to element level.".to_string());
     }
 
-    if let Some(v) = element.props.get("repeat").cloned() {
-        if let Ok(repeat) = serde_json::from_value::<RepeatV1>(v) {
-            element.repeat = Some(repeat);
-            let _ = element.props.remove("repeat");
-            moved = moved.saturating_add(1);
-            fixups
-                .fixes
-                .push("Moved \"repeat\" from props to element level.".to_string());
-        }
+    if let Some(v) = element.props.get("repeat").cloned()
+        && let Ok(repeat) = serde_json::from_value::<RepeatV1>(v)
+    {
+        element.repeat = Some(repeat);
+        let _ = element.props.remove("repeat");
+        moved = moved.saturating_add(1);
+        fixups
+            .fixes
+            .push("Moved \"repeat\" from props to element level.".to_string());
     }
 
     moved

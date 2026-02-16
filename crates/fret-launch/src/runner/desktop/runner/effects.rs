@@ -14,7 +14,7 @@ use fret_platform::file_dialog::FileDialogProvider as _;
 use fret_platform::open_url::OpenUrl as _;
 use fret_platform_native::external_drop::NativeExternalDrop;
 use fret_platform_native::file_dialog::NativeFileDialog;
-use fret_runtime::{PlatformCapabilities, PlatformCompletion};
+use fret_runtime::{PlatformCapabilities, PlatformCompletion, WindowClipboardDiagnosticsStore};
 use tracing::error;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowLevel;
@@ -478,10 +478,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         if safe_area_insets.is_some() || occlusion_insets.is_some() {
                             let entry =
                                 self.diag_window_insets_overrides.entry(window).or_default();
-                            if let Some(value) = safe_area_insets.clone() {
+                            if let Some(value) = safe_area_insets {
                                 entry.safe_area_insets = Some(value);
                             }
-                            if let Some(value) = occlusion_insets.clone() {
+                            if let Some(value) = occlusion_insets {
                                 entry.occlusion_insets = Some(value);
                             }
                         }
@@ -518,11 +518,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
                             },
                         );
-                        if changed {
-                            if let Some(state) = self.windows.get(window) {
-                                state.window.request_redraw();
-                                self.raf_windows.insert(window);
-                            }
+                        if changed && let Some(state) = self.windows.get(window) {
+                            state.window.request_redraw();
+                            self.raf_windows.insert(window);
                         }
                     }
                     Effect::CursorSetIcon { window, icon } => {
@@ -726,8 +724,33 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         );
                     }
                     Effect::ClipboardSetText { text } => {
-                        if let Err(err) = self.clipboard.set_text(&text) {
-                            tracing::debug!(?err, "failed to set clipboard text");
+                        let window = self.main_window.or_else(|| self.windows.keys().next());
+                        let Some(window) = window else {
+                            continue;
+                        };
+
+                        match self.clipboard.set_text(&text) {
+                            Ok(()) => {
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_ok(window, self.frame_id);
+                                    },
+                                );
+                            }
+                            Err(err) => {
+                                tracing::debug!(?err, "failed to set clipboard text");
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_unavailable(
+                                            window,
+                                            self.frame_id,
+                                            Some(format!("{err:?}")),
+                                        );
+                                    },
+                                );
+                            }
                         }
                     }
                     Effect::ClipboardGetText { window, token } => {
@@ -1479,6 +1502,13 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         continue;
                                     }
                                 };
+                            if matches!(
+                                create.kind,
+                                CreateWindowKind::DockFloating { .. }
+                                    | CreateWindowKind::DockRestore { .. }
+                            ) {
+                                self.dock_floating_windows.insert(new_window);
+                            }
 
                             if let CreateWindowKind::DockFloating { source_window, .. } =
                                 &create.kind

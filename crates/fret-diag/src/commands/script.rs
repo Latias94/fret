@@ -9,6 +9,7 @@ use crate::shrink;
 use crate::stats::{ScriptResultSummary, run_script_and_wait};
 use crate::util::{touch, write_script};
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_script(
     rest: &[String],
     pack_after_run: bool,
@@ -61,7 +62,7 @@ pub(crate) fn cmd_script(
                 return Err("--check-out is not supported with `diag script normalize`".to_string());
             }
 
-            let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+            let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
                     "missing script path (try: fretboard diag script normalize ./script.json)"
@@ -124,7 +125,7 @@ pub(crate) fn cmd_script(
                 );
             }
 
-            let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+            let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
                     "missing script path (try: fretboard diag script validate ./script.json)"
@@ -164,7 +165,7 @@ pub(crate) fn cmd_script(
                 return Err("--check/--write are not supported with `diag script lint`".to_string());
             }
 
-            let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+            let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
                     "missing script path (try: fretboard diag script lint ./script.json)"
@@ -206,7 +207,7 @@ pub(crate) fn cmd_script(
                         .to_string(),
                 );
             }
-            let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+            let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
                     "missing script path (try: fretboard diag script shrink ./script.json)"

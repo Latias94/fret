@@ -99,7 +99,7 @@ impl DayMatcher {
             Self::Bool(v) => *v,
             Self::Predicate(p) => p(date),
             Self::Date(d) => *d == date,
-            Self::Dates(ds) => ds.iter().any(|d| *d == date),
+            Self::Dates(ds) => ds.contains(&date),
             Self::DateRange(r) => range_includes_date(*r, date, false),
             Self::DayOfWeek(days) => days.iter().any(|d| *d == date.weekday()),
             Self::DateInterval { before, after } => {
@@ -124,10 +124,10 @@ impl DayMatcher {
 pub fn range_includes_date(range: DateRangeSelection, date: Date, exclude_ends: bool) -> bool {
     let mut from = range.from;
     let mut to = range.to;
-    if let (Some(f), Some(t)) = (from, to) {
-        if t < f {
-            (from, to) = (Some(t), Some(f));
-        }
+    if let (Some(f), Some(t)) = (from, to)
+        && t < f
+    {
+        (from, to) = (Some(t), Some(f));
     }
 
     match (from, to) {
@@ -350,7 +350,7 @@ pub fn day_picker_select_multi(
     let min = min.unwrap_or(0);
     let max = max.unwrap_or(0);
 
-    let is_selected = current.iter().any(|d| *d == trigger);
+    let is_selected = current.contains(&trigger);
 
     if is_selected {
         if current.len() == min {
@@ -493,12 +493,7 @@ pub fn day_picker_add_to_range(
         && let (Some(f), Some(t)) = (r.from, r.to)
     {
         let diff_days = (t - f).whole_days();
-        if max_days > 0 && diff_days > max_days {
-            *r = DateRangeSelection {
-                from: Some(trigger),
-                to: None,
-            };
-        } else if min_days > 1 && diff_days < min_days {
+        if (max_days > 0 && diff_days > max_days) || (min_days > 1 && diff_days < min_days) {
             *r = DateRangeSelection {
                 from: Some(trigger),
                 to: None,

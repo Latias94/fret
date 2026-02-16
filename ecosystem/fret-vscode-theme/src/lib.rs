@@ -59,7 +59,7 @@ struct TokenRule {
     foreground: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 /// Options controlling how VS Code theme JSON is mapped into `ThemeConfig` syntax tokens.
 pub struct VscodeSyntaxImportOptions {
     /// Generate `color.syntax.<tag>` for every `fret-syntax` highlight tag.
@@ -67,14 +67,6 @@ pub struct VscodeSyntaxImportOptions {
     /// This is best-effort: tags without a matching VS Code scope remain unset and will fall back
     /// to Fret's built-in defaults (or whatever your base theme provides).
     pub generate_all_fret_syntax_tokens: bool,
-}
-
-impl Default for VscodeSyntaxImportOptions {
-    fn default() -> Self {
-        Self {
-            generate_all_fret_syntax_tokens: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

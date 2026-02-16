@@ -209,10 +209,12 @@ impl<M> InboxSender<M> {
 ///
 /// Register instances in `fret_runtime::InboxDrainRegistry` so runners can drain inboxes at a
 /// driver boundary (ADR 0175).
+type InboxDrainApply<M> = dyn Fn(&mut dyn InboxDrainHost, Option<AppWindowId>, M) + Send + Sync;
+
 pub struct InboxDrainer<M> {
     inbox: Inbox<M>,
     window_hint: Option<AppWindowId>,
-    apply: Arc<dyn Fn(&mut dyn InboxDrainHost, Option<AppWindowId>, M) + Send + Sync>,
+    apply: Arc<InboxDrainApply<M>>,
 }
 
 impl<M> InboxDrainer<M> {
@@ -496,7 +498,7 @@ pub trait FutureSpawner: Send + Sync + 'static {
     ///
     /// Returns `true` if the future was accepted/spawned.
     fn spawn_local(&self, fut: Pin<Box<dyn Future<Output = ()> + 'static>>) -> bool {
-        let _ = fut;
+        drop(fut);
         false
     }
 }

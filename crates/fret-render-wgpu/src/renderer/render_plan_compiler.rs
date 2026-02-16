@@ -247,9 +247,7 @@ fn compile_for_scene_inner(
                 .flatten();
             hash = mix_fnv1a(
                 hash,
-                mask_image
-                    .map(|sel| sel.image.data().as_ffi() as u64)
-                    .unwrap_or(0),
+                mask_image.map(|sel| sel.image.data().as_ffi()).unwrap_or(0),
             );
             hash = mix_fnv1a(
                 hash,

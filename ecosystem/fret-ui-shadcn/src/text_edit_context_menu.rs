@@ -26,6 +26,22 @@ pub fn text_edit_context_menu_entries() -> Vec<ContextMenuEntry> {
     ]
 }
 
+/// Returns standard non-editable text-selection context menu entries (Copy/Select All).
+///
+/// This is intended to be used with `ContextMenu` triggers that wrap non-editable text surfaces
+/// (e.g. `SelectableText` / `SelectableLabel`).
+pub fn text_selection_context_menu_entries() -> Vec<ContextMenuEntry> {
+    vec![
+        ContextMenuEntry::Item(
+            ContextMenuItem::new("Copy").on_select(CommandId::from("edit.copy")),
+        ),
+        ContextMenuEntry::Separator,
+        ContextMenuEntry::Item(
+            ContextMenuItem::new("Select All").on_select(CommandId::from("edit.select_all")),
+        ),
+    ]
+}
+
 /// Wraps a trigger element with a standard text-edit context menu.
 ///
 /// This is an opt-in helper: it does not change `Input` / `Textarea` default behavior.
@@ -53,6 +69,18 @@ pub fn text_edit_context_menu<H: UiHost>(
     ContextMenu::new(open).into_element(cx, trigger, |_cx| text_edit_context_menu_entries())
 }
 
+/// Wraps a trigger element with a standard text-selection context menu.
+///
+/// Use this for non-editable selectable text surfaces.
+#[track_caller]
+pub fn text_selection_context_menu<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+) -> AnyElement {
+    ContextMenu::new(open).into_element(cx, trigger, |_cx| text_selection_context_menu_entries())
+}
+
 /// Like [`text_edit_context_menu`], but supports controlled/uncontrolled open state.
 #[track_caller]
 pub fn text_edit_context_menu_controllable<H: UiHost>(
@@ -63,4 +91,16 @@ pub fn text_edit_context_menu_controllable<H: UiHost>(
 ) -> AnyElement {
     ContextMenu::new_controllable(cx, open, default_open)
         .into_element(cx, trigger, |_cx| text_edit_context_menu_entries())
+}
+
+/// Like [`text_selection_context_menu`], but supports controlled/uncontrolled open state.
+#[track_caller]
+pub fn text_selection_context_menu_controllable<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Option<Model<bool>>,
+    default_open: bool,
+    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+) -> AnyElement {
+    ContextMenu::new_controllable(cx, open, default_open)
+        .into_element(cx, trigger, |_cx| text_selection_context_menu_entries())
 }

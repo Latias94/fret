@@ -50,7 +50,7 @@ pub fn set_all_rows_expanded(expanded: &mut ExpandingState, expanded_value: bool
 }
 
 pub fn toggle_all_rows_expanded(expanded: &mut ExpandingState, expanded_value: Option<bool>) {
-    let next = expanded_value.unwrap_or_else(|| !matches!(expanded, ExpandingState::All));
+    let next = expanded_value.unwrap_or(!matches!(expanded, ExpandingState::All));
     set_all_rows_expanded(expanded, next);
 }
 

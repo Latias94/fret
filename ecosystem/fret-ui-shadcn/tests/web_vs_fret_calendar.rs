@@ -2075,15 +2075,23 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
     let web_prev_icon_opacity = web_prev_icon
         .computed_style
         .get("opacity")
-        .or_else(|| web_prev.computed_style.get("opacity"))
         .and_then(|v| v.parse::<f32>().ok())
-        .unwrap_or(1.0);
+        .unwrap_or(1.0)
+        * web_prev
+            .computed_style
+            .get("opacity")
+            .and_then(|v| v.parse::<f32>().ok())
+            .unwrap_or(1.0);
     let web_next_icon_opacity = web_next_icon
         .computed_style
         .get("opacity")
-        .or_else(|| web_next.computed_style.get("opacity"))
         .and_then(|v| v.parse::<f32>().ok())
-        .unwrap_or(1.0);
+        .unwrap_or(1.0)
+        * web_next
+            .computed_style
+            .get("opacity")
+            .and_then(|v| v.parse::<f32>().ok())
+            .unwrap_or(1.0);
 
     let expected_prev_icon = apply_opacity(web_prev_icon_color, web_prev_icon_opacity);
     let expected_next_icon = apply_opacity(web_next_icon_color, web_next_icon_opacity);

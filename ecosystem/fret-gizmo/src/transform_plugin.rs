@@ -17,7 +17,7 @@ impl TransformGizmoPlugin {
     }
 
     fn kind_for_handle(handle: HandleId) -> Option<GizmoMode> {
-        let group = (handle.local() >> 16) as u32;
+        let group = handle.local() >> 16;
         match group {
             1 => Some(GizmoMode::Translate),
             2 => Some(GizmoMode::Rotate),
@@ -208,9 +208,11 @@ mod tests {
 
     #[test]
     fn begin_can_progress_with_internal_drag_threshold_when_begin_is_repeated() {
-        let mut cfg = GizmoConfig::default();
-        cfg.mode = GizmoMode::Translate;
-        cfg.drag_start_threshold_px = 3.0;
+        let cfg = GizmoConfig {
+            mode: GizmoMode::Translate,
+            drag_start_threshold_px: 3.0,
+            ..Default::default()
+        };
 
         let mut plugin = TransformGizmoPlugin::new(Gizmo::new(cfg));
 
