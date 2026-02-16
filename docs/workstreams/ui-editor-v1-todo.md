@@ -206,7 +206,9 @@ adding new runtime contracts unless evidence demands it.
 - [ ] `AssetRefField` (UI shell):
   - [ ] supports async loading states via optional query glue
   - [ ] does not define an asset system; caller supplies data and callbacks
-- [ ] `InspectorPanel` recipe (search + grid + toolbar slots).
+- [x] `InspectorPanel` recipe (search + grid + toolbar slots).
+  - Evidence: `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs`
+  - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
 
 Exit criteria:
 

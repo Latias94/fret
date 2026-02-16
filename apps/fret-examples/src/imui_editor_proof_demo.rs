@@ -4,7 +4,7 @@ use std::sync::Arc;
 use fret::interop::embedded_viewport as embedded;
 use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Axis, Color, Edges, Px};
+use fret_core::{Color, Px};
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
     runtime as dock_runtime,
@@ -14,13 +14,15 @@ use fret_runtime::{
     ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
 };
-use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle};
-use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset};
+use fret_ui_editor::composites::{
+    InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyRow,
+    PropertyRowReset,
+};
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
-    EnumSelectOptions, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
-    NumericParseFn, NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions,
-    TransformEdit, TransformEditOptions, Vec3Edit,
+    EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn, NumericParseFn,
+    NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions, TransformEdit,
+    TransformEditOptions, Vec3Edit,
 };
 use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
 
@@ -264,80 +266,63 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                         }
                     });
 
-                    let query = cx
-                        .get_model_cloned(&editor_search_model, fret_ui::Invalidation::Layout)
-                        .unwrap_or_default();
-                    let q = query.trim().to_lowercase();
-                    let matches = |s: &str| q.is_empty() || s.to_lowercase().contains(&q);
+                    vec![InspectorPanel::new(Some(editor_search_model.clone()))
+                        .options(InspectorPanelOptions {
+                            test_id: Some(Arc::from("imui-editor-proof.editor.inspector")),
+                            header_test_id: Some(Arc::from(
+                                "imui-editor-proof.editor.inspector.header",
+                            )),
+                            search_test_id: Some(Arc::from("imui-editor-proof.editor.search")),
+                            search_clear_test_id: Some(Arc::from(
+                                "imui-editor-proof.editor.search.clear",
+                            )),
+                            content_test_id: Some(Arc::from(
+                                "imui-editor-proof.editor.inspector.content",
+                            )),
+                            ..Default::default()
+                        })
+                        .into_element(
+                            cx,
+                            |_cx, _panel_cx| Vec::new(),
+                            move |cx, panel_cx| {
+                                let matches = |s: &str| panel_cx.matches(s);
 
-                    let material_show_all = q.is_empty() || matches("material");
-                    let show_opacity = material_show_all || matches("opacity");
-                    let show_roughness = material_show_all || matches("roughness");
-                    let show_metallic = material_show_all || matches("metallic");
-                    let show_base_color = material_show_all || matches("base") || matches("color");
-                    let show_shading_model =
-                        material_show_all || matches("shading") || matches("model");
-                    let show_alpha_clip =
-                        material_show_all || matches("alpha") || matches("clip");
-                    let show_cast_shadows =
-                        material_show_all || matches("shadow") || matches("shadows");
+                                let material_show_all = matches("material");
+                                let show_opacity = material_show_all || matches("opacity");
+                                let show_roughness = material_show_all || matches("roughness");
+                                let show_metallic = material_show_all || matches("metallic");
+                                let show_base_color =
+                                    material_show_all || matches("base") || matches("color");
+                                let show_shading_model =
+                                    material_show_all || matches("shading") || matches("model");
+                                let show_alpha_clip =
+                                    material_show_all || matches("alpha") || matches("clip");
+                                let show_cast_shadows =
+                                    material_show_all || matches("shadow") || matches("shadows");
 
-                    let advanced_show_all = q.is_empty() || matches("advanced");
-                    let show_iterations = advanced_show_all || matches("iterations");
-                    let show_position =
-                        advanced_show_all || matches("position") || matches("pos");
-                    let show_transform = advanced_show_all
-                        || matches("transform")
-                        || matches("xform")
-                        || matches("rotation")
-                        || matches("rot")
-                        || matches("scale");
+                                let advanced_show_all = matches("advanced");
+                                let show_iterations = advanced_show_all || matches("iterations");
+                                let show_position =
+                                    advanced_show_all || matches("position") || matches("pos");
+                                let show_transform = advanced_show_all
+                                    || matches("transform")
+                                    || matches("xform")
+                                    || matches("rotation")
+                                    || matches("rot")
+                                    || matches("scale");
 
-                    let any_match =
-                        show_opacity
-                            || show_roughness
-                            || show_metallic
-                            || show_base_color
-                            || show_shading_model
-                            || show_alpha_clip
-                            || show_cast_shadows
-                            || show_iterations
-                            || show_position
-                            || show_transform;
+                                let any_match = show_opacity
+                                    || show_roughness
+                                    || show_metallic
+                                    || show_base_color
+                                    || show_shading_model
+                                    || show_alpha_clip
+                                    || show_cast_shadows
+                                    || show_iterations
+                                    || show_position
+                                    || show_transform;
 
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: Axis::Vertical,
-                            gap: Px(8.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            let mut out = Vec::new();
-
-                            out.push(
-                                MiniSearchBox::new(editor_search_model.clone())
-                                    .options(fret_ui_editor::controls::MiniSearchBoxOptions {
-                                        test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.search",
-                                        )),
-                                        clear_test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.search.clear",
-                                        )),
-                                        ..Default::default()
-                                    })
-                                    .into_element(cx),
-                            );
+                                let mut out = Vec::new();
 
                             out.push(
                                 PropertyGroup::new("Object")
@@ -987,7 +972,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                     ),
                             );
 
-                            if !q.is_empty() && !any_match {
+                            if !panel_cx.is_query_empty() && !any_match {
                                 out.push(
                                     cx.text("No matches")
                                         .test_id("imui-editor-proof.editor.no-matches"),
@@ -995,8 +980,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                             }
 
                             out
-                        },
-                    )]
+                            },
+                        )]
                 });
                 ui.separator();
 
