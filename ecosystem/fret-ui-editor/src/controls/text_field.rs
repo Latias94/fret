@@ -9,20 +9,18 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Edges, Px, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::{ActivateReason, OnActivate};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, TextAreaProps, TextInputProps,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, TextAreaProps,
+    TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
+use crate::controls::{IconButton, IconButtonOptions, OnIconButtonActivate};
 use crate::primitives::EditorDensity;
 use crate::primitives::chrome::{
     resolve_editor_text_area_field_style, resolve_editor_text_field_style,
 };
-use crate::primitives::icons::editor_icon;
-use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 #[derive(Debug, Clone)]
 pub struct TextFieldOptions {
@@ -169,94 +167,26 @@ impl TextField {
 
         let clear = clear_enabled.then(|| {
             let model_for_clear = self.model.clone();
-            let mut el = cx.pressable(
-                PressableProps {
+            let on_activate: OnIconButtonActivate = Arc::new({
+                let model_for_clear = model_for_clear.clone();
+                move |host, action_cx| {
+                    let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
+                    host.request_redraw(action_cx.window);
+                }
+            });
+
+            IconButton::new(fret_icons::ids::ui::CLOSE, on_activate)
+                .options(IconButtonOptions {
                     enabled: enabled_for_paint,
                     focusable: false,
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Px(density.hit_thickness),
-                            height: Length::Px(density.row_height),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    a11y: PressableA11y {
-                        label: Some(Arc::from("Clear text")),
-                        ..Default::default()
-                    },
+                    width: Some(density.hit_thickness),
+                    height: Some(density.row_height),
+                    icon_size: Some(Px(12.0)),
+                    a11y_label: Some(Arc::from("Clear text")),
+                    test_id: self.options.clear_test_id.clone(),
                     ..Default::default()
-                },
-                move |cx, st| {
-                    let on_activate: OnActivate = Arc::new({
-                        let model_for_clear = model_for_clear.clone();
-                        move |host, action_cx, _reason: ActivateReason| {
-                            let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
-                            host.request_redraw(action_cx.window);
-                        }
-                    });
-                    cx.pressable_add_on_activate(on_activate);
-
-                    let theme = Theme::global(&*cx.app);
-                    let hovered = st.hovered || st.hovered_raw;
-                    let pressed = st.pressed;
-                    let bg = editor_icon_button_bg(theme, enabled_for_paint, hovered, pressed);
-                    let border =
-                        editor_icon_button_border(theme, enabled_for_paint, hovered, pressed);
-                    let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
-
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            background: bg,
-                            border: Edges::all(border_width),
-                            border_color: border,
-                            corner_radii: fret_core::Corners::all(Px(6.0)),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    vec![editor_icon(
-                                        cx,
-                                        density,
-                                        fret_icons::ids::ui::CLOSE,
-                                        Some(Px(12.0)),
-                                    )]
-                                },
-                            )]
-                        },
-                    )]
-                },
-            );
-
-            if let Some(test_id) = self.options.clear_test_id.as_ref() {
-                el = el.test_id(test_id.clone());
-            }
-            el
+                })
+                .into_element(cx)
         });
 
         let root = cx.flex(

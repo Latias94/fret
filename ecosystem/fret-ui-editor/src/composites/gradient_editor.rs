@@ -14,21 +14,21 @@ use fret_core::scene::{ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Pain
 use fret_core::{Axis, Color, Corners, Edges, MouseButton, Point, PointerId, Px, Rect};
 use fret_runtime::Model;
 use fret_ui::action::{
-    ActionCx, ActivateReason, OnActivate, PressablePointerDownResult, PressablePointerUpResult,
-    UiActionHost,
+    ActionCx, PressablePointerDownResult, PressablePointerUpResult, UiActionHost,
 };
 use fret_ui::canvas::OnCanvasPaint;
 use fret_ui::element::{
-    AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle,
-    Length, MainAlign, PressableA11y, PressableProps, SizeStyle,
+    AnyElement, CanvasProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
+    PressableProps, SizeStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::ColorRef;
 
 use super::property_row::PropertyRowOptions;
 use super::{PropertyGrid, PropertyGroup, PropertyRow};
-use crate::controls::{ColorEdit, ColorEditOptions, DragValue, NumericFormatFn, NumericParseFn};
-use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
+use crate::controls::{
+    ColorEdit, ColorEditOptions, DragValue, IconButton, IconButtonOptions, NumericFormatFn,
+    NumericParseFn, OnIconButtonActivate,
+};
 use crate::primitives::{EditorDensity, percent_0_1_format, percent_0_1_parse};
 
 pub type OnGradientStopAction =
@@ -224,13 +224,23 @@ impl GradientEditor {
             cx,
             move |cx| {
                 let on_add_stop = on_add_stop.clone()?;
-                Some(add_stop_button(
-                    cx,
-                    density,
-                    can_add_stop,
-                    on_add_stop,
-                    add_stop_test_id.clone(),
-                ))
+                let on_activate: OnIconButtonActivate = Arc::new(move |host, action_cx| {
+                    on_add_stop(host, action_cx);
+                });
+                Some(
+                    IconButton::new(fret_icons::ids::ui::PLUS, on_activate)
+                        .options(IconButtonOptions {
+                            enabled: can_add_stop,
+                            focusable: false,
+                            width: Some(density.hit_thickness),
+                            height: Some(density.row_height),
+                            icon_size: Some(Px(12.0)),
+                            a11y_label: Some(Arc::from("Add stop")),
+                            test_id: add_stop_test_id.clone(),
+                            ..Default::default()
+                        })
+                        .into_element(cx),
+                )
             },
             move |cx| {
                 vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
@@ -330,218 +340,24 @@ fn stop_row<H: UiHost>(
         },
         move |cx| {
             let remove = remove.clone()?;
-            Some(remove_button(cx, density, enabled, stop_id, remove))
+            let on_activate: OnIconButtonActivate = Arc::new(move |host, action_cx| {
+                remove(host, action_cx, stop_id);
+            });
+            Some(
+                IconButton::new(fret_icons::ids::ui::CLOSE, on_activate)
+                    .options(IconButtonOptions {
+                        enabled,
+                        focusable: false,
+                        width: Some(density.hit_thickness),
+                        height: Some(density.row_height),
+                        icon_size: Some(Px(12.0)),
+                        a11y_label: Some(Arc::from("Remove stop")),
+                        ..Default::default()
+                    })
+                    .into_element(cx),
+            )
         },
     )
-}
-
-fn remove_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    density: EditorDensity,
-    enabled: bool,
-    stop_id: fret_ui::ItemKey,
-    on_remove: OnGradientStopAction,
-) -> AnyElement {
-    cx.pressable(
-        PressableProps {
-            enabled,
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Px(density.hit_thickness),
-                    height: Length::Px(density.row_height),
-                    ..Default::default()
-                },
-                flex: FlexItemStyle {
-                    grow: 0.0,
-                    shrink: 0.0,
-                    basis: Length::Auto,
-                    align_self: None,
-                },
-                ..Default::default()
-            },
-            a11y: PressableA11y {
-                label: Some(Arc::from("Remove stop")),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        move |cx, st| {
-            let on_activate: OnActivate = Arc::new({
-                let on_remove = on_remove.clone();
-                move |host, action_cx: ActionCx, _reason: ActivateReason| {
-                    on_remove(host, action_cx, stop_id);
-                    host.request_redraw(action_cx.window);
-                }
-            });
-            cx.pressable_add_on_activate(on_activate);
-
-            let hovered = st.hovered || st.hovered_raw;
-            let pressed = st.pressed;
-
-            let (bg, border, icon_fg) = {
-                let theme = Theme::global(&*cx.app);
-                (
-                    editor_icon_button_bg(theme, enabled, hovered, pressed),
-                    editor_icon_button_border(theme, enabled, hovered, pressed),
-                    theme.color_token("muted-foreground"),
-                )
-            };
-            let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
-
-            vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    background: bg,
-                    border: Edges::all(border_width),
-                    border_color: border,
-                    corner_radii: Corners::all(Px(6.0)),
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Center,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            vec![fret_ui_kit::declarative::icon::icon_with(
-                                cx,
-                                fret_icons::ids::ui::CLOSE,
-                                Some(Px(12.0)),
-                                Some(ColorRef::Color(icon_fg)),
-                            )]
-                        },
-                    )]
-                },
-            )]
-        },
-    )
-}
-
-fn add_stop_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    density: EditorDensity,
-    enabled: bool,
-    on_add: OnGradientAction,
-    test_id: Option<Arc<str>>,
-) -> AnyElement {
-    let mut el = cx.pressable(
-        PressableProps {
-            enabled,
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Px(density.hit_thickness),
-                    height: Length::Px(density.row_height),
-                    ..Default::default()
-                },
-                flex: FlexItemStyle {
-                    grow: 0.0,
-                    shrink: 0.0,
-                    basis: Length::Auto,
-                    align_self: None,
-                },
-                ..Default::default()
-            },
-            a11y: PressableA11y {
-                label: Some(Arc::from("Add stop")),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        move |cx, st| {
-            let on_activate: OnActivate = Arc::new({
-                let on_add = on_add.clone();
-                move |host, action_cx: ActionCx, _reason: ActivateReason| {
-                    on_add(host, action_cx);
-                    host.request_redraw(action_cx.window);
-                }
-            });
-            cx.pressable_add_on_activate(on_activate);
-
-            let hovered = st.hovered || st.hovered_raw;
-            let pressed = st.pressed;
-
-            let (bg, border, icon_fg) = {
-                let theme = Theme::global(&*cx.app);
-                (
-                    editor_icon_button_bg(theme, enabled, hovered, pressed),
-                    editor_icon_button_border(theme, enabled, hovered, pressed),
-                    theme.color_token("muted-foreground"),
-                )
-            };
-            let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
-
-            vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    background: bg,
-                    border: Edges::all(border_width),
-                    border_color: border,
-                    corner_radii: Corners::all(Px(6.0)),
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Center,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            vec![fret_ui_kit::declarative::icon::icon_with(
-                                cx,
-                                fret_icons::ids::ui::PLUS,
-                                Some(Px(12.0)),
-                                Some(ColorRef::Color(icon_fg)),
-                            )]
-                        },
-                    )]
-                },
-            )]
-        },
-    );
-
-    if let Some(test_id) = test_id.as_ref() {
-        el = el.test_id(test_id.clone());
-    }
-    el
 }
 
 #[derive(Debug, Clone, Copy)]
