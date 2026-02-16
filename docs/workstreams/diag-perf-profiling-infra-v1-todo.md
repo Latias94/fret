@@ -3,6 +3,7 @@
 ## P0 (make the signals usable)
 
 - [x] Add a compact "CPU delta vs wall delta" recipe to `docs/ui-diagnostics-and-scripted-tests.md`.
+- [x] Print layout/paint sub-phase breakdown percentiles (`p50`/`p95`) in `diag stats` human output.
 - [ ] Add one example bundle + interpretation notes to `docs/workstreams/diag-perf-profiling-infra-v1.md`.
 - [x] Ensure `diag stats --json` includes CPU cycle deltas in `top[]` rows (for tooling consumers).
 

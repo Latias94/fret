@@ -749,10 +749,32 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_ui_thread_cpu_cycle_time_delta_cycles: u64,
     pub(super) p50_layout_time_us: u64,
     pub(super) p95_layout_time_us: u64,
+    pub(super) p50_layout_collect_roots_time_us: u64,
+    pub(super) p95_layout_collect_roots_time_us: u64,
+    pub(super) p50_layout_request_build_roots_time_us: u64,
+    pub(super) p95_layout_request_build_roots_time_us: u64,
+    pub(super) p50_layout_roots_time_us: u64,
+    pub(super) p95_layout_roots_time_us: u64,
+    pub(super) p50_layout_view_cache_time_us: u64,
+    pub(super) p95_layout_view_cache_time_us: u64,
+    pub(super) p50_layout_collapse_layout_observations_time_us: u64,
+    pub(super) p95_layout_collapse_layout_observations_time_us: u64,
+    pub(super) p50_layout_prepaint_after_layout_time_us: u64,
+    pub(super) p95_layout_prepaint_after_layout_time_us: u64,
     pub(super) p50_prepaint_time_us: u64,
     pub(super) p95_prepaint_time_us: u64,
     pub(super) p50_paint_time_us: u64,
     pub(super) p95_paint_time_us: u64,
+    pub(super) p50_paint_input_context_time_us: u64,
+    pub(super) p95_paint_input_context_time_us: u64,
+    pub(super) p50_paint_scroll_handle_invalidation_time_us: u64,
+    pub(super) p95_paint_scroll_handle_invalidation_time_us: u64,
+    pub(super) p50_paint_collect_roots_time_us: u64,
+    pub(super) p95_paint_collect_roots_time_us: u64,
+    pub(super) p50_paint_publish_text_input_snapshot_time_us: u64,
+    pub(super) p95_paint_publish_text_input_snapshot_time_us: u64,
+    pub(super) p50_paint_collapse_observations_time_us: u64,
+    pub(super) p95_paint_collapse_observations_time_us: u64,
     pub(super) p50_layout_engine_solve_time_us: u64,
     pub(super) p95_layout_engine_solve_time_us: u64,
     pub(super) p50_dispatch_time_us: u64,
@@ -1197,6 +1219,32 @@ impl BundleStatsReport {
             self.p95_paint_widget_time_us,
             self.p50_paint_text_prepare_time_us,
             self.p95_paint_text_prepare_time_us
+        );
+        println!(
+            "layout breakdown p50/p95 (us): roots={}/{} request_build_roots={}/{} view_cache={}/{} collapse_obs={}/{} prepaint_after_layout={}/{}",
+            self.p50_layout_roots_time_us,
+            self.p95_layout_roots_time_us,
+            self.p50_layout_request_build_roots_time_us,
+            self.p95_layout_request_build_roots_time_us,
+            self.p50_layout_view_cache_time_us,
+            self.p95_layout_view_cache_time_us,
+            self.p50_layout_collapse_layout_observations_time_us,
+            self.p95_layout_collapse_layout_observations_time_us,
+            self.p50_layout_prepaint_after_layout_time_us,
+            self.p95_layout_prepaint_after_layout_time_us
+        );
+        println!(
+            "paint breakdown p50/p95 (us): input_ctx={}/{} scroll_inv={}/{} collect_roots={}/{} text_snapshot={}/{} collapse={}/{}",
+            self.p50_paint_input_context_time_us,
+            self.p95_paint_input_context_time_us,
+            self.p50_paint_scroll_handle_invalidation_time_us,
+            self.p95_paint_scroll_handle_invalidation_time_us,
+            self.p50_paint_collect_roots_time_us,
+            self.p95_paint_collect_roots_time_us,
+            self.p50_paint_publish_text_input_snapshot_time_us,
+            self.p95_paint_publish_text_input_snapshot_time_us,
+            self.p50_paint_collapse_observations_time_us,
+            self.p95_paint_collapse_observations_time_us
         );
         if self.sum_layout_observation_record_time_us > 0
             || self.sum_layout_observation_record_models_items > 0
@@ -2269,12 +2317,56 @@ impl BundleStatsReport {
             Value::from(self.p50_layout_time_us),
         );
         p50.insert(
+            "layout_collect_roots_time_us".to_string(),
+            Value::from(self.p50_layout_collect_roots_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_time_us),
+        );
+        p50.insert(
+            "layout_roots_time_us".to_string(),
+            Value::from(self.p50_layout_roots_time_us),
+        );
+        p50.insert(
+            "layout_view_cache_time_us".to_string(),
+            Value::from(self.p50_layout_view_cache_time_us),
+        );
+        p50.insert(
+            "layout_collapse_layout_observations_time_us".to_string(),
+            Value::from(self.p50_layout_collapse_layout_observations_time_us),
+        );
+        p50.insert(
+            "layout_prepaint_after_layout_time_us".to_string(),
+            Value::from(self.p50_layout_prepaint_after_layout_time_us),
+        );
+        p50.insert(
             "prepaint_time_us".to_string(),
             Value::from(self.p50_prepaint_time_us),
         );
         p50.insert(
             "paint_time_us".to_string(),
             Value::from(self.p50_paint_time_us),
+        );
+        p50.insert(
+            "paint_input_context_time_us".to_string(),
+            Value::from(self.p50_paint_input_context_time_us),
+        );
+        p50.insert(
+            "paint_scroll_handle_invalidation_time_us".to_string(),
+            Value::from(self.p50_paint_scroll_handle_invalidation_time_us),
+        );
+        p50.insert(
+            "paint_collect_roots_time_us".to_string(),
+            Value::from(self.p50_paint_collect_roots_time_us),
+        );
+        p50.insert(
+            "paint_publish_text_input_snapshot_time_us".to_string(),
+            Value::from(self.p50_paint_publish_text_input_snapshot_time_us),
+        );
+        p50.insert(
+            "paint_collapse_observations_time_us".to_string(),
+            Value::from(self.p50_paint_collapse_observations_time_us),
         );
         p50.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -2316,12 +2408,56 @@ impl BundleStatsReport {
             Value::from(self.p95_layout_time_us),
         );
         p95.insert(
+            "layout_collect_roots_time_us".to_string(),
+            Value::from(self.p95_layout_collect_roots_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_time_us),
+        );
+        p95.insert(
+            "layout_roots_time_us".to_string(),
+            Value::from(self.p95_layout_roots_time_us),
+        );
+        p95.insert(
+            "layout_view_cache_time_us".to_string(),
+            Value::from(self.p95_layout_view_cache_time_us),
+        );
+        p95.insert(
+            "layout_collapse_layout_observations_time_us".to_string(),
+            Value::from(self.p95_layout_collapse_layout_observations_time_us),
+        );
+        p95.insert(
+            "layout_prepaint_after_layout_time_us".to_string(),
+            Value::from(self.p95_layout_prepaint_after_layout_time_us),
+        );
+        p95.insert(
             "prepaint_time_us".to_string(),
             Value::from(self.p95_prepaint_time_us),
         );
         p95.insert(
             "paint_time_us".to_string(),
             Value::from(self.p95_paint_time_us),
+        );
+        p95.insert(
+            "paint_input_context_time_us".to_string(),
+            Value::from(self.p95_paint_input_context_time_us),
+        );
+        p95.insert(
+            "paint_scroll_handle_invalidation_time_us".to_string(),
+            Value::from(self.p95_paint_scroll_handle_invalidation_time_us),
+        );
+        p95.insert(
+            "paint_collect_roots_time_us".to_string(),
+            Value::from(self.p95_paint_collect_roots_time_us),
+        );
+        p95.insert(
+            "paint_publish_text_input_snapshot_time_us".to_string(),
+            Value::from(self.p95_paint_publish_text_input_snapshot_time_us),
+        );
+        p95.insert(
+            "paint_collapse_observations_time_us".to_string(),
+            Value::from(self.p95_paint_collapse_observations_time_us),
         );
         p95.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -9783,9 +9919,60 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(rows.iter().map(|r| r.ui_thread_cpu_cycle_time_delta_cycles));
     (out.p50_layout_time_us, out.p95_layout_time_us) =
         p50_p95(rows.iter().map(|r| r.layout_time_us));
+    (
+        out.p50_layout_collect_roots_time_us,
+        out.p95_layout_collect_roots_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_collect_roots_time_us));
+    (
+        out.p50_layout_request_build_roots_time_us,
+        out.p95_layout_request_build_roots_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_time_us));
+    (out.p50_layout_roots_time_us, out.p95_layout_roots_time_us) =
+        p50_p95(rows.iter().map(|r| r.layout_roots_time_us));
+    (
+        out.p50_layout_view_cache_time_us,
+        out.p95_layout_view_cache_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_view_cache_time_us));
+    (
+        out.p50_layout_collapse_layout_observations_time_us,
+        out.p95_layout_collapse_layout_observations_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_collapse_layout_observations_time_us),
+    );
+    (
+        out.p50_layout_prepaint_after_layout_time_us,
+        out.p95_layout_prepaint_after_layout_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_prepaint_after_layout_time_us));
     (out.p50_prepaint_time_us, out.p95_prepaint_time_us) =
         p50_p95(rows.iter().map(|r| r.prepaint_time_us));
     (out.p50_paint_time_us, out.p95_paint_time_us) = p50_p95(rows.iter().map(|r| r.paint_time_us));
+    (
+        out.p50_paint_input_context_time_us,
+        out.p95_paint_input_context_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_input_context_time_us));
+    (
+        out.p50_paint_scroll_handle_invalidation_time_us,
+        out.p95_paint_scroll_handle_invalidation_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_scroll_handle_invalidation_time_us),
+    );
+    (
+        out.p50_paint_collect_roots_time_us,
+        out.p95_paint_collect_roots_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_collect_roots_time_us));
+    (
+        out.p50_paint_publish_text_input_snapshot_time_us,
+        out.p95_paint_publish_text_input_snapshot_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_publish_text_input_snapshot_time_us),
+    );
+    (
+        out.p50_paint_collapse_observations_time_us,
+        out.p95_paint_collapse_observations_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_collapse_observations_time_us));
     (
         out.p50_layout_engine_solve_time_us,
         out.p95_layout_engine_solve_time_us,

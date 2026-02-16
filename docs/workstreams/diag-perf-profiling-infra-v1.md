@@ -115,6 +115,22 @@ In practice, this should be a one-command workflow:
    - "typical perf" review (p50/p95)
    - "tail regression" triage (max + worst bundle + trace)
 
+## Quick workflow (today)
+
+Typical-perf review from a single evidence bundle:
+
+- `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
+- Focus on:
+  - `time p50/p95 (us)` for overall frame-time distribution.
+  - `layout breakdown p50/p95 (us)` to see which layout sub-phase dominates typical vs tail-ish frames.
+  - `paint breakdown p50/p95 (us)` for paint-side attribution without opening a trace.
+
+Tail-spike triage:
+
+- `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
+- If wall time is high but CPU looks low, re-run with:
+  - `--sort cpu_cycles` (Windows) or `--sort cpu_time` (fallback)
+
 ## Comparative notes (how other stacks succeed)
 
 - Chromium/Perfetto: trace event names are stable and treated as a contract; tooling builds on it.
