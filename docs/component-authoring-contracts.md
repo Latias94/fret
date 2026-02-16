@@ -70,6 +70,18 @@ Practical pattern (recommended):
 2. Implement your rendering as an inherent `into_element(self, cx)` method (or `RenderOnce` if needed).
 3. Implement `UiPatchTarget` by delegating to your existing `refine_style/refine_layout` methods.
 
+If your type already has `refine_style/refine_layout` and an inherent `into_element(self, cx)`,
+prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
+
+- `fret_ui_kit::ui_component_chrome_layout!(MyType);`
+- `fret_ui_kit::ui_component_layout_only!(MyType);`
+- `fret_ui_kit::ui_component_*_patch_only!(MyType);` (when a type should be patchable but not renderable)
+- `fret_ui_kit::ui_into_element_render_once!(MyType);` (when a type implements `RenderOnce`)
+
+In-tree example:
+
+- `ecosystem/fret-ui-ai/src/elements/message.rs`
+
 ### Children collection rule (ecosystem convention)
 
 Public constructors/setters that accept children should use:
