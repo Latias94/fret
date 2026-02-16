@@ -86,13 +86,35 @@ pub(super) fn preview_alert_dialog(
     };
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        let theme = Theme::global(&*cx.app);
+        let style = fret_core::TextStyle {
+            font: fret_core::FontId::default(),
+            size: Px(20.0),
+            weight: fret_core::FontWeight::SEMIBOLD,
+            slant: fret_core::TextSlant::Normal,
+            line_height: theme.metric_by_key("font.line_height"),
+            letter_spacing_em: None,
+        };
+        let title_el = cx.text_props(TextProps {
+            layout: {
+                let mut layout = fret_ui::element::LayoutStyle::default();
+                layout.size.width = fret_ui::element::Length::Fill;
+                layout
+            },
+            text: Arc::from(title),
+            style: Some(style),
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+        });
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
+            move |_cx| vec![title_el, body],
         )
     };
 
