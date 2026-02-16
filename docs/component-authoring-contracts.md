@@ -81,6 +81,7 @@ prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
 In-tree example:
 
 - `ecosystem/fret-ui-ai/src/elements/message.rs`
+- `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs`
 
 ### Children collection rule (ecosystem convention)
 

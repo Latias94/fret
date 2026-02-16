@@ -94,3 +94,22 @@ impl WorkflowPanel {
         )
     }
 }
+
+fret_ui_kit::ui_component_chrome_layout!(WorkflowPanel);
+
+#[cfg(test)]
+mod ui_builder_integration_tests {
+    use super::*;
+
+    #[test]
+    fn workflow_panel_opts_into_ui_builder_traits() {
+        fn assert_chrome_layout<
+            T: fret_ui_kit::UiPatchTarget
+                + fret_ui_kit::UiSupportsChrome
+                + fret_ui_kit::UiSupportsLayout
+                + fret_ui_kit::UiIntoElement,
+        >() {
+        }
+        assert_chrome_layout::<WorkflowPanel>();
+    }
+}
