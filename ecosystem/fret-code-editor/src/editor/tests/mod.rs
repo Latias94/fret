@@ -278,6 +278,44 @@ fn paint_source_does_not_materialize_whole_buffer_string() {
 }
 
 #[test]
+fn a11y_source_does_not_materialize_whole_buffer_string() {
+    // Regression guard: the editor a11y composed-window path should never call
+    // `TextBuffer::text_string()`. Materializing the entire rope would scale with document size
+    // and defeat windowed platform text input.
+    const SRC: &str = include_str!("../a11y/mod.rs");
+    assert!(
+        !SRC.contains(".text_string("),
+        "a11y/mod.rs must not call TextBuffer::text_string()"
+    );
+}
+
+#[test]
+fn a11y_composed_window_is_bounded_for_large_documents() {
+    // Regression guard: the composed a11y window must remain bounded even for large documents.
+    // This defends against accidental full-document materialization during platform queries.
+    let mut text = String::with_capacity(300_000);
+    for _ in 0..50_000 {
+        text.push_str("abcd\n");
+    }
+    assert!(text.len() > 200_000);
+
+    let handle = CodeEditorHandle::new(text.clone());
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(text.len() / 2);
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 8);
+    assert!(
+        value.len() < text.len() / 10,
+        "expected composed a11y value to be a bounded window, not a full-document snapshot"
+    );
+    assert!(
+        value.len() < 20_000,
+        "expected composed a11y value to remain bounded by window budgets"
+    );
+}
+
+#[test]
 fn drag_autoscroll_delta_y_is_zero_inside_safe_band() {
     let delta = drag_autoscroll_delta_y(Px(100.0), Px(30.0), Px(50.0));
     assert_eq!(delta, Px(0.0));
