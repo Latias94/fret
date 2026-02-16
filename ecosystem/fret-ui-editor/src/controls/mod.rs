@@ -1,5 +1,6 @@
 //! Editor controls (interactive widgets built from primitives).
 
+pub mod axis_drag_value;
 pub mod checkbox;
 pub mod color_edit;
 pub mod drag_value;
@@ -13,6 +14,7 @@ pub mod text_field;
 pub mod transform_edit;
 pub mod vec_edit;
 
+pub use axis_drag_value::{AxisDragValue, AxisDragValueOptions};
 pub use checkbox::{Checkbox, CheckboxOptions};
 pub use color_edit::{ColorEdit, ColorEditOptions};
 pub use drag_value::DragValue;

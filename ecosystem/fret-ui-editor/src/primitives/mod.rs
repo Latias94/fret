@@ -3,6 +3,7 @@
 pub mod density;
 pub mod edit_session;
 pub(crate) mod icons;
+pub(crate) mod input_group;
 pub(crate) mod style;
 pub mod tokens;
 pub(crate) mod visuals;
