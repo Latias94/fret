@@ -85,7 +85,7 @@ Usage:
   fretboard list native-demos
   fretboard list web-demos
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-reload] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
-  fretboard dev native --demo <demo> [--dev-state-reset] [-- <args...>]
+  fretboard dev native --demo <demo> [--dev-state-reset] [--hotpatch|--watch] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--no-supervise] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [--dev-state-reset] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
@@ -105,6 +105,7 @@ Examples:
   fretboard dev native --bin assets_demo
   fretboard dev native --bin hotpatch_smoke_demo
   fretboard dev native --demo simple-todo
+  fretboard dev native --demo simple-todo --hotpatch
   fretboard dev native --choose
   fretboard dev native --bin image_upload_demo -- --help
   fretboard dev native --hotpatch --choose   # hotpatch (prefers `dx serve --hotpatch` when `dx` is available; otherwise falls back to reload-boundary mode)
