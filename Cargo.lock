@@ -2295,6 +2295,7 @@ dependencies = [
  "slotmap",
  "swash",
  "thiserror 2.0.18",
+ "tracing",
  "unicode-script",
  "unicode-segmentation",
  "usvg",

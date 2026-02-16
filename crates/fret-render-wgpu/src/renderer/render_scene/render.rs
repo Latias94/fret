@@ -81,6 +81,22 @@ impl Renderer {
             viewport_size,
         } = params;
 
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        let render_scene_span = trace_enabled
+            .then(|| {
+                tracing::trace_span!(
+                    "fret.renderer.render_scene",
+                    frame_index,
+                    ops = scene.ops_len(),
+                    viewport_w = viewport_size.0,
+                    viewport_h = viewport_size.1,
+                    scale_factor,
+                    format = ?format,
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _render_scene_guard = render_scene_span.enter();
+
         let perf_enabled = self.perf_enabled;
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
@@ -108,27 +124,48 @@ impl Renderer {
             panic!("invalid scene: {e}");
         }
 
-        self.ensure_material_catalog_uploaded(queue);
-        self.ensure_mask_image_identity_uploaded(queue);
+        let path_samples = {
+            let ensure_span = trace_enabled
+                .then(|| {
+                    tracing::trace_span!(
+                        "fret.renderer.ensure_pipelines",
+                        format = ?format,
+                        path_samples = tracing::field::Empty,
+                    )
+                })
+                .unwrap_or_else(tracing::Span::none);
+            let _guard = ensure_span.enter();
 
-        self.ensure_viewport_pipeline(device, format);
-        self.ensure_quad_pipelines(format);
-        self.ensure_text_pipeline(device, format);
-        self.ensure_text_color_pipeline(device, format);
-        self.ensure_text_subpixel_pipeline(device, format);
-        self.ensure_mask_pipeline(device, format);
-        self.ensure_path_pipeline(device, format);
-        self.ensure_path_clip_mask_pipeline(device);
-        let path_samples = self.effective_path_msaa_samples(format);
-        if path_samples > 1 {
-            self.ensure_composite_pipeline(device, format);
-            self.ensure_path_msaa_pipeline(device, format, path_samples);
-            self.ensure_path_intermediate(device, viewport_size, format, path_samples);
-        }
+            self.ensure_material_catalog_uploaded(queue);
+            self.ensure_mask_image_identity_uploaded(queue);
+
+            self.ensure_viewport_pipeline(device, format);
+            self.ensure_quad_pipelines(format);
+            self.ensure_text_pipeline(device, format);
+            self.ensure_text_color_pipeline(device, format);
+            self.ensure_text_subpixel_pipeline(device, format);
+            self.ensure_mask_pipeline(device, format);
+            self.ensure_path_pipeline(device, format);
+            self.ensure_path_clip_mask_pipeline(device);
+            let path_samples = self.effective_path_msaa_samples(format);
+            ensure_span.record("path_samples", path_samples);
+            if path_samples > 1 {
+                self.ensure_composite_pipeline(device, format);
+                self.ensure_path_msaa_pipeline(device, format, path_samples);
+                self.ensure_path_intermediate(device, viewport_size, format, path_samples);
+            }
+            path_samples
+        };
 
         let text_prepare_start = perf_enabled.then(Instant::now);
-        self.text_system.prepare_for_scene(scene, frame_index);
-        self.text_system.flush_uploads(queue);
+        {
+            let text_prepare_span = trace_enabled
+                .then(|| tracing::trace_span!("fret.renderer.text.prepare", frame_index))
+                .unwrap_or_else(tracing::Span::none);
+            let _guard = text_prepare_span.enter();
+            self.text_system.prepare_for_scene(scene, frame_index);
+            self.text_system.flush_uploads(queue);
+        }
         let text_atlas_revision = self.text_system.atlas_revision();
         if perf_enabled {
             let atlas_perf = self.text_system.take_atlas_perf_snapshot();
@@ -153,7 +190,13 @@ impl Renderer {
         self.bump_svg_raster_epoch();
         let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
         let perf_svg_prepare_start = perf_enabled.then(Instant::now);
-        self.prepare_svg_ops(device, queue, scene, scale_factor);
+        {
+            let svg_prepare_span = trace_enabled
+                .then(|| tracing::trace_span!("fret.renderer.svg.prepare_ops", frame_index))
+                .unwrap_or_else(tracing::Span::none);
+            let _guard = svg_prepare_span.enter();
+            self.prepare_svg_ops(device, queue, scene, scale_factor);
+        }
         if perf_enabled {
             let counters = crate::upload_counters::take_upload_counters();
             frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);
@@ -202,13 +245,19 @@ impl Renderer {
             let mut encoding = std::mem::take(&mut self.scene_encoding_scratch);
             encoding.clear();
             let encode_start = perf_enabled.then(Instant::now);
-            self.encode_scene_ops_into(
-                scene,
-                scale_factor,
-                viewport_size,
-                format.is_srgb(),
-                &mut encoding,
-            );
+            {
+                let encode_span = trace_enabled
+                    .then(|| tracing::trace_span!("fret.renderer.scene.encode", frame_index))
+                    .unwrap_or_else(tracing::Span::none);
+                let _guard = encode_span.enter();
+                self.encode_scene_ops_into(
+                    scene,
+                    scale_factor,
+                    viewport_size,
+                    format.is_srgb(),
+                    &mut encoding,
+                );
+            }
             if let Some(encode_start) = encode_start {
                 frame_perf.encode_scene += encode_start.elapsed();
             }
@@ -283,15 +332,21 @@ impl Renderer {
         } else {
             DebugPostprocess::None
         };
-        let plan = RenderPlan::compile_for_scene(
-            &encoding,
-            viewport_size,
-            format,
-            clear.0,
-            path_samples,
-            postprocess,
-            self.intermediate_budget_bytes,
-        );
+        let plan = {
+            let plan_span = trace_enabled
+                .then(|| tracing::trace_span!("fret.renderer.plan.compile", frame_index))
+                .unwrap_or_else(tracing::Span::none);
+            let _guard = plan_span.enter();
+            RenderPlan::compile_for_scene(
+                &encoding,
+                viewport_size,
+                format,
+                clear.0,
+                path_samples,
+                postprocess,
+                self.intermediate_budget_bytes,
+            )
+        };
         if perf_enabled {
             use super::super::render_plan::{
                 RenderPlanDegradationKind as DegradationKind,
@@ -424,6 +479,20 @@ impl Renderer {
             encoding.ordered_draws.len(),
             &encoding.effect_markers,
         );
+
+        let uploads_span = trace_enabled
+            .then(|| {
+                tracing::trace_span!(
+                    "fret.renderer.upload",
+                    frame_index,
+                    passes = plan.passes.len() as u32,
+                    uniforms = encoding.uniforms.len() as u32,
+                    clips = encoding.clips.len() as u32,
+                    masks = encoding.masks.len() as u32,
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let uploads_guard = uploads_span.enter();
 
         let needs_scale = plan
             .passes
@@ -795,13 +864,45 @@ impl Renderer {
             );
         }
 
+        drop(uploads_guard);
+
         let quad_vertex_size = std::mem::size_of::<ViewportVertex>() as u64;
+
+        let record_span = trace_enabled
+            .then(|| tracing::trace_span!("fret.renderer.record_passes", frame_index))
+            .unwrap_or_else(tracing::Span::none);
+        let record_guard = record_span.enter();
 
         for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
             debug_assert!(
                 pass_index < self.render_space_capacity,
                 "render_space_capacity too small for RenderPlan passes"
             );
+            let pass_span = trace_enabled
+                .then(|| {
+                    let kind: &'static str = match planned_pass {
+                        RenderPlanPass::SceneDrawRange(_) => "scene_draw_range",
+                        RenderPlanPass::PathMsaaBatch(_) => "path_msaa_batch",
+                        RenderPlanPass::PathClipMask(_) => "path_clip_mask",
+                        RenderPlanPass::CompositePremul(_) => "composite_premul",
+                        RenderPlanPass::ScaleNearest(_) => "scale_nearest",
+                        RenderPlanPass::Blur(_) => "blur",
+                        RenderPlanPass::ColorAdjust(_) => "color_adjust",
+                        RenderPlanPass::ColorMatrix(_) => "color_matrix",
+                        RenderPlanPass::AlphaThreshold(_) => "alpha_threshold",
+                        RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
+                        RenderPlanPass::ClipMask(_) => "clip_mask",
+                        RenderPlanPass::ReleaseTarget(_) => "release_target",
+                    };
+                    tracing::trace_span!(
+                        "fret.renderer.pass",
+                        frame_index,
+                        pass_index = pass_index as u32,
+                        kind
+                    )
+                })
+                .unwrap_or_else(tracing::Span::none);
+            let _pass_guard = pass_span.enter();
             let render_space_offset = (pass_index as u64).saturating_mul(self.render_space_stride);
             let render_space_offset_u32 = render_space_offset as u32;
 
@@ -3642,7 +3743,15 @@ impl Renderer {
             }
         }
 
-        let cmd = encoder.finish();
+        drop(record_guard);
+
+        let cmd = {
+            let finish_span = trace_enabled
+                .then(|| tracing::trace_span!("fret.renderer.encoder.finish", frame_index))
+                .unwrap_or_else(tracing::Span::none);
+            let _guard = finish_span.enter();
+            encoder.finish()
+        };
 
         if self.intermediate_perf_enabled {
             self.intermediate_perf.last_frame_in_use_bytes = frame_targets.in_use_bytes();

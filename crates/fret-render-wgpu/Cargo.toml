@@ -31,6 +31,7 @@ resvg.workspace = true
 usvg.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 naga.workspace = true
