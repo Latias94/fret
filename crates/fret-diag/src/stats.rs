@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use super::util::{now_unix_ms, write_json_value};
@@ -121,6 +122,32 @@ pub(super) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_k
     }
 
     Ok(())
+}
+
+fn compact_string_middle<'a>(s: &'a str, head_bytes: usize, tail_bytes: usize) -> Cow<'a, str> {
+    // Keep `diag stats` output readable: element paths can be extremely long on Windows
+    // (workspace root + nested debug identity chain). Prefer keeping both the root prefix and the
+    // final "file:line:col" tail, which is usually the most actionable part.
+    let min_len = head_bytes.saturating_add(tail_bytes).saturating_add(3);
+    if s.len() <= min_len {
+        return Cow::Borrowed(s);
+    }
+
+    let mut head = head_bytes.min(s.len());
+    while head > 0 && !s.is_char_boundary(head) {
+        head -= 1;
+    }
+
+    let mut tail_start = s.len().saturating_sub(tail_bytes.min(s.len()));
+    while tail_start < s.len() && !s.is_char_boundary(tail_start) {
+        tail_start += 1;
+    }
+
+    Cow::Owned(format!("{}...{}", &s[..head], &s[tail_start..]))
+}
+
+fn compact_debug_path<'a>(path: &'a str) -> Cow<'a, str> {
+    compact_string_middle(path, 72, 160)
 }
 
 pub(super) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(
@@ -1648,6 +1675,7 @@ impl BundleStatsReport {
                         if let Some(path) = c.element_path.as_deref()
                             && !path.is_empty()
                         {
+                            let path = compact_debug_path(path);
                             s.push_str(&format!(" path={path}"));
                         }
                         if let Some(in_sem) = c.root_in_semantics {
@@ -1687,6 +1715,7 @@ impl BundleStatsReport {
                         if let Some(path) = c.element_path.as_deref()
                             && !path.is_empty()
                         {
+                            let path = compact_debug_path(path);
                             s.push_str(&format!(" path={path}"));
                         }
                         if let Some(in_sem) = c.root_in_semantics {
@@ -1765,6 +1794,7 @@ impl BundleStatsReport {
                         if let Some(path) = s.root_element_path.as_deref()
                             && !path.is_empty()
                         {
+                            let path = compact_debug_path(path);
                             out.push_str(&format!(" root.path={path}"));
                         }
                         if let Some(m) = s.top_measures.first() {
