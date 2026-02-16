@@ -8,6 +8,7 @@ pub mod executor;
 pub mod form_validation;
 pub mod json_pointer;
 pub mod mixed_stream;
+pub mod prompt;
 pub mod props;
 pub mod render;
 pub mod spec;
