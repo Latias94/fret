@@ -160,11 +160,17 @@ where
                 Size::Small,
                 &ChromeRefinement::default(),
                 InputTokenKeys {
-                    bg: Some("component.input.bg"),
-                    border: Some("component.input.border"),
-                    border_focus: Some("component.input.border_focus"),
-                    fg: Some("component.input.fg"),
-                    ..InputTokenKeys::none()
+                    padding_x: Some("component.text_field.padding_x"),
+                    padding_y: Some("component.text_field.padding_y"),
+                    min_height: Some("component.text_field.min_height"),
+                    radius: Some("component.text_field.radius"),
+                    border_width: Some("component.text_field.border_width"),
+                    bg: Some("component.text_field.bg"),
+                    border: Some("component.text_field.border"),
+                    border_focus: Some("component.text_field.border_focus"),
+                    fg: Some("component.text_field.fg"),
+                    text_px: Some("component.text_field.text_px"),
+                    selection: Some("component.text_field.selection"),
                 },
             );
             (density, resolved)
