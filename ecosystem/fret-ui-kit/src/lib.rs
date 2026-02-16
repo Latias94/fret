@@ -13,12 +13,19 @@
 /// `ui::h_flex(cx, |cx| ui::children![cx; Button::new("OK").ui(), cx.text("...")])`.
 #[macro_export]
 macro_rules! children {
-    ($cx:expr;) => {
+    ($cx:ident;) => {
         ::std::vec::Vec::new()
     };
-    ($cx:expr; $($child:expr),+ $(,)?) => {{
-        let cx = $cx;
-        ::std::vec![ $( $crate::UiIntoElement::into_element($child, cx) ),+ ]
+    ($cx:ident; $($child:expr),+ $(,)?) => {{
+        let mut children = ::std::vec::Vec::new();
+        $(
+            {
+                let child = $child;
+                let element = $crate::UiIntoElement::into_element(child, &mut *$cx);
+                children.push(element);
+            }
+        )+
+        children
     }};
 }
 
