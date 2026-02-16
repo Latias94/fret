@@ -1,5 +1,15 @@
 # Carousel parity: shadcn/ui v4 vs Embla vs Fret
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- `embla-carousel`: https://github.com/search?q=embla-carousel&type=repositories
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This note records the current alignment status for the `carousel` component and highlights gaps
 that should be addressed at the correct layer (mechanism vs policy/recipes).
 

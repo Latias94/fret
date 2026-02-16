@@ -1,5 +1,14 @@
 # ADR 0057: Declarative Layout Style and Flex Semantics (Taffy-Backed, Tailwind-Friendly)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

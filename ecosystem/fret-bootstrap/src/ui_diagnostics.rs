@@ -6470,6 +6470,15 @@ impl UiDiagnosticsService {
             .global::<fret_runtime::WindowTextInputSnapshotService>()
             .and_then(|svc| svc.snapshot(window));
 
+        let clipboard = app
+            .global::<fret_runtime::WindowClipboardDiagnosticsStore>()
+            .and_then(|store| store.last_read_for_window(window, app.frame_id()))
+            .map(|entry| UiClipboardDiagnosticsSnapshotV1 {
+                last_read_token: entry.token.0,
+                last_read_unavailable: entry.unavailable,
+                last_read_message: entry.message.clone(),
+            });
+
         let wgpu_adapter = app
             .global::<fret_render::WgpuAdapterSelectionSnapshot>()
             .and_then(|snapshot| serde_json::to_value(snapshot).ok());
@@ -6496,13 +6505,14 @@ impl UiDiagnosticsService {
             occlusion_insets,
             focus_is_text_input: input_ctx.map(|c| c.focus_is_text_input),
             is_composing: window_text_input_snapshot.map(|s| s.is_composing),
+            clipboard,
             primary_pointer_type: ring
                 .last_pointer_type
                 .map(|t| viewport_pointer_type_label(t).to_string()),
             caps: input_ctx.map(|c| UiPlatformCapabilitiesSummaryV1 {
                 platform: c.platform.as_str().to_string(),
                 ui_window_hover_detection: c.caps.ui.window_hover_detection.as_str().to_string(),
-                clipboard_text: c.caps.clipboard.text,
+                clipboard_text: c.caps.clipboard.text.read && c.caps.clipboard.text.write,
                 clipboard_primary_text: c.caps.clipboard.primary_text,
                 ime: c.caps.ime.enabled,
                 ime_set_cursor_area: c.caps.ime.set_cursor_area,
@@ -7589,6 +7599,8 @@ pub struct UiDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_composing: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clipboard: Option<UiClipboardDiagnosticsSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub primary_pointer_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub caps: Option<UiPlatformCapabilitiesSummaryV1>,
@@ -7596,6 +7608,14 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub wgpu_adapter: Option<serde_json::Value>,
 
     pub debug: UiTreeDebugSnapshotV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiClipboardDiagnosticsSnapshotV1 {
+    pub last_read_token: u64,
+    pub last_read_unavailable: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_read_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12487,6 +12507,16 @@ pub struct UiFrameStatsV1 {
     pub renderer_scene_encoding_cache_hits: u64,
     #[serde(default)]
     pub renderer_scene_encoding_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_material_quad_ops: u64,
+    #[serde(default)]
+    pub renderer_material_sampled_quad_ops: u64,
+    #[serde(default)]
+    pub renderer_material_distinct: u64,
+    #[serde(default)]
+    pub renderer_material_unknown_ids: u64,
+    #[serde(default)]
+    pub renderer_material_degraded_due_to_budget: u64,
 }
 
 impl UiFrameStatsV1 {
@@ -12779,6 +12809,11 @@ impl UiFrameStatsV1 {
             renderer_vertex_bytes: 0,
             renderer_scene_encoding_cache_hits: 0,
             renderer_scene_encoding_cache_misses: 0,
+            renderer_material_quad_ops: 0,
+            renderer_material_sampled_quad_ops: 0,
+            renderer_material_distinct: 0,
+            renderer_material_unknown_ids: 0,
+            renderer_material_degraded_due_to_budget: 0,
         };
 
         if let Some(sample) = renderer_perf {
@@ -12837,6 +12872,12 @@ impl UiFrameStatsV1 {
             out.renderer_vertex_bytes = sample.perf.vertex_bytes;
             out.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
             out.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
+            out.renderer_material_quad_ops = sample.perf.material_quad_ops;
+            out.renderer_material_sampled_quad_ops = sample.perf.material_sampled_quad_ops;
+            out.renderer_material_distinct = sample.perf.material_distinct;
+            out.renderer_material_unknown_ids = sample.perf.material_unknown_ids;
+            out.renderer_material_degraded_due_to_budget =
+                sample.perf.material_degraded_due_to_budget;
         }
 
         out

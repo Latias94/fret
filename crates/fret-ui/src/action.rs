@@ -612,8 +612,10 @@ pub type OnTextInputRegionIme =
 pub type OnTextInputRegionClipboardText =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, fret_core::ClipboardToken, &str) -> bool + 'static>;
 
-pub type OnTextInputRegionClipboardUnavailable =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, fret_core::ClipboardToken) -> bool + 'static>;
+pub type OnTextInputRegionClipboardUnavailable = Arc<
+    dyn Fn(&mut dyn UiActionHost, ActionCx, fret_core::ClipboardToken, Option<String>) -> bool
+        + 'static,
+>;
 
 pub type OnTextInputRegionSetSelection =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, u32, u32) -> bool + 'static>;

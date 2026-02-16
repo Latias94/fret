@@ -1,7 +1,7 @@
 //! Painting, caching, and text shaping helpers for the code editor surface.
 
+use fret_core::time::Instant;
 use std::ops::Range;
-use std::time::Instant;
 
 use super::*;
 use fret_core::TextMetrics;

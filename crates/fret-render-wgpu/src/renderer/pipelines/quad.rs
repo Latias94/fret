@@ -45,6 +45,18 @@ impl Renderer {
                     "FRET_DASH_ENABLED",
                     if key.dash_enabled { 1.0 } else { 0.0 },
                 ),
+                (
+                    "FRET_FILL_MATERIAL_SAMPLED",
+                    if key.fill_material_sampled { 1.0 } else { 0.0 },
+                ),
+                (
+                    "FRET_BORDER_MATERIAL_SAMPLED",
+                    if key.border_material_sampled {
+                        1.0
+                    } else {
+                        0.0
+                    },
+                ),
             ];
             let compilation_options = wgpu::PipelineCompilationOptions {
                 constants: &constants,

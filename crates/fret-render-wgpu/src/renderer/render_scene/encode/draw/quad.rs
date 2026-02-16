@@ -264,6 +264,13 @@ pub(in super::super) fn encode_quad(
     let corner_radii = corners_to_vec4(corner_radii).map(|r| r * state.scale_factor);
     let corner_radii = clamp_corner_radii_for_rect(w, h, corner_radii);
     let border = edges_to_vec4(border).map(|e| e * state.scale_factor);
+    let border_present = border[0] > 0.0 || border[1] > 0.0 || border[2] > 0.0 || border[3] > 0.0;
+
+    let fill_visible = paint_is_visible(background, opacity);
+    let border_visible = border_present && paint_is_visible(border_paint, opacity);
+    if !fill_visible && !border_visible {
+        return;
+    }
 
     let dash_params = dash.map(|d| {
         let dash_px = (d.dash.0 * state.scale_factor).max(0.0);
@@ -280,18 +287,32 @@ pub(in super::super) fn encode_quad(
     let dash_params = dash_params.unwrap_or([0.0, 0.0, 0.0, 0.0]);
 
     let fill_paint_gpu = paint_to_gpu(renderer, state, background, opacity, state.scale_factor);
-    let border_paint_gpu = paint_to_gpu(renderer, state, border_paint, opacity, state.scale_factor);
-    if fill_paint_gpu.kind == 3 || border_paint_gpu.kind == 3 {
+    let border_paint_gpu = if border_present {
+        paint_to_gpu(renderer, state, border_paint, opacity, state.scale_factor)
+    } else {
+        PaintGpu {
+            kind: 0,
+            tile_mode: 0,
+            color_space: 0,
+            stop_count: 0,
+            params0: [0.0; 4],
+            params1: [0.0; 4],
+            params2: [0.0; 4],
+            params3: [0.0; 4],
+            stop_colors: [[0.0; 4]; MAX_STOPS],
+            stop_offsets0: [0.0; 4],
+            stop_offsets1: [0.0; 4],
+        }
+    };
+    if fill_paint_gpu.kind == 3 || (border_present && border_paint_gpu.kind == 3) {
         *state.material_quad_ops = state.material_quad_ops.saturating_add(1);
         if (fill_paint_gpu.kind == 3 && fill_paint_gpu.stop_count == 1)
-            || (border_paint_gpu.kind == 3 && border_paint_gpu.stop_count == 1)
+            || (border_present && border_paint_gpu.kind == 3 && border_paint_gpu.stop_count == 1)
         {
             *state.material_sampled_quad_ops = state.material_sampled_quad_ops.saturating_add(1);
         }
     }
 
-    let border_sum = border[0] + border[1] + border[2] + border[3];
-    let border_present = border_sum > 0.0;
     let dash_enabled = border_present && dash_params[3] > 0.5;
 
     let fill_kind = fill_paint_gpu.kind.min(3) as u8;
@@ -301,11 +322,17 @@ pub(in super::super) fn encode_quad(
         0
     };
 
+    let fill_material_sampled = fill_kind == 3 && fill_paint_gpu.stop_count == 1;
+    let border_material_sampled =
+        border_present && border_kind == 3 && border_paint_gpu.stop_count == 1;
+
     let pipeline = QuadPipelineKey {
         fill_kind,
         border_kind,
         border_present,
         dash_enabled,
+        fill_material_sampled,
+        border_material_sampled,
     };
 
     let needs_new_batch = match state.quad_batch {

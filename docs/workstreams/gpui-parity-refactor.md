@@ -1,5 +1,15 @@
 # GPUI Parity Refactor (Experience + Performance) — Workstream Plan
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (design document for alignment)
 
 This document proposes a “fearless refactor” plan to close the **experience** (interaction feel, authoring ergonomics)

@@ -1,5 +1,14 @@
 # GenUI Spec Rendering (json-render-inspired) v1
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- json-render: https://github.com/vercel-labs/json-render
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: MVP landed (polish in progress)
 
 This workstream introduces a **guardrailed, data-driven UI spec format** (JSON-friendly) that can be:

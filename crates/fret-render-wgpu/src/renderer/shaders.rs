@@ -121,6 +121,8 @@ override FRET_FILL_KIND: u32 = 0u;
 override FRET_BORDER_KIND: u32 = 0u;
 override FRET_BORDER_PRESENT: u32 = 1u;
 override FRET_DASH_ENABLED: u32 = 0u;
+override FRET_FILL_MATERIAL_SAMPLED: u32 = 0u;
+override FRET_BORDER_MATERIAL_SAMPLED: u32 = 0u;
 
 struct Paint {
   kind: u32,
@@ -455,7 +457,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -545,7 +548,7 @@ fn mat_rot(v: vec2<f32>, a: f32) -> vec2<f32> {
   return vec2<f32>(c * v.x - s * v.y, s * v.x + c * v.y);
 }
 
-fn material_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f32> {
   let base = p.params0;
   let fg = p.params1;
   let pos = local_pos + p.params3.zw;
@@ -614,12 +617,14 @@ fn material_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     u32(floor(pos.y / noise_scale + 0.5))
   );
   let noise_r0 = mat_rand01(noise_cell, seed);
-  let noise_xi = noise_cell.x & 63u;
-  let noise_yi = noise_cell.y & 63u;
-  let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
-  let noise_layer = select(0, i32(p.color_space), p.stop_count == 1u);
-  let noise_r1 = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
-  let noise_r = select(noise_r0, noise_r1, p.stop_count == 1u);
+  var noise_r = noise_r0;
+  if (sample_catalog) {
+    let noise_xi = noise_cell.x & 63u;
+    let noise_yi = noise_cell.y & 63u;
+    let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
+    let noise_layer = i32(p.color_space);
+    noise_r = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
+  }
   let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
   let noise_cov = noise_intensity * noise_r;
   let mat4 = base * (1.0 - noise_cov) + fg * noise_cov;
@@ -703,7 +708,8 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 3u) {
-    return material_eval(p, local_pos);
+    let sampled = FRET_FILL_MATERIAL_SAMPLED != 0u;
+    return material_eval(p, local_pos, sampled);
   }
   return vec4<f32>(0.0);
 }
@@ -730,7 +736,8 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 3u) {
-    return material_eval(p, local_pos);
+    let sampled = FRET_BORDER_MATERIAL_SAMPLED != 0u;
+    return material_eval(p, local_pos, sampled);
   }
   return vec4<f32>(0.0);
 }
@@ -748,35 +755,36 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let aa_outer = max(fwidth(outer_sdf), 1e-4);
   let alpha_outer = 1.0 - smoothstep(-aa_outer, aa_outer, outer_sdf);
 
-  // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
-  let inner_origin = input.rect.xy + vec2<f32>(input.border.x, input.border.y);
-  let inner_size = input.rect.zw - vec2<f32>(input.border.x + input.border.z, input.border.y + input.border.w);
+  var alpha_fill = alpha_outer;
+  var border_cov = 0.0;
+  if (FRET_BORDER_PRESENT != 0u) {
+    // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
+    let inner_origin = input.rect.xy + vec2<f32>(input.border.x, input.border.y);
+    let inner_size = input.rect.zw - vec2<f32>(input.border.x + input.border.z, input.border.y + input.border.w);
 
-  let inner_radii = max(
-    vec4<f32>(0.0),
-    vec4<f32>(
-      input.corner_radii.x - max(input.border.x, input.border.y), // TL
-      input.corner_radii.y - max(input.border.z, input.border.y), // TR
-      input.corner_radii.z - max(input.border.z, input.border.w), // BR
-      input.corner_radii.w - max(input.border.x, input.border.w)  // BL
-    )
-  );
+    let inner_radii = max(
+      vec4<f32>(0.0),
+      vec4<f32>(
+        input.corner_radii.x - max(input.border.x, input.border.y), // TL
+        input.corner_radii.y - max(input.border.z, input.border.y), // TR
+        input.corner_radii.z - max(input.border.z, input.border.w), // BR
+        input.corner_radii.w - max(input.border.x, input.border.w)  // BL
+      )
+    );
 
-  let inner_sdf = quad_sdf(input.local_pos, inner_origin, max(inner_size, vec2<f32>(0.0)), inner_radii);
-  let aa_inner = max(fwidth(inner_sdf), 1e-4);
-  let alpha_inner_raw = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
-  let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
-  let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
+    let inner_sdf = quad_sdf(input.local_pos, inner_origin, max(inner_size, vec2<f32>(0.0)), inner_radii);
+    let aa_inner = max(fwidth(inner_sdf), 1e-4);
+    let alpha_inner_raw = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
+    let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
+    let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
-  let border_present = FRET_BORDER_PRESENT != 0u;
-
-  let alpha_fill = select(alpha_outer, alpha_inner, border_present);
-  let border_cov_raw = saturate(alpha_outer - alpha_inner);
-  let border_cov = select(0.0, border_cov_raw, border_present);
+    alpha_fill = alpha_inner;
+    border_cov = saturate(alpha_outer - alpha_inner);
+  }
 
   let fill = paint_eval_fill(inst.fill_paint, input.local_pos) * alpha_fill;
   var border = vec4<f32>(0.0);
-  if (border_present) {
+  if (FRET_BORDER_PRESENT != 0u) {
     var dash_mask = 1.0;
     if (FRET_DASH_ENABLED != 0u) {
       let dash = inst.dash_params.x;
@@ -1025,7 +1033,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3265,7 +3274,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3486,7 +3496,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3667,15 +3678,98 @@ struct MaskStack {
 @group(0) @binding(6) var mask_image_sampler: sampler;
 @group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
 
+const MAX_STOPS: u32 = 8u;
+
+struct Paint {
+  kind: u32,
+  tile_mode: u32,
+  color_space: u32,
+  stop_count: u32,
+  params0: vec4<f32>,
+  params1: vec4<f32>,
+  params2: vec4<f32>,
+  params3: vec4<f32>,
+  stop_colors: array<vec4<f32>, 8>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct PathPaints {
+  paints: array<Paint>,
+};
+
+@group(1) @binding(0) var<storage, read> path_paints: PathPaints;
+
+fn paint_stop_offset(p: Paint, i: u32) -> f32 {
+  if (i < 4u) { return p.stop_offsets0[i]; }
+  return p.stop_offsets1[i - 4u];
+}
+
+fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
+  let n = min(p.stop_count, MAX_STOPS);
+  if (n == 0u) {
+    return vec4<f32>(0.0);
+  }
+  if (n == 1u) {
+    return p.stop_colors[0u];
+  }
+
+  var prev_offset = paint_stop_offset(p, 0u);
+  var prev_color = p.stop_colors[0u];
+  if (t <= prev_offset) {
+    return prev_color;
+  }
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = paint_stop_offset(p, i);
+    let c = p.stop_colors[i];
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_color, c, u);
+    }
+    prev_offset = off;
+    prev_color = c;
+  }
+  return prev_color;
+}
+
+fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (p.kind == 0u) {
+    return p.params0;
+  }
+  if (p.kind == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  return vec4<f32>(0.0);
+}
+
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
-  @location(1) color: vec4<f32>,
+  @location(1) local_pos_px: vec2<f32>,
 };
 
 struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
-  @location(0) color: vec4<f32>,
-  @location(1) pixel_pos: vec2<f32>,
+  @location(0) pixel_pos: vec2<f32>,
+  @location(1) local_pos_px: vec2<f32>,
+  @location(2) @interpolate(flat) paint_index: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -3813,7 +3907,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3861,12 +3956,13 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
 }
 
 @vertex
-fn vs_main(input: VsIn) -> VsOut {
+fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   var out: VsOut;
   let clip_xy = to_clip_space(input.pos_px);
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
-  out.color = input.color;
   out.pixel_pos = input.pos_px;
+  out.local_pos_px = input.local_pos_px;
+  out.paint_index = instance_index;
   return out;
 }
 
@@ -3874,7 +3970,9 @@ fn vs_main(input: VsIn) -> VsOut {
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
-  let out = input.color * clip * mask;
+  let paint = path_paints.paints[input.paint_index];
+  let fill = paint_eval(paint, input.local_pos_px);
+  let out = fill * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -4095,7 +4193,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4410,7 +4509,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4695,7 +4795,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -5007,7 +5108,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }

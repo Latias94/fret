@@ -1,5 +1,15 @@
 # ADR 0164: Gizmo Host Property Source (Read-only) v1
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Godot: https://github.com/godotengine/godot
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context

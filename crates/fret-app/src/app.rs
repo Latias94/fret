@@ -50,6 +50,16 @@ fn strict_runtime_enabled() -> bool {
     *ENABLED.get_or_init(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
 }
 
+/// Application container holding globals, models, commands, and effects.
+///
+/// `App` is backend-agnostic and is intended to be driven by a runner/driver layer
+/// (`fret-launch`, `fret-bootstrap`, or the ecosystem `fret` facade).
+///
+/// Responsibilities:
+/// - store app-global services (`with_global*` APIs),
+/// - host the model store and track changed models,
+/// - maintain the command registry,
+/// - collect effects emitted by services and UI.
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
     global_type_names: HashMap<TypeId, &'static str>,

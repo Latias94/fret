@@ -62,3 +62,8 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-diag-export -- --script tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --session-id <id> --out-dir target/fret-diag-web-copy/exports`
     - Generate baseline:
       - `cargo run -p fretboard -- diag perf-baseline-from-bundles tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json target/fret-diag-web-copy/exports/<export1> target/fret-diag-web-copy/exports/<export2> --perf-baseline-headroom-pct 20 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - Baseline record:
+    - Date: 2026-02-15
+    - Exports:
+      - `target/fret-diag-web-copy/exports/1771140829044-bundle`
+      - `target/fret-diag-web-copy/exports/1771140845261-bundle`

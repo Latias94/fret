@@ -196,9 +196,11 @@ fn text_input_middle_click_pastes_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
         linux_primary_selection: true,
+        ..Default::default()
     });
     let mut caps = fret_runtime::PlatformCapabilities::default();
-    caps.clipboard.text = true;
+    caps.clipboard.text.read = true;
+    caps.clipboard.text.write = true;
     caps.clipboard.primary_text = true;
     app.set_global(caps);
 
@@ -340,7 +342,8 @@ fn text_input_select_all_is_blocked_when_empty() {
 fn text_input_supports_edit_select_all_and_copy() {
     let mut app = TestHost::new();
     let mut caps = fret_runtime::PlatformCapabilities::default();
-    caps.clipboard.text = true;
+    caps.clipboard.text.read = true;
+    caps.clipboard.text.write = true;
     app.set_global(caps);
 
     let model = app.models_mut().insert("hello".to_string());

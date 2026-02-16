@@ -15,8 +15,8 @@ pub(super) struct DesktopEnvironmentSnapshot {
 
 #[cfg(target_os = "linux")]
 mod linux_portal_settings {
+    use fret_core::time::{Duration, Instant};
     use std::sync::{Mutex, OnceLock};
-    use std::time::{Duration, Instant};
 
     use zbus::blocking::{Connection, Proxy};
     use zbus::zvariant::OwnedValue;

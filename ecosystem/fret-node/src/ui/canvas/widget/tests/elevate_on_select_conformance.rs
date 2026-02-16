@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Point, Px, Rect, Scene, SceneOp, Size, Transform2D};
+use fret_core::{Color, Paint, Point, Px, Rect, Scene, SceneOp, Size, Transform2D};
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
@@ -159,13 +159,15 @@ impl NodeGraphPresenter for EdgeColorPresenter {
 fn edge_paths_in_scene(scene: &Scene) -> Vec<Color> {
     let mut out = Vec::new();
     for op in scene.ops().iter() {
-        let SceneOp::Path { order, color, .. } = op else {
+        let SceneOp::Path { order, paint, .. } = op else {
             continue;
         };
         if *order != fret_core::DrawOrder(2) {
             continue;
         }
-        out.push(*color);
+        if let Paint::Solid(color) = *paint {
+            out.push(color);
+        }
     }
     out
 }

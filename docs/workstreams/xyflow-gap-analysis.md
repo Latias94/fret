@@ -5,6 +5,15 @@ date: 2026-02-13
 scope: ecosystem/fret-canvas, ecosystem/fret-node, ecosystem/fret-ui-ai (workflow wrappers)
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- XYFlow: https://github.com/xyflow/xyflow
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # XYFlow (React Flow) gap analysis (Fret canvas + node graph)
 
 This document answers a practical question for the AI Elements workflow ports:
@@ -17,9 +26,9 @@ to existing Fret layers and note what is missing.
 
 ## Version stamp (upstream reference)
 
-Local snapshot (developer machine asset, not part of this repo):
+Local snapshot (optional repo-ref checkout):
 
-- `F:\SourceCodes\Rust\fret\repo-ref\xyflow`
+- `repo-ref/xyflow`
 
 Pinned commit:
 

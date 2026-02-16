@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from collections import defaultdict, deque
@@ -24,6 +25,82 @@ class InternalDepIssue:
     section: str
     reason: str
     manifest: str
+
+
+@dataclass(frozen=True, order=True)
+class SemVer:
+    major: int
+    minor: int
+    patch: int
+
+    @classmethod
+    def parse(cls, raw: str) -> "SemVer":
+        # Cargo version strings may include pre-release/build metadata. We only need the numeric core.
+        m = re.match(r"^\s*(\d+)\.(\d+)\.(\d+)", raw)
+        if not m:
+            raise ValueError(f"invalid semver: {raw!r}")
+        return cls(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
+    def compat_line(self) -> tuple[int, int]:
+        # For 0.y.z, we treat y as the compatibility line (Rust community convention pre-1.0).
+        return (self.major, self.minor)
+
+
+@dataclass(frozen=True)
+class VersionReq:
+    kind: str  # "exact" | "caret"
+    lower: SemVer
+    upper: SemVer
+
+    def allows(self, version: SemVer) -> bool:
+        if self.kind == "exact":
+            return version == self.lower
+        return self.lower <= version < self.upper
+
+
+def parse_cargo_version_req(raw: str) -> VersionReq:
+    """
+    Parse a minimal subset of Cargo version requirements, sufficient for internal workspace deps.
+
+    Supported:
+      - "0.2"    (caret, >=0.2.0,<0.3.0)
+      - "0.2.1"  (caret, >=0.2.1,<0.3.0)
+      - "^0.2.1" (caret)
+      - "=0.2.1" (exact)
+
+    Unsupported forms intentionally fail fast to keep manifests consistent:
+      - ranges with commas/spaces (">=..., <..."), wildcards ("*"), tilde ("~"), etc.
+    """
+    s = raw.strip()
+    if any(ch in s for ch in [",", " ", "<", ">", "*", "~"]):
+        raise ValueError(f"unsupported Cargo version requirement: {raw!r} (use caret-style '0.y' or '0.y.z')")
+
+    if s.startswith("="):
+        v = SemVer.parse(s[1:])
+        return VersionReq(kind="exact", lower=v, upper=v)
+
+    if s.startswith("^"):
+        s = s[1:]
+
+    # Allow "0.2" shorthand.
+    m = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?$", s)
+    if not m:
+        raise ValueError(f"unsupported Cargo version requirement: {raw!r} (use '0.y' or '0.y.z')")
+
+    major = int(m.group(1))
+    minor = int(m.group(2))
+    patch = int(m.group(3) or 0)
+
+    lower = SemVer(major, minor, patch)
+    if major > 0:
+        upper = SemVer(major + 1, 0, 0)
+    elif minor > 0:
+        upper = SemVer(0, minor + 1, 0)
+    else:
+        # 0.0.z: caret allows only patch bumps.
+        upper = SemVer(0, 0, patch + 1)
+
+    return VersionReq(kind="caret", lower=lower, upper=upper)
 
 
 def repo_root() -> Path:
@@ -86,6 +163,7 @@ def collect_internal_issues(
     release_scope: list[str],
     manifests: dict[str, Path],
     workspace_names: set[str],
+    workspace_versions: dict[str, SemVer],
 ) -> tuple[list[InternalDepIssue], dict[str, set[str]], list[str], list[str]]:
     release_set = set(release_scope)
     missing_release_crates = [name for name in release_scope if name not in manifests]
@@ -127,6 +205,46 @@ def collect_internal_issues(
                                 manifest=manifest_path.resolve().as_posix(),
                             )
                         )
+                    else:
+                        dep_version = workspace_versions.get(dep_name)
+                        raw_req = spec.get("version")
+                        if dep_version is not None and isinstance(raw_req, str):
+                            try:
+                                req = parse_cargo_version_req(raw_req)
+                            except ValueError as e:
+                                issues.append(
+                                    InternalDepIssue(
+                                        crate=name,
+                                        dep=dep_name,
+                                        section=section,
+                                        reason=str(e),
+                                        manifest=manifest_path.resolve().as_posix(),
+                                    )
+                                )
+                            else:
+                                if not req.allows(dep_version):
+                                    issues.append(
+                                        InternalDepIssue(
+                                            crate=name,
+                                            dep=dep_name,
+                                            section=section,
+                                            reason=(
+                                                "internal path dependency version requirement does not allow "
+                                                f"workspace version (req={raw_req!r}, dep_version={dep_version.major}.{dep_version.minor}.{dep_version.patch})"
+                                            ),
+                                            manifest=manifest_path.resolve().as_posix(),
+                                        )
+                                    )
+                        elif dep_version is not None and raw_req is not None and not isinstance(raw_req, str):
+                            issues.append(
+                                InternalDepIssue(
+                                    crate=name,
+                                    dep=dep_name,
+                                    section=section,
+                                    reason="internal path dependency has non-string version requirement",
+                                    manifest=manifest_path.resolve().as_posix(),
+                                )
+                            )
                     if dep_name not in release_set:
                         issues.append(
                             InternalDepIssue(
@@ -253,21 +371,50 @@ def main() -> int:
 
     manifests: dict[str, Path] = {}
     workspace_names: set[str] = set()
+    workspace_versions: dict[str, SemVer] = {}
     for item in package_entries:
         name = item.get("name")
         manifest_path = item.get("manifest_path")
+        version = item.get("version")
         if isinstance(name, str):
             workspace_names.add(name)
             if isinstance(manifest_path, str):
                 manifests[name] = Path(manifest_path)
+            if isinstance(version, str):
+                try:
+                    workspace_versions[name] = SemVer.parse(version)
+                except ValueError:
+                    # Defer reporting to the release-scope version line check below.
+                    pass
 
     issues, order_graph, missing_release_crates, missing_manifests = collect_internal_issues(
         release_scope=release_scope,
         manifests=manifests,
         workspace_names=workspace_names,
+        workspace_versions=workspace_versions,
     )
     order, cycle_nodes = topo_sort(order_graph)
     metadata_warnings = collect_metadata_warnings(release_scope, manifests)
+
+    # Version-line guard: all releasable crates must share the same (major, minor) compatibility line.
+    compat_lines: dict[tuple[int, int], list[str]] = defaultdict(list)
+    version_line_issues: list[str] = []
+    for name in release_scope:
+        v = workspace_versions.get(name)
+        if v is None:
+            version_line_issues.append(f"{name}: missing or unparsable version in cargo metadata")
+        else:
+            compat_lines[v.compat_line()].append(name)
+
+    compat_line_keys = sorted(compat_lines.keys())
+    if len(compat_line_keys) > 1:
+        parts = []
+        for key in compat_line_keys:
+            crates = ", ".join(sorted(compat_lines[key]))
+            parts.append(f"{key[0]}.{key[1]}: [{crates}]")
+        version_line_issues.append(
+            "release scope spans multiple compatibility lines (expected a single 0.y line): " + " ; ".join(parts)
+        )
 
     summary = {
         "release_scope_count": len(release_scope),
@@ -276,6 +423,9 @@ def main() -> int:
         "missing_manifests": missing_manifests,
         "issue_count": len(issues),
         "issues": [issue.__dict__ for issue in issues],
+        "version_line_issue_count": len(version_line_issues),
+        "version_line_issues": version_line_issues,
+        "compat_line_keys": [f"{k[0]}.{k[1]}" for k in compat_line_keys],
         "publish_order_count": len(order),
         "publish_order": order,
         "cycle_nodes": cycle_nodes,
@@ -307,6 +457,10 @@ def main() -> int:
                 f"  - {issue.crate} -> {issue.dep} ({issue.section}): {issue.reason}"
             )
 
+        print(f"[release-closure] version line issues: {len(version_line_issues)}")
+        for issue in version_line_issues:
+            print(f"  - {issue}")
+
         if cycle_nodes:
             print(f"[release-closure] cycle nodes: {', '.join(cycle_nodes)}")
         else:
@@ -324,7 +478,7 @@ def main() -> int:
             print(f"  - {warning}")
 
     has_blocking_errors = bool(
-        missing_release_crates or missing_manifests or issues or cycle_nodes
+        missing_release_crates or missing_manifests or issues or cycle_nodes or version_line_issues
     )
     has_metadata_errors = args.strict_metadata and bool(metadata_warnings)
 

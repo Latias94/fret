@@ -1,5 +1,15 @@
 # macOS Docking Tear-off (Multi-Window) — ImGui Parity Refactor Workstream
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dear ImGui: https://github.com/ocornut/imgui
+- winit: https://github.com/rust-windowing/winit
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream document; normative contracts live in ADRs)
 
 This workstream focuses on **macOS hand-feel parity** for editor-grade docking with **multiple OS windows**

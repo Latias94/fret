@@ -1,5 +1,14 @@
 # Docking Tear-off (Multi-Window) — ImGui Parity Refactor Workstream (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream document; normative contracts live in ADRs)
 
 This workstream targets **editor-grade docking across multiple OS windows** (tear-off + re-dock),

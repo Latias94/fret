@@ -918,6 +918,11 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_bind_group_switches: u64,
     pub(super) renderer_scissor_sets: u64,
     pub(super) renderer_scene_encoding_cache_misses: u64,
+    pub(super) renderer_material_quad_ops: u64,
+    pub(super) renderer_material_sampled_quad_ops: u64,
+    pub(super) renderer_material_distinct: u64,
+    pub(super) renderer_material_unknown_ids: u64,
+    pub(super) renderer_material_degraded_due_to_budget: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
     pub(super) changed_models: u32,
@@ -9040,6 +9045,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_scene_encoding_cache_misses"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_material_quad_ops = stats
+                .and_then(|m| m.get("renderer_material_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_sampled_quad_ops = stats
+                .and_then(|m| m.get("renderer_material_sampled_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_distinct = stats
+                .and_then(|m| m.get("renderer_material_distinct"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_unknown_ids = stats
+                .and_then(|m| m.get("renderer_material_unknown_ids"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_material_degraded_due_to_budget = stats
+                .and_then(|m| m.get("renderer_material_degraded_due_to_budget"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_engine_solves = stats
                 .and_then(|m| m.get("layout_engine_solves"))
                 .and_then(|v| v.as_u64())
@@ -9698,6 +9723,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_bind_group_switches,
                 renderer_scissor_sets,
                 renderer_scene_encoding_cache_misses,
+                renderer_material_quad_ops,
+                renderer_material_sampled_quad_ops,
+                renderer_material_distinct,
+                renderer_material_unknown_ids,
+                renderer_material_degraded_due_to_budget,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
                 changed_models,

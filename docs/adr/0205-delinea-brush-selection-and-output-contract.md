@@ -1,5 +1,14 @@
 # ADR 0205: `delinea` Brush Selection + Interaction Output Contract (ECharts-Inspired)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (P0)
 
 ## Context
@@ -102,5 +111,5 @@ This ADR explicitly leaves space for ECharts-class behaviors:
 ## References
 
 - Apache ECharts brush component and selection output:
-  - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\brush\\*`
+  - `repo-ref/echarts/src/component/brush/*`
 - Selection/filter contract baseline: `docs/adr/0199-delinea-row-selection-and-filtering-contract.md`

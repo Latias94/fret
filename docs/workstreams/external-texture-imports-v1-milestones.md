@@ -83,3 +83,8 @@ Evidence:
     - `apps/fretboard/src/demos.rs` (`external_texture_imports_web_demo`)
     - `docs/workstreams/perf-baselines/policies/external-texture-imports-web-copy.v1.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - Baseline record:
+    - Date: 2026-02-15
+    - Exports:
+      - `target/fret-diag-web-copy/exports/1771140829044-bundle`
+      - `target/fret-diag-web-copy/exports/1771140845261-bundle`

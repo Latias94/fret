@@ -1,3 +1,4 @@
+use fret_core::time::Duration;
 use fret_core::{
     Color, DrawOrder, Event, MouseButton, Paint, Px, Rect, SceneOp, Size, TextConstraints,
     TextOverflow, TextWrap,
@@ -5,7 +6,10 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect};
 
 use super::TextInput;
-use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, PlatformTextInputCx, Widget};
+use crate::widget::{
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
+    PlatformTextInputCx, Widget,
+};
 use crate::{Invalidation, UiHost};
 
 impl<H: UiHost> Widget<H> for TextInput {
@@ -176,13 +180,8 @@ impl<H: UiHost> Widget<H> for TextInput {
         let padding_top = self.chrome_style.padding.top;
         let padding_bottom = self.chrome_style.padding.bottom;
 
-        let inner_width = Px((self.last_bounds.size.width.0
-            - padding_left.0
-            - self.chrome_style.padding.right.0)
-            .max(0.0));
-
         let constraints = TextConstraints {
-            max_width: Some(inner_width),
+            max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
@@ -202,7 +201,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
 
         let origin = fret_core::Point::new(
-            self.last_bounds.origin.x + padding_left,
+            self.last_bounds.origin.x + padding_left - self.offset_x,
             Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
         );
 
@@ -270,12 +269,8 @@ impl<H: UiHost> Widget<H> for TextInput {
         let padding_top = self.chrome_style.padding.top;
         let padding_bottom = self.chrome_style.padding.bottom;
 
-        let inner_width = Px((self.last_bounds.size.width.0
-            - padding_left.0
-            - self.chrome_style.padding.right.0)
-            .max(0.0));
         let constraints = TextConstraints {
-            max_width: Some(inner_width),
+            max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
@@ -295,7 +290,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
 
         let origin = fret_core::Point::new(
-            self.last_bounds.origin.x + padding_left,
+            self.last_bounds.origin.x + padding_left - self.offset_x,
             Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
         );
 
@@ -515,9 +510,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.request_focus(cx.node);
                     cx.capture_pointer(cx.node);
                     self.last_sent_cursor = None;
+                    self.selection_dragging = true;
+                    self.last_pointer_pos = Some(*position);
+                    self.ensure_selection_autoscroll_timer(cx);
                     let padding = self.chrome_style.padding.left;
-                    let local_x =
-                        Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
+                    let local_x = Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)
+                        + self.offset_x.0)
+                        .max(0.0));
                     let mut caret = self
                         .text_blob
                         .map(|blob| cx.services.hit_test_x(blob, local_x))
@@ -566,6 +565,48 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
+                MouseButton::Right => {
+                    if *pointer_type != fret_core::PointerType::Mouse {
+                        return;
+                    }
+                    cx.request_focus(cx.node);
+                    self.last_sent_cursor = None;
+
+                    // Avoid mutating selection/caret during IME composition; a context menu should
+                    // not disrupt an in-progress preedit session.
+                    if self.is_ime_composing() {
+                        return;
+                    }
+
+                    let (sel_start, sel_end) = crate::text_edit::buffer::selection_range(
+                        self.selection_anchor,
+                        self.caret,
+                    );
+
+                    let padding = self.chrome_style.padding.left;
+                    let local_x = Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)
+                        + self.offset_x.0)
+                        .max(0.0));
+                    let caret_at_point = self
+                        .text_blob
+                        .map(|blob| cx.services.hit_test_x(blob, local_x))
+                        .unwrap_or_else(|| self.caret_from_x(local_x));
+
+                    // Preserve an existing selection when right-clicking inside it so "Copy" and
+                    // friends remain enabled in upstream context menus.
+                    if sel_start != sel_end
+                        && caret_at_point >= sel_start
+                        && caret_at_point <= sel_end
+                    {
+                        return;
+                    }
+
+                    self.caret = caret_at_point;
+                    self.selection_anchor = caret_at_point;
+                    self.clear_ime_composition();
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
                 MouseButton::Middle => {
                     if *pointer_type != fret_core::PointerType::Mouse {
                         return;
@@ -591,8 +632,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                     self.last_sent_cursor = None;
 
                     let padding = self.chrome_style.padding.left;
-                    let local_x =
-                        Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
+                    let local_x = Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)
+                        + self.offset_x.0)
+                        .max(0.0));
                     let caret = self
                         .text_blob
                         .map(|blob| cx.services.hit_test_x(blob, local_x))
@@ -621,20 +663,33 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if cx.captured != Some(cx.node) || !buttons.left {
                     return;
                 }
+
+                self.last_pointer_pos = Some(*position);
+                self.ensure_selection_autoscroll_timer(cx);
                 let padding = self.chrome_style.padding.left;
-                let local_x =
-                    Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
+                let local_x = Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)
+                    + self.offset_x.0)
+                    .max(0.0));
                 self.caret = self
                     .text_blob
                     .map(|blob| cx.services.hit_test_x(blob, local_x))
                     .unwrap_or_else(|| self.caret_from_x(local_x));
                 self.clear_ime_composition();
+                self.selection_autoscroll_tick(cx);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
             }
             Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 if cx.captured == Some(cx.node) && *button == MouseButton::Left {
                     cx.release_pointer_capture();
+                    self.selection_dragging = false;
+                    self.last_pointer_pos = None;
+                    if let Some(token) = self.selection_autoscroll_timer.take() {
+                        if let Some(window) = cx.window {
+                            crate::elements::clear_timer_target(cx.app, window, token);
+                        }
+                        cx.app.push_effect(Effect::CancelTimer { token });
+                    }
 
                     let settings = cx
                         .app
@@ -657,6 +712,19 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 text: sel.to_string(),
                             });
                         }
+                    }
+                }
+            }
+            Event::PointerCancel(_) => {
+                if cx.captured == Some(cx.node) {
+                    cx.release_pointer_capture();
+                    self.selection_dragging = false;
+                    self.last_pointer_pos = None;
+                    if let Some(token) = self.selection_autoscroll_timer.take() {
+                        if let Some(window) = cx.window {
+                            crate::elements::clear_timer_target(cx.app, window, token);
+                        }
+                        cx.app.push_effect(Effect::CancelTimer { token });
                     }
                 }
             }
@@ -846,7 +914,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.request_redraw();
                 }
             }
-            Event::ClipboardTextUnavailable { token } => {
+            Event::ClipboardTextUnavailable { token, .. } => {
                 if self.pending_clipboard_token == Some(*token) {
                     self.pending_clipboard_token = None;
                 }
@@ -902,6 +970,21 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.request_redraw();
                 }
             }
+            Event::Timer { token } => {
+                if self.selection_autoscroll_timer != Some(*token) {
+                    return;
+                }
+                self.selection_autoscroll_timer = None;
+                if let Some(window) = cx.window {
+                    crate::elements::clear_timer_target(cx.app, window, *token);
+                }
+                if !self.selection_dragging {
+                    return;
+                }
+                self.selection_autoscroll_tick(cx);
+                self.ensure_selection_autoscroll_timer(cx);
+                cx.stop_propagation();
+            }
             _ => {}
         }
     }
@@ -948,6 +1031,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.copy" => {
+                if !cx.input_ctx.caps.clipboard.text.write {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -961,6 +1047,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.cut" => {
+                if !cx.input_ctx.caps.clipboard.text.write {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -977,6 +1066,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.paste" => {
+                if !cx.input_ctx.caps.clipboard.text.read {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -1058,6 +1150,59 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
+        }
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> CommandAvailability {
+        if !self.enabled {
+            return CommandAvailability::NotHandled;
+        }
+        if cx.focus != Some(cx.node) {
+            return CommandAvailability::NotHandled;
+        }
+
+        let cmd = match command.as_str() {
+            "edit.copy" => "text.copy",
+            "edit.cut" => "text.cut",
+            "edit.paste" => "text.paste",
+            "edit.select_all" => "text.select_all",
+            other => other,
+        };
+        if !cmd.starts_with("text.") {
+            return CommandAvailability::NotHandled;
+        }
+
+        let clipboard_read = cx.input_ctx.caps.clipboard.text.read;
+        let clipboard_write = cx.input_ctx.caps.clipboard.text.write;
+        match cmd {
+            "text.copy" | "text.cut" => {
+                if !clipboard_write {
+                    return CommandAvailability::Blocked;
+                }
+                if self.has_selection() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            "text.paste" => {
+                if !clipboard_read {
+                    return CommandAvailability::Blocked;
+                }
+                CommandAvailability::Available
+            }
+            "text.select_all" | "text.clear" => {
+                if !self.text.is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            _ => CommandAvailability::NotHandled,
         }
     }
 
@@ -1250,9 +1395,10 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
 
         let padding_left = self.chrome_style.padding.left;
-        let _padding_right = self.chrome_style.padding.right;
+        let padding_right = self.chrome_style.padding.right;
         let padding_top = self.chrome_style.padding.top;
         let padding_bottom = self.chrome_style.padding.bottom;
+        let inner_width = Px((cx.bounds.size.width.0 - padding_left.0 - padding_right.0).max(0.0));
         let text_height = if show_placeholder {
             self.placeholder_metrics
                 .map(|m| m.size.height)
@@ -1264,6 +1410,80 @@ impl<H: UiHost> Widget<H> for TextInput {
             .max(0.0)
             .max(text_height.0));
         let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+
+        if inner_width.0 <= 0.0 {
+            self.offset_x = Px(0.0);
+        } else if focused {
+            let settings = cx
+                .app
+                .global::<fret_runtime::TextInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            let margin = (settings.horizontal_autoscroll_margin_px as f32)
+                .max(0.0)
+                .min(inner_width.0 * 0.45);
+            let caret_x = self
+                .text_blob
+                .map(|blob| cx.services.caret_x(blob, self.caret))
+                .unwrap_or(Px(0.0));
+            let caret_x = if self.is_ime_composing() && !self.preedit.is_empty() {
+                let cursor_end =
+                    crate::text_edit::ime::preedit_cursor_end(&self.preedit, self.preedit_cursor);
+                let pre_w = cx
+                    .services
+                    .text()
+                    .measure_str(&self.preedit[..cursor_end], &self.style, constraints)
+                    .size
+                    .width;
+                caret_x + pre_w
+            } else {
+                caret_x
+            };
+
+            let text_end_x = self
+                .text_blob
+                .map(|blob| cx.services.caret_x(blob, self.text.len()))
+                .unwrap_or(Px(0.0));
+            let preedit_w = if self.is_ime_composing() && !self.preedit.is_empty() {
+                cx.services
+                    .text()
+                    .measure_str(self.preedit.as_str(), &self.style, constraints)
+                    .size
+                    .width
+            } else {
+                Px(0.0)
+            };
+            let content_w = text_end_x + preedit_w;
+            let max_offset = Px((content_w.0 - inner_width.0).max(0.0));
+
+            let mut desired = self.offset_x;
+            let visible_x = Px(caret_x.0 - self.offset_x.0);
+            if visible_x.0 < margin {
+                desired = Px(caret_x.0 - margin);
+            } else if visible_x.0 > inner_width.0 - margin {
+                desired = Px(caret_x.0 - (inner_width.0 - margin));
+            }
+            self.offset_x = Px(desired.0.clamp(0.0, max_offset.0));
+        } else {
+            let text_end_x = self
+                .text_blob
+                .map(|blob| cx.services.caret_x(blob, self.text.len()))
+                .unwrap_or(Px(0.0));
+            let preedit_w = if self.is_ime_composing() && !self.preedit.is_empty() {
+                cx.services
+                    .text()
+                    .measure_str(self.preedit.as_str(), &self.style, constraints)
+                    .size
+                    .width
+            } else {
+                Px(0.0)
+            };
+            let content_w = text_end_x + preedit_w;
+            let max_offset = Px((content_w.0 - inner_width.0).max(0.0));
+            self.offset_x = Px(self.offset_x.0.clamp(0.0, max_offset.0));
+        }
+
+        cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
         if self.has_selection() && !self.is_ime_composing() {
             let (a, b) = self.selection_range();
@@ -1280,7 +1500,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 order: DrawOrder(0),
                 rect: Rect::new(
                     fret_core::geometry::Point::new(
-                        cx.bounds.origin.x + padding_left + start_x,
+                        cx.bounds.origin.x + padding_left + start_x - self.offset_x,
                         cx.bounds.origin.y + padding_top + vertical_offset,
                     ),
                     Size::new(
@@ -1301,7 +1521,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
         .unwrap_or(Px(10.0));
         let base_origin = fret_core::geometry::Point::new(
-            cx.bounds.origin.x + padding_left,
+            cx.bounds.origin.x + padding_left - self.offset_x,
             cx.bounds.origin.y + padding_top + vertical_offset + baseline,
         );
 
@@ -1366,6 +1586,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
 
         if !focused {
+            cx.scene.push(SceneOp::PopClip);
             return;
         }
 
@@ -1402,5 +1623,115 @@ impl<H: UiHost> Widget<H> for TextInput {
             border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: fret_core::geometry::Corners::all(Px(1.0)),
         });
+
+        cx.scene.push(SceneOp::PopClip);
+    }
+}
+
+impl TextInput {
+    const SELECTION_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
+
+    fn ensure_selection_autoscroll_timer<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
+        if self.selection_autoscroll_timer.is_some() {
+            return;
+        }
+        if !self.selection_dragging {
+            return;
+        }
+        let Some(window) = cx.window else {
+            return;
+        };
+        let token = cx.app.next_timer_token();
+        self.selection_autoscroll_timer = Some(token);
+        crate::elements::record_timer_target_node(cx.app, window, token, cx.node);
+        cx.app.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after: Self::SELECTION_AUTOSCROLL_TICK,
+            repeat: None,
+        });
+    }
+
+    fn selection_autoscroll_tick<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
+        if !self.selection_dragging {
+            return;
+        }
+        let Some(pos) = self.last_pointer_pos else {
+            return;
+        };
+
+        let padding_left = self.chrome_style.padding.left;
+        let padding_right = self.chrome_style.padding.right;
+        let inner_left = self.last_bounds.origin.x.0 + padding_left.0;
+        let inner_right =
+            self.last_bounds.origin.x.0 + self.last_bounds.size.width.0 - padding_right.0;
+        let inner_width = (inner_right - inner_left).max(0.0);
+        if inner_width <= 0.0 {
+            return;
+        }
+
+        let settings = cx
+            .app
+            .global::<fret_runtime::TextInteractionSettings>()
+            .copied()
+            .unwrap_or_default();
+        let margin = (settings.horizontal_autoscroll_margin_px as f32)
+            .max(0.0)
+            .min(inner_width * 0.45);
+        let max_step = settings.horizontal_autoscroll_max_step_px as f32;
+        if max_step <= 0.0 {
+            return;
+        }
+
+        let left_edge = inner_left + margin;
+        let right_edge = inner_right - margin;
+        let mut delta = 0.0_f32;
+        if pos.x.0 < left_edge {
+            let dist = (left_edge - pos.x.0).max(0.0);
+            delta = -((dist / 4.0) + 1.0).min(max_step);
+        } else if pos.x.0 > right_edge {
+            let dist = (pos.x.0 - right_edge).max(0.0);
+            delta = ((dist / 4.0) + 1.0).min(max_step);
+        }
+        if delta.abs() <= 0.01 {
+            return;
+        }
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: cx.scale_factor,
+        };
+        let content_w = cx
+            .services
+            .text()
+            .measure_str(self.text.as_str(), &self.style, constraints)
+            .size
+            .width
+            .0;
+        let max_offset = (content_w - inner_width).max(0.0);
+        if max_offset <= 0.0 {
+            return;
+        }
+
+        let next_offset = (self.offset_x.0 + delta).clamp(0.0, max_offset);
+        if (next_offset - self.offset_x.0).abs() <= 0.01 {
+            return;
+        }
+        self.offset_x = Px(next_offset);
+
+        let local_x = Px((pos.x.0 - (self.last_bounds.origin.x.0 + padding_left.0)
+            + self.offset_x.0)
+            .max(0.0));
+        self.caret = self
+            .text_blob
+            .map(|blob| cx.services.hit_test_x(blob, local_x))
+            .unwrap_or_else(|| self.caret_from_x(local_x));
+        self.clear_ime_composition();
+
+        cx.invalidate_self(Invalidation::Paint);
+        cx.request_redraw();
     }
 }

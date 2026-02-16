@@ -2,6 +2,16 @@
 title: Tailwind Primitive Parity TODO (gpui-component alignment)
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # Tailwind Primitive Parity TODO (gpui-component alignment)
 
 This is a pragmatic, execution-oriented TODO list for aligning Fret’s **typed, Tailwind-like** primitive

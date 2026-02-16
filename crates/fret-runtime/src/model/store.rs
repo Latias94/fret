@@ -14,6 +14,15 @@ use super::debug::{ModelChangedDebugInfo, ModelCreatedDebugInfo};
 use super::error::ModelUpdateError;
 use super::handle::Model;
 
+/// Main-thread-only storage for typed models.
+///
+/// `ModelStore` is an `Rc`-backed container that holds model values behind type-erased entries and
+/// provides leasing-based read/update access.
+///
+/// Key properties:
+/// - Models are removed when their last strong [`Model<T>`] handle is dropped.
+/// - `take_changed_models` provides an incremental change list for driving UI updates.
+/// - In debug/strict modes, the store tracks lease locations to surface misuse early.
 pub struct ModelStore {
     pub(super) inner: Rc<ModelStoreInner>,
     // Models are main-thread only. Enforce this at compile time by making the store (and all
@@ -312,6 +321,9 @@ impl ModelStore {
         true
     }
 
+    /// Returns and clears the list of models that were marked changed since the last call.
+    ///
+    /// Dropped models are filtered out.
     pub fn take_changed_models(&mut self) -> Vec<ModelId> {
         let mut state = self.state_mut();
         state.changed_dedup.clear();

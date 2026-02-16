@@ -1,5 +1,15 @@
 # ADR 0088: Renderer Architecture v2 - Scene Compiler, Atlases, and Default Performance
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Godot: https://github.com/godotengine/godot
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (scene compiler + caching landed; ongoing perf expansion)
 
 ## Context

@@ -4,9 +4,10 @@ use std::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, SystemTime},
 };
 
+use fret_core::time::Instant;
 use winit::event_loop::EventLoopProxy;
 
 pub(crate) fn hotpatch_diag_enabled() -> bool {
@@ -394,11 +395,11 @@ impl SubsecondTrigger {
                 tracing::debug!("hotpatch(subsecond): connected to devserver");
                 hotpatch_diag_log("hotpatch(subsecond): connected");
 
-                let mut last_skip_diag_at: Option<std::time::Instant> = None;
+                let mut last_skip_diag_at: Option<Instant> = None;
                 while let Ok(msg) = websocket.read() {
                     let tungstenite::Message::Text(text) = msg else {
                         if hotpatch_diag_enabled() {
-                            let now = std::time::Instant::now();
+                            let now = Instant::now();
                             let emit = match last_skip_diag_at {
                                 None => true,
                                 Some(t) => now.duration_since(t) > Duration::from_secs(5),
@@ -415,7 +416,7 @@ impl SubsecondTrigger {
 
                     let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else {
                         if hotpatch_diag_enabled() {
-                            let now = std::time::Instant::now();
+                            let now = Instant::now();
                             let emit = match last_skip_diag_at {
                                 None => true,
                                 Some(t) => now.duration_since(t) > Duration::from_secs(5),
@@ -441,7 +442,7 @@ impl SubsecondTrigger {
                         .and_then(|v| u32::try_from(v).ok());
                     if for_pid != Some(pid) {
                         if hotpatch_diag_enabled() {
-                            let now = std::time::Instant::now();
+                            let now = Instant::now();
                             let emit = match last_skip_diag_at {
                                 None => true,
                                 Some(t) => now.duration_since(t) > Duration::from_secs(5),
@@ -460,7 +461,7 @@ impl SubsecondTrigger {
                         let for_build_id = hotreload.get("for_build_id").and_then(|v| v.as_u64());
                         if for_build_id != Some(build_id) {
                             if hotpatch_diag_enabled() {
-                                let now = std::time::Instant::now();
+                                let now = Instant::now();
                                 let emit = match last_skip_diag_at {
                                     None => true,
                                     Some(t) => now.duration_since(t) > Duration::from_secs(5),
@@ -487,7 +488,7 @@ impl SubsecondTrigger {
                         serde_json::from_value::<subsecond::JumpTable>(jump_table_value.clone())
                     else {
                         if hotpatch_diag_enabled() {
-                            let now = std::time::Instant::now();
+                            let now = Instant::now();
                             let emit = match last_skip_diag_at {
                                 None => true,
                                 Some(t) => now.duration_since(t) > Duration::from_secs(5),

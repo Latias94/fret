@@ -1,5 +1,15 @@
 # Delinea Engine Contract Closure v1 (ECharts-Class Foundations)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream notes only; ADRs remain the source of truth)
 
 Tracking files:

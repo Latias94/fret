@@ -38,10 +38,7 @@ impl Image {
             alt: None,
             test_id: None,
             chrome: ChromeRefinement::default().rounded(Radius::Md),
-            layout: LayoutRefinement::default()
-                .w_full()
-                .min_w_0()
-                .overflow_hidden(),
+            layout: LayoutRefinement::default().min_w_0().overflow_hidden(),
         }
     }
 

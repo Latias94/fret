@@ -1,5 +1,15 @@
 # ADR 0184: Execution and Concurrency Surface v1 (Dispatcher + Executors)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Flutter: https://github.com/flutter/flutter
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

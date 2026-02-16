@@ -1,5 +1,14 @@
 # fret-node ↔ xyflow Alignment Workstream
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- XYFlow: https://github.com/xyflow/xyflow
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document is an **execution plan** for aligning `ecosystem/fret-node` (Rust) with `xyflow`
 (React Flow / Svelte Flow / `@xyflow/system`) across two deliverables:
 

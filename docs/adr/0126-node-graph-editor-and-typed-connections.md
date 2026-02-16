@@ -1,5 +1,17 @@
 # ADR 0126: Node Graph Editor and Typed Connections (`fret-node`)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- egui-snarl: https://github.com/zakarumych/egui-snarl
+- Unity Graphics (ShaderGraph): https://github.com/Unity-Technologies/Graphics
+- imgui-node-editor: https://github.com/thedmd/imgui-node-editor
+- XYFlow: https://github.com/xyflow/xyflow
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed  
 Date: 2026-01-06
 

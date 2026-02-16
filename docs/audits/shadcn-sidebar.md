@@ -1,5 +1,15 @@
 # shadcn/ui v4 Audit - Sidebar (Base UI aligned)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- MUI Base UI: https://github.com/mui/base-ui
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's `Sidebar` surface against upstream shadcn/ui v4 (`new-york-v4`) and
 the underlying Base UI/Radix behavior contracts used by that surface.
 

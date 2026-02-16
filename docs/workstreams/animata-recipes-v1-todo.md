@@ -1,5 +1,15 @@
 # Animata Recipes Alignment (v1) — TODO Tracker
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Animata: https://github.com/codse/animata
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (semantic-first; recipe selection in progress)
 
 This document tracks TODOs for:

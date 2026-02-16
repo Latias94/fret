@@ -25,6 +25,10 @@ pub enum DiagIncomingOpenItem {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Effects emitted by the portable runtime surface.
+///
+/// Effects are collected by the host (e.g. `fret-app::App`) and are expected to be handled by a
+/// runner/backend integration layer (native or web).
 pub enum Effect {
     /// Request a window redraw (one-shot).
     ///

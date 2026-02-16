@@ -1,5 +1,14 @@
 # ADR 0161: Canvas Cache Policy and Hosted Resource Caches (Smooth-By-Default)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 - Status: Proposed
 - Date: 2026-01-16
 - Scope: `crates/fret-ui` Canvas hosted caches + ecosystem canvas substrate (`ecosystem/fret-canvas`)

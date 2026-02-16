@@ -98,6 +98,11 @@ WebGPU guardrail (portability sanity):
 
 - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
+Optional stronger guardrail (runs in a real browser WebGPU implementation, catches Tint uniformity drift):
+
+- `cd crates/fret-render-wgpu`
+- `wasm-pack test --headless --chrome`
+
 ## 2.2) Baseline runbook (copy/paste)
 
 This section describes a minimal, reproducible baseline capture for the refactor.
@@ -164,6 +169,20 @@ python3 tools/perf/headless_svg_atlas_stress_gate.py
 ```
 
 Baseline: `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
+### 2.2.4 Quad/material headless gate (variants + dash)
+
+This gate is focused on the quad shader hot paths (paint kinds + dash), and is intended to keep the
+pipeline-variant keyspace bounded and observable.
+
+It also reports Tier B material usage counters (`material_*`) so follow-up variants (e.g. material-kind splits)
+are only pursued when evidence shows materials are hot.
+
+```powershell
+python3 tools/perf/headless_quad_material_stress_gate.py
+```
+
+Baseline: `docs/workstreams/perf-baselines/quad-material-stress-headless.windows-local.v1.json`
 
 ## 3) Proposed internal architecture (implementation, not contract)
 
@@ -556,3 +575,70 @@ The v1 policy is intentionally simple and deterministic:
 | --- | --- | --- | --- | --- |
 | `ParamsOnly` materials | **Must** | **Must** | **Must** | Registration must not fail; unknown ids degrade at draw time (transparent). |
 | `ParamsPlusCatalogTexture` (sampled) | **May** | **May** | **May** | If unsupported, registration fails with `Unsupported` and callers must select a non-sampled alternative. |
+
+---
+
+## Appendix D — Common UI renderer semantics gaps (post-v1 backlog)
+
+This appendix captures **common UI rendering semantics** that mainstream frameworks expose (CSS,
+Flutter, SwiftUI, Skia-based stacks) but that are either **missing** in the current `SceneOp`
+surface or only available via approximation/recipes today.
+
+These are not required to finish the renderer vNext refactor. They are tracked as a backlog in:
+
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md` (M7 — `REN-VNEXT-sem-*`)
+
+### D1) Paint surfaces missing on key primitives
+
+The current contract is intentionally conservative:
+
+- `SceneOp::Quad` supports `Paint` for fill and border.
+- `SceneOp::Path` is **solid-color only**.
+- `SceneOp::Text` is **solid-color only**.
+
+Common needs that are not contract-level yet:
+
+- Painted paths (gradients/materials on arbitrary vector shapes).
+- Gradient/material text fills and text outlines/strokes.
+
+These require careful design because they tend to:
+
+- increase shader binding surface area,
+- increase pipeline key space,
+- and create portability risks under WebGPU uniformity + downlevel mobile constraints.
+
+### D2) Stroke completeness (beyond dash)
+
+`StrokeStyleV1` only supports dash and only a limited set of stroke-like scene ops exist
+(notably `StrokeRRect`).
+
+Common missing stroke semantics:
+
+- join/cap/miter rules,
+- constant-pixel-width strokes under transform,
+- arbitrary path stroking (`StrokePath`).
+
+### D3) Gradient completeness (conic/sweep)
+
+Only linear and radial gradients exist today. A minimal sweep/conic gradient surface is a common
+UI need (spinners, rings, charts, accent glows) and is a likely v2 candidate if we can keep it
+bounded and portable.
+
+### D4) Blend mode coverage (bounded)
+
+The blend mode enum is intentionally small (`Over/Add/Multiply/Screen`). Many UI systems use
+additional blend modes, but expanding this must be **evidence-driven** and bounded, because:
+
+- support varies by backend/precision,
+- correctness expectations are high (visual diffs),
+- and it can complicate batching/pipeline selection.
+
+### D5) Tiling and wider color spaces (capability-gated)
+
+The contract currently sanitizes/degrades:
+
+- `TileMode::Repeat/Mirror` → `Clamp`
+- `ColorSpace::Oklab` → `Srgb`
+
+This keeps behavior deterministic across targets today, but leaves a backlog for “true”
+repeat/mirror and wider color management once we have the necessary capabilities and tests.

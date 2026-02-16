@@ -1,3 +1,12 @@
+//! Minimal, portable i18n vocabulary for the Fret workspace.
+//!
+//! This crate defines:
+//! - locale identifiers and lookup chains,
+//! - message keys + typed argument bags,
+//! - a small formatting trait (`I18nLookup`) that can be implemented by different backends.
+//!
+//! Backend integrations (e.g. Fluent) intentionally live in ecosystem crates.
+
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -6,6 +15,7 @@ use std::rc::Rc;
 use unic_langid::LanguageIdentifier;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// Strongly typed locale identifier used throughout the workspace.
 pub struct LocaleId(LanguageIdentifier);
 
 impl LocaleId {
@@ -56,6 +66,7 @@ impl Default for LocaleId {
 }
 
 #[derive(Debug)]
+/// Error returned when parsing an invalid locale string.
 pub struct LocaleParseError(pub unic_langid::LanguageIdentifierError);
 
 impl fmt::Display for LocaleParseError {
@@ -67,6 +78,7 @@ impl fmt::Display for LocaleParseError {
 impl std::error::Error for LocaleParseError {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// Stable key used to look up a localized message.
 pub struct MessageKey(Cow<'static, str>);
 
 impl MessageKey {
@@ -143,6 +155,7 @@ impl From<f64> for MessageArgValue {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+/// A small, ordered map of message arguments used during formatting.
 pub struct MessageArgs {
     items: BTreeMap<String, MessageArgValue>,
 }
@@ -171,6 +184,7 @@ impl MessageArgs {
 }
 
 #[derive(Clone, Debug)]
+/// Result of a successful i18n lookup.
 pub struct LocalizedMessage {
     pub text: String,
     pub locale: LocaleId,
@@ -206,6 +220,10 @@ impl fmt::Display for I18nLookupError {
 impl std::error::Error for I18nLookupError {}
 
 pub trait I18nLookup {
+    /// Formats a localized message for the given key.
+    ///
+    /// Implementations should consider the `preferred_locales` chain and return the resolved
+    /// locale along with the formatted text.
     fn format(
         &self,
         preferred_locales: &[LocaleId],

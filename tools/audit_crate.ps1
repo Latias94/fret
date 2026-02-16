@@ -151,4 +151,4 @@ Write-Host ""
 Write-Host "suggested gates (fast):"
 Write-Host ("  - cargo fmt")
 Write-Host ("  - cargo nextest run -p {0}" -f $pkg.name)
-Write-Host ("  - pwsh -NoProfile -File tools/check_layering.ps1")
+Write-Host ("  - python tools/check_layering.py")

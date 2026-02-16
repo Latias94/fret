@@ -1,5 +1,15 @@
 # ADR 0177: Retained Windowed Surface Hosts (Sliver-Style, GPUI/Flutter-Aligned)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Flutter: https://github.com/flutter/flutter
+- gpui-component: https://github.com/longbridge/gpui-component
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (v0 fixed-height hosts; extended coverage in progress)
 
 ## Context

@@ -1,5 +1,5 @@
+use fret_core::time::{Duration, Instant};
 use std::env;
-use std::time::{Duration, Instant};
 
 use fret_canvas::spatial::DefaultIndexWithBackrefs;
 use fret_core::{Point, Px, Rect, Size};

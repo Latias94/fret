@@ -5,9 +5,10 @@ pub use super::super::common::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
+use fret_core::time::Instant;
 #[cfg(feature = "hotpatch-subsecond")]
 mod hotpatch;
 
@@ -319,7 +320,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             }
 
-            caps.clipboard.text = true;
+            caps.clipboard.text.read = true;
+            caps.clipboard.text.write = true;
             caps.clipboard.files = false;
 
             caps.dnd.external = true;
@@ -359,7 +361,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
             caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
 
-            caps.clipboard.text = false;
+            caps.clipboard.text.read = false;
+            caps.clipboard.text.write = false;
             caps.clipboard.files = false;
 
             caps.dnd.external = false;
@@ -391,7 +394,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
             caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
 
-            caps.clipboard.text = false;
+            caps.clipboard.text.read = false;
+            caps.clipboard.text.write = false;
             caps.clipboard.files = false;
 
             caps.dnd.external = false;
@@ -443,7 +447,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .window_z_level
             .clamp_to_available(available.ui.window_z_level);
 
-        caps.clipboard.text &= available.clipboard.text;
+        caps.clipboard.text.read &= available.clipboard.text.read;
+        caps.clipboard.text.write &= available.clipboard.text.write;
         caps.clipboard.files &= available.clipboard.files;
 
         caps.dnd.external &= available.dnd.external;

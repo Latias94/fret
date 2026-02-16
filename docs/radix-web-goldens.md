@@ -1,5 +1,14 @@
 # Radix Primitives Web Goldens (JSON)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document proposes a “Radix primitives golden” layer that complements the existing shadcn
 component goldens.
 

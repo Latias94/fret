@@ -32,6 +32,39 @@ impl Renderer {
         self.instance_capacity = new_capacity;
     }
 
+    pub(super) fn ensure_path_paint_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.path_paint_capacity {
+            return;
+        }
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.path_paint_capacity.saturating_mul(2).max(1));
+        let mut new_buffers = Vec::with_capacity(self.path_paint_buffers.len());
+        let mut new_bind_groups = Vec::with_capacity(self.path_paint_buffers.len());
+        for i in 0..self.path_paint_buffers.len() {
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(&format!("fret path paints (resized) #{i}")),
+                size: (new_capacity * std::mem::size_of::<PaintGpu>()) as u64,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(&format!("fret path paints bind group (resized) #{i}")),
+                layout: &self.path_paint_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+            });
+            new_buffers.push(buffer);
+            new_bind_groups.push(bind_group);
+        }
+        self.path_paint_buffers = new_buffers;
+        self.path_paint_bind_groups = new_bind_groups;
+        self.path_paint_buffer_index = 0;
+        self.path_paint_capacity = new_capacity;
+    }
+
     pub(super) fn ensure_viewport_vertex_capacity(&mut self, device: &wgpu::Device, needed: usize) {
         if needed <= self.viewport_vertex_capacity {
             return;

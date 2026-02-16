@@ -1,5 +1,14 @@
 # Glide Data Grid Audit (DataGridCanvas)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Glide Data Grid: https://github.com/glideapps/glide-data-grid
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft
 
 This audit compares Fret’s canvas-backed data grid surface with Glide Data Grid to guide a

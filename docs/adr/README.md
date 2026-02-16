@@ -12,8 +12,9 @@ See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs
 
 Non-normative code references:
 
-- Zed/GPUI is pinned under `repo-ref/zed/` and is used as an implementation reference for runtime
+- Zed/GPUI (upstream: https://github.com/zed-industries/zed) is used as an implementation reference for runtime
   substrate shapes (window/input dispatch, scheduling, overlays, theme, and settings).
+  See `docs/repo-ref.md` for optional local snapshots.
 
 ## How To Use ADRs
 

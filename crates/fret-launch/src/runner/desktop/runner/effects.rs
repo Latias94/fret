@@ -1,4 +1,4 @@
-use std::{any::TypeId, collections::HashSet, sync::OnceLock, time::Instant};
+use std::{any::TypeId, collections::HashSet, sync::OnceLock};
 
 use super::macos_cursor::dock_tearoff_log;
 use super::streaming_images::{
@@ -6,6 +6,7 @@ use super::streaming_images::{
 };
 use super::window::bring_window_to_front;
 use fret_app::{CreateWindowKind, Effect, WindowRequest};
+use fret_core::time::Instant;
 use fret_core::{Event, Point, Px};
 use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
@@ -736,7 +737,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         {
                             self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable { token },
+                                &Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                },
                             );
                             continue;
                         }
@@ -746,10 +750,23 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 window,
                                 &Event::ClipboardText { token, text },
                             ),
-                            Ok(None) | Err(_) => self.deliver_window_event_now(
+                            Ok(None) => self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable { token },
+                                &Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                },
                             ),
+                            Err(err) => {
+                                tracing::debug!(?err, "failed to read clipboard text");
+                                self.deliver_window_event_now(
+                                    window,
+                                    &Event::ClipboardTextUnavailable {
+                                        token,
+                                        message: Some(format!("{err:?}")),
+                                    },
+                                );
+                            }
                         }
                     }
                     Effect::PrimarySelectionSetText { text } => {
@@ -1256,7 +1273,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let t0 = std::time::Instant::now();
+                        let t0 = Instant::now();
                         match crate::runner::yuv::nv12_to_rgba8_rect(
                             crate::runner::yuv::Nv12ToRgba8RectInput {
                                 width,
@@ -1336,7 +1353,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                     } => {
                         stats.yuv_conversions_attempted =
                             stats.yuv_conversions_attempted.saturating_add(1);
-                        let t0 = std::time::Instant::now();
+                        let t0 = Instant::now();
                         match crate::runner::yuv::i420_to_rgba8_rect(
                             crate::runner::yuv::I420ToRgba8RectInput {
                                 width,

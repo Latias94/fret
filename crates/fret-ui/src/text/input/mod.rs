@@ -4,7 +4,7 @@ mod cx;
 mod input;
 mod widget;
 
-use fret_core::{Px, Rect, SemanticsRole, TextMetrics, TextStyle};
+use fret_core::{Point, Px, Rect, SemanticsRole, TextMetrics, TextStyle};
 
 use crate::TextInputStyle;
 
@@ -18,6 +18,10 @@ pub struct TextInput {
     text: String,
     caret: usize,
     selection_anchor: usize,
+    offset_x: Px,
+    selection_dragging: bool,
+    last_pointer_pos: Option<Point>,
+    selection_autoscroll_timer: Option<fret_runtime::TimerToken>,
     preedit: String,
     preedit_cursor: Option<(usize, usize)>,
     ime_replace_range: Option<(usize, usize)>,

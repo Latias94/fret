@@ -37,7 +37,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             repeat: Some(Self::PAN_INERTIA_TICK_INTERVAL),
         });
 
-        let now = std::time::Instant::now();
+        let now = fret_core::time::Instant::now();
         self.interaction.viewport_animation = Some(ViewportAnimationState {
             timer,
             from_pan,
