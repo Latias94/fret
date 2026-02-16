@@ -218,8 +218,10 @@ folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
 - [x] Ensure paint-only changes never invalidate row geometry caches.
   - Regression gate:
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
-- [ ] Add a catastrophic regression guard for “resize jitter + visible viewport”:
-  - reuse the UI wrap smoke gate as a baseline,
+- [x] Add a catastrophic regression guard for “resize jitter + visible viewport”:
+  - reuse the UI wrap smoke gate as a baseline:
+    - `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py`
+    - default script: `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`
   - [x] add a code-editor-specific smoke gate (no calibrated baseline required):
     - `tools/perf/diag_code_editor_resize_jitter_smoke_gate.py`
     - default script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
