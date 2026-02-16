@@ -174,6 +174,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_search_model = editor_demo_search_model(cx);
     let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
     let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
+    let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
 
     #[cfg(debug_assertions)]
     {
@@ -775,6 +776,40 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                     }
                                                 });
 
+                                            let on_add: fret_ui_editor::composites::OnGradientAction =
+                                                Arc::new({
+                                                    let stops_model = editor_gradient_stops_model.clone();
+                                                    let next_id_model = editor_gradient_next_id_model.clone();
+                                                    move |host, action_cx| {
+                                                        let id = host
+                                                            .models_mut()
+                                                            .update(&next_id_model, |v| {
+                                                                let out = *v;
+                                                                *v = v.saturating_add(1);
+                                                                out
+                                                            })
+                                                            .unwrap_or(1);
+
+                                                        let position = host.models_mut().insert(0.5_f64);
+                                                        let color = host.models_mut().insert(Color {
+                                                            r: 0.85,
+                                                            g: 0.85,
+                                                            b: 0.85,
+                                                            a: 1.0,
+                                                        });
+                                                        let stop = GradientDemoStop {
+                                                            id,
+                                                            position,
+                                                            color,
+                                                        };
+
+                                                        let _ = host
+                                                            .models_mut()
+                                                            .update(&stops_model, |stops| stops.push(stop));
+                                                        host.request_redraw(action_cx.window);
+                                                    }
+                                                });
+
                                             let bindings: Arc<[GradientStopBinding]> = stops
                                                 .into_iter()
                                                 .map(|s| GradientStopBinding {
@@ -790,6 +825,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                 .angle_degrees(Some(
                                                     editor_gradient_angle_model.clone(),
                                                 ))
+                                                .on_add_stop(Some(on_add))
                                                 .options(GradientEditorOptions {
                                                     id_source: Some(Arc::from(
                                                         "imui_editor_proof_demo.gradient",
@@ -802,6 +838,9 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                                     )),
                                                     stops_test_id: Some(Arc::from(
                                                         "imui-editor-proof.editor.gradient.stops",
+                                                    )),
+                                                    add_stop_test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient.add-stop",
                                                     )),
                                                     ..Default::default()
                                                 })
@@ -1160,6 +1199,12 @@ fn editor_demo_gradient_stops_model<H: UiHost>(
                 color: stop_1_color,
             },
         ])
+    })
+}
+
+fn editor_demo_gradient_next_id_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<u64> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.gradient_next_id", |cx| {
+        cx.app.models_mut().insert(3_u64)
     })
 }
 

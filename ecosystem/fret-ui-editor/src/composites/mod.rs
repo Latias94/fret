@@ -8,7 +8,8 @@ pub mod property_group;
 pub mod property_row;
 
 pub use gradient_editor::{
-    GradientEditor, GradientEditorOptions, GradientStopBinding, OnGradientStopAction,
+    GradientEditor, GradientEditorOptions, GradientStopBinding, OnGradientAction,
+    OnGradientStopAction,
 };
 pub use inspector_panel::{InspectorPanel, InspectorPanelCx, InspectorPanelOptions};
 pub use property_grid::{PropertyGrid, PropertyGridOptions, PropertyGridRow, PropertyGridRowCx};

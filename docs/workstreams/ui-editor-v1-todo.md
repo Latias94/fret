@@ -224,7 +224,7 @@ Goal: validate that editor primitives can scale to canvas-like controls without 
   - [x] stop color edit reuse (`ColorEdit`)
   - [x] angle edit reuse (`DragValue`)
   - Evidence: `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs`
-  - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.gradient.*`)
+  - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.gradient.*`, `imui-editor-proof.editor.gradient.add-stop`)
 - [ ] Identify what this spike forces on other ecosystems (tokens/slots/hooks) beyond existing editor tokens.
 
 Exit criteria:
