@@ -6,6 +6,20 @@
 //!
 //! Note: This crate is now declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface (see ADR 0066 / declarative-only migration).
+//!
+//! ## Getting started
+//!
+//! Recommended imports for application/component code:
+//!
+//! ```rust
+//! use fret_ui_shadcn::prelude::*;
+//! ```
+//!
+//! ## Feature flags
+//!
+//! - `app-integration`: helpers for installing the default shadcn theme into `fret_app::App` and
+//!   syncing light/dark from `WindowMetricsService`.
+//! - `state-selector`, `state-query`: opt-in state helpers used by some recipes/demos.
 
 mod a11y_modal;
 pub mod accordion;
