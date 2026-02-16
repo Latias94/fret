@@ -100,6 +100,18 @@ In these cases:
 
 The `ui_component_*_patch_only!` macros exist to make this a 1-liner.
 
+Minimal usage pattern:
+
+```rust
+use fret_ui_kit::UiExt as _;
+
+// Patch a props/config value (not an element).
+let inner = WorkflowPanelInner::default().ui().w_full().min_w_0().build();
+
+// Pass the patched value into the owning component.
+let panel = WorkflowPanel::new(children).inner(inner).ui().max_w(Px(640.0));
+```
+
 ### Children collection rule (ecosystem convention)
 
 Public constructors/setters that accept children should use:
