@@ -148,18 +148,19 @@ impl<H: UiHost> UiTree<H> {
         // only affect hit-testing/paint, or programmatic scroll handle updates in frames that skip
         // layout). Ensure we consume scroll-handle change invalidations before paint-cache replay
         // so cached ancestors cannot replay stale ops.
-        let scroll_inv_started = self.debug_enabled.then(Instant::now);
-        self.invalidate_scroll_handle_bindings_for_changed_handles(
-            app,
-            crate::layout_pass::LayoutPassKind::Final,
-            false,
-            true,
-        );
-        if let Some(scroll_inv_started) = scroll_inv_started {
+        let (_, scroll_inv_elapsed) = fret_perf::measure(self.debug_enabled, || {
+            self.invalidate_scroll_handle_bindings_for_changed_handles(
+                app,
+                crate::layout_pass::LayoutPassKind::Final,
+                false,
+                true,
+            );
+        });
+        if let Some(scroll_inv_elapsed) = scroll_inv_elapsed {
             self.debug_stats.paint_scroll_handle_invalidation_time = self
                 .debug_stats
                 .paint_scroll_handle_invalidation_time
-                .saturating_add(scroll_inv_started.elapsed());
+                .saturating_add(scroll_inv_elapsed);
         }
 
         let cache_enabled = self.paint_cache_enabled();
@@ -169,16 +170,16 @@ impl<H: UiHost> UiTree<H> {
             self.paint_cache.invalidate_recording();
         }
 
-        let roots_started = self.debug_enabled.then(Instant::now);
-        let roots: Vec<NodeId> = self
-            .visible_layers_in_paint_order()
-            .map(|layer| self.layers[layer].root)
-            .collect();
-        if let Some(roots_started) = roots_started {
+        let (roots, roots_elapsed) = fret_perf::measure(self.debug_enabled, || {
+            self.visible_layers_in_paint_order()
+                .map(|layer| self.layers[layer].root)
+                .collect::<Vec<NodeId>>()
+        });
+        if let Some(roots_elapsed) = roots_elapsed {
             self.debug_stats.paint_collect_roots_time = self
                 .debug_stats
                 .paint_collect_roots_time
-                .saturating_add(roots_started.elapsed());
+                .saturating_add(roots_elapsed);
         }
         for root in roots {
             self.paint(app, services, root, bounds, scene, scale_factor);
@@ -187,38 +188,39 @@ impl<H: UiHost> UiTree<H> {
         // Publish a platform-facing text-input snapshot after paint so text widgets can update
         // their IME cursor area in the same frame (ADR 0012).
         if let Some(window) = self.window {
-            let text_snapshot_started = self.debug_enabled.then(Instant::now);
-            let mut next = if focus_is_text_input {
-                self.focus
-                    .and_then(|focus| self.nodes.get(focus))
-                    .and_then(|n| n.widget.as_ref())
-                    .and_then(|w| w.platform_text_input_snapshot())
-                    .unwrap_or_else(|| fret_runtime::WindowTextInputSnapshot {
-                        focus_is_text_input: true,
-                        ..Default::default()
-                    })
-            } else {
-                fret_runtime::WindowTextInputSnapshot::default()
-            };
-            next.focus_is_text_input = focus_is_text_input;
+            let (_, text_snapshot_elapsed) = fret_perf::measure(self.debug_enabled, || {
+                let mut next = if focus_is_text_input {
+                    self.focus
+                        .and_then(|focus| self.nodes.get(focus))
+                        .and_then(|n| n.widget.as_ref())
+                        .and_then(|w| w.platform_text_input_snapshot())
+                        .unwrap_or_else(|| fret_runtime::WindowTextInputSnapshot {
+                            focus_is_text_input: true,
+                            ..Default::default()
+                        })
+                } else {
+                    fret_runtime::WindowTextInputSnapshot::default()
+                };
+                next.focus_is_text_input = focus_is_text_input;
 
-            let needs_update = app
-                .global::<fret_runtime::WindowTextInputSnapshotService>()
-                .and_then(|svc| svc.snapshot(window))
-                .is_none_or(|prev| prev != &next);
-            if needs_update {
-                app.with_global_mut(
-                    fret_runtime::WindowTextInputSnapshotService::default,
-                    |svc, _app| {
-                        svc.set_snapshot(window, next);
-                    },
-                );
-            }
-            if let Some(text_snapshot_started) = text_snapshot_started {
+                let needs_update = app
+                    .global::<fret_runtime::WindowTextInputSnapshotService>()
+                    .and_then(|svc| svc.snapshot(window))
+                    .is_none_or(|prev| prev != &next);
+                if needs_update {
+                    app.with_global_mut(
+                        fret_runtime::WindowTextInputSnapshotService::default,
+                        |svc, _app| {
+                            svc.set_snapshot(window, next);
+                        },
+                    );
+                }
+            });
+            if let Some(text_snapshot_elapsed) = text_snapshot_elapsed {
                 self.debug_stats.paint_publish_text_input_snapshot_time = self
                     .debug_stats
                     .paint_publish_text_input_snapshot_time
-                    .saturating_add(text_snapshot_started.elapsed());
+                    .saturating_add(text_snapshot_elapsed);
             }
         }
 
@@ -231,13 +233,14 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let collapse_started = self.debug_enabled.then(Instant::now);
-        self.collapse_paint_observations_to_view_cache_roots_if_needed();
-        if let Some(collapse_started) = collapse_started {
+        let (_, collapse_elapsed) = fret_perf::measure(self.debug_enabled, || {
+            self.collapse_paint_observations_to_view_cache_roots_if_needed();
+        });
+        if let Some(collapse_elapsed) = collapse_elapsed {
             self.debug_stats.paint_collapse_observations_time = self
                 .debug_stats
                 .paint_collapse_observations_time
-                .saturating_add(collapse_started.elapsed());
+                .saturating_add(collapse_elapsed);
         }
 
         if let Some(started) = started {

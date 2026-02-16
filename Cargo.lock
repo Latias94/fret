@@ -2137,6 +2137,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-perf"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "tracing",
+]
+
+[[package]]
 name = "fret-platform"
 version = "0.1.0"
 dependencies = [
@@ -2391,6 +2399,7 @@ name = "fret-ui"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-perf",
  "fret-runtime",
  "fret-text-nav",
  "rustc-hash 2.1.1",

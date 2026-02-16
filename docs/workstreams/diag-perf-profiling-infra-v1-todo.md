@@ -28,3 +28,13 @@
 - [ ] Audit the current "frame timeline" coverage (layout/paint/dispatch/hit-test).
 - [ ] Add missing always-on phase timers for known uninstrumented work (keep additive keys).
 - [ ] Ensure chrome trace emits stable event names for new sub-phases.
+- [ ] Adopt `crates/fret-perf` helpers for new/updated timers so stats + spans stay aligned.
+  - [ ] Migrate more layout sub-phases beyond request/build + roots:
+    - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
+    - `crates/fret-ui/src/layout/engine.rs` (solve/measure sub-spans, if we want tighter attribution)
+  - [ ] Migrate remaining paint sub-phases and hot node paths:
+    - `crates/fret-ui/src/tree/paint/entry.rs` (input ctx, cache replay, etc.)
+    - `crates/fret-ui/src/tree/paint/node.rs` (cache key, hit check, replay/translate, widget paint)
+  - [ ] Extend runner/renderer phase spans where needed:
+    - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (frame phase spans)
+    - `crates/fret-render-*` (prepare/record/submit/present boundaries)

@@ -83,6 +83,14 @@ muscle memory:
 
 The goal is that "worst bundle" always has enough timeline context to answer "which phase spiked".
 
+Implementation note (keep refactors safe):
+
+- Prefer routing new/updated sub-phase timers through `crates/fret-perf` helpers (e.g.
+  `fret_perf::measure_span`) so a single call site can:
+  - update per-frame `debug.stats` timings (used by `diag perf` / baselines), and
+  - emit a matching `tracing` span name (used by Tracy).
+- This reduces the chance that stats buckets and timeline span boundaries drift apart over time.
+
 ### C) CPU-time vs schedule noise (Windows-friendly)
 
 When ETW/WPR is unavailable:

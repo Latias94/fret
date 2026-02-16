@@ -1,0 +1,16 @@
+[package]
+name = "fret-perf"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Lightweight perf instrumentation helpers that unify per-frame stats and tracing spans."
+
+[dependencies]
+fret-core = { path = "../fret-core" }
+tracing.workspace = true
+
