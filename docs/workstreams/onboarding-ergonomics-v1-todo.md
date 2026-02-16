@@ -171,8 +171,10 @@ Design note:
 - [ ] ONB-macro-051 Prototype the macro crate on 1–3 internal components.
   - Leave evidence anchors and avoid broad churn.
 
-- [ ] ONB-macro-052 Add a blanket impl: `UiIntoElement` for all `T: fret_ui::element::RenderOnce`.
+- [!] ONB-macro-052 Add a blanket impl: `UiIntoElement` for all `T: fret_ui::element::RenderOnce`.
   - Goal: eliminate repetitive `impl UiIntoElement` boilerplate in third-party crates.
+  - Note: blocked by Rust coherence (would conflict with `UiIntoElement for AnyElement` if upstream adds `RenderOnce`).
+    Use `fret_ui_kit::ui_into_element_render_once!(Ty)` instead.
   - Evidence:
     - `crates/fret-ui/src/element.rs` (`RenderOnce`)
     - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`UiIntoElement`)
@@ -183,7 +185,7 @@ Design note:
     - `crates/fret-runtime/src/commands.rs` (`CommandMeta`, `DefaultKeybinding`)
     - `crates/fret-app/src/core_commands.rs` (registration patterns)
 
-- [ ] ONB-macro-054 Export `macro_rules!` helpers for third-party `.ui()` integration.
+- [x] ONB-macro-054 Export `macro_rules!` helpers for third-party `.ui()` integration.
   - Goal: make “opt into `UiBuilder`” a 1-line change for external crates.
   - Proposed surface (names bikesheddable):
     - `fret_ui_kit::ui_component_chrome_layout!(Ty);`
