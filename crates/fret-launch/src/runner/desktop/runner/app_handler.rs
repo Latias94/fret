@@ -3,6 +3,7 @@
 use super::*;
 use std::sync::{Mutex, OnceLock};
 
+use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
 
 #[cfg(feature = "diag-screenshots")]
@@ -70,7 +71,7 @@ struct HitchLogWriter {
 struct HitchLogState {
     writers: Vec<HitchLogWriter>,
     writes_since_flush: u32,
-    last_flush: std::time::Instant,
+    last_flush: Instant,
 }
 
 impl HitchLogState {
@@ -94,7 +95,7 @@ impl HitchLogState {
         Self {
             writers,
             writes_since_flush: 0,
-            last_flush: std::time::Instant::now(),
+            last_flush: Instant::now(),
         }
     }
 
@@ -119,7 +120,7 @@ impl HitchLogState {
                 let _ = w.file.flush();
             }
             self.writes_since_flush = 0;
-            self.last_flush = std::time::Instant::now();
+            self.last_flush = Instant::now();
         }
     }
 }

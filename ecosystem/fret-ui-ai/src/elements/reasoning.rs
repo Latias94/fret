@@ -1,5 +1,5 @@
+use fret_core::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 
 use fret_core::{Point, Px, SemanticsRole, Transform2D};
 use fret_runtime::Model;

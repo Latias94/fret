@@ -127,7 +127,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 return;
             }
 
-            let now = std::time::Instant::now();
+            let now = fret_core::time::Instant::now();
             let mut dt = now
                 .checked_duration_since(anim.last_tick_at)
                 .unwrap_or_default();

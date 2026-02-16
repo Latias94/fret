@@ -9,8 +9,8 @@ use crate::tree::{
     UiDebugScrollNodeTelemetry,
 };
 use fret_core::FrameId;
+use fret_core::time::{Duration, Instant};
 use std::sync::OnceLock;
-use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 struct ScrollLayoutProfileConfig {

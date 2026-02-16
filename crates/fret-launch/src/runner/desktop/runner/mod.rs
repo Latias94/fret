@@ -5,9 +5,10 @@ pub use super::super::common::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
+use fret_core::time::Instant;
 #[cfg(feature = "hotpatch-subsecond")]
 mod hotpatch;
 

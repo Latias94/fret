@@ -1,5 +1,5 @@
+use fret_core::time::{Duration, Instant, SystemTime};
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant, SystemTime};
 
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};

@@ -1,12 +1,18 @@
 use super::super::super::super::*;
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
+use fret::mvu_router::KeyedMessageRouter;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
+
+#[cfg(target_arch = "wasm32")]
+use std::cell::RefCell;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::Mutex;
 
 #[derive(Debug, Clone)]
 struct DemoProcessRow {
@@ -29,11 +35,31 @@ struct DemoProcessTableFacetsState {
 }
 
 const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.select_all_page";
-const CMD_TOGGLE_ROW_SELECTED_PREFIX: &str = "ui_gallery.data_table.toggle_row_selected/";
+const TOGGLE_ROW_SELECTED_ROUTE_PREFIX: &str = "ui_gallery.data_table.toggle_row_selected.";
 
-fn parse_toggle_row_selected(command: &str) -> Option<u64> {
-    let rest = command.strip_prefix(CMD_TOGGLE_ROW_SELECTED_PREFIX)?;
-    rest.parse().ok()
+#[cfg(not(target_arch = "wasm32"))]
+fn with_toggle_row_selected_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
+    static ROUTER: OnceLock<Mutex<KeyedMessageRouter<u64, u64>>> = OnceLock::new();
+    let lock = ROUTER
+        .get_or_init(|| Mutex::new(KeyedMessageRouter::new(TOGGLE_ROW_SELECTED_ROUTE_PREFIX)));
+    let mut guard = lock
+        .lock()
+        .expect("ui-gallery data-table legacy row router lock poisoned");
+    f(&mut guard)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn with_toggle_row_selected_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
+    thread_local! {
+        static ROUTER: RefCell<KeyedMessageRouter<u64, u64>> =
+            RefCell::new(KeyedMessageRouter::new(TOGGLE_ROW_SELECTED_ROUTE_PREFIX));
+    }
+
+    ROUTER.with(|router| f(&mut *router.borrow_mut()))
+}
+
+fn toggle_row_selected_command(row_id: u64) -> CommandId {
+    with_toggle_row_selected_router(|router| router.cmd(row_id, row_id))
 }
 
 fn wire_selection_commands<H: UiHost + 'static>(
@@ -46,10 +72,6 @@ fn wire_selection_commands<H: UiHost + 'static>(
         cx.root_id(),
         Arc::new(move |host, acx, command| {
             let cmd = command.as_str();
-
-            if cmd != CMD_SELECT_ALL_PAGE && !cmd.starts_with(CMD_TOGGLE_ROW_SELECTED_PREFIX) {
-                return false;
-            }
 
             let current = host
                 .models_mut()
@@ -65,7 +87,9 @@ fn wire_selection_commands<H: UiHost + 'static>(
 
             let next = if cmd == CMD_SELECT_ALL_PAGE {
                 table.toggled_all_page_rows_selected(None)
-            } else if let Some(row_id) = parse_toggle_row_selected(cmd) {
+            } else if let Some(row_id) =
+                with_toggle_row_selected_router(|router| router.try_resolve(command))
+            {
                 table.toggled_row_selected(RowKey(row_id), None, true)
             } else {
                 return false;
@@ -375,10 +399,7 @@ pub(in crate::ui) fn preview_data_table_legacy(
                                     "ui-gallery-data-table-select-row-{}",
                                     row.id
                                 )))
-                                .on_click(CommandId::new(format!(
-                                    "{CMD_TOGGLE_ROW_SELECTED_PREFIX}{}",
-                                    row.id
-                                )))
+                                .on_click(toggle_row_selected_command(row.id))
                                 .into_element(cx)
                         })
                     }

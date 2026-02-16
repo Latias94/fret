@@ -14,7 +14,7 @@ pub(in crate::ui) fn preview_ai_image_demo(
         return vec![cx.text("Image demo assets missing (expected UiGalleryDriver init).")];
     };
 
-    let state = cx.use_image_source_state(&assets.wide_png);
+    let state = cx.use_image_source_state(&assets.square_png);
     let status_line = cx
         .text(format!("status={:?}", state.status))
         .test_id("ui-ai-image-demo-status");
@@ -23,6 +23,13 @@ pub(in crate::ui) fn preview_ai_image_demo(
         ui_ai::Image::new(id)
             .alt("Generated image")
             .test_id("ui-ai-image-demo-image")
+            .refine_layout(LayoutRefinement::default().w_px(Px(300.0)).h_px(Px(300.0)))
+            .refine_style(
+                ChromeRefinement::default()
+                    .rounded(Radius::Lg)
+                    .border_1()
+                    .border_color(ColorRef::Color(theme.color_token("border"))),
+            )
             .into_element(cx)
     });
 
@@ -31,21 +38,8 @@ pub(in crate::ui) fn preview_ai_image_demo(
             .test_id("ui-ai-image-demo-loading")
     });
 
-    let chrome = ChromeRefinement::default()
-        .rounded(Radius::Lg)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")))
-        .p(Space::N4);
-
-    let props = decl_style::container_props(
-        theme,
-        chrome,
-        LayoutRefinement::default()
-            .w_full()
-            .h_px(Px(420.0))
-            .min_w_0()
-            .min_h_0(),
-    );
+    let chrome = ChromeRefinement::default().p(Space::N4);
+    let props = decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full());
 
     vec![stack::vstack(
         cx,
@@ -56,7 +50,16 @@ pub(in crate::ui) fn preview_ai_image_demo(
             vec![
                 cx.text("Image (AI Elements): generated image presentation surface."),
                 status_line,
-                cx.container(props, move |_cx| vec![image]),
+                cx.container(props, move |cx| {
+                    vec![stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .justify_center()
+                            .items_center(),
+                        move |_cx| vec![image],
+                    )]
+                }),
             ]
         },
     )]

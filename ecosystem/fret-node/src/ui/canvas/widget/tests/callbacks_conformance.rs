@@ -1,6 +1,6 @@
+use fret_core::time::{Duration, Instant};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::{Duration, Instant};
 
 use fret_core::{Event, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px, Rect, Size};
 use fret_ui::retained_bridge::Widget as _;

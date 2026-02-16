@@ -701,7 +701,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        let t0 = std::time::Instant::now();
+        let t0 = fret_core::time::Instant::now();
         let Ok(uploaded_bytes) = yuv_gpu::write_nv12_rect(
             &context.queue,
             planes,

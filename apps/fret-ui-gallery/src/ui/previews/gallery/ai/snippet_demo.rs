@@ -19,38 +19,43 @@ pub(in crate::ui) fn preview_ai_snippet_demo(
         )
     };
 
-    let cmd = |cx: &mut ElementContext<'_, App>,
-               label: &'static str,
-               code: &'static str,
-               id: &'static str| {
-        ui_ai::Snippet::new([
-            ui_ai::SnippetText::new(label).into_element(cx),
-            ui_ai::SnippetInput::new(code).into_element(cx),
+    let snippet = |cx: &mut ElementContext<'_, App>,
+                   prefix: Option<&'static str>,
+                   code: &'static str,
+                   id: &'static str| {
+        let mut children: Vec<AnyElement> = Vec::new();
+        if let Some(prefix) = prefix {
+            children.push(ui_ai::SnippetText::new(prefix).into_element(cx));
+        }
+        children.push(ui_ai::SnippetInput::new(code).into_element(cx));
+        children.push(
             ui_ai::SnippetCopyButton::new(code)
                 .test_id(Arc::<str>::from(format!("{id}-copy")))
                 .copied_marker_test_id(Arc::<str>::from(format!("{id}-copied")))
                 .into_element(cx),
-        ])
-        .test_id(Arc::<str>::from(id))
-        .into_element(cx)
+        );
+
+        ui_ai::Snippet::new(children)
+            .test_id(Arc::<str>::from(id))
+            .into_element(cx)
     };
 
-    let simple = cmd(
+    let command = snippet(
         cx,
-        "Run:",
+        Some("$"),
         "cargo nextest run -p fret-ui-gallery",
         "ui-ai-snippet-demo-nextest",
     );
-    let env = cmd(
+    let plain = snippet(
         cx,
-        "Env:",
+        None,
         "FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1",
         "ui-ai-snippet-demo-env",
     );
 
     vec![
         cx.text("Snippet (AI Elements): inline copyable surface with feedback timeout."),
-        section(cx, "Command", simple),
-        section(cx, "Environment", env),
+        section(cx, "With Prefix", command),
+        section(cx, "Without Prefix", plain),
     ]
 }

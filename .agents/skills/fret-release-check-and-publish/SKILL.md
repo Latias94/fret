@@ -12,6 +12,7 @@ Use this skill when:
 - Preparing a release wave (`v0.1+`) and deciding what to publish.
 - Debugging release-plz PR/publish failures.
 - Validating `release-plz.toml` and `.github/workflows/release-plz.yml`.
+- Introducing or enforcing a versioning policy (single vs multiple `version_group`s).
 
 ## Inputs to collect (ask the user)
 
@@ -29,7 +30,13 @@ Defaults if unclear:
 
 ## Smallest starting point (one command)
 
-- `python3 tools/release_closure_check.py --print-publish-commands`
+- `python3 tools/release_closure_check.py --config release-plz.toml --print-publish-commands`
+
+## One-command preflight (recommended)
+
+Use the cross-platform preflight runner to avoid forgetting individual gates:
+
+- `python3 tools/pre_release.py --release-config release-plz.toml`
 
 ## Quick intent
 
@@ -41,7 +48,9 @@ Defaults if unclear:
 
 1. Decide the publish set in `release-plz.toml` (keep it small).
 2. (Recommended) Run a release closure + publish order check:
-   - `python3 tools/release_closure_check.py --write-order docs/release/v0.1.0-publish-order.txt --print-publish-commands`
+   - `python3 tools/release_closure_check.py --config release-plz.toml --write-order docs/release/v0.1.0-publish-order.txt --print-publish-commands`
+   - Or via one-command preflight:
+     - `python3 tools/pre_release.py --release-config release-plz.toml --release-write-order docs/release/v0.1.0-publish-order.txt --release-print-publish-commands`
 3. Run planning: `release-plz update --config release-plz.toml --allow-dirty --repo-url <repo-url>`.
 4. Optionally run a per-crate dry run (may fail before first-wave dependencies exist on crates.io):
    - `cargo publish --dry-run -p <crate> --allow-dirty --no-verify`
@@ -52,6 +61,7 @@ Defaults if unclear:
 
 - Release config: `release-plz.toml`
 - CI workflow: `.github/workflows/release-plz.yml`
+- Preflight gate workflow (recommended): `.github/workflows/release-guards.yml`
 - Release analysis and scope notes: `docs/release/release-plz-adoption-analysis.md`
 - Operational checklist (v0.1): `docs/release/v0.1.0-release-checklist.md`
 
@@ -66,6 +76,23 @@ Defaults if unclear:
 3. Put wave-aligned crates into one `version_group` (for example `fret-0-1`) to keep versions synchronized.
 4. Keep app/demo/tooling crates out of the publish whitelist unless explicitly required.
 
+### Step 1.5: Decide your versioning model (single vs multiple version groups)
+
+Two viable strategies:
+
+- Single group (lockstep): all published crates share the same exact `x.y.z`.
+- Multiple groups (independent patch): split into multiple `version_group`s (for example core vs ecosystem) so
+  one group can publish `0.y.(z+1)` without bumping the other group.
+
+If you adopt multiple groups, enforce two extra invariants:
+
+- All released crates stay on the same compatibility line (`0.y`) unless the release is intentionally breaking.
+- Internal `path` dependencies use a Cargo version requirement that matches the intended policy:
+  - allow any patch within the compatibility line: `version = "0.y"`
+  - require a minimum patch when using new APIs: `version = "0.y.z"`
+
+The closure checker (`tools/release_closure_check.py`) should be treated as the source of truth for these invariants.
+
 ### Step 2: Preflight checks (must pass before CI release)
 
 1. Verify each release crate is publishable:
@@ -78,7 +105,18 @@ Defaults if unclear:
    - If workspace is large, validate by package first:
      - `release-plz update --config release-plz.toml --allow-dirty --repo-url <repo-url> --package <crate>`
 4. For first-wave multi-crate publishes, prefer a closure/order check over isolated dry-runs:
-   - `python3 tools/release_closure_check.py --print-publish-commands`
+   - `python3 tools/release_closure_check.py --config release-plz.toml --print-publish-commands`
+
+### Step 2.5: SemVer break detection (API-level)
+
+`release-plz` can run an API SemVer break check via `cargo-semver-checks` (controlled by `semver_check` in
+`release-plz.toml`).
+
+Important limitations:
+
+- It checks *public Rust API surface*, not runtime behavior/contract semantics.
+- It typically reflects the default feature set; feature-gated APIs may not be fully covered.
+- It needs a published baseline version to compare against (first publish has limited signal).
 
 ### Step 3: CI publish flow
 
@@ -137,6 +175,7 @@ Defaults if unclear:
 
 - `release-plz.toml`
 - `.github/workflows/release-plz.yml`
+- `.github/workflows/release-guards.yml`
 - `docs/release/release-plz-adoption-analysis.md`
 - `docs/release/v0.1.0-release-checklist.md`
 - `tools/release_closure_check.py`
