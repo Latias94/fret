@@ -5,15 +5,18 @@
 
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Color, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length,
+    MainAlign, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
+use super::icons::editor_icon;
 use super::visuals::{EditorFrameState, EditorWidgetVisuals};
+use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 pub(crate) fn editor_input_group_frame<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -172,6 +175,145 @@ pub(crate) fn editor_input_group_divider<H: UiHost>(
         },
         |_cx| Vec::new(),
     )
+}
+
+pub(crate) fn editor_icon_button_segment<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    enabled_for_paint: bool,
+    a11y_label: std::sync::Arc<str>,
+    icon: fret_icons::IconId,
+    icon_size: Option<Px>,
+    test_id: Option<std::sync::Arc<str>>,
+    on_activate: OnActivate,
+) -> AnyElement {
+    let mut el = cx.pressable(
+        PressableProps {
+            enabled: enabled_for_paint,
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Px(density.hit_thickness),
+                    height: Length::Px(density.row_height),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            a11y: PressableA11y {
+                label: Some(a11y_label),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, st| {
+            cx.pressable_add_on_activate(on_activate.clone());
+
+            let theme = Theme::global(&*cx.app);
+            let hovered = st.hovered || st.hovered_raw;
+            let pressed = st.pressed;
+            let bg = editor_icon_button_bg(theme, enabled_for_paint, hovered, pressed);
+            let border = editor_icon_button_border(theme, enabled_for_paint, hovered, pressed);
+            let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    background: bg,
+                    border: Edges::all(border_width),
+                    border_color: border,
+                    corner_radii: Corners::all(Px(0.0)),
+                    ..Default::default()
+                },
+                move |cx| vec![editor_icon(cx, density, icon, icon_size)],
+            )]
+        },
+    );
+
+    if let Some(test_id) = test_id.as_ref() {
+        el = el.test_id(test_id.clone());
+    }
+
+    el
+}
+
+pub(crate) fn editor_clear_button_segment<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    enabled_for_paint: bool,
+    a11y_label: std::sync::Arc<str>,
+    test_id: Option<std::sync::Arc<str>>,
+    on_activate: OnActivate,
+) -> AnyElement {
+    editor_icon_button_segment(
+        cx,
+        density,
+        enabled_for_paint,
+        a11y_label,
+        fret_icons::ids::ui::CLOSE,
+        Some(Px(12.0)),
+        test_id,
+        on_activate,
+    )
+}
+
+pub(crate) fn editor_joined_input_frame<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutStyle,
+    density: EditorDensity,
+    chrome: ResolvedEditorFrameChrome,
+    enabled_for_paint: bool,
+    open: bool,
+    frame_test_id: Option<std::sync::Arc<str>>,
+    build_input: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    build_trailing_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
+        let input = build_input(cx);
+        let focused = cx.is_focused_element(input.id);
+
+        let divider = chrome.border;
+        let input = editor_input_group_inset(cx, chrome.padding, input);
+
+        let mut segments = vec![input];
+        for seg in build_trailing_segments(cx) {
+            segments.push(editor_input_group_divider(cx, divider));
+            segments.push(seg);
+        }
+
+        let mut frame = editor_input_group_frame(
+            cx,
+            LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            density,
+            chrome,
+            EditorFrameState {
+                enabled: enabled_for_paint,
+                hovered,
+                pressed: false,
+                focused,
+                open,
+            },
+            move |cx, _visuals| vec![editor_input_group_row(cx, Px(0.0), segments)],
+        );
+
+        if let Some(test_id) = frame_test_id.as_ref() {
+            frame = frame.test_id(test_id.clone());
+        }
+
+        vec![frame]
+    })
 }
 
 pub(crate) fn editor_axis_segment<H: UiHost>(

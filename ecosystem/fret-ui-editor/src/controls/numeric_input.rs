@@ -15,19 +15,16 @@ use fret_core::{Axis, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    TextInputProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, TextInputProps,
+    TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
-use crate::primitives::input_group::{
-    editor_input_group_frame, editor_input_group_inset, editor_input_group_row,
-};
+use crate::primitives::input_group::editor_joined_input_frame;
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::EditorFrameState;
 
 #[derive(Debug, Clone)]
 pub struct NumericInputOptions {
@@ -166,19 +163,25 @@ where
         let enabled_for_paint = options.enabled;
         let error_for_field = error.clone();
         let text_style_for_field = text_style.clone();
+        let placeholder = options.placeholder.clone();
+        let focusable = options.focusable;
 
-        let field = cx.hover_region(
-            HoverRegionProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
+        let field = editor_joined_input_frame(
+            cx,
+            LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
                     ..Default::default()
                 },
+                ..Default::default()
             },
-            move |cx, hovered| {
+            density,
+            frame_chrome,
+            enabled_for_paint,
+            false,
+            options.test_id.clone(),
+            move |cx| {
                 let mut props = TextInputProps::new(draft.clone());
                 props.layout = LayoutStyle {
                     size: SizeStyle {
@@ -189,9 +192,9 @@ where
                     },
                     ..Default::default()
                 };
-                props.enabled = options.enabled;
-                props.focusable = options.focusable;
-                props.placeholder = options.placeholder.clone();
+                props.enabled = enabled_for_paint;
+                props.focusable = focusable;
+                props.placeholder = placeholder.clone();
                 props.test_id = None;
                 props.chrome = joined_text_input_style(chrome);
                 props.text_style = text_style_for_field.clone();
@@ -297,35 +300,9 @@ where
                     }
                 }
 
-                let input = editor_input_group_inset(cx, frame_chrome.padding, input);
-                let mut frame = editor_input_group_frame(
-                    cx,
-                    LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    density,
-                    frame_chrome,
-                    EditorFrameState {
-                        enabled: enabled_for_paint,
-                        hovered,
-                        pressed: false,
-                        focused: is_focused,
-                        open: false,
-                    },
-                    move |cx, _visuals| vec![editor_input_group_row(cx, Px(0.0), vec![input])],
-                );
-
-                if let Some(test_id) = options.test_id.as_ref() {
-                    frame = frame.test_id(test_id.clone());
-                }
-
-                vec![frame]
+                input
             },
+            |_cx| Vec::new(),
         );
 
         let error_msg = cx
