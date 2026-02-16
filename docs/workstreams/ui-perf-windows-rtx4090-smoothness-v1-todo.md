@@ -23,6 +23,7 @@
 - [x] Add percentiles (p50/p95) for `diag stats` bundle summaries (typical perf review).
 - [x] Export phase sub-events in `trace.chrome.json` derived from `debug.stats.*_time_us`.
 - [x] Export per-run frame percentiles into `check.perf_thresholds.json` for quick scanning.
+- [x] Add miss-only renderer spans for pipeline creation and intermediate target allocation/eviction.
 - [ ] Make “phase timeline” → “top hotspots” linkage explicit in one place (docs + tool output).
 
 ## Windows-specific

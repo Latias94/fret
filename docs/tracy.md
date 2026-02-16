@@ -66,6 +66,12 @@ If you enable `fret_render_wgpu=trace`, you should also see renderer internals n
 - `fret.renderer.scene.encode`, `fret.renderer.plan.compile`
 - `fret.renderer.upload`, `fret.renderer.record_passes`, `fret.renderer.pass`
 - `fret.renderer.encoder.finish`
+- Target allocation / pool budget events (only on misses / realloc / eviction):
+  - `fret.renderer.targets.ensure_target`
+  - `fret.renderer.pool.allocate_texture`, `fret.renderer.pool.clear`
+  - `fret.renderer.pool.enforce_budget`, `fret.renderer.pool.evict`
+- Pipeline creation misses (only when a pipeline is created / rebuilt):
+  - `fret.renderer.pipeline.create.*` (e.g. `quad`, `text`, `path_msaa`, `blur`, `composite`)
 
 ## Correlating Tracy with `diag perf` / `bundle.json`
 
