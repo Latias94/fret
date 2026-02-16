@@ -54,6 +54,16 @@ the public UI contract stable and portable:
    - v2 introduces steady-state perf baselines for any landed zero/low-copy strategy, especially
      on wasm/mobile.
 
+This ADR is tracked as a workstream:
+
+- `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
+
+## Non-goals (v2)
+
+- Exposing backend handles to UI/component code.
+- A fully general color management pipeline (ICC profiles, arbitrary transfer functions).
+- Shipping “true zero-copy” on every backend immediately (capability-gated + staged).
+
 ## Import strategy set (bounded)
 
 This ADR defines a bounded set of strategies. Concrete backend implementations may add internal
@@ -97,6 +107,39 @@ ingestion strategy:
 If a backend cannot preserve a metadata property for a given strategy (e.g. colorspace metadata is
 not representable), it must degrade deterministically and record a diagnostic counter.
 
+## Capability matrix (expected reality)
+
+This ADR assumes the following *typical* capability picture. Implementations must treat this as
+capability-gated (query, do not assume).
+
+- Web (wasm + wgpu WebGPU backend):
+  - `ExternalZeroCopy`: **blocked** until backend support exists for WebGPU `ExternalTexture`.
+  - `GpuCopy`: available today (`copyExternalImageToTexture` path) and is the portable “fast” path.
+  - `CpuUpload`: available as the final fallback (but avoid for high-frequency sources).
+- Native desktop (wgpu, platform GPU):
+  - `GpuCopy`: available and should be the default non-regression anchor.
+  - `ExternalZeroCopy`: may be possible only for specific producer integrations; treat as optional.
+- Mobile (iOS/Android):
+  - Strategy availability depends heavily on the backend + OS primitives; assume “copy-first” until
+    proven and gated by real device perf baselines.
+
+## Perf gates (must be explicit)
+
+For each landed v2 strategy, add:
+
+1. A deterministic steady-state `fretboard diag perf` script (or reuse an existing one).
+2. A committed baseline JSON under `docs/workstreams/perf-baselines/`.
+3. A rule for whether ingest fallbacks are expected on the target (and how they are asserted).
+
+Existing v1 anchors (copy paths):
+
+- Web copy path:
+  - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
+  - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+- Native contract-path:
+  - `tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json`
+  - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
+
 ## Consequences
 
 - The framework gains a clear, portable, performance-oriented story for video/camera/streaming UI.
@@ -114,3 +157,7 @@ not representable), it must degrade deterministically and record a diagnostic co
   - `docs/workstreams/external-texture-imports-v1-milestones.md`
 - Capability surface (today): `crates/fret-render-wgpu/src/capabilities.rs`
 - Native adapter seam (today): `crates/fret-launch/src/runner/native_external_import.rs`
+- v2 workstream tracking:
+  - `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
+  - `docs/workstreams/external-texture-imports-v2-zero-low-copy-todo.md`
+  - `docs/workstreams/external-texture-imports-v2-zero-low-copy-milestones.md`

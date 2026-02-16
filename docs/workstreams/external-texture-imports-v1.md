@@ -55,3 +55,4 @@ Key properties (v2):
 Tracking:
 
 - ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md`
+- Workstream (v2): `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
