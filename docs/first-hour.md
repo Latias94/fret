@@ -69,7 +69,52 @@ for item in items {
 }
 ```
 
-### B) Heterogeneous children without adapter noise
+### B) The authoring dialect: `ui::*` constructors + `UiBuilder`
+
+In the onboarding path, you will mostly author UI via `ui::*` constructors from `fret_ui_shadcn::prelude::*`.
+
+Key points:
+
+- `ui::*` constructors return `UiBuilder<T>` (a patchable builder surface).
+- Apply layout/chrome refinement via fluent methods (`px_2()`, `gap(Space::N2)`, `rounded_md()`, ...).
+- Convert into `AnyElement` at the boundary via `.into_element(cx)`.
+- If you have a patchable component type (implements `UiPatchTarget`), you can opt into the same fluent
+  authoring style with `.ui()`.
+
+Minimal pattern:
+
+```rust
+let header = ui::h_flex(cx, |cx| ui::children![cx; ui::text("Hello")])
+    .gap(Space::N2)
+    .px_3()
+    .into_element(cx);
+```
+
+### C) Iterator helpers for child collection
+
+If you already have an iterator that yields `AnyElement`, collect it with `.elements()`:
+
+```rust
+use fret_ui::element::AnyElementIterExt;
+
+let rows = items
+    .iter()
+    .map(|it| cx.keyed(it.id, |cx| render_row(cx, it)))
+    .elements();
+```
+
+If you run into iterator borrow pitfalls (because a closure needs `&mut cx`), prefer the `*_build`
+constructors that collect into a sink:
+
+```rust
+let list = ui::v_flex_build(cx, |cx, out| {
+    for it in items.iter() {
+        out.push(cx.keyed(it.id, |cx| render_row(cx, it)));
+    }
+});
+```
+
+### D) Heterogeneous children without adapter noise
 
 When building a list of children, prefer:
 
@@ -78,7 +123,7 @@ When building a list of children, prefer:
 This is the intended “composition macro” surface: it keeps call sites readable while conversions
 remain explicit at the ecosystem boundary.
 
-### C) Invalidation rules of thumb
+### E) Invalidation rules of thumb
 
 Fret uses explicit invalidation (this is a contract, not an optimization detail).
 
@@ -108,3 +153,11 @@ If you are unsure, start with `Layout` and tighten later.
 4) **Interop (Tier A embedding)**: viewport surfaces + input forwarding
    - See: `docs/ui-ergonomics-and-interop.md`
    - See: `ecosystem/fret/src/interop/embedded_viewport.rs`
+
+### Template matrix (what each scaffold teaches)
+
+| Template | Generate | Teaches | Avoids |
+| --- | --- | --- | --- |
+| `hello` | `fretboard new hello` | smallest runnable UI surface | MVU/state patterns |
+| `simple-todo` | `fretboard new simple-todo` | MVU + typed messages + keyed lists | selectors/queries |
+| `todo` | `fretboard new todo` | “best practice baseline” with selectors/queries | being minimal |

@@ -51,6 +51,11 @@ Acceptance:
 - `simple-todo` has no selector/query deps.
 - Both templates teach keyed list rendering.
 
+Evidence (current):
+
+- `apps/fretboard/src/scaffold/templates.rs`
+- `docs/first-hour.md` (template matrix + progressive disclosure ladder)
+
 ---
 
 ## Milestone 2 (M2): Authoring density (composition macros)

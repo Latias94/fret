@@ -72,23 +72,26 @@ Design note:
     - `apps/fret-examples/src/todo_demo.rs`
     - `docs/examples/todo-app-golden-path.md`
 
-- [ ] ONB-tpl-012 Add a “template matrix” doc section (what each template teaches).
+- [x] ONB-tpl-012 Add a “template matrix” doc section (what each template teaches).
   - Where:
-    - `README.md` or `docs/README.md` (decision needed)
+    - `docs/first-hour.md`
 
 ---
 
 ## C. Reduce Authoring Noise (teach + small deltas)
 
-- [ ] ONB-auth-020 Ensure onboarding docs teach `ui::*` constructors early.
+- [x] ONB-auth-020 Ensure onboarding docs teach `ui::*` constructors early.
   - Evidence:
     - `ecosystem/fret-ui-kit/src/ui.rs`
     - `ecosystem/fret-ui-shadcn/src/lib.rs` (prelude exports)
+    - `docs/first-hour.md`
 
-- [ ] ONB-auth-021 Promote iterator helpers for child collection.
+- [x] ONB-auth-021 Promote iterator helpers for child collection.
   - Teach `AnyElementIterExt::elements()` / `elements_owned()` in onboarding docs.
   - Evidence:
     - `crates/fret-ui/src/element.rs` (`AnyElementIterExt`)
+    - `ecosystem/fret-ui-kit/src/ui.rs` (`*_build` iterator helpers)
+    - `docs/first-hour.md`
 
 - [ ] ONB-auth-022 Audit top-level examples for avoidable `vec![...]` / `.collect()` boilerplate.
   - Target files (initial):
