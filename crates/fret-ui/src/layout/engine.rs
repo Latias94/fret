@@ -42,6 +42,8 @@ pub struct TaffyLayoutEngine {
     seen_generation: u32,
     seen_stamp: SecondaryMap<NodeId, u32>,
     child_nodes_scratch: Vec<TaffyNodeId>,
+    child_unique_scratch: Vec<NodeId>,
+    child_dedupe_set_scratch: HashSet<NodeId>,
     mark_seen_stack_scratch: Vec<NodeId>,
     mark_solved_stack_scratch: Vec<NodeId>,
     clear_solved_stack_scratch: Vec<NodeId>,
@@ -103,6 +105,8 @@ impl Default for TaffyLayoutEngine {
             seen_generation: 1,
             seen_stamp: SecondaryMap::new(),
             child_nodes_scratch: Vec::new(),
+            child_unique_scratch: Vec::new(),
+            child_dedupe_set_scratch: HashSet::new(),
             mark_seen_stack_scratch: Vec::new(),
             mark_solved_stack_scratch: Vec::new(),
             clear_solved_stack_scratch: Vec::new(),
@@ -849,15 +853,68 @@ impl TaffyLayoutEngine {
     }
 
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
+        let original_len = children.len();
+        let mut child_unique_scratch = std::mem::take(&mut self.child_unique_scratch);
+        let mut child_dedupe_set_scratch = std::mem::take(&mut self.child_dedupe_set_scratch);
+
+        let mut had_dupes = false;
+        let children = if children.len() <= 1 {
+            children
+        } else if children.len() <= 32 {
+            child_unique_scratch.clear();
+            child_unique_scratch.reserve(children.len());
+            for &child in children {
+                if child_unique_scratch.iter().any(|&seen| seen == child) {
+                    had_dupes = true;
+                    continue;
+                }
+                child_unique_scratch.push(child);
+            }
+            if had_dupes {
+                child_unique_scratch.as_slice()
+            } else {
+                children
+            }
+        } else {
+            child_unique_scratch.clear();
+            child_dedupe_set_scratch.clear();
+            child_unique_scratch.reserve(children.len());
+            for &child in children {
+                if !child_dedupe_set_scratch.insert(child) {
+                    had_dupes = true;
+                    continue;
+                }
+                child_unique_scratch.push(child);
+            }
+            if had_dupes {
+                child_unique_scratch.as_slice()
+            } else {
+                children
+            }
+        };
+
+        if had_dupes {
+            tracing::warn!(
+                parent = ?node,
+                children_len = original_len,
+                unique_len = children.len(),
+                "layout engine set_children received duplicate children; deduping to avoid taffy panic"
+            );
+        }
+
         if self
             .children
             .get(node)
             .is_some_and(|prev| prev.as_slice() == children)
         {
+            self.child_unique_scratch = child_unique_scratch;
+            self.child_dedupe_set_scratch = child_dedupe_set_scratch;
             return;
         }
 
         let Some(parent) = self.request_layout_node(node).map(|id| id.0) else {
+            self.child_unique_scratch = child_unique_scratch;
+            self.child_dedupe_set_scratch = child_dedupe_set_scratch;
             return;
         };
         let prev_children = self.children.get(node).cloned();
@@ -870,6 +927,8 @@ impl TaffyLayoutEngine {
         self.child_nodes_scratch.reserve(children.len());
         for &child in children {
             let Some(child_id) = self.request_layout_node(child).map(|id| id.0) else {
+                self.child_unique_scratch = child_unique_scratch;
+                self.child_dedupe_set_scratch = child_dedupe_set_scratch;
                 return;
             };
             self.child_nodes_scratch.push(child_id);
@@ -896,6 +955,9 @@ impl TaffyLayoutEngine {
                 Self::warn_taffy_error_once("set_children", err);
             }
         }
+
+        self.child_unique_scratch = child_unique_scratch;
+        self.child_dedupe_set_scratch = child_dedupe_set_scratch;
     }
 
     #[stacksafe::stacksafe]
