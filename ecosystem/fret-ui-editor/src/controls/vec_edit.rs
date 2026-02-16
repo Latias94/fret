@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
@@ -18,6 +18,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::controls::{DragValue, NumericFormatFn, NumericParseFn, NumericValidateFn};
+use crate::primitives::visuals::{
+    EditorWidgetVisuals, editor_icon_button_bg, editor_icon_button_border,
+};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 fn axis_color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
@@ -66,53 +69,83 @@ impl AxisReset {
     }
 }
 
-fn axis_label_el<H: UiHost>(
+fn axis_badge<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     density: EditorDensity,
     label: Arc<str>,
     tint: Color,
-    fg: Color,
 ) -> AnyElement {
-    let bg = Color { a: 0.22, ..tint };
-    let border = Color { a: 0.55, ..tint };
-    cx.container(
-        ContainerProps {
+    let badge_w = Px(density.row_height.0.max(density.hit_thickness.0));
+    cx.pressable(
+        PressableProps {
+            enabled: true,
+            focusable: false,
             layout: LayoutStyle {
                 size: SizeStyle {
-                    width: Length::Px(density.hit_thickness),
+                    width: Length::Px(badge_w),
                     height: Length::Px(density.row_height),
                     ..Default::default()
                 },
                 ..Default::default()
             },
-            padding: Edges::all(Px(0.0)),
-            background: Some(bg),
-            border: Edges::all(Px(1.0)),
-            border_color: Some(border),
-            corner_radii: Corners::all(Px(4.0)),
             ..Default::default()
         },
-        move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
+        move |cx, st| {
+            let theme = Theme::global(&*cx.app);
+            let visuals = EditorWidgetVisuals::new(theme);
+
+            let hovered = st.hovered || st.hovered_raw;
+            let pressed = st.pressed;
+
+            let bg_base = Color { a: 0.90, ..tint };
+            let border_base = Color { a: 1.0, ..tint };
+
+            let bg = visuals.hover_overlay_bg_custom(bg_base, hovered, pressed, 0.05, 0.09);
+            let border =
+                visuals.hover_overlay_border_custom(border_base, hovered, pressed, 0.07, 0.11);
+            let fg = theme.color_token("foreground");
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
+                    padding: Edges::all(Px(0.0)),
+                    background: Some(bg),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(border),
+                    corner_radii: Corners::all(Px(4.0)),
                     ..Default::default()
                 },
-                text: label.clone(),
-                style: Some(TextStyle {
-                    size: Px(10.0),
-                    line_height: Some(density.row_height),
-                    ..Default::default()
-                }),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: TextAlign::Center,
-            })]
+                move |cx| {
+                    vec![cx.text_props(TextProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        text: label.clone(),
+                        style: Some(TextStyle {
+                            size: Px(11.0),
+                            weight: FontWeight::SEMIBOLD,
+                            line_height: Some(density.row_height),
+                            ..Default::default()
+                        }),
+                        color: Some(fg),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        align: TextAlign::Center,
+                    })]
+                },
+            )]
         },
     )
 }
@@ -141,12 +174,15 @@ where
         let a11y_label = reset.options.a11y_label.clone();
         let on_reset = reset.on_reset.clone();
 
-        let theme = Theme::global(&*cx.app);
-        let reset_fg = theme
-            .color_by_key("muted-foreground")
-            .or_else(|| theme.color_by_key("muted_foreground"))
-            .unwrap_or_else(|| theme.color_token("foreground"));
+        let reset_fg = {
+            let theme = Theme::global(&*cx.app);
+            theme
+                .color_by_key("muted-foreground")
+                .or_else(|| theme.color_by_key("muted_foreground"))
+                .unwrap_or_else(|| theme.color_token("foreground"))
+        };
 
+        let reset_fg_for_paint = reset_fg;
         let mut el = cx.pressable(
             PressableProps {
                 layout: LayoutStyle {
@@ -165,7 +201,7 @@ where
                 },
                 ..Default::default()
             },
-            move |cx, _st| {
+            move |cx, st| {
                 let on_activate: OnActivate = Arc::new({
                     let on_reset = on_reset.clone();
                     move |host, action_cx, _reason: ActivateReason| {
@@ -174,26 +210,53 @@ where
                 });
                 cx.pressable_add_on_activate(on_activate);
 
-                vec![cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
+                let theme = Theme::global(&*cx.app);
+                let hovered = st.hovered || st.hovered_raw;
+                let pressed = st.pressed;
+                let bg = editor_icon_button_bg(theme, true, hovered, pressed);
+                let border = editor_icon_button_border(theme, true, hovered, pressed);
+                let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
+                        background: bg,
+                        border: Edges::all(border_width),
+                        border_color: border,
+                        corner_radii: Corners::all(Px(6.0)),
                         ..Default::default()
                     },
-                    text: glyph.clone(),
-                    style: Some(TextStyle {
-                        size: Px(10.0),
-                        line_height: Some(density.row_height),
-                        ..Default::default()
-                    }),
-                    color: Some(reset_fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: TextAlign::Center,
-                })]
+                    move |cx| {
+                        vec![cx.text_props(TextProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            text: glyph.clone(),
+                            style: Some(TextStyle {
+                                size: Px(11.0),
+                                weight: FontWeight::SEMIBOLD,
+                                line_height: Some(density.row_height),
+                                ..Default::default()
+                            }),
+                            color: Some(reset_fg_for_paint),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            align: TextAlign::Center,
+                        })]
+                    },
+                )]
             },
         );
 
@@ -230,9 +293,7 @@ where
             if let Some(reset) = reset_el {
                 out.push(reset);
             }
-            let theme = Theme::global(&*cx.app);
-            let label_fg = theme.color_token("foreground");
-            out.push(axis_label_el(cx, density, label, color, label_fg));
+            out.push(axis_badge(cx, density, label, color));
             out.push(
                 DragValue::new(model, format, parse)
                     .validate(validate)
