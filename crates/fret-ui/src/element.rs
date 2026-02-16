@@ -504,6 +504,19 @@ impl Default for ContainerProps {
 ///
 /// This is primarily intended for diagnostics and UI automation (`test_id`) and for restricted
 /// a11y stamping on typed elements without introducing a layout wrapper.
+///
+/// ```ignore
+/// use fret_core::SemanticsRole;
+/// use fret_ui::element::SemanticsDecoration;
+///
+/// let decoration = SemanticsDecoration::default()
+///     .role(SemanticsRole::Checkbox)
+///     .label("Enable autosave")
+///     .checked(Some(true))
+///     .test_id("settings.autosave");
+///
+/// let el = some_element.attach_semantics(decoration);
+/// ```
 #[derive(Debug, Default, Clone)]
 pub struct SemanticsDecoration {
     pub role: Option<SemanticsRole>,
