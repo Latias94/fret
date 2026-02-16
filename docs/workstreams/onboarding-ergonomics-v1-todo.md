@@ -157,9 +157,10 @@ Design note:
 
 ## E. MVU ergonomics (clarity + future escape hatch)
 
-- [ ] ONB-mvu-040 Document the MVU “tick refresh” posture and its implications.
-  - Evidence:
-    - `ecosystem/fret/src/mvu.rs` (forced refresh after update)
+ - [x] ONB-mvu-040 Document the MVU “tick refresh” posture and its implications.
+   - Evidence:
+     - `ecosystem/fret/src/mvu.rs` (internal `tick` model)
+     - `docs/examples/todo-app-golden-path.md`
 
 - [ ] ONB-mvu-041 Explore an opt-in mode for more precise invalidation (future).
   - Decision gate:

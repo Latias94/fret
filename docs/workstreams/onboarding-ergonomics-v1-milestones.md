@@ -161,6 +161,11 @@ Acceptance:
 
 - MVU posture is explicit in docs; perf-sensitive users have clear guidance.
 
+Evidence (current):
+
+- `docs/examples/todo-app-golden-path.md` (tick refresh notes)
+- `ecosystem/fret/src/mvu.rs` (internal `tick` model)
+
 ---
 
 ## (Optional) Milestone 7 (M7): Demo shell consolidation

@@ -111,6 +111,9 @@ Notes:
 
 - `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0105).
 - `fret::mvu` provides an MVU-shaped authoring surface (typed messages) while keeping the underlying driver hotpatch-friendly.
+- MVU uses a conservative default invalidation posture: it forces a `Layout` refresh after each handled command by bumping an internal `tick` model (see `ecosystem/fret/src/mvu.rs`).
+  - This is intentional: it makes MVU apps correct-by-default.
+  - If you need tighter invalidation/perf control, drop down to a manual driver (still hotpatch-friendly) and invalidate only what changed.
 
 ## App state (models)
 
@@ -130,12 +133,21 @@ enum Msg {
     Add,
     ClearDone,
     RefreshTip,
+    SetFilter(TodoFilter),
     Remove(u64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TodoFilter {
+    All,
+    Active,
+    Completed,
 }
 
 struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
+    filter: Model<TodoFilter>,
     next_id: u64,
 }
 
