@@ -1128,7 +1128,7 @@ impl CanvasCache {
             order,
             origin,
             path,
-            color,
+            paint: color.into(),
         });
         metrics
     }

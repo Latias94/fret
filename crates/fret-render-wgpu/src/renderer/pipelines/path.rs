@@ -18,7 +18,10 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret path pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout],
+            bind_group_layouts: &[
+                &self.uniform_bind_group_layout,
+                &self.path_paint_bind_group_layout,
+            ],
             immediate_size: 0,
         });
 
@@ -39,7 +42,7 @@ impl Renderer {
                             shader_location: 0,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 8,
                             shader_location: 1,
                         },
@@ -96,7 +99,10 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret path msaa pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout],
+            bind_group_layouts: &[
+                &self.uniform_bind_group_layout,
+                &self.path_paint_bind_group_layout,
+            ],
             immediate_size: 0,
         });
 
@@ -117,7 +123,7 @@ impl Renderer {
                             shader_location: 0,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 8,
                             shader_location: 1,
                         },

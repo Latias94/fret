@@ -203,13 +203,13 @@ fn path_stroke_style_v2_join_miter_vs_bevel_has_expected_corner_coverage() {
         order: DrawOrder(1),
         origin: origin_miter,
         path: path_miter,
-        color: white,
+        paint: white.into(),
     });
     scene.push(SceneOp::Path {
         order: DrawOrder(2),
         origin: origin_bevel,
         path: path_bevel,
-        color: white,
+        paint: white.into(),
     });
 
     // Sample a point that lies inside the miter "square corner" but outside the bevel diagonal.
@@ -327,13 +327,13 @@ fn path_stroke_style_v2_dash_periodicity_and_phase_are_deterministic_across_scal
         order: DrawOrder(1),
         origin: origin_phase0,
         path: path_phase0,
-        color: white,
+        paint: white.into(),
     });
     scene.push(SceneOp::Path {
         order: DrawOrder(2),
         origin: origin_phase10,
         path: path_phase10,
-        color: white,
+        paint: white.into(),
     });
 
     let sample_phase0_on = (20.0_f32, 30.0_f32); // distance 10: inside dash
@@ -461,13 +461,13 @@ fn path_stroke_style_v2_round_cap_extends_coverage_beyond_butt_across_scale_fact
         order: DrawOrder(1),
         origin: origin_butt,
         path: path_butt,
-        color: white,
+        paint: white.into(),
     });
     scene.push(SceneOp::Path {
         order: DrawOrder(2),
         origin: origin_round,
         path: path_round,
-        color: white,
+        paint: white.into(),
     });
 
     // The line ends at x=80; width=20 => radius=10. Round cap should cover ~x in (80..90).

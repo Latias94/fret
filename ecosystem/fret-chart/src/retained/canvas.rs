@@ -5462,7 +5462,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         order: DrawOrder(base_order),
                         origin: self.last_layout.plot.origin,
                         path: fill,
-                        color: fill_color,
+                        paint: fill_color.into(),
                     });
                 }
             }
@@ -5482,7 +5482,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         order: DrawOrder(base_order.saturating_add(1)),
                         origin: self.last_layout.plot.origin,
                         path: stroke,
-                        color: stroke_color,
+                        paint: stroke_color.into(),
                     });
                 }
             }
@@ -5688,7 +5688,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             order: DrawOrder(base_order.saturating_add(highlight_bias)),
                             origin: self.last_layout.plot.origin,
                             path: fill,
-                            color: fill_color,
+                            paint: fill_color.into(),
                         });
                     }
                 }
@@ -5708,7 +5708,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             order: DrawOrder(base_order.saturating_add(highlight_bias + 1)),
                             origin: self.last_layout.plot.origin,
                             path: stroke,
-                            color: stroke_color,
+                            paint: stroke_color.into(),
                         });
                     }
                 }

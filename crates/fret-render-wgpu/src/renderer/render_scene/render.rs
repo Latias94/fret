@@ -538,11 +538,13 @@ impl Renderer {
         self.prepare_uniform_mask_image_bind_groups(device, &encoding.uniform_mask_images);
 
         let instances = &encoding.instances;
+        let path_paints = &encoding.path_paints;
         let viewport_vertices = &encoding.viewport_vertices;
         let text_vertices = &encoding.text_vertices;
         let path_vertices = &encoding.path_vertices;
 
         self.ensure_instance_capacity(device, instances.len());
+        self.ensure_path_paint_capacity(device, path_paints.len());
         self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
         self.ensure_text_vertex_capacity(device, text_vertices.len());
         self.ensure_path_vertex_capacity(device, path_vertices.len());
@@ -558,6 +560,20 @@ impl Renderer {
                 frame_perf.instance_bytes = frame_perf
                     .instance_bytes
                     .saturating_add((std::mem::size_of::<QuadInstance>() * instances.len()) as u64);
+            }
+        }
+
+        let path_paint_buffer_index = self.path_paint_buffer_index;
+        self.path_paint_buffer_index =
+            (self.path_paint_buffer_index + 1) % self.path_paint_buffers.len();
+        let path_paint_buffer = self.path_paint_buffers[path_paint_buffer_index].clone();
+        let path_paint_bind_group = self.path_paint_bind_groups[path_paint_buffer_index].clone();
+        if !path_paints.is_empty() {
+            queue.write_buffer(&path_paint_buffer, 0, bytemuck::cast_slice(path_paints));
+            if perf_enabled {
+                frame_perf.instance_bytes = frame_perf
+                    .instance_bytes
+                    .saturating_add((std::mem::size_of::<PaintGpu>() * path_paints.len()) as u64);
             }
         }
 
@@ -1572,6 +1588,11 @@ impl Renderer {
                                             frame_perf.pipeline_switches_path =
                                                 frame_perf.pipeline_switches_path.saturating_add(1);
                                         }
+                                        pass.set_bind_group(1, &path_paint_bind_group, &[]);
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                        }
                                         pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Path;
                                     }
@@ -1620,7 +1641,7 @@ impl Renderer {
                                     }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                        0..1,
+                                        draw.paint_index..(draw.paint_index + 1),
                                     );
                                     if perf_enabled {
                                         frame_perf.draw_calls =
@@ -1725,6 +1746,11 @@ impl Renderer {
                             frame_perf.pipeline_switches_path_msaa =
                                 frame_perf.pipeline_switches_path_msaa.saturating_add(1);
                         }
+                        path_pass_rp.set_bind_group(1, &path_paint_bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                        }
                         path_pass_rp.set_vertex_buffer(0, path_vertex_buffer.slice(..));
 
                         let mut active_uniform_offset: Option<u32> = None;
@@ -1779,7 +1805,7 @@ impl Renderer {
                             }
                             path_pass_rp.draw(
                                 draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                0..1,
+                                draw.paint_index..(draw.paint_index + 1),
                             );
                             if perf_enabled {
                                 frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);

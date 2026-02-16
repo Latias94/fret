@@ -153,12 +153,13 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
         order: DrawOrder(0),
         origin: Point::new(Px(0.0), Px(0.0)),
         path: path_top,
-        color: Color {
+        paint: Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        },
+        }
+        .into(),
     });
     scene.push(SceneOp::PopClip);
 
@@ -176,12 +177,13 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
         order: DrawOrder(0),
         origin: Point::new(Px(0.0), Px(0.0)),
         path: path_bottom,
-        color: Color {
+        paint: Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        },
+        }
+        .into(),
     });
     scene.push(SceneOp::PopClip);
 

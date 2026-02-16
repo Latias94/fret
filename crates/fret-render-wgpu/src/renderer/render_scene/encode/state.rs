@@ -25,6 +25,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) text_subpixel_enhanced_contrast: f32,
 
     pub(super) instances: &'a mut Vec<QuadInstance>,
+    pub(super) path_paints: &'a mut Vec<PaintGpu>,
     pub(super) viewport_vertices: &'a mut Vec<ViewportVertex>,
     pub(super) text_vertices: &'a mut Vec<TextVertex>,
     pub(super) path_vertices: &'a mut Vec<PathVertex>,
@@ -86,6 +87,7 @@ impl<'a> EncodeState<'a> {
         material_distinct_budget_per_frame: usize,
     ) -> Self {
         let instances = &mut encoding.instances;
+        let path_paints = &mut encoding.path_paints;
         let viewport_vertices = &mut encoding.viewport_vertices;
         let text_vertices = &mut encoding.text_vertices;
         let path_vertices = &mut encoding.path_vertices;
@@ -114,6 +116,7 @@ impl<'a> EncodeState<'a> {
             text_grayscale_enhanced_contrast,
             text_subpixel_enhanced_contrast,
             instances,
+            path_paints,
             viewport_vertices,
             text_vertices,
             path_vertices,

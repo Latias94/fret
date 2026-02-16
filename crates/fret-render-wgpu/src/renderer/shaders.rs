@@ -457,7 +457,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -1032,7 +1033,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3272,7 +3274,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3493,7 +3496,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3674,15 +3678,98 @@ struct MaskStack {
 @group(0) @binding(6) var mask_image_sampler: sampler;
 @group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
 
+const MAX_STOPS: u32 = 8u;
+
+struct Paint {
+  kind: u32,
+  tile_mode: u32,
+  color_space: u32,
+  stop_count: u32,
+  params0: vec4<f32>,
+  params1: vec4<f32>,
+  params2: vec4<f32>,
+  params3: vec4<f32>,
+  stop_colors: array<vec4<f32>, 8>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct PathPaints {
+  paints: array<Paint>,
+};
+
+@group(1) @binding(0) var<storage, read> path_paints: PathPaints;
+
+fn paint_stop_offset(p: Paint, i: u32) -> f32 {
+  if (i < 4u) { return p.stop_offsets0[i]; }
+  return p.stop_offsets1[i - 4u];
+}
+
+fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
+  let n = min(p.stop_count, MAX_STOPS);
+  if (n == 0u) {
+    return vec4<f32>(0.0);
+  }
+  if (n == 1u) {
+    return p.stop_colors[0u];
+  }
+
+  var prev_offset = paint_stop_offset(p, 0u);
+  var prev_color = p.stop_colors[0u];
+  if (t <= prev_offset) {
+    return prev_color;
+  }
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = paint_stop_offset(p, i);
+    let c = p.stop_colors[i];
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_color, c, u);
+    }
+    prev_offset = off;
+    prev_color = c;
+  }
+  return prev_color;
+}
+
+fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (p.kind == 0u) {
+    return p.params0;
+  }
+  if (p.kind == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  return vec4<f32>(0.0);
+}
+
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
-  @location(1) color: vec4<f32>,
+  @location(1) local_pos_px: vec2<f32>,
 };
 
 struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
-  @location(0) color: vec4<f32>,
-  @location(1) pixel_pos: vec2<f32>,
+  @location(0) pixel_pos: vec2<f32>,
+  @location(1) local_pos_px: vec2<f32>,
+  @location(2) @interpolate(flat) paint_index: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -3820,7 +3907,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3868,12 +3956,13 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
 }
 
 @vertex
-fn vs_main(input: VsIn) -> VsOut {
+fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   var out: VsOut;
   let clip_xy = to_clip_space(input.pos_px);
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
-  out.color = input.color;
   out.pixel_pos = input.pos_px;
+  out.local_pos_px = input.local_pos_px;
+  out.paint_index = instance_index;
   return out;
 }
 
@@ -3881,7 +3970,9 @@ fn vs_main(input: VsIn) -> VsOut {
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
-  let out = input.color * clip * mask;
+  let paint = path_paints.paints[input.paint_index];
+  let fill = paint_eval(paint, input.local_pos_px);
+  let out = fill * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -4102,7 +4193,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4417,7 +4509,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4702,7 +4795,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -5014,7 +5108,8 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    let s = textureSample(mask_image_texture, mask_image_sampler, uv);
+    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
+    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }

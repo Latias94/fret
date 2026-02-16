@@ -735,12 +735,15 @@ fn find_best_icon_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rg
                 best = Some(rgba);
             }
         }
-        SceneOp::Path { origin, color, .. } => {
+        SceneOp::Path { origin, paint, .. } => {
             let origin = st.transform.apply_point(origin);
             if !search_within.contains(origin) {
                 return;
             }
-            let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
+            let fret_core::Paint::Solid(color) = *paint else {
+                return;
+            };
+            let rgba = color_to_rgba(color_with_opacity(&color, st.opacity));
             if rgba.a <= 0.01 {
                 return;
             }

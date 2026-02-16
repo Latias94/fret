@@ -334,10 +334,10 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         SceneOp::Path {
             origin,
             path,
-            color,
+            paint,
             ..
         } => {
-            draw::encode_path(renderer, state, origin, path, color);
+            draw::encode_path(renderer, state, origin, path, paint);
         }
         SceneOp::ViewportSurface {
             rect,

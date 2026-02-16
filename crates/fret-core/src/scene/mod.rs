@@ -517,7 +517,7 @@ pub enum SceneOp {
         order: DrawOrder,
         origin: Point,
         path: PathId,
-        color: Color,
+        paint: Paint,
     },
 
     ViewportSurface {

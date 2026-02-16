@@ -5179,7 +5179,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(2),
                     origin: layout.plot.origin,
                     path,
-                    color,
+                    paint: color.into(),
                 });
                 debug_paths_pushed = debug_paths_pushed.saturating_add(1);
             }
@@ -5189,7 +5189,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(2),
                     origin: layout.plot.origin,
                     path,
-                    color,
+                    paint: color.into(),
                 });
                 debug_paths_pushed = debug_paths_pushed.saturating_add(1);
             }
