@@ -1,6 +1,6 @@
 ---
 name: fret-repo-orientation
-description: "Get oriented in the Fret codebase (or when using Fret from an external app repo): identify the right layer/crate, find entry points fast, and choose the smallest runnable target for a change."
+description: "This skill should be used when the user asks to \"find the right crate/layer\", \"locate entry points\", \"choose the smallest runnable target\", or \"get oriented in the Fret repo\". Provides a navigation workflow to map an intent to the correct layer and pick the fastest runnable demo/harness to iterate."
 ---
 
 # Fret repo orientation (find the right place fast)

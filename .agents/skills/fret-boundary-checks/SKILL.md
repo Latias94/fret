@@ -1,6 +1,6 @@
 ---
 name: fret-boundary-checks
-description: "Run and interpret boundary/portability guardrails for fearless refactors: layering checks, forbidden dependency spot checks for kernel crates, and module-size drift reports. Use before/after refactors that move code across crates or may accidentally pull backend deps into contracts."
+description: "This skill should be used when the user asks to \"run layering checks\", \"verify crate boundaries\", \"prevent winit/wgpu leakage\", or \"refactor across crates safely\". Provides a guardrail workflow (layering checks, forbidden-dep spot checks, drift reports) to keep contract crates portable during refactors."
 ---
 
 # Fret boundary checks (guardrails)
