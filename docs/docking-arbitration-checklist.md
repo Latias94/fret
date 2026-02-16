@@ -195,3 +195,9 @@ The harness combines:
 - and a modal dialog trigger,
 
 so that ADR 0072 can be validated end-to-end in one window.
+
+## Scripted gates (optional)
+
+- Multi-window tear-off smoke (ImGui-style): `tools/diag-scripts/docking-arbitration-tearoff-multiwindow-basic.json`
+  - Run:
+    - `FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-tearoff-multiwindow-basic.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
