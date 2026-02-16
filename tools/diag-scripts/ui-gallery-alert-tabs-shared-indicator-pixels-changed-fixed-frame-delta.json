@@ -31,7 +31,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-tabs-trigger-component" }
+        "target": { "kind": "test_id", "id": "ui-gallery-alert-tabs-trigger-preview" }
       },
       "timeout_frames": 240
     },

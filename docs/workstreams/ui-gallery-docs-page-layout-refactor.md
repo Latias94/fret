@@ -48,8 +48,8 @@ Legend:
 | Input Group | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json` | Keeps `ui-gallery-input-group-text-*` test IDs stable for non-overlap gates. |
 | Label | `apps/fret-ui-gallery/src/ui/pages/label.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | None yet | Keeps examples small; relies on single-line section titles with ellipsis. |
 | Checkbox | `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-checkbox-rtl-and-checked-wrap.json` | Keeps `ui-gallery-checkbox-*` test IDs stable for the wrap/RTL regression script. |
-| Native Select | `apps/fret-ui-gallery/src/ui/pages/native_select.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | None yet | Candidate: clarify platform/native intent vs shadcn Select. |
-| Form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | Legacy tabs | Examples Partial / API ✅ | Partial | Tab-only | None yet | Candidate: single “forms doc” page with sections per recipe. |
+| Native Select | `apps/fret-ui-gallery/src/ui/pages/native_select.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | None yet | Notes clarify NativeSelect vs Select usage intent. |
+| Form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | Docs-style | Examples Partial / API ✅ | Yes | Key sections only | None yet | Remains an integration hub; sections document composition recipes. |
 
 ### Shadcn/overlays
 
@@ -75,7 +75,7 @@ Legend:
 | Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | None yet | Candidate: add truncation/ellipsis examples for narrow sidebars. |
 | Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Keeps `ui-gallery-collapsible-component` + demo/basic trigger/content test IDs for existing diag gates. |
 | Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | None yet | Keeps `ui-gallery-aspect-ratio-*` test IDs stable for future diag scripts. |
-| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Examples ✅ / API ✅ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
+| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Keeps `ui-gallery-alert-component` and section demo test IDs stable; demo section uses preview/code tabs for indicator gate. |
 | Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-empty-docs-smoke.json` (1) | Keeps existing `test_id`s for each recipe. |
 
 ## Suggested Migration Order (next)
