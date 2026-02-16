@@ -1378,6 +1378,96 @@ mod tests {
     }
 
     #[test]
+    fn parley_word_wrap_handles_long_attributed_paragraph_under_resize_jitter() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let mut text = String::new();
+        for i in 0..500 {
+            if i > 0 {
+                text.push(' ');
+            }
+            text.push_str("word");
+            text.push_str(&(i % 97).to_string());
+        }
+
+        let text_len = text.len();
+        let mut spans: Vec<TextSpan> = Vec::new();
+        let mut remaining = text_len;
+        let mut toggle = false;
+        while remaining > 0 {
+            let take = remaining.min(if toggle { 17 } else { 31 });
+            spans.push(TextSpan {
+                len: take,
+                shaping: TextShapingStyle::default(),
+                paint: if toggle {
+                    TextPaintStyle {
+                        fg: Some(fret_core::Color {
+                            r: 0.9,
+                            g: 0.1,
+                            b: 0.1,
+                            a: 1.0,
+                        }),
+                        ..Default::default()
+                    }
+                } else {
+                    TextPaintStyle::default()
+                },
+            });
+            remaining = remaining.saturating_sub(take);
+            toggle = !toggle;
+        }
+        assert_eq!(
+            spans.iter().map(|s| s.len).sum::<usize>(),
+            text_len,
+            "spans must fully cover the text"
+        );
+
+        let widths = [60.0, 80.0, 120.0, 90.0, 70.0, 140.0, 60.0];
+        for w in widths {
+            let constraints = TextConstraints {
+                max_width: Some(Px(w)),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            };
+            let wrapped = wrap_with_constraints(
+                &mut shaper,
+                TextInputRef::Attributed {
+                    text: text.as_str(),
+                    base: &base,
+                    spans: spans.as_slice(),
+                },
+                constraints,
+            );
+
+            assert_eq!(wrapped.text_len, text_len);
+            assert_eq!(wrapped.kept_end, text_len);
+            assert!(!wrapped.line_ranges.is_empty());
+            assert_eq!(wrapped.line_ranges[0].start, 0);
+            assert_eq!(wrapped.line_ranges.last().unwrap().end, text_len);
+            assert_eq!(wrapped.lines.len(), wrapped.line_ranges.len());
+
+            for r in &wrapped.line_ranges {
+                assert!(text.is_char_boundary(r.start));
+                assert!(text.is_char_boundary(r.end));
+                assert!(r.start < r.end, "expected non-empty line range");
+            }
+            for win in wrapped.line_ranges.windows(2) {
+                assert_eq!(
+                    win[0].end, win[1].start,
+                    "expected contiguous coverage for a single-paragraph attributed text wrap"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn newlines_split_into_paragraphs_and_create_gaps_in_ranges() {
         let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {

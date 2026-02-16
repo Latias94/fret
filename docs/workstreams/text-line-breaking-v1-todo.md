@@ -46,8 +46,12 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
   - [x] run the fixture-driven wrap conformance suite under the Parley path,
   - [x] document any known gaps as explicit TODOs (avoid silent behavior drift).
 - [~] Performance guard:
-  - [~] ensure no O(n²) regressions on long paragraphs (Parley path is linear; keep a dedicated
-    long-paragraph probe in the wrapper test suite),
+  - [x] ensure no O(n²) regressions on long paragraphs (Parley path is linear; keep a dedicated
+    long-paragraph probe in the wrapper test suite):
+    - `crates/fret-render-wgpu/src/text/wrapper.rs`
+      (`parley_word_wrap_handles_long_plain_paragraph_under_resize_jitter`)
+    - `crates/fret-render-wgpu/src/text/wrapper.rs`
+      (`parley_word_wrap_handles_long_attributed_paragraph_under_resize_jitter`)
   - [x] keep resize jitter bounded:
     - add a diag perf script focused on `TextWrap::Word` under window resize jitter:
       `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`
