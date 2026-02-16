@@ -48,6 +48,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/config.rs` (perf snapshot output),
     `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (JSON dump: estimated peak bytes + degradations list),
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (segment stability counters: changed segments + pass growth).
+- [x] REN-VNEXT-perf-110 Unify per-frame GPU buffer rotation for quad instances and vertex streams (viewport/text/path).
+  - Goal: remove duplicated capacity growth + frame-rotation logic without changing bind group indices or shader semantics.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`RingBuffer<T>`, `StorageRingBuffer<T>`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (initialization)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (uploads + `next_pair`/`next_buffer`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (layout access via ring)
+  - Gates (2026-02-16):
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo test -p fret-render-wgpu --test text_paint_conformance`
 - [x] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
   - Note: This was a temporary safety rail during rollout and has been removed after completing `REN-VNEXT-plan-005`.
 

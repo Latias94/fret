@@ -544,18 +544,17 @@ impl Renderer {
         let text_vertices = &encoding.text_vertices;
         let path_vertices = &encoding.path_vertices;
 
-        self.ensure_instance_capacity(device, instances.len());
+        self.quad_instances.ensure_capacity(device, instances.len());
         self.path_paints.ensure_capacity(device, path_paints.len());
         self.text_paints.ensure_capacity(device, text_paints.len());
-        self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
-        self.ensure_text_vertex_capacity(device, text_vertices.len());
-        self.ensure_path_vertex_capacity(device, path_vertices.len());
+        self.viewport_vertices
+            .ensure_capacity(device, viewport_vertices.len());
+        self.text_vertices
+            .ensure_capacity(device, text_vertices.len());
+        self.path_vertices
+            .ensure_capacity(device, path_vertices.len());
 
-        let instance_buffer_index = self.instance_buffer_index;
-        self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
-        let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
-        let quad_instance_bind_group =
-            self.quad_instance_bind_groups[instance_buffer_index].clone();
+        let (instance_buffer, quad_instance_bind_group) = self.quad_instances.next_pair();
         if !instances.is_empty() {
             queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
             if perf_enabled {
@@ -585,11 +584,7 @@ impl Renderer {
             }
         }
 
-        let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
-        self.viewport_vertex_buffer_index =
-            (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
-        let viewport_vertex_buffer =
-            self.viewport_vertex_buffers[viewport_vertex_buffer_index].clone();
+        let viewport_vertex_buffer = self.viewport_vertices.next_buffer();
         if !viewport_vertices.is_empty() {
             queue.write_buffer(
                 &viewport_vertex_buffer,
@@ -603,10 +598,7 @@ impl Renderer {
             }
         }
 
-        let text_vertex_buffer_index = self.text_vertex_buffer_index;
-        self.text_vertex_buffer_index =
-            (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
-        let text_vertex_buffer = self.text_vertex_buffers[text_vertex_buffer_index].clone();
+        let text_vertex_buffer = self.text_vertices.next_buffer();
         if !text_vertices.is_empty() {
             queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
             if perf_enabled {
@@ -616,10 +608,7 @@ impl Renderer {
             }
         }
 
-        let path_vertex_buffer_index = self.path_vertex_buffer_index;
-        self.path_vertex_buffer_index =
-            (self.path_vertex_buffer_index + 1) % self.path_vertex_buffers.len();
-        let path_vertex_buffer = self.path_vertex_buffers[path_vertex_buffer_index].clone();
+        let path_vertex_buffer = self.path_vertices.next_buffer();
         if !path_vertices.is_empty() {
             queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
             if perf_enabled {

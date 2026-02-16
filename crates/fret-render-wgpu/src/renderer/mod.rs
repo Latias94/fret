@@ -87,19 +87,13 @@ pub struct Renderer {
     viewport_sampler: wgpu::Sampler,
     image_sampler_nearest: wgpu::Sampler,
 
-    instance_buffers: Vec<wgpu::Buffer>,
-    quad_instance_bind_group_layout: wgpu::BindGroupLayout,
-    quad_instance_bind_groups: Vec<wgpu::BindGroup>,
-    instance_buffer_index: usize,
-    instance_capacity: usize,
+    quad_instances: buffers::StorageRingBuffer<QuadInstance>,
 
     path_paints: buffers::StorageRingBuffer<PaintGpu>,
 
     text_paints: buffers::StorageRingBuffer<PaintGpu>,
 
-    viewport_vertex_buffers: Vec<wgpu::Buffer>,
-    viewport_vertex_buffer_index: usize,
-    viewport_vertex_capacity: usize,
+    viewport_vertices: buffers::RingBuffer<ViewportVertex>,
 
     text_pipeline_format: Option<wgpu::TextureFormat>,
     text_pipeline: Option<wgpu::RenderPipeline>,
@@ -113,9 +107,7 @@ pub struct Renderer {
     mask_pipeline_format: Option<wgpu::TextureFormat>,
     mask_pipeline: Option<wgpu::RenderPipeline>,
 
-    text_vertex_buffers: Vec<wgpu::Buffer>,
-    text_vertex_buffer_index: usize,
-    text_vertex_capacity: usize,
+    text_vertices: buffers::RingBuffer<TextVertex>,
 
     path_pipeline_format: Option<wgpu::TextureFormat>,
     path_pipeline: Option<wgpu::RenderPipeline>,
@@ -184,9 +176,7 @@ pub struct Renderer {
     alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     alpha_threshold_param_buffer: wgpu::Buffer,
 
-    path_vertex_buffers: Vec<wgpu::Buffer>,
-    path_vertex_buffer_index: usize,
-    path_vertex_capacity: usize,
+    path_vertices: buffers::RingBuffer<PathVertex>,
 
     path_intermediate: Option<PathIntermediate>,
     path_composite_vertices: wgpu::Buffer,

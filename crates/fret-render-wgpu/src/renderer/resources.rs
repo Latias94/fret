@@ -334,18 +334,6 @@ impl Renderer {
         let text_system = TextSystem::new(device);
 
         const FRAMES_IN_FLIGHT: usize = 3;
-        let instance_capacity = 1024;
-        let instance_buffers: Vec<wgpu::Buffer> = (0..FRAMES_IN_FLIGHT)
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret quad instances #{i}")),
-                    size: (instance_capacity * std::mem::size_of::<QuadInstance>()) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
-
         let quad_instance_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("fret quad instances bind group layout"),
@@ -361,20 +349,15 @@ impl Renderer {
                 }],
             });
 
-        let quad_instance_bind_groups: Vec<wgpu::BindGroup> = instance_buffers
-            .iter()
-            .enumerate()
-            .map(|(i, buffer)| {
-                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some(&format!("fret quad instances bind group #{i}")),
-                    layout: &quad_instance_bind_group_layout,
-                    entries: &[wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: buffer.as_entire_binding(),
-                    }],
-                })
-            })
-            .collect();
+        let instance_usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
+        let quad_instances = buffers::StorageRingBuffer::<QuadInstance>::new(
+            device,
+            FRAMES_IN_FLIGHT,
+            1024,
+            quad_instance_bind_group_layout,
+            "fret quad instances",
+            instance_usage,
+        );
 
         let path_paint_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -425,41 +408,28 @@ impl Renderer {
             paint_usage,
         );
 
-        let viewport_vertex_capacity = 64 * 6;
-        let viewport_vertex_buffers = (0..FRAMES_IN_FLIGHT)
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret viewport vertices #{i}")),
-                    size: (viewport_vertex_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
-
-        let text_vertex_capacity = 512 * 6;
-        let text_vertex_buffers = (0..FRAMES_IN_FLIGHT)
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret text vertices #{i}")),
-                    size: (text_vertex_capacity * std::mem::size_of::<TextVertex>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
-
-        let path_vertex_capacity = 1024;
-        let path_vertex_buffers = (0..FRAMES_IN_FLIGHT)
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret path vertices #{i}")),
-                    size: (path_vertex_capacity * std::mem::size_of::<PathVertex>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
+        let vertex_usage = wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST;
+        let viewport_vertices = buffers::RingBuffer::<ViewportVertex>::new(
+            device,
+            FRAMES_IN_FLIGHT,
+            64 * 6,
+            "fret viewport vertices",
+            vertex_usage,
+        );
+        let text_vertices = buffers::RingBuffer::<TextVertex>::new(
+            device,
+            FRAMES_IN_FLIGHT,
+            512 * 6,
+            "fret text vertices",
+            vertex_usage,
+        );
+        let path_vertices = buffers::RingBuffer::<PathVertex>::new(
+            device,
+            FRAMES_IN_FLIGHT,
+            1024,
+            "fret path vertices",
+            vertex_usage,
+        );
 
         let path_composite_vertex_capacity = 64 * 6;
         let path_composite_vertices = device.create_buffer(&wgpu::BufferDescriptor {
@@ -528,16 +498,10 @@ impl Renderer {
             viewport_bind_group_layout,
             viewport_sampler,
             image_sampler_nearest,
-            instance_buffers,
-            quad_instance_bind_group_layout,
-            quad_instance_bind_groups,
-            instance_buffer_index: 0,
-            instance_capacity,
+            quad_instances,
             path_paints,
             text_paints,
-            viewport_vertex_buffers,
-            viewport_vertex_buffer_index: 0,
-            viewport_vertex_capacity,
+            viewport_vertices,
             text_pipeline_format: None,
             text_pipeline: None,
             text_color_pipeline_format: None,
@@ -546,9 +510,7 @@ impl Renderer {
             text_subpixel_pipeline: None,
             mask_pipeline_format: None,
             mask_pipeline: None,
-            text_vertex_buffers,
-            text_vertex_buffer_index: 0,
-            text_vertex_capacity,
+            text_vertices,
             path_pipeline_format: None,
             path_pipeline: None,
             path_msaa_pipeline_format: None,
@@ -605,9 +567,7 @@ impl Renderer {
             alpha_threshold_bind_group_layout: None,
             alpha_threshold_mask_bind_group_layout: None,
             alpha_threshold_param_buffer,
-            path_vertex_buffers,
-            path_vertex_buffer_index: 0,
-            path_vertex_capacity,
+            path_vertices,
             path_intermediate: None,
             path_composite_vertices,
             path_composite_vertex_capacity,

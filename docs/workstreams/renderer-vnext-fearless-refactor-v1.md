@@ -16,6 +16,8 @@ Current status (as of 2026-02-16):
   - Renderer implementation landed (solid + gradients; bounded batching via `paint_index`).
   - GPU readback conformance gate landed (`crates/fret-render-wgpu/tests/text_paint_conformance.rs`).
   - Adoption is tracked as optional in `docs/workstreams/text-paint-surface-v1.md` (M3).
+- Renderer per-frame GPU buffer rotation is now ring-buffered (quad instances + viewport/text/path vertices),
+  reducing duplicated resize/rotation code without changing any public contract.
 - A cheap headless perf gate exists and has a checked-in baseline:
   - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`

@@ -76,6 +76,19 @@ Exit criteria:
 - For a small fixed set of scenes, the old and new paths produce equivalent output (within defined
   tolerances) and any deltas are understood.
 
+Progress record (internal refactor: per-frame GPU buffer rings):
+
+- Date: 2026-02-16
+- Scope: renderer-internal resource plumbing (no contract changes)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`RingBuffer<T>`, `StorageRingBuffer<T>`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (ring initialization)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (uploads + per-frame rotation)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo test -p fret-render-wgpu --test text_paint_conformance`
+
 ## M2 — Isolated opacity (saveLayerAlpha) v1
 
 Deliverables:
