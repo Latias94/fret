@@ -175,6 +175,11 @@ pub struct RenderPerfSnapshot {
     pub frames: u64,
 
     pub encode_scene_us: u64,
+    pub ensure_pipelines_us: u64,
+    pub plan_compile_us: u64,
+    pub upload_us: u64,
+    pub record_passes_us: u64,
+    pub encoder_finish_us: u64,
     pub prepare_svg_us: u64,
     pub prepare_text_us: u64,
 
@@ -302,6 +307,11 @@ pub(super) struct RenderPerfStats {
     pub(super) frames: u64,
 
     pub(super) encode_scene: Duration,
+    pub(super) ensure_pipelines: Duration,
+    pub(super) plan_compile: Duration,
+    pub(super) upload: Duration,
+    pub(super) record_passes: Duration,
+    pub(super) encoder_finish: Duration,
     pub(super) prepare_svg: Duration,
     pub(super) prepare_text: Duration,
 

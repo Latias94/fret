@@ -553,6 +553,11 @@ pub(super) enum BundleStatsSort {
     Dispatch,
     HitTest,
     RendererEncodeScene,
+    RendererEnsurePipelines,
+    RendererPlanCompile,
+    RendererUpload,
+    RendererRecordPasses,
+    RendererEncoderFinish,
     RendererPrepareText,
     RendererDrawCalls,
     RendererPipelineSwitches,
@@ -585,6 +590,15 @@ impl BundleStatsSort {
             "dispatch" => Ok(Self::Dispatch),
             "hit_test" => Ok(Self::HitTest),
             "encode_scene" | "encode" | "renderer_encode_scene" => Ok(Self::RendererEncodeScene),
+            "ensure_pipelines" | "ensure" | "renderer_ensure_pipelines" => {
+                Ok(Self::RendererEnsurePipelines)
+            }
+            "plan_compile" | "plan" | "renderer_plan_compile" => Ok(Self::RendererPlanCompile),
+            "upload" | "uploads" | "renderer_upload" => Ok(Self::RendererUpload),
+            "record_passes" | "record" | "renderer_record_passes" => Ok(Self::RendererRecordPasses),
+            "encoder_finish" | "finish" | "renderer_encoder_finish" => {
+                Ok(Self::RendererEncoderFinish)
+            }
             "prepare_text" | "renderer_prepare_text" => Ok(Self::RendererPrepareText),
             "draw_calls" | "draws" | "renderer_draw_calls" => Ok(Self::RendererDrawCalls),
             "pipeline_switches" | "pipelines" | "renderer_pipeline_switches" => {
@@ -648,7 +662,7 @@ impl BundleStatsSort {
                 Ok(Self::RendererIntermediatePoolFreeTextures)
             }
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
+                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|encode_scene|ensure_pipelines|plan_compile|upload|record_passes|encoder_finish|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
             )),
         }
     }
@@ -662,6 +676,11 @@ impl BundleStatsSort {
             Self::Dispatch => "dispatch",
             Self::HitTest => "hit_test",
             Self::RendererEncodeScene => "encode_scene",
+            Self::RendererEnsurePipelines => "ensure_pipelines",
+            Self::RendererPlanCompile => "plan_compile",
+            Self::RendererUpload => "upload",
+            Self::RendererRecordPasses => "record_passes",
+            Self::RendererEncoderFinish => "encoder_finish",
             Self::RendererPrepareText => "prepare_text",
             Self::RendererDrawCalls => "draw_calls",
             Self::RendererPipelineSwitches => "pipeline_switches",
@@ -934,6 +953,11 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_tick_id: u64,
     pub(super) renderer_frame_id: u64,
     pub(super) renderer_encode_scene_us: u64,
+    pub(super) renderer_ensure_pipelines_us: u64,
+    pub(super) renderer_plan_compile_us: u64,
+    pub(super) renderer_upload_us: u64,
+    pub(super) renderer_record_passes_us: u64,
+    pub(super) renderer_encoder_finish_us: u64,
     pub(super) renderer_prepare_text_us: u64,
     pub(super) renderer_prepare_svg_us: u64,
     pub(super) renderer_svg_upload_bytes: u64,
@@ -9358,6 +9382,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_encode_scene_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_ensure_pipelines_us = stats
+                .and_then(|m| m.get("renderer_ensure_pipelines_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_plan_compile_us = stats
+                .and_then(|m| m.get("renderer_plan_compile_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_upload_us = stats
+                .and_then(|m| m.get("renderer_upload_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_record_passes_us = stats
+                .and_then(|m| m.get("renderer_record_passes_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encoder_finish_us = stats
+                .and_then(|m| m.get("renderer_encoder_finish_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_prepare_text_us = stats
                 .and_then(|m| m.get("renderer_prepare_text_us"))
                 .and_then(|v| v.as_u64())
@@ -10209,6 +10253,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_tick_id,
                 renderer_frame_id,
                 renderer_encode_scene_us,
+                renderer_ensure_pipelines_us,
+                renderer_plan_compile_us,
+                renderer_upload_us,
+                renderer_record_passes_us,
+                renderer_encoder_finish_us,
                 renderer_prepare_text_us,
                 renderer_prepare_svg_us,
                 renderer_svg_upload_bytes,
@@ -10493,6 +10542,59 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .then_with(|| {
                         b.renderer_pipeline_switches
                             .cmp(&a.renderer_pipeline_switches)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererEnsurePipelines => {
+            rows.sort_by(|a, b| {
+                b.renderer_ensure_pipelines_us
+                    .cmp(&a.renderer_ensure_pipelines_us)
+                    .then_with(|| b.renderer_plan_compile_us.cmp(&a.renderer_plan_compile_us))
+                    .then_with(|| b.renderer_encode_scene_us.cmp(&a.renderer_encode_scene_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererPlanCompile => {
+            rows.sort_by(|a, b| {
+                b.renderer_plan_compile_us
+                    .cmp(&a.renderer_plan_compile_us)
+                    .then_with(|| b.renderer_encode_scene_us.cmp(&a.renderer_encode_scene_us))
+                    .then_with(|| {
+                        b.renderer_record_passes_us
+                            .cmp(&a.renderer_record_passes_us)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererUpload => {
+            rows.sort_by(|a, b| {
+                b.renderer_upload_us
+                    .cmp(&a.renderer_upload_us)
+                    .then_with(|| {
+                        b.renderer_ensure_pipelines_us
+                            .cmp(&a.renderer_ensure_pipelines_us)
+                    })
+                    .then_with(|| b.renderer_plan_compile_us.cmp(&a.renderer_plan_compile_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererRecordPasses => {
+            rows.sort_by(|a, b| {
+                b.renderer_record_passes_us
+                    .cmp(&a.renderer_record_passes_us)
+                    .then_with(|| b.renderer_upload_us.cmp(&a.renderer_upload_us))
+                    .then_with(|| b.renderer_draw_calls.cmp(&a.renderer_draw_calls))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererEncoderFinish => {
+            rows.sort_by(|a, b| {
+                b.renderer_encoder_finish_us
+                    .cmp(&a.renderer_encoder_finish_us)
+                    .then_with(|| {
+                        b.renderer_record_passes_us
+                            .cmp(&a.renderer_record_passes_us)
                     })
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });

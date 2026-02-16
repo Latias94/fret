@@ -41,6 +41,11 @@ impl Renderer {
         let snap = RenderPerfSnapshot {
             frames: self.perf.frames,
             encode_scene_us: self.perf.encode_scene.as_micros() as u64,
+            ensure_pipelines_us: self.perf.ensure_pipelines.as_micros() as u64,
+            plan_compile_us: self.perf.plan_compile.as_micros() as u64,
+            upload_us: self.perf.upload.as_micros() as u64,
+            record_passes_us: self.perf.record_passes.as_micros() as u64,
+            encoder_finish_us: self.perf.encoder_finish.as_micros() as u64,
             prepare_svg_us: self.perf.prepare_svg.as_micros() as u64,
             prepare_text_us: self.perf.prepare_text.as_micros() as u64,
             svg_uploads: self.perf.svg_uploads,

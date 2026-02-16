@@ -12624,6 +12624,16 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_encode_scene_us: u64,
     #[serde(default)]
+    pub renderer_ensure_pipelines_us: u64,
+    #[serde(default)]
+    pub renderer_plan_compile_us: u64,
+    #[serde(default)]
+    pub renderer_upload_us: u64,
+    #[serde(default)]
+    pub renderer_record_passes_us: u64,
+    #[serde(default)]
+    pub renderer_encoder_finish_us: u64,
+    #[serde(default)]
     pub renderer_prepare_svg_us: u64,
     #[serde(default)]
     pub renderer_prepare_text_us: u64,
@@ -13006,6 +13016,11 @@ impl UiFrameStatsV1 {
             renderer_frame_id: 0,
             renderer_frames: 0,
             renderer_encode_scene_us: 0,
+            renderer_ensure_pipelines_us: 0,
+            renderer_plan_compile_us: 0,
+            renderer_upload_us: 0,
+            renderer_record_passes_us: 0,
+            renderer_encoder_finish_us: 0,
             renderer_prepare_svg_us: 0,
             renderer_prepare_text_us: 0,
             renderer_svg_uploads: 0,
@@ -13082,6 +13097,11 @@ impl UiFrameStatsV1 {
             out.renderer_frame_id = sample.frame_id;
             out.renderer_frames = sample.perf.frames;
             out.renderer_encode_scene_us = sample.perf.encode_scene_us;
+            out.renderer_ensure_pipelines_us = sample.perf.ensure_pipelines_us;
+            out.renderer_plan_compile_us = sample.perf.plan_compile_us;
+            out.renderer_upload_us = sample.perf.upload_us;
+            out.renderer_record_passes_us = sample.perf.record_passes_us;
+            out.renderer_encoder_finish_us = sample.perf.encoder_finish_us;
             out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
             out.renderer_prepare_text_us = sample.perf.prepare_text_us;
             out.renderer_svg_uploads = sample.perf.svg_uploads;

@@ -2479,6 +2479,7 @@ dependencies = [
  "etagere",
  "fret-core",
  "fret-fonts",
+ "fret-perf",
  "fret-render-core",
  "glam 0.30.10",
  "lyon",
