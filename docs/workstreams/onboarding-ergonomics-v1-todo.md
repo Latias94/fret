@@ -197,6 +197,7 @@ Design note:
     - `ecosystem/fret-ui-shadcn/src/ui_ext/support.rs`
   - Evidence (in-tree external-style example):
     - `ecosystem/fret-ui-ai/src/elements/message.rs`
+    - `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs`
     - `docs/component-authoring-contracts.md`
 
 - [ ] ONB-macro-055 Decide the “IntoElement-like” adapter strategy for third-party components.
