@@ -180,13 +180,13 @@ mod tests {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 text: prepared.blob,
-                color: Color::TRANSPARENT,
+                paint: Color::TRANSPARENT.into(),
             },
             SceneOp::Path {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                color: Color::TRANSPARENT,
+                paint: Color::TRANSPARENT.into(),
             },
             SceneOp::SvgImage {
                 order: DrawOrder(0),

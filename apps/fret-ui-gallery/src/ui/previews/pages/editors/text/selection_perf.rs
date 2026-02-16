@@ -202,7 +202,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
                             order: DrawOrder(1),
                             origin: text_origin,
                             text: blob,
-                            color: fg,
+                            paint: fg.into(),
                         });
                         scene.push(SceneOp::PopClip);
 

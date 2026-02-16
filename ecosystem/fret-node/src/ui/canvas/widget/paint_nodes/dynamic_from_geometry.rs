@@ -86,7 +86,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    color: self.style.context_menu_text,
+                    paint: self.style.context_menu_text.into(),
                 });
             }
         }

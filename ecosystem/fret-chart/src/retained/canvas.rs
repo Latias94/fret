@@ -1305,7 +1305,7 @@ impl ChartCanvas {
                             Px(rect.origin.y.0 + pad_y),
                         ),
                         text: blob,
-                        color: self.style.tooltip_text_color,
+                        paint: self.style.tooltip_text_color.into(),
                     });
 
                     axis_pointer_label_rect = Some(match axis_pointer_label_rect {
@@ -1563,11 +1563,12 @@ impl ChartCanvas {
                                 order: DrawOrder(order_base.saturating_add(1)),
                                 origin: Point::new(Px(text_x0), Px(y)),
                                 text: blob,
-                                color: if line.is_missing {
+                                paint: (if line.is_missing {
                                     missing_text_color
                                 } else {
                                     self.style.tooltip_text_color
-                                },
+                                })
+                                .into(),
                             });
                         }
                         TooltipLineLayout::Columns {
@@ -1579,7 +1580,7 @@ impl ChartCanvas {
                                 order: DrawOrder(order_base.saturating_add(1)),
                                 origin: Point::new(Px(text_x0), Px(y)),
                                 text: left_blob,
-                                color: self.style.tooltip_text_color,
+                                paint: self.style.tooltip_text_color.into(),
                             });
                             let value_x = text_x0 + max_left_w + col_gap;
                             let value_color = if line.is_missing {
@@ -1591,7 +1592,7 @@ impl ChartCanvas {
                                 order: DrawOrder(order_base.saturating_add(2)),
                                 origin: Point::new(Px(value_x), Px(y)),
                                 text: right_blob,
-                                color: value_color,
+                                paint: value_color.into(),
                             });
                         }
                     }
@@ -2932,7 +2933,7 @@ impl ChartCanvas {
                 order: DrawOrder(legend_order.0.saturating_add(2)),
                 origin: Point::new(Px(sx), Px(text_y)),
                 text: blob,
-                color: self.style.legend_text_color,
+                paint: self.style.legend_text_color.into(),
             });
 
             sx += w + selector_gap;
@@ -2990,7 +2991,7 @@ impl ChartCanvas {
                 order: DrawOrder(legend_order.0.saturating_add(3 + i as u32 * 3)),
                 origin: Point::new(Px(text_x), Px(text_y)),
                 text: blob,
-                color: text_color,
+                paint: text_color.into(),
             });
 
             y += row_h + gap;
@@ -3289,7 +3290,7 @@ impl ChartCanvas {
                         order: label_order,
                         origin: Point::new(Px(label_x), Px(label_y)),
                         text: blob,
-                        color: self.style.axis_label_color,
+                        paint: self.style.axis_label_color.into(),
                     });
                     last_right = right;
                 }
@@ -3368,7 +3369,7 @@ impl ChartCanvas {
                         order: label_order,
                         origin: Point::new(Px(label_x), Px(label_y)),
                         text: blob,
-                        color: self.style.axis_label_color,
+                        paint: self.style.axis_label_color.into(),
                     });
                     last_bottom = bottom;
                 }
@@ -5805,7 +5806,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 order,
                 origin: Point::new(Px(plot.origin.x.0 + pad), Px(plot.origin.y.0 + pad)),
                 text: blob,
-                color: self.style.axis_tick_color,
+                paint: self.style.axis_tick_color.into(),
             });
         }
 
@@ -6080,7 +6081,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             order: DrawOrder(label_order.0.saturating_add(1)),
                             origin: Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
                             text: blob,
-                            color: self.style.tooltip_text_color,
+                            paint: self.style.tooltip_text_color.into(),
                         });
                     };
 
@@ -6555,7 +6556,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             order: DrawOrder(order_base.saturating_add(1)),
                             origin: Point::new(Px(text_x0), Px(y)),
                             text: blob,
-                            color,
+                            paint: color.into(),
                         });
                         y += metrics.size.height.0.max(1.0);
                     }
@@ -6580,7 +6581,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             order: DrawOrder(order_base.saturating_add(1)),
                             origin: Point::new(Px(text_x0), Px(y)),
                             text: left_blob,
-                            color: self.style.tooltip_text_color,
+                            paint: self.style.tooltip_text_color.into(),
                         });
                         let value_color = if line.is_missing {
                             missing_text_color
@@ -6591,7 +6592,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             order: DrawOrder(order_base.saturating_add(2)),
                             origin: Point::new(Px(value_x), Px(y)),
                             text: right_blob,
-                            color: value_color,
+                            paint: value_color.into(),
                         });
 
                         y += line_height;

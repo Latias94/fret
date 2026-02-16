@@ -220,7 +220,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(text_x, text_y),
                 text: blob,
-                color: self.style.edge_label_text,
+                paint: self.style.edge_label_text.into(),
             });
         }
 
