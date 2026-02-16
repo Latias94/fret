@@ -88,7 +88,7 @@ fn wire_selection_commands<H: UiHost + 'static>(
             let next = if cmd == CMD_SELECT_ALL_PAGE {
                 table.toggled_all_page_rows_selected(None)
             } else if let Some(row_id) =
-                with_toggle_row_selected_router(|router| router.try_resolve(command))
+                with_toggle_row_selected_router(|router| router.try_resolve(&command))
             {
                 table.toggled_row_selected(RowKey(row_id), None, true)
             } else {
