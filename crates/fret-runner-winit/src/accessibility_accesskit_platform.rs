@@ -128,7 +128,45 @@ mod platform_impl {
         }
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
+    mod platform {
+        use super::*;
+
+        pub(super) struct PlatformAdapter {
+            adapter: accesskit_unix::Adapter,
+        }
+
+        impl PlatformAdapter {
+            pub(super) fn new(
+                _window_handle: RawWindowHandle,
+                activation_handler: impl 'static + ActivationHandler + Send,
+                action_handler: impl 'static + ActionHandler + Send,
+                deactivation_handler: impl 'static + DeactivationHandler + Send,
+            ) -> Self {
+                let adapter = accesskit_unix::Adapter::new(
+                    activation_handler,
+                    action_handler,
+                    deactivation_handler,
+                );
+                Self { adapter }
+            }
+
+            pub(super) fn update_if_active(&mut self, updater: impl FnOnce() -> TreeUpdate) {
+                self.adapter.update_if_active(updater);
+            }
+
+            pub(super) fn set_focus(&mut self, is_focused: bool) {
+                self.adapter.update_window_focus_state(is_focused);
+            }
+
+            pub(super) fn set_window_bounds(&mut self, outer_bounds: Rect, inner_bounds: Rect) {
+                self.adapter
+                    .set_root_window_bounds(outer_bounds, inner_bounds);
+            }
+        }
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     mod platform {
         use super::*;
 
