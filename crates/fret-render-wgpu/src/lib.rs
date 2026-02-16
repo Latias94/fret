@@ -1,3 +1,11 @@
+//! wgpu-based renderer implementation for the Fret workspace.
+//!
+//! This crate provides the default GPU renderer used by the native runner stack and exposes
+//! diagnostics snapshots useful for tooling and issue reports.
+//!
+//! Most apps should not depend on this crate directly; prefer the higher-level facades
+//! (`fret-framework` or the ecosystem `fret` crate) unless you are assembling a custom stack.
+
 #![allow(clippy::too_many_arguments)]
 
 mod capabilities;
@@ -40,6 +48,7 @@ pub use text::SystemFontRescanSeed;
 pub use text::TextFontFamilyConfig;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+/// Summary of a single backend/adapter initialization attempt.
 pub struct WgpuInitAttemptSnapshot {
     pub backends: String,
     pub ok: bool,
@@ -56,6 +65,7 @@ pub struct WgpuInitAttemptSnapshot {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+/// Diagnostics collected while initializing a `WgpuContext`.
 pub struct WgpuInitDiagnosticsSnapshot {
     pub allow_fallback: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -66,6 +76,7 @@ pub struct WgpuInitDiagnosticsSnapshot {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+/// Selected adapter metadata captured for diagnostics and repro bundles.
 pub struct WgpuAdapterSelectionSnapshot {
     pub schema_version: u32,
     pub allow_fallback: bool,

@@ -1,8 +1,20 @@
+//! Stable, serializable protocol types for Fret diagnostics and scripted UI automation.
+//!
+//! The diagnostics pipeline intentionally uses explicit schema versions (e.g. `*V1`, `*V2`) so
+//! tooling can evolve without breaking older bundles/scripts.
+//!
+//! Most users interact with this crate indirectly via `fretboard diag` and the JSON artifacts in
+//! `tools/diag-scripts/`.
+
 use serde::{Deserialize, Serialize};
 
 pub mod builder;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Envelope message for diagnostics/devtools transports.
+///
+/// Transports (e.g. WebSockets) send a `type` discriminator and a free-form JSON `payload`.
+/// Higher-level tooling is responsible for validating the schema version and payload structure.
 pub struct DiagTransportMessageV1 {
     pub schema_version: u32,
     pub r#type: String,
@@ -15,6 +27,7 @@ pub struct DiagTransportMessageV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Hello message sent by a client when attaching to a devtools server.
 pub struct DevtoolsHelloV1 {
     pub client_kind: String,
     pub client_version: String,
@@ -23,6 +36,7 @@ pub struct DevtoolsHelloV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Acknowledgement message returned by the devtools server after receiving [`DevtoolsHelloV1`].
 pub struct DevtoolsHelloAckV1 {
     pub server_version: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -92,6 +106,9 @@ pub enum UiImeEventV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Scripted UI interaction plan (schema v1).
+///
+/// Used by `fretboard diag` to drive automated UI actions and assertions.
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -165,6 +182,9 @@ pub enum UiActionStepV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Scripted UI interaction plan (schema v2).
+///
+/// This is the preferred schema for new scripts and generators.
 pub struct UiActionScriptV2 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]

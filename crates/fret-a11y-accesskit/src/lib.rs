@@ -1,3 +1,11 @@
+//! AccessKit adapter for Fret semantics snapshots.
+//!
+//! This crate converts `fret-core`'s portable semantics tree (`SemanticsSnapshot`) into
+//! AccessKit's `TreeUpdate` representation.
+//!
+//! Backend-specific wiring (e.g. hooking this into a windowing system) lives in runner crates such
+//! as `fret-runner-winit`.
+
 use std::collections::{HashMap, HashSet};
 
 use accesskit::{
@@ -164,6 +172,10 @@ fn byte_to_character_index(value: &str, byte_offset: u32) -> usize {
     index
 }
 
+/// Builds an AccessKit [`TreeUpdate`] from a Fret [`SemanticsSnapshot`].
+///
+/// `scale_factor` should match the target's pixel scale (e.g. window scale factor) so bounds are
+/// converted from logical pixels to physical pixels as expected by AccessKit.
 pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64) -> TreeUpdate {
     let visible_roots = choose_visible_roots(snapshot);
     let children = build_children_index(&snapshot.nodes);
