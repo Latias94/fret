@@ -78,6 +78,16 @@ prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
 - `fret_ui_kit::ui_component_*_patch_only!(MyType);` (patch-only; see below)
 - `fret_ui_kit::ui_into_element_render_once!(MyType);` (when a type implements `RenderOnce`)
 
+#### Adapter strategy (RenderOnce vs UiIntoElement)
+
+Near-term decision:
+
+- Prefer explicit `UiIntoElement` impls for component types that can render directly into `AnyElement`.
+- For types that already implement `fret_ui::element::RenderOnce`, use `fret_ui_kit::ui_into_element_render_once!(MyType);`.
+- We intentionally do **not** provide a blanket impl `UiIntoElement for T: RenderOnce` today due to Rust coherence constraints
+  (see `ONB-macro-052` in the onboarding workstream TODO). This keeps the ecosystem surface explicit and avoids surprising
+  overlap with existing impls.
+
 In-tree example:
 
 - `ecosystem/fret-ui-ai/src/elements/message.rs`

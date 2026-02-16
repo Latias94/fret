@@ -210,12 +210,14 @@ Design note:
     - `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs`
     - `docs/component-authoring-contracts.md`
 
-- [ ] ONB-macro-055 Decide the “IntoElement-like” adapter strategy for third-party components.
+- [x] ONB-macro-055 Decide the “IntoElement-like” adapter strategy for third-party components.
   - Preferred:
     - blanket impl `UiIntoElement` for `T: RenderOnce` (if coherent).
   - Fallbacks (if coherence conflicts appear):
     - `#[derive(UiIntoElement)]` that forwards to `RenderOnce::render_once`, or
     - a secondary trait accepted by `UiBuilder` (avoid breaking existing explicit impls).
+  - Evidence:
+    - `docs/component-authoring-contracts.md`
 
 ---
 
