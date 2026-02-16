@@ -13,7 +13,63 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        let window = self.window;
+        let frame_id = app.frame_id();
+        let kind: &'static str = match event {
+            Event::Pointer(_) | Event::PointerCancel(_) => "pointer",
+            Event::Timer { .. } => "timer",
+            _ => "other",
+        };
+
+        let ((), elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.dispatch.event",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    kind,
+                )
+            },
+            || self.dispatch_event_inner(app, services, event, base_root),
+        );
+        if self.debug_enabled {
+            self.debug_stats.dispatch_events = self.debug_stats.dispatch_events.saturating_add(1);
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.dispatch_time += elapsed;
+                match kind {
+                    "pointer" => {
+                        self.debug_stats.dispatch_pointer_events =
+                            self.debug_stats.dispatch_pointer_events.saturating_add(1);
+                        self.debug_stats.dispatch_pointer_event_time += elapsed;
+                    }
+                    "timer" => {
+                        self.debug_stats.dispatch_timer_events =
+                            self.debug_stats.dispatch_timer_events.saturating_add(1);
+                        self.debug_stats.dispatch_timer_event_time += elapsed;
+                    }
+                    _ => {
+                        self.debug_stats.dispatch_other_events =
+                            self.debug_stats.dispatch_other_events.saturating_add(1);
+                        self.debug_stats.dispatch_other_event_time += elapsed;
+                    }
+                }
+            }
+        }
+    }
+
+    #[stacksafe::stacksafe]
+    fn dispatch_event_inner(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        event: &Event,
+        base_root: NodeId,
+    ) {
         self.begin_debug_frame_if_needed(app.frame_id());
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
 
         if let Some(window) = self.window {
             let frame_id = app.frame_id();
@@ -76,18 +132,39 @@ impl<H: UiHost> UiTree<H> {
         // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
         // hit-testing.
         if matches!(event, Event::Pointer(_)) {
-            self.invalidate_scroll_handle_bindings_for_changed_handles(
-                app,
-                crate::layout_pass::LayoutPassKind::Final,
-                /* consume_deferred_scroll_to_item */ false,
-                /* commit_scroll_handle_baselines */ false,
+            let (_, elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_enabled,
+                || tracing::trace_span!("fret.ui.dispatch.scroll_handle_invalidation"),
+                || {
+                    self.invalidate_scroll_handle_bindings_for_changed_handles(
+                        app,
+                        crate::layout_pass::LayoutPassKind::Final,
+                        /* consume_deferred_scroll_to_item */ false,
+                        /* commit_scroll_handle_baselines */ false,
+                    );
+                },
             );
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.dispatch_scroll_handle_invalidation_time += elapsed;
+            }
         }
 
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
-        let (active_layers, barrier_root) = self.active_input_layers();
-        self.enforce_modal_barrier_scope(&active_layers);
+        let ((active_layers, barrier_root), active_layers_elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.ui.dispatch.active_layers"),
+            || {
+                let (active_layers, barrier_root) = self.active_input_layers();
+                self.enforce_modal_barrier_scope(&active_layers);
+                (active_layers, barrier_root)
+            },
+        );
+        if let Some(active_layers_elapsed) = active_layers_elapsed {
+            self.debug_stats.dispatch_active_layers_time += active_layers_elapsed;
+        }
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
         // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
