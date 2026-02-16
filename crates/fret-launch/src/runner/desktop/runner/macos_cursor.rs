@@ -5,6 +5,13 @@ use std::collections::HashMap;
 #[cfg(target_os = "macos")]
 use winit::dpi::PhysicalPosition;
 
+#[cfg(target_os = "macos")]
+use objc2::MainThreadMarker;
+#[cfg(target_os = "macos")]
+use objc2_app_kit::{NSEvent, NSScreen};
+#[cfg(target_os = "macos")]
+use objc2_foundation::{NSPoint, NSRect};
+
 pub(super) fn macos_window_log(_args: fmt::Arguments<'_>) {
     #[cfg(target_os = "macos")]
     {
@@ -105,36 +112,16 @@ pub(super) fn macos_cursor_trace_enabled() -> bool {
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
 pub(super) fn macos_is_left_mouse_down() -> bool {
-    use objc::runtime::Class;
-    use objc::{msg_send, sel, sel_impl};
-    unsafe {
-        let Some(class) = Class::get("NSEvent") else {
-            return false;
-        };
-        let buttons: u64 = msg_send![class, pressedMouseButtons];
-        (buttons & 1) != 0
-    }
+    (NSEvent::pressedMouseButtons() & 1) != 0
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
-pub(super) fn macos_mouse_location() -> Option<cocoa::foundation::NSPoint> {
-    use cocoa::foundation::NSPoint;
-    use objc::runtime::Class;
-    use objc::{msg_send, sel, sel_impl};
-    unsafe {
-        let Some(class) = Class::get("NSEvent") else {
-            return None;
-        };
-        let point: NSPoint = msg_send![class, mouseLocation];
-        Some(point)
-    }
+pub(super) fn macos_mouse_location() -> Option<NSPoint> {
+    Some(NSEvent::mouseLocation())
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct MacCursorTransform {
     scale_factor: f64,
@@ -146,7 +133,6 @@ pub(super) struct MacCursorTransform {
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(super) struct MacCursorScreenKey {
     origin_x: i32,
@@ -157,9 +143,8 @@ pub(super) struct MacCursorScreenKey {
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
 impl MacCursorScreenKey {
-    fn from_frame(frame: cocoa::foundation::NSRect, scale_factor: f64) -> Self {
+    fn from_frame(frame: NSRect, scale_factor: f64) -> Self {
         Self {
             origin_x: frame.origin.x.round() as i32,
             origin_y: frame.origin.y.round() as i32,
@@ -181,48 +166,34 @@ impl MacCursorScreenKey {
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
-fn macos_screen_key_for_point(point: cocoa::foundation::NSPoint) -> Option<MacCursorScreenKey> {
-    use cocoa::base::id;
-    use cocoa::foundation::NSRect;
-    use objc::runtime::Class;
-    use objc::{msg_send, sel, sel_impl};
+fn macos_screen_key_for_point(point: NSPoint) -> Option<MacCursorScreenKey> {
+    let Some(mtm) = MainThreadMarker::new() else {
+        return None;
+    };
 
-    unsafe {
-        let Some(class) = Class::get("NSScreen") else {
-            return None;
-        };
-        let screens: id = msg_send![class, screens];
-        if screens.is_null() {
-            return None;
-        }
-        let count: usize = msg_send![screens, count];
-        for idx in 0..count {
-            let screen: id = msg_send![screens, objectAtIndex: idx];
-            if screen.is_null() {
-                continue;
-            }
-            let frame: NSRect = msg_send![screen, frame];
-            let min_x = frame.origin.x;
-            let min_y = frame.origin.y;
-            let max_x = min_x + frame.size.width;
-            let max_y = min_y + frame.size.height;
-            if point.x >= min_x && point.x < max_x && point.y >= min_y && point.y < max_y {
-                let scale_factor: f64 = msg_send![screen, backingScaleFactor];
-                return Some(MacCursorScreenKey::from_frame(frame, scale_factor));
-            }
+    let screens = NSScreen::screens(mtm);
+    for screen in screens.to_vec() {
+        let frame = screen.frame();
+        let min_x = frame.origin.x;
+        let min_y = frame.origin.y;
+        let max_x = min_x + frame.size.width;
+        let max_y = min_y + frame.size.height;
+        if point.x >= min_x && point.x < max_x && point.y >= min_y && point.y < max_y {
+            // `backingScaleFactor` is safe to call here, but not always exposed by feature-gated
+            // bindings; use a direct message send to avoid extra feature coupling.
+            let scale_factor: f64 = unsafe { objc2::msg_send![&screen, backingScaleFactor] };
+            return Some(MacCursorScreenKey::from_frame(frame, scale_factor));
         }
     }
     None
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
 impl MacCursorTransform {
     fn update_from_sample(
         &mut self,
         winit_screen_pos: PhysicalPosition<f64>,
-        cocoa_mouse_location: cocoa::foundation::NSPoint,
+        cocoa_mouse_location: NSPoint,
         scale_factor: f64,
     ) {
         let cocoa_x = cocoa_mouse_location.x * scale_factor;
@@ -266,7 +237,7 @@ impl MacCursorTransform {
         }
     }
 
-    fn map(&self, cocoa_mouse_location: cocoa::foundation::NSPoint) -> PhysicalPosition<f64> {
+    fn map(&self, cocoa_mouse_location: NSPoint) -> PhysicalPosition<f64> {
         let cocoa_x = cocoa_mouse_location.x * self.scale_factor;
         let cocoa_y = cocoa_mouse_location.y * self.scale_factor;
         let x = cocoa_x + self.x_offset;
@@ -287,7 +258,6 @@ impl MacCursorTransform {
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
 #[derive(Default)]
 pub(super) struct MacCursorTransformTable {
     by_screen: HashMap<MacCursorScreenKey, MacCursorTransform>,
@@ -359,12 +329,11 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
 }
 
 #[cfg(target_os = "macos")]
-#[allow(deprecated)]
 impl MacCursorTransformTable {
     fn update_from_window_sample(
         &mut self,
         winit_screen_pos: PhysicalPosition<f64>,
-        cocoa_pos: cocoa::foundation::NSPoint,
+        cocoa_pos: NSPoint,
         scale_factor: f64,
     ) {
         let key = macos_screen_key_for_point(cocoa_pos).unwrap_or_else(|| {
@@ -382,7 +351,7 @@ impl MacCursorTransformTable {
 
     fn map_with_key_hint(
         &mut self,
-        cocoa_pos: cocoa::foundation::NSPoint,
+        cocoa_pos: NSPoint,
         key_hint: Option<MacCursorScreenKey>,
     ) -> Option<PhysicalPosition<f64>> {
         let hint_hit = key_hint.is_some_and(|k| self.by_screen.contains_key(&k));
@@ -423,7 +392,7 @@ impl MacCursorTransformTable {
         Some(out)
     }
 
-    fn map(&mut self, cocoa_pos: cocoa::foundation::NSPoint) -> Option<PhysicalPosition<f64>> {
+    fn map(&mut self, cocoa_pos: NSPoint) -> Option<PhysicalPosition<f64>> {
         self.map_with_key_hint(cocoa_pos, macos_screen_key_for_point(cocoa_pos))
     }
 }
@@ -474,7 +443,7 @@ mod tests {
             },
         );
 
-        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let cocoa_pos = NSPoint { x: 1.0, y: 2.0 };
         let mapped = table
             .map_with_key_hint(cocoa_pos, Some(key_a))
             .expect("expected mapping");
@@ -523,7 +492,7 @@ mod tests {
             },
         );
 
-        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let cocoa_pos = NSPoint { x: 1.0, y: 2.0 };
         let mapped = table
             .map_with_key_hint(cocoa_pos, Some(key_b))
             .expect("expected mapping via any transform");
