@@ -737,7 +737,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         {
                             self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable { token },
+                                &Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                },
                             );
                             continue;
                         }
@@ -747,10 +750,23 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 window,
                                 &Event::ClipboardText { token, text },
                             ),
-                            Ok(None) | Err(_) => self.deliver_window_event_now(
+                            Ok(None) => self.deliver_window_event_now(
                                 window,
-                                &Event::ClipboardTextUnavailable { token },
+                                &Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                },
                             ),
+                            Err(err) => {
+                                tracing::debug!(?err, "failed to read clipboard text");
+                                self.deliver_window_event_now(
+                                    window,
+                                    &Event::ClipboardTextUnavailable {
+                                        token,
+                                        message: Some(format!("{err:?}")),
+                                    },
+                                );
+                            }
                         }
                     }
                     Effect::PrimarySelectionSetText { text } => {

@@ -16,8 +16,8 @@ pub use kind::{
     CapabilityValueKind, KNOWN_BOOL_CAPABILITY_KEYS, KNOWN_STR_CAPABILITY_KEYS, capability_key_kind,
 };
 pub use leaf::{
-    ClipboardCapabilities, DndCapabilities, FsCapabilities, GfxCapabilities, ImeCapabilities,
-    ShellCapabilities, UiCapabilities,
+    ClipboardCapabilities, ClipboardTextCapabilities, DndCapabilities, FsCapabilities,
+    GfxCapabilities, ImeCapabilities, ShellCapabilities, UiCapabilities,
 };
 pub use platform::PlatformCapabilities;
 pub use qualities::{

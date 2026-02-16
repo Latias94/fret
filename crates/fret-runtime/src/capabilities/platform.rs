@@ -1,7 +1,7 @@
 use super::keys;
 use super::{
-    ClipboardCapabilities, DndCapabilities, ExecCapabilities, FsCapabilities, GfxCapabilities,
-    ImeCapabilities, ShellCapabilities, UiCapabilities,
+    ClipboardCapabilities, ClipboardTextCapabilities, DndCapabilities, ExecCapabilities,
+    FsCapabilities, GfxCapabilities, ImeCapabilities, ShellCapabilities, UiCapabilities,
 };
 use super::{
     ExternalDragPayloadKind, ExternalDragPositionQuality, WindowHoverDetectionQuality,
@@ -36,7 +36,10 @@ impl Default for PlatformCapabilities {
                 window_z_level: WindowZLevelQuality::Reliable,
             },
             clipboard: ClipboardCapabilities {
-                text: true,
+                text: ClipboardTextCapabilities {
+                    read: true,
+                    write: true,
+                },
                 files: false,
                 primary_text: cfg!(all(
                     unix,
@@ -80,7 +83,9 @@ impl PlatformCapabilities {
             keys::UI_MULTI_WINDOW => Some(self.ui.multi_window),
             keys::UI_WINDOW_TEAR_OFF => Some(self.ui.window_tear_off),
             keys::UI_CURSOR_ICONS => Some(self.ui.cursor_icons),
-            keys::CLIPBOARD_TEXT => Some(self.clipboard.text),
+            keys::CLIPBOARD_TEXT => Some(self.clipboard.text.read && self.clipboard.text.write),
+            keys::CLIPBOARD_TEXT_READ => Some(self.clipboard.text.read),
+            keys::CLIPBOARD_TEXT_WRITE => Some(self.clipboard.text.write),
             keys::CLIPBOARD_FILES => Some(self.clipboard.files),
             keys::CLIPBOARD_PRIMARY_TEXT => Some(self.clipboard.primary_text),
             keys::DND_EXTERNAL => Some(self.dnd.external),

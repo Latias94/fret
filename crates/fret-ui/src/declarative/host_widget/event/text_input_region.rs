@@ -134,7 +134,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
                 cx.stop_propagation();
             }
         }
-        Event::ClipboardTextUnavailable { token } => {
+        Event::ClipboardTextUnavailable { token, .. } => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,

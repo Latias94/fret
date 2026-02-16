@@ -35,7 +35,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 self.deliver_window_event_now(window, &Event::ClipboardText { token, text });
             }
             PlatformCompletion::ClipboardTextUnavailable { token } => {
-                self.deliver_window_event_now(window, &Event::ClipboardTextUnavailable { token });
+                self.deliver_window_event_now(
+                    window,
+                    &Event::ClipboardTextUnavailable {
+                        token,
+                        message: None,
+                    },
+                );
             }
             PlatformCompletion::ExternalDropData(data) => {
                 self.deliver_window_event_now(window, &Event::ExternalDropData(data));

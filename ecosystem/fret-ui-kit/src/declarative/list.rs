@@ -278,7 +278,7 @@ where
                         if !acx.focus_in_subtree {
                             return fret_ui::CommandAvailability::NotHandled;
                         }
-                        if !acx.input_ctx.caps.clipboard.text {
+                        if !acx.input_ctx.caps.clipboard.text.write {
                             return fret_ui::CommandAvailability::Blocked;
                         }
                         let models = host.models_mut();
@@ -427,7 +427,7 @@ where
                         if !acx.focus_in_subtree {
                             return fret_ui::CommandAvailability::NotHandled;
                         }
-                        if !acx.input_ctx.caps.clipboard.text {
+                        if !acx.input_ctx.caps.clipboard.text.write {
                             return fret_ui::CommandAvailability::Blocked;
                         }
                         let models = host.models_mut();
@@ -815,7 +815,8 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut caps = fret_runtime::PlatformCapabilities::default();
-        caps.clipboard.text = true;
+        caps.clipboard.text.read = true;
+        caps.clipboard.text.write = true;
         app.set_global(caps);
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -920,7 +921,8 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut caps = fret_runtime::PlatformCapabilities::default();
-        caps.clipboard.text = true;
+        caps.clipboard.text.read = true;
+        caps.clipboard.text.write = true;
         app.set_global(caps);
 
         let mut ui: UiTree<App> = UiTree::new();

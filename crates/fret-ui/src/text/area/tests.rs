@@ -311,9 +311,11 @@ fn right_click_focuses_and_preserves_selection_for_context_menus() {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let mut style = TextAreaStyle::default();
-    style.padding_x = Px(0.0);
-    style.padding_y = Px(0.0);
+    let style = TextAreaStyle {
+        padding_x: Px(0.0),
+        padding_y: Px(0.0),
+        ..Default::default()
+    };
 
     let mut widget = TextArea::new("hello world").with_style(style);
     widget.caret = 5;
@@ -460,7 +462,8 @@ fn text_area_command_availability_tracks_selection_and_clipboard_caps() {
     let mut app = TestHost::new();
 
     let mut caps = PlatformCapabilities::default();
-    caps.clipboard.text = true;
+    caps.clipboard.text.read = true;
+    caps.clipboard.text.write = true;
     app.set_global(caps);
 
     let mut ui = UiTree::new();
@@ -494,7 +497,8 @@ fn text_area_command_availability_tracks_selection_and_clipboard_caps() {
     );
 
     let mut caps = PlatformCapabilities::default();
-    caps.clipboard.text = false;
+    caps.clipboard.text.read = false;
+    caps.clipboard.text.write = false;
     app.set_global(caps);
 
     assert_eq!(
@@ -515,9 +519,11 @@ fn dragging_selection_autoscrolls_horizontally_when_wrap_none() {
     let root = ui.create_node(RenderTransformWrapper::new(
         fret_core::Transform2D::IDENTITY,
     ));
-    let mut style = TextAreaStyle::default();
-    style.padding_x = Px(0.0);
-    style.padding_y = Px(0.0);
+    let style = TextAreaStyle {
+        padding_x: Px(0.0),
+        padding_y: Px(0.0),
+        ..Default::default()
+    };
 
     let mut widget = TextArea::new("abcdefghijklmnopqrstuvwxyz")
         .with_wrap(TextWrap::None)

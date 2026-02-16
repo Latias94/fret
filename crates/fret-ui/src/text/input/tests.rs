@@ -381,7 +381,8 @@ fn text_input_command_availability_tracks_selection_and_clipboard_caps() {
 
     let mut app = TestHost::new();
     let mut caps = PlatformCapabilities::default();
-    caps.clipboard.text = true;
+    caps.clipboard.text.read = true;
+    caps.clipboard.text.write = true;
     app.set_global(caps);
 
     assert_eq!(
@@ -407,7 +408,8 @@ fn text_input_command_availability_tracks_selection_and_clipboard_caps() {
     );
 
     let mut caps = PlatformCapabilities::default();
-    caps.clipboard.text = false;
+    caps.clipboard.text.read = false;
+    caps.clipboard.text.write = false;
     app.set_global(caps);
 
     assert_eq!(

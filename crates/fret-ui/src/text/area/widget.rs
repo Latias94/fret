@@ -994,7 +994,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 self.apply_multiline_ui_delta(cx, delta);
             }
-            Event::ClipboardTextUnavailable { token } => {
+            Event::ClipboardTextUnavailable { token, .. } => {
                 if self.pending_clipboard_token == Some(*token) {
                     self.pending_clipboard_token = None;
                 }
@@ -1135,7 +1135,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.copy" => {
-                if !cx.input_ctx.caps.clipboard.text {
+                if !cx.input_ctx.caps.clipboard.text.write {
                     return true;
                 }
                 let result = crate::text_edit::commands::apply_clipboard(
@@ -1151,7 +1151,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.cut" => {
-                if !cx.input_ctx.caps.clipboard.text {
+                if !cx.input_ctx.caps.clipboard.text.write {
                     return true;
                 }
                 let result = crate::text_edit::commands::apply_clipboard(
@@ -1169,7 +1169,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.paste" => {
-                if !cx.input_ctx.caps.clipboard.text {
+                if !cx.input_ctx.caps.clipboard.text.read {
                     return true;
                 }
                 let result = crate::text_edit::commands::apply_clipboard(
@@ -1267,13 +1267,14 @@ impl<H: UiHost> Widget<H> for TextArea {
             return CommandAvailability::NotHandled;
         }
 
-        let clipboard_text = cx.input_ctx.caps.clipboard.text;
+        let clipboard_read = cx.input_ctx.caps.clipboard.text.read;
+        let clipboard_write = cx.input_ctx.caps.clipboard.text.write;
         let (start, end) = self.selection_range();
         let has_selection = start != end;
 
         match cmd {
             "text.copy" | "text.cut" => {
-                if !clipboard_text {
+                if !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
                 if has_selection {
@@ -1283,7 +1284,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
             }
             "text.paste" => {
-                if !clipboard_text {
+                if !clipboard_read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available

@@ -6502,7 +6502,7 @@ impl UiDiagnosticsService {
             caps: input_ctx.map(|c| UiPlatformCapabilitiesSummaryV1 {
                 platform: c.platform.as_str().to_string(),
                 ui_window_hover_detection: c.caps.ui.window_hover_detection.as_str().to_string(),
-                clipboard_text: c.caps.clipboard.text,
+                clipboard_text: c.caps.clipboard.text.read && c.caps.clipboard.text.write,
                 clipboard_primary_text: c.caps.clipboard.primary_text,
                 ime: c.caps.ime.enabled,
                 ime_set_cursor_area: c.caps.ime.set_cursor_area,

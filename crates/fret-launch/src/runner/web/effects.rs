@@ -393,15 +393,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
 
                     if self.diag_clipboard_force_unavailable {
-                        self.pending_events
-                            .push(Event::ClipboardTextUnavailable { token });
+                        self.pending_events.push(Event::ClipboardTextUnavailable {
+                            token,
+                            message: None,
+                        });
                         window.request_redraw();
                         continue;
                     }
 
                     let Some(window_handle) = web_sys::window() else {
-                        self.pending_events
-                            .push(Event::ClipboardTextUnavailable { token });
+                        self.pending_events.push(Event::ClipboardTextUnavailable {
+                            token,
+                            message: None,
+                        });
                         window.request_redraw();
                         continue;
                     };
@@ -410,8 +414,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         {
                             Ok(v) => v,
                             Err(_) => {
-                                self.pending_events
-                                    .push(Event::ClipboardTextUnavailable { token });
+                                self.pending_events.push(Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                });
                                 window.request_redraw();
                                 continue;
                             }
@@ -420,8 +426,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     {
                         Ok(v) => v,
                         Err(_) => {
-                            self.pending_events
-                                .push(Event::ClipboardTextUnavailable { token });
+                            self.pending_events.push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: None,
+                            });
                             window.request_redraw();
                             continue;
                         }
@@ -432,8 +440,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     {
                         Some(v) => v,
                         None => {
-                            self.pending_events
-                                .push(Event::ClipboardTextUnavailable { token });
+                            self.pending_events.push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: None,
+                            });
                             window.request_redraw();
                             continue;
                         }
@@ -446,15 +456,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Ok(v) => match v.dyn_into::<Promise>() {
                             Ok(p) => p,
                             Err(_) => {
-                                self.pending_events
-                                    .push(Event::ClipboardTextUnavailable { token });
+                                self.pending_events.push(Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: None,
+                                });
                                 window.request_redraw();
                                 continue;
                             }
                         },
                         Err(_) => {
-                            self.pending_events
-                                .push(Event::ClipboardTextUnavailable { token });
+                            self.pending_events.push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: None,
+                            });
                             window.request_redraw();
                             continue;
                         }
@@ -468,7 +482,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 let text = v.as_string().unwrap_or_default();
                                 Event::ClipboardText { token, text }
                             }
-                            Err(_) => Event::ClipboardTextUnavailable { token },
+                            Err(_) => Event::ClipboardTextUnavailable {
+                                token,
+                                message: None,
+                            },
                         };
                         pending.borrow_mut().push(event);
                         if let Some(proxy) = proxy {
