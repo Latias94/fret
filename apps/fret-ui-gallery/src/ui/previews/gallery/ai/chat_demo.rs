@@ -27,6 +27,8 @@ pub(in crate::ui) fn preview_ai_chat_demo(
     #[derive(Default)]
     struct ChatModels {
         prompt: Option<Model<String>>,
+        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
+        next_attachment_id: Option<Model<u32>>,
         messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
         loading: Option<Model<bool>>,
         pending: Option<Model<Option<PendingReply>>>,
@@ -41,6 +43,33 @@ pub(in crate::ui) fn preview_ai_chat_demo(
         None => {
             let model = cx.app.models_mut().insert(String::new());
             cx.with_state(ChatModels::default, |st| st.prompt = Some(model.clone()));
+            model
+        }
+    };
+
+    let attachments = cx.with_state(ChatModels::default, |st| st.attachments.clone());
+    let attachments = match attachments {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(Vec::<ui_ai::AttachmentData>::new());
+            cx.with_state(ChatModels::default, |st| {
+                st.attachments = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let next_attachment_id = cx.with_state(ChatModels::default, |st| st.next_attachment_id.clone());
+    let next_attachment_id = match next_attachment_id {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u32);
+            cx.with_state(ChatModels::default, |st| {
+                st.next_attachment_id = Some(model.clone())
+            });
             model
         }
     };
@@ -280,12 +309,13 @@ pub(in crate::ui) fn preview_ai_chat_demo(
 
     let send: OnActivate = Arc::new({
         let prompt = prompt.clone();
+        let attachments = attachments.clone();
         let messages = messages.clone();
         let pending = pending.clone();
         let loading = loading.clone();
         let next_id = next_id.clone();
         let content_revision = content_revision.clone();
-        move |host, _action_cx, _reason| {
+        move |host, action_cx, _reason| {
             fn chunk_for_demo(text: &str, chars_per_chunk: usize) -> Arc<[Arc<str>]> {
                 let mut out = Vec::new();
                 let mut buf = String::new();
@@ -307,12 +337,23 @@ pub(in crate::ui) fn preview_ai_chat_demo(
                 out.into()
             }
 
+            let attachments_len = host
+                .models_mut()
+                .read(&attachments, |v| v.len())
+                .ok()
+                .unwrap_or(0);
+
             let text = host.models_mut().read(&prompt, Clone::clone).ok();
             let Some(text) = text else { return };
             let text = text.trim().to_string();
-            if text.is_empty() {
-                return;
-            }
+            let text = if text.is_empty() {
+                if attachments_len == 0 {
+                    return;
+                }
+                "Sent with attachments".to_string()
+            } else {
+                text
+            };
 
             let user_id = host
                 .models_mut()
@@ -410,6 +451,8 @@ pub(in crate::ui) fn preview_ai_chat_demo(
                 })
             });
             let _ = host.models_mut().update(&loading, |v| *v = true);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
         }
     });
 
@@ -418,7 +461,7 @@ pub(in crate::ui) fn preview_ai_chat_demo(
         let pending = pending.clone();
         let loading = loading.clone();
         let content_revision = content_revision.clone();
-        move |host, _action_cx, _reason| {
+        move |host, action_cx, _reason| {
             let assistant_id = host
                 .models_mut()
                 .read(&pending, |v| v.as_ref().map(|p| p.assistant_id))
@@ -427,6 +470,8 @@ pub(in crate::ui) fn preview_ai_chat_demo(
 
             let _ = host.models_mut().update(&pending, |v| *v = None);
             let _ = host.models_mut().update(&loading, |v| *v = false);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
 
             let Some(assistant_id) = assistant_id else {
                 return;
@@ -596,11 +641,40 @@ pub(in crate::ui) fn preview_ai_chat_demo(
             .into_element(cx)
     };
 
+    let add_attachments: OnActivate = Arc::new({
+        let attachments = attachments.clone();
+        let next_attachment_id = next_attachment_id.clone();
+        move |host, action_cx, _reason| {
+            let n = host
+                .models_mut()
+                .read(&next_attachment_id, |v| *v)
+                .unwrap_or(0);
+            let next = Arc::<str>::from(format!("att-{n}"));
+            let _ = host
+                .models_mut()
+                .update(&next_attachment_id, |v| *v = v.saturating_add(1));
+
+            let file = ui_ai::AttachmentFileData::new(next.clone())
+                .filename("design.png")
+                .media_type("image/png")
+                .size_bytes(42_000);
+            let item = ui_ai::AttachmentData::File(file);
+            let _ = host.models_mut().update(&attachments, |v| {
+                if v.iter().any(|x| x.id().as_ref() == next.as_ref()) {
+                    return;
+                }
+                v.push(item);
+            });
+            host.notify(action_cx);
+        }
+    });
+
     let chat = ui_ai::AiChat::new(messages.clone(), prompt)
         .loading_model(loading.clone())
         .content_revision_model(content_revision.clone())
         .on_send(send)
         .on_stop(stop)
+        .on_add_attachments(add_attachments)
         .show_download(true)
         .on_download(export_markdown)
         .download_test_id("ui-gallery-ai-chat-download")
@@ -612,6 +686,9 @@ pub(in crate::ui) fn preview_ai_chat_demo(
         .prompt_textarea_test_id("ui-gallery-ai-chat-prompt-textarea")
         .prompt_send_test_id("ui-gallery-ai-chat-prompt-send")
         .prompt_stop_test_id("ui-gallery-ai-chat-prompt-stop")
+        .prompt_attachments_model(attachments)
+        .prompt_attachments_test_id("ui-gallery-ai-chat-prompt-attachments")
+        .prompt_add_attachments_test_id("ui-gallery-ai-chat-prompt-add-attachments")
         .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(360.0)))
         .into_element(cx);
 
