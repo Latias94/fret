@@ -376,18 +376,6 @@ impl Renderer {
             })
             .collect();
 
-        let path_paint_capacity = 1024;
-        let path_paint_buffers: Vec<wgpu::Buffer> = (0..FRAMES_IN_FLIGHT)
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret path paints #{i}")),
-                    size: (path_paint_capacity * std::mem::size_of::<PaintGpu>()) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
-
         let path_paint_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("fret path paints bind group layout"),
@@ -403,32 +391,15 @@ impl Renderer {
                 }],
             });
 
-        let path_paint_bind_groups: Vec<wgpu::BindGroup> = path_paint_buffers
-            .iter()
-            .enumerate()
-            .map(|(i, buffer)| {
-                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some(&format!("fret path paints bind group #{i}")),
-                    layout: &path_paint_bind_group_layout,
-                    entries: &[wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: buffer.as_entire_binding(),
-                    }],
-                })
-            })
-            .collect();
-
-        let text_paint_capacity = 1024;
-        let text_paint_buffers: Vec<wgpu::Buffer> = (0..FRAMES_IN_FLIGHT)
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret text paints #{i}")),
-                    size: (text_paint_capacity * std::mem::size_of::<PaintGpu>()) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
+        let paint_usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
+        let path_paints = buffers::StorageRingBuffer::<PaintGpu>::new(
+            device,
+            FRAMES_IN_FLIGHT,
+            1024,
+            path_paint_bind_group_layout,
+            "fret path paints",
+            paint_usage,
+        );
 
         let text_paint_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -445,20 +416,14 @@ impl Renderer {
                 }],
             });
 
-        let text_paint_bind_groups: Vec<wgpu::BindGroup> = text_paint_buffers
-            .iter()
-            .enumerate()
-            .map(|(i, buffer)| {
-                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some(&format!("fret text paints bind group #{i}")),
-                    layout: &text_paint_bind_group_layout,
-                    entries: &[wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: buffer.as_entire_binding(),
-                    }],
-                })
-            })
-            .collect();
+        let text_paints = buffers::StorageRingBuffer::<PaintGpu>::new(
+            device,
+            FRAMES_IN_FLIGHT,
+            1024,
+            text_paint_bind_group_layout,
+            "fret text paints",
+            paint_usage,
+        );
 
         let viewport_vertex_capacity = 64 * 6;
         let viewport_vertex_buffers = (0..FRAMES_IN_FLIGHT)
@@ -568,16 +533,8 @@ impl Renderer {
             quad_instance_bind_groups,
             instance_buffer_index: 0,
             instance_capacity,
-            path_paint_buffers,
-            path_paint_bind_group_layout,
-            path_paint_bind_groups,
-            path_paint_buffer_index: 0,
-            path_paint_capacity,
-            text_paint_buffers,
-            text_paint_bind_group_layout,
-            text_paint_bind_groups,
-            text_paint_buffer_index: 0,
-            text_paint_capacity,
+            path_paints,
+            text_paints,
             viewport_vertex_buffers,
             viewport_vertex_buffer_index: 0,
             viewport_vertex_capacity,

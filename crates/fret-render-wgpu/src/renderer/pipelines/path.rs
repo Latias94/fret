@@ -18,10 +18,7 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret path pipeline layout"),
-            bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
-                &self.path_paint_bind_group_layout,
-            ],
+            bind_group_layouts: &[&self.uniform_bind_group_layout, self.path_paints.layout()],
             immediate_size: 0,
         });
 
@@ -99,10 +96,7 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret path msaa pipeline layout"),
-            bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
-                &self.path_paint_bind_group_layout,
-            ],
+            bind_group_layouts: &[&self.uniform_bind_group_layout, self.path_paints.layout()],
             immediate_size: 0,
         });
 

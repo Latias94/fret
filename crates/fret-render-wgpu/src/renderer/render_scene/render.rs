@@ -545,8 +545,8 @@ impl Renderer {
         let path_vertices = &encoding.path_vertices;
 
         self.ensure_instance_capacity(device, instances.len());
-        self.ensure_path_paint_capacity(device, path_paints.len());
-        self.ensure_text_paint_capacity(device, text_paints.len());
+        self.path_paints.ensure_capacity(device, path_paints.len());
+        self.text_paints.ensure_capacity(device, text_paints.len());
         self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
         self.ensure_text_vertex_capacity(device, text_vertices.len());
         self.ensure_path_vertex_capacity(device, path_vertices.len());
@@ -565,11 +565,7 @@ impl Renderer {
             }
         }
 
-        let path_paint_buffer_index = self.path_paint_buffer_index;
-        self.path_paint_buffer_index =
-            (self.path_paint_buffer_index + 1) % self.path_paint_buffers.len();
-        let path_paint_buffer = self.path_paint_buffers[path_paint_buffer_index].clone();
-        let path_paint_bind_group = self.path_paint_bind_groups[path_paint_buffer_index].clone();
+        let (path_paint_buffer, path_paint_bind_group) = self.path_paints.next_pair();
         if !path_paints.is_empty() {
             queue.write_buffer(&path_paint_buffer, 0, bytemuck::cast_slice(path_paints));
             if perf_enabled {
@@ -579,11 +575,7 @@ impl Renderer {
             }
         }
 
-        let text_paint_buffer_index = self.text_paint_buffer_index;
-        self.text_paint_buffer_index =
-            (self.text_paint_buffer_index + 1) % self.text_paint_buffers.len();
-        let text_paint_buffer = self.text_paint_buffers[text_paint_buffer_index].clone();
-        let text_paint_bind_group = self.text_paint_bind_groups[text_paint_buffer_index].clone();
+        let (text_paint_buffer, text_paint_bind_group) = self.text_paints.next_pair();
         if !text_paints.is_empty() {
             queue.write_buffer(&text_paint_buffer, 0, bytemuck::cast_slice(text_paints));
             if perf_enabled {
