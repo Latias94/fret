@@ -9890,6 +9890,7 @@ pub enum UiDockDropResolveSourceV1 {
     InvertDocking,
     OutsideWindow,
     FloatZone,
+    EmptyDockSpace,
     LayoutBoundsMiss,
     LatchedPreviousHover,
     TabBar,
@@ -9905,6 +9906,7 @@ impl UiDockDropResolveSourceV1 {
             fret_runtime::DockDropResolveSource::InvertDocking => Self::InvertDocking,
             fret_runtime::DockDropResolveSource::OutsideWindow => Self::OutsideWindow,
             fret_runtime::DockDropResolveSource::FloatZone => Self::FloatZone,
+            fret_runtime::DockDropResolveSource::EmptyDockSpace => Self::EmptyDockSpace,
             fret_runtime::DockDropResolveSource::LayoutBoundsMiss => Self::LayoutBoundsMiss,
             fret_runtime::DockDropResolveSource::LatchedPreviousHover => Self::LatchedPreviousHover,
             fret_runtime::DockDropResolveSource::TabBar => Self::TabBar,
@@ -16419,6 +16421,7 @@ fn eval_predicate(
                 fret_runtime::DockDropResolveSource::InvertDocking => "invert_docking",
                 fret_runtime::DockDropResolveSource::OutsideWindow => "outside_window",
                 fret_runtime::DockDropResolveSource::FloatZone => "float_zone",
+                fret_runtime::DockDropResolveSource::EmptyDockSpace => "empty_dock_space",
                 fret_runtime::DockDropResolveSource::LayoutBoundsMiss => "layout_bounds_miss",
                 fret_runtime::DockDropResolveSource::LatchedPreviousHover => {
                     "latched_previous_hover"

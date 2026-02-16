@@ -566,6 +566,20 @@ pub(super) fn paint_drop_overlay(
                 corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
             });
         }
+        DockDropTarget::EmptyDockSpace { window: w } => {
+            if w != window {
+                return;
+            }
+            let zone = bounds;
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(10_000),
+                rect: zone,
+                background: fret_core::Paint::Solid(Color { a: 0.08, ..primary }),
+                border: Edges::all(Px(3.0)),
+                border_paint: fret_core::Paint::Solid(Color { a: 0.75, ..primary }),
+                corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
+            });
+        }
         DockDropTarget::Dock(target) => {
             let Some(rect) = layout.get(&target.tabs).copied() else {
                 return;

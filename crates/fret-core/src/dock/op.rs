@@ -25,6 +25,15 @@ pub enum DockOp {
         insert_index: Option<usize>,
     },
 
+    /// Move a panel into a window that currently has no dock root tabs.
+    ///
+    /// This creates the initial root tab stack for `target_window` and inserts `panel` into it.
+    MovePanelToEmptyDockSpace {
+        source_window: AppWindowId,
+        panel: PanelKey,
+        target_window: AppWindowId,
+    },
+
     /// Move an entire tab stack ("dock node") as a group.
     ///
     /// This is used for editor-grade interactions like dragging the tab bar empty space to
@@ -36,6 +45,15 @@ pub enum DockOp {
         target_tabs: DockNodeId,
         zone: DropZone,
         insert_index: Option<usize>,
+    },
+
+    /// Move an entire tab stack ("dock node") into a window that currently has no dock root tabs.
+    ///
+    /// This creates the initial root tab stack for `target_window` and moves the whole group.
+    MoveTabsToEmptyDockSpace {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        target_window: AppWindowId,
     },
 
     FloatPanelToWindow {

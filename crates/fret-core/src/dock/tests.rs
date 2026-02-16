@@ -431,6 +431,70 @@ fn float_tabs_to_window_moves_tab_stack_to_new_window_root() {
 }
 
 #[test]
+fn move_panel_to_empty_dock_space_creates_target_root_tabs() {
+    let w1 = window(1);
+    let w2 = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(w1, tabs);
+
+    assert!(g.apply_op(&DockOp::MovePanelToEmptyDockSpace {
+        source_window: w1,
+        panel: panel_b.clone(),
+        target_window: w2,
+    }));
+
+    let root2 = g.window_root(w2).expect("expected target root");
+    let DockNode::Tabs { tabs, active } = g.node(root2).expect("target tabs exists") else {
+        unreachable!();
+    };
+    assert_eq!(tabs, &vec![panel_b]);
+    assert_eq!(*active, 0);
+
+    assert_eq!(g.collect_panels_in_window(w1), vec![panel_a]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
+fn move_tabs_to_empty_dock_space_creates_target_root_tabs() {
+    let w1 = window(1);
+    let w2 = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 1,
+    });
+    g.set_window_root(w1, tabs);
+
+    assert!(g.apply_op(&DockOp::MoveTabsToEmptyDockSpace {
+        source_window: w1,
+        source_tabs: tabs,
+        target_window: w2,
+    }));
+
+    assert!(
+        g.window_root(w1).is_none(),
+        "expected source window root to be removed"
+    );
+    let root2 = g.window_root(w2).expect("expected target root");
+    let DockNode::Tabs { tabs, active } = g.node(root2).expect("target tabs exists") else {
+        unreachable!();
+    };
+    assert_eq!(tabs, &vec![panel_a, panel_b]);
+    assert_eq!(*active, 1);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
 fn move_tabs_merges_into_target_tabs_and_preserves_active() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
@@ -768,7 +832,11 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
                         DockOp::SetActiveTab { .. } => "set_active_tab",
                         DockOp::ClosePanel { .. } => "close_panel",
                         DockOp::MovePanel { .. } => "move_panel",
+                        DockOp::MovePanelToEmptyDockSpace { .. } => {
+                            "move_panel_to_empty_dock_space"
+                        }
                         DockOp::MoveTabs { .. } => "move_tabs",
+                        DockOp::MoveTabsToEmptyDockSpace { .. } => "move_tabs_to_empty_dock_space",
                         DockOp::FloatPanelToWindow { .. } => "float_panel_to_window",
                         DockOp::RequestFloatPanelToNewWindow { .. } => {
                             "request_float_panel_to_new_window"

@@ -393,12 +393,14 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 app.with_global_mut(DockTearOffMachine::default, |machine, _app| match &op {
                     DockOp::ClosePanel { panel, .. }
                     | DockOp::MovePanel { panel, .. }
+                    | DockOp::MovePanelToEmptyDockSpace { panel, .. }
                     | DockOp::FloatPanelToWindow { panel, .. }
                     | DockOp::FloatPanelInWindow { panel, .. } => {
                         machine.prune_expired(now);
                         machine.cancel_for_panel(panel);
                     }
                     DockOp::MoveTabs { source_tabs, .. }
+                    | DockOp::MoveTabsToEmptyDockSpace { source_tabs, .. }
                     | DockOp::FloatTabsInWindow { source_tabs, .. } => {
                         machine.prune_expired(now);
                         if let Some(fret_core::DockNode::Tabs { tabs, .. }) =
@@ -433,7 +435,25 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         dock.clear_viewport_layout_for_window(*target_window);
                         invalidate_windows(app, [*source_window, *target_window]);
                     }
+                    DockOp::MovePanelToEmptyDockSpace {
+                        source_window,
+                        target_window,
+                        ..
+                    } => {
+                        dock.clear_viewport_layout_for_window(*source_window);
+                        dock.clear_viewport_layout_for_window(*target_window);
+                        invalidate_windows(app, [*source_window, *target_window]);
+                    }
                     DockOp::MoveTabs {
+                        source_window,
+                        target_window,
+                        ..
+                    } => {
+                        dock.clear_viewport_layout_for_window(*source_window);
+                        dock.clear_viewport_layout_for_window(*target_window);
+                        invalidate_windows(app, [*source_window, *target_window]);
+                    }
+                    DockOp::MoveTabsToEmptyDockSpace {
                         source_window,
                         target_window,
                         ..

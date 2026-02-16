@@ -73,6 +73,223 @@ fn dock_tab_drop_outside_window_requests_float() {
 }
 
 #[test]
+fn dock_tab_drop_into_empty_window_creates_root_tabs() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(KeyData::from_ffi(42));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window_b);
+
+    let root = ui.create_node_retained(DockSpace::new(window_b));
+    ui.set_root(root);
+
+    let panel = PanelKey::new("core.hierarchy");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_a, tabs);
+        dock.panels.insert(
+            panel.clone(),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window_a,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: panel.clone(),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: Point::new(Px(240.0), Px(180.0)),
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let effects = app.take_effects();
+    let op = effects.iter().find_map(|e| match e {
+        Effect::Dock(op) => Some(op.clone()),
+        _ => None,
+    });
+    let op = op.expect("expected a DockOp effect");
+    assert!(
+        matches!(
+            &op,
+            DockOp::MovePanelToEmptyDockSpace {
+                source_window,
+                panel: p,
+                target_window
+            } if *source_window == window_a && *target_window == window_b && *p == panel
+        ),
+        "expected a move-to-empty-dock-space op when dropping into an empty dock space"
+    );
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let DockOp::MovePanelToEmptyDockSpace { .. } = &op else {
+            unreachable!();
+        };
+        assert!(
+            dock.graph.apply_op(&op),
+            "expected dock graph op apply to succeed"
+        );
+        assert!(
+            dock.graph.window_root(window_b).is_some(),
+            "expected target window to gain a dock root"
+        );
+        assert!(
+            dock.graph.find_panel_in_window(window_b, &panel).is_some(),
+            "expected moved panel to be present in target window"
+        );
+    });
+}
+
+#[test]
+fn dock_tabs_group_drop_into_empty_window_creates_root_tabs() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(KeyData::from_ffi(42));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window_b);
+
+    let root = ui.create_node_retained(DockSpace::new(window_b));
+    ui.set_root(root);
+
+    let panel_a = PanelKey::new("core.hierarchy");
+    let panel_b = PanelKey::new("core.inspector");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let source_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone()],
+            active: 1,
+        });
+        dock.graph.set_window_root(window_a, tabs);
+        dock.panels.insert(
+            panel_a.clone(),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            panel_b.clone(),
+            DockPanel {
+                title: "Inspector".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        tabs
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        fret_runtime::DRAG_KIND_DOCK_TABS,
+        window_a,
+        Point::new(Px(24.0), Px(12.0)),
+        DockTabsDragPayload {
+            source_tabs,
+            tabs: vec![panel_a.clone(), panel_b.clone()],
+            active: 1,
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: Point::new(Px(240.0), Px(180.0)),
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let effects = app.take_effects();
+    let op = effects
+        .iter()
+        .find_map(|e| match e {
+            Effect::Dock(op) => Some(op.clone()),
+            _ => None,
+        })
+        .expect("expected a DockOp effect");
+
+    assert!(
+        matches!(
+            &op,
+            DockOp::MoveTabsToEmptyDockSpace {
+                source_window,
+                source_tabs: tabs,
+                target_window
+            } if *source_window == window_a && *target_window == window_b && *tabs == source_tabs
+        ),
+        "expected a move-tabs-to-empty-dock-space op when dropping into an empty dock space"
+    );
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let DockOp::MoveTabsToEmptyDockSpace { .. } = &op else {
+            unreachable!();
+        };
+        assert!(dock.graph.apply_op(&op));
+        assert!(dock.graph.window_root(window_b).is_some());
+        assert!(
+            dock.graph
+                .find_panel_in_window(window_b, &panel_a)
+                .is_some()
+        );
+        assert!(
+            dock.graph
+                .find_panel_in_window(window_b, &panel_b)
+                .is_some()
+        );
+    });
+}
+
+#[test]
 fn dock_tabs_group_drop_outside_window_requests_float() {
     let window = AppWindowId::default();
 

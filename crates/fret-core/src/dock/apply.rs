@@ -66,6 +66,16 @@ impl DockGraph {
                 *zone,
                 *insert_index,
             ),
+            DockOp::MovePanelToEmptyDockSpace {
+                source_window,
+                panel,
+                target_window,
+            } => {
+                if self.window_root(*target_window).is_some() {
+                    return false;
+                }
+                self.float_panel_to_window(*source_window, panel.clone(), *target_window)
+            }
             DockOp::MoveTabs {
                 source_window,
                 source_tabs,
@@ -81,6 +91,16 @@ impl DockGraph {
                 *zone,
                 *insert_index,
             ),
+            DockOp::MoveTabsToEmptyDockSpace {
+                source_window,
+                source_tabs,
+                target_window,
+            } => {
+                if self.window_root(*target_window).is_some() {
+                    return false;
+                }
+                self.float_tabs_to_window(*source_window, *source_tabs, *target_window)
+            }
             DockOp::FloatPanelToWindow {
                 source_window,
                 panel,
