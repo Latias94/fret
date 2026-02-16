@@ -36,15 +36,18 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Capability matrix + observability
 
-- [ ] EXTV2-cap-030 Publish a capability matrix for v2 strategies (native/wasm/mobile) and ensure
+- [x] EXTV2-cap-030 Publish a capability matrix for v2 strategies (native/wasm/mobile) and ensure
       “requested vs effective” ingest attribution is always present in perf snapshots/bundles.
   - Evidence anchors:
     - `crates/fret-render-wgpu/src/capabilities.rs`
     - `crates/fret-render-wgpu/src/renderer/types.rs` (`RenderPerfSnapshot`)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1`)
+    - `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md` (Capability matrix + fallback chain)
 
-- [ ] EXTV2-diag-040 Add explicit counters/hints for metadata degradations (not just ingest fallbacks):
+- [!] EXTV2-diag-040 Add explicit counters/hints for metadata degradations (not just ingest fallbacks):
       e.g. “colorspace_hint_dropped”, “orientation_hint_ignored”.
+  - Blocked until we introduce additional metadata fields beyond v1’s portable set (or land a
+    backend that cannot preserve existing metadata and must degrade deterministically).
 
 ## Native/mobile implementations (staged)
 

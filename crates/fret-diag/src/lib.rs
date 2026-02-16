@@ -13325,7 +13325,7 @@ fn devtools_select_session_id(
             .collect::<Vec<_>>()
             .join(", ");
         return Err(format!(
-            "unknown --devtools-session-id: {want} (known: {known})"
+            "unknown --devtools-session-id: {want} (known: {known}). Hint: refresh the session id via `cargo run -p fret-diag-export -- --list-sessions --token <token>`"
         ));
     }
 

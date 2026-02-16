@@ -55,3 +55,5 @@ It builds on v1’s contract-path closure:
   `docs/workstreams/perf-baselines/`, pass the full file name.
 - If multiple sessions exist, pass `--devtools-session-id <id>` (list via
   `cargo run -p fret-diag-export -- --list-sessions --token <token>`).
+  - Note: web sessions may change across reloads; re-run `--list-sessions` if tooling reports an
+    unknown session id.
