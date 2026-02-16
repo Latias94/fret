@@ -4355,6 +4355,7 @@ fn span_has_any_overrides(span: &TextSpan) -> bool {
         || span.shaping.weight.is_some()
         || span.shaping.slant.is_some()
         || span.shaping.letter_spacing_em.is_some()
+        || !span.shaping.features.is_empty()
         || !span.shaping.axes.is_empty()
         || span.paint.fg.is_some()
         || span.paint.bg.is_some()
@@ -7305,6 +7306,274 @@ mod tests {
         assert_ne!(
             bytes_light, bytes_heavy,
             "expected raster output to differ across variable font weights"
+        );
+    }
+
+    #[test]
+    fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture() {
+        // Lock a "behavior visible" contract for OpenType feature overrides (e.g. `liga`/`calt`).
+        // This avoids relying solely on cache-key correctness: we also want to know the shaping
+        // pipeline actually applies feature overrides for fonts that support them.
+        const INTER_ROMAN: &[u8] = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../fret-fonts/assets/Inter-roman.ttf"
+        ));
+
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+        let _ = text.parley_shaper.set_common_fallback_stack_suffix(
+            text.fallback_policy.common_fallback_stack_suffix.clone(),
+        );
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
+        let added = text.add_fonts([INTER_ROMAN.to_vec()]);
+        assert!(added > 0, "expected Inter fixture font to load");
+
+        let family = text
+            .all_font_names()
+            .into_iter()
+            .find(|n| {
+                let lower = n.to_ascii_lowercase();
+                lower == "inter" || lower.contains("inter ")
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "expected an Inter family name after loading the fixture font (names_head={:?})",
+                    text.all_font_names().into_iter().take(8).collect::<Vec<_>>()
+                )
+            });
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let base_style = TextStyle {
+            font: fret_core::FontId::family(family.clone()),
+            size: Px(32.0),
+            weight: FontWeight(400),
+            ..Default::default()
+        };
+
+        let rich = |text: &str, shaping: TextShapingStyle| {
+            fret_core::AttributedText::new(
+                Arc::<str>::from(text),
+                Arc::<[TextSpan]>::from(vec![TextSpan {
+                    len: text.len(),
+                    shaping,
+                    paint: Default::default(),
+                }]),
+            )
+        };
+
+        // Inter's OpenType "ligature-like" sequences (e.g. long arrows) are expressed via `calt`
+        // rather than `liga`, so gate `calt` behavior explicitly.
+        let shaping_off = TextShapingStyle::default().with_feature("calt", 0);
+        let shaping_on = TextShapingStyle::default().with_feature("calt", 1);
+
+        let candidates = [
+            "->", "=>", "-->", "<--", "<=>", "==>", "--->", "<---", "<==>",
+        ];
+        let mut diffs: Vec<String> = Vec::new();
+        let mut report: Vec<String> = Vec::new();
+
+        for candidate in candidates {
+            let rich_off = rich(candidate, shaping_off.clone());
+            let rich_on = rich(candidate, shaping_on.clone());
+
+            let (blob_off, _) = text.prepare_attributed(&rich_off, &base_style, constraints);
+            let (blob_on, _) = text.prepare_attributed(&rich_on, &base_style, constraints);
+
+            let glyph_ids_off: Vec<u32> = text
+                .blob(blob_off)
+                .expect("text blob")
+                .shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.glyph_id)
+                .collect();
+            let glyph_ids_on: Vec<u32> = text
+                .blob(blob_on)
+                .expect("text blob")
+                .shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.glyph_id)
+                .collect();
+
+            if glyph_ids_off != glyph_ids_on {
+                let head_off = glyph_ids_off.iter().take(8).copied().collect::<Vec<_>>();
+                let head_on = glyph_ids_on.iter().take(8).copied().collect::<Vec<_>>();
+                diffs.push(format!(
+                    "{candidate}: off_len={} on_len={} off_head={head_off:?} on_head={head_on:?}",
+                    glyph_ids_off.len(),
+                    glyph_ids_on.len()
+                ));
+            }
+
+            report.push(format!(
+                "{candidate}: off={:?} on={:?}",
+                glyph_ids_off, glyph_ids_on
+            ));
+        }
+
+        assert!(
+            !diffs.is_empty(),
+            "expected at least one candidate to change shaped glyph output when toggling `calt` (family={family:?}); report={report:?}"
+        );
+    }
+
+    #[test]
+    fn parley_feature_override_calt_0_disables_inter_arrow_ligature() {
+        // Sanity check (upstream dependency behavior): Inter contains a `calt` ligature mapping
+        // for "->" -> "arrowright". Ensure `calt=0` disables it.
+        const INTER_ROMAN: &[u8] = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../fret-fonts/assets/Inter-roman.ttf"
+        ));
+
+        let text = "->";
+
+        fn shape_with_calt(text: &str, calt: u16) -> Vec<u32> {
+            use std::borrow::Cow;
+            let mut fcx = parley::FontContext::default();
+            fcx.collection =
+                parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+                    shared: false,
+                    system_fonts: false,
+                });
+            fcx.source_cache = parley::fontique::SourceCache::default();
+            fcx.collection.register_fonts(
+                parley::fontique::Blob::<u8>::from(INTER_ROMAN.to_vec()),
+                None,
+            );
+
+            let mut lcx: parley::LayoutContext<[u8; 4]> = parley::LayoutContext::default();
+            let mut builder = lcx.ranged_builder(&mut fcx, text, 1.0, true);
+
+            builder.push_default(parley::style::StyleProperty::FontStack(
+                parley::style::FontStack::Source(Cow::Borrowed("Inter")),
+            ));
+            builder.push_default(parley::style::StyleProperty::FontSize(32.0));
+            builder.push(
+                parley::style::StyleProperty::FontFeatures(parley::style::FontSettings::List(
+                    Cow::Owned(vec![swash::Setting {
+                        tag: swash::tag_from_bytes(b"calt"),
+                        value: calt,
+                    }]),
+                )),
+                0..text.len(),
+            );
+
+            let mut layout = builder.build(text);
+            layout.break_all_lines(None);
+
+            let line = layout.lines().next().expect("line");
+            let item = line.items().next().expect("item");
+            let glyph_run = match item {
+                parley::PositionedLayoutItem::GlyphRun(glyph_run) => glyph_run,
+                parley::PositionedLayoutItem::InlineBox(_) => unreachable!(),
+            };
+            glyph_run
+                .run()
+                .clusters()
+                .flat_map(|c| c.glyphs().map(|g| g.id))
+                .collect::<Vec<_>>()
+        }
+
+        let ids_on = shape_with_calt(text, 1);
+        let ids_off = shape_with_calt(text, 0);
+        assert_ne!(
+            ids_on, ids_off,
+            "expected `calt` override to affect glyph output for {text:?} (on={ids_on:?}, off={ids_off:?})"
+        );
+        assert!(
+            ids_on.len() < ids_off.len(),
+            "expected `calt=1` to use a ligature glyph for {text:?} (on={ids_on:?}, off={ids_off:?})"
+        );
+    }
+
+    #[test]
+    fn parley_tree_builder_honors_font_features_for_inter_arrow_ligature() {
+        const INTER_ROMAN: &[u8] = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../fret-fonts/assets/Inter-roman.ttf"
+        ));
+
+        let text = "->";
+        use std::borrow::Cow;
+
+        let mut fcx = parley::FontContext::default();
+        fcx.collection = parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+            shared: false,
+            system_fonts: false,
+        });
+        fcx.source_cache = parley::fontique::SourceCache::default();
+        fcx.collection.register_fonts(
+            parley::fontique::Blob::<u8>::from(INTER_ROMAN.to_vec()),
+            None,
+        );
+
+        let mut lcx: parley::LayoutContext<[u8; 4]> = parley::LayoutContext::default();
+
+        let mut shape_with_calt = |calt: u16| {
+            let root = parley::style::TextStyle::default();
+            let mut builder = lcx.tree_builder(&mut fcx, 1.0, true, &root);
+
+            let mut base = parley::style::TextStyle::default();
+            base.font_stack = parley::style::FontStack::Source(Cow::Borrowed("Inter"));
+            base.font_size = 32.0;
+
+            builder.push_style_span(base);
+
+            let props = [parley::style::StyleProperty::FontFeatures(
+                parley::style::FontSettings::List(Cow::Owned(vec![swash::Setting {
+                    tag: swash::tag_from_bytes(b"calt"),
+                    value: calt,
+                }])),
+            )];
+            builder.push_style_modification_span(props.iter());
+
+            builder.push_text(text);
+            builder.pop_style_span(); // modification span
+            builder.pop_style_span(); // base span
+
+            let mut layout = parley::Layout::default();
+            let _ = builder.build_into(&mut layout);
+            layout.break_all_lines(None);
+
+            let line = layout.lines().next().expect("line");
+            let item = line.items().next().expect("item");
+            let glyph_run = match item {
+                parley::PositionedLayoutItem::GlyphRun(glyph_run) => glyph_run,
+                parley::PositionedLayoutItem::InlineBox(_) => unreachable!(),
+            };
+            glyph_run
+                .run()
+                .clusters()
+                .flat_map(|c| c.glyphs().map(|g| g.id))
+                .collect::<Vec<_>>()
+        };
+
+        let ids_on = shape_with_calt(1);
+        let ids_off = shape_with_calt(0);
+
+        assert_ne!(
+            ids_on, ids_off,
+            "expected TreeBuilder + StyleProperty::FontFeatures to affect glyph output for {text:?} (on={ids_on:?}, off={ids_off:?})"
+        );
+        assert!(
+            ids_on.len() < ids_off.len(),
+            "expected `calt=1` to use a ligature glyph for {text:?} (on={ids_on:?}, off={ids_off:?})"
         );
     }
 
