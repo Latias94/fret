@@ -187,7 +187,7 @@ impl<H: UiHost> UiTree<H> {
 
                 let start = scene.ops_len();
                 let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
-                let ((), replay_elapsed) = fret_perf::measure_span(
+                let (replayed_ops, replay_elapsed) = fret_perf::measure_span_with(
                     self.debug_enabled,
                     trace_enabled,
                     || {
@@ -198,11 +198,15 @@ impl<H: UiHost> UiTree<H> {
                             scale_factor = sf,
                         )
                     },
-                    || {
+                    |span| {
                         scene.replay_ops_translated(
                             &self.paint_cache.prev_ops[range_start..range_end],
                             delta,
                         );
+                        let end = scene.ops_len();
+                        let replayed_ops = end.saturating_sub(start);
+                        span.record("ops", replayed_ops as u64);
+                        replayed_ops
                     },
                 );
                 if let Some(replay_elapsed) = replay_elapsed {
@@ -211,11 +215,7 @@ impl<H: UiHost> UiTree<H> {
                         .paint_cache_replay_time
                         .saturating_add(replay_elapsed);
                 }
-                let end = scene.ops_len();
-                if trace_enabled {
-                    tracing::Span::current().record("ops", (end - start) as u64);
-                }
-                self.debug_record_paint_cache_replay(node, (end - start) as u32);
+                self.debug_record_paint_cache_replay(node, replayed_ops as u32);
 
                 if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                     let prev = n.invalidation;
@@ -224,7 +224,7 @@ impl<H: UiHost> UiTree<H> {
                         key,
                         origin: bounds.origin,
                         start: start as u32,
-                        end: end as u32,
+                        end: (start + replayed_ops) as u32,
                     });
                     n.invalidation.paint = false;
                     n.paint_invalidated_by_hit_test_only = false;
@@ -362,7 +362,7 @@ impl<H: UiHost> UiTree<H> {
                 self.paint_cache.replayed_ops = self
                     .paint_cache
                     .replayed_ops
-                    .saturating_add((end - start) as u32);
+                    .saturating_add(replayed_ops as u32);
                 return;
             }
             if replay_allowed_by_hit_test_only_gate
