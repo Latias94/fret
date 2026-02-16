@@ -209,9 +209,10 @@ pub fn day_picker_cell_state(
     modifiers: &DayPickerModifiers,
 ) -> DayPickerCellState {
     let base = day_picker_day_modifiers(day, show_outside_days, modifiers);
-    // Align with react-day-picker/shadcn behavior: bounds make days *disabled* (not hidden),
-    // so the grid stays visually aligned without blank gaps.
-    let hidden = base.hidden;
+    // Align with react-day-picker/shadcn behavior:
+    // - days outside `startMonth`/`endMonth` can be suppressed from the grid
+    // - keep in-month days visible but disabled when out of bounds (common for date-range bounds)
+    let hidden = base.hidden || (!in_bounds && !day.in_month);
 
     let mut disabled = base.disabled || (!day.in_month && disable_outside_days) || !in_bounds;
     if hidden {
@@ -749,6 +750,19 @@ mod tests {
     }
 
     #[test]
+    fn day_picker_cell_state_outside_day_out_of_bounds_is_hidden() {
+        let d = Date::from_calendar_date(2026, Month::February, 1).unwrap();
+        let day = CalendarDay {
+            date: d,
+            in_month: false,
+        };
+
+        let st = day_picker_cell_state(day, true, false, false, &DayPickerModifiers::default());
+        assert!(st.hidden);
+        assert!(st.disabled);
+    }
+
+    #[test]
     fn month_grid_is_stable_42_days() {
         let m = CalendarMonth::new(2026, Month::January);
         let grid = month_grid(m, Weekday::Monday);
@@ -901,13 +915,13 @@ mod tests {
             }
         );
 
-        // Out-of-bounds days are hidden (and disabled).
+        // In-month out-of-bounds days remain visible but disabled.
         let st =
             day_picker_cell_state(in_month, true, false, false, &DayPickerModifiers::default());
         assert_eq!(
             st,
             DayPickerCellState {
-                hidden: true,
+                hidden: false,
                 disabled: true
             }
         );
