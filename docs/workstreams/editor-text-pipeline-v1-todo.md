@@ -181,6 +181,10 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - `replace_and_mark_text_in_range_utf16` supports composing for:
     - empty `range` (caret-only), and
     - non-empty `range` (selection replacement represented in the composed view; composing text remains preedit-only).
+  - [x] Staging: selection replacement is currently single-line.
+    - Replacement ranges that span a newline are clamped to the anchor logical line.
+    - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
 - [x] (Staging) Unify selection-replacing preedit across paint + platform-facing composed view:
   - the display-row text used for shaping/paint matches the platform-facing composed window while
     `preedit_replace_range` is active.

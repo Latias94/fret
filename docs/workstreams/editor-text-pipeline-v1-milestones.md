@@ -149,6 +149,8 @@ Evidence anchors:
     (`declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates`)
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
     (`platform_replace_and_mark_empty_text_cancels_and_restores_selection`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
 - Diag gates:
   - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`
   - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_a11y_composition_json`)
