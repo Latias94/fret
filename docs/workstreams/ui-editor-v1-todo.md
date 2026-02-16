@@ -180,9 +180,11 @@ adding new runtime contracts unless evidence demands it.
   - [x] Proof demo model helpers are keyed by stable names (avoid accidental model sharing across fields).
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`named_demo_state`)
 - [~] Add a reusable `TextField` control surface:
-  - single-line + multi-line
-  - password mode (masking + copy policy)
-  - optional clear button + completion/history hook placeholders
+  - [x] single-line + multi-line
+  - [x] joined input-group chrome (frame + segments; avoids style drift)
+  - [x] optional clear button (+ stable `clear_test_id`)
+  - [ ] password mode (masking + copy policy)
+  - [ ] completion/history hook placeholders
   - Evidence: `ecosystem/fret-ui-editor/src/controls/text_field.rs`
 
 ### M3 — Core editor controls (Color / Vec / Transform / Asset refs)

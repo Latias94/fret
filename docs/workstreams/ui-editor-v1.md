@@ -235,8 +235,10 @@ They are tracked here to keep the workstream grounded in “what feels broken”
   `test_id` is for diagnostics/automation and must not be treated as widget identity.
   This applies to demo harness state helpers too: any `with_state`-backed model helper must be `named/keyed`
   (see `apps/fret-examples/src/imui_editor_proof_demo.rs`, `named_demo_state`).
-- **Visual cohesion**: editor controls are still missing a single, shared “widget visuals” resolver (hover/active/disabled)
-  comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`. Without this, chrome and density drift across controls.
+- **Visual cohesion**: we now have early convergence points (`EditorStyle`, `EditorWidgetVisuals`, and joined input-group
+  primitives), but hover/active/disabled visuals are not yet consistently resolved across all controls (and some controls
+  still rely on ad-hoc capture/hover plumbing). Keep converging toward a single “widget visuals” resolver comparable to
+  egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`.
 
 ## Interaction contracts (v1)
 

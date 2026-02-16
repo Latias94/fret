@@ -58,9 +58,13 @@ impl<'a> EditorStyle<'a> {
     }
 
     pub(crate) fn frame_chrome_small(&self) -> ResolvedEditorFrameChrome {
+        self.frame_chrome(Size::Small)
+    }
+
+    pub(crate) fn frame_chrome(&self, size: Size) -> ResolvedEditorFrameChrome {
         resolve_editor_frame_chrome(
             self.theme,
-            Size::Small,
+            size,
             &ChromeRefinement::default(),
             Self::text_field_input_tokens(),
         )
