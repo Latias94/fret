@@ -275,9 +275,7 @@ pub(in super::super) fn encode_clip_path_mask(
 ) -> Option<(u32, u32)> {
     state.flush_quad_batch();
 
-    let Some(prepared) = renderer.paths.get(path) else {
-        return None;
-    };
+    let prepared = renderer.paths.get(path)?;
     if prepared.triangles.is_empty() {
         return None;
     }

@@ -364,6 +364,7 @@ fn build_dashed_lyon_path(
     tolerance: f32,
 ) -> Option<lyon::path::Path> {
     use lyon::math::point;
+    use std::cmp::Ordering;
 
     let mut dash = DashState::new(pattern)?;
     let mut builder = lyon::path::Path::builder();
@@ -382,7 +383,7 @@ fn build_dashed_lyon_path(
                 let dx = to.x - from.x;
                 let dy = to.y - from.y;
                 let len = (dx * dx + dy * dy).sqrt();
-                if !(len > 0.0) {
+                if len.partial_cmp(&0.0) != Some(Ordering::Greater) {
                     continue;
                 }
 
@@ -392,7 +393,7 @@ fn build_dashed_lyon_path(
 
                 while traveled < len {
                     let step = dash.remaining.min(len - traveled);
-                    if !(step > 0.0) {
+                    if step.partial_cmp(&0.0) != Some(Ordering::Greater) {
                         break;
                     }
 
@@ -426,7 +427,7 @@ fn build_dashed_lyon_path(
                         let mut cur = last;
                         while traveled < len {
                             let step = dash.remaining.min(len - traveled);
-                            if !(step > 0.0) {
+                            if step.partial_cmp(&0.0) != Some(Ordering::Greater) {
                                 break;
                             }
                             traveled += step;

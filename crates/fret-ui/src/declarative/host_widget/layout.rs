@@ -1244,7 +1244,7 @@ impl ElementHostWidget {
             }
             #[cfg(feature = "unstable-retained-bridge")]
             ElementInstance::RetainedSubtree(props) => {
-                if let Some(&child) = cx.children.get(0) {
+                if let Some(&child) = cx.children.first() {
                     let bounds = Rect::new(cx.bounds.origin, cx.available);
                     let _ = cx.layout_in(child, bounds);
                 }

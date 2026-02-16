@@ -359,10 +359,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             );
         }
         let window_ref = self.windows.get(id).map(|s| s.window.clone());
-        if let Some(window_ref) = window_ref {
-            if self.update_window_environment_for_window_ref(id, window_ref.as_ref()) {
-                self.app.request_redraw(id);
-            }
+        if let Some(window_ref) = window_ref
+            && self.update_window_environment_for_window_ref(id, window_ref.as_ref())
+        {
+            self.app.request_redraw(id);
         }
 
         let winit_id = self.windows[id].window.id();

@@ -237,7 +237,7 @@ pub fn dash_polyline_segments(
         phase_ix = (phase_ix + 1) % pattern.len();
     }
 
-    let mut on = (phase_ix % 2) == 0;
+    let mut on = phase_ix.is_multiple_of(2);
     let mut phase_len = pattern[phase_ix];
 
     for w in points.windows(2) {
@@ -262,7 +262,7 @@ pub fn dash_polyline_segments(
                 phase_ix = (phase_ix + 1) % pattern.len();
                 phase_len = pattern[phase_ix];
                 phase_pos = 0.0;
-                on = (phase_ix % 2) == 0;
+                on = phase_ix.is_multiple_of(2);
                 continue;
             }
 
@@ -282,7 +282,7 @@ pub fn dash_polyline_segments(
                 phase_ix = (phase_ix + 1) % pattern.len();
                 phase_len = pattern[phase_ix];
                 phase_pos = 0.0;
-                on = (phase_ix % 2) == 0;
+                on = phase_ix.is_multiple_of(2);
             }
         }
     }

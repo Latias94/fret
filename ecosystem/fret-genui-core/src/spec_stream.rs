@@ -308,8 +308,7 @@ fn remove_by_pointer(root: &mut Value, pointer: &str) -> Result<(), JsonPointerE
     }
 
     let mut cur = root;
-    for i in 0..segments.len() - 1 {
-        let seg = &segments[i];
+    for seg in segments.iter().take(segments.len().saturating_sub(1)) {
         match cur {
             Value::Object(map) => match map.get_mut(seg) {
                 Some(v) => cur = v,

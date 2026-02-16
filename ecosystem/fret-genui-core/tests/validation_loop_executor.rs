@@ -54,44 +54,43 @@ fn executor_gates_submit_and_records_validation_issues() {
 
     let mut exec = GenUiActionExecutorV1::new(state.clone()).with_standard_actions();
     let validation_model = validation.clone();
-    exec.register_handler(
-        "formSubmit",
-        Arc::new(move |host, state, _inv| {
-            let snapshot = host
-                .models_mut()
-                .read(state, Clone::clone)
-                .ok()
-                .unwrap_or(Value::Null);
-            let out = validate_all(&snapshot, &registry);
-            let ok = out.is_ok();
+    #[allow(clippy::arc_with_non_send_sync)]
+    let handler = Arc::new(move |host, state, _inv| {
+        let snapshot = host
+            .models_mut()
+            .read(state, Clone::clone)
+            .ok()
+            .unwrap_or(Value::Null);
+        let out = validate_all(&snapshot, &registry);
+        let ok = out.is_ok();
 
-            let issues_for_state = Value::Array(
-                out.issues
-                    .iter()
-                    .map(|i| {
-                        let mut obj = serde_json::Map::new();
-                        obj.insert("path".to_string(), Value::String(i.path.clone()));
-                        obj.insert("code".to_string(), Value::String(i.code.clone()));
-                        obj.insert("message".to_string(), Value::String(i.message.clone()));
-                        Value::Object(obj)
-                    })
-                    .collect::<Vec<_>>(),
-            );
-
-            let _ = host.models_mut().update(&validation_model, |v| *v = out);
-            let _ = host.models_mut().update(state, |v| {
-                let _ = json_pointer::set(v, "/validation/issues", issues_for_state.clone());
-                let _ = json_pointer::set(v, "/validation/hasErrors", Value::Bool(!ok));
-            });
-            if ok {
-                Ok(())
-            } else {
-                Err(GenUiExecError::HandlerFailed {
-                    message: "validation failed".to_string(),
+        let issues_for_state = Value::Array(
+            out.issues
+                .iter()
+                .map(|i| {
+                    let mut obj = serde_json::Map::new();
+                    obj.insert("path".to_string(), Value::String(i.path.clone()));
+                    obj.insert("code".to_string(), Value::String(i.code.clone()));
+                    obj.insert("message".to_string(), Value::String(i.message.clone()));
+                    Value::Object(obj)
                 })
-            }
-        }),
-    );
+                .collect::<Vec<_>>(),
+        );
+
+        let _ = host.models_mut().update(&validation_model, |v| *v = out);
+        let _ = host.models_mut().update(state, |v| {
+            let _ = json_pointer::set(v, "/validation/issues", issues_for_state.clone());
+            let _ = json_pointer::set(v, "/validation/hasErrors", Value::Bool(!ok));
+        });
+        if ok {
+            Ok(())
+        } else {
+            Err(GenUiExecError::HandlerFailed {
+                message: "validation failed".to_string(),
+            })
+        }
+    });
+    exec.register_handler("formSubmit", handler);
 
     let mut host = UiActionHostAdapter { app: &mut app };
     let mut i = inv("formSubmit", json!({ "formName": "Demo" }));
@@ -155,44 +154,43 @@ fn executor_allows_submit_when_valid_and_clears_issues() {
 
     let mut exec = GenUiActionExecutorV1::new(state.clone()).with_standard_actions();
     let validation_model = validation.clone();
-    exec.register_handler(
-        "formSubmit",
-        Arc::new(move |host, state, _inv| {
-            let snapshot = host
-                .models_mut()
-                .read(state, Clone::clone)
-                .ok()
-                .unwrap_or(Value::Null);
-            let out = validate_all(&snapshot, &registry);
-            let ok = out.is_ok();
+    #[allow(clippy::arc_with_non_send_sync)]
+    let handler = Arc::new(move |host, state, _inv| {
+        let snapshot = host
+            .models_mut()
+            .read(state, Clone::clone)
+            .ok()
+            .unwrap_or(Value::Null);
+        let out = validate_all(&snapshot, &registry);
+        let ok = out.is_ok();
 
-            let issues_for_state = Value::Array(
-                out.issues
-                    .iter()
-                    .map(|i| {
-                        let mut obj = serde_json::Map::new();
-                        obj.insert("path".to_string(), Value::String(i.path.clone()));
-                        obj.insert("code".to_string(), Value::String(i.code.clone()));
-                        obj.insert("message".to_string(), Value::String(i.message.clone()));
-                        Value::Object(obj)
-                    })
-                    .collect::<Vec<_>>(),
-            );
-
-            let _ = host.models_mut().update(&validation_model, |v| *v = out);
-            let _ = host.models_mut().update(state, |v| {
-                let _ = json_pointer::set(v, "/validation/issues", issues_for_state.clone());
-                let _ = json_pointer::set(v, "/validation/hasErrors", Value::Bool(!ok));
-            });
-            if ok {
-                Ok(())
-            } else {
-                Err(GenUiExecError::HandlerFailed {
-                    message: "validation failed".to_string(),
+        let issues_for_state = Value::Array(
+            out.issues
+                .iter()
+                .map(|i| {
+                    let mut obj = serde_json::Map::new();
+                    obj.insert("path".to_string(), Value::String(i.path.clone()));
+                    obj.insert("code".to_string(), Value::String(i.code.clone()));
+                    obj.insert("message".to_string(), Value::String(i.message.clone()));
+                    Value::Object(obj)
                 })
-            }
-        }),
-    );
+                .collect::<Vec<_>>(),
+        );
+
+        let _ = host.models_mut().update(&validation_model, |v| *v = out);
+        let _ = host.models_mut().update(state, |v| {
+            let _ = json_pointer::set(v, "/validation/issues", issues_for_state.clone());
+            let _ = json_pointer::set(v, "/validation/hasErrors", Value::Bool(!ok));
+        });
+        if ok {
+            Ok(())
+        } else {
+            Err(GenUiExecError::HandlerFailed {
+                message: "validation failed".to_string(),
+            })
+        }
+    });
+    exec.register_handler("formSubmit", handler);
 
     let mut host = UiActionHostAdapter { app: &mut app };
     let mut i = inv("formSubmit", json!({ "formName": "Demo" }));

@@ -478,10 +478,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         if safe_area_insets.is_some() || occlusion_insets.is_some() {
                             let entry =
                                 self.diag_window_insets_overrides.entry(window).or_default();
-                            if let Some(value) = safe_area_insets.clone() {
+                            if let Some(value) = safe_area_insets {
                                 entry.safe_area_insets = Some(value);
                             }
-                            if let Some(value) = occlusion_insets.clone() {
+                            if let Some(value) = occlusion_insets {
                                 entry.occlusion_insets = Some(value);
                             }
                         }
@@ -518,11 +518,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
                             },
                         );
-                        if changed {
-                            if let Some(state) = self.windows.get(window) {
-                                state.window.request_redraw();
-                                self.raf_windows.insert(window);
-                            }
+                        if changed && let Some(state) = self.windows.get(window) {
+                            state.window.request_redraw();
+                            self.raf_windows.insert(window);
                         }
                     }
                     Effect::CursorSetIcon { window, icon } => {

@@ -166,7 +166,9 @@ fn color_fallback_theme_token_alpha_mul_derives_from_base_token() {
     let base = theme.color_token("primary");
 
     let derived = ColorRef::Token {
-        key: "primary.hover.background",
+        // Use a token that does not exist in the default theme surface so the fallback path is
+        // exercised (some shadcn convenience keys are always present).
+        key: "tests.primary.hover.background",
         fallback: ColorFallback::ThemeTokenAlphaMul {
             key: "primary",
             mul: 0.5,
@@ -186,7 +188,7 @@ fn state_specific_token_overrides_fallback_derivation() {
         colors: std::collections::HashMap::from([
             ("primary".to_string(), "#000000FF".to_string()),
             (
-                "primary.hover.background".to_string(),
+                "tests.primary.hover.background".to_string(),
                 "#00000080".to_string(),
             ),
         ]),
@@ -195,10 +197,10 @@ fn state_specific_token_overrides_fallback_derivation() {
     Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
     let theme = Theme::global(&app);
-    let expected = theme.color_token("primary.hover.background");
+    let expected = theme.color_token("tests.primary.hover.background");
 
     let resolved = ColorRef::Token {
-        key: "primary.hover.background",
+        key: "tests.primary.hover.background",
         fallback: ColorFallback::ThemeTokenAlphaMul {
             key: "primary",
             mul: 0.5,

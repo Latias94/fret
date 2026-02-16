@@ -83,6 +83,7 @@ pub struct WindowElementDiagnosticsSnapshot {
 }
 
 #[cfg(feature = "diagnostics")]
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum OverlayPlacementDiagnosticsRecord {
     /// Anchored panel placement solved via `overlay_placement` (e.g. popper-like overlays).
@@ -1287,26 +1288,26 @@ impl WindowElementState {
     #[track_caller]
     pub(crate) fn set_node_entry(&mut self, id: GlobalElementId, entry: NodeEntry) {
         #[cfg(feature = "diagnostics")]
-        if let Some(prev) = self.nodes.get(&id) {
-            if prev.root != entry.root {
-                let location = std::panic::Location::caller();
-                self.debug_node_entry_root_overwrites
-                    .push(NodeEntryRootOverwrite {
-                        frame_id: entry.last_seen_frame,
-                        element: id,
-                        old_root: prev.root,
-                        new_root: entry.root,
-                        old_node: prev.node,
-                        new_node: entry.node,
-                        file: location.file(),
-                        line: location.line(),
-                        column: location.column(),
-                    });
-                const MAX_RECORDS: usize = 256;
-                if self.debug_node_entry_root_overwrites.len() > MAX_RECORDS {
-                    let drain = self.debug_node_entry_root_overwrites.len() - MAX_RECORDS;
-                    self.debug_node_entry_root_overwrites.drain(0..drain);
-                }
+        if let Some(prev) = self.nodes.get(&id)
+            && prev.root != entry.root
+        {
+            let location = std::panic::Location::caller();
+            self.debug_node_entry_root_overwrites
+                .push(NodeEntryRootOverwrite {
+                    frame_id: entry.last_seen_frame,
+                    element: id,
+                    old_root: prev.root,
+                    new_root: entry.root,
+                    old_node: prev.node,
+                    new_node: entry.node,
+                    file: location.file(),
+                    line: location.line(),
+                    column: location.column(),
+                });
+            const MAX_RECORDS: usize = 256;
+            if self.debug_node_entry_root_overwrites.len() > MAX_RECORDS {
+                let drain = self.debug_node_entry_root_overwrites.len() - MAX_RECORDS;
+                self.debug_node_entry_root_overwrites.drain(0..drain);
             }
         }
         #[cfg(any(test, feature = "diagnostics"))]
@@ -2016,6 +2017,7 @@ impl WindowElementState {
     }
 
     #[cfg(feature = "diagnostics")]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn record_overlay_placement_placed_rect(
         &mut self,
         frame_id: FrameId,
@@ -2080,6 +2082,7 @@ impl WindowElementState {
     }
 
     #[cfg(feature = "diagnostics")]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn record_debug_child(
         &mut self,
         frame_id: FrameId,

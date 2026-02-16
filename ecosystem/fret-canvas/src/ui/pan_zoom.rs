@@ -14,25 +14,20 @@ use crate::ui::canvas_surface::{CanvasSurfacePanelProps, canvas_surface_panel};
 use crate::ui::use_controllable_model;
 use crate::view::{DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, wheel_zoom_factor};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PanZoomInputPreset {
     /// Safe-by-default mapping intended for embedding inside scroll views.
     ///
     /// - Does not consume plain wheel.
     /// - Zooms only when `ctrl || meta` is held.
     /// - Pans via middle-drag.
+    #[default]
     DefaultSafe,
     /// Canvas-first mapping for editor/CAD surfaces.
     ///
     /// - Wheel zooms (consumed).
     /// - Pans via middle-drag (by default).
     DesktopCanvasCad,
-}
-
-impl Default for PanZoomInputPreset {
-    fn default() -> Self {
-        Self::DefaultSafe
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -511,19 +506,10 @@ impl Default for CanvasMarqueeSelectionProps {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct EditorPanZoomCanvasWithMarqueeProps {
     pub pan_zoom: PanZoomCanvasSurfacePanelProps,
     pub marquee: CanvasMarqueeSelectionProps,
-}
-
-impl Default for EditorPanZoomCanvasWithMarqueeProps {
-    fn default() -> Self {
-        Self {
-            pan_zoom: PanZoomCanvasSurfacePanelProps::default(),
-            marquee: CanvasMarqueeSelectionProps::default(),
-        }
-    }
 }
 
 fn rect_from_points(a: Point, b: Point) -> Rect {
@@ -580,10 +566,10 @@ pub fn editor_pan_zoom_canvas_surface_panel_with_marquee_selection<H: UiHost>(
                     return false;
                 }
 
-                if let Some(start_filter) = start_filter.as_ref() {
-                    if !start_filter(host, action_cx, down) {
-                        return false;
-                    }
+                if let Some(start_filter) = start_filter.as_ref()
+                    && !start_filter(host, action_cx, down)
+                {
+                    return false;
                 }
 
                 host.capture_pointer();
@@ -657,34 +643,34 @@ pub fn editor_pan_zoom_canvas_surface_panel_with_marquee_selection<H: UiHost>(
                 host.release_pointer_capture();
                 let _ = host.models_mut().update(&drag_c, |st| *st = None);
 
-                if drag.active {
-                    if let Some(on_commit) = on_commit.as_ref() {
-                        let bounds = host.bounds();
-                        let view = host
-                            .models_mut()
-                            .read(&view_c, |v| *v)
-                            .ok()
-                            .unwrap_or(PanZoom2D::default());
-                        let rect_screen = rect_from_points(drag.start, drag.current);
-                        let c0 = view.screen_to_canvas(bounds, rect_screen.origin);
-                        let c1 = view.screen_to_canvas(
-                            bounds,
-                            Point::new(
-                                Px(rect_screen.origin.x.0 + rect_screen.size.width.0),
-                                Px(rect_screen.origin.y.0 + rect_screen.size.height.0),
-                            ),
-                        );
-                        let rect_canvas = rect_from_points(c0, c1);
-                        on_commit(
-                            host,
-                            action_cx,
-                            CanvasMarqueeCommitCx {
-                                rect_screen,
-                                rect_canvas,
-                                modifiers: drag.modifiers,
-                            },
-                        );
-                    }
+                if drag.active
+                    && let Some(on_commit) = on_commit.as_ref()
+                {
+                    let bounds = host.bounds();
+                    let view = host
+                        .models_mut()
+                        .read(&view_c, |v| *v)
+                        .ok()
+                        .unwrap_or_default();
+                    let rect_screen = rect_from_points(drag.start, drag.current);
+                    let c0 = view.screen_to_canvas(bounds, rect_screen.origin);
+                    let c1 = view.screen_to_canvas(
+                        bounds,
+                        Point::new(
+                            Px(rect_screen.origin.x.0 + rect_screen.size.width.0),
+                            Px(rect_screen.origin.y.0 + rect_screen.size.height.0),
+                        ),
+                    );
+                    let rect_canvas = rect_from_points(c0, c1);
+                    on_commit(
+                        host,
+                        action_cx,
+                        CanvasMarqueeCommitCx {
+                            rect_screen,
+                            rect_canvas,
+                            modifiers: drag.modifiers,
+                        },
+                    );
                 }
 
                 host.request_redraw(action_cx.window);

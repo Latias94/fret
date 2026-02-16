@@ -581,7 +581,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         // Fallback if the z-order list has drifted.
         for w in self.windows.keys() {
-            if self.windows_z_order.iter().any(|tracked| *tracked == w) {
+            if self.windows_z_order.contains(&w) {
                 continue;
             }
             let Some(state) = self.windows.get(w) else {

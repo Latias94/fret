@@ -597,8 +597,10 @@ mod tests {
     #[test]
     fn best_bounds_for_test_id_prefers_largest_area() {
         let window = AppWindowId::default();
-        let mut snapshot = SemanticsSnapshot::default();
-        snapshot.window = window;
+        let mut snapshot = SemanticsSnapshot {
+            window,
+            ..Default::default()
+        };
 
         snapshot.nodes.push(SemanticsNode {
             id: NodeId::from(slotmap::KeyData::from_ffi(1)),

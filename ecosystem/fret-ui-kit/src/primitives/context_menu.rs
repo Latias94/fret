@@ -432,6 +432,7 @@ mod tests {
                 modifiers: Modifiers::default(),
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                hit_is_text_input: false,
             },
         );
         assert!(!handled);
@@ -481,6 +482,7 @@ mod tests {
                 modifiers: Modifiers::default(),
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                hit_is_text_input: false,
             },
         );
 
@@ -553,6 +555,7 @@ mod tests {
                 modifiers: Modifiers::default(),
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                hit_is_text_input: false,
             },
         );
 

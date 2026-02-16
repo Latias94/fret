@@ -341,16 +341,16 @@ fn update_run_id_manifest_with_bundle_json_chunks(
         RunManifestV2::new(run_id)
     };
 
-    if manifest.script_result.is_none() {
-        if let Some(result) = read_run_id_script_result(out_dir, run_id) {
-            manifest.script_result = Some(RunManifestScriptResultSummaryV1 {
-                stage: stage_as_str(&result.stage).to_string(),
-                reason_code: result.reason_code.clone(),
-                updated_unix_ms: result.updated_unix_ms,
-            });
-            manifest.last_bundle_dir = result.last_bundle_dir.clone();
-            manifest.last_bundle_artifact = result.last_bundle_artifact.clone();
-        }
+    if manifest.script_result.is_none()
+        && let Some(result) = read_run_id_script_result(out_dir, run_id)
+    {
+        manifest.script_result = Some(RunManifestScriptResultSummaryV1 {
+            stage: stage_as_str(&result.stage).to_string(),
+            reason_code: result.reason_code.clone(),
+            updated_unix_ms: result.updated_unix_ms,
+        });
+        manifest.last_bundle_dir = result.last_bundle_dir.clone();
+        manifest.last_bundle_artifact = result.last_bundle_artifact.clone();
     }
 
     manifest.schema_version = 2;
@@ -443,16 +443,16 @@ pub(crate) fn materialize_bundle_json_from_manifest_chunks_if_missing(
                 e
             )
         })?;
-        if let Some(expected) = expected_chunk_bytes {
-            if expected != bytes.len() as u64 {
-                let _ = std::fs::remove_file(&tmp_path);
-                return Err(format!(
-                    "bundle json chunk size mismatch ({}): expected={} actual={}",
-                    chunk_path.display(),
-                    expected,
-                    bytes.len()
-                ));
-            }
+        if let Some(expected) = expected_chunk_bytes
+            && expected != bytes.len() as u64
+        {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(format!(
+                "bundle json chunk size mismatch ({}): expected={} actual={}",
+                chunk_path.display(),
+                expected,
+                bytes.len()
+            ));
         }
         if let Some(expected) = expected_chunk_blake3 {
             let actual = blake3::hash(&bytes).to_hex().to_string();
@@ -604,14 +604,13 @@ mod tests {
                 .is_some(),
             "expected bundle_json.blake3"
         );
-        assert_eq!(
-            parsed
+        assert!(
+            !parsed
                 .get("bundle_json")
                 .and_then(|v| v.get("chunks"))
                 .and_then(|v| v.as_array())
                 .map(|a| a.is_empty())
-                .unwrap_or(true),
-            false
+                .unwrap_or(true)
         );
 
         let run_dir = root.join(run_id.to_string());

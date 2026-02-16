@@ -877,12 +877,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
             WindowEvent::ThemeChanged(_theme) => {
                 let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
-                if let Some(window_ref) = window_ref {
-                    if self
+                if let Some(window_ref) = window_ref
+                    && self
                         .update_window_environment_for_window_ref(app_window, window_ref.as_ref())
-                    {
-                        self.app.request_redraw(app_window);
-                    }
+                {
+                    self.app.request_redraw(app_window);
                 }
             }
             WindowEvent::Focused(focused) => {
@@ -1612,14 +1611,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         #[cfg(feature = "diag-screenshots")]
                         if let (Some(diag), Some(inflight)) =
                             (self.diag_screenshots.as_mut(), screenshot_inflight)
+                            && let Err(err) = diag.finish_capture(&context.device, inflight)
                         {
-                            if let Err(err) = diag.finish_capture(&context.device, inflight) {
-                                tracing::warn!(
-                                    error = %err,
-                                    window = ?app_window,
-                                    "diag screenshot: capture failed"
-                                );
-                            }
+                            tracing::warn!(
+                                error = %err,
+                                window = ?app_window,
+                                "diag screenshot: capture failed"
+                            );
                         }
 
                         if let Some((pending, dir)) = pending_bundle_screenshot {

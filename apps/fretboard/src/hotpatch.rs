@@ -110,23 +110,22 @@ fn hotpatch_status(args: Vec<String>) -> Result<(), String> {
     if let Some(path) = hotpatch_bootstrap_log_paths(&root)
         .into_iter()
         .find(|p| p.is_file())
+        && let Ok(lines) = read_tail_lines(&path, 200, 256 * 1024)
     {
-        if let Ok(lines) = read_tail_lines(&path, 200, 256 * 1024) {
-            let needle = "ui_app_render: view call strategy=";
-            let last = lines.iter().rev().find_map(|line| {
-                line.find(needle)
-                    .map(|idx| line[(idx + needle.len())..].trim().to_string())
-            });
-            if let Some(strategy) = last {
-                if strategy == "direct" || strategy == "hotfn" {
-                    println!("  last_view_call: {strategy} (from bootstrap log)");
-                }
-            }
+        let needle = "ui_app_render: view call strategy=";
+        let last = lines.iter().rev().find_map(|line| {
+            line.find(needle)
+                .map(|idx| line[(idx + needle.len())..].trim().to_string())
+        });
+        if let Some(strategy) = last
+            && (strategy == "direct" || strategy == "hotfn")
+        {
+            println!("  last_view_call: {strategy} (from bootstrap log)");
+        }
 
-            let reload_needle = "dev_reload:";
-            if let Some(line) = lines.iter().rev().find(|line| line.contains(reload_needle)) {
-                println!("  last_dev_reload: {line}");
-            }
+        let reload_needle = "dev_reload:";
+        if let Some(line) = lines.iter().rev().find(|line| line.contains(reload_needle)) {
+            println!("  last_dev_reload: {line}");
         }
     }
 
@@ -154,7 +153,7 @@ fn print_log_tail_group(
 ) -> Result<(), String> {
     let existing: Vec<&PathBuf> = candidates.iter().filter(|p| p.is_file()).collect();
 
-    println!("");
+    println!();
     println!("{name} log candidates:");
     for p in candidates {
         let exists = if p.is_file() { "yes" } else { "no" };
@@ -166,7 +165,7 @@ fn print_log_tail_group(
         return Ok(());
     };
 
-    println!("");
+    println!();
     println!("{name} log tail: {}", path.display());
     match read_tail_lines(path, tail_lines, max_bytes) {
         Ok(lines) => {
@@ -231,7 +230,7 @@ pub(crate) fn ensure_hotpatch_trigger_file_poked(path: &Path) -> Result<(), Stri
         .map_err(|e| e.to_string())?;
     let marker = format!("{}", now.as_nanos());
 
-    std::fs::write(&path, marker).map_err(|e| e.to_string())?;
+    std::fs::write(path, marker).map_err(|e| e.to_string())?;
     Ok(())
 }
 

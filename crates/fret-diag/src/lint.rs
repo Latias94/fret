@@ -87,6 +87,7 @@ fn role_requires_label(role: &str) -> bool {
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_finding(
     findings: &mut Vec<Value>,
     level: LintLevel,
@@ -112,10 +113,7 @@ fn push_finding(
     }));
 }
 
-fn pick_last_snapshot_after_warmup<'a>(
-    snaps: &'a [Value],
-    warmup_frames: u64,
-) -> Option<&'a Value> {
+fn pick_last_snapshot_after_warmup(snaps: &[Value], warmup_frames: u64) -> Option<&Value> {
     snaps
         .iter()
         .rev()
@@ -196,10 +194,10 @@ fn lint_bundle_from_json(
                 continue;
             };
             by_id.insert(id, n);
-            if let Some(test_id) = n.get("test_id").and_then(|v| v.as_str()) {
-                if !test_id.trim().is_empty() {
-                    test_id_to_nodes.entry(test_id).or_default().push(id);
-                }
+            if let Some(test_id) = n.get("test_id").and_then(|v| v.as_str())
+                && !test_id.trim().is_empty()
+            {
+                test_id_to_nodes.entry(test_id).or_default().push(id);
             }
         }
 
@@ -237,21 +235,21 @@ fn lint_bundle_from_json(
                 .map(|s| s.to_string());
 
             let active_descendant = n.get("active_descendant").and_then(|v| v.as_u64());
-            if let Some(active_descendant) = active_descendant {
-                if !by_id.contains_key(&active_descendant) {
-                    push_finding(
-                        &mut findings,
-                        LintLevel::Error,
-                        "semantics.active_descendant_missing",
-                        window_id,
-                        frame_id,
-                        Some(id),
-                        test_id.clone(),
-                        role.clone(),
-                        "active_descendant points to a missing node",
-                        serde_json::json!({ "active_descendant": active_descendant }),
-                    );
-                }
+            if let Some(active_descendant) = active_descendant
+                && !by_id.contains_key(&active_descendant)
+            {
+                push_finding(
+                    &mut findings,
+                    LintLevel::Error,
+                    "semantics.active_descendant_missing",
+                    window_id,
+                    frame_id,
+                    Some(id),
+                    test_id.clone(),
+                    role.clone(),
+                    "active_descendant points to a missing node",
+                    serde_json::json!({ "active_descendant": active_descendant }),
+                );
             }
 
             let label = n.get("label").and_then(|v| v.as_str());
@@ -340,38 +338,33 @@ fn lint_bundle_from_json(
                 );
             }
 
-            if is_focused {
-                if let Some(active) = active_descendant {
-                    if let Some(active_node) = by_id.get(&active) {
-                        if let Some(active_bounds) =
-                            active_node.get("bounds").and_then(rect_from_bounds)
-                        {
-                            if !rects_intersect(active_bounds, window_bounds, eps) {
-                                push_finding(
-                                    &mut findings,
-                                    LintLevel::Error,
-                                    "layout.active_item_out_of_window",
-                                    window_id,
-                                    frame_id,
-                                    Some(active),
-                                    active_node
-                                        .get("test_id")
-                                        .and_then(|v| v.as_str())
-                                        .map(|s| s.to_string()),
-                                    active_node
-                                        .get("role")
-                                        .and_then(|v| v.as_str())
-                                        .map(|s| s.to_string()),
-                                    "active item is outside the window bounds",
-                                    serde_json::json!({
-                                        "bounds": active_node.get("bounds").cloned().unwrap_or(Value::Null),
-                                        "window_bounds": snapshot.get("window_bounds").cloned().unwrap_or(Value::Null),
-                                    }),
-                                );
-                            }
-                        }
-                    }
-                }
+            if is_focused
+                && let Some(active) = active_descendant
+                && let Some(active_node) = by_id.get(&active)
+                && let Some(active_bounds) = active_node.get("bounds").and_then(rect_from_bounds)
+                && !rects_intersect(active_bounds, window_bounds, eps)
+            {
+                push_finding(
+                    &mut findings,
+                    LintLevel::Error,
+                    "layout.active_item_out_of_window",
+                    window_id,
+                    frame_id,
+                    Some(active),
+                    active_node
+                        .get("test_id")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    active_node
+                        .get("role")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    "active item is outside the window bounds",
+                    serde_json::json!({
+                        "bounds": active_node.get("bounds").cloned().unwrap_or(Value::Null),
+                        "window_bounds": snapshot.get("window_bounds").cloned().unwrap_or(Value::Null),
+                    }),
+                );
             }
         }
     }

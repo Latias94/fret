@@ -740,10 +740,10 @@ fn find_best_icon_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rg
             if !search_within.contains(origin) {
                 return;
             }
-            let fret_core::Paint::Solid(color) = *paint else {
+            let fret_core::Paint::Solid(color) = paint else {
                 return;
             };
-            let rgba = color_to_rgba(color_with_opacity(&color, st.opacity));
+            let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
             if rgba.a <= 0.01 {
                 return;
             }

@@ -607,6 +607,7 @@ pub(super) enum OrderedDraw {
     Path(PathDraw),
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum EffectMarkerKind {
     Push {

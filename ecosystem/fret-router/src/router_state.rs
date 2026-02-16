@@ -1140,7 +1140,7 @@ where
                         if !self.history.navigate(nav_action, Some(to.clone())) {
                             return Ok(RouterUpdate::NoChange);
                         }
-                        return self.commit_changed_transition(cause, from, redirect_chain);
+                        self.commit_changed_transition(cause, from, redirect_chain)
                     }
                     RouterGuardResolution::Block {
                         cause,
@@ -1163,61 +1163,61 @@ where
                             state: self.state.clone(),
                         });
 
-                        return Ok(RouterUpdate::Blocked(transition));
+                        Ok(RouterUpdate::Blocked(transition))
                     }
                 }
             }
             NavigationAction::Back | NavigationAction::Forward => {
-                if self.guard.is_some() {
-                    if let Some(attempted) = self.history.peek(action) {
-                        let attempted = attempted.canonicalized();
-                        match self.resolve_guard_chain(
-                            RouterTransitionCause::Navigate { action },
-                            action,
-                            &from,
-                            attempted,
-                        )? {
-                            RouterGuardResolution::Allow {
-                                cause,
-                                action: nav_action,
-                                to,
-                                redirect_chain,
-                            } => {
-                                if redirect_chain.is_empty()
-                                    && matches!(cause, RouterTransitionCause::Navigate { action: a } if a == action)
-                                {
-                                    if !self.history.navigate(action, None) {
-                                        return Ok(RouterUpdate::NoChange);
-                                    }
-                                } else if !self.history.navigate(nav_action, Some(to.clone())) {
+                if self.guard.is_some()
+                    && let Some(attempted) = self.history.peek(action)
+                {
+                    let attempted = attempted.canonicalized();
+                    match self.resolve_guard_chain(
+                        RouterTransitionCause::Navigate { action },
+                        action,
+                        &from,
+                        attempted,
+                    )? {
+                        RouterGuardResolution::Allow {
+                            cause,
+                            action: nav_action,
+                            to,
+                            redirect_chain,
+                        } => {
+                            if redirect_chain.is_empty()
+                                && matches!(cause, RouterTransitionCause::Navigate { action: a } if a == action)
+                            {
+                                if !self.history.navigate(action, None) {
                                     return Ok(RouterUpdate::NoChange);
                                 }
-
-                                return self.commit_changed_transition(cause, from, redirect_chain);
+                            } else if !self.history.navigate(nav_action, Some(to.clone())) {
+                                return Ok(RouterUpdate::NoChange);
                             }
-                            RouterGuardResolution::Block {
+
+                            return self.commit_changed_transition(cause, from, redirect_chain);
+                        }
+                        RouterGuardResolution::Block {
+                            cause,
+                            action: _nav_action,
+                            attempted,
+                            redirect_chain,
+                            reason,
+                        } => {
+                            let transition = RouterTransition {
                                 cause,
-                                action: _nav_action,
-                                attempted,
+                                from,
+                                to: attempted,
                                 redirect_chain,
-                                reason,
-                            } => {
-                                let transition = RouterTransition {
-                                    cause,
-                                    from,
-                                    to: attempted,
-                                    redirect_chain,
-                                    blocked_by: Some(reason),
-                                };
+                                blocked_by: Some(reason),
+                            };
 
-                                self.state.last_transition = Some(transition.clone());
-                                self.events.push(RouterEvent::Blocked {
-                                    transition: transition.clone(),
-                                    state: self.state.clone(),
-                                });
+                            self.state.last_transition = Some(transition.clone());
+                            self.events.push(RouterEvent::Blocked {
+                                transition: transition.clone(),
+                                state: self.state.clone(),
+                            });
 
-                                return Ok(RouterUpdate::Blocked(transition));
-                            }
+                            return Ok(RouterUpdate::Blocked(transition));
                         }
                     }
                 }
@@ -1245,13 +1245,12 @@ where
                             to,
                             redirect_chain,
                         } => {
-                            if matches!(cause, RouterTransitionCause::Redirect { .. })
-                                || !redirect_chain.is_empty()
+                            if (matches!(cause, RouterTransitionCause::Redirect { .. })
+                                || !redirect_chain.is_empty())
+                                && self.history.navigate(nav_action, Some(to.clone()))
                             {
-                                if self.history.navigate(nav_action, Some(to.clone())) {
-                                    final_cause = cause;
-                                    final_chain = redirect_chain;
-                                }
+                                final_cause = cause;
+                                final_chain = redirect_chain;
                             }
                         }
                         RouterGuardResolution::Block {
@@ -1285,7 +1284,7 @@ where
                     }
                 }
 
-                return self.commit_changed_transition(final_cause, from, final_chain);
+                self.commit_changed_transition(final_cause, from, final_chain)
             }
         }
     }

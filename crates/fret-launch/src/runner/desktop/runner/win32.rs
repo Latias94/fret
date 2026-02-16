@@ -1,5 +1,3 @@
-#![cfg(target_os = "windows")]
-
 use super::window::MonitorRectF64;
 use winit::dpi::PhysicalPosition;
 

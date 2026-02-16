@@ -144,6 +144,7 @@ impl EventDispatcher {
         let repeat_base_path = self.repeat_base_path.clone();
         let repeat_index = self.repeat_index;
 
+        #[allow(clippy::arc_with_non_send_sync)]
         Some(Arc::new(move |host, cx: ActionCx, _reason| {
             let state_snapshot: Value = host
                 .models_mut()
@@ -308,7 +309,7 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
         .ok_or_else(|| RenderError::MissingElement { key: key.clone() })?;
 
     let out = cx.keyed(&key.0, |cx| {
-        let visible = element.visible.as_ref().map_or(true, |cond| {
+        let visible = element.visible.as_ref().is_none_or(|cond| {
             let vctx = VisibilityContext {
                 state: state_snapshot,
                 repeat: repeat_scope,
@@ -377,6 +378,7 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
     Ok(out)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_children<H: UiHost, R: ComponentResolver<H>>(
     cx: &mut ElementContext<'_, H>,
     spec: &SpecV1,
