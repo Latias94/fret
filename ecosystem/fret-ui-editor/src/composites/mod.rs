@@ -16,5 +16,6 @@ pub use property_grid::{PropertyGrid, PropertyGridOptions, PropertyGridRow, Prop
 pub use property_grid_virtualized::{PropertyGridVirtualized, PropertyGridVirtualizedOptions};
 pub use property_group::{OnPropertyGroupToggle, PropertyGroup, PropertyGroupOptions};
 pub use property_row::{
-    OnPropertyRowReset, PropertyRow, PropertyRowOptions, PropertyRowReset, PropertyRowResetOptions,
+    OnPropertyRowReset, PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions,
+    PropertyRowReset, PropertyRowResetOptions,
 };

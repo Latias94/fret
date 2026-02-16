@@ -21,6 +21,7 @@ impl EditorTokenKeys {
 
     pub const PROPERTY_COLUMN_GAP: &'static str = "editor.property.column_gap";
     pub const PROPERTY_GROUP_HEADER_HEIGHT: &'static str = "editor.property.group_header_height";
+    pub const PROPERTY_AUTO_STACK_BELOW: &'static str = "editor.property.auto_stack_below";
 
     pub const CHECKBOX_SIZE: &'static str = "editor.checkbox.size";
     pub const CHECKBOX_RADIUS: &'static str = "editor.checkbox.radius";

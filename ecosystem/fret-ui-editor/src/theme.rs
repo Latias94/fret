@@ -37,6 +37,12 @@ pub fn apply_editor_theme_patch_v1<H: UiHost>(app: &mut H) {
         cfg.metrics
             .insert(EditorTokenKeys::VEC_AUTO_STACK_BELOW.to_string(), 420.0);
 
+        // Property grid responsiveness (stack label/value vertically in narrow inspectors).
+        cfg.metrics.insert(
+            EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW.to_string(),
+            520.0,
+        );
+
         // Text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
         cfg.metrics
             .insert("component.text_field.padding_x".to_string(), 6.0);

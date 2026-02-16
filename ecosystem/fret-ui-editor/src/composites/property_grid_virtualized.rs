@@ -13,7 +13,7 @@ use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::composites::property_row::PropertyRowOptions;
+use crate::composites::property_row::{PropertyRowLayoutVariant, PropertyRowOptions};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -123,6 +123,7 @@ impl PropertyGridVirtualized {
             let row_options = PropertyRowOptions {
                 label_width: self.options.label_width,
                 gap: Some(column_gap),
+                variant: PropertyRowLayoutVariant::Auto,
                 ..Default::default()
             };
 

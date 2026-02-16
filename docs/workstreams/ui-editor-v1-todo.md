@@ -100,6 +100,7 @@ Exit criteria:
 - [~] `PropertyGrid` composite:
   - [x] two-column layout (via `PropertyRow` composition)
   - [x] label width policy (fixed width option, propagated to rows)
+  - [x] responsive rows: auto-stack label/value vertically in narrow inspectors (token: `editor.property.auto_stack_below`)
   - [ ] virtualization strategy decision:
     - [x] composable rows path (VirtualList)
       - Evidence: `ecosystem/fret-ui-editor/src/composites/property_grid_virtualized.rs`

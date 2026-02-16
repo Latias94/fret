@@ -196,6 +196,7 @@ Notes:
 | `editor.numeric.error_fg` | color | Numeric input validation/error foreground | near `destructive` |
 | `editor.property.column_gap` | metric | Label/value column gap | small |
 | `editor.property.group_header_height` | metric | Collapsible group header height | row_height-ish |
+| `editor.property.auto_stack_below` | metric | Stack property row label/value vertically below this width | tuned per inspector width |
 | `editor.checkbox.size` | metric | Checkbox visual square size (inside hit target) | ~16px |
 | `editor.checkbox.radius` | metric | Checkbox corner radius | small |
 | `editor.enum_select.max_list_height` | metric | Max height for enum select list viewport | medium |
