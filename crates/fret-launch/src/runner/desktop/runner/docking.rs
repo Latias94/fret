@@ -77,6 +77,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if !drag.cross_window_hover
                 || (drag.kind != fret_runtime::DRAG_KIND_DOCK_PANEL
                     && drag.kind != fret_runtime::DRAG_KIND_DOCK_TABS)
+                // Avoid mis-triggering this poll-up fallback when diagnostics scripts inject pointer
+                // events (bypassing OS button state): only run when the runner believes the left
+                // button is currently down for the drag's source window.
+                || !self.is_left_mouse_down_for_window(drag.source_window)
                 || win32::is_left_mouse_down()
                 || self.saw_left_mouse_release_this_turn
             {
@@ -85,8 +89,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             (drag.source_window, drag.current_window, drag.dragging)
         };
 
-        if let Some(p) = win32::cursor_pos_physical() {
-            self.cursor_screen_pos = Some(p);
+        // Prefer the diagnostics cursor override if present; scripted runs cannot reliably
+        // control OS cursor position, so clobbering `cursor_screen_pos` here can make poll-up
+        // drop routing non-deterministic.
+        if self.diag_cursor_screen_pos_override.is_none() || self.cursor_screen_pos.is_none() {
+            if let Some(p) = win32::cursor_pos_physical() {
+                self.cursor_screen_pos = Some(p);
+            }
         }
 
         dock_tearoff_log(format_args!(
