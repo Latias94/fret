@@ -172,10 +172,18 @@ impl UiRuntimeEnvConfig {
             }
             None => LayoutEngineSweepPolicy::OnDemand,
         };
+        // Default-on: these are perf knobs intended to keep the request/build phase cheap on
+        // steady-state frames. Set to "0" to disable.
         let layout_skip_request_build_translation_only =
-            env_present("FRET_UI_LAYOUT_SKIP_REQUEST_BUILD_TRANSLATION_ONLY");
+            std::env::var("FRET_UI_LAYOUT_SKIP_REQUEST_BUILD_TRANSLATION_ONLY")
+                .ok()
+                .map(|v| v != "0")
+                .unwrap_or(true);
         let layout_flow_skip_barrier_clean_children =
-            env_present("FRET_UI_LAYOUT_FLOW_SKIP_BARRIER_CLEAN_CHILDREN");
+            std::env::var("FRET_UI_LAYOUT_FLOW_SKIP_BARRIER_CLEAN_CHILDREN")
+                .ok()
+                .map(|v| v != "0")
+                .unwrap_or(true);
         let debug_focus_repair = env_present("FRET_DEBUG_FOCUS_REPAIR");
 
         let taffy_dump = env_present("FRET_TAFFY_DUMP").then(|| RuntimeTaffyDumpConfig {
