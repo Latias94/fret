@@ -81,6 +81,7 @@ Deliverables:
 - [~] `PropertyRow` composite:
   - [x] label slot + value slot + actions slot
   - [x] reset-to-default affordance (UI only; callback provided by caller)
+  - [x] stable identity for auto layout heuristics (`id_source` for loop-built rows)
   - Evidence: `ecosystem/fret-ui-editor/src/composites/property_row.rs`
 
 Optional (if `fret-undo` integration is ready):

@@ -1,4 +1,5 @@
 //! Inspector-style property row composite (label + value + actions).
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -63,6 +64,11 @@ pub struct PropertyRowOptions {
     pub gap: Option<Px>,
     pub variant: PropertyRowLayoutVariant,
     pub auto_stack_below: Option<Px>,
+    /// Explicit identity source for internal policy state (auto layout heuristics).
+    ///
+    /// This is the editor-composite equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when building rows in a loop where the callsite is not unique per row.
+    pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
 }
 
@@ -81,6 +87,7 @@ impl Default for PropertyRowOptions {
             gap: None,
             variant: PropertyRowLayoutVariant::Row,
             auto_stack_below: None,
+            id_source: None,
             test_id: None,
         }
     }
@@ -123,6 +130,28 @@ impl PropertyRow {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
+    ) -> AnyElement {
+        let loc = Location::caller();
+        let callsite = (loc.file(), loc.line(), loc.column());
+        let id_source = self.options.id_source.clone();
+        if let Some(id_source) = id_source.as_deref() {
+            cx.keyed(
+                ("fret-ui-editor.property_row", id_source, callsite),
+                move |cx| self.into_element_keyed(cx, label, value, actions),
+            )
+        } else {
+            cx.keyed(("fret-ui-editor.property_row", callsite), move |cx| {
+                self.into_element_keyed(cx, label, value, actions)
+            })
+        }
+    }
+
+    fn into_element_keyed<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
