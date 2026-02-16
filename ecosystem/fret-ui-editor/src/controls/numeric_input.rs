@@ -11,7 +11,7 @@ use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Edges, KeyCode, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
@@ -23,7 +23,9 @@ use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
-use crate::primitives::input_group::editor_joined_input_frame;
+use crate::primitives::input_group::{
+    EditorInputGroupFrameOverrides, editor_joined_input_frame_with_overrides,
+};
 use crate::primitives::style::EditorStyle;
 
 #[derive(Debug, Clone)]
@@ -84,6 +86,20 @@ pub struct NumericInput<T> {
     validate: Option<NumericValidateFn<T>>,
     on_outcome: Option<OnNumericInputOutcome>,
     options: NumericInputOptions,
+}
+
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
+fn mix(a: Color, b: Color, t: f32) -> Color {
+    let t = t.clamp(0.0, 1.0);
+    Color {
+        r: lerp(a.r, b.r, t),
+        g: lerp(a.g, b.g, t),
+        b: lerp(a.b, b.b, t),
+        a: lerp(a.a, b.a, t),
+    }
 }
 
 impl<T> NumericInput<T>
@@ -162,11 +178,13 @@ where
 
         let enabled_for_paint = options.enabled;
         let error_for_field = error.clone();
+        let error_for_frame = error.clone();
         let text_style_for_field = text_style.clone();
         let placeholder = options.placeholder.clone();
         let focusable = options.focusable;
 
-        let field = editor_joined_input_frame(
+        let frame_bg = frame_chrome.bg;
+        let field = editor_joined_input_frame_with_overrides(
             cx,
             LayoutStyle {
                 size: SizeStyle {
@@ -181,6 +199,40 @@ where
             enabled_for_paint,
             false,
             options.test_id.clone(),
+            move |cx, _focused| {
+                let has_error = cx
+                    .get_model_cloned(&error_for_frame, Invalidation::Paint)
+                    .unwrap_or(None)
+                    .is_some();
+                if !has_error {
+                    return EditorInputGroupFrameOverrides::none();
+                }
+
+                let theme = Theme::global(&*cx.app);
+                let error_border = theme
+                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
+                    .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+                    .unwrap_or_else(|| theme.color_token("destructive"));
+                let error_bg = theme
+                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BG)
+                    .unwrap_or_else(|| {
+                        let mut out = mix(
+                            frame_bg,
+                            Color {
+                                a: 1.0,
+                                ..error_border
+                            },
+                            0.08,
+                        );
+                        out.a = 1.0;
+                        out
+                    });
+
+                EditorInputGroupFrameOverrides {
+                    bg: Some(error_bg),
+                    border: Some(error_border),
+                }
+            },
             move |cx| {
                 let mut props = TextInputProps::new(draft.clone());
                 props.layout = LayoutStyle {

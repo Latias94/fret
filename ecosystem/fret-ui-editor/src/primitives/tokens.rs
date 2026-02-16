@@ -18,6 +18,8 @@ impl EditorTokenKeys {
     pub const NUMERIC_SCRUB_FAST_MULTIPLIER: &'static str = "editor.numeric.scrub_fast_multiplier";
     pub const NUMERIC_SCRUB_DRAG_THRESHOLD: &'static str = "editor.numeric.scrub_drag_threshold";
     pub const NUMERIC_ERROR_FG: &'static str = "editor.numeric.error_fg";
+    pub const NUMERIC_ERROR_BORDER: &'static str = "editor.numeric.error_border";
+    pub const NUMERIC_ERROR_BG: &'static str = "editor.numeric.error_bg";
 
     pub const PROPERTY_COLUMN_GAP: &'static str = "editor.property.column_gap";
     pub const PROPERTY_GROUP_HEADER_HEIGHT: &'static str = "editor.property.group_header_height";

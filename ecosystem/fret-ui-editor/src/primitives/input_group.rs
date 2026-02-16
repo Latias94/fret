@@ -281,6 +281,32 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
     build_input: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     build_trailing_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
+    editor_joined_input_frame_with_overrides(
+        cx,
+        layout,
+        density,
+        chrome,
+        enabled_for_paint,
+        open,
+        frame_test_id,
+        |_cx, _focused| EditorInputGroupFrameOverrides::none(),
+        build_input,
+        build_trailing_segments,
+    )
+}
+
+pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutStyle,
+    density: EditorDensity,
+    chrome: ResolvedEditorFrameChrome,
+    enabled_for_paint: bool,
+    open: bool,
+    frame_test_id: Option<std::sync::Arc<str>>,
+    frame_overrides: impl FnOnce(&mut ElementContext<'_, H>, bool) -> EditorInputGroupFrameOverrides,
+    build_input: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    build_trailing_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
     cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
         let pointer_state: Arc<Mutex<JoinedInputPointerState>> = cx.with_state(
             || Arc::new(Mutex::new(JoinedInputPointerState::default())),
@@ -359,6 +385,7 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
 
                 let input = build_input(cx);
                 let focused = cx.is_focused_element(input.id);
+                let overrides = frame_overrides(cx, focused);
 
                 let divider = chrome.border;
                 let input = editor_input_group_inset(cx, chrome.padding, input);
@@ -369,7 +396,7 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
                     segments.push(seg);
                 }
 
-                let mut frame = editor_input_group_frame(
+                let mut frame = editor_input_group_frame_with_overrides(
                     cx,
                     LayoutStyle {
                         size: SizeStyle {
@@ -388,6 +415,7 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
                         focused,
                         open,
                     },
+                    overrides,
                     move |cx, _visuals| vec![editor_input_group_row(cx, Px(0.0), segments)],
                 );
 

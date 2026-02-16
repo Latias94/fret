@@ -194,6 +194,8 @@ Notes:
 | `editor.numeric.scrub_fast_multiplier` | metric | Alt fast mode multiplier | > 1.0 |
 | `editor.numeric.scrub_drag_threshold` | metric | Minimum drag distance (px) before scrubbing starts | small (2–6px) |
 | `editor.numeric.error_fg` | color | Numeric input validation/error foreground | near `destructive` |
+| `editor.numeric.error_border` | color | Numeric input error-state frame border | near `destructive` |
+| `editor.numeric.error_bg` | color | Numeric input error-state frame background | subtle, opaque |
 | `editor.property.column_gap` | metric | Label/value column gap | small |
 | `editor.property.group_header_height` | metric | Collapsible group header height | row_height-ish |
 | `editor.property.auto_stack_below` | metric | Stack property row label/value vertically below this width | tuned per inspector width |
