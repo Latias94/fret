@@ -69,6 +69,11 @@ To keep the core contract stable, the ergonomics work should focus on (2) while 
 Trying to directly “mix” two full UI runtimes in the same widget tree tends to fail on:
 focus, accessibility semantics, input capture, text IME, layout, and animation timing.
 
+Runnable Tier A demo (native):
+
+- `cargo run -p fret-demo --bin embedded_viewport_demo`
+- Cookbook: `docs/interop-tier-a-embedded-viewport.md`
+
 Instead, a practical interop strategy is:
 
 - **Tier A (recommended): Viewport surface embedding**
