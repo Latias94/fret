@@ -17,7 +17,21 @@
       "scope": "tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json",
+      "metric": "top_layout_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json",
+      "metric": "top_layout_engine_solve_time_us",
+      "seed": "p95"
     }
   ]
 }
-

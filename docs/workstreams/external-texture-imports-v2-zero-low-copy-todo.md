@@ -51,12 +51,19 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Native/mobile implementations (staged)
 
-- [ ] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
+- [~] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic
       fallback to GPU copy / CPU upload and observable attribution.
   - Evidence anchors:
     - `crates/fret-launch/src/runner/native_external_import.rs`
     - `crates/fret-launch/src/runner/imported_viewport_target.rs`
+    - Adapter-request attribution (requested vs effective) is now verifiable in a native demo:
+      - `apps/fret-examples/src/external_texture_imports_demo.rs` (KeyN adapter path requests `ExternalZeroCopy`)
+      - Perf script: `tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json`
+      - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-contract-path-native-adapter.windows-local.v1.json`
+  - Remaining:
+    - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
+      produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise).
 
 - [ ] EXTV2-mobile-110 Define iOS/Android capability-gated plans (blocked until backend support exists):
       document prerequisites and the deterministic fallback behavior.
@@ -73,3 +80,9 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Keep v1 copy-path baselines green:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+    - Evidence (2026-02-16): web DevTools WS perf gate run is runnable end-to-end again:
+      - `fix(web): wake redraw on DevTools WS inbox`
+      - `fretboard diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json ... --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+  - Native adapter-path gate (requested vs effective attribution in perf bundles):
+    - Script: `tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json`
+    - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-contract-path-native-adapter.windows-local.v1.json`

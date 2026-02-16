@@ -171,6 +171,7 @@ enum ExternalTextureImportsMode {
 struct OwnedWgpuTextureFrame {
     texture: wgpu::Texture,
     size: (u32, u32),
+    ingest_strategy: RenderTargetIngestStrategy,
 }
 
 impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
@@ -183,8 +184,8 @@ impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
         let mut metadata = RenderTargetMetadata::default();
-        metadata.requested_ingest_strategy = RenderTargetIngestStrategy::Owned;
-        metadata.ingest_strategy = RenderTargetIngestStrategy::Owned;
+        metadata.requested_ingest_strategy = self.ingest_strategy;
+        metadata.ingest_strategy = self.ingest_strategy;
         Ok(NativeExternalImportedFrame {
             view,
             size: self.size,
@@ -477,6 +478,7 @@ fn record_engine_frame(
         let frame: Box<dyn NativeExternalTextureFrame> = Box::new(OwnedWgpuTextureFrame {
             texture: texture.clone(),
             size: st.target_px_size,
+            ingest_strategy: effective_strategy,
         });
         if let Err(err) = st
             .target
@@ -485,7 +487,7 @@ fn record_engine_frame(
                 &mut update,
                 context,
                 &renderer_caps,
-                effective_strategy,
+                RenderTargetIngestStrategy::ExternalZeroCopy,
                 frame,
             )
         {
@@ -603,7 +605,7 @@ pub fn run() -> anyhow::Result<()> {
         app.set_global(PlatformCapabilities::default());
     })
     .with_main_window(
-        "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source)",
+        "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source, N toggles native adapter)",
         (960.0, 640.0),
     );
 
