@@ -71,5 +71,6 @@ renderer conformance tests for correctness-sensitive semantics.
 
 ## M3 — Adoption (optional / follow-up)
 
-- [ ] PSSV2-adopt-300 Wire at least one real consumer to use v2 join/cap/dash:
+- [x] PSSV2-adopt-300 Wire at least one real consumer to use v2 join/cap/dash:
   - pick a small, isolated demo surface (plot/node graph/canvas) to validate ergonomics.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/paint.rs` (edge wire paths use `PathStyle::StrokeV2` with join/cap), `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs` (accepts v2 style).

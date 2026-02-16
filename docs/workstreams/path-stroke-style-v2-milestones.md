@@ -67,4 +67,4 @@ Acceptance criteria:
 
 - At least one consumer uses v2 style in a visible demo (optional, but recommended to validate API ergonomics).
 
-Status: Not started.
+Status: Completed (ecosystem consumer wired: node graph).
