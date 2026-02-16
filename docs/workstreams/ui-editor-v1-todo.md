@@ -94,7 +94,7 @@ Exit criteria:
 - [~] `EditorDensity` token family (`editor.density.*`) and application in core controls.
 - [ ] `FieldStatus` glue (loading/error/mixed/dirty):
   - [x] simple badge/label helpers
-  - [ ] optional `state` module integration (feature-gated)
+  - [x] optional `state` module integration (feature-gated)
 - [x] `MiniSearchBox` control (for filtering property groups and palettes).
 - [x] `PropertyGroup` composite (collapsible group header + section).
 - [~] `PropertyGrid` composite:
