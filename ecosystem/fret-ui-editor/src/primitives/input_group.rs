@@ -267,6 +267,7 @@ pub(crate) fn editor_clear_button_segment<H: UiHost>(
 #[derive(Debug, Default)]
 struct JoinedInputPointerState {
     pressed: bool,
+    last_pointer_type: Option<fret_core::PointerType>,
 }
 
 pub(crate) fn editor_joined_input_frame<H: UiHost>(
@@ -286,11 +287,16 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
             |s| s.clone(),
         );
 
-        // Best-effort cleanup: if the pointer is no longer hovering the region, do not keep a
-        // stale "pressed" visual (e.g. pointer-up outside the region without capture).
+        // Best-effort cleanup for mouse: if the pointer is no longer hovering the region, do not
+        // keep a stale "pressed" visual (e.g. pointer-up outside the region without capture).
+        //
+        // Touch/stylus interactions often do not produce reliable hover signals, so we avoid
+        // clearing `pressed` solely based on hover for non-mouse pointer types.
         if !hovered {
             if let Ok(mut st) = pointer_state.lock() {
-                st.pressed = false;
+                if matches!(st.last_pointer_type, Some(fret_core::PointerType::Mouse)) {
+                    st.pressed = false;
+                }
             }
         }
 
@@ -309,6 +315,7 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
 
             if let Ok(mut st) = pointer_state_down.lock() {
                 st.pressed = true;
+                st.last_pointer_type = Some(down.pointer_type);
             }
             host.invalidate(Invalidation::Paint);
             host.request_redraw(action_cx.window);
@@ -319,6 +326,7 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
         let on_up: OnPointerUp = Arc::new(move |host, action_cx: ActionCx, _up| {
             if let Ok(mut st) = pointer_state_up.lock() {
                 st.pressed = false;
+                st.last_pointer_type = Some(_up.pointer_type);
             }
             host.invalidate(Invalidation::Paint);
             host.request_redraw(action_cx.window);
@@ -329,6 +337,7 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
         let on_cancel: OnPointerCancel = Arc::new(move |host, action_cx: ActionCx, _cancel| {
             if let Ok(mut st) = pointer_state_cancel.lock() {
                 st.pressed = false;
+                st.last_pointer_type = Some(_cancel.pointer_type);
             }
             host.invalidate(Invalidation::Paint);
             host.request_redraw(action_cx.window);
