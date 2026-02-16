@@ -28,6 +28,7 @@ use fret_core::{AppWindowId, Event, Scene};
 use fret_render::{Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{FrameId, PlatformCapabilities, TickId};
 use js_sys::{Function, Reflect};
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
 use winit::window::{Window, WindowId};
@@ -86,6 +87,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     diag_incoming_open_payloads: HashMap<fret_core::IncomingOpenToken, DiagIncomingOpenPayload>,
 
     environment_media_queries: Option<render_loop::WebEnvironmentMediaQueries>,
+    devtools_ws_inbox_waker: Option<Closure<dyn FnMut(web_sys::Event)>>,
 }
 
 #[derive(Debug, Default)]
@@ -200,6 +202,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             diag_incoming_open_next_token: 1,
             diag_incoming_open_payloads: HashMap::new(),
             environment_media_queries: None,
+            devtools_ws_inbox_waker: None,
         }
     }
 

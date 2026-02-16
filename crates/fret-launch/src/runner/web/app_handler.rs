@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use fret_core::Event;
 use fret_render::{Renderer, SurfaceState, WgpuContext};
+use wasm_bindgen::JsCast as _;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen_futures::spawn_local;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
@@ -40,6 +42,26 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         };
         let window: Arc<dyn Window> = Arc::<dyn Window>::from(window);
         self.window_id = Some(window.id());
+
+        // DevTools WS messages can arrive while the web app is idle (no continuous frame loop).
+        // Wake the runner so diagnostics scripts can start without requiring "always animating".
+        if self.devtools_ws_inbox_waker.is_none()
+            && let Some(web_window) = web_sys::window()
+        {
+            let w = window.clone();
+            let proxy = self.event_loop_proxy.clone();
+            let cb = Closure::wrap(Box::new(move |_evt: web_sys::Event| {
+                w.request_redraw();
+                if let Some(proxy) = proxy.as_ref() {
+                    proxy.wake_up();
+                }
+            }) as Box<dyn FnMut(_)>);
+            let _ = web_window.add_event_listener_with_callback(
+                "fret_devtools_ws_inbox",
+                cb.as_ref().unchecked_ref(),
+            );
+            self.devtools_ws_inbox_waker = Some(cb);
+        }
 
         if self.window_state.is_none() {
             let state = self

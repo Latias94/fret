@@ -130,6 +130,14 @@ impl DevtoolsWsClient {
             if let Ok(mut inbox) = state_message.inbox.lock() {
                 inbox.push_back(msg);
             }
+
+            // Best-effort: wake web apps that only poll the DevTools WS inbox during frames.
+            // This allows scripts to start even when the UI is idle (no continuous RAF loop).
+            if let Some(window) = web_sys::window()
+                && let Ok(evt) = web_sys::Event::new("fret_devtools_ws_inbox")
+            {
+                let _ = window.dispatch_event(&evt);
+            }
         }) as Box<dyn FnMut(web_sys::MessageEvent)>);
         ws.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
 
