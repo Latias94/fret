@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use core::ops::Range;
 
 use fret_core::{Point, Px, Rect};
@@ -271,8 +273,8 @@ pub fn minmax_per_pixel_step_with(
     }
 
     let end = (cursor.next_index + max_points_to_process).min(end_limit);
-    for i in cursor.next_index..end {
-        let xi = x[i];
+    for (offset, &xi) in x[cursor.next_index..end].iter().enumerate() {
+        let i = cursor.next_index + offset;
         let yi = y_at(i);
         if !xi.is_finite() || !yi.is_finite() {
             continue;

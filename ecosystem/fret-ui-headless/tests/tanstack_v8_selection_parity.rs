@@ -51,7 +51,7 @@ struct FixtureExpect {
 #[serde(tag = "type")]
 enum FixtureAction {
     #[serde(rename = "toggleRowSelected")]
-    ToggleRowSelected {
+    Row {
         row_id: String,
         #[serde(default)]
         value: Option<bool>,
@@ -59,12 +59,12 @@ enum FixtureAction {
         select_children: bool,
     },
     #[serde(rename = "toggleAllRowsSelected")]
-    ToggleAllRowsSelected {
+    AllRows {
         #[serde(default)]
         value: Option<bool>,
     },
     #[serde(rename = "toggleAllPageRowsSelected")]
-    ToggleAllPageRowsSelected {
+    AllPageRows {
         #[serde(default)]
         value: Option<bool>,
     },
@@ -195,7 +195,7 @@ fn tanstack_v8_selection_parity() {
             let table = builder.build();
 
             match action {
-                FixtureAction::ToggleRowSelected {
+                FixtureAction::Row {
                     row_id,
                     value,
                     select_children,
@@ -208,10 +208,10 @@ fn tanstack_v8_selection_parity() {
                     state.row_selection =
                         table.toggled_row_selected(row_key, *value, *select_children);
                 }
-                FixtureAction::ToggleAllRowsSelected { value } => {
+                FixtureAction::AllRows { value } => {
                     state.row_selection = table.toggled_all_rows_selected(*value);
                 }
-                FixtureAction::ToggleAllPageRowsSelected { value } => {
+                FixtureAction::AllPageRows { value } => {
                     state.row_selection = table.toggled_all_page_rows_selected(*value);
                 }
             }

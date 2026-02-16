@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
@@ -259,7 +261,7 @@ impl FilterProcessorStage {
 
                 const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
                 if y_filter_mode == crate::spec::FilterMode::WeakFilter
-                    && state.data_window_y.get(&series.y_axis).is_some()
+                    && state.data_window_y.contains_key(&series.y_axis)
                     && series.stack.is_none()
                     && matches!(
                         series.kind,
@@ -892,7 +894,7 @@ fn apply_y_indices_for_grid(
                 .is_some_and(|s| {
                     s.filter_mode == crate::spec::FilterMode::WeakFilter && s.window.is_some()
                 })
-            && state.data_window_y.get(&series_model.y_axis).is_some()
+            && state.data_window_y.contains_key(&series_model.y_axis)
         {
             continue;
         }

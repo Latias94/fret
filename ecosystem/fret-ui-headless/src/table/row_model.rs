@@ -708,10 +708,7 @@ impl<'a, TData> Table<'a, TData> {
 
         // TanStack Table v8: `table.initialState` is derived from `options.initialState` and
         // feature defaults. It does not implicitly mirror `options.state`.
-        let initial_state = builder
-            .initial_state
-            .clone()
-            .unwrap_or_else(super::TableState::default);
+        let initial_state = builder.initial_state.clone().unwrap_or_default();
 
         Self {
             data: builder.data,
@@ -930,10 +927,10 @@ impl<'a, TData> Table<'a, TData> {
     pub fn row_id_for_key(&self, row_key: RowKey) -> Option<RowId> {
         if !self.state.grouping.is_empty() && !self.options.manual_grouping {
             let grouped = self.grouped_row_model();
-            if let Some(i) = grouped.row_by_key(row_key) {
-                if let Some(row) = grouped.row(i) {
-                    return Some(row.id.clone());
-                }
+            if let Some(i) = grouped.row_by_key(row_key)
+                && let Some(row) = grouped.row(i)
+            {
+                return Some(row.id.clone());
             }
         }
 
@@ -2147,10 +2144,7 @@ impl<'a, TData> Table<'a, TData> {
             .and_then(|&i| model.row(i))
             .map(|r| (get_value)(r.original));
 
-        let desc = match first_value {
-            Some(super::TanStackValue::String(_)) => false,
-            _ => true,
-        };
+        let desc = !matches!(first_value, Some(super::TanStackValue::String(_)));
         Some(desc)
     }
 
@@ -2825,11 +2819,8 @@ impl<'a, TData> Table<'a, TData> {
         let is_grouped =
             |c: &&super::ColumnDef<TData>| grouping.iter().any(|id| id.as_ref() == c.id.as_ref());
 
-        let non_grouped: Vec<&super::ColumnDef<TData>> = ordered
-            .iter()
-            .copied()
-            .filter(|c| !is_grouped(&c))
-            .collect();
+        let non_grouped: Vec<&super::ColumnDef<TData>> =
+            ordered.iter().copied().filter(|c| !is_grouped(c)).collect();
 
         if mode == super::GroupedColumnMode::Remove {
             return non_grouped;
@@ -4242,10 +4233,11 @@ impl<'a, TData> Table<'a, TData> {
 
             let mut next = old.clone();
 
-            if let Some(row_meta) = row_meta_by_key.get(&row_key) {
-                if row_meta.can_select && current == value {
-                    return next;
-                }
+            if let Some(row_meta) = row_meta_by_key.get(&row_key)
+                && row_meta.can_select
+                && current == value
+            {
+                return next;
             }
 
             mutate_row_selection(&row_meta_by_key, &mut next, row_key, value, select_children);
@@ -4617,10 +4609,10 @@ impl<'a, TData> Table<'a, TData> {
                     });
                 }
 
-                if !col.columns.is_empty() {
-                    if let Some(found) = find(&col.columns, depth + 1, next_parent, id) {
-                        return Some(found);
-                    }
+                if !col.columns.is_empty()
+                    && let Some(found) = find(&col.columns, depth + 1, next_parent, id)
+                {
+                    return Some(found);
                 }
             }
             None

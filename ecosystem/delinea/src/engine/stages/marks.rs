@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use fret_core::{Point, Px, Rect};
 
 use crate::data::DatasetStore;
@@ -664,16 +666,15 @@ impl MarksStage {
 
                 if use_lod {
                     let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
-                    if self.append_rebuild_mode {
-                        if let Some(cache) = self.minmax_append_cache.get_mut(&series.id)
-                            && table.row_count() >= cache.row_count
-                            && cache.viewport_width_px == width_px
-                            && cache.bounds == bounds
-                            && self.cursor.next_index == 0
-                        {
-                            self.cursor = cache.cursor.clone();
-                            std::mem::swap(scratch, &mut cache.scratch);
-                        }
+                    if self.append_rebuild_mode
+                        && let Some(cache) = self.minmax_append_cache.get_mut(&series.id)
+                        && table.row_count() >= cache.row_count
+                        && cache.viewport_width_px == width_px
+                        && cache.bounds == bounds
+                        && self.cursor.next_index == 0
+                    {
+                        self.cursor = cache.cursor.clone();
+                        std::mem::swap(scratch, &mut cache.scratch);
                     }
 
                     let mut finished_scan = false;
@@ -2169,16 +2170,15 @@ impl MarksStage {
             let mut finished_scan = false;
 
             let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
-            if self.append_rebuild_mode {
-                if let Some(cache) = self.minmax_append_cache.get_mut(&series.id)
-                    && table.row_count() >= cache.row_count
-                    && cache.viewport_width_px == width_px
-                    && cache.bounds == bounds
-                    && self.cursor.next_index == 0
-                {
-                    self.cursor = cache.cursor.clone();
-                    std::mem::swap(scratch, &mut cache.scratch);
-                }
+            if self.append_rebuild_mode
+                && let Some(cache) = self.minmax_append_cache.get_mut(&series.id)
+                && table.row_count() >= cache.row_count
+                && cache.viewport_width_px == width_px
+                && cache.bounds == bounds
+                && self.cursor.next_index == 0
+            {
+                self.cursor = cache.cursor.clone();
+                std::mem::swap(scratch, &mut cache.scratch);
             }
             while !finished_scan {
                 let points_budget = budget.take_points(4096) as usize;

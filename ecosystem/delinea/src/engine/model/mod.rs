@@ -446,10 +446,10 @@ impl ChartModel {
             } else {
                 (s.x_axis, s.y_axis, s.dataset, s.encode.x, s.stack_strategy)
             };
-            if let Some(existing) = stack_groups.insert(stack, key) {
-                if existing != key {
-                    return Err(ModelError::StackGroupMismatch { stack });
-                }
+            if let Some(existing) = stack_groups.insert(stack, key)
+                && existing != key
+            {
+                return Err(ModelError::StackGroupMismatch { stack });
             }
         }
 

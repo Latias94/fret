@@ -14,7 +14,7 @@ impl<TDeps, TValue> Default for Memo<TDeps, TValue> {
 
 impl<TDeps: PartialEq, TValue> Memo<TDeps, TValue> {
     pub fn get_or_compute(&mut self, deps: TDeps, f: impl FnOnce() -> TValue) -> (&TValue, bool) {
-        let should_recompute = self.deps.as_ref().map_or(true, |d| d != &deps);
+        let should_recompute = self.deps.as_ref() != Some(&deps);
         if should_recompute {
             self.deps = Some(deps);
             self.value = Some(f());

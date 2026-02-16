@@ -155,7 +155,7 @@ impl FormState {
         &mut self,
         mut validate: impl FnMut(&FormFieldId) -> Option<Arc<str>>,
     ) -> bool {
-        let fields: Vec<FormFieldId> = self.registered_fields.iter().cloned().collect();
+        let fields: Vec<FormFieldId> = self.registered_fields.to_vec();
         for field in fields.iter() {
             let error = validate(field);
             self.set_error_opt(Arc::clone(field), error);

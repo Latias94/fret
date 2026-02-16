@@ -595,12 +595,11 @@ impl TanStackTableState {
         field: &'static str,
         row_key: RowKey,
     ) -> Result<String, TanStackStateError> {
-        if let Some(grouped) = grouped_row_model {
-            if let Some(index) = grouped.row_by_key(row_key) {
-                if let Some(row) = grouped.row(index) {
-                    return Ok(row.id.as_str().to_string());
-                }
-            }
+        if let Some(grouped) = grouped_row_model
+            && let Some(index) = grouped.row_by_key(row_key)
+            && let Some(row) = grouped.row(index)
+        {
+            return Ok(row.id.as_str().to_string());
         }
 
         let index = core_row_model
@@ -908,17 +907,17 @@ impl TanStackTableState {
             field: &'static str,
             row_id: &str,
         ) -> Result<RowKey, TanStackStateError> {
-            if let Some(grouped) = grouped {
-                if let Some(index) = grouped.row_by_id(row_id) {
-                    let row =
-                        grouped
-                            .row(index)
-                            .ok_or_else(|| TanStackStateError::UnresolvedRowId {
-                                field,
-                                row_id: row_id.to_string(),
-                            })?;
-                    return Ok(row.key);
-                }
+            if let Some(grouped) = grouped
+                && let Some(index) = grouped.row_by_id(row_id)
+            {
+                let row =
+                    grouped
+                        .row(index)
+                        .ok_or_else(|| TanStackStateError::UnresolvedRowId {
+                            field,
+                            row_id: row_id.to_string(),
+                        })?;
+                return Ok(row.key);
             }
             if let Some(index) = core.row_by_id(row_id) {
                 let row = core

@@ -91,12 +91,8 @@ pub fn is_probably_monotonic_in_range(values: &[f64], range: RowRange) -> Option
     }
 
     let slice = &values[range.start..range.end];
-    let Some(first) = slice.first().copied() else {
-        return None;
-    };
-    let Some(last) = slice.last().copied() else {
-        return None;
-    };
+    let first = slice.first().copied()?;
+    let last = slice.last().copied()?;
     if !first.is_finite() || !last.is_finite() {
         return None;
     }

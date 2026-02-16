@@ -777,7 +777,7 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
 
 fn make_initial_nary_split_graph(panels: &[String]) -> (DockGraph, AppWindowId, Vec<PanelKey>) {
     let w = window(1);
-    let panel_keys: Vec<PanelKey> = panels.iter().map(|s| PanelKey::new(s)).collect();
+    let panel_keys: Vec<PanelKey> = panels.iter().map(PanelKey::new).collect();
 
     let mut g = DockGraph::new();
     if panel_keys.is_empty() {
@@ -808,7 +808,7 @@ fn make_initial_nary_split_graph(panels: &[String]) -> (DockGraph, AppWindowId, 
 
 fn make_initial_root_tabs_graph(panels: &[String]) -> (DockGraph, AppWindowId, Vec<PanelKey>) {
     let w = window(1);
-    let panel_keys: Vec<PanelKey> = panels.iter().map(|s| PanelKey::new(s)).collect();
+    let panel_keys: Vec<PanelKey> = panels.iter().map(PanelKey::new).collect();
 
     let mut g = DockGraph::new();
     if panel_keys.is_empty() {

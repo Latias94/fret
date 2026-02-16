@@ -1,5 +1,7 @@
 //! Incremental indices views (X filter / XY weakFilter).
 
+#![allow(clippy::too_many_arguments)]
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 

@@ -234,6 +234,10 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
             colors.selection_background,
         ),
         (
+            "color.selection.inactive.background".to_string(),
+            colors.selection_inactive_background,
+        ),
+        (
             "color.hover.background".to_string(),
             colors.hover_background,
         ),
@@ -410,6 +414,10 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
     out.insert(
         "selection.background".to_string(),
         colors.selection_background,
+    );
+    out.insert(
+        "selection.inactive.background".to_string(),
+        colors.selection_inactive_background,
     );
     out.insert("input.background".to_string(), colors.panel_background);
     out.insert("input.foreground".to_string(), colors.text_primary);
@@ -591,6 +599,7 @@ pub struct ThemeColors {
 
     pub accent: Color,
     pub selection_background: Color,
+    pub selection_inactive_background: Color,
     pub hover_background: Color,
     pub focus_ring: Color,
 
@@ -641,6 +650,7 @@ impl ThemeSnapshot {
             "color.text.disabled" => self.colors.text_disabled,
             "color.accent" => self.colors.accent,
             "color.selection.background" => self.colors.selection_background,
+            "color.selection.inactive.background" => self.colors.selection_inactive_background,
             "color.hover.background" => self.colors.hover_background,
             "color.focus.ring" => self.colors.focus_ring,
             "color.menu.background" => self.colors.menu_background,
@@ -698,6 +708,7 @@ impl ThemeSnapshot {
             "destructive-foreground" => self.colors.text_primary,
 
             "selection.background" => self.colors.selection_background,
+            "selection.inactive.background" => self.colors.selection_inactive_background,
 
             "scrollbar.background" => self.colors.scrollbar_track,
             "scrollbar.thumb.background" => self.colors.scrollbar_thumb,
@@ -1220,6 +1231,15 @@ impl Theme {
                     changed = true;
                 }
             }
+            if !cfg_colors.contains_key("selection.inactive.background")
+                && !cfg_colors.contains_key("color.selection.inactive.background")
+            {
+                let inactive = with_alpha(c, 0.24);
+                if self.colors.selection_inactive_background != inactive {
+                    self.colors.selection_inactive_background = inactive;
+                    changed = true;
+                }
+            }
         });
 
         macro_rules! apply_baseline_color {
@@ -1243,9 +1263,22 @@ impl Theme {
         apply_baseline_color!("color.text.muted", self.colors.text_muted);
         apply_baseline_color!("color.text.disabled", self.colors.text_disabled);
         apply_baseline_color!("color.accent", self.colors.accent);
+        if !cfg_colors.contains_key("color.selection.background") {
+            apply_baseline_color!("selection.background", self.colors.selection_background);
+        }
+        if !cfg_colors.contains_key("color.selection.inactive.background") {
+            apply_baseline_color!(
+                "selection.inactive.background",
+                self.colors.selection_inactive_background
+            );
+        }
         apply_baseline_color!(
             "color.selection.background",
             self.colors.selection_background
+        );
+        apply_baseline_color!(
+            "color.selection.inactive.background",
+            self.colors.selection_inactive_background
         );
         apply_baseline_color!("color.hover.background", self.colors.hover_background);
         apply_baseline_color!("color.focus.ring", self.colors.focus_ring);
@@ -1440,6 +1473,10 @@ impl Theme {
         next_colors.insert(
             "color.selection.background".to_string(),
             self.colors.selection_background,
+        );
+        next_colors.insert(
+            "color.selection.inactive.background".to_string(),
+            self.colors.selection_inactive_background,
         );
         next_colors.insert(
             "color.hover.background".to_string(),
@@ -1887,6 +1924,10 @@ fn default_theme() -> &'static Theme {
             selection_background: parse_default_theme_hex_color(
                 "selection_background",
                 "#3D8BFF66",
+            ),
+            selection_inactive_background: parse_default_theme_hex_color(
+                "selection_inactive_background",
+                "#3D8BFF3D",
             ),
             hover_background: parse_default_theme_hex_color("hover_background", "#363C46"),
             focus_ring: parse_default_theme_hex_color("focus_ring", "#3D8BFFCC"),

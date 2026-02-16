@@ -21,11 +21,13 @@ fn tanstack_v8_memo_rebuild_each_frame_ungrouped_row_model_order_cache_is_reused
         node(3, vec![]),
     ];
 
-    let mut state = TableState::default();
-    state.expanding = [RowKey(1)].into_iter().collect();
-    state.pagination = PaginationState {
-        page_index: 0,
-        page_size: 1,
+    let state = TableState {
+        expanding: [RowKey(1)].into_iter().collect(),
+        pagination: PaginationState {
+            page_index: 0,
+            page_size: 1,
+        },
+        ..Default::default()
     };
 
     let mut cache = TanStackUngroupedRowModelOrderCache::default();

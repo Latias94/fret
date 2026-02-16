@@ -3,20 +3,15 @@
 //! This is intentionally small and `u64`-focused for now. The UI layer can format `u64` results
 //! (e.g. currency/units) as needed.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Aggregation {
+    #[default]
     None,
     Count,
     SumU64,
     MinU64,
     MaxU64,
     MeanU64,
-}
-
-impl Default for Aggregation {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 pub fn aggregate_u64(

@@ -53,19 +53,10 @@ pub struct RingScaleGizmoState {
     drag_origin: Vec3,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RingScaleGizmoPlugin {
     pub config: RingScaleGizmoConfig,
     pub state: RingScaleGizmoState,
-}
-
-impl Default for RingScaleGizmoPlugin {
-    fn default() -> Self {
-        Self {
-            config: RingScaleGizmoConfig::default(),
-            state: RingScaleGizmoState::default(),
-        }
-    }
 }
 
 impl RingScaleGizmoPlugin {
@@ -123,15 +114,14 @@ impl RingScaleGizmoPlugin {
 
     fn snap_factor(&self, input: &crate::GizmoInput, factor: f32) -> f32 {
         let mut factor = factor.max(0.01);
-        if input.snap {
-            if let Some(step) = self
+        if input.snap
+            && let Some(step) = self
                 .config
                 .scale_snap_step
                 .filter(|s| s.is_finite() && *s > 0.0)
-            {
-                factor = 1.0 + ((factor - 1.0) / step).round() * step;
-                factor = factor.max(0.01);
-            }
+        {
+            factor = 1.0 + ((factor - 1.0) / step).round() * step;
+            factor = factor.max(0.01);
         }
         factor
     }
@@ -197,7 +187,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
             self.config.color
         };
 
-        let segs = self.config.segments.max(3).min(256);
+        let segs = self.config.segments.clamp(3, 256);
         let mut out = GizmoDrawList3d::default();
         let mut prev = origin + u * r_world;
         for i in 1..=segs {
@@ -253,7 +243,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
             return;
         }
 
-        let segs = self.config.segments.max(3).min(256);
+        let segs = self.config.segments.clamp(3, 256);
         let handle = Self::ring_handle();
         let radius = self.config.pick_radius_px.max(0.5);
 
@@ -299,10 +289,7 @@ impl GizmoPlugin for RingScaleGizmoPlugin {
             GizmoPhase::Begin => Self::active_origin(active_target, targets),
             _ => self.state.drag_origin,
         };
-        let Some(p0) = project_point(ctx.view_projection, ctx.viewport, origin, ctx.depth_range)
-        else {
-            return None;
-        };
+        let p0 = project_point(ctx.view_projection, ctx.viewport, origin, ctx.depth_range)?;
 
         match phase {
             GizmoPhase::Begin => {
