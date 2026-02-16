@@ -357,11 +357,12 @@ fn should_suspend_pointer_gating_for_capture(
     // open. If another layer is currently capturing the pointer (viewport drags, resizers, etc.),
     // enabling occlusion can change routing semantics in surprising ways.
     //
-    // `consume_outside_pointer_events` only affects "outside press" dispatch (and suppresses
-    // underlay hit-test dispatch on outside press), which is safe to keep enabled while another
-    // layer is capturing the pointer.
-    let _ = consume_outside_pointer_events;
-    open && capture_conflicts_with_layer && disable_outside_pointer_events
+    // `consume_outside_pointer_events` affects "outside press" dispatch and can suppress underlay
+    // hit-test dispatch on pointer down, which is also surprising while another layer owns
+    // capture. Prefer to keep the overlay visible but temporarily suspend pointer gating and
+    // hit-testing until capture is released.
+    open && capture_conflicts_with_layer
+        && (disable_outside_pointer_events || consume_outside_pointer_events)
 }
 
 struct OverlayFocusHost<'a, H: UiHost> {

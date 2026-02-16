@@ -357,11 +357,6 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
 
     out.insert("primary".to_string(), colors.accent);
     out.insert("primary-foreground".to_string(), colors.text_primary);
-    // shadcn recipe convenience: `hover:bg-primary/90`.
-    out.insert(
-        "primary.hover.background".to_string(),
-        with_alpha(colors.accent, 0.9),
-    );
 
     out.insert("secondary".to_string(), colors.panel_background);
     out.insert("secondary-foreground".to_string(), colors.text_primary);
