@@ -166,12 +166,14 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - Evidence: `crates/fret-ui/src/declarative/tests/semantics.rs`
 - [x] Wire `TextInputRegionProps.ime_cursor_area` from the editor caret geometry (data-only):
   - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs`
-- [ ] Add a regression gate for `ime_cursor_area` correctness and stability:
+- [x] Add a regression gate for `ime_cursor_area` correctness and stability:
   - It must match the caret rect for the active selection under:
     - preedit injection (including selection-replacing composition),
     - wrapped + code-wrap-policy display rows,
     - surrogate pairs / mixed scripts (UTF-8 ↔ UTF-16 clamps),
     - stale-geometry invalidation paths (font stack changes, wrap width changes).
+  - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`ime_cursor_area_matches_caret_rect_for_selection_under_preedit_and_wrap`)
 - [x] Add ecosystem-owned bounds/hit-test support for `TextInputRegion` (not `fret-ui` mechanism):
   - `BoundsForRange` / `CharacterIndexForPoint` via cached row geometry + fallbacks.
 - [x] Add ecosystem-owned replace support for platform text input (not `fret-ui` mechanism):

@@ -1011,6 +1011,43 @@ fn caret_rect_offsets_for_preedit_cursor() {
 }
 
 #[test]
+fn ime_cursor_area_matches_caret_rect_for_selection_under_preedit_and_wrap() {
+    let handle = CodeEditorHandle::new("a馃榾bcd");
+    handle.set_soft_wrap_cols(Some(2));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: "a馃榾".len(),
+            focus: "a馃榾".len(),
+        };
+        st.preedit = Some(PreeditState {
+            text: "XY".to_string(),
+            cursor: Some((1, 1)),
+        });
+    }
+
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(120.0)),
+    );
+
+    let mut st = handle.state.borrow_mut();
+    let expected =
+        caret_rect_for_selection(&mut st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
+    let actual =
+        ime_cursor_area_for_text_input_region(&mut st, Px(20.0), Px(10.0), bounds, &scroll)
+            .expect("ime cursor area");
+    assert_eq!(actual, expected);
+}
+
+#[test]
 fn platform_marked_range_utf16_maps_to_preedit_cursor_bytes() {
     let text = "a😀b";
     let base = 10u32;

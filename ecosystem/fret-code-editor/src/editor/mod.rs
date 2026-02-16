@@ -1623,13 +1623,8 @@ impl CodeEditor {
 
                 let cell_w = cell_w.get();
                 let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                let ime_cursor_area = geom::caret_rect_for_selection(
-                    &mut st,
-                    row_h,
-                    cell_w,
-                    cx.bounds,
-                    &scroll_handle,
-                );
+                let ime_cursor_area =
+                    ime_cursor_area_for_text_input_region(&mut st, row_h, cell_w, cx.bounds, &scroll_handle);
                 (
                     content_len,
                     boundary_override,
@@ -2717,4 +2712,14 @@ impl CodeEditor {
             })
         })
     }
+}
+
+fn ime_cursor_area_for_text_input_region(
+    st: &mut CodeEditorState,
+    row_h: Px,
+    cell_w: Px,
+    bounds: Rect,
+    scroll_handle: &fret_ui::scroll::ScrollHandle,
+) -> Option<fret_core::Rect> {
+    geom::caret_rect_for_selection(st, row_h, cell_w, bounds, scroll_handle)
 }
