@@ -99,14 +99,13 @@ possible, but must not introduce unbounded state surfaces.
 
 ## Evidence / implementation anchors
 
-Planned anchors (to be filled as work lands):
+Anchors:
 
-- Contract types: `crates/fret-core/src/vector_path.rs`
-- Renderer path prep: `crates/fret-render-wgpu/src/renderer/path.rs`
-- Conformance: `crates/fret-render-wgpu/tests/` (new GPU readback test)
+- Contract types: `crates/fret-core/src/vector_path.rs` (`StrokeStyleV2`, `StrokeJoinV1`, `StrokeCapV1`, `PathStyle::StrokeV2`)
+- Renderer path prep + cache keys: `crates/fret-render-wgpu/src/renderer/path.rs` (`mix_path_style`, `build_dashed_lyon_path`, `tessellate_path_commands`, `metrics_from_path_commands`)
+- Conformance: `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs` (GPU readback: join/cap/dash across scale factors)
 
 ## Related
 
 - ADR 0271: `docs/adr/0271-stroke-rrect-and-dashed-borders-v1.md` (dash model)
 - Workstream: `docs/workstreams/path-stroke-style-v2.md`
-

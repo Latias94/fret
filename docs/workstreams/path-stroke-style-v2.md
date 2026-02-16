@@ -1,6 +1,6 @@
 ---
 title: Path Stroke Style v2 (Join/Cap/Miter + Dash) — Workstream
-status: draft
+status: active
 date: 2026-02-16
 scope: fret-core vector paths, tessellation/cache keys, fret-render-wgpu path pipeline, portability + conformance
 ---
@@ -50,6 +50,13 @@ layers tend to approximate via many quads or per-widget hacks, which is:
    - allow existing `PathStyle::Stroke(width-only)` users to keep working.
 4. Leave at least one hard regression gate:
    - GPU readback conformance test(s) for join/cap/dash stability across scale factors.
+
+## Current status
+
+- Contract + ADR landed (v2 types are available in `fret-core`).
+- Default renderer (`fret-render-wgpu`) supports v2 join/cap/miter/dash via lyon tessellation and
+  deterministic dash segmentation.
+- GPU readback conformance covers join/cap/dash properties across multiple scale factors.
 
 ## Non-goals (v2)
 

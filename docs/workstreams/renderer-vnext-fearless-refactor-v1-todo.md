@@ -204,12 +204,13 @@ milestones) when implementation begins.
 - [ ] REN-VNEXT-sem-010 Path fill paint surface: allow `SceneOp::Path` to accept `Paint` (gradients/materials).
   - Current: `SceneOp::Path` is solid-only (`color: Color`).
   - Risk: binding surface + key space growth; needs bounded, capability-gated fallbacks (wasm/mobile).
-- [ ] REN-VNEXT-sem-020 General path stroke: introduce a `SceneOp::StrokePath` (or equivalent) with bounded stroke style.
-  - Current: only `StrokeRRect` exists; no stroke for arbitrary prepared paths.
-  - Tracking: `docs/workstreams/path-stroke-style-v2.md` (v2 join/cap/miter/dash contract + renderer support).
-- [ ] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter, dash, and constant-px stroke width semantics.
-  - Current: `StrokeStyleV1` only supports dash.
-  - Tracking: `docs/workstreams/path-stroke-style-v2.md` (vector path stroke style v2; constant-px under transforms is likely deferred).
+- [x] REN-VNEXT-sem-020 General path stroke: introduce a “stroke arbitrary vector paths” surface with bounded stroke style.
+  - Landed via: `PathStyle::StrokeV2(StrokeStyleV2)` for vector path preparation + `SceneOp::Path` rendering.
+  - Evidence: `docs/workstreams/path-stroke-style-v2.md`, `crates/fret-core/src/vector_path.rs`.
+- [~] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter + dash semantics (and constant-px stroke width semantics as an explicit follow-up).
+  - Landed: join/cap/miter + dash for vector path strokes (deterministic, scale-aware).
+  - Deferred: constant-px stroke width under non-uniform transforms (requires a transform-aware contract).
+  - Tracking: `docs/workstreams/path-stroke-style-v2.md`.
 - [ ] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient` (or a minimal equivalent).
   - Current: only linear + radial gradients exist.
 - [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
@@ -224,9 +225,9 @@ milestones) when implementation begins.
 ## Always-run guardrails (before/after each milestone)
 
 - [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-  - Last run: 2026-02-15, commit `c4f08adb`.
+  - Last run: 2026-02-16, commit `246030f3`.
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
-  - Status: satisfied through M5 (sampling hints conformance gate landed).
+  - Status: satisfied through M5 (sampling hints gate) and stroke v2 (join/cap/dash conformance gate landed).
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
   - Last capture: 2026-02-15, commit `c4f08adb`.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).

@@ -1,6 +1,6 @@
 ---
 title: Path Stroke Style v2 — Milestones
-status: draft
+status: active
 date: 2026-02-16
 scope: vector path stroke semantics v2
 ---
@@ -38,7 +38,7 @@ Acceptance criteria:
   - sanitize rules,
   - deterministic degradations.
 
-Status: In progress.
+Status: Completed.
 
 ### M1 — Renderer implementation
 
@@ -48,7 +48,7 @@ Acceptance criteria:
 - dash pattern is implemented deterministically (dash/gap/phase, scale-aware).
 - no correctness regression in existing path drawing (fill + v1 stroke paths).
 
-Status: In progress (join/cap/miter mapped; dash segmentation pending).
+Status: Completed.
 
 ### M2 — Conformance gate
 
@@ -59,7 +59,7 @@ Acceptance criteria:
   - dash periodicity and phase anchoring,
   - stability across scale factors.
 
-Status: In progress (join coverage gate landed; cap/dash follow-ups pending).
+Status: Completed.
 
 ### M3 — Adoption (optional)
 

@@ -26,13 +26,15 @@ renderer conformance tests for correctness-sensitive semantics.
   - Add `PathStyle::StrokeV2(StrokeStyleV2)` while keeping `PathStyle::Stroke(StrokeStyle { width })` supported.
   - Evidence: updated types in `crates/fret-core/src/vector_path.rs` + updated renderer path cache key.
 
-- [ ] PSSV2-contract-020 Define deterministic dash semantics for vector path strokes:
+- [x] PSSV2-contract-020 Define deterministic dash semantics for vector path strokes:
   - Reuse `DashPatternV1` semantics (dash/gap/phase; logical px; no fitting).
-  - Confirm whether to reuse the exact type or introduce a shared core type.
+  - Reuse the exact `DashPatternV1` type (shared across stroke-like primitives).
+  - Evidence: `crates/fret-core/src/vector_path.rs` (`StrokeStyleV2.dash: Option<DashPatternV1>`), `docs/adr/0277-path-stroke-style-v2.md` (“Dash pattern”).
 
-- [ ] PSSV2-contract-030 Define transform semantics explicitly:
-  - Document non-uniform transform deformation as expected/deterministic.
-  - Decide whether any “constant px width” variant is in-scope (likely deferred).
+- [x] PSSV2-contract-030 Define transform semantics explicitly:
+  - Non-uniform transform deformation is expected and must be deterministic (no hidden backend “corrections”).
+  - “Constant pixel width” is out-of-scope for v2 (explicitly deferred).
+  - Evidence: `docs/adr/0277-path-stroke-style-v2.md` (“Transforms”).
 
 - [x] PSSV2-adr-040 Draft an ADR that locks v2 stroke semantics and fallback policy:
   - join/cap/miter/dash rules
@@ -45,7 +47,7 @@ renderer conformance tests for correctness-sensitive semantics.
 - [x] PSSV2-core-100 Extend path cache key mixing to include v2 style fields:
   - join/cap/miter limit/dash
   - ensure stable hashing and no float NaN divergence (sanitize before hashing)
-  - Note: until dash segmentation is implemented, the default renderer intentionally does not key on dash fields (dash deterministically degrades to solid).
+  - Note: dash fields are part of the cache key once dash segmentation is implemented (required for determinism).
   - Evidence: `crates/fret-render-wgpu/src/renderer/path.rs` (`mix_path_style`, `path_cache_key`)
 
 - [ ] PSSV2-core-110 Update any callsites that want v2 strokes (keep v1 working):
@@ -53,15 +55,15 @@ renderer conformance tests for correctness-sensitive semantics.
 
 ## M2 — Renderer implementation (wgpu default)
 
-- [~] PSSV2-render-200 Implement v2 stroke tessellation via lyon:
-  - map join/cap/miter to lyon `StrokeOptions`
-  - implement dash by segmenting the path pre-tessellation (bounded, deterministic)
-  - Evidence: `crates/fret-render-wgpu/src/renderer/path.rs`
+ - [x] PSSV2-render-200 Implement v2 stroke tessellation via lyon:
+   - map join/cap/miter to lyon `StrokeOptions`
+   - implement dash by segmenting the path pre-tessellation (bounded, deterministic)
+   - Evidence: `crates/fret-render-wgpu/src/renderer/path.rs` (`build_dashed_lyon_path`, `tessellate_path_commands`)
 
-- [x] PSSV2-render-210 Add a conformance test (GPU readback) for:
-  - join rendering stability across scale factors (miter vs bevel corner coverage)
-  - Follow-up: add cap coverage + dashed stroke periodicity once dash segmentation is implemented.
-  - Evidence: `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`
+ - [x] PSSV2-render-210 Add a conformance test (GPU readback) for:
+   - join rendering stability across scale factors (miter vs bevel corner coverage)
+   - cap coverage and dashed stroke periodicity / phase anchoring
+   - Evidence: `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`
 
 - [ ] PSSV2-render-220 Add a “no perf cliff” check:
   - ensure v2 fields are zero-cost when not used (no extra allocations on v1 path)
