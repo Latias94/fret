@@ -26,14 +26,15 @@ Design note:
 
 ## A. Onboarding Ladder (docs-first)
 
-- [ ] ONB-docs-001 Add a “First hour” onboarding doc (native-first).
+- [x] ONB-docs-001 Add a “First hour” onboarding doc (native-first).
   - Must include: dependencies, minimal MVU, keyed lists, invalidation cheat sheet.
   - Evidence anchors:
     - `README.md` (quick start)
+    - `docs/first-hour.md`
     - `docs/examples/todo-app-golden-path.md`
     - `docs/ui-ergonomics-and-interop.md` (interop tiering)
 
-- [ ] ONB-docs-002 Update `docs/examples/todo-app-golden-path.md` to explicitly position:
+- [x] ONB-docs-002 Update `docs/examples/todo-app-golden-path.md` to explicitly position:
   - “simple-todo” as the Step 1 baseline (Model + MVU),
   - “todo” as Step 2/3 (selector + query).
 
@@ -55,7 +56,7 @@ Design note:
 
 ## B. Templates (fretboard scaffolds)
 
-- [ ] ONB-tpl-010 Add `simple-todo` template.
+- [x] ONB-tpl-010 Add `simple-todo` template.
   - Scope:
     - `Model<T>` + MVU typed messages
     - shadcn components
@@ -101,7 +102,7 @@ Design note:
   - Acceptance:
     - `simple-todo` template can be authored without `.into_element(cx)` for common components.
 
-- [ ] ONB-auth-024 Add an iced-like `children![...]` macro for heterogeneous child lists.
+- [x] ONB-auth-024 Add an iced-like `children![...]` macro for heterogeneous child lists.
   - Goal: remove repetitive `.into_element(cx)` calls without redesigning all constructors.
   - Reference:
     - iced `row!/column!`: `repo-ref/iced/widget/src/helpers.rs`
@@ -115,22 +116,25 @@ Design note:
 
 ## D. Interop (Tier A) — runnable demo + cookbook
 
-- [ ] ONB-interop-030 Add a minimal runnable “embedded viewport” demo.
+- [x] ONB-interop-030 Add a minimal runnable “embedded viewport” demo.
   - Must show:
     - offscreen target allocation + resize
     - rendering into target
     - embedding as a panel
     - input forwarding + visible feedback
   - Evidence:
+    - `apps/fret-examples/src/embedded_viewport_demo.rs`
+    - `apps/fret-demo/src/bin/embedded_viewport_demo.rs`
     - `ecosystem/fret/src/interop/embedded_viewport.rs`
 
-- [ ] ONB-interop-031 Add a short interop cookbook doc.
+- [x] ONB-interop-031 Add a short interop cookbook doc.
   - Must include:
     - “Do this” (Tier A)
     - “Don’t do this” (same-tree mixing pitfalls)
     - pointers to diagnostics tooling
   - Evidence:
     - `docs/ui-ergonomics-and-interop.md`
+    - `docs/interop-tier-a-embedded-viewport.md`
 
 - [ ] ONB-interop-032 Add at least one scripted repro gate for the interop demo.
   - Where:
