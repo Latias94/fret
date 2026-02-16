@@ -195,6 +195,9 @@ Design note:
     - patch-only variants (no `UiIntoElement`) for “sub-surfaces” that should not render directly.
   - Evidence (internal precedent):
     - `ecosystem/fret-ui-shadcn/src/ui_ext/support.rs`
+  - Evidence (in-tree external-style example):
+    - `ecosystem/fret-ui-ai/src/elements/message.rs`
+    - `docs/component-authoring-contracts.md`
 
 - [ ] ONB-macro-055 Decide the “IntoElement-like” adapter strategy for third-party components.
   - Preferred:
