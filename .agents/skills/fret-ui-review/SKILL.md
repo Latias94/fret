@@ -1,6 +1,6 @@
 ---
 name: fret-ui-review
-description: "Review Fret app/UI code for framework-aligned UI/UX correctness: tokens, focus-visible, overlays, commands gating, `test_id` stability, and regression gates. Use when asked to review a Fret UI, polish UX, or audit for common pitfalls."
+description: "This skill should be used when the user asks to \"review a Fret UI\", \"polish UX\", \"audit focus/overlays\", or \"check token drift and `test_id` stability\". Provides a framework-aligned audit workflow (tokens, focus-visible, overlays, commands gating) with recommended regression gates and evidence anchors."
 ---
 
 # Fret UI review (framework-aligned audit)

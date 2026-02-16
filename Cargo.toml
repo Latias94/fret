@@ -24,7 +24,7 @@ documentation = "https://docs.rs/fret"
 [workspace.dependencies]
 anyhow = "1"
 bytemuck = { version = "1", features = ["derive"] }
-accesskit = "0.22"
+accesskit = "0.24.0"
 cocoa = "0.26"
 objc = "0.2"
 pollster = "0.4"
