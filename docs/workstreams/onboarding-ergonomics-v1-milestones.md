@@ -107,6 +107,10 @@ Acceptance:
 - Demo shows visible feedback from forwarded input (e.g. click counter + last event text).
 - At least one scripted repro exists (screenshot / trace) so regressions are reviewable.
 
+Evidence (scripted repro):
+
+- `tools/diag-scripts/embedded-viewport-demo-input-forwarding.json`
+
 ---
 
 ## Milestone 4 (M4): Third-party integration helpers (stable-ish, ecosystem-only)

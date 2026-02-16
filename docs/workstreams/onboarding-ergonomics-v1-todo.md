@@ -158,11 +158,15 @@ Design note:
     - `docs/ui-ergonomics-and-interop.md`
     - `docs/interop-tier-a-embedded-viewport.md`
 
-- [ ] ONB-interop-032 Add at least one scripted repro gate for the interop demo.
+- [x] ONB-interop-032 Add at least one scripted repro gate for the interop demo.
   - Where:
-    - `tools/diag-scripts/` (exact filename TBD)
+    - `tools/diag-scripts/`
   - Output:
     - screenshot bundle or deterministic input trace
+  - Evidence:
+    - `tools/diag-scripts/embedded-viewport-demo-input-forwarding.json`
+  - Run:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/embedded-viewport-demo-input-forwarding.json --check-viewport-input-min 1 --launch -- cargo run -p fret-demo --bin embedded_viewport_demo`
 
 ---
 
