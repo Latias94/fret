@@ -7444,6 +7444,235 @@ mod tests {
     }
 
     #[test]
+    fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture() {
+        // Lock that OpenType feature overrides can affect layout decisions under `TextWrap::Word`,
+        // not just the shaped glyph IDs. This protects against regressions where features are
+        // applied for shaping but ignored by line breaking / wrapping codepaths.
+        const INTER_ROMAN: &[u8] = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../fret-fonts/assets/Inter-roman.ttf"
+        ));
+
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+        let _ = text.parley_shaper.set_common_fallback_stack_suffix(
+            text.fallback_policy.common_fallback_stack_suffix.clone(),
+        );
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
+        let added = text.add_fonts([INTER_ROMAN.to_vec()]);
+        assert!(added > 0, "expected Inter fixture font to load");
+
+        let family = text
+            .all_font_names()
+            .into_iter()
+            .find(|n| {
+                let lower = n.to_ascii_lowercase();
+                lower == "inter" || lower.contains("inter ")
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "expected an Inter family name after loading the fixture font (names_head={:?})",
+                    text.all_font_names().into_iter().take(8).collect::<Vec<_>>()
+                )
+            });
+
+        let base_style = TextStyle {
+            font: fret_core::FontId::family(family.clone()),
+            size: Px(32.0),
+            weight: FontWeight(400),
+            ..Default::default()
+        };
+
+        let shaping_off = TextShapingStyle::default().with_feature("calt", 0);
+        let shaping_on = TextShapingStyle::default().with_feature("calt", 1);
+
+        let token_candidates = ["->", "=>", "-->", "<=>", "==>", "--->", "<==>"];
+
+        let mut chosen: Option<(&'static str, Px)> = None;
+        let mut debug: Vec<String> = Vec::new();
+
+        for token in token_candidates {
+            // Build "token " repeated so word wrap breakpoints are at deterministic whitespace.
+            let token_with_space = format!("{token} ");
+            let mut content = String::new();
+            for _ in 0..32 {
+                content.push_str(&token_with_space);
+            }
+
+            let rich = |s: &str, shaping: TextShapingStyle| {
+                fret_core::AttributedText::new(
+                    Arc::<str>::from(s),
+                    Arc::<[TextSpan]>::from(vec![TextSpan {
+                        len: s.len(),
+                        shaping,
+                        paint: Default::default(),
+                    }]),
+                )
+            };
+
+            let single_line = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            };
+
+            let (blob_off, _) = text.prepare_attributed(
+                &rich(&content, shaping_off.clone()),
+                &base_style,
+                single_line,
+            );
+            let (blob_on, _) = text.prepare_attributed(
+                &rich(&content, shaping_on.clone()),
+                &base_style,
+                single_line,
+            );
+
+            // Find a breakpoint width that allows N tokens under `calt=1` but only N-1 under
+            // `calt=0`, then gate that wrapping produces different first-line end indices.
+            let token_len = token_with_space.len();
+            for n in 2..24usize {
+                let idx = (token_len * n).min(content.len());
+                let x_off = text
+                    .caret_x(blob_off, idx)
+                    .expect("caret_x for feature-off candidate");
+                let x_on = text
+                    .caret_x(blob_on, idx)
+                    .expect("caret_x for feature-on candidate");
+                if (x_off.0 - x_on.0).abs() < 0.5 {
+                    continue;
+                }
+
+                let next_idx = (token_len * (n + 1)).min(content.len());
+                let x_off_next = text
+                    .caret_x(blob_off, next_idx)
+                    .expect("caret_x for feature-off candidate (next)");
+                let x_on_next = text
+                    .caret_x(blob_on, next_idx)
+                    .expect("caret_x for feature-on candidate (next)");
+
+                // Pick a width that fits (n+1) tokens under calt=on but not under calt=off.
+                if x_on_next.0 + 0.5 < x_off_next.0 {
+                    let w = Px((x_on_next.0 + x_off_next.0) * 0.5);
+                    let wrapped_constraints = TextConstraints {
+                        max_width: Some(w),
+                        wrap: TextWrap::Word,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        scale_factor: 1.0,
+                    };
+
+                    let (wrap_off, _) = text.prepare_attributed(
+                        &rich(&content, shaping_off.clone()),
+                        &base_style,
+                        wrapped_constraints,
+                    );
+                    let (wrap_on, _) = text.prepare_attributed(
+                        &rich(&content, shaping_on.clone()),
+                        &base_style,
+                        wrapped_constraints,
+                    );
+
+                    let shape_off = text.blob(wrap_off).expect("wrapped blob off").shape.clone();
+                    let shape_on = text.blob(wrap_on).expect("wrapped blob on").shape.clone();
+
+                    let first_end_off = shape_off.lines.first().map(|l| l.end).unwrap_or(0);
+                    let first_end_on = shape_on.lines.first().map(|l| l.end).unwrap_or(0);
+                    let lines_off = shape_off.lines.len();
+                    let lines_on = shape_on.lines.len();
+
+                    debug.push(format!(
+                        "{token}: n={n} off={:.2} on={:.2} off_next={:.2} on_next={:.2} w={:.2} first_end_off={first_end_off} first_end_on={first_end_on} lines_off={lines_off} lines_on={lines_on}",
+                        x_off.0, x_on.0, x_off_next.0, x_on_next.0, w.0
+                    ));
+
+                    text.release(wrap_off);
+                    text.release(wrap_on);
+
+                    if first_end_off != first_end_on || lines_off != lines_on {
+                        chosen = Some((token, w));
+                        break;
+                    }
+                }
+            }
+
+            text.release(blob_off);
+            text.release(blob_on);
+
+            if chosen.is_some() {
+                break;
+            }
+        }
+
+        let (token, max_width) = chosen.unwrap_or_else(|| {
+            panic!(
+                "expected at least one Inter `calt` token to produce a wrap width that changes breakpoints; debug={debug:?}"
+            )
+        });
+
+        let token_with_space = format!("{token} ");
+        let mut content = String::new();
+        for _ in 0..32 {
+            content.push_str(&token_with_space);
+        }
+
+        let rich = |s: &str, shaping: TextShapingStyle| {
+            fret_core::AttributedText::new(
+                Arc::<str>::from(s),
+                Arc::<[TextSpan]>::from(vec![TextSpan {
+                    len: s.len(),
+                    shaping,
+                    paint: Default::default(),
+                }]),
+            )
+        };
+
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let (blob_off, _) = text.prepare_attributed(
+            &rich(&content, shaping_off),
+            &base_style,
+            wrapped_constraints,
+        );
+        let (blob_on, _) = text.prepare_attributed(
+            &rich(&content, shaping_on),
+            &base_style,
+            wrapped_constraints,
+        );
+
+        let shape_off = text.blob(blob_off).expect("blob off").shape.clone();
+        let shape_on = text.blob(blob_on).expect("blob on").shape.clone();
+
+        let first_end_off = shape_off.lines.first().map(|l| l.end).unwrap_or(0);
+        let first_end_on = shape_on.lines.first().map(|l| l.end).unwrap_or(0);
+        let lines_off = shape_off.lines.len();
+        let lines_on = shape_on.lines.len();
+
+        assert_ne!(
+            (first_end_off, lines_off),
+            (first_end_on, lines_on),
+            "expected `calt` toggles to change `TextWrap::Word` wrap output for token={token:?} max_width={max_width:?}; debug={debug:?}"
+        );
+
+        text.release(blob_off);
+        text.release(blob_on);
+    }
+
+    #[test]
     fn parley_feature_override_calt_0_disables_inter_arrow_ligature() {
         // Sanity check (upstream dependency behavior): Inter contains a `calt` ligature mapping
         // for "->" -> "arrowright". Ensure `calt=0` disables it.
