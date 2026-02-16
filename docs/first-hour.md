@@ -80,11 +80,13 @@ Key points:
 - Convert into `AnyElement` at the boundary via `.into_element(cx)`.
 - If you have a patchable component type (implements `UiPatchTarget`), you can opt into the same fluent
   authoring style with `.ui()`.
+- Most `ui::*` layout constructors accept children as `UiIntoElement`, so you can pass `UiBuilder` values
+  directly (use `ui::children![cx; ...]` for heterogeneous lists).
 
 Minimal pattern:
 
 ```rust
-let header = ui::h_flex(cx, |cx| ui::children![cx; ui::text("Hello")])
+let header = ui::h_flex(cx, |cx| [ui::text(cx, "Hello")])
     .gap(Space::N2)
     .px_3()
     .into_element(cx);

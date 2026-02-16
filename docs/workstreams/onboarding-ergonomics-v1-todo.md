@@ -102,7 +102,7 @@ Design note:
   - Partial evidence (started):
     - `apps/fret-ui-gallery/src/ui/pages/alert.rs` (migrated to `ui::children!`)
 
-- [ ] ONB-auth-023 Reduce call-site `.into_element(cx)` noise by teaching constructors to accept `UiIntoElement` children.
+- [x] ONB-auth-023 Reduce call-site `.into_element(cx)` noise by teaching constructors to accept `UiIntoElement` children.
   - Goal: move adapter verbosity to ecosystem boundaries (GPUI-like composition).
   - Proposed targets (ecosystem-only):
     - `ecosystem/fret-ui-kit/src/ui.rs` (`ui::h_flex`, `ui::v_flex`, `ui::container_build`, `ui::scroll_area_build`, ...)
@@ -110,6 +110,9 @@ Design note:
     - confirm a single component trait posture for third-party code (`UiIntoElement` and/or `RenderOnce`).
   - Acceptance:
     - `simple-todo` template can be authored without `.into_element(cx)` for common components.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/ui.rs` (layout constructors accept `UiIntoElement` children)
+    - `docs/first-hour.md`
 
 - [x] ONB-auth-025 Migrate `simple-todo` template to `ui::children!` + `.ui()` (reduce adapter noise).
   - Evidence:

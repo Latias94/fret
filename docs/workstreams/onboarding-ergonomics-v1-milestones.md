@@ -75,6 +75,7 @@ Deliverables:
 Evidence (current):
 
 - `ecosystem/fret-ui-kit/src/lib.rs` (`children!`)
+- `ecosystem/fret-ui-kit/src/ui.rs` (`ui::*` layout constructors accept `UiIntoElement` children)
 - `apps/fretboard/src/scaffold/templates.rs` (`simple-todo` template)
 
 Acceptance:
