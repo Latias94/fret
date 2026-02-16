@@ -2351,6 +2351,143 @@ fn set_code_wrap_policy_clears_row_geom_cache_when_wrapped() {
 }
 
 #[test]
+fn move_caret_vertical_uses_row_fold_map_for_inlay_insertions_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(3));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 3,
+            text: Arc::<str>::from("X"),
+        }],
+    );
+
+    let mut st = handle.state.borrow_mut();
+    assert_eq!(st.display_map.row_count(), 3);
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    // Prefer a stable target x so the vertical move hit-tests a specific caret stop.
+    st.caret_preferred_x = Some(Px(10.0));
+
+    // Seed geometry for the next row ("X") so the move path uses the geometry cache.
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 1, 64);
+    assert_eq!(
+        row_range,
+        st.display_map.display_row_byte_range(&st.buffer, 1),
+        "cached row text range must match the display map"
+    );
+    assert_eq!(row_text.as_ref(), "X");
+    assert!(
+        fold_map.is_some(),
+        "expected an insertion span for the inlay"
+    );
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        1,
+        (
+            RowGeom {
+                row_range: row_range.clone(),
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    input::move_caret_vertical(&mut st, 1, false, Px(8.0));
+    assert_eq!(
+        st.selection.caret(),
+        3,
+        "expected caret to snap to the inlay insertion point (before 'd')"
+    );
+}
+
+#[test]
+fn move_caret_vertical_uses_row_fold_map_for_fold_placeholders_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(2));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..5,
+            placeholder: Arc::<str>::from("."),
+        }],
+    );
+
+    let mut st = handle.state.borrow_mut();
+    assert_eq!(st.display_map.row_count(), 2);
+
+    // Seed geometry for the first wrapped row ("a.") so the vertical move path uses the cached
+    // caret stop mapping (which must respect fold placeholders).
+    let (row_range, row_text, fold_map, _preedit_range, _spans) =
+        paint::cached_row_text_with_range(&mut st, 0, 64);
+    assert_eq!(
+        row_range,
+        st.display_map.display_row_byte_range(&st.buffer, 0),
+        "cached row text range must match the display map"
+    );
+    assert_eq!(row_text.as_ref(), "a.");
+    assert!(fold_map.is_some());
+
+    // Start on the second wrapped row and move up. The requested x targets the placeholder in the
+    // first wrapped row, which must snap to the fold start in the base buffer.
+    st.selection = Selection {
+        anchor: 5,
+        focus: 5,
+    };
+    st.caret_preferred_x = Some(Px(10.0));
+
+    let caret_stops: Vec<(usize, Px)> = (0..=row_text.len())
+        .map(|idx| (idx, Px(idx as f32 * 10.0)))
+        .collect();
+    st.row_geom_cache.insert(
+        0,
+        (
+            RowGeom {
+                row_range: row_range.clone(),
+                key: row_geom_key_for_tests(&row_text),
+                caret_stops,
+                fold_map,
+                caret_rect_top: None,
+                caret_rect_height: None,
+                has_preedit: false,
+                preedit: None,
+            },
+            1,
+        ),
+    );
+
+    input::move_caret_vertical(&mut st, -1, false, Px(8.0));
+    assert_eq!(
+        st.selection.caret(),
+        1,
+        "expected caret to snap to the fold start when targeting the placeholder"
+    );
+}
+
+#[test]
 fn page_down_moves_by_viewport_rows_and_scrolls() {
     let handle = CodeEditorHandle::new("abcd\nefgh\nijkl\nmnop\nqrst\n");
     handle.set_soft_wrap_cols(Some(2));

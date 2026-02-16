@@ -544,6 +544,14 @@ impl DisplayMap {
             .end
             .saturating_sub(line_start)
             .max(row_start_in_line);
+        let row_is_empty = row_start_in_line == row_end_in_line;
+        let event_in_row = |byte: usize| {
+            if row_is_empty {
+                byte == row_start_in_line
+            } else {
+                byte >= row_start_in_line && byte < row_end_in_line
+            }
+        };
 
         let line_text_owned = buf.line_text(line).unwrap_or_default();
         let line_text = line_text_owned.as_str();
@@ -562,7 +570,7 @@ impl DisplayMap {
         for fold in folds.iter() {
             let start = fold.range.start.min(line_text.len());
             let end = fold.range.end.min(line_text.len()).max(start);
-            if start < row_start_in_line || start >= row_end_in_line {
+            if !event_in_row(start) {
                 continue;
             }
             let local_start = start.saturating_sub(row_start_in_line).min(base.len());
@@ -571,7 +579,7 @@ impl DisplayMap {
                 .saturating_sub(row_start_in_line)
                 .min(base.len())
                 .max(local_start);
-            if local_start >= local_end {
+            if local_start >= local_end && !row_is_empty {
                 continue;
             }
             row_folds.push(FoldSpan {
@@ -583,7 +591,7 @@ impl DisplayMap {
         let mut row_inlays: Vec<InlaySpan> = Vec::new();
         for inlay in inlays.iter() {
             let byte = inlay.byte.min(line_text.len());
-            if byte < row_start_in_line || byte >= row_end_in_line {
+            if !event_in_row(byte) {
                 continue;
             }
             let inside_fold = folds.iter().any(|f| {
@@ -2669,6 +2677,59 @@ mod display_map_tests {
         assert_eq!(
             map.byte_to_display_point(&buf, line0_end),
             DisplayPoint::new(2, 6)
+        );
+    }
+
+    #[test]
+    fn inline_preedit_replacement_roundtrips_under_wrap_and_code_wrap_policy() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "left->right->tail".to_string()).unwrap();
+
+        let folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        let policy =
+            code_wrap_policy::CodeWrapPolicy::preset(code_wrap_policy::CodeWrapPreset::Balanced);
+        let preedit = InlinePreedit {
+            anchor: "left->".len(),
+            replace_range: Some("left->".len().."left->right".len()),
+            text: Arc::<str>::from("X"),
+        };
+
+        let map = DisplayMap::new_with_decorations_and_preedit_and_code_wrap_policy(
+            &buf,
+            Some(6),
+            &folds,
+            &inlays,
+            Some(preedit),
+            Some(policy),
+        );
+
+        let mut rows: Vec<String> = Vec::new();
+        for row in 0..map.row_count() {
+            rows.push(
+                map.materialize_display_row_text(&buf, row)
+                    .text
+                    .as_ref()
+                    .to_string(),
+            );
+        }
+        assert_eq!(rows.join(""), "left->X->tail");
+        for w in rows.windows(2) {
+            assert!(
+                !(w[0].ends_with('-') && w[1].starts_with('>')),
+                "expected `->` to not be split across a wrap boundary: rows={rows:?}"
+            );
+        }
+
+        let start = "left->".len();
+        let inside_replaced = "left->ri".len();
+        let pt_start = map.byte_to_display_point(&buf, start);
+        assert_eq!(map.byte_to_display_point(&buf, inside_replaced), pt_start);
+        assert_eq!(map.display_point_to_byte(&buf, pt_start), start);
+        assert_eq!(
+            map.display_point_to_byte(&buf, DisplayPoint::new(pt_start.row, pt_start.col + 1)),
+            "left->right".len(),
+            "expected the composed replacement end to map to the end of the replaced range"
         );
     }
 }
