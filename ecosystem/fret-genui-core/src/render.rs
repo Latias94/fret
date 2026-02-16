@@ -117,9 +117,17 @@ pub trait ComponentResolver<H: UiHost> {
         key: &ElementKey,
         element: &ElementV1,
         props: &ResolvedProps,
-        children: Vec<AnyElement>,
+        children: Vec<RenderedChildV1>,
         on_event: &dyn Fn(&str) -> Option<OnActivate>,
     ) -> Result<AnyElement, Self::Error>;
+}
+
+#[derive(Debug, Clone)]
+pub struct RenderedChildV1 {
+    pub key: ElementKey,
+    pub component: String,
+    pub props: ResolvedProps,
+    pub rendered: AnyElement,
 }
 
 #[derive(Clone)]
@@ -250,7 +258,7 @@ pub fn render_spec<H: UiHost, R: ComponentResolver<H>>(
     let mut stack: Vec<ElementKey> = Vec::new();
     let mut roots = Vec::new();
 
-    let root_el = render_element_key(
+    let root_el = render_element_node(
         cx,
         spec,
         runtime,
@@ -264,7 +272,7 @@ pub fn render_spec<H: UiHost, R: ComponentResolver<H>>(
         &mut rendered_count,
         &mut stack,
     )?;
-    roots.push(root_el);
+    roots.push(root_el.rendered);
 
     if rendered_count > runtime.limits.max_elements {
         return Err(RenderError::LimitExceeded {
@@ -279,7 +287,7 @@ pub fn render_spec<H: UiHost, R: ComponentResolver<H>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
+fn render_element_node<H: UiHost, R: ComponentResolver<H>>(
     cx: &mut ElementContext<'_, H>,
     spec: &SpecV1,
     runtime: &GenUiRuntime,
@@ -292,7 +300,7 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
     depth: usize,
     rendered_count: &mut usize,
     stack: &mut Vec<ElementKey>,
-) -> Result<AnyElement, RenderError> {
+) -> Result<RenderedChildV1, RenderError> {
     if depth > runtime.limits.max_depth {
         return Err(RenderError::LimitExceeded { kind: "max_depth" });
     }
@@ -353,7 +361,7 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
             stack,
         )?;
 
-        let base = resolver
+        let rendered = resolver
             .render_element(cx, key, element, &props, children, &|ev| {
                 dispatcher.on_event(ev)
             })
@@ -366,10 +374,17 @@ fn render_element_key<H: UiHost, R: ComponentResolver<H>>(
         *rendered_count = rendered_count.saturating_add(1);
 
         // Presence semantics: always render subtree, but gate layout/paint/input when invisible.
-        Ok::<_, RenderError>(if visible {
-            base
+        let rendered = if visible {
+            rendered
         } else {
-            cx.interactivity_gate(false, false, |_cx| [base])
+            cx.interactivity_gate(false, false, |_cx| [rendered])
+        };
+
+        Ok::<_, RenderError>(RenderedChildV1 {
+            key: key.clone(),
+            component: element.ty.clone(),
+            props,
+            rendered,
         })
     })?;
 
@@ -390,7 +405,7 @@ fn render_children<H: UiHost, R: ComponentResolver<H>>(
     depth: usize,
     rendered_count: &mut usize,
     stack: &mut Vec<ElementKey>,
-) -> Result<Vec<AnyElement>, RenderError> {
+) -> Result<Vec<RenderedChildV1>, RenderError> {
     if let Some(repeat) = element.repeat.as_ref() {
         let Some(list) = crate::json_pointer::get_opt(state_snapshot, &repeat.state_path) else {
             return Ok(Vec::new());
@@ -401,7 +416,7 @@ fn render_children<H: UiHost, R: ComponentResolver<H>>(
             });
         };
 
-        let mut out: Vec<AnyElement> = Vec::new();
+        let mut out: Vec<RenderedChildV1> = Vec::new();
         for (index, item) in arr.iter().enumerate() {
             if index >= runtime.limits.max_repeat_items {
                 return Err(RenderError::LimitExceeded {
@@ -423,10 +438,10 @@ fn render_children<H: UiHost, R: ComponentResolver<H>>(
                 base_path: Some(base_path.as_ref()),
             };
 
-            let item_children: Vec<AnyElement> = cx.keyed(item_key, |cx| {
-                let mut built: Vec<AnyElement> = Vec::new();
+            let item_children: Vec<RenderedChildV1> = cx.keyed(item_key, |cx| {
+                let mut built: Vec<RenderedChildV1> = Vec::new();
                 for child_key in element.children.iter() {
-                    let el = render_element_key(
+                    let child = render_element_node(
                         cx,
                         spec,
                         runtime,
@@ -440,7 +455,7 @@ fn render_children<H: UiHost, R: ComponentResolver<H>>(
                         rendered_count,
                         stack,
                     )?;
-                    built.push(el);
+                    built.push(child);
                 }
                 Ok::<_, RenderError>(built)
             })?;
@@ -450,9 +465,9 @@ fn render_children<H: UiHost, R: ComponentResolver<H>>(
         return Ok(out);
     }
 
-    let mut out: Vec<AnyElement> = Vec::new();
+    let mut out: Vec<RenderedChildV1> = Vec::new();
     for child_key in element.children.iter() {
-        out.push(render_element_key(
+        out.push(render_element_node(
             cx,
             spec,
             runtime,
