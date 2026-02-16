@@ -41,8 +41,8 @@ Legend:
 | Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|---|
 | Select | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Per-section | `tools/diag-scripts/ui-gallery-select-*.json` (16) | Keeps existing diag `test_id`s for trigger/items. |
-| Combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-combobox-*.json` (10) | `apps/fret-ui-gallery/src/ui/pages/combobox/sections.rs` returns “pure content” (no nested cards). |
-| Date Picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json` | Keeps range-roving regression script compatible (role/name driven). |
+| Combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-combobox-*.json` (10) | `apps/fret-ui-gallery/src/ui/pages/combobox/sections.rs` returns “pure content” (no nested cards). |
+| Date Picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json` | Keeps range-roving regression script compatible (role/name driven). |
 | Field | `apps/fret-ui-gallery/src/ui/pages/field.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: convert to sections; keep `Field` examples grouped by recipe. |
 | Input | `apps/fret-ui-gallery/src/ui/pages/input.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-*.json` (2) | Candidate: split by size/disabled/invalid/password. |
 | Input Group | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-group-*.json` (1) | Candidate: sections per composition recipe. |
@@ -57,17 +57,17 @@ Legend:
 |---|---|---|---|---|---|---|---|
 | Alert Dialog | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-alert-dialog-*.json` (4) | Notes are a dedicated section; headings are nowrap+ellipsis by default. |
 | Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dialog-*.json` (3) | `docs-order-smoke` targets this page; `escape-focus-restore*` targets the Overlay page dialog widget. |
-| Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Keeps existing `test_id`s for demo + snap-points scenarios. |
-| Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json` (1) | Keeps existing `test_id`s for triggers and demo items. |
-| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
-| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (5) | Adds a page-level docs smoke; existing overlay scripts still gate right-click/keyboard paths. |
-| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-hover-card-docs-smoke.json` (1) | Overlay-level clamp gating lives in `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`. |
+| Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Keeps existing `test_id`s for demo + snap-points scenarios. |
+| Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json` (1) | Keeps existing `test_id`s for triggers and demo items. |
+| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
+| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (5) | Adds a page-level docs smoke; existing overlay scripts still gate right-click/keyboard paths. |
+| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-hover-card-docs-smoke.json` (1) | Overlay-level clamp gating lives in `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`. |
 
 ### Shadcn/navigation + misc
 
 | Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|---|
-| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Keeps existing section-title `test_id`s for single-line heading gates. |
+| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Keeps existing section-title `test_id`s for single-line heading gates. |
 | Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: state matrix sections. |
 | Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: single/multi + orientation. |
 | Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Examples Partial / API ❌ | Partial | Tab-only | None yet | Candidate: sections per token preset + truncation/wrap behavior. |

@@ -2830,6 +2830,21 @@ This page validates:
 - value model (`Model<Option<Arc<str>>>`)
 - open model (`Model<bool>`)
 - query model (`Model<String>`)
+
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx`
+- Base UI docs: https://base-ui.com/react/components/combobox
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::Combobox`, `ComboboxItem`
+
+Upstream API reference:
+
+- https://base-ui.com/react/components/combobox#api-reference
 "#;
 
 pub(crate) const USAGE_COMBOBOX: &str = r#"
@@ -2854,6 +2869,17 @@ This page validates:
 - selected date model (`Model<Option<time::Date>>`)
 - month model (`Model<CalendarMonth>`)
 - open model (`Model<bool>`)
+
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/date-picker.mdx`
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::DatePicker`
+- Uses `fret_ui_headless::calendar` models (`CalendarMonth`)
 "#;
 
 pub(crate) const USAGE_DATE_PICKER: &str = r#"
@@ -3215,6 +3241,22 @@ pub(crate) const DOC_TOOLTIP: &str = r#"
 ## Tooltip
 
 Tooltip is an overlay-driven component with hover/open-delay policies.
+
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/tooltip.mdx`
+- Radix docs: https://www.radix-ui.com/docs/primitives/components/tooltip
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::TooltipProvider`
+- `fret_ui_shadcn::Tooltip`, `TooltipContent`
+
+Upstream API reference:
+
+- https://www.radix-ui.com/docs/primitives/components/tooltip#api-reference
 "#;
 
 pub(crate) const USAGE_TOOLTIP: &str = r#"
@@ -3385,7 +3427,22 @@ let alert = shadcn::Alert::new(vec![
 pub(crate) const DOC_ALERT_DIALOG: &str = r#"
 ## Alert Dialog
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`
+- Radix docs: https://www.radix-ui.com/primitives/docs/components/alert-dialog
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::AlertDialog`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogFooter`
+- `fret_ui_shadcn::AlertDialogTitle`, `AlertDialogDescription`
+- `fret_ui_shadcn::AlertDialogCancel`, `AlertDialogAction`
+
+Upstream API reference:
+
+- https://www.radix-ui.com/primitives/docs/components/alert-dialog#api-reference
 "#;
 
 pub(crate) const USAGE_ALERT_DIALOG: &str = r#"
@@ -3409,7 +3466,15 @@ let ratio = shadcn::AspectRatio::new(16.0 / 9.0, vec![/* content */]).into_eleme
 pub(crate) const DOC_BREADCRUMB: &str = r#"
 ## Breadcrumb
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/breadcrumb.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx`
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::breadcrumb::*` (or `fret_ui_shadcn::Breadcrumb` recipes)
 "#;
 
 pub(crate) const USAGE_BREADCRUMB: &str = r#"
@@ -3514,7 +3579,21 @@ pub(crate) const USAGE_COLLAPSIBLE: &str = r#"
 pub(crate) const DOC_CONTEXT_MENU: &str = r#"
 ## Context Menu
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/context-menu.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/context-menu.mdx`
+- Radix docs: https://www.radix-ui.com/docs/primitives/components/context-menu
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::ContextMenu`
+- `fret_ui_shadcn::ContextMenuContent`, `ContextMenuItem`, `ContextMenuSub`, `ContextMenuSeparator`
+
+Upstream API reference:
+
+- https://www.radix-ui.com/docs/primitives/components/context-menu#api-reference
 "#;
 
 pub(crate) const USAGE_CONTEXT_MENU: &str = r#"
@@ -3547,7 +3626,20 @@ pub(crate) const USAGE_DIALOG: &str = r#"
 pub(crate) const DOC_DRAWER: &str = r#"
 ## Drawer
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/drawer.mdx`
+- Vaul docs: https://vaul.emilkowal.ski/getting-started
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::Drawer` (+ content/header/footer helpers)
+
+Notes:
+
+- Upstream shadcn Drawer is Vaul-based; there is no single Radix API reference page.
 "#;
 
 pub(crate) const USAGE_DRAWER: &str = r#"
@@ -3559,7 +3651,21 @@ pub(crate) const USAGE_DRAWER: &str = r#"
 pub(crate) const DOC_DROPDOWN_MENU: &str = r#"
 ## Dropdown Menu
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/dropdown-menu.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/dropdown-menu.mdx`
+- Radix docs: https://www.radix-ui.com/docs/primitives/components/dropdown-menu
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::DropdownMenu`
+- `fret_ui_shadcn::DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSub`, `DropdownMenuSeparator`
+
+Upstream API reference:
+
+- https://www.radix-ui.com/docs/primitives/components/dropdown-menu#api-reference
 "#;
 
 pub(crate) const USAGE_DROPDOWN_MENU: &str = r#"
@@ -3595,7 +3701,21 @@ pub(crate) const USAGE_FORM: &str = r#"
 pub(crate) const DOC_HOVER_CARD: &str = r#"
 ## Hover Card
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/hover-card.mdx`.
+Upstream reference:
+
+- `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx`
+- Radix docs: https://www.radix-ui.com/docs/primitives/components/hover-card
+
+## API Reference
+
+Fret surface (shadcn ecosystem):
+
+- `fret_ui_shadcn::HoverCard`
+- `fret_ui_shadcn::HoverCardContent`, `HoverCardTrigger`
+
+Upstream API reference:
+
+- https://www.radix-ui.com/docs/primitives/components/hover-card#api-reference
 "#;
 
 pub(crate) const USAGE_HOVER_CARD: &str = r#"
