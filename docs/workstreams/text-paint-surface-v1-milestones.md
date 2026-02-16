@@ -57,4 +57,4 @@ Acceptance criteria:
 
 - At least one consumer uses non-solid `Paint` on text to validate ergonomics.
 
-Status: Not started.
+Status: Landed (ui-gallery probe).

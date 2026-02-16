@@ -217,9 +217,11 @@ milestones) when implementation begins.
 - [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
 - [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
-  - Status (2026-02-16): work started and staged behind ADR 0279.
-    - Contract: `SceneOp::Text` now carries `paint: Paint` (bounded v1).
-    - Remaining closure: GPU readback conformance for text paint (gradient properties + scale-factor stability).
+  - Status (2026-02-16): v1 landed for painted text fills (solid + gradients), staged by ADR 0279.
+    - Landed (v1): `SceneOp::Text` carries `paint: Paint` with bounded, deterministic degradations.
+    - Landed (v1): GPU readback conformance gate for text gradient paint.
+    - Landed (adoption): ui-gallery probe uses `Paint::LinearGradient` for text.
+    - Deferred (v2+): text outline/stroke and text shadow as first-class contract surfaces.
   - Tracking: `docs/workstreams/text-paint-surface-v1.md` (purpose/TODO/milestones)
   - ADR: `docs/adr/0279-text-paint-surface-v1.md`
 - [ ] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` and/or image/pattern paints.

@@ -54,5 +54,6 @@ renderer conformance tests for correctness-sensitive semantics.
 
 ## M3 — Adoption (optional)
 
-- [ ] TPS-adopt-300 Wire one real consumer to use non-solid text paint:
+- [x] TPS-adopt-300 Wire one real consumer to use non-solid text paint:
   - pick a small demo surface (ui-gallery / editor diagnostics) to validate ergonomics.
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/selection_perf.rs` (gradient text label).

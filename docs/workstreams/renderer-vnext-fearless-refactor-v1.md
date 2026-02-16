@@ -11,9 +11,11 @@ Current status (as of 2026-02-16):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
 - Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
-- Text paint surface v1 started:
-  - ADR 0279 drafted (`SceneOp::Text` upgrades from `Color` to `Paint`).
-  - Implementation WIP in this worktree (next: GPU readback conformance).
+- Text paint surface v1 landed:
+  - ADR 0279 (`SceneOp::Text` upgrades from solid `Color` to `Paint`).
+  - Renderer implementation landed (solid + gradients; bounded batching via `paint_index`).
+  - GPU readback conformance gate landed (`crates/fret-render-wgpu/tests/text_paint_conformance.rs`).
+  - Adoption is tracked as optional in `docs/workstreams/text-paint-surface-v1.md` (M3).
 - A cheap headless perf gate exists and has a checked-in baseline:
   - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
