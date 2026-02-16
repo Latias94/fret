@@ -1439,6 +1439,22 @@ fn select_impl<H: UiHost>(
 
             if !overlay_present {
                 let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                // The item-aligned placement path reads last-known bounds for overlay-owned element
+                // IDs (viewport/listbox/selected item). If we keep those IDs around after the
+                // overlay unmounts, we may accidentally reuse stale, render-transformed bounds on
+                // the next open (e.g. after presence scale animations), leading to compounding
+                // shrink/drift across open/close cycles.
+                //
+                // Base UI recomputes placement inputs on every open; match that outcome by
+                // clearing overlay-owned element IDs when the overlay is no longer present.
+                state.viewport = None;
+                state.listbox = None;
+                state.content_panel = None;
+                state.width_probe = None;
+                state.selected_item = None;
+                state.selected_item_text = None;
+                state.alignment_item_pos = None;
+                state.alignment_item_has_leading_non_item = false;
                 state.pending_item_aligned_scroll_to_y = None;
                 state.last_item_aligned_scroll_to_y = None;
                 state.item_aligned_user_scrolled = false;
@@ -7906,6 +7922,122 @@ mod tests {
                 "expected non-zero viewport height after wheel (frame={i}); bounds={viewport_bounds:?}"
             );
         }
+    }
+
+    #[test]
+    fn select_item_aligned_overlay_does_not_shrink_across_open_close_cycles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(520.0), Px(280.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..60)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        for _ in 0..3 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node");
+        let viewport_before = ui.debug_node_bounds(viewport.id).expect("viewport bounds");
+        assert!(
+            viewport_before.size.height.0 > 1.0,
+            "expected non-zero viewport height before close; bounds={viewport_before:?}"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Wait for the presence animation to fully unmount the overlay.
+        let mut closed = false;
+        for _ in 0..120 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let has_listbox = snap.nodes.iter().any(|n| n.role == SemanticsRole::ListBox);
+            if !has_listbox {
+                closed = true;
+                break;
+            }
+        }
+        assert!(closed, "expected select overlay to unmount after closing");
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        for _ in 0..3 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node after reopen");
+        let viewport_after = ui
+            .debug_node_bounds(viewport.id)
+            .expect("viewport bounds after reopen");
+        assert!(
+            viewport_after.size.height.0 > 1.0,
+            "expected non-zero viewport height after reopen; bounds={viewport_after:?}"
+        );
+
+        let drift = (viewport_after.size.height.0 - viewport_before.size.height.0).abs();
+        assert!(
+            drift <= 1.0,
+            "expected viewport height to remain stable across close/reopen; drift={drift} before={viewport_before:?} after={viewport_after:?}"
+        );
     }
 
     #[test]
