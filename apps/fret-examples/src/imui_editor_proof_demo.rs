@@ -15,8 +15,8 @@ use fret_runtime::{
     WindowRole, WindowStyleRequest,
 };
 use fret_ui_editor::composites::{
-    InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyRow,
-    PropertyRowReset,
+    GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
+    InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset,
 };
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
@@ -172,6 +172,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let (editor_scl_x, editor_scl_y, editor_scl_z) = editor_demo_scale_models(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
+    let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
+    let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
 
     #[cfg(debug_assertions)]
     {
@@ -738,6 +740,77 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                             );
 
                             out.push(
+                                PropertyGroup::new("Gradient")
+                                    .options(fret_ui_editor::composites::PropertyGroupOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.gradient",
+                                        )),
+                                        header_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.gradient.header",
+                                        )),
+                                        content_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.gradient.content",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(
+                                        cx,
+                                        |_cx| None,
+                                        move |cx| {
+                                            let stops: Vec<GradientDemoStop> = cx
+                                                .watch_model(&editor_gradient_stops_model)
+                                                .paint()
+                                                .cloned()
+                                                .unwrap_or_default();
+
+                                            let on_remove: fret_ui_editor::composites::OnGradientStopAction =
+                                                Arc::new({
+                                                    let stops_model = editor_gradient_stops_model.clone();
+                                                    move |host, action_cx, stop_id| {
+                                                        let _ = host.models_mut().update(
+                                                            &stops_model,
+                                                            |stops| stops.retain(|s| s.id != stop_id),
+                                                        );
+                                                        host.request_redraw(action_cx.window);
+                                                    }
+                                                });
+
+                                            let bindings: Arc<[GradientStopBinding]> = stops
+                                                .into_iter()
+                                                .map(|s| GradientStopBinding {
+                                                    id: s.id,
+                                                    position: s.position,
+                                                    color: s.color,
+                                                    remove: Some(on_remove.clone()),
+                                                })
+                                                .collect::<Vec<_>>()
+                                                .into();
+
+                                            vec![GradientEditor::new(bindings)
+                                                .angle_degrees(Some(
+                                                    editor_gradient_angle_model.clone(),
+                                                ))
+                                                .options(GradientEditorOptions {
+                                                    id_source: Some(Arc::from(
+                                                        "imui_editor_proof_demo.gradient",
+                                                    )),
+                                                    test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient",
+                                                    )),
+                                                    preview_test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient.preview",
+                                                    )),
+                                                    stops_test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient.stops",
+                                                    )),
+                                                    ..Default::default()
+                                                })
+                                                .into_element(cx)]
+                                        },
+                                    ),
+                            );
+
+                            out.push(
                                 PropertyGroup::new("Advanced")
                                     .options(fret_ui_editor::composites::PropertyGroupOptions {
                                         test_id: Some(Arc::from(
@@ -1041,6 +1114,52 @@ fn editor_demo_roughness_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Mod
 fn editor_demo_metallic_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
     named_demo_state(cx, "imui_editor_proof_demo.model.metallic", |cx| {
         cx.app.models_mut().insert(0.1_f64)
+    })
+}
+
+#[derive(Clone)]
+struct GradientDemoStop {
+    id: fret_ui::ItemKey,
+    position: Model<f64>,
+    color: Model<Color>,
+}
+
+fn editor_demo_gradient_angle_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.gradient_angle", |cx| {
+        cx.app.models_mut().insert(45.0_f64)
+    })
+}
+
+fn editor_demo_gradient_stops_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Vec<GradientDemoStop>> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.gradient_stops", |cx| {
+        let stop_0_pos = cx.app.models_mut().insert(0.0_f64);
+        let stop_0_color = cx.app.models_mut().insert(Color {
+            r: 0.95,
+            g: 0.35,
+            b: 0.20,
+            a: 1.0,
+        });
+        let stop_1_pos = cx.app.models_mut().insert(1.0_f64);
+        let stop_1_color = cx.app.models_mut().insert(Color {
+            r: 0.20,
+            g: 0.45,
+            b: 0.95,
+            a: 1.0,
+        });
+        cx.app.models_mut().insert(vec![
+            GradientDemoStop {
+                id: 1,
+                position: stop_0_pos,
+                color: stop_0_color,
+            },
+            GradientDemoStop {
+                id: 2,
+                position: stop_1_pos,
+                color: stop_1_color,
+            },
+        ])
     })
 }
 

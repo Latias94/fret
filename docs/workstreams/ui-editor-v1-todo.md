@@ -219,11 +219,13 @@ Exit criteria:
 
 Goal: validate that editor primitives can scale to canvas-like controls without runtime changes.
 
-- [ ] `GradientEditor` spike:
-  - [ ] stop list + drag stop position
-  - [ ] stop color edit reuse (`ColorEdit`)
-  - [ ] angle edit reuse (`DragValue`)
-- [ ] Identify what this spike forces on other ecosystems (tokens/slots/hooks).
+- [x] `GradientEditor` spike (v1 composition proof):
+  - [x] stop list + stop position editing (via `DragValue`)
+  - [x] stop color edit reuse (`ColorEdit`)
+  - [x] angle edit reuse (`DragValue`)
+  - Evidence: `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs`
+  - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.gradient.*`)
+- [ ] Identify what this spike forces on other ecosystems (tokens/slots/hooks) beyond existing editor tokens.
 
 Exit criteria:
 
