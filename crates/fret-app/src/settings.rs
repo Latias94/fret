@@ -421,6 +421,49 @@ mod tests {
     }
 
     #[test]
+    fn docking_transparent_payload_alpha_is_clamped_to_unit_interval() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.transparent_payload_alpha = -1.0;
+        assert_eq!(
+            settings
+                .docking_interaction_settings()
+                .transparent_payload_alpha,
+            0.0
+        );
+
+        settings.docking.transparent_payload_alpha = 2.0;
+        assert_eq!(
+            settings
+                .docking_interaction_settings()
+                .transparent_payload_alpha,
+            1.0
+        );
+    }
+
+    #[test]
+    fn docking_transparent_payload_alpha_nan_falls_back_to_default() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.transparent_payload_alpha = f32::NAN;
+        assert_eq!(
+            settings
+                .docking_interaction_settings()
+                .transparent_payload_alpha,
+            fret_runtime::DockingInteractionSettings::default().transparent_payload_alpha
+        );
+    }
+
+    #[test]
+    fn docking_transparent_payload_during_follow_is_forwarded() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.transparent_payload_during_follow = true;
+        assert!(
+            settings
+                .docking_interaction_settings()
+                .transparent_payload_during_follow
+        );
+    }
+
+    #[test]
     fn locale_defaults_to_en_us_without_fallbacks() {
         let settings = SettingsFileV1::default();
         assert_eq!(settings.locale.primary, "en-US");
