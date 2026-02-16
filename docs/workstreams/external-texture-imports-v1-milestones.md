@@ -110,11 +110,14 @@ Evidence:
       - `render_target_updates_ingest_fallbacks` (requested != effective),
       - and `viewport_draw_calls_ingest_*` (draw-side attribution).
     - This is best-effort observability only; it must not change import behavior by itself.
+    - Optional gate: fail a perf run when fallbacks occur unexpectedly:
+      - `--check-perf-hints --check-perf-hints-min-severity info --check-perf-hints-deny renderer.external_import_ingest_fallbacks`
   - Evidence:
     - `crates/fret-render-core/src/lib.rs` (`RenderTargetMetadata.requested_ingest_strategy`)
     - `crates/fret-render-wgpu/src/renderer/resources.rs` (update-time counters)
     - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (perf snapshot plumbing)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` fields)
+    - `crates/fret-diag/src/lib.rs` (`renderer.external_import_ingest_fallbacks` perf hint)
 
 ## M5 — Zero/low-copy ceiling (v2; capability-gated)
 
