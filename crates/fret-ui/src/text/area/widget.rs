@@ -1,5 +1,8 @@
 use super::{PreparedKey, TextArea};
-use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, PlatformTextInputCx, Widget};
+use crate::widget::{
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
+    PlatformTextInputCx, Widget,
+};
 use crate::{Invalidation, UiHost};
 use fret_core::time::Duration;
 use fret_core::{
@@ -561,6 +564,58 @@ impl<H: UiHost> Widget<H> for TextArea {
             }) => {
                 match *button {
                     MouseButton::Left => {}
+                    MouseButton::Right => {
+                        if *pointer_type != fret_core::PointerType::Mouse {
+                            return;
+                        }
+
+                        cx.request_focus(cx.node);
+                        self.dragging_thumb = false;
+
+                        // Avoid mutating selection/caret during IME composition; a context menu
+                        // should not disrupt an in-progress preedit session.
+                        if self.is_ime_composing() {
+                            return;
+                        }
+
+                        let Some(blob) = self.blob else {
+                            return;
+                        };
+
+                        // Only apply right-click caret/selection behavior within the text content
+                        // region; keep the scrollbar area untouched.
+                        if !self.content_bounds().contains(*position) {
+                            return;
+                        }
+
+                        let (sel_start, sel_end) = self.selection_range();
+
+                        let inner = self.content_bounds();
+                        let local = fret_core::Point::new(
+                            position.x - inner.origin.x + self.offset_x,
+                            Px(position.y.0 - inner.origin.y.0 + self.offset_y.0),
+                        );
+                        let hit = cx.services.hit_test_point(blob, local);
+                        let caret_at_point = hit.index;
+
+                        // Preserve an existing selection when right-clicking inside it so "Copy"
+                        // and friends remain enabled in upstream context menus.
+                        if sel_start != sel_end
+                            && caret_at_point >= sel_start
+                            && caret_at_point <= sel_end
+                        {
+                            return;
+                        }
+
+                        self.caret = caret_at_point;
+                        self.selection_anchor = caret_at_point;
+                        self.affinity = hit.affinity;
+                        self.ensure_caret_visible = true;
+
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        return;
+                    }
                     MouseButton::Middle => {
                         if *pointer_type != fret_core::PointerType::Mouse {
                             return;
@@ -1080,6 +1135,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.copy" => {
+                if !cx.input_ctx.caps.clipboard.text {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -1093,6 +1151,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.cut" => {
+                if !cx.input_ctx.caps.clipboard.text {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -1108,6 +1169,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.paste" => {
+                if !cx.input_ctx.caps.clipboard.text {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -1177,6 +1241,61 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.apply_multiline_ui_delta(cx, delta);
                 true
             }
+        }
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut CommandAvailabilityCx<'_, H>,
+        command: &fret_runtime::CommandId,
+    ) -> CommandAvailability {
+        if !self.enabled {
+            return CommandAvailability::NotHandled;
+        }
+        if cx.focus != Some(cx.node) {
+            return CommandAvailability::NotHandled;
+        }
+
+        let cmd = match command.as_str() {
+            "edit.copy" => "text.copy",
+            "edit.cut" => "text.cut",
+            "edit.paste" => "text.paste",
+            "edit.select_all" => "text.select_all",
+            other => other,
+        };
+        if !cmd.starts_with("text.") {
+            return CommandAvailability::NotHandled;
+        }
+
+        let clipboard_text = cx.input_ctx.caps.clipboard.text;
+        let (start, end) = self.selection_range();
+        let has_selection = start != end;
+
+        match cmd {
+            "text.copy" | "text.cut" => {
+                if !clipboard_text {
+                    return CommandAvailability::Blocked;
+                }
+                if has_selection {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            "text.paste" => {
+                if !clipboard_text {
+                    return CommandAvailability::Blocked;
+                }
+                CommandAvailability::Available
+            }
+            "text.select_all" | "text.clear" => {
+                if !self.text().is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            _ => CommandAvailability::NotHandled,
         }
     }
 
