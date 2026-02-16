@@ -22,6 +22,7 @@ Mark a page “Docs-style” when all are true:
 2. Every section has at least **one line** of explanation text (either in the section or in a Notes section).
 3. Key sections include a minimal code sample (does not need to cover every variant).
 4. Keeps critical `test_id`s stable; if a change is unavoidable, update corresponding diag scripts.
+5. The table row includes a non-empty **Diag Coverage** entry (either a glob/prefix or a specific script file).
 
 ## Progress Table
 
@@ -32,45 +33,45 @@ Legend:
 
 ### Shadcn/forms
 
-| Component | Entry point | Layout | Section text | Code samples | Notes |
-|---|---|---|---|---|---|
-| Select | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Docs-style | Yes | Per-section | Keeps existing diag `test_id`s for trigger/items. |
-| Combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Docs-style | Yes | Key sections only | Section content in `apps/fret-ui-gallery/src/ui/pages/combobox/sections.rs` now returns “pure content” (no nested cards). |
-| Date Picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Docs-style | Yes | Key sections only | Keeps range-roving regression script compatible (role/name driven). |
-| Field | `apps/fret-ui-gallery/src/ui/pages/field.rs` | Legacy tabs | Partial | Tab-only | Candidate: convert to sections; keep `Field` examples grouped by recipe. |
-| Input | `apps/fret-ui-gallery/src/ui/pages/input.rs` | Legacy tabs | Partial | Tab-only | Candidate: split by size/disabled/invalid/password. |
-| Input Group | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Legacy tabs | Partial | Tab-only | Candidate: sections per composition recipe. |
-| Label | `apps/fret-ui-gallery/src/ui/pages/label.rs` | Legacy tabs | Partial | Tab-only | Candidate: keep examples small; rely on ellipsis title defaults. |
-| Checkbox | `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` | Legacy tabs | Partial | Tab-only | Candidate: align with shadcn docs matrix (checked/indeterminate/disabled). |
-| Native Select | `apps/fret-ui-gallery/src/ui/pages/native_select.rs` | Legacy tabs | Partial | Tab-only | Candidate: clarify platform/native intent vs shadcn Select. |
-| Form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | Legacy tabs | Partial | Tab-only | Candidate: single “forms doc” page with sections per recipe. |
+| Component | Entry point | Layout | Section text | Code samples | Diag Coverage | Notes |
+|---|---|---|---|---|---|---|
+| Select | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Docs-style | Yes | Per-section | `tools/diag-scripts/ui-gallery-select-*.json` (16) | Keeps existing diag `test_id`s for trigger/items. |
+| Combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-combobox-*.json` (10) | `apps/fret-ui-gallery/src/ui/pages/combobox/sections.rs` returns “pure content” (no nested cards). |
+| Date Picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json` | Keeps range-roving regression script compatible (role/name driven). |
+| Field | `apps/fret-ui-gallery/src/ui/pages/field.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: convert to sections; keep `Field` examples grouped by recipe. |
+| Input | `apps/fret-ui-gallery/src/ui/pages/input.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-*.json` (2) | Candidate: split by size/disabled/invalid/password. |
+| Input Group | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-group-*.json` (1) | Candidate: sections per composition recipe. |
+| Label | `apps/fret-ui-gallery/src/ui/pages/label.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: keep examples small; rely on ellipsis title defaults. |
+| Checkbox | `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-checkbox-rtl-and-checked-wrap.json` | Candidate: align with shadcn docs matrix (checked/indeterminate/disabled). |
+| Native Select | `apps/fret-ui-gallery/src/ui/pages/native_select.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: clarify platform/native intent vs shadcn Select. |
+| Form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: single “forms doc” page with sections per recipe. |
 
 ### Shadcn/overlays
 
-| Component | Entry point | Layout | Section text | Code samples | Notes |
-|---|---|---|---|---|---|
-| Alert Dialog | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Docs-style | Yes | Key sections only | Notes are a dedicated section; headings are nowrap+ellipsis by default. |
-| Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Legacy tabs | Partial | Tab-only | Candidate: sections for sizes/scroll/close semantics. |
-| Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Legacy tabs | Partial | Tab-only | Candidate: sections for side + focus/escape behavior. |
-| Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Legacy tabs | Partial | Tab-only | Candidate: sections for checkbox/radio/submenus. |
-| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Legacy tabs | Partial | Tab-only | Candidate: hover intent + delay knobs + placement. |
-| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Legacy tabs | Partial | Tab-only | Candidate: right-click vs long-press + keyboard. |
-| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Legacy tabs | Partial | Tab-only | Candidate: alignment + delay + pointer leave. |
+| Component | Entry point | Layout | Section text | Code samples | Diag Coverage | Notes |
+|---|---|---|---|---|---|---|
+| Alert Dialog | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-alert-dialog-*.json` (4) | Notes are a dedicated section; headings are nowrap+ellipsis by default. |
+| Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-dialog-*.json` (3) | Candidate: sections for sizes/scroll/close semantics. |
+| Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Candidate: sections for side + focus/escape behavior. |
+| Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: sections for checkbox/radio/submenus. |
+| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (2) | Candidate: hover intent + delay knobs + placement. |
+| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (4) | Candidate: right-click vs long-press + keyboard. |
+| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-tooltip-hovercard-*.json` (1) | Candidate: alignment + delay + pointer leave. |
 
 ### Shadcn/navigation + misc
 
-| Component | Entry point | Layout | Section text | Code samples | Notes |
-|---|---|---|---|---|---|
-| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Legacy tabs | Partial | Tab-only | Candidate: small surface; easy migration. |
-| Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Partial | Tab-only | Candidate: state matrix sections. |
-| Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Partial | Tab-only | Candidate: single/multi + orientation. |
-| Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Partial | Tab-only | Candidate: sections per token preset + truncation/wrap behavior. |
-| Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Legacy tabs | Partial | Tab-only | Candidate: short page; easy migration. |
-| Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Partial | Tab-only | Candidate: list item patterns + icons + truncation. |
-| Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Legacy tabs | Partial | Tab-only | Candidate: accordion/collapsible behavior notes. |
-| Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Legacy tabs | Partial | Tab-only | Candidate: minimal surface. |
-| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Partial | Tab-only | Candidate: variant matrix sections. |
-| Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Legacy tabs | Partial | Tab-only | Candidate: quick conversion. |
+| Component | Entry point | Layout | Section text | Code samples | Diag Coverage | Notes |
+|---|---|---|---|---|---|---|
+| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Candidate: small surface; easy migration. |
+| Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: state matrix sections. |
+| Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: single/multi + orientation. |
+| Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: sections per token preset + truncation/wrap behavior. |
+| Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: short page; easy migration. |
+| Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: list item patterns + icons + truncation. |
+| Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Candidate: accordion/collapsible behavior notes. |
+| Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: minimal surface. |
+| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
+| Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: quick conversion. |
 
 ## Suggested Migration Order (next)
 
@@ -87,4 +88,3 @@ Recommended next batch:
 3. `Tooltip`
 4. `Field`
 5. `Checkbox`
-
