@@ -31,18 +31,10 @@ pub struct AdapterSignalRecord {
 pub type AdapterSignalReporter<'a> = dyn FnMut(AdapterSignalRecord) + 'a;
 
 /// Shared seam options accepted by immediate adapter helpers.
+#[derive(Default)]
 pub struct AdapterSeamOptions<'a> {
     pub reporter: Option<&'a mut AdapterSignalReporter<'a>>,
     pub focus_restore_target: Option<GlobalElementId>,
-}
-
-impl Default for AdapterSeamOptions<'_> {
-    fn default() -> Self {
-        Self {
-            reporter: None,
-            focus_restore_target: None,
-        }
-    }
 }
 
 /// Emit one adapter signal record through the optional reporter.

@@ -469,6 +469,7 @@ pub(super) fn paint_dock(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_split_handles(
     theme: fret_ui::ThemeSnapshot,
     graph: &DockGraph,
@@ -527,6 +528,7 @@ pub(super) fn paint_split_handles(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_drop_overlay(
     theme: fret_ui::ThemeSnapshot,
     target: Option<DockDropTarget>,
@@ -781,6 +783,7 @@ pub(super) fn paint_drop_overlay(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_drop_hints(
     theme: fret_ui::ThemeSnapshot,
     hints: Option<DockDropHints>,

@@ -171,12 +171,8 @@ mod tests {
         let effects0 = app.flush_effects();
         assert!(out0.present);
         assert!(out0.animating);
-        assert!(
-            effects0
-                .iter()
-                .any(|e| *e == Effect::RequestAnimationFrame(window))
-        );
-        assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
+        assert!(effects0.contains(&Effect::RequestAnimationFrame(window)));
+        assert!(effects0.contains(&Effect::Redraw(window)));
 
         // While animating: keep requesting redraw, but do not reacquire a new RAF lease.
 
@@ -186,12 +182,8 @@ mod tests {
         let effects1 = app.flush_effects();
         assert!(out1.present);
         assert!(out1.animating);
-        assert!(
-            !effects1
-                .iter()
-                .any(|e| *e == Effect::RequestAnimationFrame(window))
-        );
-        assert!(effects1.iter().any(|e| *e == Effect::Redraw(window)));
+        assert!(!effects1.contains(&Effect::RequestAnimationFrame(window)));
+        assert!(effects1.contains(&Effect::Redraw(window)));
 
         // Stable open: no longer animating, so no more redraw requests.
 
@@ -231,12 +223,8 @@ mod tests {
         let effects = app.flush_effects();
         assert!(out.present);
         assert!(out.animating);
-        assert!(
-            effects
-                .iter()
-                .any(|e| *e == Effect::RequestAnimationFrame(window))
-        );
-        assert!(effects.iter().any(|e| *e == Effect::Redraw(window)));
+        assert!(effects.contains(&Effect::RequestAnimationFrame(window)));
+        assert!(effects.contains(&Effect::Redraw(window)));
     }
 
     #[test]
@@ -253,12 +241,8 @@ mod tests {
         let effects0 = app.flush_effects();
         assert!(out0.present);
         assert!(out0.animating);
-        assert!(
-            effects0
-                .iter()
-                .any(|e| *e == Effect::RequestAnimationFrame(window))
-        );
-        assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
+        assert!(effects0.contains(&Effect::RequestAnimationFrame(window)));
+        assert!(effects0.contains(&Effect::Redraw(window)));
     }
 
     #[test]

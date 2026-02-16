@@ -270,11 +270,11 @@ pub fn drive_motion_value_f32<H: UiHost>(
                                 st.elapsed = Duration::ZERO;
                                 st.animating = true;
 
-                                if let Some(kick) = kick {
-                                    if kick.id != st.spring_last_kick_id {
-                                        st.velocity = kick.velocity;
-                                        st.spring_last_kick_id = kick.id;
-                                    }
+                                if let Some(kick) = kick
+                                    && kick.id != st.spring_last_kick_id
+                                {
+                                    st.velocity = kick.velocity;
+                                    st.spring_last_kick_id = kick.id;
                                 }
                             }
 

@@ -472,6 +472,7 @@ mod tests {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn render(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -515,7 +516,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
 
@@ -680,7 +681,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
 
@@ -817,7 +818,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
 
@@ -937,7 +938,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
 

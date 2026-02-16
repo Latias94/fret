@@ -13348,7 +13348,7 @@ fn run_script_over_transport(
                 poll_ms,
             )
         })()
-        .map_err(|err| {
+        .inspect_err(|err| {
             let reason_code = if err.contains("timed out waiting") {
                 "timeout.tooling.bundle_dump"
             } else {
@@ -13368,7 +13368,6 @@ fn run_script_over_transport(
                 script_result_path,
                 &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
             );
-            err
         })?;
 
         let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {

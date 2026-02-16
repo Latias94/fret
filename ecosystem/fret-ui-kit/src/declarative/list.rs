@@ -12,6 +12,8 @@ use crate::{Items, Justify, MetricRef, Size, Space};
 
 use std::sync::Arc;
 
+type CopyTextAtFn = dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync;
+
 fn resolve_list_colors(theme: &Theme) -> (Color, Color, Color, Color) {
     let list_bg = theme
         .color_by_key("list.background")
@@ -102,7 +104,7 @@ pub fn list_virtualized_copyable<H: UiHost, I>(
     scroll_handle: &VirtualListScrollHandle,
     items_revision: u64,
     key_at: impl FnMut(usize) -> u64,
-    copy_text_at: Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>,
+    copy_text_at: Arc<CopyTextAtFn>,
     on_select: impl Fn(usize) -> Option<CommandId>,
     row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
 ) -> AnyElement
@@ -176,7 +178,7 @@ pub fn list_virtualized_copyable_retained_v0<H: UiHost + 'static, I>(
     scroll_handle: &VirtualListScrollHandle,
     items_revision: u64,
     key_at: impl Fn(usize) -> u64 + 'static,
-    copy_text_at: Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>,
+    copy_text_at: Arc<CopyTextAtFn>,
     on_select: impl Fn(usize) -> Option<CommandId> + 'static,
     row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
 ) -> AnyElement
@@ -210,7 +212,7 @@ fn list_virtualized_impl<H: UiHost, I>(
     scroll_handle: &VirtualListScrollHandle,
     items_revision: u64,
     key_at: impl FnMut(usize) -> u64,
-    copy_text_at: Option<Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>>,
+    copy_text_at: Option<Arc<CopyTextAtFn>>,
     on_select: impl Fn(usize) -> Option<CommandId>,
     mut row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
 ) -> AnyElement
@@ -261,10 +263,10 @@ where
                         }
                         let models = host.models_mut();
                         let selected = models.get_copied(&selection_for_command).unwrap_or(None);
-                        if let Some(selected) = selected {
-                            if let Some(text) = (copy_text_for_command)(&*models, selected) {
-                                host.push_effect(Effect::ClipboardSetText { text });
-                            }
+                        if let Some(selected) = selected
+                            && let Some(text) = (copy_text_for_command)(&*models, selected)
+                        {
+                            host.push_effect(Effect::ClipboardSetText { text });
                         }
                         true
                     }),
@@ -359,7 +361,7 @@ fn list_virtualized_retained_impl<H: UiHost + 'static, I>(
     scroll_handle: &VirtualListScrollHandle,
     items_revision: u64,
     key_at: impl Fn(usize) -> u64 + 'static,
-    copy_text_at: Option<Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>>,
+    copy_text_at: Option<Arc<CopyTextAtFn>>,
     on_select: impl Fn(usize) -> Option<CommandId> + 'static,
     row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
 ) -> AnyElement
@@ -410,10 +412,10 @@ where
                         }
                         let models = host.models_mut();
                         let selected = models.get_copied(&selection_for_command).unwrap_or(None);
-                        if let Some(selected) = selected {
-                            if let Some(text) = (copy_text_for_command)(&*models, selected) {
-                                host.push_effect(Effect::ClipboardSetText { text });
-                            }
+                        if let Some(selected) = selected
+                            && let Some(text) = (copy_text_for_command)(&*models, selected)
+                        {
+                            host.push_effect(Effect::ClipboardSetText { text });
                         }
                         true
                     }),
@@ -447,7 +449,7 @@ where
                 len,
                 options,
                 scroll_handle,
-                move |i| (key_at)(i),
+                key_at,
                 move |cx, i| {
                     let cmd = on_select(i);
                     let enabled = cmd.is_some() || selection.is_some();
@@ -894,8 +896,7 @@ mod tests {
             "expected edit.copy to not emit ClipboardSetText when selection is empty"
         );
 
-        let _ = app
-            .models_mut()
+        app.models_mut()
             .update(&selection, |v| *v = Some(1))
             .expect("selection update");
 
@@ -1000,8 +1001,7 @@ mod tests {
             "expected edit.copy to not emit ClipboardSetText when selection is empty"
         );
 
-        let _ = app
-            .models_mut()
+        app.models_mut()
             .update(&selection, |v| *v = Some(1))
             .expect("selection update");
 

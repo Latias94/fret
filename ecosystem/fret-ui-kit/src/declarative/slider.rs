@@ -55,6 +55,7 @@ fn value_from_pointer_axis(
 ///
 /// This mirrors Radix slide start behavior: pick the closest thumb, then update (snap + clamp)
 /// the value, keeping the chosen thumb index for subsequent pointer move events.
+#[allow(clippy::too_many_arguments)]
 pub fn start_slider_drag_from_pointer_axis(
     host: &mut dyn UiPointerActionHost,
     model: &Model<Vec<f32>>,
@@ -114,6 +115,7 @@ pub fn start_slider_drag_from_pointer_axis(
 ///
 /// Returns the updated `value_index_to_change` which should be stored by the caller while the
 /// drag gesture is active (Radix `valueIndexToChangeRef`).
+#[allow(clippy::too_many_arguments)]
 pub fn update_slider_model_from_pointer_axis(
     host: &mut dyn UiPointerActionHost,
     model: &Model<Vec<f32>>,
@@ -173,6 +175,7 @@ pub fn update_slider_model_from_pointer_axis(
 /// This is a small wiring helper used by shadcn recipes and other primitive consumers. It does
 /// not implement the full multi-thumb Radix slider contract yet; it focuses on the common
 /// single-thumb use case.
+#[allow(clippy::too_many_arguments)]
 pub fn update_single_slider_model_from_pointer_axis(
     host: &mut dyn UiPointerActionHost,
     model: &Model<Vec<f32>>,
@@ -201,6 +204,7 @@ pub fn update_single_slider_model_from_pointer_axis(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn start_slider_drag_from_pointer_x(
     host: &mut dyn UiPointerActionHost,
     model: &Model<Vec<f32>>,
@@ -227,6 +231,7 @@ pub fn start_slider_drag_from_pointer_x(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_slider_model_from_pointer_x(
     host: &mut dyn UiPointerActionHost,
     model: &Model<Vec<f32>>,
@@ -255,6 +260,7 @@ pub fn update_slider_model_from_pointer_x(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_single_slider_model_from_pointer_x(
     host: &mut dyn UiPointerActionHost,
     model: &Model<Vec<f32>>,

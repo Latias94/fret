@@ -15,7 +15,7 @@ fn docking_viewport_panels_are_laid_out_before_overlay_layout_and_do_not_couple_
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
-    let mut services = FakeTextService::default();
+    let mut services = FakeTextService;
 
     let panel_left = PanelKey::new("test.viewport.left");
     let panel_right = PanelKey::new("test.viewport.right");
@@ -191,7 +191,7 @@ fn docking_viewport_panels_keep_scroll_and_virtual_list_extents_constraint_corre
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
-    let mut services = FakeTextService::default();
+    let mut services = FakeTextService;
 
     let panel_left = PanelKey::new("test.viewport.scroll");
     let panel_right = PanelKey::new("test.viewport.vlist");

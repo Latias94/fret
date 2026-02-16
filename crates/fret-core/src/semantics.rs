@@ -273,16 +273,16 @@ impl SemanticsSnapshot {
                     },
                 });
             }
-            if let (Some(pos_in_set), Some(set_size)) = (node.pos_in_set, node.set_size) {
-                if pos_in_set == 0 || set_size == 0 || pos_in_set > set_size {
-                    return Err(SemanticsValidationError {
-                        node: node.id,
-                        kind: SemanticsValidationErrorKind::InvalidCollectionMetadata {
-                            pos_in_set: Some(pos_in_set),
-                            set_size: Some(set_size),
-                        },
-                    });
-                }
+            if let (Some(pos_in_set), Some(set_size)) = (node.pos_in_set, node.set_size)
+                && (pos_in_set == 0 || set_size == 0 || pos_in_set > set_size)
+            {
+                return Err(SemanticsValidationError {
+                    node: node.id,
+                    kind: SemanticsValidationErrorKind::InvalidCollectionMetadata {
+                        pos_in_set: Some(pos_in_set),
+                        set_size: Some(set_size),
+                    },
+                });
             }
 
             if let Some(parent) = node.parent {

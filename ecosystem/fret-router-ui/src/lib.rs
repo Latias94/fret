@@ -635,6 +635,7 @@ where
     router_link_with_props(cx, store, link, PressableProps::default(), children)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn router_link_to<R, H>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
@@ -654,6 +655,7 @@ where
     Ok(router_link(cx, store, link, children))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn router_link_to_with_test_id<R, H>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
