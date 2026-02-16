@@ -624,11 +624,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let mut x = screen_pos.x;
         let mut y = screen_pos.y;
 
+        #[cfg(target_os = "windows")]
+        let decoration_offset = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::decoration_offset_for_hwnd)
+            .unwrap_or_else(|| state.window.surface_position());
+        #[cfg(not(target_os = "windows"))]
+        let decoration_offset = state.window.surface_position();
+
         if let Some((ox, oy)) = outer_pos_for_cursor_grab(
             screen_pos,
             grab_offset_logical,
             scale,
-            state.window.surface_position(),
+            decoration_offset,
             Some(max_client),
         ) {
             x = ox;
@@ -684,11 +691,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // window (visible as a fixed offset between cursor and window).
         let target_inner = state.window.surface_size();
         let target_inner_logical: winit::dpi::LogicalSize<f32> = target_inner.to_logical(scale);
+
+        #[cfg(target_os = "windows")]
+        let decoration_offset = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::decoration_offset_for_hwnd)
+            .unwrap_or_else(|| state.window.surface_position());
+        #[cfg(not(target_os = "windows"))]
+        let decoration_offset = state.window.surface_position();
+
         let (mut x, mut y) = outer_pos_for_cursor_grab(
             screen_pos,
             grab_offset_logical,
             scale,
-            state.window.surface_position(),
+            decoration_offset,
             Some(target_inner_logical),
         )?;
 
