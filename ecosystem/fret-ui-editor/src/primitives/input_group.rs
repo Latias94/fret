@@ -9,8 +9,9 @@ use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Color, Corners, Edges, MouseButton, Px, TextAlign, TextStyle};
 use fret_ui::action::{ActionCx, OnActivate, OnPointerCancel, OnPointerDown, OnPointerUp};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length,
-    MainAlign, PointerRegionProps, PressableA11y, PressableProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, HoverRegionProps,
+    LayoutStyle, Length, MainAlign, PointerRegionProps, PressableA11y, PressableProps, SizeStyle,
+    TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ColorRef;
@@ -110,6 +111,12 @@ pub(crate) fn editor_input_group_inset<H: UiHost>(
                 height: Length::Fill,
                 ..Default::default()
             },
+            flex: FlexItemStyle {
+                grow: 1.0,
+                shrink: 1.0,
+                basis: Length::Px(Px(0.0)),
+                align_self: None,
+            },
             ..Default::default()
         },
         padding,
@@ -193,6 +200,7 @@ pub(crate) fn editor_icon_button_segment<H: UiHost>(
     let mut el = cx.pressable(
         PressableProps {
             enabled: enabled_for_paint,
+            focusable: false,
             layout: LayoutStyle {
                 size: SizeStyle {
                     width: Length::Px(density.hit_thickness),

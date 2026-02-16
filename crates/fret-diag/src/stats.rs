@@ -889,6 +889,25 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_prepare_svg_us: u64,
     pub(super) renderer_svg_upload_bytes: u64,
     pub(super) renderer_image_upload_bytes: u64,
+
+    pub(super) renderer_render_target_updates_ingest_unknown: u64,
+    pub(super) renderer_render_target_updates_ingest_owned: u64,
+    pub(super) renderer_render_target_updates_ingest_external_zero_copy: u64,
+    pub(super) renderer_render_target_updates_ingest_gpu_copy: u64,
+    pub(super) renderer_render_target_updates_ingest_cpu_upload: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_unknown: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_owned: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_external_zero_copy: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_gpu_copy: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_cpu_upload: u64,
+    pub(super) renderer_render_target_updates_ingest_fallbacks: u64,
+
+    pub(super) renderer_viewport_draw_calls: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_unknown: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_owned: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_external_zero_copy: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_gpu_copy: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_cpu_upload: u64,
     pub(super) renderer_svg_raster_budget_bytes: u64,
     pub(super) renderer_svg_rasters_live: u64,
     pub(super) renderer_svg_standalone_bytes_live: u64,
@@ -8935,6 +8954,78 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_image_upload_bytes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+
+            let renderer_render_target_updates_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_owned = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_external_zero_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_external_zero_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_cpu_upload"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_owned = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_external_zero_copy = stats
+                .and_then(|m| {
+                    m.get("renderer_render_target_updates_requested_ingest_external_zero_copy")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_cpu_upload"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_fallbacks = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let renderer_viewport_draw_calls = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_owned = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_external_zero_copy = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_external_zero_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_cpu_upload"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_svg_raster_budget_bytes = stats
                 .and_then(|m| m.get("renderer_svg_raster_budget_bytes"))
                 .and_then(|v| v.as_u64())
@@ -9700,6 +9791,23 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_prepare_svg_us,
                 renderer_svg_upload_bytes,
                 renderer_image_upload_bytes,
+                renderer_render_target_updates_ingest_unknown,
+                renderer_render_target_updates_ingest_owned,
+                renderer_render_target_updates_ingest_external_zero_copy,
+                renderer_render_target_updates_ingest_gpu_copy,
+                renderer_render_target_updates_ingest_cpu_upload,
+                renderer_render_target_updates_requested_ingest_unknown,
+                renderer_render_target_updates_requested_ingest_owned,
+                renderer_render_target_updates_requested_ingest_external_zero_copy,
+                renderer_render_target_updates_requested_ingest_gpu_copy,
+                renderer_render_target_updates_requested_ingest_cpu_upload,
+                renderer_render_target_updates_ingest_fallbacks,
+                renderer_viewport_draw_calls,
+                renderer_viewport_draw_calls_ingest_unknown,
+                renderer_viewport_draw_calls_ingest_owned,
+                renderer_viewport_draw_calls_ingest_external_zero_copy,
+                renderer_viewport_draw_calls_ingest_gpu_copy,
+                renderer_viewport_draw_calls_ingest_cpu_upload,
                 renderer_svg_raster_budget_bytes,
                 renderer_svg_rasters_live,
                 renderer_svg_standalone_bytes_live,

@@ -1449,6 +1449,15 @@ pub(super) fn read_perf_baseline_file(
         workspace_root.join(path)
     };
 
+    if let Ok(meta) = std::fs::metadata(&resolved) {
+        if meta.is_dir() {
+            return Err(format!(
+                "invalid --perf-baseline path (expected a JSON file, got a directory): {}",
+                resolved.display()
+            ));
+        }
+    }
+
     let bytes = std::fs::read(&resolved).map_err(|e| {
         format!(
             "failed to read perf baseline file {}: {e}",

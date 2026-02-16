@@ -21,6 +21,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
+                self.text_paints.layout(),
             ],
             immediate_size: 0,
         });
@@ -48,6 +49,11 @@ impl Renderer {
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 16,
                             shader_location: 2,
                         },
@@ -103,6 +109,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
+                self.text_paints.layout(),
             ],
             immediate_size: 0,
         });
@@ -130,6 +137,11 @@ impl Renderer {
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 16,
                             shader_location: 2,
                         },
@@ -187,6 +199,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
+                self.text_paints.layout(),
             ],
             immediate_size: 0,
         });
@@ -214,6 +227,11 @@ impl Renderer {
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 16,
                             shader_location: 2,
                         },

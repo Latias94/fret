@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_input(
     cx: &mut ElementContext<'_, App>,
     value: Model<String>,
@@ -233,48 +235,6 @@ pub(super) fn preview_input(
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(860.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
 
@@ -285,7 +245,7 @@ pub(super) fn preview_input(
             .refine_layout(max_w_xs.clone())
             .into_element(cx)
             .test_id("ui-gallery-input-basic");
-        section_card(cx, "Basic", content)
+        content
     };
 
     let field = {
@@ -301,7 +261,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-field");
-        section_card(cx, "Field", content)
+        content
     };
 
     let field_group = {
@@ -336,7 +296,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-field-group");
-        section_card(cx, "Field Group", content)
+        content
     };
 
     let disabled = {
@@ -351,7 +311,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-disabled");
-        section_card(cx, "Disabled", content)
+        content
     };
 
     let invalid = {
@@ -368,7 +328,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-invalid");
-        section_card(cx, "Invalid", content)
+        content
     };
 
     let file = {
@@ -394,7 +354,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-file");
-        section_card(cx, "File", content)
+        content
     };
 
     let inline = {
@@ -409,7 +369,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-inline");
-        section_card(cx, "Inline", content)
+        content
     };
 
     let grid = {
@@ -443,7 +403,7 @@ pub(super) fn preview_input(
             },
         )
         .test_id("ui-gallery-input-grid");
-        section_card(cx, "Grid", content)
+        content
     };
 
     let required = {
@@ -471,7 +431,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-required");
-        section_card(cx, "Required", content)
+        content
     };
 
     let badge = {
@@ -498,7 +458,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-badge");
-        section_card(cx, "Badge", content)
+        content
     };
 
     let input_group = {
@@ -519,7 +479,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-input-group");
-        section_card(cx, "Input Group", content)
+        content
     };
 
     let button_group = {
@@ -541,7 +501,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-button-group");
-        section_card(cx, "Button Group", content)
+        content
     };
 
     let form = {
@@ -620,8 +580,7 @@ pub(super) fn preview_input(
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-form");
-
-        section_card(cx, "Form", content)
+        content
     };
 
     let rtl = {
@@ -643,111 +602,20 @@ pub(super) fn preview_input(
             },
         )
         .test_id("ui-gallery-input-rtl");
-
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Input docs order: Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL.",
-                ),
-                basic,
-                field,
-                field_group,
-                disabled,
-                invalid,
-                file,
-                inline,
-                grid,
-                required,
-                badge,
-                input_group,
-                button_group,
-                form,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-input-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Basic Input").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"Input::new(model).placeholder("Enter text").a11y_label("Enter text");"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Field Composition").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "Field::new([FieldLabel, Input, FieldDescription]).into_element(cx);",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Input Group + Button Group").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "InputGroup::new(model).leading([...]).trailing([...]); ButtonGroup::new([input.into(), button.into()]);",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
-                    "Input page now uses docs-order examples and exposes stable test IDs for each section.",
+                    "API reference: `ecosystem/fret-ui-shadcn/src/input.rs` (Input), `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup), `ecosystem/fret-ui-shadcn/src/button_group.rs` (ButtonGroup).",
                 ),
                 shadcn::typography::muted(
                     cx,
@@ -757,16 +625,68 @@ pub(super) fn preview_input(
                     cx,
                     "Required styling is represented by label affordance because dedicated required visuals are not built into current Input API.",
                 ),
+                shadcn::typography::muted(
+                    cx,
+                    "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
+                ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-input",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Input docs order: Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL.",
+        ),
+        vec![
+            DocSection::new("Basic", basic)
+                .description("Single input field (used by IME routing regression scripts)."),
+            DocSection::new("Field", field)
+                .description("Field composition with label, description, and error slots.")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Username").into_element(cx),
+    shadcn::Input::new(model).placeholder("Enter your username").into_element(cx),
+    shadcn::FieldDescription::new("Choose a unique username.").into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Field Group", field_group)
+                .description("FieldGroup stacks related fields and action rows."),
+            DocSection::new("Disabled", disabled).description(
+                "Disabled inputs should block focus/interaction and use muted styling.",
+            ),
+            DocSection::new("Invalid", invalid)
+                .description("Invalid state uses `aria_invalid` + field-level error copy."),
+            DocSection::new("File", file).description(
+                "File input is approximated via text + browse button composition in current API.",
+            ),
+            DocSection::new("Inline", inline)
+                .description("Horizontal Field orientation is useful for compact toolbars."),
+            DocSection::new("Grid", grid)
+                .description("Two-column input layout with shared row alignment."),
+            DocSection::new("Required", required)
+                .description("Required affordance is represented by label copy in this gallery."),
+            DocSection::new("Badge", badge).description("Use Badge inside a label row."),
+            DocSection::new("Input Group", input_group)
+                .description("Inline addons and trailing buttons via InputGroup composition.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .leading([shadcn::InputGroupText::new("https://").into_element(cx)])
+    .trailing([shadcn::InputGroupText::new(".com").into_element(cx)])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Button Group", button_group)
+                .description("ButtonGroup composes an input and a button with shared chrome."),
+            DocSection::new("Form", form)
+                .description("Multi-field form layout using FieldGroup + responsive rows."),
+            DocSection::new("RTL", rtl)
+                .description("Input + Field composition under an RTL direction provider."),
+            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-input")]
 }

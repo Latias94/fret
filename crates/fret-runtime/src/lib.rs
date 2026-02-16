@@ -42,6 +42,7 @@ pub mod menu;
 pub mod model;
 pub mod platform_completion;
 pub mod platform_text_input;
+pub mod runner_accessibility_diagnostics;
 pub mod runner_surface_lifecycle_diagnostics;
 pub mod shortcut_routing_diagnostics;
 pub mod strict_runtime;
@@ -136,6 +137,9 @@ pub use model::{
 };
 pub use platform_completion::PlatformCompletion;
 pub use platform_text_input::{PlatformTextInputQuery, PlatformTextInputQueryResult, Utf16Range};
+pub use runner_accessibility_diagnostics::{
+    RunnerAccessibilityDiagnosticsStore, RunnerAccessibilitySnapshot,
+};
 pub use runner_surface_lifecycle_diagnostics::{
     RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,
 };

@@ -656,7 +656,10 @@ fn find_best_text_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rg
     );
 
     scene_walk(scene, |st, op| {
-        let SceneOp::Text { origin, color, .. } = *op else {
+        let SceneOp::Text { origin, paint, .. } = *op else {
+            return;
+        };
+        let fret_core::Paint::Solid(color) = paint else {
             return;
         };
         let origin = st.transform.apply_point(origin);

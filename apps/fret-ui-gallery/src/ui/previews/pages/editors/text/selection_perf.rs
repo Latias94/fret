@@ -19,6 +19,8 @@ pub(in crate::ui) fn preview_text_selection_perf(
         prepared_key: Option<PreparedKey>,
         blob: Option<fret_core::TextBlobId>,
         metrics: Option<fret_core::TextMetrics>,
+        gradient_blob: Option<fret_core::TextBlobId>,
+        gradient_metrics: Option<fret_core::TextMetrics>,
     }
 
     let state = cx.with_state(
@@ -129,6 +131,9 @@ pub(in crate::ui) fn preview_text_selection_perf(
                             if let Some(blob) = st.blob.take() {
                                 services.text().release(blob);
                             }
+                            if let Some(blob) = st.gradient_blob.take() {
+                                services.text().release(blob);
+                            }
 
                             let style = fret_core::TextStyle {
                                 font: fret_core::FontId::monospace(),
@@ -150,6 +155,24 @@ pub(in crate::ui) fn preview_text_selection_perf(
                             st.prepared_key = Some(key);
                             st.blob = Some(blob);
                             st.metrics = Some(metrics);
+
+                            let gradient_style = fret_core::TextStyle {
+                                font: fret_core::FontId::ui(),
+                                size: Px(18.0),
+                                ..Default::default()
+                            };
+                            let gradient_constraints = fret_core::TextConstraints {
+                                max_width: None,
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                                scale_factor,
+                                align: fret_core::TextAlign::Start,
+                            };
+                            let (gradient_blob, gradient_metrics) = services
+                                .text()
+                                .prepare_str("Text paint (linear gradient)", &gradient_style, gradient_constraints);
+                            st.gradient_blob = Some(gradient_blob);
+                            st.gradient_metrics = Some(gradient_metrics);
                         }
 
                         let Some(blob) = st.blob else {
@@ -202,9 +225,58 @@ pub(in crate::ui) fn preview_text_selection_perf(
                             order: DrawOrder(1),
                             origin: text_origin,
                             text: blob,
-                            color: fg,
+                            paint: (fg).into(),
                         });
                         scene.push(SceneOp::PopClip);
+
+                        if let (Some(gblob), Some(gmetrics)) =
+                            (st.gradient_blob, st.gradient_metrics)
+                        {
+                            let top = bounds.origin.y.0 + 32.0;
+                            let origin = Point::new(
+                                Px(bounds.origin.x.0 + 12.0),
+                                Px(top + gmetrics.baseline.0),
+                            );
+
+                            let mut stops = [fret_core::GradientStop::new(
+                                0.0,
+                                fret_core::Color::TRANSPARENT,
+                            ); fret_core::MAX_STOPS];
+                            stops[0] = fret_core::GradientStop::new(
+                                0.0,
+                                fret_core::Color {
+                                    r: 1.0,
+                                    g: 0.0,
+                                    b: 0.0,
+                                    a: 1.0,
+                                },
+                            );
+                            stops[1] = fret_core::GradientStop::new(
+                                1.0,
+                                fret_core::Color {
+                                    r: 0.0,
+                                    g: 0.0,
+                                    b: 1.0,
+                                    a: 1.0,
+                                },
+                            );
+
+                            let gradient = fret_core::LinearGradient {
+                                start: origin,
+                                end: Point::new(Px(origin.x.0 + gmetrics.size.width.0), origin.y),
+                                tile_mode: fret_core::TileMode::Clamp,
+                                color_space: fret_core::ColorSpace::Srgb,
+                                stop_count: 2,
+                                stops,
+                            };
+
+                            scene.push(SceneOp::Text {
+                                order: DrawOrder(2),
+                                origin,
+                                text: gblob,
+                                paint: fret_core::Paint::LinearGradient(gradient),
+                            });
+                        }
 
                         let stats = format!(
                             "clipped rects: {} | scroll_y: {:.1}/{:.1} | content_h: {:.1} | viewport_h: {:.1}",
@@ -228,7 +300,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
                     };
                     let _ = p.text(
                         p.key(&"text_selection_perf_stats"),
-                        DrawOrder(2),
+                        DrawOrder(3),
                         stats_origin,
                         stats,
                         stats_style,

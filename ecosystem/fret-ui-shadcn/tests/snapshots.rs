@@ -315,9 +315,9 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             fit: format!("{fit:?}"),
             opacity: round3(opacity),
         },
-        SceneOp::Text { origin, color, .. } => SnapSceneOp::Text {
+        SceneOp::Text { origin, paint, .. } => SnapSceneOp::Text {
             origin: snap_point(origin),
-            color: snap_color(color),
+            color: snap_paint(paint),
         },
         SceneOp::Path { origin, paint, .. } => {
             let color = match paint {

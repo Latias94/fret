@@ -815,41 +815,41 @@ where
                 .test_id(test_id.clone())
             };
 
-            let mut stacked: Vec<AnyElement> = Vec::new();
-            stacked.push(clipped_body);
-
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::Left,
-                resize_left_test_id.clone(),
-            ));
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::Right,
-                resize_right_test_id.clone(),
-            ));
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::Top,
-                resize_top_test_id.clone(),
-            ));
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::Bottom,
-                resize_bottom_test_id.clone(),
-            ));
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::TopLeft,
-                resize_top_left_test_id.clone(),
-            ));
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::TopRight,
-                resize_top_right_test_id.clone(),
-            ));
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::BottomLeft,
-                resize_bottom_left_test_id.clone(),
-            ));
-            stacked.push(resize_handle(
-                super::FloatWindowResizeHandle::BottomRight,
-                resize_corner_test_id.clone(),
-            ));
+            let mut stacked: Vec<AnyElement> = vec![
+                clipped_body,
+                resize_handle(
+                    super::FloatWindowResizeHandle::Left,
+                    resize_left_test_id.clone(),
+                ),
+                resize_handle(
+                    super::FloatWindowResizeHandle::Right,
+                    resize_right_test_id.clone(),
+                ),
+                resize_handle(
+                    super::FloatWindowResizeHandle::Top,
+                    resize_top_test_id.clone(),
+                ),
+                resize_handle(
+                    super::FloatWindowResizeHandle::Bottom,
+                    resize_bottom_test_id.clone(),
+                ),
+                resize_handle(
+                    super::FloatWindowResizeHandle::TopLeft,
+                    resize_top_left_test_id.clone(),
+                ),
+                resize_handle(
+                    super::FloatWindowResizeHandle::TopRight,
+                    resize_top_right_test_id.clone(),
+                ),
+                resize_handle(
+                    super::FloatWindowResizeHandle::BottomLeft,
+                    resize_bottom_left_test_id.clone(),
+                ),
+                resize_handle(
+                    super::FloatWindowResizeHandle::BottomRight,
+                    resize_corner_test_id.clone(),
+                ),
+            ];
 
             if let Some(blocker) = blocker {
                 stacked.push(blocker);

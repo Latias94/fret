@@ -920,6 +920,8 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     let mut port: Option<u16> = None;
     let mut demo: Option<String> = None;
     let mut choose = false;
+    let mut devtools_ws_url: Option<String> = None;
+    let mut devtools_token: Option<String> = None;
 
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -937,6 +939,18 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
                 );
             }
             "--choose" => choose = true,
+            "--devtools-ws-url" => {
+                devtools_ws_url = Some(
+                    it.next()
+                        .ok_or_else(|| "--devtools-ws-url requires a value".to_string())?,
+                );
+            }
+            "--devtools-token" => {
+                devtools_token = Some(
+                    it.next()
+                        .ok_or_else(|| "--devtools-token requires a value".to_string())?,
+                );
+            }
             "--help" | "-h" => return help(),
             other => return Err(format!("unknown argument for dev web: {other}")),
         }
@@ -966,6 +980,26 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     };
     if let Some(demo) = demo.as_deref() {
         url.push_str(&format!("/?demo={demo}"));
+    }
+
+    if let Some(ws_url) = devtools_ws_url.as_deref() {
+        if ws_url.trim().is_empty() {
+            return Err("--devtools-ws-url must not be empty".to_string());
+        }
+        let sep = if url.contains('?') { '&' } else { '?' };
+        url.push(sep);
+        url.push_str("fret_devtools_ws=");
+        url.push_str(ws_url.trim());
+    }
+
+    if let Some(token) = devtools_token.as_deref() {
+        if token.trim().is_empty() {
+            return Err("--devtools-token must not be empty".to_string());
+        }
+        let sep = if url.contains('?') { '&' } else { '?' };
+        url.push(sep);
+        url.push_str("fret_devtools_token=");
+        url.push_str(token.trim());
     }
 
     eprintln!("Starting Trunk dev server in `{}`", display_path(&web_dir));

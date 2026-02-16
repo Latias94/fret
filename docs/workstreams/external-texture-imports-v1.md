@@ -35,3 +35,24 @@ It is the practical “runs end-to-end in-repo” companion to:
 - TODOs: `docs/workstreams/external-texture-imports-v1-todo.md`
 - Milestones: `docs/workstreams/external-texture-imports-v1-milestones.md`
 
+## v2 direction — zero/low-copy imports (capability-gated)
+
+The v1 workstream intentionally proves the *contract path* first. The next meaningful step is to
+raise the performance ceiling for high-frequency, high-resolution sources (video, camera, remote
+desktop, large canvas) by adding a **capability-gated zero/low-copy import path**.
+
+Key properties (v2):
+
+- **Bounded and deterministic**: the import strategy is selected from a small, ordered set, and
+  every unsupported path must fall back deterministically to a copy-based path.
+- **No backend handles in UI**: UI/component code continues to consume `RenderTargetId` +
+  `SceneOp::ViewportSurface` only.
+- **Metadata is first-class**: colorspace/transform/orientation/alpha semantics travel with the
+  frame so the copy and zero-copy paths converge to the same observable behavior.
+- **Perf gated**: steady-state perf baselines exist for the copy path today; v2 adds baselines for
+  any zero/low-copy path we land, especially on wasm/mobile.
+
+Tracking:
+
+- ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md`
+- Workstream (v2): `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`

@@ -130,6 +130,7 @@ pub(super) struct ViewportVertex {
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct TextVertex {
     pub(super) pos_px: [f32; 2],
+    pub(super) local_pos_px: [f32; 2],
     pub(super) uv: [f32; 2],
     pub(super) color: [f32; 4],
 }
@@ -184,6 +185,22 @@ pub struct RenderPerfSnapshot {
     pub image_uploads: u64,
     pub image_upload_bytes: u64,
 
+    // Imported render targets (best-effort). These counters expose the declared ingestion strategy
+    // for `RenderTargetId` updates applied before the UI render pass.
+    pub render_target_updates_ingest_unknown: u64,
+    pub render_target_updates_ingest_owned: u64,
+    pub render_target_updates_ingest_external_zero_copy: u64,
+    pub render_target_updates_ingest_gpu_copy: u64,
+    pub render_target_updates_ingest_cpu_upload: u64,
+    // Imported render targets (best-effort). Requested vs effective ingestion strategy is tracked
+    // so capability-gated fallbacks become visible in perf/diagnostics snapshots.
+    pub render_target_updates_requested_ingest_unknown: u64,
+    pub render_target_updates_requested_ingest_owned: u64,
+    pub render_target_updates_requested_ingest_external_zero_copy: u64,
+    pub render_target_updates_requested_ingest_gpu_copy: u64,
+    pub render_target_updates_requested_ingest_cpu_upload: u64,
+    pub render_target_updates_ingest_fallbacks: u64,
+
     // SVG raster cache (best-effort). These are intended to distinguish one-time warmup from
     // steady-state thrash (e.g. budget-driven eviction + repeated re-upload).
     pub svg_raster_budget_bytes: u64,
@@ -236,6 +253,11 @@ pub struct RenderPerfSnapshot {
     pub draw_calls: u64,
     pub quad_draw_calls: u64,
     pub viewport_draw_calls: u64,
+    pub viewport_draw_calls_ingest_unknown: u64,
+    pub viewport_draw_calls_ingest_owned: u64,
+    pub viewport_draw_calls_ingest_external_zero_copy: u64,
+    pub viewport_draw_calls_ingest_gpu_copy: u64,
+    pub viewport_draw_calls_ingest_cpu_upload: u64,
     pub image_draw_calls: u64,
     pub text_draw_calls: u64,
     pub path_draw_calls: u64,
@@ -288,6 +310,18 @@ pub(super) struct RenderPerfStats {
     pub(super) image_uploads: u64,
     pub(super) image_upload_bytes: u64,
 
+    pub(super) render_target_updates_ingest_unknown: u64,
+    pub(super) render_target_updates_ingest_owned: u64,
+    pub(super) render_target_updates_ingest_external_zero_copy: u64,
+    pub(super) render_target_updates_ingest_gpu_copy: u64,
+    pub(super) render_target_updates_ingest_cpu_upload: u64,
+    pub(super) render_target_updates_requested_ingest_unknown: u64,
+    pub(super) render_target_updates_requested_ingest_owned: u64,
+    pub(super) render_target_updates_requested_ingest_external_zero_copy: u64,
+    pub(super) render_target_updates_requested_ingest_gpu_copy: u64,
+    pub(super) render_target_updates_requested_ingest_cpu_upload: u64,
+    pub(super) render_target_updates_ingest_fallbacks: u64,
+
     pub(super) svg_raster_budget_bytes: u64,
     pub(super) svg_rasters_live: u64,
     pub(super) svg_standalone_bytes_live: u64,
@@ -335,6 +369,11 @@ pub(super) struct RenderPerfStats {
     pub(super) draw_calls: u64,
     pub(super) quad_draw_calls: u64,
     pub(super) viewport_draw_calls: u64,
+    pub(super) viewport_draw_calls_ingest_unknown: u64,
+    pub(super) viewport_draw_calls_ingest_owned: u64,
+    pub(super) viewport_draw_calls_ingest_external_zero_copy: u64,
+    pub(super) viewport_draw_calls_ingest_gpu_copy: u64,
+    pub(super) viewport_draw_calls_ingest_cpu_upload: u64,
     pub(super) image_draw_calls: u64,
     pub(super) text_draw_calls: u64,
     pub(super) path_draw_calls: u64,
@@ -561,6 +600,7 @@ pub(super) struct TextDraw {
     pub(super) vertex_count: u32,
     pub(super) kind: TextDrawKind,
     pub(super) atlas_page: u16,
+    pub(super) paint_index: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -644,6 +684,7 @@ pub(super) struct EffectMarker {
 pub(super) struct SceneEncoding {
     pub(super) instances: Vec<QuadInstance>,
     pub(super) path_paints: Vec<PaintGpu>,
+    pub(super) text_paints: Vec<PaintGpu>,
     pub(super) viewport_vertices: Vec<ViewportVertex>,
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
@@ -667,6 +708,7 @@ impl SceneEncoding {
     pub(super) fn clear(&mut self) {
         self.instances.clear();
         self.path_paints.clear();
+        self.text_paints.clear();
         self.viewport_vertices.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();

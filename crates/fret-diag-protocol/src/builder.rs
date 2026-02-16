@@ -66,6 +66,10 @@ pub fn ime_cursor_area_min_size(min_w_px: f32, min_h_px: f32, eps_px: f32) -> Ui
     }
 }
 
+pub fn runner_accessibility_activated() -> UiPredicateV1 {
+    UiPredicateV1::RunnerAccessibilityActivated
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct ScriptV2Builder {
     steps: Vec<UiActionStepV2>,

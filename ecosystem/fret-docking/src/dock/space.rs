@@ -133,11 +133,10 @@ fn dock_graph_stats_for_window(
                     if let Some(DockNode::Split {
                         axis: child_axis, ..
                     }) = graph.node(child)
+                        && child_axis == axis
                     {
-                        if child_axis == axis {
-                            has_nested_same_axis_splits = true;
-                            canonical_ok = false;
-                        }
+                        has_nested_same_axis_splits = true;
+                        canonical_ok = false;
                     }
                     stack.push((
                         child,
@@ -517,7 +516,7 @@ impl DockSpace {
         }
 
         // Ceil(duration / (1/60)s) so transitions do not end earlier than requested.
-        let ticks = (ns + ref_ns - 1) / ref_ns;
+        let ticks = ns.div_ceil(ref_ns);
         ticks.clamp(1, 10_000) as u64
     }
 
@@ -583,6 +582,7 @@ impl DockSpace {
         (ticks, ease)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn split_fraction_overrides_for_graph(
         &mut self,
         graph: &DockGraph,
@@ -1185,6 +1185,7 @@ impl DockSpace {
         self.set_tab_scroll_for(tabs, scroll);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn apply_tab_bar_drag_auto_scroll(
         &mut self,
         theme: fret_ui::ThemeSnapshot,
@@ -1707,7 +1708,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(21),
             origin: Point::new(Px(x), Px(y)),
             text: glyph.blob,
-            color: fg,
+            paint: (fg).into(),
         });
 
         if !self.hovered_float_zone {
@@ -1761,14 +1762,12 @@ impl DockSpace {
             order: fret_core::DrawOrder(23),
             origin: text_origin,
             text: tooltip.blob,
-            color: theme.color_token("popover-foreground"),
+            paint: (theme.color_token("popover-foreground")).into(),
         });
     }
 
     fn find_first_tabs(graph: &DockGraph, node: DockNodeId) -> Option<DockNodeId> {
-        let Some(n) = graph.node(node) else {
-            return None;
-        };
+        let n = graph.node(node)?;
         match n {
             DockNode::Tabs { tabs, .. } => (!tabs.is_empty()).then_some(node),
             DockNode::Split { children, .. } => children
@@ -1929,7 +1928,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(1),
             origin: Point::new(Px(x), Px(y)),
             text: text.blob,
-            color: theme.color_token("muted-foreground"),
+            paint: (theme.color_token("muted-foreground")).into(),
         });
     }
 }
@@ -2156,6 +2155,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             Tabs(DockTabsDragSnapshot),
         }
 
+        #[allow(clippy::too_many_arguments)]
         fn dock_drop_target(
             graph: &DockGraph,
             root: DockNodeId,
@@ -2195,7 +2195,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             let leaf = leaf_tabs_node_at_pos(graph, layout, position);
             if let Some((tabs_node, rect, tab_count)) = leaf {
-                if let Some(candidates) = candidates.as_deref_mut() {
+                if let Some(candidates) = candidates.as_mut() {
                     candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                         kind: fret_runtime::DockDropCandidateRectKind::LeafTabsRect,
                         zone: None,
@@ -2204,7 +2204,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 }
                 let (tab_bar, _content) = split_tab_bar(rect);
                 if tab_bar.contains(position) {
-                    if let Some(candidates) = candidates.as_deref_mut() {
+                    if let Some(candidates) = candidates.as_mut() {
                         candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                             kind: fret_runtime::DockDropCandidateRectKind::TabBarRect,
                             zone: None,
@@ -2240,7 +2240,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             // Diagnostics note: always publish the hint-pad rectangles as candidates when
             // possible, even if the current pointer position does not currently select a hint.
             // This keeps bundle triage explainable and makes scripted repro adjustments easier.
-            if let Some(candidates) = candidates.as_deref_mut() {
+            if let Some(candidates) = candidates.as_mut() {
                 if let Some(&root_rect) = layout.get(&root) {
                     candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                         kind: fret_runtime::DockDropCandidateRectKind::RootRect,
@@ -2368,6 +2368,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             (root, dock_bounds)
         }
 
+        #[allow(clippy::too_many_arguments)]
         fn compute_dock_drop_target(
             graph: &DockGraph,
             window: fret_core::AppWindowId,
@@ -2399,7 +2400,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 )
             }
 
-            if let Some(candidates) = candidates.as_deref_mut() {
+            if let Some(candidates) = candidates.as_mut() {
                 candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                     kind: fret_runtime::DockDropCandidateRectKind::WindowBounds,
                     zone: None,
@@ -2509,7 +2510,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 };
 
             if !layout_bounds.contains(effective_position) {
-                if let Some(candidates) = candidates.as_deref_mut() {
+                if let Some(candidates) = candidates.as_mut() {
                     candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                         kind: fret_runtime::DockDropCandidateRectKind::LayoutBounds,
                         zone: None,
@@ -2551,6 +2552,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .unwrap_or((None, fret_runtime::DockDropResolveSource::None))
         }
 
+        #[allow(clippy::too_many_arguments)]
         fn resolve_dock_drop_target(
             prev_hover: Option<DockDropTarget>,
             invert_docking: bool,
@@ -2599,10 +2601,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
             };
 
             if let (Some(DockDropTarget::Dock(t)), Some(policy)) = (target.as_ref(), docking_policy)
+                && !policy.allow_dock_drop_target(window, t.root, t.tabs, t.zone, t.outer)
             {
-                if !policy.allow_dock_drop_target(window, t.root, t.tabs, t.zone, t.outer) {
-                    return (None, source);
-                }
+                return (None, source);
             }
 
             (target, source)
@@ -2623,6 +2624,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
         }
 
+        #[allow(clippy::too_many_arguments)]
         fn compute_dock_drop_resolve_diagnostics(
             pointer_id: fret_core::PointerId,
             position: Point,
@@ -2675,6 +2677,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
         }
 
+        #[allow(clippy::too_many_arguments)]
         fn resolve_dock_drop_intent_panel<F>(
             target: Option<DockDropTarget>,
             drag: &DockPanelDragSnapshot,
@@ -3175,14 +3178,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 return;
                             }
                             if !self.viewport_capture.is_empty() {
-                                if let Some(capture) = self.viewport_capture.values().next() {
-                                    if docking_interaction_settings
+                                if let Some(capture) = self.viewport_capture.values().next()
+                                    && docking_interaction_settings
                                         .suppress_context_menu_during_viewport_capture
-                                        && *button == fret_core::MouseButton::Right
-                                        && capture.button != fret_core::MouseButton::Right
-                                    {
-                                        stop_propagation = true;
-                                    }
+                                    && *button == fret_core::MouseButton::Right
+                                    && capture.button != fret_core::MouseButton::Right
+                                {
+                                    stop_propagation = true;
                                 }
                                 return;
                             }
@@ -3321,7 +3323,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 }
                             }
 
-                            if *button == fret_core::MouseButton::Left && dock_bounds.contains(*position)
+                            if *button == fret_core::MouseButton::Left
+                                && dock_bounds.contains(*position)
                             {
                                 if float_zone_rect.contains(*position) {
                                     if let Some(root) = root
@@ -4561,17 +4564,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             self.tab_overflow_menu = Some(menu);
                                         }
                                     }
-                                } else {
-                                    if self.hovered_tab.is_some()
-                                        || self.hovered_tab_close
-                                        || self.hovered_tab_overflow_button.is_some()
-                                    {
-                                        self.hovered_tab = None;
-                                        self.hovered_tab_close = false;
-                                        self.hovered_tab_overflow_button = None;
-                                        invalidate_paint = true;
-                                        pending_redraws.push(self.window);
-                                    }
+                                } else if self.hovered_tab.is_some()
+                                    || self.hovered_tab_close
+                                    || self.hovered_tab_overflow_button.is_some()
+                                {
+                                    self.hovered_tab = None;
+                                    self.hovered_tab_close = false;
+                                    self.hovered_tab_overflow_button = None;
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
                                 }
 
                                 if let Some(divider) = self.divider_drag.as_ref() {
@@ -6443,7 +6444,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         order: fret_core::DrawOrder(3),
                         origin: Point::new(text_x, text_y),
                         text: glyph.blob,
-                        color,
+                        paint: (color).into(),
                     });
                 }
 

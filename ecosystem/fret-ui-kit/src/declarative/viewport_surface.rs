@@ -48,6 +48,7 @@ fn mapping_for(host_bounds: fret_core::Rect, props: ViewportSurfacePanelProps) -
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_viewport_input(
     host: &mut dyn fret_ui::action::UiPointerActionHost,
     window: fret_core::AppWindowId,

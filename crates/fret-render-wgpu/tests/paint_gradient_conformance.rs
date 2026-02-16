@@ -1,7 +1,7 @@
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
     Color, ColorSpace, DrawOrder, GradientStop, LinearGradient, MAX_STOPS, Paint, RadialGradient,
-    Scene, SceneOp, TileMode,
+    Scene, SceneOp, SweepGradient, TileMode,
 };
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
@@ -127,6 +127,14 @@ fn stops_2(a: Color, b: Color) -> ([GradientStop; MAX_STOPS], u8) {
     stops[0] = GradientStop::new(0.0, a);
     stops[1] = GradientStop::new(1.0, b);
     (stops, 2)
+}
+
+fn stops_3(a: Color, b: Color, c: Color) -> ([GradientStop; MAX_STOPS], u8) {
+    let mut stops = [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
+    stops[0] = GradientStop::new(0.0, a);
+    stops[1] = GradientStop::new(0.5, b);
+    stops[2] = GradientStop::new(1.0, c);
+    (stops, 3)
 }
 
 #[test]
@@ -259,4 +267,87 @@ fn gpu_radial_gradient_smoke_conformance() {
 
     assert!(center[3] > 240 && corner[3] > 240);
     assert!(corner[0] < center[0] && corner[1] < center[1] && corner[2] < center[2]);
+}
+
+#[test]
+fn gpu_sweep_gradient_smoke_conformance() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let size = (64u32, 64u32);
+    let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0)));
+    let (stops, stop_count) = stops_3(
+        Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        },
+    );
+
+    let gradient = SweepGradient {
+        center: Point::new(Px(32.0), Px(32.0)),
+        start_angle_turns: 0.0,
+        end_angle_turns: 1.0,
+        tile_mode: TileMode::Clamp,
+        color_space: ColorSpace::Srgb,
+        stop_count,
+        stops,
+    };
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect,
+        background: Paint::SweepGradient(gradient),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    let right = pixel_rgba(&pixels, size.0, 59, 32);
+    let left = pixel_rgba(&pixels, size.0, 4, 32);
+    let down = pixel_rgba(&pixels, size.0, 32, 59);
+    let up = pixel_rgba(&pixels, size.0, 32, 4);
+
+    assert!(
+        right[3] > 240 && left[3] > 240 && down[3] > 240 && up[3] > 240,
+        "expected opaque alpha: right={right:?} left={left:?} down={down:?} up={up:?}"
+    );
+
+    assert!(
+        right[0] > right[1] && right[0] > right[2],
+        "expected red-dominant at +X (right): {right:?}"
+    );
+    assert!(
+        left[1] > left[0] && left[1] > left[2],
+        "expected green-dominant at -X (left): {left:?}"
+    );
+    assert!(
+        down[0] > down[2] && down[1] > down[2],
+        "expected red/green mix at +Y (down): {down:?}"
+    );
+    assert!(
+        up[2] > up[0] && up[1] > up[0],
+        "expected green/blue mix at -Y (up): {up:?}"
+    );
 }

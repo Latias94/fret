@@ -1,5 +1,8 @@
 use fret_core::RenderTargetId;
-use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetMetadata, Renderer};
+use fret_render::{
+    RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetIngestStrategy,
+    RenderTargetMetadata, Renderer,
+};
 
 use super::EngineFrameUpdate;
 use super::{EngineFrameKeepalive, NativeExternalImportError, NativeExternalTextureFrame};
@@ -25,6 +28,16 @@ pub struct ImportedViewportRenderTarget {
 }
 
 impl ImportedViewportRenderTarget {
+    fn with_ingest_strategies(
+        mut metadata: RenderTargetMetadata,
+        requested: RenderTargetIngestStrategy,
+        effective: RenderTargetIngestStrategy,
+    ) -> RenderTargetMetadata {
+        metadata.requested_ingest_strategy = requested;
+        metadata.ingest_strategy = effective;
+        metadata
+    }
+
     pub fn new(format: wgpu::TextureFormat, color_space: RenderTargetColorSpace) -> Self {
         Self {
             id: RenderTargetId::default(),
@@ -125,6 +138,27 @@ impl ImportedViewportRenderTarget {
         update.update_render_target(self.id, desc);
     }
 
+    /// Record an imported view update with explicit requested vs effective ingestion strategies.
+    ///
+    /// This exists to keep v2 capability-gated fallback behavior observable while still staging
+    /// registry mutation through runner deltas (ADR 0234).
+    pub fn push_update_with_ingest_strategies(
+        &self,
+        update: &mut EngineFrameUpdate,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        metadata: RenderTargetMetadata,
+        requested: RenderTargetIngestStrategy,
+        effective: RenderTargetIngestStrategy,
+    ) {
+        self.push_update_with_metadata(
+            update,
+            view,
+            size,
+            Self::with_ingest_strategies(metadata, requested, effective),
+        );
+    }
+
     /// Record an imported view update and a per-frame keepalive token.
     ///
     /// Use this when the imported view depends on an ephemeral external handle (e.g. a WebCodecs
@@ -169,6 +203,45 @@ impl ImportedViewportRenderTarget {
         frame: Box<dyn NativeExternalTextureFrame>,
     ) -> Result<(), NativeExternalImportError> {
         let imported = frame.import(ctx, caps)?;
+
+        if !self.is_registered() {
+            let _ = self.ensure_registered_with_metadata(
+                renderer,
+                imported.view.clone(),
+                imported.size,
+                imported.metadata,
+            );
+        }
+
+        self.push_update_with_metadata_and_keepalive(
+            update,
+            imported.view,
+            imported.size,
+            imported.metadata,
+            imported.keepalive,
+        );
+
+        Ok(())
+    }
+
+    /// Attempt to import a platform-produced external frame and record a runner delta update,
+    /// while enforcing v2 requested vs effective metadata semantics.
+    ///
+    /// The returned `imported.metadata.ingest_strategy` is treated as the effective strategy.
+    /// Callers should pass the requested strategy they would like to use on this target.
+    pub fn push_native_external_import_update_with_requested_ingest_strategy(
+        &mut self,
+        renderer: &mut Renderer,
+        update: &mut EngineFrameUpdate,
+        ctx: &fret_render::WgpuContext,
+        caps: &fret_render::RendererCapabilities,
+        requested: RenderTargetIngestStrategy,
+        frame: Box<dyn NativeExternalTextureFrame>,
+    ) -> Result<(), NativeExternalImportError> {
+        let mut imported = frame.import(ctx, caps)?;
+
+        let effective = imported.metadata.ingest_strategy;
+        imported.metadata = Self::with_ingest_strategies(imported.metadata, requested, effective);
 
         if !self.is_registered() {
             let _ = self.ensure_registered_with_metadata(

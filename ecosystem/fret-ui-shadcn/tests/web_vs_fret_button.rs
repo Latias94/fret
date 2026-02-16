@@ -1,7 +1,7 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px, Rect, Scene,
-    SceneOp, Size as CoreSize,
+    AppWindowId, Event, Modifiers, MouseButton, Paint, Point, PointerEvent, PointerType, Px, Rect,
+    Scene, SceneOp, Size as CoreSize,
 };
 use fret_ui::tree::UiTree;
 use serde::Serialize;
@@ -377,10 +377,12 @@ fn extract_fret_button_style(variant: fret_ui_shadcn::ButtonVariant) -> FretButt
 
     let mut text_color: Option<Rgba> = None;
     for op in scene.ops() {
-        if let SceneOp::Text { origin, color, .. } = *op {
+        if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                text_color = Some(color_to_rgba(color));
-                break;
+                if let Paint::Solid(color) = paint {
+                    text_color = Some(color_to_rgba(color));
+                    break;
+                }
             }
         }
     }
@@ -500,10 +502,12 @@ fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> 
 
     let mut text_color: Option<Rgba> = None;
     for op in scene.ops() {
-        if let SceneOp::Text { origin, color, .. } = *op {
+        if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                text_color = Some(color_to_rgba(color));
-                break;
+                if let Paint::Solid(color) = paint {
+                    text_color = Some(color_to_rgba(color));
+                    break;
+                }
             }
         }
     }
@@ -611,10 +615,12 @@ fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> 
 
     let mut text_color: Option<Rgba> = None;
     for op in scene.ops() {
-        if let SceneOp::Text { origin, color, .. } = *op {
+        if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                text_color = Some(color_to_rgba(color));
-                break;
+                if let Paint::Solid(color) = paint {
+                    text_color = Some(color_to_rgba(color));
+                    break;
+                }
             }
         }
     }
@@ -700,10 +706,12 @@ fn extract_fret_button_style_disabled(variant: fret_ui_shadcn::ButtonVariant) ->
 
     let mut text_color: Option<Rgba> = None;
     for op in scene.ops() {
-        if let SceneOp::Text { origin, color, .. } = *op {
+        if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                text_color = Some(color_to_rgba(color));
-                break;
+                if let Paint::Solid(color) = paint {
+                    text_color = Some(color_to_rgba(color));
+                    break;
+                }
             }
         }
     }

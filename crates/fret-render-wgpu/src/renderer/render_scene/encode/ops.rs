@@ -326,10 +326,10 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         SceneOp::Text {
             origin,
             text,
-            color,
+            paint,
             ..
         } => {
-            draw::encode_text(renderer, state, origin, text, color);
+            draw::encode_text(renderer, state, origin, text, paint);
         }
         SceneOp::Path {
             origin,

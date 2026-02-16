@@ -98,6 +98,8 @@ Exit criteria:
 Evidence anchors (expected):
 
 - Wrapped RTL hit testing and geometry:
-  - `crates/fret-render-wgpu/src/text/mod.rs` (tests exercising `TextSystem::prepare` + `hit_test_point`)
+  - `crates/fret-render-wgpu/src/text/mod.rs`
+    (`rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends`)
 - Mixed-direction wrapped selection geometry:
-  - `crates/fret-render-wgpu/src/text/mod.rs` (selection rects for RTL ranges under wrapping)
+  - `crates/fret-render-wgpu/src/text/mod.rs`
+    (`mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty`)

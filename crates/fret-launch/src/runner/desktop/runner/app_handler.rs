@@ -2032,6 +2032,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             };
 
             if a11y.take_activation_request() {
+                self.app.with_global_mut(
+                    fret_runtime::RunnerAccessibilityDiagnosticsStore::default,
+                    |store, app| {
+                        store.record_activation_request(app_window, app.frame_id());
+                    },
+                );
                 state.window.request_redraw();
             }
 

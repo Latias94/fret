@@ -1,3 +1,8 @@
+#![allow(clippy::arc_with_non_send_sync)]
+#![allow(clippy::default_constructed_unit_structs)]
+#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::too_many_arguments)]
+
 use super::state::{OVERLAY_CACHE_TTL_FRAMES, WindowOverlays};
 use super::*;
 

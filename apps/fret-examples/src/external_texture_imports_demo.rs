@@ -6,7 +6,10 @@ use fret_launch::{
     EngineFrameKeepalive, EngineFrameUpdate, ImportedViewportRenderTarget,
     NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
 };
-use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext, write_rgba8_texture_region};
+use fret_render::{
+    RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer,
+    WgpuContext, write_rgba8_texture_region,
+};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
     ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
@@ -179,10 +182,13 @@ impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
         let view = self
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut metadata = RenderTargetMetadata::default();
+        metadata.requested_ingest_strategy = RenderTargetIngestStrategy::Owned;
+        metadata.ingest_strategy = RenderTargetIngestStrategy::Owned;
         Ok(NativeExternalImportedFrame {
             view,
             size: self.size,
-            metadata: fret_render::RenderTargetMetadata::default(),
+            metadata,
             keepalive: EngineFrameKeepalive::new(self),
         })
     }
@@ -456,6 +462,14 @@ fn record_engine_frame(
         .expect("texture must exist after allocation");
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
+    let mut metadata = RenderTargetMetadata::default();
+    let effective_strategy = match st.mode {
+        ExternalTextureImportsMode::CheckerGpu => RenderTargetIngestStrategy::Owned,
+        ExternalTextureImportsMode::DecodedPngCpuCopy => RenderTargetIngestStrategy::CpuUpload,
+    };
+    metadata.requested_ingest_strategy = effective_strategy;
+    metadata.ingest_strategy = effective_strategy;
+
     if st.use_native_adapter {
         let renderer_caps = app
             .global::<fret_render::RendererCapabilities>()
@@ -464,23 +478,31 @@ fn record_engine_frame(
             texture: texture.clone(),
             size: st.target_px_size,
         });
-        if let Err(err) = st.target.push_native_external_import_update(
-            renderer,
-            &mut update,
-            context,
-            &renderer_caps,
-            frame,
-        ) {
+        if let Err(err) = st
+            .target
+            .push_native_external_import_update_with_requested_ingest_strategy(
+                renderer,
+                &mut update,
+                context,
+                &renderer_caps,
+                effective_strategy,
+                frame,
+            )
+        {
             tracing::warn!(
                 ?err,
                 "native external import adapter path failed; falling back"
             );
-            st.target
-                .push_update(&mut update, view.clone(), st.target_px_size);
+            st.target.push_update_with_metadata(
+                &mut update,
+                view.clone(),
+                st.target_px_size,
+                metadata,
+            );
         }
     } else {
         st.target
-            .push_update(&mut update, view.clone(), st.target_px_size);
+            .push_update_with_metadata(&mut update, view.clone(), st.target_px_size, metadata);
     }
 
     match st.mode {

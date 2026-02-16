@@ -9,7 +9,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         _parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
     ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
         let accessibility_enabled = self.config.accessibility_enabled
-            && !std::env::var_os("FRET_A11Y_DISABLE").is_some_and(|v| !v.is_empty());
+            && std::env::var_os("FRET_A11Y_DISABLE").is_none_or(|v| v.is_empty());
 
         let mut attrs = winit::window::WindowAttributes::default()
             .with_title(spec.title)

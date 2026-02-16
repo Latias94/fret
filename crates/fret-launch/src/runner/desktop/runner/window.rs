@@ -88,8 +88,8 @@ pub(super) struct RectF64 {
 
 #[cfg(target_os = "macos")]
 pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Window>) -> bool {
-    use cocoa::base::{id, nil};
     use objc::runtime::Class;
+    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
 
@@ -103,20 +103,21 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
     }
 
     unsafe {
+        let nil: *mut Object = std::ptr::null_mut();
         let Some(class) = Class::get("NSApplication") else {
             window.focus_window();
             return true;
         };
-        let app: id = msg_send![class, sharedApplication];
+        let app: *mut Object = msg_send![class, sharedApplication];
         if app.is_null() {
             window.focus_window();
             return true;
         }
 
-        let ns_window: id = match window.window_handle() {
+        let ns_window: *mut Object = match window.window_handle() {
             Ok(handle) => match handle.as_raw() {
                 winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
-                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
                     if ns_view.is_null() {
                         std::ptr::null_mut()
                     } else {
@@ -132,10 +133,10 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
             return true;
         }
 
-        let sender_ns_window: id = match sender_window.window_handle() {
+        let sender_ns_window: *mut Object = match sender_window.window_handle() {
             Ok(handle) => match handle.as_raw() {
                 winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
-                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
                     if ns_view.is_null() {
                         std::ptr::null_mut()
                     } else {
@@ -175,8 +176,8 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
         // success rate of the ordering change when the source window is in a tracked interaction.
         window.focus_window();
 
-        let key_window_after: id = msg_send![app, keyWindow];
-        let main_window_after: id = msg_send![app, mainWindow];
+        let key_window_after: *mut Object = msg_send![app, keyWindow];
+        let main_window_after: *mut Object = msg_send![app, mainWindow];
         let is_key_after: bool = msg_send![ns_window, isKeyWindow];
         let is_main_after: bool = msg_send![ns_window, isMainWindow];
         let is_visible_after: bool = msg_send![ns_window, isVisible];
@@ -474,7 +475,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let RawWindowHandle::Win32(handle) = handle.as_raw() else {
             return None;
         };
-        Some(handle.hwnd.get() as isize)
+        Some(handle.hwnd.get())
     }
 
     #[cfg(target_os = "windows")]
@@ -513,10 +514,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 {
                     fallback = Some(window);
                 }
-            } else if let Some(&window) = hwnd_to_window.get(&hwnd) {
-                if self.screen_pos_in_window(window, screen_pos) {
-                    return Some(window);
-                }
+            } else if let Some(&window) = hwnd_to_window.get(&hwnd)
+                && self.screen_pos_in_window(window, screen_pos)
+            {
+                return Some(window);
             }
 
             let Some(next) = super::win32::next_window_in_z_order(hwnd) else {

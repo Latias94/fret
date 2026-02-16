@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct CollapsibleModels {
@@ -127,49 +129,9 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_stretch()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
     let container_props =
         |cx: &mut ElementContext<'_, App>, chrome: ChromeRefinement, layout: LayoutRefinement| {
             cx.with_theme(|theme| decl_style::container_props(theme, chrome, layout))
-        };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = container_props(
-            cx,
-            ChromeRefinement::default()
-                .border_1()
-                .rounded(Radius::Md)
-                .p(Space::N4),
-            LayoutRefinement::default().w_full().max_w(Px(760.0)),
-        );
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
         };
 
     let details_collapsible = |cx: &mut ElementContext<'_, App>,
@@ -316,7 +278,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         "Order #4189",
         "Shipped",
     );
-    let demo = section_card(cx, "Demo", demo_content);
+    let demo = demo_content;
 
     let controlled_now = cx
         .get_model_copied(&controlled_open, Invalidation::Layout)
@@ -363,7 +325,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         },
     )
     .test_id("ui-gallery-collapsible-controlled");
-    let controlled_state = section_card(cx, "Controlled State", controlled_content);
+    let controlled_state = controlled_content;
 
     let basic_content = shadcn::Collapsible::uncontrolled(false)
         .into_element_with_open_model(
@@ -395,7 +357,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             },
         )
         .test_id("ui-gallery-collapsible-basic");
-    let basic = section_card(cx, "Basic", basic_content);
+    let basic = basic_content;
 
     let input_field = |cx: &mut ElementContext<'_, App>,
                        test_id: &'static str,
@@ -488,7 +450,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ]
         },
     );
-    let settings = section_card(cx, "Settings Panel", settings_panel);
+    let settings = settings_panel.test_id("ui-gallery-collapsible-settings-panel");
 
     let file_leaf = |cx: &mut ElementContext<'_, App>, label: &'static str| {
         shadcn::Button::new(label)
@@ -570,7 +532,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
         .test_id("ui-gallery-collapsible-file-tree")
     };
-    let file_tree = section_card(cx, "File Tree", file_tree_content);
+    let file_tree = file_tree_content;
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -585,88 +547,20 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             )
         },
     );
-    let rtl = section_card(cx, "RTL", rtl_content);
+    let rtl = rtl_content;
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Collapsible docs flow: Demo -> Controlled State -> Basic -> Settings Panel -> File Tree -> RTL.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                controlled_state,
-                basic,
-                settings,
-                file_tree,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-collapsible-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic",
-                    r#"let demo = shadcn::Collapsible::uncontrolled(false)
-    .into_element_with_open_model(cx, |cx, open, is_open| {
-        shadcn::Button::new(if is_open { "Hide details" } else { "Show details" })
-            .toggle_model(open)
-            .into_element(cx)
-    }, |cx| shadcn::CollapsibleContent::new(vec![cx.text("Content")]).into_element(cx));"#,
-                ),
-                code_block(
-                    cx,
-                    "Controlled State",
-                    r#"let open: Model<bool> = cx.app.models_mut().insert(false);
-let controlled = shadcn::Collapsible::new(open.clone()).into_element_with_open_model(...);"#,
-                ),
-                code_block(
-                    cx,
-                    "RTL",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Collapsible::new(open_model).into_element_with_open_model(...)
-})"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`.",
+                ),
                 shadcn::typography::muted(
                     cx,
                     "Use controlled mode (`Model<bool>`) when outside state (URL/query, form mode, or saved layout) needs to drive disclosure.",
@@ -686,13 +580,49 @@ let controlled = shadcn::Collapsible::new(open.clone()).into_element_with_open_m
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-collapsible",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Collapsible docs flow: Demo, Controlled State, Basic, Settings Panel, File Tree, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Uncontrolled disclosure with a compact trigger and a details list."),
+            DocSection::new("Controlled State", controlled_state)
+                .description("Controlled via `Model<bool>` when state must be driven externally.")
+                .code(
+                    "rust",
+                    r#"let open: Model<bool> = cx.app.models_mut().insert(false);
+shadcn::Collapsible::new(open.clone()).into_element_with_open_model(cx, |cx, open, is_open| {
+    shadcn::Button::new(if is_open { "Collapse" } else { "Expand" })
+        .toggle_model(open)
+        .into_element(cx)
+}, |cx| {
+    shadcn::CollapsibleContent::new(vec![cx.text("...")]).into_element(cx)
+});"#,
+                ),
+            DocSection::new("Basic", basic)
+                .description("Uncontrolled disclosure with a simple text content body.")
+                .code(
+                    "rust",
+                    r#"shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
+    cx,
+    |cx, open, is_open| shadcn::Button::new(if is_open { "Hide" } else { "Show" })
+        .toggle_model(open)
+        .into_element(cx),
+    |cx| shadcn::CollapsibleContent::new(vec![cx.text("Content")]).into_element(cx),
+);"#,
+                ),
+            DocSection::new("Settings Panel", settings)
+                .description("Collapsible used to hide optional/advanced form fields."),
+            DocSection::new("File Tree", file_tree)
+                .description("Nested collapsibles with independent open state per node."),
+            DocSection::new("RTL", rtl)
+                .description("Direction provider should keep trigger/content alignment stable."),
+            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-collapsible-component")]
 }

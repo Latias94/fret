@@ -520,7 +520,10 @@ pub(crate) fn find_best_text_color_near(
     let mut best_any_score = f32::INFINITY;
 
     scene_walk(scene, |st, op| {
-        let SceneOp::Text { origin, color, .. } = *op else {
+        let SceneOp::Text { origin, paint, .. } = *op else {
+            return;
+        };
+        let Paint::Solid(color) = paint else {
             return;
         };
         let raw_origin = origin;

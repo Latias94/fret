@@ -84,6 +84,7 @@ impl Edges4<Space> {
         Edges4::<MetricRef>::from(self).pos()
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn neg(self) -> Edges4<SignedMetricRef> {
         Edges4::<MetricRef>::from(self).neg()
     }
@@ -94,6 +95,7 @@ impl Edges4<Px> {
         Edges4::<MetricRef>::from(self).pos()
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn neg(self) -> Edges4<SignedMetricRef> {
         Edges4::<MetricRef>::from(self).neg()
     }
@@ -104,6 +106,7 @@ impl Edges4<MetricRef> {
         self.map(SignedMetricRef::pos)
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn neg(self) -> Edges4<SignedMetricRef> {
         self.map(SignedMetricRef::neg)
     }

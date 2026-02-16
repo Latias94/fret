@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use fret_core::Event;
 use fret_render::{Renderer, SurfaceState, WgpuContext};
+use wasm_bindgen::JsCast as _;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen_futures::spawn_local;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
@@ -41,6 +43,26 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         let window: Arc<dyn Window> = Arc::<dyn Window>::from(window);
         self.window_id = Some(window.id());
 
+        // DevTools WS messages can arrive while the web app is idle (no continuous frame loop).
+        // Wake the runner so diagnostics scripts can start without requiring "always animating".
+        if self.devtools_ws_inbox_waker.is_none()
+            && let Some(web_window) = web_sys::window()
+        {
+            let w = window.clone();
+            let proxy = self.event_loop_proxy.clone();
+            let cb = Closure::wrap(Box::new(move |_evt: web_sys::Event| {
+                w.request_redraw();
+                if let Some(proxy) = proxy.as_ref() {
+                    proxy.wake_up();
+                }
+            }) as Box<dyn FnMut(_)>);
+            let _ = web_window.add_event_listener_with_callback(
+                "fret_devtools_ws_inbox",
+                cb.as_ref().unchecked_ref(),
+            );
+            self.devtools_ws_inbox_waker = Some(cb);
+        }
+
         if self.window_state.is_none() {
             let state = self
                 .driver
@@ -77,6 +99,95 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             let msaa = self.config.path_msaa_samples;
             let font_config = self.config.text_font_families.clone();
             spawn_local(async move {
+                struct WebDiagFlags {
+                    devtools_ws_configured: bool,
+                    renderer_perf_enabled: bool,
+                }
+
+                fn diag_flags_from_location() -> WebDiagFlags {
+                    let Some(window) = web_sys::window() else {
+                        return WebDiagFlags {
+                            devtools_ws_configured: false,
+                            renderer_perf_enabled: false,
+                        };
+                    };
+
+                    let location = window.location();
+                    let search = location.search().unwrap_or_default();
+                    let hash = location.hash().unwrap_or_default();
+
+                    fn parse_query_params(query: &str) -> Option<web_sys::UrlSearchParams> {
+                        let query = query.trim();
+                        if query.is_empty() {
+                            return None;
+                        }
+                        let query = query.trim_start_matches('?');
+                        web_sys::UrlSearchParams::new_with_str(query).ok()
+                    }
+
+                    fn parse_hash_query_params(hash: &str) -> Option<web_sys::UrlSearchParams> {
+                        let hash = hash.trim();
+                        if hash.is_empty() {
+                            return None;
+                        }
+
+                        let hash = hash.trim_start_matches('#');
+                        let query = hash.split_once('?').map(|(_, q)| q).unwrap_or(hash);
+                        parse_query_params(query)
+                    }
+
+                    fn is_truthy_flag(v: Option<String>) -> bool {
+                        v.as_deref()
+                            .is_some_and(|v| matches!(v.trim(), "1" | "true" | "yes" | "on"))
+                    }
+
+                    fn has_devtools_params(params: &web_sys::UrlSearchParams) -> bool {
+                        params.get("fret_devtools_ws").is_some()
+                            && params.get("fret_devtools_token").is_some()
+                    }
+
+                    let mut devtools_ws_configured = false;
+                    let mut renderer_perf_enabled = false;
+
+                    if let Some(params) = parse_query_params(&search) {
+                        devtools_ws_configured |= has_devtools_params(&params);
+                        renderer_perf_enabled |=
+                            is_truthy_flag(params.get("fret_diag_renderer_perf"));
+                    }
+                    if let Some(params) = parse_hash_query_params(&hash) {
+                        devtools_ws_configured |= has_devtools_params(&params);
+                        renderer_perf_enabled |=
+                            is_truthy_flag(params.get("fret_diag_renderer_perf"));
+                    }
+
+                    if !devtools_ws_configured {
+                        let ws_global = js_sys::Reflect::get(
+                            window.as_ref(),
+                            &wasm_bindgen::JsValue::from_str("__FRET_DEVTOOLS_WS"),
+                        )
+                        .ok()
+                        .and_then(|v| v.as_string());
+                        let token_global = js_sys::Reflect::get(
+                            window.as_ref(),
+                            &wasm_bindgen::JsValue::from_str("__FRET_DEVTOOLS_TOKEN"),
+                        )
+                        .ok()
+                        .and_then(|v| v.as_string());
+                        devtools_ws_configured |= ws_global.is_some() && token_global.is_some();
+                    }
+
+                    if devtools_ws_configured {
+                        renderer_perf_enabled = true;
+                    }
+
+                    WebDiagFlags {
+                        devtools_ws_configured,
+                        renderer_perf_enabled,
+                    }
+                }
+
+                let diag_flags = diag_flags_from_location();
+
                 let (width, height) = {
                     let web_window = match web_sys::window() {
                         Some(w) => w,
@@ -112,12 +223,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer.set_intermediate_budget_bytes(intermediate_budget);
                 renderer.set_path_msaa_samples(msaa);
                 let _ = renderer.set_text_font_families(&font_config);
+                if diag_flags.renderer_perf_enabled {
+                    renderer.set_perf_enabled(true);
+                }
 
                 *gfx_slot.borrow_mut() = Some(GfxState {
                     ctx,
                     surface_state,
                     renderer,
                     last_surface_error: None,
+                    diag_keepalive_redraw: diag_flags.devtools_ws_configured,
                 });
                 if let Some(proxy) = proxy {
                     proxy.wake_up();

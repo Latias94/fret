@@ -1907,7 +1907,6 @@ impl UiDiagnosticsService {
                                         remaining_frames: timeout_frames,
                                         request_id,
                                         window_ffi,
-                                        last_result_trigger_stamp: None,
                                     });
                                 } else {
                                     force_dump_label = Some(format!(
@@ -1937,7 +1936,6 @@ impl UiDiagnosticsService {
                             let trigger_stamp =
                                 read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
                             let completed = trigger_stamp.is_some()
-                                && trigger_stamp != state.last_result_trigger_stamp
                                 && screenshot_request_completed(
                                     &self.cfg.screenshot_result_path,
                                     &state.request_id,
@@ -1962,7 +1960,6 @@ impl UiDiagnosticsService {
                                     remaining_frames: state.remaining_frames.saturating_sub(1),
                                     request_id: state.request_id,
                                     window_ffi: state.window_ffi,
-                                    last_result_trigger_stamp: trigger_stamp,
                                 });
                                 output.request_redraw = true;
                             }
@@ -2187,6 +2184,10 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::RunnerAccessibilityActivated => app
+                            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                            .and_then(|store| store.snapshot(window))
+                            .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
                         }
@@ -2407,6 +2408,10 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::RunnerAccessibilityActivated => app
+                            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                            .and_then(|store| store.snapshot(window))
+                            .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
                         }
@@ -7061,7 +7066,7 @@ impl UiDiagnosticsService {
         &mut self,
         label: Option<&str>,
         dump_max_snapshots_override: Option<usize>,
-        request_id: Option<u64>,
+        _request_id: Option<u64>,
     ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -9250,7 +9255,6 @@ struct ScreenshotWaitState {
     remaining_frames: u32,
     request_id: String,
     window_ffi: u64,
-    last_result_trigger_stamp: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9404,6 +9408,11 @@ pub struct UiTreeDebugSnapshotV1 {
     /// are dropping and recreating surfaces as expected.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner_surface_lifecycle: Option<UiRunnerSurfaceLifecycleSnapshotV1>,
+    /// Runner accessibility activation evidence, sourced from `RunnerAccessibilityDiagnosticsStore`.
+    ///
+    /// This records when the OS accessibility stack activates the AccessKit adapter for a window.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_accessibility: Option<UiRunnerAccessibilitySnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -9442,6 +9451,15 @@ pub struct UiRunnerSurfaceLifecycleSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_destroy_surfaces_unix_ms: Option<u64>,
     pub surfaces_available: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiRunnerAccessibilitySnapshotV1 {
+    pub activation_requests: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_activation_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_activation_frame_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9636,6 +9654,18 @@ impl UiTreeDebugSnapshotV1 {
                 last_destroy_surfaces_unix_ms: snapshot.last_destroy_surfaces_unix_ms,
                 surfaces_available: snapshot.surfaces_available,
             });
+
+        let runner_accessibility = Some({
+            let snapshot = app
+                .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                .and_then(|store| store.snapshot(window))
+                .unwrap_or_default();
+            UiRunnerAccessibilitySnapshotV1 {
+                activation_requests: snapshot.activation_requests,
+                last_activation_unix_ms: snapshot.last_activation_unix_ms,
+                last_activation_frame_id: snapshot.last_activation_frame_id.map(|id| id.0),
+            }
+        });
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -9816,6 +9846,7 @@ impl UiTreeDebugSnapshotV1 {
             window_insets,
             text_input,
             runner_surface_lifecycle,
+            runner_accessibility,
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
@@ -12617,6 +12648,28 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_image_upload_bytes: u64,
     #[serde(default)]
+    pub renderer_render_target_updates_ingest_unknown: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_owned: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_external_zero_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_gpu_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_cpu_upload: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_unknown: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_owned: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_external_zero_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_gpu_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_cpu_upload: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_fallbacks: u64,
+    #[serde(default)]
     pub renderer_svg_raster_budget_bytes: u64,
     #[serde(default)]
     pub renderer_svg_rasters_live: u64,
@@ -12680,6 +12733,18 @@ pub struct UiFrameStatsV1 {
     pub renderer_text_draw_calls: u64,
     #[serde(default)]
     pub renderer_quad_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_unknown: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_owned: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_external_zero_copy: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_gpu_copy: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_cpu_upload: u64,
     #[serde(default)]
     pub renderer_mask_draw_calls: u64,
     #[serde(default)]
@@ -12959,6 +13024,17 @@ impl UiFrameStatsV1 {
             renderer_svg_upload_bytes: 0,
             renderer_image_uploads: 0,
             renderer_image_upload_bytes: 0,
+            renderer_render_target_updates_ingest_unknown: 0,
+            renderer_render_target_updates_ingest_owned: 0,
+            renderer_render_target_updates_ingest_external_zero_copy: 0,
+            renderer_render_target_updates_ingest_gpu_copy: 0,
+            renderer_render_target_updates_ingest_cpu_upload: 0,
+            renderer_render_target_updates_requested_ingest_unknown: 0,
+            renderer_render_target_updates_requested_ingest_owned: 0,
+            renderer_render_target_updates_requested_ingest_external_zero_copy: 0,
+            renderer_render_target_updates_requested_ingest_gpu_copy: 0,
+            renderer_render_target_updates_requested_ingest_cpu_upload: 0,
+            renderer_render_target_updates_ingest_fallbacks: 0,
             renderer_svg_raster_budget_bytes: 0,
             renderer_svg_rasters_live: 0,
             renderer_svg_standalone_bytes_live: 0,
@@ -12991,6 +13067,12 @@ impl UiFrameStatsV1 {
             renderer_draw_calls: 0,
             renderer_text_draw_calls: 0,
             renderer_quad_draw_calls: 0,
+            renderer_viewport_draw_calls: 0,
+            renderer_viewport_draw_calls_ingest_unknown: 0,
+            renderer_viewport_draw_calls_ingest_owned: 0,
+            renderer_viewport_draw_calls_ingest_external_zero_copy: 0,
+            renderer_viewport_draw_calls_ingest_gpu_copy: 0,
+            renderer_viewport_draw_calls_ingest_cpu_upload: 0,
             renderer_mask_draw_calls: 0,
             renderer_pipeline_switches: 0,
             renderer_bind_group_switches: 0,
@@ -13018,6 +13100,30 @@ impl UiFrameStatsV1 {
             out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
             out.renderer_image_uploads = sample.perf.image_uploads;
             out.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
+            out.renderer_render_target_updates_ingest_unknown =
+                sample.perf.render_target_updates_ingest_unknown;
+            out.renderer_render_target_updates_ingest_owned =
+                sample.perf.render_target_updates_ingest_owned;
+            out.renderer_render_target_updates_ingest_external_zero_copy =
+                sample.perf.render_target_updates_ingest_external_zero_copy;
+            out.renderer_render_target_updates_ingest_gpu_copy =
+                sample.perf.render_target_updates_ingest_gpu_copy;
+            out.renderer_render_target_updates_ingest_cpu_upload =
+                sample.perf.render_target_updates_ingest_cpu_upload;
+            out.renderer_render_target_updates_requested_ingest_unknown =
+                sample.perf.render_target_updates_requested_ingest_unknown;
+            out.renderer_render_target_updates_requested_ingest_owned =
+                sample.perf.render_target_updates_requested_ingest_owned;
+            out.renderer_render_target_updates_requested_ingest_external_zero_copy = sample
+                .perf
+                .render_target_updates_requested_ingest_external_zero_copy;
+            out.renderer_render_target_updates_requested_ingest_gpu_copy =
+                sample.perf.render_target_updates_requested_ingest_gpu_copy;
+            out.renderer_render_target_updates_requested_ingest_cpu_upload = sample
+                .perf
+                .render_target_updates_requested_ingest_cpu_upload;
+            out.renderer_render_target_updates_ingest_fallbacks =
+                sample.perf.render_target_updates_ingest_fallbacks;
             out.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
             out.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
             out.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;
@@ -13054,6 +13160,17 @@ impl UiFrameStatsV1 {
             out.renderer_draw_calls = sample.perf.draw_calls;
             out.renderer_text_draw_calls = sample.perf.text_draw_calls;
             out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
+            out.renderer_viewport_draw_calls = sample.perf.viewport_draw_calls;
+            out.renderer_viewport_draw_calls_ingest_unknown =
+                sample.perf.viewport_draw_calls_ingest_unknown;
+            out.renderer_viewport_draw_calls_ingest_owned =
+                sample.perf.viewport_draw_calls_ingest_owned;
+            out.renderer_viewport_draw_calls_ingest_external_zero_copy =
+                sample.perf.viewport_draw_calls_ingest_external_zero_copy;
+            out.renderer_viewport_draw_calls_ingest_gpu_copy =
+                sample.perf.viewport_draw_calls_ingest_gpu_copy;
+            out.renderer_viewport_draw_calls_ingest_cpu_upload =
+                sample.perf.viewport_draw_calls_ingest_cpu_upload;
             out.renderer_mask_draw_calls = sample.perf.mask_draw_calls;
             out.renderer_pipeline_switches = sample.perf.pipeline_switches;
             out.renderer_bind_group_switches = sample.perf.bind_group_switches;
@@ -16190,6 +16307,7 @@ fn eval_predicate(
         }
         UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
         UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
+        UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {

@@ -93,6 +93,7 @@ pub fn clear_pointer_default_scope(
     clear_pointer(models, svc, window, kind, pointer_id);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn update_from_sensor_event_in_scope(
     models: &mut ModelStore,
     svc: &DndServiceModel,

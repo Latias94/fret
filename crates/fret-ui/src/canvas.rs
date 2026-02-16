@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use fret_core::scene::Paint;
 use fret_core::{
     AttributedText, Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, FontId,
     FontWeight, Point, Px, Rect, Scene, SceneOp, SvgFit, TextConstraints, TextMetrics,
@@ -927,7 +928,7 @@ impl CanvasCache {
                 order,
                 origin,
                 text: blob,
-                color,
+                paint: Paint::Solid(color),
             });
             return TextDraw { blob, metrics };
         }
@@ -946,7 +947,7 @@ impl CanvasCache {
                 order,
                 origin,
                 text: entry.blob,
-                color,
+                paint: Paint::Solid(color),
             });
             return TextDraw {
                 blob: entry.blob,
@@ -978,7 +979,7 @@ impl CanvasCache {
             order,
             origin,
             text: blob,
-            color,
+            paint: Paint::Solid(color),
         });
         TextDraw { blob, metrics }
     }
@@ -1072,7 +1073,7 @@ impl CanvasCache {
             order,
             origin,
             text: blob,
-            color,
+            paint: Paint::Solid(color),
         });
         TextDraw { blob, metrics }
     }

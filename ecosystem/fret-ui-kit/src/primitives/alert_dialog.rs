@@ -170,20 +170,15 @@ pub fn cancel_element_for_open_model<H: UiHost>(
         })
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum AlertDialogInitialFocus {
     None,
+    #[default]
     PreferCancel,
     Element(GlobalElementId),
 }
 
-impl Default for AlertDialogInitialFocus {
-    fn default() -> Self {
-        Self::PreferCancel
-    }
-}
-
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct AlertDialogOptions {
     pub initial_focus: AlertDialogInitialFocus,
     pub on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -197,16 +192,6 @@ impl std::fmt::Debug for AlertDialogOptions {
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
-    }
-}
-
-impl Default for AlertDialogOptions {
-    fn default() -> Self {
-        Self {
-            initial_focus: AlertDialogInitialFocus::default(),
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
-        }
     }
 }
 

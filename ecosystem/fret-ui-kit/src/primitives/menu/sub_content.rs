@@ -195,11 +195,11 @@ where
                 if down.repeat {
                     return false;
                 }
-                let is_close_key = match (down.key, dir) {
-                    (KeyCode::ArrowLeft, LayoutDirection::Ltr) => true,
-                    (KeyCode::ArrowRight, LayoutDirection::Rtl) => true,
-                    _ => false,
-                };
+                let is_close_key = matches!(
+                    (down.key, dir),
+                    (KeyCode::ArrowLeft, LayoutDirection::Ltr)
+                        | (KeyCode::ArrowRight, LayoutDirection::Rtl)
+                );
                 if !is_close_key {
                     return false;
                 }

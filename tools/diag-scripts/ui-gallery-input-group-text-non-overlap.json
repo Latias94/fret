@@ -61,6 +61,15 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-input-group-text-control" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 480
+    },
 
     {
       "type": "wait_until",
@@ -87,4 +96,3 @@
     { "type": "capture_screenshot", "label": "ui-gallery-input-group-text-non-overlap" }
   ]
 }
-
