@@ -55,18 +55,13 @@ impl Renderer {
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x2,
-                            offset: 8,
-                            shader_location: 1,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
                             offset: 16,
-                            shader_location: 2,
+                            shader_location: 1,
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
                             offset: 24,
-                            shader_location: 3,
+                            shader_location: 2,
                         },
                     ],
                 }],
