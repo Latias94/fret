@@ -53,6 +53,13 @@ struct SelectOpenChangeCallbackState {
     pending_complete: Option<bool>,
 }
 
+#[derive(Debug, Default)]
+struct SelectScrollArrowAutoScrollState {
+    token: Option<TimerToken>,
+    last_pos: Option<Point>,
+    hovered: bool,
+}
+
 fn select_open_change_events(
     state: &mut SelectOpenChangeCallbackState,
     open: bool,
@@ -198,6 +205,14 @@ where
                         ..Default::default()
                     },
                     move |cx, _st| {
+                        let id = cx.root_id();
+                        let auto_scroll_state: Arc<Mutex<SelectScrollArrowAutoScrollState>> =
+                            cx.with_state_for(
+                                id,
+                                || Arc::new(Mutex::new(SelectScrollArrowAutoScrollState::default())),
+                                |s| s.clone(),
+                            );
+
                         let handle = handle_for_pressable.clone();
                         let on_scroll = Arc::new(move |host: &mut dyn fret_ui::action::UiActionHost,
                                                   action_cx: ActionCx| {
@@ -206,6 +221,46 @@ where
                             handle.scroll_to_offset(next);
                             host.request_redraw(action_cx.window);
                         });
+
+                        let auto_scroll_state_for_timer = auto_scroll_state.clone();
+                        let handle_for_timer = handle_for_pressable.clone();
+                        let clear_active_for_timer = clear_active_for_hover.clone();
+                        cx.timer_on_timer_for(
+                            id,
+                            Arc::new(move |host, action_cx, token| {
+                                let mut st = auto_scroll_state_for_timer
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                if st.token.as_ref() != Some(&token) {
+                                    return false;
+                                }
+                                if !st.hovered {
+                                    st.token = None;
+                                    return true;
+                                }
+
+                                let prev = handle_for_timer.offset();
+                                let max = handle_for_timer.max_offset();
+
+                                let next_y = (prev.y.0 + item_step.0 * dir).clamp(0.0, max.y.0);
+                                if (next_y - prev.y.0).abs() <= 0.01 {
+                                    st.token = None;
+                                    return true;
+                                }
+
+                                handle_for_timer.scroll_to_offset(Point::new(prev.x, Px(next_y)));
+                                clear_active_for_timer(host, action_cx);
+                                host.request_redraw(action_cx.window);
+
+                                host.push_effect(Effect::SetTimer {
+                                    window: Some(action_cx.window),
+                                    token,
+                                    after: Duration::from_millis(40),
+                                    repeat: None,
+                                });
+                                true
+                            }),
+                        );
 
                         let on_scroll_for_activate = on_scroll.clone();
                         cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
@@ -221,16 +276,51 @@ where
                             fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
                         }));
 
-                        cx.pressable_add_on_hover_change(Arc::new(
-                            move |host, action_cx, hovered| {
-                                if hovered {
-                                    // Base UI clears the active index when the pointer moves over
-                                    // scroll arrows. Mirror the outcome so item highlights don't
-                                    // "stick" while the pointer is on the arrow strip.
-                                    clear_active_for_hover(host, action_cx);
+                        let auto_scroll_state_for_move = auto_scroll_state.clone();
+                        cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                            let mut st = auto_scroll_state_for_move
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            st.hovered = true;
+
+                            let did_move = st.last_pos.map_or(true, |p| p != mv.position);
+                            st.last_pos = Some(mv.position);
+                            if !did_move || st.token.is_some() {
+                                return false;
+                            }
+
+                            // Base UI scroll arrows start a 40ms scroll timer on mouse move rather
+                            // than scrolling immediately on hover.
+                            let token = host.next_timer_token();
+                            st.token = Some(token);
+                            host.push_effect(Effect::SetTimer {
+                                window: Some(action_cx.window),
+                                token,
+                                after: Duration::from_millis(40),
+                                repeat: None,
+                            });
+                            false
+                        }));
+
+                        let auto_scroll_state_for_hover = auto_scroll_state.clone();
+                        cx.pressable_add_on_hover_change(Arc::new(move |host, action_cx, hovered| {
+                            let mut st = auto_scroll_state_for_hover
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            st.hovered = hovered;
+                            if !hovered {
+                                st.last_pos = None;
+                                if let Some(token) = st.token.take() {
+                                    host.push_effect(Effect::CancelTimer { token });
                                 }
-                            },
-                        ));
+                                return;
+                            }
+
+                            // Base UI clears the active index when the pointer moves over scroll
+                            // arrows. Mirror the outcome so item highlights don't "stick" while the
+                            // pointer is on the arrow strip.
+                            clear_active_for_hover(host, action_cx);
+                        }));
 
                         vec![cx.container(
                             ContainerProps {
@@ -7121,6 +7211,178 @@ mod tests {
         assert!(
             up_is_hit_testable,
             "expected scroll up to become hit-testable after wheel scrolling down; bounds={up_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn select_scroll_buttons_hover_autoscroll_without_dismissing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..50)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_down = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
+            .expect("scroll down node");
+        let down_bounds = ui
+            .debug_node_bounds(scroll_down.id)
+            .expect("scroll down bounds");
+        let hover_pos = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(down_bounds.origin.x.0 + down_bounds.size.width.0 * fx),
+                    Px(down_bounds.origin.y.0 + down_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_down.id)
+                {
+                    return p;
+                }
+            }
+            panic!("expected scroll down bounds to be hit-testable; bounds={down_bounds:?}");
+        })();
+
+        // Base UI starts auto-scroll on pointer move over the scroll arrow.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: hover_pos,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let effects = app.flush_effects();
+        let token = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(40) => {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("hover autoscroll timer token");
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_up = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+            .expect("scroll up node");
+        let up_bounds = ui
+            .debug_node_bounds(scroll_up.id)
+            .expect("scroll up bounds");
+        let up_is_hit_testable = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(up_bounds.origin.x.0 + up_bounds.size.width.0 * fx),
+                    Px(up_bounds.origin.y.0 + up_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_up.id)
+                {
+                    return true;
+                }
+            }
+            false
+        })();
+        assert!(
+            up_is_hit_testable,
+            "expected hover autoscroll to make scroll up hit-testable; bounds={up_bounds:?}"
         );
     }
 
