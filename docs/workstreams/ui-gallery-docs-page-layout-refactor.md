@@ -8,6 +8,8 @@ single-page layout:
 - A page is composed of **sections** (Preview + optional Code + short text explanation).
 - Section titles default to **single-line + ellipsis** (avoid narrow-window character wrapping surprises).
 - Code samples use `fret-ui-ai`'s `CodeBlock` (copyable, language-labeled).
+- Track whether the **Preview examples** follow the upstream shadcn docs headings/order, and whether the page provides
+  an **API reference pointer** (typically in the top-level Notes tab).
 
 Non-goals:
 
@@ -23,6 +25,7 @@ Mark a page “Docs-style” when all are true:
 3. Key sections include a minimal code sample (does not need to cover every variant).
 4. Keeps critical `test_id`s stable; if a change is unavoidable, update corresponding diag scripts.
 5. The table row includes a non-empty **Diag Coverage** entry (either a glob/prefix or a specific script file).
+6. The table row includes a non-empty **Docs Parity** entry (Preview examples order + API reference pointer status).
 
 ## Progress Table
 
@@ -30,48 +33,50 @@ Legend:
 
 - **Docs-style**: migrated to `DocSection` sections.
 - **Legacy tabs**: still uses `render_component_page_tabs` (Component / Code / Notes).
+- **Docs Parity**: `Examples ✅/Partial/❌` indicates whether Preview sections match upstream shadcn docs headings/order;
+  `API ✅/❌` indicates whether Notes/Usage provide an API reference pointer (upstream link and/or in-tree anchors).
 
 ### Shadcn/forms
 
-| Component | Entry point | Layout | Section text | Code samples | Diag Coverage | Notes |
-|---|---|---|---|---|---|---|
-| Select | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Docs-style | Yes | Per-section | `tools/diag-scripts/ui-gallery-select-*.json` (16) | Keeps existing diag `test_id`s for trigger/items. |
-| Combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-combobox-*.json` (10) | `apps/fret-ui-gallery/src/ui/pages/combobox/sections.rs` returns “pure content” (no nested cards). |
-| Date Picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json` | Keeps range-roving regression script compatible (role/name driven). |
-| Field | `apps/fret-ui-gallery/src/ui/pages/field.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: convert to sections; keep `Field` examples grouped by recipe. |
-| Input | `apps/fret-ui-gallery/src/ui/pages/input.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-*.json` (2) | Candidate: split by size/disabled/invalid/password. |
-| Input Group | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-group-*.json` (1) | Candidate: sections per composition recipe. |
-| Label | `apps/fret-ui-gallery/src/ui/pages/label.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: keep examples small; rely on ellipsis title defaults. |
-| Checkbox | `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-checkbox-rtl-and-checked-wrap.json` | Candidate: align with shadcn docs matrix (checked/indeterminate/disabled). |
-| Native Select | `apps/fret-ui-gallery/src/ui/pages/native_select.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: clarify platform/native intent vs shadcn Select. |
-| Form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: single “forms doc” page with sections per recipe. |
+| Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
+|---|---|---|---|---|---|---|---|
+| Select | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Per-section | `tools/diag-scripts/ui-gallery-select-*.json` (16) | Keeps existing diag `test_id`s for trigger/items. |
+| Combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-combobox-*.json` (10) | `apps/fret-ui-gallery/src/ui/pages/combobox/sections.rs` returns “pure content” (no nested cards). |
+| Date Picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json` | Keeps range-roving regression script compatible (role/name driven). |
+| Field | `apps/fret-ui-gallery/src/ui/pages/field.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: convert to sections; keep `Field` examples grouped by recipe. |
+| Input | `apps/fret-ui-gallery/src/ui/pages/input.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-*.json` (2) | Candidate: split by size/disabled/invalid/password. |
+| Input Group | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-input-group-*.json` (1) | Candidate: sections per composition recipe. |
+| Label | `apps/fret-ui-gallery/src/ui/pages/label.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: keep examples small; rely on ellipsis title defaults. |
+| Checkbox | `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-checkbox-rtl-and-checked-wrap.json` | Candidate: align with shadcn docs matrix (checked/indeterminate/disabled). |
+| Native Select | `apps/fret-ui-gallery/src/ui/pages/native_select.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: clarify platform/native intent vs shadcn Select. |
+| Form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | Legacy tabs | Examples Partial / API ❌ | Partial | Tab-only | None yet | Candidate: single “forms doc” page with sections per recipe. |
 
 ### Shadcn/overlays
 
-| Component | Entry point | Layout | Section text | Code samples | Diag Coverage | Notes |
-|---|---|---|---|---|---|---|
-| Alert Dialog | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-alert-dialog-*.json` (4) | Notes are a dedicated section; headings are nowrap+ellipsis by default. |
-| Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dialog-*.json` (3) | `docs-order-smoke` targets this page; `escape-focus-restore*` targets the Overlay page dialog widget. |
-| Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Keeps existing `test_id`s for demo + snap-points scenarios. |
-| Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json` (1) | Keeps existing `test_id`s for triggers and demo items. |
-| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
-| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (5) | Adds a page-level docs smoke; existing overlay scripts still gate right-click/keyboard paths. |
-| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-hover-card-docs-smoke.json` (1) | Overlay-level clamp gating lives in `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`. |
+| Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
+|---|---|---|---|---|---|---|---|
+| Alert Dialog | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-alert-dialog-*.json` (4) | Notes are a dedicated section; headings are nowrap+ellipsis by default. |
+| Dialog | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dialog-*.json` (3) | `docs-order-smoke` targets this page; `escape-focus-restore*` targets the Overlay page dialog widget. |
+| Drawer | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-drawer-*.json` (4) | Keeps existing `test_id`s for demo + snap-points scenarios. |
+| Dropdown Menu | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json` (1) | Keeps existing `test_id`s for triggers and demo items. |
+| Tooltip | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-tooltip-*.json` (3) | `repeat-hover`/`scroll-clamp` target the Overlay page tooltip widget; `docs-smoke` targets this page. |
+| Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (5) | Adds a page-level docs smoke; existing overlay scripts still gate right-click/keyboard paths. |
+| Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-hover-card-docs-smoke.json` (1) | Overlay-level clamp gating lives in `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`. |
 
 ### Shadcn/navigation + misc
 
-| Component | Entry point | Layout | Section text | Code samples | Diag Coverage | Notes |
-|---|---|---|---|---|---|---|
-| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Keeps existing section-title `test_id`s for single-line heading gates. |
-| Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: state matrix sections. |
-| Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: single/multi + orientation. |
-| Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: sections per token preset + truncation/wrap behavior. |
-| Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-kbd-docs-smoke.json` (1) | Keeps existing `test_id`s for demo/group/button/input-group. |
-| Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: list item patterns + icons + truncation. |
-| Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Candidate: accordion/collapsible behavior notes. |
-| Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: minimal surface. |
-| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
-| Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-empty-docs-smoke.json` (1) | Keeps existing `test_id`s for each recipe. |
+| Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
+|---|---|---|---|---|---|---|---|
+| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Keeps existing section-title `test_id`s for single-line heading gates. |
+| Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: state matrix sections. |
+| Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: single/multi + orientation. |
+| Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Examples Partial / API ❌ | Partial | Tab-only | None yet | Candidate: sections per token preset + truncation/wrap behavior. |
+| Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-kbd-docs-smoke.json` (1) | Keeps existing `test_id`s for demo/group/button/input-group. |
+| Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: list item patterns + icons + truncation. |
+| Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Candidate: accordion/collapsible behavior notes. |
+| Aspect Ratio | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | None yet | Candidate: minimal surface. |
+| Alert | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Legacy tabs | Examples ✅ / API ❌ | Partial | Tab-only | `tools/diag-scripts/ui-gallery-alert-static-bundle.json`, `tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json` | Candidate: variant matrix sections. |
+| Empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Docs-style | Examples ✅ / API ❌ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-empty-docs-smoke.json` (1) | Keeps existing `test_id`s for each recipe. |
 
 ## Suggested Migration Order (next)
 
