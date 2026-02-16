@@ -22,14 +22,14 @@ pub(in crate::ui) fn preview_ai_image_demo(
     let image = state.image.map(|id| {
         ui_ai::Image::new(id)
             .alt("Generated image")
-            .test_id("ui-ai-image-demo-image")
-            .refine_layout(LayoutRefinement::default().w_px(Px(300.0)).h_px(Px(300.0)))
             .refine_style(
                 ChromeRefinement::default()
                     .rounded(Radius::Lg)
                     .border_1()
                     .border_color(ColorRef::Color(theme.color_token("border"))),
             )
+            .refine_layout(LayoutRefinement::default().w_px(Px(300.0)).h_px(Px(300.0)))
+            .test_id("ui-ai-image-demo-image")
             .into_element(cx)
     });
 
@@ -39,7 +39,8 @@ pub(in crate::ui) fn preview_ai_image_demo(
     });
 
     let chrome = ChromeRefinement::default().p(Space::N4);
-    let props = decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full());
+    let layout = LayoutRefinement::default().w_full().min_w_0().min_h_0();
+    let props = decl_style::container_props(theme, chrome, layout);
 
     vec![stack::vstack(
         cx,

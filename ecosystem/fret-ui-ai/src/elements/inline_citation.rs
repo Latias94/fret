@@ -1,15 +1,23 @@
 use std::sync::Arc;
 
+use fret_core::{
+    FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant, TextStyle, TextWrap,
+};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{AnyElement, SemanticsProps};
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, PressableA11y, PressableProps, SemanticsProps, TextProps,
+};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{ChromeRefinement, Justify, LayoutRefinement, Radius, Space};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, HoverCard, HoverCardContent};
+use fret_ui_shadcn::{
+    Badge, BadgeVariant, Button, ButtonSize, ButtonVariant, HoverCard, HoverCardContent,
+};
 
 use crate::model::SourceItem;
 
@@ -23,6 +31,46 @@ fn hostname_for_url(url: &str) -> Option<&str> {
     let host_port = url.split('/').next().unwrap_or("");
     let host = host_port.split(':').next().unwrap_or("");
     (!host.is_empty()).then_some(host)
+}
+
+fn text_sm_style(theme: &Theme, weight: FontWeight) -> TextStyle {
+    let size = theme
+        .metric_by_key("component.text.sm_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key("component.text.sm_line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+    TextStyle {
+        font: FontId::default(),
+        size,
+        weight,
+        slant: TextSlant::Normal,
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
+}
+
+fn text_xs_style(theme: &Theme, weight: FontWeight, slant: TextSlant) -> TextStyle {
+    let size = theme
+        .metric_by_key("component.text.xs_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key("component.text.xs_line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+    TextStyle {
+        font: FontId::default(),
+        size,
+        weight,
+        slant,
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
 }
 
 #[derive(Clone)]
@@ -131,6 +179,8 @@ impl InlineCitation {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
         #[derive(Default)]
         struct PagerState {
             index: Option<Model<usize>>,
@@ -168,18 +218,35 @@ impl InlineCitation {
                 }
             });
 
-        let mut trigger = Button::new(trigger_text)
-            .variant(ButtonVariant::Secondary)
-            .size(ButtonSize::Sm)
+        let badge_layout = LayoutRefinement::default().ml(Space::N1).merge(self.layout);
+
+        let badge = Badge::new(trigger_text.clone())
+            .variant(BadgeVariant::Secondary)
             .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-            .refine_layout(self.layout);
-        if let Some(on_activate) = self.on_activate.clone() {
-            trigger = trigger.on_activate(on_activate);
-        }
-        if let Some(test_id) = self.test_id.clone() {
-            trigger = trigger.test_id(test_id);
-        }
-        let trigger = trigger.into_element(cx);
+            .refine_layout(badge_layout)
+            .into_element(cx);
+
+        let on_activate = self.on_activate.clone();
+        let trigger_test_id = self.test_id.clone();
+        let trigger_label: Arc<str> = Arc::from(trigger_text);
+
+        let trigger = cx.pressable(
+            PressableProps {
+                a11y: PressableA11y {
+                    role: Some(SemanticsRole::Button),
+                    label: Some(trigger_label),
+                    test_id: trigger_test_id,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |cx, _state| {
+                if let Some(handler) = on_activate.clone() {
+                    cx.pressable_on_activate(handler);
+                }
+                [badge]
+            },
+        );
 
         if resolved_sources.is_empty() {
             return trigger;
@@ -245,12 +312,20 @@ impl InlineCitation {
         });
 
         let prev_btn = {
+            let icon = decl_icon::icon_with(
+                cx,
+                ids::ui::CHEVRON_LEFT,
+                Some(Px(16.0)),
+                Some(ColorRef::Token {
+                    key: "muted-foreground",
+                    fallback: ColorFallback::ThemeTextMuted,
+                }),
+            );
             let mut btn = Button::new("Previous source")
-                .variant(ButtonVariant::Outline)
+                .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::IconSm)
                 .disabled(prev_disabled)
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(cx, ids::ui::CHEVRON_LEFT)])
+                .children([icon])
                 .on_activate(on_prev);
             if let Some(id) = prev_test_id.clone() {
                 btn = btn.test_id(id);
@@ -259,12 +334,20 @@ impl InlineCitation {
         };
 
         let next_btn = {
+            let icon = decl_icon::icon_with(
+                cx,
+                ids::ui::CHEVRON_RIGHT,
+                Some(Px(16.0)),
+                Some(ColorRef::Token {
+                    key: "muted-foreground",
+                    fallback: ColorFallback::ThemeTextMuted,
+                }),
+            );
             let mut btn = Button::new("Next source")
-                .variant(ButtonVariant::Outline)
+                .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::IconSm)
                 .disabled(next_disabled)
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+                .children([icon])
                 .on_activate(on_next);
             if let Some(id) = next_test_id.clone() {
                 btn = btn.test_id(id);
@@ -274,63 +357,244 @@ impl InlineCitation {
 
         let index_label = match index_test_id.clone() {
             Some(test_id) => {
-                let label = cx.text(format!("{current}/{total}"));
-                cx.semantics(
+                let index_text = cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: Arc::<str>::from(format!("{current}/{total}")),
+                    style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
+                    color: Some(
+                        theme
+                            .color_by_key("muted-foreground")
+                            .unwrap_or_else(|| theme.color_token("muted-foreground")),
+                    ),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: TextAlign::End,
+                });
+
+                let index_inner = cx.container(
+                    decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default().px(Space::N3).py(Space::N1),
+                        LayoutRefinement::default(),
+                    ),
+                    move |_cx| vec![index_text],
+                );
+
+                let labelled = cx.semantics(
                     SemanticsProps {
                         role: fret_core::SemanticsRole::Group,
                         test_id: Some(test_id),
                         ..Default::default()
                     },
-                    move |_cx| vec![label],
+                    move |_cx| vec![index_inner],
+                );
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().flex_grow(1.0))
+                        .justify_end()
+                        .items_center(),
+                    move |_cx| vec![labelled],
                 )
             }
-            None => cx.text(format!("{current}/{total}")),
+            None => {
+                let index_text = cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: Arc::<str>::from(format!("{current}/{total}")),
+                    style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
+                    color: Some(
+                        theme
+                            .color_by_key("muted-foreground")
+                            .unwrap_or_else(|| theme.color_token("muted-foreground")),
+                    ),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: TextAlign::End,
+                });
+
+                let index_inner = cx.container(
+                    decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default().px(Space::N3).py(Space::N1),
+                        LayoutRefinement::default(),
+                    ),
+                    move |_cx| vec![index_text],
+                );
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().flex_grow(1.0))
+                        .justify_end()
+                        .items_center(),
+                    move |_cx| vec![index_inner],
+                )
+            }
         };
 
-        let header = stack::hstack(
+        let header_row = stack::hstack(
             cx,
             stack::HStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N2)
-                .justify(Justify::Between),
-            move |_cx| vec![prev_btn, index_label, next_btn],
+                .items_center(),
+            move |_cx| vec![prev_btn, next_btn, index_label],
+        );
+
+        let header = cx.container(
+            decl_style::container_props(
+                &theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Token {
+                        key: "secondary",
+                        fallback: ColorFallback::ThemePanelBackground,
+                    })
+                    .p(Space::N2)
+                    .rounded_tl(Radius::Md)
+                    .rounded_tr(Radius::Md),
+                LayoutRefinement::default().w_full(),
+            ),
+            move |_cx| vec![header_row],
         );
 
         let source = resolved_sources.get(index_now).cloned();
         let body = if let Some(source) = source {
-            let title = match (source.url.clone(), self.on_open_url.clone()) {
+            let title_text = cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: source.title.clone(),
+                style: Some(text_sm_style(&theme, FontWeight::MEDIUM)),
+                color: Some(theme.color_token("foreground")),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: TextAlign::Start,
+            });
+
+            let url_text = match (source.url.clone(), self.on_open_url.clone()) {
                 (Some(url), Some(handler)) => {
                     let link = fret_markdown::LinkInfo {
                         href: url.clone(),
-                        text: source.title.clone(),
+                        text: url.clone(),
                     };
                     let on_activate: OnActivate = Arc::new(move |host, cx, reason| {
                         handler(host, cx, reason, link.clone());
                     });
-                    Button::new(source.title.clone())
-                        .variant(ButtonVariant::Link)
-                        .size(ButtonSize::Sm)
-                        .on_activate(on_activate)
-                        .into_element(cx)
+
+                    let url_text = cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: url.clone(),
+                        style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
+                        color: Some(theme.color_token("muted-foreground")),
+                        wrap: TextWrap::Grapheme,
+                        overflow: TextOverflow::Ellipsis,
+                        align: TextAlign::Start,
+                    });
+
+                    Some(cx.pressable(
+                        PressableProps {
+                            key_activation: fret_ui::element::PressableKeyActivation::EnterOnly,
+                            a11y: PressableA11y {
+                                role: Some(SemanticsRole::Link),
+                                label: Some(Arc::<str>::from("Open source URL")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _state| {
+                            cx.pressable_on_activate(on_activate.clone());
+                            [url_text]
+                        },
+                    ))
                 }
-                _ => cx.text(source.title),
+                (Some(url), None) => Some(cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: url,
+                    style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
+                    color: Some(theme.color_token("muted-foreground")),
+                    wrap: TextWrap::Grapheme,
+                    overflow: TextOverflow::Ellipsis,
+                    align: TextAlign::Start,
+                })),
+                _ => None,
             };
 
-            let excerpt = source.excerpt.map(|t| cx.text(t));
+            let quote = source.excerpt.clone().map(|excerpt| {
+                let mut style = text_sm_style(&theme, FontWeight::NORMAL);
+                style.slant = TextSlant::Italic;
 
-            stack::vstack(
+                let quote_text = cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: excerpt,
+                    style: Some(style),
+                    color: Some(theme.color_token("muted-foreground")),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    align: TextAlign::Start,
+                });
+
+                cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: LayoutStyle::default(),
+                        padding: fret_core::Edges {
+                            top: fret_core::Px(0.0),
+                            right: fret_core::Px(0.0),
+                            bottom: fret_core::Px(0.0),
+                            left: fret_core::Px(12.0),
+                        },
+                        background: None,
+                        background_paint: None,
+                        shadow: None,
+                        border: fret_core::Edges {
+                            top: fret_core::Px(0.0),
+                            right: fret_core::Px(0.0),
+                            bottom: fret_core::Px(0.0),
+                            left: fret_core::Px(2.0),
+                        },
+                        border_color: Some(theme.color_token("muted")),
+                        border_paint: None,
+                        border_dash: None,
+                        focus_ring: None,
+                        focus_border_color: None,
+                        focus_within: false,
+                        corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+                        snap_to_device_pixels: false,
+                    },
+                    move |_cx| vec![quote_text],
+                )
+            });
+
+            let source_block = stack::vstack(
                 cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N2),
+                stack::VStackProps::default().gap(Space::N1),
                 move |_cx| {
                     let mut out = Vec::new();
-                    out.push(title);
-                    if let Some(excerpt) = excerpt {
-                        out.push(excerpt);
+                    out.push(title_text);
+                    if let Some(url_text) = url_text {
+                        out.push(url_text);
                     }
                     out
                 },
+            );
+
+            let body_inner = stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N2),
+                move |_cx| {
+                    let mut out = vec![source_block];
+                    if let Some(quote) = quote {
+                        out.push(quote);
+                    }
+                    out
+                },
+            );
+
+            cx.container(
+                decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default().p(Space::N4).pl(Space::N8),
+                    LayoutRefinement::default().w_full(),
+                ),
+                move |_cx| vec![body_inner],
             )
         } else {
             cx.text(self.label)
@@ -340,7 +604,7 @@ impl InlineCitation {
             cx,
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2),
+                .gap(Space::N0),
             move |_cx| vec![header, body],
         );
 
@@ -365,7 +629,7 @@ impl InlineCitation {
 
         HoverCard::new(trigger, card)
             .open_delay_frames(0)
-            .close_delay_frames(18)
+            .close_delay_frames(0)
             .into_element(cx)
     }
 }
