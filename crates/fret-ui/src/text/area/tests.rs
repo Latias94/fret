@@ -7,6 +7,8 @@ use fret_core::{
     TextService,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
+use slotmap::KeyData;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy)]
 struct RenderTransformWrapper {
@@ -92,6 +94,133 @@ impl fret_core::SvgService for FakeTextService {
 }
 
 impl fret_core::MaterialService for FakeTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
+#[derive(Default)]
+struct AutoscrollTextService {
+    next_blob: u64,
+    by_blob_text: HashMap<fret_core::TextBlobId, String>,
+    last_prepare_max_width: Option<Px>,
+}
+
+impl TextService for AutoscrollTextService {
+    fn prepare(
+        &mut self,
+        input: &fret_core::TextInput,
+        constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        self.last_prepare_max_width = constraints.max_width;
+        let blob = fret_core::TextBlobId::from(KeyData::from_ffi(self.next_blob));
+        self.next_blob = self.next_blob.wrapping_add(1);
+        self.by_blob_text.insert(blob, input.text().to_string());
+
+        let w = constraints
+            .max_width
+            .map(|w| w.0.max(0.0))
+            .unwrap_or(input.text().len() as f32);
+
+        (
+            blob,
+            TextMetrics {
+                size: Size::new(Px(w), Px(10.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn caret_rect(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+        index: usize,
+        _affinity: CaretAffinity,
+    ) -> Rect {
+        Rect::new(
+            Point::new(Px(index as f32), Px(0.0)),
+            Size::new(Px(1.0), Px(10.0)),
+        )
+    }
+
+    fn selection_rects(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+        (a, b): (usize, usize),
+        out: &mut Vec<Rect>,
+    ) {
+        out.clear();
+        let (start, end) = (a.min(b), a.max(b));
+        out.push(Rect::new(
+            Point::new(Px(start as f32), Px(0.0)),
+            Size::new(Px((end - start) as f32), Px(10.0)),
+        ));
+    }
+
+    fn hit_test_point(
+        &mut self,
+        blob: fret_core::TextBlobId,
+        point: Point,
+    ) -> fret_core::HitTestResult {
+        let len = self.by_blob_text.get(&blob).map(|s| s.len()).unwrap_or(0);
+
+        let mut idx = point.x.0.floor().max(0.0) as usize;
+        idx = idx.min(len);
+
+        let text = self
+            .by_blob_text
+            .get(&blob)
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        while idx > 0 && !text.is_char_boundary(idx) {
+            idx = idx.saturating_sub(1);
+        }
+
+        fret_core::HitTestResult {
+            index: idx,
+            affinity: fret_core::CaretAffinity::Downstream,
+        }
+    }
+
+    fn release(&mut self, blob: fret_core::TextBlobId) {
+        self.by_blob_text.remove(&blob);
+    }
+}
+
+impl fret_core::PathService for AutoscrollTextService {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for AutoscrollTextService {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for AutoscrollTextService {
     fn register_material(
         &mut self,
         _desc: fret_core::MaterialDescriptor,
@@ -231,6 +360,135 @@ fn ime_cursor_area_is_in_visual_space_after_render_transform() {
     assert!(
         (translated.y.0 - base.y.0 - dy.0).abs() < 0.001,
         "expected IME cursor y to include render transform translation"
+    );
+}
+
+#[test]
+fn dragging_selection_autoscrolls_horizontally_when_wrap_none() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(40.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(RenderTransformWrapper::new(
+        fret_core::Transform2D::IDENTITY,
+    ));
+    let mut style = TextAreaStyle::default();
+    style.padding_x = Px(0.0);
+    style.padding_y = Px(0.0);
+
+    let mut widget = TextArea::new("abcdefghijklmnopqrstuvwxyz")
+        .with_wrap(TextWrap::None)
+        .with_style(style);
+    widget.caret = 0;
+    widget.selection_anchor = 0;
+    widget.offset_x = Px(0.0);
+    let area = ui.create_node(widget);
+    ui.add_child(root, area);
+    ui.set_root(root);
+    ui.set_focus(Some(area));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = AutoscrollTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    text.last_prepare_max_width = Some(Px(-1.0));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    let _ = app.take_effects();
+
+    assert!(
+        text.last_prepare_max_width.is_none(),
+        "expected wrap=None text area to prepare text with an unbounded max width"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(0.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let mut token = app
+        .take_effects()
+        .into_iter()
+        .find_map(|e| match e {
+            Effect::SetTimer { token, .. } => Some(token),
+            _ => None,
+        })
+        .expect("expected selection autoscroll to schedule a timer on pointer down");
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(13.0), Px(10.0)),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = app.take_effects();
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let snap0 = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after paint");
+    let (_, focus0) = snap0
+        .selection_utf16
+        .expect("expected selection to be present for focused text area");
+    assert!(
+        focus0 < snap0.text_len_utf16,
+        "expected a partial selection before timer-driven auto-scroll ticks"
+    );
+
+    for _ in 0..5 {
+        ui.dispatch_event(&mut app, &mut text, &Event::Timer { token });
+
+        token = app
+            .take_effects()
+            .into_iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, .. } => Some(token),
+                _ => None,
+            })
+            .expect("expected selection autoscroll to schedule the next timer tick");
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    }
+
+    let snap1 = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after paint");
+    let (_, focus1) = snap1
+        .selection_utf16
+        .expect("expected selection to be present for focused text area");
+
+    assert!(
+        focus1 > focus0,
+        "expected dragging selection near the right edge to auto-scroll and extend the selection (focus0={focus0}, focus1={focus1}, text_len={})",
+        snap1.text_len_utf16
     );
 }
 
