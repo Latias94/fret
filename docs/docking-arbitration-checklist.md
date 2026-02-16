@@ -198,6 +198,29 @@ so that ADR 0072 can be validated end-to-end in one window.
 
 ## Scripted gates (optional)
 
-- Multi-window tear-off smoke (ImGui-style): `tools/diag-scripts/docking-arbitration-tearoff-multiwindow-basic.json`
-  - Run:
-    - `FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-tearoff-multiwindow-basic.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
+These scripts live under `tools/diag-scripts/` and are primarily intended as deterministic repro helpers
+while iterating on docking + multi-window behavior.
+
+Recommended starting points:
+
+- Default layout signature (single-window smoke): `tools/diag-scripts/docking-arbitration-demo-default-layout-signature.json`
+- Float-zone floats active tabs (in-window): `tools/diag-scripts/docking-arbitration-demo-float-zone-floats-in-window.json`
+- Escape cancels dock drag (in-window): `tools/diag-scripts/docking-arbitration-demo-nary-escape-cancels-drag.json`
+
+Multi-window (ImGui-style) helpers (requires `diag.multi_window`):
+
+- Tear-off then overlap windows: `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-positioning.json`
+- Cross-window hover switching (cursor override): `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`
+- Drag tab back to main window: `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+
+Windows-specific gate (poll-up completion):
+
+- Release-outside finishes cross-window drags: `tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
+
+Lightweight smoke (minimal assertions):
+
+- Multi-window tear-off smoke: `tools/diag-scripts/docking-arbitration-tearoff-multiwindow-basic.json`
+
+Example invocation:
+
+- `FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-default-layout-signature.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
