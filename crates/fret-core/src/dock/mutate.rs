@@ -405,6 +405,44 @@ impl DockGraph {
         true
     }
 
+    pub fn float_tabs_to_window(
+        &mut self,
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        new_window: AppWindowId,
+    ) -> bool {
+        if self
+            .root_for_node_in_window_forest(source_window, source_tabs)
+            .is_none()
+        {
+            return false;
+        }
+
+        let (panels, active) = match self.nodes.get(source_tabs) {
+            Some(DockNode::Tabs { tabs, active }) if !tabs.is_empty() => (tabs.clone(), *active),
+            _ => return false,
+        };
+        let active = active.min(panels.len().saturating_sub(1));
+
+        if let Some(DockNode::Tabs { tabs, active }) = self.nodes.get_mut(source_tabs) {
+            tabs.clear();
+            *active = 0;
+        }
+        if self.window_root(source_window) == Some(source_tabs) {
+            let _ = self.remove_window_root(source_window);
+        }
+
+        let tabs = self.insert_node(DockNode::Tabs {
+            tabs: panels,
+            active,
+        });
+        self.set_window_root(new_window, tabs);
+
+        self.simplify_window_forest(source_window);
+        self.simplify_window_forest(new_window);
+        true
+    }
+
     pub fn float_panel_in_window(
         &mut self,
         source_window: AppWindowId,

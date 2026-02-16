@@ -198,6 +198,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
+    let mut reuse_launch_per_script: bool = false;
     let mut launch_high_priority: bool = false;
     let mut keep_open: bool = false;
     let mut script_tool_write: bool = false;
@@ -212,6 +213,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
+    let mut max_frame_p95_total_us: Option<u64> = None;
+    let mut max_frame_p95_layout_us: Option<u64> = None;
+    let mut max_frame_p95_solve_us: Option<u64> = None;
     let mut max_pointer_move_dispatch_us: Option<u64> = None;
     let mut max_pointer_move_hit_test_us: Option<u64> = None;
     let mut max_pointer_move_global_changes: Option<u64> = None;
@@ -789,6 +793,39 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_top_solve_us = Some(
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --max-top-solve-us".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-frame-p95-total-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-frame-p95-total-us".to_string());
+                };
+                max_frame_p95_total_us = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-frame-p95-total-us".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-frame-p95-layout-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-frame-p95-layout-us".to_string());
+                };
+                max_frame_p95_layout_us = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-frame-p95-layout-us".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-frame-p95-solve-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-frame-p95-solve-us".to_string());
+                };
+                max_frame_p95_solve_us = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-frame-p95-solve-us".to_string())?,
                 );
                 i += 1;
             }
@@ -1720,6 +1757,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--reuse-launch" => {
                 reuse_launch = true;
+                i += 1;
+            }
+            "--reuse-launch-per-script" => {
+                reuse_launch_per_script = true;
                 i += 1;
             }
             "--launch-high-priority" => {
@@ -7013,7 +7054,27 @@ See: `docs/tracy.md`.\n";
 
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
+            if perf_threshold_agg == PerfThresholdAggregate::P90 && repeat < 10 {
+                eprintln!(
+                    "warning: --perf-threshold-agg p90 with --repeat < 10 is not meaningful (p90 collapses to max); consider --repeat 11+",
+                );
+            }
             let reuse_process = launch.is_none() || reuse_launch;
+            if reuse_launch_per_script {
+                if !reuse_launch {
+                    return Err("--reuse-launch-per-script requires --reuse-launch".to_string());
+                }
+                if launch.is_none() {
+                    return Err("--reuse-launch-per-script requires --launch".to_string());
+                }
+                if keep_open {
+                    return Err(
+                        "--reuse-launch-per-script is not supported with --keep-open".to_string(),
+                    );
+                }
+            }
+            let reuse_process_per_script =
+                reuse_process && reuse_launch_per_script && scripts.len() > 1;
             let use_devtools_ws = devtools_ws_url.is_some()
                 || devtools_token.is_some()
                 || devtools_session_id.is_some();
@@ -7051,6 +7112,9 @@ See: `docs/tracy.md`.\n";
                 max_top_total_us,
                 max_top_layout_us,
                 max_top_solve_us,
+                max_frame_p95_total_us,
+                max_frame_p95_layout_us,
+                max_frame_p95_solve_us,
                 max_pointer_move_dispatch_us,
                 max_pointer_move_hit_test_us,
                 max_pointer_move_global_changes,
@@ -7093,6 +7157,8 @@ See: `docs/tracy.md`.\n";
                     name,
                     "ui-gallery"
                         | "ui-gallery-steady"
+                        | "ui-gallery-complex-steady"
+                        | "ui-gallery-complex-typical"
                         | "ui-resize-probes"
                         | "ui-code-editor-resize-probes"
                 ) {
@@ -7103,11 +7169,29 @@ See: `docs/tracy.md`.\n";
                         "1",
                     );
                 }
-                if matches!(name, "ui-gallery" | "ui-gallery-steady") {
+                if matches!(
+                    name,
+                    "ui-gallery"
+                        | "ui-gallery-steady"
+                        | "ui-gallery-complex-steady"
+                        | "ui-gallery-complex-typical"
+                        | "ui-resize-probes"
+                        | "ui-code-editor-resize-probes"
+                ) {
                     let _ = ensure_env_var(
                         &mut perf_launch_env,
                         "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
                         "1",
+                    );
+                }
+                if matches!(name, "ui-gallery-complex-typical") {
+                    // Typical-perf triage needs enough snapshots per bundle to make frame
+                    // percentiles meaningful (otherwise `p95` collapses to `max`).
+                    let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_MAX_SNAPSHOTS", "180");
+                    let _ = ensure_env_var(
+                        &mut perf_launch_env,
+                        "FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS",
+                        "180",
                     );
                 }
             }
@@ -7286,7 +7370,7 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
-            if launched_by_fretboard {
+            if launched_by_fretboard && !reuse_process_per_script {
                 child = maybe_launch_demo(
                     &launch,
                     &perf_launch_env,
@@ -7301,13 +7385,38 @@ See: `docs/tracy.md`.\n";
                 )?;
             }
 
-            if reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+            if reuse_process && !reuse_process_per_script && !perf_suite_prewarm_scripts.is_empty()
+            {
                 for prewarm in &perf_suite_prewarm_scripts {
                     run_suite_aux_script_must_pass(prewarm, &mut child)?;
                 }
             }
 
-            for src in scripts {
+            for (script_index, src) in scripts.into_iter().enumerate() {
+                if reuse_process_per_script && launched_by_fretboard && script_index > 0 {
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    child = None;
+                }
+                if reuse_process_per_script && launched_by_fretboard && child.is_none() {
+                    child = maybe_launch_demo(
+                        &launch,
+                        &perf_launch_env,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_ready_path,
+                        &resolved_exit_path,
+                        false,
+                        timeout_ms,
+                        poll_ms,
+                        launch_high_priority,
+                    )?;
+                    if !perf_suite_prewarm_scripts.is_empty() {
+                        for prewarm in &perf_suite_prewarm_scripts {
+                            run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                        }
+                    }
+                }
+
                 if repeat == 1 {
                     if !reuse_process {
                         child = maybe_launch_demo(
@@ -7997,6 +8106,18 @@ See: `docs/tracy.md`.\n";
                                 cli_thresholds.max_top_solve_us,
                                 baseline_thresholds.max_top_solve_us,
                             );
+                            let (thr_frame_p95_total, src_frame_p95_total) = resolve_threshold(
+                                cli_thresholds.max_frame_p95_total_us,
+                                baseline_thresholds.max_frame_p95_total_us,
+                            );
+                            let (thr_frame_p95_layout, src_frame_p95_layout) = resolve_threshold(
+                                cli_thresholds.max_frame_p95_layout_us,
+                                baseline_thresholds.max_frame_p95_layout_us,
+                            );
+                            let (thr_frame_p95_solve, src_frame_p95_solve) = resolve_threshold(
+                                cli_thresholds.max_frame_p95_solve_us,
+                                baseline_thresholds.max_frame_p95_solve_us,
+                            );
                             let (thr_pointer_move_dispatch, src_pointer_move_dispatch) =
                                 resolve_threshold(
                                     cli_thresholds.max_pointer_move_dispatch_us,
@@ -8070,6 +8191,9 @@ See: `docs/tracy.md`.\n";
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
+                                    "frame_p95_total_time_us": report.p95_total_time_us,
+                                    "frame_p95_layout_time_us": report.p95_layout_time_us,
+                                    "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
                                     "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
                                     "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
                                     "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
@@ -8080,16 +8204,25 @@ See: `docs/tracy.md`.\n";
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
+                                    "frame_p95_total_time_us": report.p95_total_time_us,
+                                    "frame_p95_layout_time_us": report.p95_layout_time_us,
+                                    "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
                                 },
                                 "p95": {
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
+                                    "frame_p95_total_time_us": report.p95_total_time_us,
+                                    "frame_p95_layout_time_us": report.p95_layout_time_us,
+                                    "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
                                 },
                                 "thresholds": {
                                     "max_top_total_us": thr_total,
                                     "max_top_layout_us": thr_layout,
                                     "max_top_solve_us": thr_solve,
+                                    "max_frame_p95_total_us": thr_frame_p95_total,
+                                    "max_frame_p95_layout_us": thr_frame_p95_layout,
+                                    "max_frame_p95_solve_us": thr_frame_p95_solve,
                                     "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
                                     "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
                                     "max_pointer_move_global_changes": thr_pointer_move_global_changes,
@@ -8100,6 +8233,9 @@ See: `docs/tracy.md`.\n";
                                     "max_top_total_us": src_total,
                                     "max_top_layout_us": src_layout,
                                     "max_top_solve_us": src_solve,
+                                    "max_frame_p95_total_us": src_frame_p95_total,
+                                    "max_frame_p95_layout_us": src_frame_p95_layout,
+                                    "max_frame_p95_solve_us": src_frame_p95_solve,
                                     "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
                                     "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
                                     "max_pointer_move_global_changes": src_pointer_move_global_changes,
@@ -8123,6 +8259,15 @@ See: `docs/tracy.md`.\n";
                                 top_solve,
                                 top_solve,
                                 top_solve,
+                                report.p95_total_time_us,
+                                report.p95_total_time_us,
+                                report.p95_total_time_us,
+                                report.p95_layout_time_us,
+                                report.p95_layout_time_us,
+                                report.p95_layout_time_us,
+                                report.p95_layout_engine_solve_time_us,
+                                report.p95_layout_engine_solve_time_us,
+                                report.p95_layout_engine_solve_time_us,
                                 pointer_move_frames_present,
                                 pointer_move_max_dispatch_time_us,
                                 pointer_move_max_hit_test_time_us,
@@ -8130,7 +8275,7 @@ See: `docs/tracy.md`.\n";
                                 run_paint_cache_hit_test_only_replay_allowed_max,
                                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 Some(bundle_path.as_path()),
-                                None,
+                                Some(0),
                             ));
                         }
 
@@ -8165,6 +8310,9 @@ See: `docs/tracy.md`.\n";
                 let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_dispatch: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_hit_test: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_frame_p95_total: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_frame_p95_layout: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_frame_p95_solve: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_pointer_move_dispatch: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_pointer_move_hit_test: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_pointer_move_global_changes: Vec<u64> = Vec::with_capacity(repeat);
@@ -8173,7 +8321,7 @@ See: `docs/tracy.md`.\n";
                 let mut runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Vec<u64> =
                     Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
-                let mut script_worst: Option<(u64, PathBuf)> = None;
+                let mut script_worst: Option<(u64, PathBuf, u64)> = None;
 
                 for run_index in 0..repeat {
                     if !reuse_process {
@@ -8636,6 +8784,9 @@ See: `docs/tracy.md`.\n";
                     runs_paint.push(top_paint);
                     runs_dispatch.push(top_dispatch);
                     runs_hit_test.push(top_hit_test);
+                    runs_frame_p95_total.push(report.p95_total_time_us);
+                    runs_frame_p95_layout.push(report.p95_layout_time_us);
+                    runs_frame_p95_solve.push(report.p95_layout_engine_solve_time_us);
                     let pointer_move_frames_present = report.pointer_move_frames_present;
                     let pointer_move_frames_considered =
                         report.pointer_move_frames_considered as u64;
@@ -8662,6 +8813,8 @@ See: `docs/tracy.md`.\n";
                         .push(run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max);
                     runs_json.push(serde_json::json!({
                         "run_index": run_index,
+                        "frames_considered": report.snapshots_considered,
+                        "frames_warmup_skipped": report.snapshots_skipped_warmup,
                         "top_total_time_us": top_total,
                         "top_layout_time_us": top_layout,
                         "top_layout_engine_solve_time_us": top_solve,
@@ -8670,6 +8823,27 @@ See: `docs/tracy.md`.\n";
                         "top_paint_time_us": top_paint,
                         "top_dispatch_time_us": top_dispatch,
                         "top_hit_test_time_us": top_hit_test,
+                        "frame_p50_total_time_us": report.p50_total_time_us,
+                        "frame_p95_total_time_us": report.p95_total_time_us,
+                        "frame_max_total_time_us": report.max_total_time_us,
+                        "frame_p50_ui_thread_cpu_time_us": report.p50_ui_thread_cpu_time_us,
+                        "frame_p95_ui_thread_cpu_time_us": report.p95_ui_thread_cpu_time_us,
+                        "frame_max_ui_thread_cpu_time_us": report.max_ui_thread_cpu_time_us,
+                        "frame_p50_layout_time_us": report.p50_layout_time_us,
+                        "frame_p95_layout_time_us": report.p95_layout_time_us,
+                        "frame_p50_layout_engine_solve_time_us": report.p50_layout_engine_solve_time_us,
+                        "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
+                        "frame_max_layout_engine_solve_time_us": report.max_layout_engine_solve_time_us,
+                        "frame_p50_prepaint_time_us": report.p50_prepaint_time_us,
+                        "frame_p95_prepaint_time_us": report.p95_prepaint_time_us,
+                        "frame_max_prepaint_time_us": report.max_prepaint_time_us,
+                        "frame_p50_paint_time_us": report.p50_paint_time_us,
+                        "frame_p95_paint_time_us": report.p95_paint_time_us,
+                        "frame_max_paint_time_us": report.max_paint_time_us,
+                        "frame_p50_dispatch_time_us": report.p50_dispatch_time_us,
+                        "frame_p95_dispatch_time_us": report.p95_dispatch_time_us,
+                        "frame_p50_hit_test_time_us": report.p50_hit_test_time_us,
+                        "frame_p95_hit_test_time_us": report.p95_hit_test_time_us,
                         "top_dispatch_events": top_dispatch_events,
                         "top_hit_test_queries": top_hit_test_queries,
                         "pointer_move_frames_present": pointer_move_frames_present,
@@ -8751,8 +8925,10 @@ See: `docs/tracy.md`.\n";
 	                    }));
 
                     match &script_worst {
-                        Some((prev_us, _)) if *prev_us >= top_total => {}
-                        _ => script_worst = Some((top_total, bundle_path.clone())),
+                        Some((prev_us, _, _)) if *prev_us >= top_total => {}
+                        _ => {
+                            script_worst = Some((top_total, bundle_path.clone(), run_index as u64))
+                        }
                     }
 
                     match &overall_worst {
@@ -9148,9 +9324,10 @@ See: `docs/tracy.md`.\n";
 	                                "top_renderer_intermediate_pool_free_bytes": summarize_times_us(&top_renderer_intermediate_pool_free_bytes),
 	                                "top_renderer_intermediate_pool_free_textures": summarize_times_us(&top_renderer_intermediate_pool_free_textures),
 	                            },
-	                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+	                            "worst_run": script_worst.as_ref().map(|(us, bundle, run_index)| serde_json::json!({
 	                                "top_total_time_us": us,
 	                                "bundle": bundle.display().to_string(),
+	                                "run_index": run_index,
 	                            })),
 	                        }));
                     } else {
@@ -9208,6 +9385,31 @@ See: `docs/tracy.md`.\n";
                     sorted_solve.sort_unstable();
                     let p90_solve = percentile_nearest_rank_sorted(&sorted_solve, 0.90);
                     let p95_solve = percentile_nearest_rank_sorted(&sorted_solve, 0.95);
+
+                    let max_frame_p95_total = *runs_frame_p95_total.iter().max().unwrap_or(&0);
+                    let max_frame_p95_layout = *runs_frame_p95_layout.iter().max().unwrap_or(&0);
+                    let max_frame_p95_solve = *runs_frame_p95_solve.iter().max().unwrap_or(&0);
+
+                    let mut sorted_frame_p95_total = runs_frame_p95_total.clone();
+                    sorted_frame_p95_total.sort_unstable();
+                    let p90_frame_p95_total =
+                        percentile_nearest_rank_sorted(&sorted_frame_p95_total, 0.90);
+                    let p95_frame_p95_total =
+                        percentile_nearest_rank_sorted(&sorted_frame_p95_total, 0.95);
+
+                    let mut sorted_frame_p95_layout = runs_frame_p95_layout.clone();
+                    sorted_frame_p95_layout.sort_unstable();
+                    let p90_frame_p95_layout =
+                        percentile_nearest_rank_sorted(&sorted_frame_p95_layout, 0.90);
+                    let p95_frame_p95_layout =
+                        percentile_nearest_rank_sorted(&sorted_frame_p95_layout, 0.95);
+
+                    let mut sorted_frame_p95_solve = runs_frame_p95_solve.clone();
+                    sorted_frame_p95_solve.sort_unstable();
+                    let p90_frame_p95_solve =
+                        percentile_nearest_rank_sorted(&sorted_frame_p95_solve, 0.90);
+                    let p95_frame_p95_solve =
+                        percentile_nearest_rank_sorted(&sorted_frame_p95_solve, 0.95);
                     let max_pointer_move_dispatch =
                         *runs_pointer_move_dispatch.iter().max().unwrap_or(&0);
                     let max_pointer_move_hit_test =
@@ -9242,6 +9444,12 @@ See: `docs/tracy.md`.\n";
                             policy.seed_for(&script_key, PerfSeedMetric::TopLayoutTimeUs);
                         let seed_solve = policy
                             .seed_for(&script_key, PerfSeedMetric::TopLayoutEngineSolveTimeUs);
+                        let seed_frame_p95_total =
+                            policy.seed_for(&script_key, PerfSeedMetric::FrameP95TotalTimeUs);
+                        let seed_frame_p95_layout =
+                            policy.seed_for(&script_key, PerfSeedMetric::FrameP95LayoutTimeUs);
+                        let seed_frame_p95_solve = policy
+                            .seed_for(&script_key, PerfSeedMetric::FrameP95LayoutEngineSolveTimeUs);
 
                         let seed_total_value = match seed_total {
                             PerfBaselineSeed::Max => max_total,
@@ -9258,6 +9466,21 @@ See: `docs/tracy.md`.\n";
                             PerfBaselineSeed::P90 => p90_solve,
                             PerfBaselineSeed::P95 => p95_solve,
                         };
+                        let seed_frame_p95_total_value = match seed_frame_p95_total {
+                            PerfBaselineSeed::Max => max_frame_p95_total,
+                            PerfBaselineSeed::P90 => p90_frame_p95_total,
+                            PerfBaselineSeed::P95 => p95_frame_p95_total,
+                        };
+                        let seed_frame_p95_layout_value = match seed_frame_p95_layout {
+                            PerfBaselineSeed::Max => max_frame_p95_layout,
+                            PerfBaselineSeed::P90 => p90_frame_p95_layout,
+                            PerfBaselineSeed::P95 => p95_frame_p95_layout,
+                        };
+                        let seed_frame_p95_solve_value = match seed_frame_p95_solve {
+                            PerfBaselineSeed::Max => max_frame_p95_solve,
+                            PerfBaselineSeed::P90 => p90_frame_p95_solve,
+                            PerfBaselineSeed::P95 => p95_frame_p95_solve,
+                        };
 
                         let thr_total = apply_perf_baseline_headroom(
                             seed_total_value,
@@ -9271,6 +9494,27 @@ See: `docs/tracy.md`.\n";
                             seed_solve_value,
                             perf_baseline_headroom_pct,
                         );
+                        let wants_frame_p95_thresholds = suite_name
+                            .as_deref()
+                            .is_some_and(|name| name.contains("typical"));
+                        let thr_frame_p95_total = wants_frame_p95_thresholds.then(|| {
+                            apply_perf_baseline_headroom(
+                                seed_frame_p95_total_value,
+                                perf_baseline_headroom_pct,
+                            )
+                        });
+                        let thr_frame_p95_layout = wants_frame_p95_thresholds.then(|| {
+                            apply_perf_baseline_headroom(
+                                seed_frame_p95_layout_value,
+                                perf_baseline_headroom_pct,
+                            )
+                        });
+                        let thr_frame_p95_solve = wants_frame_p95_thresholds.then(|| {
+                            apply_perf_baseline_headroom(
+                                seed_frame_p95_solve_value,
+                                perf_baseline_headroom_pct,
+                            )
+                        });
                         let thr_pointer_move_dispatch = apply_perf_baseline_headroom(
                             max_pointer_move_dispatch,
                             perf_baseline_headroom_pct,
@@ -9300,6 +9544,9 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
+                                "frame_p95_total_time_us": max_frame_p95_total,
+                                "frame_p95_layout_time_us": max_frame_p95_layout,
+                                "frame_p95_layout_engine_solve_time_us": max_frame_p95_solve,
                                 "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
                                 "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
                                 "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
@@ -9310,26 +9557,41 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": p90_total,
                                 "top_layout_time_us": p90_layout,
                                 "top_layout_engine_solve_time_us": p90_solve,
+                                "frame_p95_total_time_us": p90_frame_p95_total,
+                                "frame_p95_layout_time_us": p90_frame_p95_layout,
+                                "frame_p95_layout_engine_solve_time_us": p90_frame_p95_solve,
                             },
                             "measured_p95": {
                                 "top_total_time_us": p95_total,
                                 "top_layout_time_us": p95_layout,
                                 "top_layout_engine_solve_time_us": p95_solve,
+                                "frame_p95_total_time_us": p95_frame_p95_total,
+                                "frame_p95_layout_time_us": p95_frame_p95_layout,
+                                "frame_p95_layout_engine_solve_time_us": p95_frame_p95_solve,
                             },
                             "threshold_seed": {
                                 "top_total_time_us": seed_total_value,
                                 "top_layout_time_us": seed_layout_value,
                                 "top_layout_engine_solve_time_us": seed_solve_value,
+                                "frame_p95_total_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_total_value),
+                                "frame_p95_layout_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_layout_value),
+                                "frame_p95_layout_engine_solve_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_solve_value),
                             },
                             "threshold_seed_source": {
                                 "top_total_time_us": seed_total.as_str(),
                                 "top_layout_time_us": seed_layout.as_str(),
                                 "top_layout_engine_solve_time_us": seed_solve.as_str(),
+                                "frame_p95_total_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_total.as_str()),
+                                "frame_p95_layout_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_layout.as_str()),
+                                "frame_p95_layout_engine_solve_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_solve.as_str()),
                             },
                             "thresholds": {
-                                "max_top_total_us": thr_total,
-                                "max_top_layout_us": thr_layout,
-                                "max_top_solve_us": thr_solve,
+                                "max_top_total_us": (!wants_frame_p95_thresholds).then_some(thr_total),
+                                "max_top_layout_us": (!wants_frame_p95_thresholds).then_some(thr_layout),
+                                "max_top_solve_us": (!wants_frame_p95_thresholds).then_some(thr_solve),
+                                "max_frame_p95_total_us": thr_frame_p95_total,
+                                "max_frame_p95_layout_us": thr_frame_p95_layout,
+                                "max_frame_p95_solve_us": thr_frame_p95_solve,
                                 "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
                                 "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
                                 "max_pointer_move_global_changes": thr_pointer_move_global_changes,
@@ -9355,6 +9617,18 @@ See: `docs/tracy.md`.\n";
                         let (thr_solve, src_solve) = resolve_threshold(
                             cli_thresholds.max_top_solve_us,
                             baseline_thresholds.max_top_solve_us,
+                        );
+                        let (thr_frame_p95_total, src_frame_p95_total) = resolve_threshold(
+                            cli_thresholds.max_frame_p95_total_us,
+                            baseline_thresholds.max_frame_p95_total_us,
+                        );
+                        let (thr_frame_p95_layout, src_frame_p95_layout) = resolve_threshold(
+                            cli_thresholds.max_frame_p95_layout_us,
+                            baseline_thresholds.max_frame_p95_layout_us,
+                        );
+                        let (thr_frame_p95_solve, src_frame_p95_solve) = resolve_threshold(
+                            cli_thresholds.max_frame_p95_solve_us,
+                            baseline_thresholds.max_frame_p95_solve_us,
                         );
                         let (thr_pointer_move_dispatch, src_pointer_move_dispatch) =
                             resolve_threshold(
@@ -9391,15 +9665,33 @@ See: `docs/tracy.md`.\n";
 
                         let observed_total = match perf_threshold_agg {
                             PerfThresholdAggregate::Max => max_total,
+                            PerfThresholdAggregate::P90 => p90_total,
                             PerfThresholdAggregate::P95 => p95_total,
                         };
                         let observed_layout = match perf_threshold_agg {
                             PerfThresholdAggregate::Max => max_layout,
+                            PerfThresholdAggregate::P90 => p90_layout,
                             PerfThresholdAggregate::P95 => p95_layout,
                         };
                         let observed_solve = match perf_threshold_agg {
                             PerfThresholdAggregate::Max => max_solve,
+                            PerfThresholdAggregate::P90 => p90_solve,
                             PerfThresholdAggregate::P95 => p95_solve,
+                        };
+                        let observed_frame_p95_total = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_frame_p95_total,
+                            PerfThresholdAggregate::P90 => p90_frame_p95_total,
+                            PerfThresholdAggregate::P95 => p95_frame_p95_total,
+                        };
+                        let observed_frame_p95_layout = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_frame_p95_layout,
+                            PerfThresholdAggregate::P90 => p90_frame_p95_layout,
+                            PerfThresholdAggregate::P95 => p95_frame_p95_layout,
+                        };
+                        let observed_frame_p95_solve = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_frame_p95_solve,
+                            PerfThresholdAggregate::P90 => p90_frame_p95_solve,
+                            PerfThresholdAggregate::P95 => p95_frame_p95_solve,
                         };
                         let row = serde_json::json!({
                             "script": script_key.clone(),
@@ -9411,10 +9703,14 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": observed_total,
                                 "top_layout_time_us": observed_layout,
                                 "top_layout_engine_solve_time_us": observed_solve,
+                                "frame_p95_total_time_us": observed_frame_p95_total,
+                                "frame_p95_layout_time_us": observed_frame_p95_layout,
+                                "frame_p95_layout_engine_solve_time_us": observed_frame_p95_solve,
                             },
-                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+                            "worst_run": script_worst.as_ref().map(|(us, bundle, run_index)| serde_json::json!({
                                 "top_total_time_us": us,
                                 "bundle": bundle.display().to_string(),
+                                "run_index": run_index,
                                 "trace_chrome": bundle
                                     .parent()
                                     .map(|dir| dir.join("trace.chrome.json"))
@@ -9425,6 +9721,9 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
+                                "frame_p95_total_time_us": max_frame_p95_total,
+                                "frame_p95_layout_time_us": max_frame_p95_layout,
+                                "frame_p95_layout_engine_solve_time_us": max_frame_p95_solve,
                                 "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
                                 "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
                                 "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
@@ -9435,16 +9734,33 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": percentile_nearest_rank_sorted(&sorted_total, 0.50),
                                 "top_layout_time_us": percentile_nearest_rank_sorted(&sorted_layout, 0.50),
                                 "top_layout_engine_solve_time_us": percentile_nearest_rank_sorted(&sorted_solve, 0.50),
+                                "frame_p95_total_time_us": percentile_nearest_rank_sorted(&sorted_frame_p95_total, 0.50),
+                                "frame_p95_layout_time_us": percentile_nearest_rank_sorted(&sorted_frame_p95_layout, 0.50),
+                                "frame_p95_layout_engine_solve_time_us": percentile_nearest_rank_sorted(&sorted_frame_p95_solve, 0.50),
+                            },
+                            "p90": {
+                                "top_total_time_us": p90_total,
+                                "top_layout_time_us": p90_layout,
+                                "top_layout_engine_solve_time_us": p90_solve,
+                                "frame_p95_total_time_us": p90_frame_p95_total,
+                                "frame_p95_layout_time_us": p90_frame_p95_layout,
+                                "frame_p95_layout_engine_solve_time_us": p90_frame_p95_solve,
                             },
                             "p95": {
                                 "top_total_time_us": p95_total,
                                 "top_layout_time_us": p95_layout,
                                 "top_layout_engine_solve_time_us": p95_solve,
+                                "frame_p95_total_time_us": p95_frame_p95_total,
+                                "frame_p95_layout_time_us": p95_frame_p95_layout,
+                                "frame_p95_layout_engine_solve_time_us": p95_frame_p95_solve,
                             },
                             "thresholds": {
                                 "max_top_total_us": thr_total,
                                 "max_top_layout_us": thr_layout,
                                 "max_top_solve_us": thr_solve,
+                                "max_frame_p95_total_us": thr_frame_p95_total,
+                                "max_frame_p95_layout_us": thr_frame_p95_layout,
+                                "max_frame_p95_solve_us": thr_frame_p95_solve,
                                 "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
                                 "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
                                 "max_pointer_move_global_changes": thr_pointer_move_global_changes,
@@ -9455,6 +9771,9 @@ See: `docs/tracy.md`.\n";
                                 "max_top_total_us": src_total,
                                 "max_top_layout_us": src_layout,
                                 "max_top_solve_us": src_solve,
+                                "max_frame_p95_total_us": src_frame_p95_total,
+                                "max_frame_p95_layout_us": src_frame_p95_layout,
+                                "max_frame_p95_solve_us": src_frame_p95_solve,
                                 "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
                                 "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
                                 "max_pointer_move_global_changes": src_pointer_move_global_changes,
@@ -9478,14 +9797,25 @@ See: `docs/tracy.md`.\n";
                             observed_solve,
                             max_solve,
                             p95_solve,
+                            observed_frame_p95_total,
+                            max_frame_p95_total,
+                            p95_frame_p95_total,
+                            observed_frame_p95_layout,
+                            max_frame_p95_layout,
+                            p95_frame_p95_layout,
+                            observed_frame_p95_solve,
+                            max_frame_p95_solve,
+                            p95_frame_p95_solve,
                             pointer_move_frames_present,
                             max_pointer_move_dispatch,
                             max_pointer_move_hit_test,
                             max_pointer_move_global_changes,
                             max_run_paint_cache_hit_test_only_replay_allowed_max,
                             max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                            script_worst.as_ref().map(|(_us, bundle)| bundle.as_path()),
-                            None,
+                            script_worst
+                                .as_ref()
+                                .map(|(_us, bundle, _run)| bundle.as_path()),
+                            script_worst.as_ref().map(|(_us, _bundle, run)| *run),
                         ));
                     }
                 }
@@ -13712,7 +14042,7 @@ fn run_script_over_transport(
                 poll_ms,
             )
         })()
-        .map_err(|err| {
+        .inspect_err(|err| {
             let reason_code = if err.contains("timed out waiting") {
                 "timeout.tooling.bundle_dump"
             } else {
@@ -13732,7 +14062,6 @@ fn run_script_over_transport(
                 script_result_path,
                 &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
             );
-            err
         })?;
 
         let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {
@@ -19491,6 +19820,9 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
+                max_frame_p95_total_us: None,
+                max_frame_p95_layout_us: None,
+                max_frame_p95_solve_us: None,
                 max_pointer_move_dispatch_us: Some(2000),
                 max_pointer_move_hit_test_us: Some(1500),
                 max_pointer_move_global_changes: Some(0),
@@ -19507,6 +19839,15 @@ mod tests {
             49,
             49,
             49,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             true,
             1999,
             1499,
@@ -19529,6 +19870,9 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
+                max_frame_p95_total_us: None,
+                max_frame_p95_layout_us: None,
+                max_frame_p95_solve_us: None,
                 max_pointer_move_dispatch_us: Some(2000),
                 max_pointer_move_hit_test_us: Some(1500),
                 max_pointer_move_global_changes: Some(0),
@@ -19545,6 +19889,15 @@ mod tests {
             51,
             51,
             51,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             true,
             2001,
             1501,

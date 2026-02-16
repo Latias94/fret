@@ -102,9 +102,7 @@ pub fn build_user_prompt_v1(opts: UserPromptOptionsV1<'_>) -> String {
 
     let mut parts: Vec<String> = Vec::new();
 
-    let refine_mode = opts
-        .current_spec
-        .is_some_and(|spec| is_non_empty_spec(spec));
+    let refine_mode = opts.current_spec.is_some_and(is_non_empty_spec);
 
     if refine_mode {
         let spec = opts.current_spec.expect("refine_mode implies current_spec");
@@ -113,14 +111,14 @@ pub fn build_user_prompt_v1(opts: UserPromptOptionsV1<'_>) -> String {
         parts.push(String::new());
         parts.push(format!("USER REQUEST: {user_text}"));
 
-        if let Some(state) = opts.state {
-            if state != &Value::Null {
-                parts.push(String::new());
-                parts.push("AVAILABLE STATE:".into());
-                parts.push(
-                    serde_json::to_string_pretty(state).unwrap_or_else(|_| "<state>".to_string()),
-                );
-            }
+        if let Some(state) = opts.state
+            && state != &Value::Null
+        {
+            parts.push(String::new());
+            parts.push("AVAILABLE STATE:".into());
+            parts.push(
+                serde_json::to_string_pretty(state).unwrap_or_else(|_| "<state>".to_string()),
+            );
         }
 
         parts.push(String::new());
@@ -132,14 +130,12 @@ pub fn build_user_prompt_v1(opts: UserPromptOptionsV1<'_>) -> String {
     // Fresh generation mode.
     parts.push(user_text);
 
-    if let Some(state) = opts.state {
-        if state != &Value::Null {
-            parts.push(String::new());
-            parts.push("AVAILABLE STATE:".into());
-            parts.push(
-                serde_json::to_string_pretty(state).unwrap_or_else(|_| "<state>".to_string()),
-            );
-        }
+    if let Some(state) = opts.state
+        && state != &Value::Null
+    {
+        parts.push(String::new());
+        parts.push("AVAILABLE STATE:".into());
+        parts.push(serde_json::to_string_pretty(state).unwrap_or_else(|_| "<state>".to_string()));
     }
 
     parts.push(String::new());

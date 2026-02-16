@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct FieldPageModels {
@@ -180,45 +182,6 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(900.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let centered_card = centered(cx, card);
-            section(cx, title, centered_card)
-        };
-
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     let input = {
@@ -247,7 +210,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-input");
-        section_card(cx, "Input", content)
+        content
     };
 
     let textarea = {
@@ -265,7 +228,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-textarea");
-        section_card(cx, "Textarea", content)
+        content
     };
     let select = {
         let content = shadcn::Field::new([
@@ -285,7 +248,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-select");
-        section_card(cx, "Select", content)
+        content
     };
 
     let slider = {
@@ -301,7 +264,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-slider");
-        section_card(cx, "Slider", content)
+        content
     };
 
     let fieldset = {
@@ -354,7 +317,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-fieldset");
-        section_card(cx, "Fieldset", content)
+        content
     };
 
     let checkbox = {
@@ -388,7 +351,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-checkbox");
-        section_card(cx, "Checkbox", content)
+        content
     };
 
     let radio = {
@@ -415,7 +378,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-radio");
-        section_card(cx, "Radio", content)
+        content
     };
 
     let switch = {
@@ -440,7 +403,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-switch");
-        section_card(cx, "Switch", content)
+        content
     };
 
     let choice_card = {
@@ -483,7 +446,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-choice-card");
-        section_card(cx, "Choice Card", content)
+        content
     };
 
     let field_group = {
@@ -526,7 +489,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(max_w_md.clone())
         .into_element(cx)
         .test_id("ui-gallery-field-group");
-        section_card(cx, "Field Group", content)
+        content
     };
     let rtl = {
         let content = fret_ui_kit::primitives::direction::with_direction_provider(
@@ -561,7 +524,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             },
         )
         .test_id("ui-gallery-field-rtl");
-        section_card(cx, "RTL", content)
+        content
     };
 
     let responsive = {
@@ -614,109 +577,28 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)))
         .into_element(cx)
         .test_id("ui-gallery-field-responsive");
-        section_card(cx, "Responsive Layout", content)
+        content
     };
 
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Field docs order: Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Field Group, RTL, Responsive Layout.",
-                ),
-                input,
-                textarea,
-                select,
-                slider,
-                fieldset,
-                checkbox,
-                radio,
-                switch,
-                choice_card,
-                field_group,
-                rtl,
-                responsive,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-field-component");
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Input + Description").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(cx, "Field::new([FieldLabel, Input, FieldDescription]).into_element(cx);")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Choice Card").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "RadioGroupItem::new(...).variant(RadioGroupItemVariant::ChoiceCard).child(FieldContent::new([...]).into_element(cx));",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Responsive Orientation").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "Field::new([...]).orientation(FieldOrientation::Responsive);",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
-                    "Field page now follows upstream docs section order for deterministic parity checks.",
+                    "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "Each section keeps a stable test_id so diag scripts can target specific examples.",
+                    "Field page follows upstream docs section order for deterministic parity checks.",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
                 ),
                 shadcn::typography::muted(
                     cx,
@@ -725,13 +607,78 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-field",
-        component_panel,
-        code_panel,
-        notes_panel,
+        Some(
+            "Preview follows shadcn Field docs order: Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Field Group, RTL, Responsive Layout.",
+        ),
+        vec![
+            DocSection::new("Input", input)
+                .description("Basic text inputs with labels + helper copy.")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Username").into_element(cx),
+    shadcn::Input::new(model).placeholder("Max Leiter").into_element(cx),
+    shadcn::FieldDescription::new("Choose a unique username.").into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Textarea", textarea)
+                .description("Textarea field with explicit height and helper copy."),
+            DocSection::new("Select", select).description("Select composed inside a Field shell."),
+            DocSection::new("Slider", slider).description(
+                "Non-text controls should still use FieldTitle/Description for context.",
+            ),
+            DocSection::new("Fieldset", fieldset)
+                .description("FieldSet groups multiple fields with a legend + description."),
+            DocSection::new("Checkbox", checkbox)
+                .description("Horizontal Field orientation keeps checkbox + label aligned."),
+            DocSection::new("Radio", radio)
+                .description("RadioGroup nested under Field for label copy."),
+            DocSection::new("Switch", switch)
+                .description("Switch composed with title + description."),
+            DocSection::new("Choice Card", choice_card)
+                .description("Choice-card radios combine FieldContent with rich labels.")
+                .code(
+                    "rust",
+                    r#"shadcn::RadioGroupItem::new(model, "pro", "Pro")
+    .variant(shadcn::RadioGroupItemVariant::ChoiceCard)
+    .child(
+        shadcn::FieldContent::new([
+            shadcn::FieldTitle::new("Pro").into_element(cx),
+            shadcn::FieldDescription::new("For small teams.").into_element(cx),
+        ])
+        .into_element(cx),
     )
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Field Group", field_group)
+                .description("FieldGroup provides separators and checkbox-group composition."),
+            DocSection::new("RTL", rtl)
+                .description("All Field compositions should render correctly under RTL direction."),
+            DocSection::new("Responsive Layout", responsive)
+                .description(
+                    "Responsive orientation collapses label/content layouts for narrow containers.",
+                )
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldContent::new([
+        shadcn::FieldLabel::new("Name").into_element(cx),
+        shadcn::FieldDescription::new("Provide your full name.").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Input::new(model).into_element(cx),
+])
+.orientation(shadcn::FieldOrientation::Responsive)
+.into_element(cx);"#,
+                ),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and stability guidance."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-field")]
 }

@@ -63,6 +63,23 @@ pub trait UiIntoElement: Sized {
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
 
+impl UiIntoElement for AnyElement {
+    #[track_caller]
+    fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self
+    }
+}
+
+impl<T> UiIntoElement for UiBuilder<T>
+where
+    T: UiPatchTarget + UiIntoElement,
+{
+    #[track_caller]
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
 /// The main fluent authoring surface: `value.ui().px_2().w_full().into_element(cx)`.
 #[derive(Debug, Clone)]
 pub struct UiBuilder<T> {
@@ -965,7 +982,8 @@ impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
 impl<H: UiHost, F, I> UiBuilder<crate::ui::FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -996,7 +1014,8 @@ where
 impl<H: UiHost, F, I> UiBuilder<crate::ui::ContainerBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1007,7 +1026,8 @@ where
 impl<H: UiHost, F, I> UiBuilder<crate::ui::StackBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1018,7 +1038,8 @@ where
 impl<H: UiHost, F, I> UiBuilder<crate::ui::ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

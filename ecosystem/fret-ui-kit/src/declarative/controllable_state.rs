@@ -207,7 +207,7 @@ mod tests {
 
         let called = Cell::new(0);
         let model_id_out = Cell::new(None);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
             bump_frame(app);
@@ -257,7 +257,7 @@ mod tests {
         let called = Cell::new(0);
         let model_a_id_out = Cell::new(None);
         let model_b_id_out = Cell::new(None);
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
             bump_frame(app);

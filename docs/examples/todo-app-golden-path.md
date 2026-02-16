@@ -9,6 +9,22 @@ This document shows what we want a first-time Fret user to write when building a
 
 It is intentionally “golden path”: advanced apps may assemble crates manually.
 
+## Onboarding ladder (progressive disclosure)
+
+Prefer an explicit ladder instead of starting with the full baseline on minute 1:
+
+1. `hello` — the smallest runnable “Hello UI”
+2. `simple-todo` — **Model + MVU messages + keyed lists** (no selectors/queries)
+3. `todo` — the best-practice baseline (**selectors + queries**) once you need derived/async state
+
+Templates (in this repository):
+
+```bash
+fretboard new hello --name hello-world
+fretboard new simple-todo --name my-simple-todo
+fretboard new todo --name my-todo
+```
+
 Related ADRs:
 
 - Golden-path driver/pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
@@ -45,6 +61,23 @@ Notes:
 - `fret` defaults to a practical desktop setup (diagnostics + icons + optional caches).
 - Advanced apps can depend on `fret-framework` + `fret-bootstrap` directly for finer-grained control.
 
+## Invalidation rules of thumb (keep it simple)
+
+When observing models in views:
+
+- Visual-only changes → `Paint`
+- Affects sizing/flow/scroll extents → `Layout`
+- Affects hit regions only → `HitTest`
+
+If you are unsure, start with `Layout` and tighten later.
+
+## Identity rules of thumb (keyed lists)
+
+Dynamic lists should use stable keys:
+
+- Prefer `cx.keyed(id, |cx| ...)` for list rows.
+- If a list can insert/remove/reorder, assume it needs keys.
+
 ## Minimal `Cargo.toml`
 
 This repo is not published to crates.io yet, so the examples below use workspace `path` dependencies.
@@ -78,6 +111,9 @@ Notes:
 
 - `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0105).
 - `fret::mvu` provides an MVU-shaped authoring surface (typed messages) while keeping the underlying driver hotpatch-friendly.
+- MVU uses a conservative default invalidation posture: it forces a `Layout` refresh after each handled command by bumping an internal `tick` model (see `ecosystem/fret/src/mvu.rs`).
+  - This is intentional: it makes MVU apps correct-by-default.
+  - If you need tighter invalidation/perf control, drop down to a manual driver (still hotpatch-friendly) and invalidate only what changed.
 
 ## App state (models)
 
@@ -97,12 +133,21 @@ enum Msg {
     Add,
     ClearDone,
     RefreshTip,
+    SetFilter(TodoFilter),
     Remove(u64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TodoFilter {
+    All,
+    Active,
+    Completed,
 }
 
 struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
+    filter: Model<TodoFilter>,
     next_id: u64,
 }
 
@@ -112,7 +157,11 @@ struct TodoProgram;
 
 ## Three-layer state split (recommended)
 
-The official baseline (including `apps/fret-examples/src/todo_demo.rs`) uses an explicit 3-layer model:
+This section describes the **best-practice baseline** (`todo`) and `apps/fret-examples/src/todo_demo.rs`.
+
+The `simple-todo` template intentionally stops earlier (Model + MVU only).
+
+The official baseline uses an explicit 3-layer model:
 
 1. Local mutable state (`Model<T>`):
    - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`).

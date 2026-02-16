@@ -460,8 +460,8 @@ fn request_overlay<H: UiHost>(
         fret_ui::element::AnchoredProps {
             layout: LayoutStyle {
                 size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Fill,
+                    width: Length::Auto,
+                    height: Length::Auto,
                     ..Default::default()
                 },
                 ..Default::default()

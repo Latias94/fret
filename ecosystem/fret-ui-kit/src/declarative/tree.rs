@@ -18,6 +18,8 @@ use crate::{
     TreeState, flatten_tree,
 };
 
+type RetainedTreeRowFn<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement;
+
 fn resolve_list_colors(theme: &Theme) -> (Color, Color, Color, Color) {
     let list_bg = theme
         .color_by_key("list.background")
@@ -123,16 +125,13 @@ pub fn tree_view<H: UiHost>(
 /// - This defaults to fixed row height for predictable perf. If you need variable-height rows,
 ///   use [`tree_view_retained_with_measure_mode`] with `VirtualListMeasureMode::Measured`.
 /// - `debug_row_test_id_prefix` is intended for scripted UI Gallery harnesses.
-pub fn tree_view_retained<H: UiHost>(
+pub fn tree_view_retained<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
     state: Model<TreeState>,
     size: Size,
     debug_row_test_id_prefix: Option<Arc<str>>,
-) -> AnyElement
-where
-    H: 'static,
-{
+) -> AnyElement {
     tree_view_retained_with_measure_mode(
         cx,
         items,
@@ -144,17 +143,14 @@ where
 }
 
 /// A variant of [`tree_view_retained`] that allows opting into measured (variable-height) rows.
-pub fn tree_view_retained_with_measure_mode<H: UiHost>(
+pub fn tree_view_retained_with_measure_mode<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
     state: Model<TreeState>,
     size: Size,
     measure_mode: fret_ui::element::VirtualListMeasureMode,
     debug_row_test_id_prefix: Option<Arc<str>>,
-) -> AnyElement
-where
-    H: 'static,
-{
+) -> AnyElement {
     tree_view_retained_impl(
         cx,
         items,
@@ -359,17 +355,14 @@ pub fn tree_view_with_renderer<H: UiHost>(
     )
 }
 
-fn tree_view_retained_impl<H: UiHost>(
+fn tree_view_retained_impl<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
     state: Model<TreeState>,
     size: Size,
     measure_mode: fret_ui::element::VirtualListMeasureMode,
     debug_row_test_id_prefix: Option<Arc<str>>,
-) -> AnyElement
-where
-    H: 'static,
-{
+) -> AnyElement {
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
     let state_revision = cx.app.models().revision(&state).unwrap_or(0);
 
@@ -447,7 +440,7 @@ where
             });
             let row_test_id_prefix = debug_row_test_id_prefix.clone();
 
-            let row: Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement> =
+            let row: Arc<RetainedTreeRowFn<H>> =
                 Arc::new(move |cx: &mut ElementContext<'_, H>, i| {
                     let Some(entry) = entries_for_row.get(i).cloned() else {
                         return cx.text("");
@@ -480,7 +473,7 @@ where
                         .as_ref()
                         .map(|id| Arc::from(format!("{id}-toggle")));
 
-                    let row_el = cx.pressable(
+                    cx.pressable(
                         PressableProps {
                             enabled,
                             a11y: PressableA11y {
@@ -566,9 +559,7 @@ where
                                 },
                             )]
                         },
-                    );
-
-                    row_el
+                    )
                 });
 
             vec![cx.virtual_list_keyed_retained_with_layout(

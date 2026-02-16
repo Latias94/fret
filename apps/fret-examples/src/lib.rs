@@ -47,6 +47,8 @@ pub mod echarts_demo;
 pub mod echarts_multi_grid_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod embedded_viewport_demo;
 pub mod emoji_conformance_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -107,6 +109,7 @@ pub mod query_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod router_query_demo;
 pub mod shaded_demo;
+pub mod simple_todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sonner_demo;
 pub mod stacked_bars_demo;

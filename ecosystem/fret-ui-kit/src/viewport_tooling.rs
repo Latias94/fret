@@ -15,18 +15,13 @@ use fret_viewport_tooling::{
     ViewportToolResult,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ViewportToolCoordinateSpace {
     /// Use render-target pixels for cursor coordinates (recommended for 3D gizmos).
+    #[default]
     TargetPx,
     /// Use window logical pixels for cursor coordinates (useful for HUD-ish tools).
     ScreenPx,
-}
-
-impl Default for ViewportToolCoordinateSpace {
-    fn default() -> Self {
-        Self::TargetPx
-    }
 }
 
 #[derive(Debug, Clone, Copy)]

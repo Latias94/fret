@@ -350,15 +350,15 @@ fn read_desktop_prefers_reduced_motion() -> Option<bool> {
 
 #[cfg(target_os = "macos")]
 fn read_desktop_prefers_reduced_motion() -> Option<bool> {
-    use cocoa::base::id;
     use objc::runtime::Class;
+    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
         let Some(class) = Class::get("NSWorkspace") else {
             return None;
         };
-        let workspace: id = msg_send![class, sharedWorkspace];
+        let workspace: *mut Object = msg_send![class, sharedWorkspace];
         if workspace.is_null() {
             return None;
         }
@@ -475,15 +475,15 @@ fn read_desktop_text_scale_factor() -> Option<f32> {
 
 #[cfg(target_os = "macos")]
 fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
-    use cocoa::base::id;
     use objc::runtime::Class;
+    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
         let Some(class) = Class::get("NSWorkspace") else {
             return None;
         };
-        let workspace: id = msg_send![class, sharedWorkspace];
+        let workspace: *mut Object = msg_send![class, sharedWorkspace];
         if workspace.is_null() {
             return None;
         }
@@ -499,27 +499,31 @@ fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
 
 #[cfg(target_os = "macos")]
 fn read_desktop_accent_color() -> Option<fret_core::Color> {
-    use cocoa::base::{id, nil};
-    use cocoa::foundation::NSAutoreleasePool;
-    use cocoa::foundation::NSString;
     use objc::runtime::Class;
+    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use std::ffi::CStr;
+    use std::ffi::CString;
     use std::os::raw::c_char;
 
     unsafe {
         let Some(class) = Class::get("NSUserDefaults") else {
             return None;
         };
-        let defaults: id = msg_send![class, standardUserDefaults];
+        let defaults: *mut Object = msg_send![class, standardUserDefaults];
         if defaults.is_null() {
             return None;
         }
 
-        let key: id = NSString::alloc(nil)
-            .init_str("AppleHighlightColor")
-            .autorelease();
-        let value: id = msg_send![defaults, stringForKey: key];
+        let Some(ns_string_class) = Class::get("NSString") else {
+            return None;
+        };
+        let key_cstr = CString::new("AppleHighlightColor").ok()?;
+        let key: *mut Object = msg_send![ns_string_class, alloc];
+        let key: *mut Object = msg_send![key, initWithUTF8String: key_cstr.as_ptr()];
+        let key: *mut Object = msg_send![key, autorelease];
+
+        let value: *mut Object = msg_send![defaults, stringForKey: key];
         if value.is_null() {
             return None;
         }
@@ -633,15 +637,15 @@ fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
 
 #[cfg(target_os = "macos")]
 fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
-    use cocoa::base::id;
     use objc::runtime::Class;
+    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
         let Some(class) = Class::get("NSWorkspace") else {
             return None;
         };
-        let workspace: id = msg_send![class, sharedWorkspace];
+        let workspace: *mut Object = msg_send![class, sharedWorkspace];
         if workspace.is_null() {
             return None;
         }

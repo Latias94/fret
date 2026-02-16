@@ -21,6 +21,38 @@ enum HotpatchModeSummary {
     ReloadBoundary,
 }
 
+fn demo_id_to_native_bin(demo: &str, native_bins: &[String]) -> Option<String> {
+    // `--demo` is intended to be aligned with web IDs where possible. Native demo binaries are
+    // snake_case and often end in `_demo`, so we try a small set of conservative candidates.
+    //
+    // Some demos have intentionally different ids across platforms; handle those explicitly.
+    let override_bin = match demo {
+        // Web uses a wasm-only copy-path demo; native uses a different implementation id.
+        "external_texture_imports_web_demo" => Some("external_texture_imports_demo"),
+        _ => None,
+    };
+    if let Some(bin) = override_bin {
+        if native_bins.iter().any(|b| b == bin) {
+            return Some(bin.to_string());
+        }
+    }
+
+    let normalized = demo.replace('-', "_");
+    let mut candidates: Vec<String> = Vec::new();
+
+    candidates.push(demo.to_string());
+    if normalized != demo {
+        candidates.push(normalized.clone());
+    }
+    if !normalized.ends_with("_demo") {
+        candidates.push(format!("{normalized}_demo"));
+    }
+
+    candidates
+        .into_iter()
+        .find(|c| native_bins.iter().any(|b| b == c))
+}
+
 fn print_hotpatch_summary(
     mode: HotpatchModeSummary,
     bin: &str,
@@ -179,6 +211,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let demos = list_native_demos_from(&root)?;
 
     let mut bin: Option<String> = None;
+    let mut demo: Option<String> = None;
     let mut choose = false;
     let mut hotpatch = false;
     let mut hotpatch_reload_only = false;
@@ -201,6 +234,12 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                 bin = Some(
                     it.next()
                         .ok_or_else(|| "--bin requires a value".to_string())?,
+                );
+            }
+            "--demo" => {
+                demo = Some(
+                    it.next()
+                        .ok_or_else(|| "--demo requires a value".to_string())?,
                 );
             }
             "--choose" => choose = true,
@@ -258,6 +297,69 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             "--help" | "-h" => return help(),
             other => return Err(format!("unknown argument for dev native: {other}")),
         }
+    }
+
+    if demo.is_some() && bin.is_some() {
+        return Err("cannot combine --demo and --bin".to_string());
+    }
+
+    if demo.is_some() && choose {
+        return Err("cannot combine --demo and --choose (use --demo <name>)".to_string());
+    }
+
+    // Prefer running native demos by `--bin` even when the user passed a web-style `--demo` id.
+    // This keeps behavior consistent (feature flags, hotpatch/watch support, etc.), and avoids
+    // relying on the `apps/fret-demo` selection shell having perfect parity with web ids.
+    if let Some(demo_id) = demo.as_deref() {
+        if let Some(mapped) = demo_id_to_native_bin(demo_id, &demos) {
+            bin = Some(mapped);
+            demo = None;
+        }
+    }
+
+    let demo_needs_bin = demo.is_some()
+        && (hotpatch
+            || hotpatch_devserver_ws.is_some()
+            || hotpatch_dx
+            || watch.unwrap_or(false)
+            || hotpatch_trigger_path.is_some()
+            || hotpatch_poll_ms.is_some()
+            || hotpatch_build_id.is_some());
+
+    if demo_needs_bin {
+        let demo_id = demo.as_deref().unwrap_or_default();
+        return Err(format!(
+            "cannot combine `--demo {demo_id}` with --hotpatch/--watch because it does not map to a native demo binary.\n  hint: try `fretboard list native-demos` and use `--bin <name>`.\n  hint: if you only want to run the demo shell, omit --hotpatch/--watch."
+        ));
+    }
+
+    // `--demo` runs the `apps/fret-demo` demo-selection shell (mirrors web's `?demo=...`).
+    // Keep this path conservative: hotpatch and watch are currently bin-centric (`--bin`).
+    if let Some(demo) = demo.as_deref() {
+        // Keep `--demo` aligned with web demo IDs when possible.
+        if demo != "todo_demo" {
+            validate_web_demo(demo)?;
+        }
+
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(&root).args(["run", "-p", "fret-demo"]);
+
+        if dev_state_reset {
+            cmd.env("FRET_DEV_STATE", "1");
+            cmd.env("FRET_DEV_STATE_DEBOUNCE_MS", "0");
+            cmd.env("FRET_DEV_STATE_RESET", "1");
+        }
+
+        cmd.arg("--").arg(demo);
+        if !passthrough.is_empty() {
+            cmd.args(passthrough);
+        }
+
+        let status = cmd.status().map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("cargo exited with status: {status}"));
+        }
+        return Ok(());
     }
 
     if hotpatch && hotpatch_devserver_ws.is_some() {

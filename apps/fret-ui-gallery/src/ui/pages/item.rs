@@ -1,48 +1,8 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(920.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let icon_media = |cx: &mut ElementContext<'_, App>, icon: &'static str| {
         shadcn::ItemMedia::new([shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon))])
             .variant(shadcn::ItemMediaVariant::Icon)
@@ -186,7 +146,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             true,
             "ui-gallery-item-demo",
         );
-        section_card(cx, "Demo", content)
+        content
     };
 
     let variant = {
@@ -225,7 +185,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         .gap(Px(8.0))
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
         .into_element(cx);
-        section_card(cx, "Variant", content)
+        content
     };
 
     let size = {
@@ -264,7 +224,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 ]
             },
         );
-        section_card(cx, "Size", content)
+        content
     };
 
     let icon = {
@@ -278,7 +238,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             true,
             "ui-gallery-item-icon",
         );
-        section_card(cx, "Icon", content)
+        content
     };
 
     let avatar = {
@@ -292,7 +252,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             true,
             "ui-gallery-item-avatar",
         );
-        section_card(cx, "Avatar", content)
+        content
     };
 
     let image = {
@@ -306,7 +266,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             true,
             "ui-gallery-item-image",
         );
-        section_card(cx, "Image", content)
+        content
     };
 
     let group = {
@@ -347,7 +307,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
         .into_element(cx)
         .test_id("ui-gallery-item-group");
-        section_card(cx, "Group", content)
+        content
     };
 
     let header = {
@@ -382,7 +342,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             },
         )
         .test_id("ui-gallery-item-header");
-        section_card(cx, "Header", content)
+        content
     };
 
     let link = {
@@ -396,7 +356,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             false,
             "ui-gallery-item-link",
         );
-        section_card(cx, "Link", content)
+        content
     };
 
     let dropdown = {
@@ -420,7 +380,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
         .into_element(cx)
         .test_id("ui-gallery-item-dropdown");
-        section_card(cx, "Dropdown", content)
+        content
     };
 
     let rtl = {
@@ -451,104 +411,21 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         )
         .test_id("ui-gallery-item-rtl");
 
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Item docs order: Demo, Variant, Size, Icon, Avatar, Image, Group, Header, Link, Dropdown, RTL.",
-                ),
-                demo,
-                variant,
-                size,
-                icon,
-                avatar,
-                image,
-                group,
-                header,
-                link,
-                dropdown,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-item-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Basic Composition").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"Item::new([ItemMedia::new([...]), ItemContent::new([...]), ItemActions::new([...])])"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Variant and Size").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"Item::new([...]).variant(ItemVariant::Outline).size(ItemSize::Sm)"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Grouping").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"ItemGroup::new([item_a, ItemSeparator::new().into_element(cx), item_b])"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/item.rs`.",
+                ),
                 shadcn::typography::muted(
                     cx,
                     "Current API variants: default/outline/muted; sizes: default/sm.",
@@ -559,18 +436,69 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "Each section has stable test_id for future diag scripts.",
+                    "Prefer stable `test_id`s on list rows and actions so diag scripts survive layout refactors.",
                 ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-item",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Item docs order: Demo, Variant, Size, Icon, Avatar, Image, Group, Header, Link, Dropdown, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("A file row with media, content, and a trailing action.")
+                .max_w(Px(920.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Item::new([
+    shadcn::ItemMedia::new([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.file-text"))]).into_element(cx),
+    shadcn::ItemContent::new([
+        shadcn::ItemTitle::new("Invoice.pdf").into_element(cx),
+        shadcn::ItemDescription::new("Updated 2 days ago").into_element(cx),
+    ]).into_element(cx),
+    shadcn::ItemActions::new([shadcn::Button::new("Open").into_element(cx)]).into_element(cx),
+])
+.on_click(CMD_APP_OPEN)
+.into_element(cx);"#,
+                ),
+            DocSection::new("Variant", variant)
+                .description("Default / Outline / Muted variants.")
+                .max_w(Px(920.0)),
+            DocSection::new("Size", size)
+                .description("Row density presets (default + small).")
+                .max_w(Px(920.0)),
+            DocSection::new("Icon", icon)
+                .description("Icon media variant for app navigation rows.")
+                .max_w(Px(920.0)),
+            DocSection::new("Avatar", avatar)
+                .description("Compose Avatar inside ItemMedia for people lists.")
+                .max_w(Px(920.0)),
+            DocSection::new("Image", image)
+                .description("Media slot can be styled as an image placeholder.")
+                .max_w(Px(920.0)),
+            DocSection::new("Group", group)
+                .description("Group rows with separators and consistent spacing.")
+                .max_w(Px(920.0)),
+            DocSection::new("Header", header)
+                .description("Header row pairs a title with a trailing action.")
+                .max_w(Px(920.0)),
+            DocSection::new("Link", link)
+                .description("Clickable list row (approximates docs link usage).")
+                .max_w(Px(920.0)),
+            DocSection::new("Dropdown", dropdown)
+                .description("Trailing ghost action button (menu placeholder).")
+                .max_w(Px(920.0)),
+            DocSection::new("RTL", rtl)
+                .description("Validate text alignment and action placement under RTL.")
+                .max_w(Px(920.0)),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and implementation notes.")
+                .max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-item")]
 }

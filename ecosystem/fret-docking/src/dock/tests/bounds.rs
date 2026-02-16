@@ -15,7 +15,7 @@ fn docking_bounds_for_element_reports_last_frame_panel_rects() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
-    let mut services = FakeTextService::default();
+    let mut services = FakeTextService;
 
     let panel_left = PanelKey::new("test.viewport.left");
     let panel_right = PanelKey::new("test.viewport.right");
@@ -236,7 +236,7 @@ fn bounds_for_element_is_window_scoped_across_multi_window_docking() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
-    let mut services = FakeTextService::default();
+    let mut services = FakeTextService;
 
     let panel_a = PanelKey::new("mw.viewport.a");
     let panel_b = PanelKey::new("mw.viewport.b");
@@ -387,7 +387,7 @@ fn overlay_placement_must_use_window_local_anchor_bounds() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
-    let mut services = FakeTextService::default();
+    let mut services = FakeTextService;
 
     let panel_a = PanelKey::new("mw.viewport.a");
     let panel_b = PanelKey::new("mw.viewport.b");
@@ -448,12 +448,20 @@ fn overlay_placement_must_use_window_local_anchor_bounds() {
         bounds_a,
         root_a_name,
         move |cx| {
-            let mut layout = fret_ui::element::LayoutStyle::default();
-            layout.position = fret_ui::element::PositionStyle::Absolute;
-            layout.inset.top = Some(Px(20.0));
-            layout.inset.left = Some(Px(240.0));
-            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
-            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+            let layout = fret_ui::element::LayoutStyle {
+                position: fret_ui::element::PositionStyle::Absolute,
+                inset: fret_ui::element::InsetStyle {
+                    top: Some(Px(20.0)),
+                    left: Some(Px(240.0)),
+                    ..Default::default()
+                },
+                size: fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Px(Px(100.0)),
+                    height: fret_ui::element::Length::Px(Px(30.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
 
             let props = fret_ui::element::SemanticsProps {
                 layout,
@@ -481,12 +489,20 @@ fn overlay_placement_must_use_window_local_anchor_bounds() {
         bounds_b,
         root_b_name,
         move |cx| {
-            let mut layout = fret_ui::element::LayoutStyle::default();
-            layout.position = fret_ui::element::PositionStyle::Absolute;
-            layout.inset.top = Some(Px(20.0));
-            layout.inset.left = Some(Px(40.0));
-            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
-            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+            let layout = fret_ui::element::LayoutStyle {
+                position: fret_ui::element::PositionStyle::Absolute,
+                inset: fret_ui::element::InsetStyle {
+                    top: Some(Px(20.0)),
+                    left: Some(Px(40.0)),
+                    ..Default::default()
+                },
+                size: fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Px(Px(100.0)),
+                    height: fret_ui::element::Length::Px(Px(30.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
 
             let props = fret_ui::element::SemanticsProps {
                 layout,
@@ -532,12 +548,20 @@ fn overlay_placement_must_use_window_local_anchor_bounds() {
         bounds_a,
         root_a_name,
         move |cx| {
-            let mut layout = fret_ui::element::LayoutStyle::default();
-            layout.position = fret_ui::element::PositionStyle::Absolute;
-            layout.inset.top = Some(Px(20.0));
-            layout.inset.left = Some(Px(240.0));
-            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
-            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+            let layout = fret_ui::element::LayoutStyle {
+                position: fret_ui::element::PositionStyle::Absolute,
+                inset: fret_ui::element::InsetStyle {
+                    top: Some(Px(20.0)),
+                    left: Some(Px(240.0)),
+                    ..Default::default()
+                },
+                size: fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Px(Px(100.0)),
+                    height: fret_ui::element::Length::Px(Px(30.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
 
             let props = fret_ui::element::SemanticsProps {
                 layout,
@@ -558,12 +582,20 @@ fn overlay_placement_must_use_window_local_anchor_bounds() {
         bounds_b,
         root_b_name,
         move |cx| {
-            let mut layout = fret_ui::element::LayoutStyle::default();
-            layout.position = fret_ui::element::PositionStyle::Absolute;
-            layout.inset.top = Some(Px(20.0));
-            layout.inset.left = Some(Px(40.0));
-            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
-            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+            let layout = fret_ui::element::LayoutStyle {
+                position: fret_ui::element::PositionStyle::Absolute,
+                inset: fret_ui::element::InsetStyle {
+                    top: Some(Px(20.0)),
+                    left: Some(Px(40.0)),
+                    ..Default::default()
+                },
+                size: fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Px(Px(100.0)),
+                    height: fret_ui::element::Length::Px(Px(30.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
 
             let props = fret_ui::element::SemanticsProps {
                 layout,

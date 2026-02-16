@@ -112,15 +112,34 @@ impl<H: UiHost> UiTree<H> {
 
         let mut viewport_cursor: usize = 0;
 
-        let scroll_started = self.debug_enabled.then(Instant::now);
-        let started_phase = profile_layout_all.then(Instant::now);
-        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind, true, true);
-        if let Some(started) = started_phase {
-            t_invalidate_scroll_handle_bindings = Some(started.elapsed());
+        let layout_phase_time_enabled = self.debug_enabled || profile_layout_all;
+        let window = self.window;
+        let frame_id = app.frame_id();
+        let (_, invalidate_elapsed) = fret_perf::measure_span(
+            layout_phase_time_enabled,
+            trace_layout,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout.invalidate_scroll_handle_bindings",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    pass_kind = ?pass_kind,
+                )
+            },
+            || {
+                self.invalidate_scroll_handle_bindings_for_changed_handles(
+                    app, pass_kind, true, true,
+                )
+            },
+        );
+        if profile_layout_all {
+            t_invalidate_scroll_handle_bindings = invalidate_elapsed;
         }
-        if let Some(scroll_started) = scroll_started {
+        if self.debug_enabled
+            && let Some(invalidate_elapsed) = invalidate_elapsed
+        {
             self.debug_stats
-                .layout_invalidate_scroll_handle_bindings_time += scroll_started.elapsed();
+                .layout_invalidate_scroll_handle_bindings_time += invalidate_elapsed;
         }
 
         let any_root_needs_layout_or_bounds = roots.iter().any(|&root| {
@@ -186,15 +205,26 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
-            let expand_started = self.debug_enabled.then(Instant::now);
-            let started_phase = profile_layout_all.then(Instant::now);
-            self.expand_view_cache_layout_invalidations_if_needed();
-            if let Some(started) = started_phase {
-                t_expand_view_cache_invalidations = Some(started.elapsed());
+            let (_, expand_elapsed) = fret_perf::measure_span(
+                layout_phase_time_enabled,
+                trace_layout,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.expand_view_cache_invalidations",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        pass_kind = ?pass_kind,
+                    )
+                },
+                || self.expand_view_cache_layout_invalidations_if_needed(),
+            );
+            if profile_layout_all {
+                t_expand_view_cache_invalidations = expand_elapsed;
             }
-            if let Some(expand_started) = expand_started {
-                self.debug_stats.layout_expand_view_cache_invalidations_time +=
-                    expand_started.elapsed();
+            if self.debug_enabled
+                && let Some(expand_elapsed) = expand_elapsed
+            {
+                self.debug_stats.layout_expand_view_cache_invalidations_time += expand_elapsed;
             }
         }
 
@@ -237,201 +267,301 @@ impl<H: UiHost> UiTree<H> {
             }
         };
 
-        let started_phase = profile_layout_all.then(Instant::now);
-        let request_build_started = self.debug_enabled.then(Instant::now);
-        if trace_layout {
-            let span = tracing::trace_span!(
-                "fret.ui.layout.request_build_roots",
-                window = ?self.window,
-                pass_kind = ?pass_kind,
-                roots_len,
-            );
-            let _guard = span.enter();
-            self.request_build_window_roots_if_final(
-                app,
-                services,
-                &roots,
-                bounds,
-                scale_factor,
-                pass_kind,
-            );
-        } else {
-            self.request_build_window_roots_if_final(
-                app,
-                services,
-                &roots,
-                bounds,
-                scale_factor,
-                pass_kind,
-            );
-        }
-        if let Some(started) = started_phase {
-            t_request_build_roots = Some(started.elapsed());
-        }
-        if let Some(request_build_started) = request_build_started {
-            self.debug_stats.layout_request_build_roots_time += request_build_started.elapsed();
-        }
-
-        let started_phase = profile_layout_all.then(Instant::now);
-        let roots_started = self.debug_enabled.then(Instant::now);
-        if trace_layout {
-            let span = tracing::trace_span!(
-                "fret.ui.layout.roots",
-                window = ?self.window,
-                pass_kind = ?pass_kind,
-                roots_len,
-            );
-            let _guard = span.enter();
-            for root in roots {
-                let _ = self.layout_in_with_pass_kind(
+        let (_, request_build_elapsed) = fret_perf::measure_span(
+            layout_phase_time_enabled,
+            trace_layout,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout.request_build_roots",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    pass_kind = ?pass_kind,
+                    roots_len,
+                )
+            },
+            || {
+                self.request_build_window_roots_if_final(
                     app,
                     services,
-                    root,
+                    &roots,
                     bounds,
                     scale_factor,
                     pass_kind,
                 );
-
-                self.flush_viewport_roots_after_root(
-                    app,
-                    services,
-                    scale_factor,
-                    pass_kind,
-                    &mut viewport_cursor,
-                );
-            }
-        } else {
-            for root in roots {
-                let _ = self.layout_in_with_pass_kind(
-                    app,
-                    services,
-                    root,
-                    bounds,
-                    scale_factor,
-                    pass_kind,
-                );
-
-                self.flush_viewport_roots_after_root(
-                    app,
-                    services,
-                    scale_factor,
-                    pass_kind,
-                    &mut viewport_cursor,
-                );
-            }
+            },
+        );
+        if profile_layout_all {
+            t_request_build_roots = request_build_elapsed;
         }
-        if let Some(roots_started) = roots_started {
-            self.debug_stats.layout_roots_time += roots_started.elapsed();
-        }
-        if let Some(started) = started_phase {
-            t_layout_roots = Some(started.elapsed());
+        if self.debug_enabled
+            && let Some(request_build_elapsed) = request_build_elapsed
+        {
+            self.debug_stats.layout_request_build_roots_time += request_build_elapsed;
         }
 
-        if pass_kind == LayoutPassKind::Final {
-            let barrier_started = self.debug_enabled.then(Instant::now);
-            let started_phase = profile_layout_all.then(Instant::now);
-            self.layout_pending_barrier_relayouts_if_needed(
-                app,
-                services,
-                scale_factor,
-                pass_kind,
-                &mut viewport_cursor,
-            );
-            if let Some(started) = started_phase {
-                t_pending_barriers = Some(started.elapsed());
-            }
-            if let Some(barrier_started) = barrier_started {
-                let elapsed = barrier_started.elapsed();
-                self.debug_stats.layout_barrier_relayouts_time += elapsed;
-                self.debug_stats.layout_pending_barrier_relayouts_time += elapsed;
-            }
+        let (_, roots_elapsed) = fret_perf::measure_span(
+            layout_phase_time_enabled,
+            trace_layout,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout.roots",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    pass_kind = ?pass_kind,
+                    roots_len,
+                )
+            },
+            || {
+                for root in roots {
+                    let _ = self.layout_in_with_pass_kind(
+                        app,
+                        services,
+                        root,
+                        bounds,
+                        scale_factor,
+                        pass_kind,
+                    );
+
+                    self.flush_viewport_roots_after_root(
+                        app,
+                        services,
+                        scale_factor,
+                        pass_kind,
+                        &mut viewport_cursor,
+                    );
+                }
+            },
+        );
+        if profile_layout_all {
+            t_layout_roots = roots_elapsed;
+        }
+        if self.debug_enabled
+            && let Some(roots_elapsed) = roots_elapsed
+        {
+            self.debug_stats.layout_roots_time += roots_elapsed;
         }
 
         if pass_kind == LayoutPassKind::Final {
-            let view_cache_started = self.debug_enabled.then(Instant::now);
-
-            let started_phase = profile_layout_all.then(Instant::now);
-            let repair_started = self.debug_enabled.then(Instant::now);
-            self.repair_view_cache_root_bounds_from_engine_if_needed(app);
-            if let Some(started) = started_phase {
-                t_repair_view_cache_bounds = Some(started.elapsed());
-            }
-            if let Some(repair_started) = repair_started {
-                self.debug_stats.layout_repair_view_cache_bounds_time += repair_started.elapsed();
-            }
-
-            let started_phase = profile_layout_all.then(Instant::now);
-            let contained_started = self.debug_enabled.then(Instant::now);
-            self.layout_contained_view_cache_roots_if_needed(
-                app,
-                services,
-                scale_factor,
-                pass_kind,
-                &mut viewport_cursor,
+            let (_, barrier_elapsed) = fret_perf::measure_span(
+                layout_phase_time_enabled,
+                trace_layout,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.pending_barriers",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        pass_kind = ?pass_kind,
+                    )
+                },
+                || {
+                    self.layout_pending_barrier_relayouts_if_needed(
+                        app,
+                        services,
+                        scale_factor,
+                        pass_kind,
+                        &mut viewport_cursor,
+                    );
+                },
             );
-            if let Some(started) = started_phase {
-                t_layout_contained_view_cache_roots = Some(started.elapsed());
+            if profile_layout_all {
+                t_pending_barriers = barrier_elapsed;
             }
-            if let Some(contained_started) = contained_started {
-                self.debug_stats.layout_contained_view_cache_roots_time +=
-                    contained_started.elapsed();
+            if self.debug_enabled
+                && let Some(barrier_elapsed) = barrier_elapsed
+            {
+                self.debug_stats.layout_barrier_relayouts_time += barrier_elapsed;
+                self.debug_stats.layout_pending_barrier_relayouts_time += barrier_elapsed;
             }
+        }
 
-            let started_phase = profile_layout_all.then(Instant::now);
-            let collapse_started = self.debug_enabled.then(Instant::now);
-            self.collapse_layout_observations_to_view_cache_roots_if_needed();
-            if let Some(started) = started_phase {
-                t_collapse_layout_observations = Some(started.elapsed());
-            }
-            if let Some(collapse_started) = collapse_started {
-                self.debug_stats.layout_collapse_layout_observations_time +=
-                    collapse_started.elapsed();
-            }
+        if pass_kind == LayoutPassKind::Final {
+            let (_, view_cache_elapsed) = fret_perf::measure_span(
+                layout_phase_time_enabled,
+                trace_layout,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.view_cache",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        pass_kind = ?pass_kind,
+                    )
+                },
+                || {
+                    let (_, repair_elapsed) = fret_perf::measure_span(
+                        layout_phase_time_enabled,
+                        trace_layout,
+                        || {
+                            tracing::trace_span!(
+                                "fret.ui.layout.view_cache.repair_bounds",
+                                window = ?window,
+                                frame_id = frame_id.0,
+                                pass_kind = ?pass_kind,
+                            )
+                        },
+                        || self.repair_view_cache_root_bounds_from_engine_if_needed(app),
+                    );
+                    if profile_layout_all {
+                        t_repair_view_cache_bounds = repair_elapsed;
+                    }
+                    if self.debug_enabled
+                        && let Some(repair_elapsed) = repair_elapsed
+                    {
+                        self.debug_stats.layout_repair_view_cache_bounds_time += repair_elapsed;
+                    }
 
-            if let Some(view_cache_started) = view_cache_started {
-                self.debug_stats.layout_view_cache_time += view_cache_started.elapsed();
+                    let (_, contained_elapsed) = fret_perf::measure_span(
+                        layout_phase_time_enabled,
+                        trace_layout,
+                        || {
+                            tracing::trace_span!(
+                                "fret.ui.layout.view_cache.layout_contained_roots",
+                                window = ?window,
+                                frame_id = frame_id.0,
+                                pass_kind = ?pass_kind,
+                            )
+                        },
+                        || {
+                            self.layout_contained_view_cache_roots_if_needed(
+                                app,
+                                services,
+                                scale_factor,
+                                pass_kind,
+                                &mut viewport_cursor,
+                            );
+                        },
+                    );
+                    if profile_layout_all {
+                        t_layout_contained_view_cache_roots = contained_elapsed;
+                    }
+                    if self.debug_enabled
+                        && let Some(contained_elapsed) = contained_elapsed
+                    {
+                        self.debug_stats.layout_contained_view_cache_roots_time +=
+                            contained_elapsed;
+                    }
+
+                    let (_, collapse_elapsed) = fret_perf::measure_span(
+                        layout_phase_time_enabled,
+                        trace_layout,
+                        || {
+                            tracing::trace_span!(
+                                "fret.ui.layout.view_cache.collapse_observations",
+                                window = ?window,
+                                frame_id = frame_id.0,
+                                pass_kind = ?pass_kind,
+                            )
+                        },
+                        || self.collapse_layout_observations_to_view_cache_roots_if_needed(),
+                    );
+                    if profile_layout_all {
+                        t_collapse_layout_observations = collapse_elapsed;
+                    }
+                    if self.debug_enabled
+                        && let Some(collapse_elapsed) = collapse_elapsed
+                    {
+                        self.debug_stats.layout_collapse_layout_observations_time +=
+                            collapse_elapsed;
+                    }
+                },
+            );
+            if self.debug_enabled
+                && let Some(view_cache_elapsed) = view_cache_elapsed
+            {
+                self.debug_stats.layout_view_cache_time += view_cache_elapsed;
             }
         }
 
         if self.semantics_requested {
-            let semantics_started = self.debug_enabled.then(Instant::now);
-            let started_phase = profile_layout_all.then(Instant::now);
-            self.semantics_requested = false;
-            self.refresh_semantics_snapshot(app);
-            if let Some(started) = started_phase {
-                t_refresh_semantics = Some(started.elapsed());
+            let (_, semantics_elapsed) = fret_perf::measure_span(
+                layout_phase_time_enabled,
+                trace_layout,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.refresh_semantics",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        pass_kind = ?pass_kind,
+                    )
+                },
+                || {
+                    self.semantics_requested = false;
+                    self.refresh_semantics_snapshot(app);
+                },
+            );
+            if profile_layout_all {
+                t_refresh_semantics = semantics_elapsed;
             }
-            if let Some(semantics_started) = semantics_started {
-                self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
+            if self.debug_enabled
+                && let Some(semantics_elapsed) = semantics_elapsed
+            {
+                self.debug_stats.layout_semantics_refresh_time += semantics_elapsed;
             }
         }
         if pass_kind == LayoutPassKind::Final {
-            let prepaint_started = self.debug_enabled.then(Instant::now);
-            let started_phase = profile_layout_all.then(Instant::now);
-            self.prepaint_after_layout(app, scale_factor);
-            if let Some(started) = started_phase {
-                t_prepaint_after_layout = Some(started.elapsed());
+            let (_, prepaint_elapsed) = fret_perf::measure_span(
+                layout_phase_time_enabled,
+                trace_layout,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.prepaint_after_layout",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        pass_kind = ?pass_kind,
+                    )
+                },
+                || self.prepaint_after_layout(app, scale_factor),
+            );
+            if profile_layout_all {
+                t_prepaint_after_layout = prepaint_elapsed;
             }
-            if let Some(prepaint_started) = prepaint_started {
-                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
+            if self.debug_enabled
+                && let Some(prepaint_elapsed) = prepaint_elapsed
+            {
+                self.debug_stats.layout_prepaint_after_layout_time += prepaint_elapsed;
             }
         }
-        let started_phase = profile_layout_all.then(Instant::now);
         if pass_kind == LayoutPassKind::Final {
-            let focus_started = self.debug_enabled.then(Instant::now);
-            self.repair_focus_node_from_focused_element_if_needed(app);
-            if let Some(focus_started) = focus_started {
-                self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
+            let (_, focus_elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                trace_layout,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.focus_repair",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        pass_kind = ?pass_kind,
+                    )
+                },
+                || self.repair_focus_node_from_focused_element_if_needed(app),
+            );
+            if let Some(focus_elapsed) = focus_elapsed {
+                self.debug_stats.layout_focus_repair_time += focus_elapsed;
             }
         }
-        let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
-        self.flush_deferred_cleanup(services);
-        if let Some(started) = started_phase {
-            t_flush_deferred_cleanup = Some(started.elapsed());
+        let (_, deferred_cleanup_elapsed) = fret_perf::measure_span(
+            layout_phase_time_enabled,
+            trace_layout,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout.flush_deferred_cleanup",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    pass_kind = ?pass_kind,
+                )
+            },
+            || self.flush_deferred_cleanup(services),
+        );
+        if profile_layout_all {
+            t_flush_deferred_cleanup = deferred_cleanup_elapsed;
         }
-        if let Some(deferred_cleanup_started) = deferred_cleanup_started {
-            self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
+        if self.debug_enabled
+            && let Some(deferred_cleanup_elapsed) = deferred_cleanup_elapsed
+        {
+            self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_elapsed;
         }
+
+        // layout_time is computed below, and should exclude prepaint_after_layout time (since that
+        // work is accounted separately and runs even on "layout fast path" frames).
 
         if let Some(started) = started {
             self.debug_stats.layout_time = started
@@ -480,7 +610,8 @@ impl<H: UiHost> UiTree<H> {
                 repair_view_cache_bounds_ms = t_repair_view_cache_bounds.map(|d| d.as_millis()),
                 layout_contained_view_cache_roots_ms =
                     t_layout_contained_view_cache_roots.map(|d| d.as_millis()),
-                collapse_layout_observations_ms = t_collapse_layout_observations.map(|d| d.as_millis()),
+                collapse_layout_observations_ms =
+                    t_collapse_layout_observations.map(|d| d.as_millis()),
                 refresh_semantics_ms = t_refresh_semantics.map(|d| d.as_millis()),
                 prepaint_after_layout_ms = t_prepaint_after_layout.map(|d| d.as_millis()),
                 flush_deferred_cleanup_ms = t_flush_deferred_cleanup.map(|d| d.as_millis()),
@@ -994,8 +1125,14 @@ impl<H: UiHost> UiTree<H> {
 
         // If both an ancestor and a descendant cache root are invalidated in the same frame, only
         // relayout the ancestor; it will already relayout the subtree.
+        //
+        // Hot path: avoid scanning the whole node store. Cache-root invalidations are tracked in
+        // `dirty_cache_roots`, so we can restrict this pass to the subset that actually changed.
         let mut candidates: Vec<NodeId> = Vec::with_capacity(16);
-        for (id, node) in self.nodes.iter() {
+        for &id in &self.dirty_cache_roots {
+            let Some(node) = self.nodes.get(id) else {
+                continue;
+            };
             if !node.view_cache.enabled || !node.view_cache.contained_layout {
                 continue;
             }
@@ -1098,7 +1235,8 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let profile_layout = crate::runtime_config::ui_runtime_config().layout_profile;
+        let runtime_cfg = crate::runtime_config::ui_runtime_config();
+        let profile_layout = runtime_cfg.layout_profile;
         let total_started = profile_layout.then(Instant::now);
 
         let sf = scale_factor;
@@ -1112,25 +1250,33 @@ impl<H: UiHost> UiTree<H> {
 
         let phase1_started = profile_layout.then(Instant::now);
         let reuse_cached_flow = self.interactive_resize_active();
+        let allow_translation_only_skip = runtime_cfg.layout_skip_request_build_translation_only;
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
-            if self
-                .nodes
-                .get(root)
-                .is_none_or(|node| node.element.is_none())
-            {
+            let Some((has_element, layout_invalidated, prev_bounds, measured)) =
+                self.nodes.get(root).map(|node| {
+                    (
+                        node.element.is_some(),
+                        node.invalidation.layout,
+                        node.bounds,
+                        node.measured_size,
+                    )
+                })
+            else {
+                continue;
+            };
+            if !has_element {
                 continue;
             }
-            let layout_invalidated = self
-                .nodes
-                .get(root)
-                .is_some_and(|node| node.invalidation.layout);
-            if engine.layout_id_for_node(root).is_some()
-                && self
-                    .nodes
-                    .get(root)
-                    .is_some_and(|node| !node.invalidation.layout && node.bounds == bounds)
-            {
+
+            let needs_layout = layout_invalidated || prev_bounds != bounds;
+            let is_translation_only = allow_translation_only_skip
+                && !layout_invalidated
+                && prev_bounds.size == bounds.size
+                && prev_bounds.origin != bounds.origin
+                && measured != Size::default();
+
+            if engine.layout_id_for_node(root).is_some() && (!needs_layout || is_translation_only) {
                 engine.mark_seen_subtree_from_cached_children(root);
                 continue;
             }
@@ -1226,8 +1372,30 @@ impl<H: UiHost> UiTree<H> {
                         }
                     })
                     .collect();
+                let solve_root = engine.last_solve_root().unwrap_or(root);
+                let root_element = self.nodes.get(solve_root).and_then(|n| n.element);
+                let root_element_kind =
+                    crate::declarative::frame::element_record_for_node(app, window, solve_root)
+                        .map(|record| record.instance.kind_name());
+                let root_element_path: Option<String> = root_element.and_then(|element| {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        crate::elements::with_window_state(app, window, |st| {
+                            st.debug_path_for_element(element)
+                        })
+                    }
+                    #[cfg(not(feature = "diagnostics"))]
+                    {
+                        let _ = element;
+                        None
+                    }
+                });
+
                 self.debug_record_layout_engine_solve(
-                    engine.last_solve_root().unwrap_or(root),
+                    solve_root,
+                    root_element,
+                    root_element_kind,
+                    root_element_path,
                     elapsed,
                     engine.last_solve_measure_calls(),
                     engine.last_solve_measure_cache_hits(),
@@ -1418,8 +1586,31 @@ impl<H: UiHost> UiTree<H> {
                                 }
                             })
                             .collect();
+                        let solve_root = engine.last_solve_root().unwrap_or(item.root);
+                        let root_element = self.nodes.get(solve_root).and_then(|n| n.element);
+                        let root_element_kind = crate::declarative::frame::element_record_for_node(
+                            app, window, solve_root,
+                        )
+                        .map(|record| record.instance.kind_name());
+                        let root_element_path: Option<String> = root_element.and_then(|element| {
+                            #[cfg(feature = "diagnostics")]
+                            {
+                                crate::elements::with_window_state(app, window, |st| {
+                                    st.debug_path_for_element(element)
+                                })
+                            }
+                            #[cfg(not(feature = "diagnostics"))]
+                            {
+                                let _ = element;
+                                None
+                            }
+                        });
+
                         self.debug_record_layout_engine_solve(
-                            engine.last_solve_root().unwrap_or(item.root),
+                            solve_root,
+                            root_element,
+                            root_element_kind,
+                            root_element_path,
                             elapsed,
                             engine.last_solve_measure_calls(),
                             engine.last_solve_measure_cache_hits(),

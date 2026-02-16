@@ -35,7 +35,7 @@ pub struct ValidationCheckV1 {
 }
 
 /// Validation configuration for a field/path.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct ValidationConfigV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub checks: Vec<ValidationCheckV1>,
@@ -44,16 +44,6 @@ pub struct ValidationConfigV1 {
     /// Optional visibility-like condition that enables validation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enabled: Option<VisibilityConditionV1>,
-}
-
-impl Default for ValidationConfigV1 {
-    fn default() -> Self {
-        Self {
-            checks: Vec::new(),
-            validate_on: None,
-            enabled: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

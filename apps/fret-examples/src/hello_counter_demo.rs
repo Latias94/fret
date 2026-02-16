@@ -162,20 +162,20 @@ fn view(
     .into_element(cx);
 
     let header_inner = ui::v_flex(cx, |cx| {
-        [
+        ui::children![
+            cx;
             hero_icon,
-            shadcn::CardTitle::new("Hello Counter").into_element(cx),
+            shadcn::CardTitle::new("Hello Counter"),
             shadcn::CardDescription::new(
                 "A minimal counter demo using `fret` + shadcn/ui (MVU messages + Model).",
-            )
-            .into_element(cx),
+            ),
         ]
     })
     .gap(Space::N2)
     .items_center()
     .into_element(cx);
 
-    let header = shadcn::CardHeader::new([header_inner]).into_element(cx);
+    let header = shadcn::CardHeader::new([header_inner]);
 
     let count_text = cx
         .text_props(TextProps {
@@ -210,13 +210,11 @@ fn view(
         overflow: fret_core::TextOverflow::Clip,
     });
 
-    let step_badge = shadcn::Badge::new(format!("Step: {effective_step}"))
-        .variant(if step_valid {
-            shadcn::BadgeVariant::Secondary
-        } else {
-            shadcn::BadgeVariant::Destructive
-        })
-        .into_element(cx);
+    let step_badge = shadcn::Badge::new(format!("Step: {effective_step}")).variant(if step_valid {
+        shadcn::BadgeVariant::Secondary
+    } else {
+        shadcn::BadgeVariant::Destructive
+    });
 
     let step_help = cx.text_props(TextProps {
         layout: Default::default(),
@@ -308,10 +306,13 @@ fn view(
 
     let content_body = ui::v_flex(cx, |cx| {
         [
-            ui::v_flex(cx, |_cx| [count_text, status_line, step_badge])
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+            ui::v_flex(
+                cx,
+                |cx| ui::children![cx; count_text, status_line, step_badge],
+            )
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
             ui::v_flex(cx, |_cx| [step_row, step_help])
                 .gap(Space::N2)
                 .w_full()
@@ -323,16 +324,15 @@ fn view(
     .items_center()
     .into_element(cx);
 
-    let content = shadcn::CardContent::new([content_body]).into_element(cx);
+    let content = shadcn::CardContent::new([content_body]);
 
-    let footer = shadcn::CardFooter::new([actions]).into_element(cx);
+    let footer = shadcn::CardFooter::new([actions]);
 
-    let card = shadcn::Card::new([header, content, footer])
+    let card = shadcn::Card::new(ui::children![cx; header, content, footer])
         .refine_style(ChromeRefinement::default().shadow_lg())
         .ui()
         .w_full()
-        .max_w(Px(480.0))
-        .into_element(cx);
+        .max_w(Px(480.0));
 
     ui::container(cx, |cx| {
         [ui::v_flex(cx, |_cx| [card])

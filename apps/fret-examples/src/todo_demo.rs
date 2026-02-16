@@ -495,11 +495,10 @@ fn view(
     };
 
     let tip_line = ui::h_flex(cx, |_cx| {
-        [
+        ui::children![
+            _cx;
             tip_status,
-            ui::text(_cx, tip_text)
-                .text_color(ColorRef::Color(theme.color_token(tip_color_key)))
-                .into_element(_cx),
+            ui::text(_cx, tip_text).text_color(ColorRef::Color(theme.color_token(tip_color_key))),
         ]
     })
     .gap(Space::N2)

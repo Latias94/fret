@@ -11,6 +11,18 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.text_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!("fret.renderer.pipeline.create.text", format = ?format, reason)
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret text shader"),
             source: wgpu::ShaderSource::Wgsl(TEXT_SHADER.into()),
@@ -98,6 +110,22 @@ impl Renderer {
         if self.text_color_pipeline_format == Some(format) && self.text_color_pipeline.is_some() {
             return;
         }
+
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.text_color_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.text_color",
+                    format = ?format,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret color text shader"),
@@ -188,6 +216,22 @@ impl Renderer {
         {
             return;
         }
+
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.text_subpixel_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!(
+                    "fret.renderer.pipeline.create.text_subpixel",
+                    format = ?format,
+                    reason
+                )
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret subpixel text shader"),

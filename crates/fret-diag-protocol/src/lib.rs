@@ -1029,6 +1029,12 @@ pub enum UiPredicateV1 {
     /// result can bump `TextFontStackKey` and trigger large relayouts; this predicate lets perf
     /// suites wait for that one-time work to complete before entering a measured window.
     SystemFontRescanIdle,
+    /// True when the runner has observed an OS accessibility activation request for the current
+    /// window.
+    ///
+    /// This is intended to gate “AccessKit ↔ OS AX is actually live” rather than only asserting
+    /// that the app has an internal semantics tree.
+    RunnerAccessibilityActivated,
     VisibleInWindow {
         target: UiSelectorV1,
     },
@@ -2004,5 +2010,20 @@ mod tests {
         })
         .unwrap();
         assert_eq!(value, serde_json::json!({ "schema_version": 1 }));
+    }
+
+    #[test]
+    fn predicate_runner_accessibility_activated_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::RunnerAccessibilityActivated).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({ "kind": "runner_accessibility_activated" })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::RunnerAccessibilityActivated
+        ));
     }
 }

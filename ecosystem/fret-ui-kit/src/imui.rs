@@ -6,6 +6,9 @@
 //! - `fret-ui-kit` can optionally provide bridges that allow `UiBuilder<T>` patch vocabulary to be
 //!   used from immediate-style control flow.
 
+#![allow(clippy::field_reassign_with_default)]
+#![allow(clippy::too_many_arguments)]
+
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -2508,7 +2511,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
         enum Built {
             Inline(Vec<AnyElement>),
-            Wrapped(AnyElement),
+            Wrapped(Box<AnyElement>),
         }
 
         let built = self.with_cx_mut(|cx| {
@@ -2531,19 +2534,22 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 Built::Inline(build_children(cx))
             } else {
                 let alpha = disabled_alpha_for(cx);
-                Built::Wrapped(cx.pointer_region(PointerRegionProps::default(), |cx| {
-                    cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
-                    cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
-                    vec![cx.opacity(alpha, |cx| {
-                        vec![cx.focus_traversal_gate(false, |cx| build_children(cx))]
-                    })]
-                }))
+                Built::Wrapped(Box::new(cx.pointer_region(
+                    PointerRegionProps::default(),
+                    |cx| {
+                        cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
+                        cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
+                        vec![cx.opacity(alpha, |cx| {
+                            vec![cx.focus_traversal_gate(false, |cx| build_children(cx))]
+                        })]
+                    },
+                )))
             }
         });
 
         match built {
             Built::Inline(elements) => self.extend(elements),
-            Built::Wrapped(element) => self.add(element),
+            Built::Wrapped(element) => self.add(*element),
         }
     }
 
@@ -3446,8 +3452,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let test_id = options.test_id.clone();
             let enabled = options.enabled && !imui_is_disabled(cx);
             let label_for_visuals = label.clone();
-            let role = role;
-            let checked = checked;
 
             let mut stack = fret_ui::element::StackProps::default();
             stack.layout.size.width = Length::Fill;
@@ -4573,10 +4577,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             )
         });
 
-        if enabled && trigger.clicked() {
-            if let Some(anchor) = trigger.core.rect {
-                self.open_popup_at(popup_scope_id.as_ref(), anchor);
-            }
+        if enabled
+            && trigger.clicked()
+            && let Some(anchor) = trigger.core.rect
+        {
+            self.open_popup_at(popup_scope_id.as_ref(), anchor);
         }
 
         let selected_before = selected.clone();
@@ -5136,7 +5141,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             }
         }
 
-        let open_model = open.map(|m| m.clone());
+        let open_model = open.cloned();
 
         let chrome = Rc::new(Cell::new(FloatingWindowChromeResponse::default()));
         let chrome_out = chrome.clone();
@@ -5287,7 +5292,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
         let element = self.with_cx_mut(|cx| {
             cx.named(id, |cx| {
-                let open_model = open.map(|m| m.clone());
+                let open_model = open.cloned();
 
                 let window_id = cx.root_id();
                 if let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() {
@@ -5593,7 +5598,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             let title = title.clone();
                             let title_bar_test_id = title_bar_test_id.clone();
                             let open_for_key = open_model.clone();
-                            let window_id = window_id;
                             let drag_surface = cx.pointer_region(
                                 PointerRegionProps {
                                     layout: {
@@ -5768,7 +5772,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return vec![body];
                     }
 
-                    let window_id = window_id;
                     let mut resize_handle = |handle: FloatWindowResizeHandle, test_id: Arc<str>| {
                         let (cursor, layout) = match handle {
                             FloatWindowResizeHandle::Left => {

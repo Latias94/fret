@@ -137,10 +137,10 @@ pub fn resolve_slot<T: Clone>(
     default: T,
     states: WidgetStates,
 ) -> T {
-    if let Some(overrides) = overrides {
-        if let Some(value) = overrides.resolve(states).clone() {
-            return value;
-        }
+    if let Some(overrides) = overrides
+        && let Some(value) = overrides.resolve(states).clone()
+    {
+        return value;
     }
     default
 }

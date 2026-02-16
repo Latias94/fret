@@ -10,67 +10,102 @@ impl<H: UiHost> UiTree<H> {
         layers: &[NodeId],
         position: Point,
     ) -> Option<NodeId> {
-        if layers.is_empty() {
-            self.hit_test_path_cache = None;
-            return None;
-        }
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        let layers_len = layers.len() as u64;
+        let (hit, elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.ui.hit_test.layers", layers_len),
+            || {
+                if layers.is_empty() {
+                    self.hit_test_path_cache = None;
+                    return None;
+                }
 
-        if let Some(cache) = self.hit_test_path_cache.take()
-            && !cache.path.is_empty()
-        {
-            for &root in layers {
-                if root == cache.layer_root {
-                    let bounds_tree_enabled = self.hit_test_bounds_trees.layer_enabled(root);
+                if let Some(cache) = self.hit_test_path_cache.take()
+                    && !cache.path.is_empty()
+                {
+                    for &root in layers {
+                        if root == cache.layer_root {
+                            let bounds_tree_enabled =
+                                self.hit_test_bounds_trees.layer_enabled(root);
 
-                    if !bounds_tree_enabled
-                        && cache.path.first().copied() == Some(root)
-                        && let Some(hit) = {
-                            let started = self.debug_enabled.then(fret_core::time::Instant::now);
-                            let hit = self.try_hit_test_along_cached_path(&cache.path, position);
-                            if let Some(started) = started {
-                                self.debug_stats.hit_test_cached_path_time += started.elapsed();
+                            if !bounds_tree_enabled
+                                && cache.path.first().copied() == Some(root)
+                                && let Some(hit) = {
+                                    let path_len = cache.path.len() as u64;
+                                    let (hit, elapsed) = fret_perf::measure_span(
+                                        self.debug_enabled,
+                                        trace_enabled,
+                                        || {
+                                            tracing::trace_span!(
+                                                "fret.ui.hit_test.cached_path",
+                                                root = ?root,
+                                                path_len,
+                                            )
+                                        },
+                                        || {
+                                            self.try_hit_test_along_cached_path(
+                                                &cache.path,
+                                                position,
+                                            )
+                                        },
+                                    );
+                                    if let Some(elapsed) = elapsed {
+                                        self.debug_stats.hit_test_cached_path_time += elapsed;
+                                    }
+                                    hit
+                                }
+                            {
+                                if self.debug_enabled {
+                                    self.debug_stats.hit_test_path_cache_hits =
+                                        self.debug_stats.hit_test_path_cache_hits.saturating_add(1);
+                                }
+                                self.hit_test_path_cache = Some(cache);
+                                return Some(hit);
                             }
-                            hit
+
+                            if self.debug_enabled && !bounds_tree_enabled {
+                                self.debug_stats.hit_test_path_cache_misses = self
+                                    .debug_stats
+                                    .hit_test_path_cache_misses
+                                    .saturating_add(1);
+                            }
+                            let hit = self.hit_test_layer_bounds_tree_or_fallback(root, position);
+                            self.update_hit_test_path_cache(root, hit);
+                            return hit;
                         }
-                    {
-                        if self.debug_enabled {
-                            self.debug_stats.hit_test_path_cache_hits =
-                                self.debug_stats.hit_test_path_cache_hits.saturating_add(1);
+
+                        if let Some(hit) =
+                            self.hit_test_layer_bounds_tree_or_fallback(root, position)
+                        {
+                            self.update_hit_test_path_cache(root, Some(hit));
+                            return Some(hit);
                         }
-                        self.hit_test_path_cache = Some(cache);
+                    }
+
+                    self.hit_test_path_cache = None;
+                    return None;
+                }
+
+                for &root in layers {
+                    if let Some(hit) = self.hit_test_layer_bounds_tree_or_fallback(root, position) {
+                        self.update_hit_test_path_cache(root, Some(hit));
                         return Some(hit);
                     }
-
-                    if self.debug_enabled && !bounds_tree_enabled {
-                        self.debug_stats.hit_test_path_cache_misses = self
-                            .debug_stats
-                            .hit_test_path_cache_misses
-                            .saturating_add(1);
-                    }
-                    let hit = self.hit_test_layer_bounds_tree_or_fallback(root, position);
-                    self.update_hit_test_path_cache(root, hit);
-                    return hit;
                 }
 
-                if let Some(hit) = self.hit_test_layer_bounds_tree_or_fallback(root, position) {
-                    self.update_hit_test_path_cache(root, Some(hit));
-                    return Some(hit);
-                }
-            }
-
-            self.hit_test_path_cache = None;
-            return None;
-        }
-
-        for &root in layers {
-            if let Some(hit) = self.hit_test_layer_bounds_tree_or_fallback(root, position) {
-                self.update_hit_test_path_cache(root, Some(hit));
-                return Some(hit);
+                self.hit_test_path_cache = None;
+                None
+            },
+        );
+        if self.debug_enabled {
+            self.debug_stats.hit_test_queries = self.debug_stats.hit_test_queries.saturating_add(1);
+            if let Some(elapsed) = elapsed {
+                self.debug_stats.hit_test_time += elapsed;
             }
         }
-
-        self.hit_test_path_cache = None;
-        None
+        hit
     }
 
     pub(super) fn hit_test_layers(&self, layers: &[NodeId], position: Point) -> Option<NodeId> {
@@ -214,12 +249,18 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         position: Point,
     ) -> Option<NodeId> {
-        let started = self.debug_enabled.then(fret_core::time::Instant::now);
-        let (query, query_stats) =
-            self.hit_test_bounds_trees
-                .query(root, position, self.debug_enabled);
-        if let Some(started) = started {
-            self.debug_stats.hit_test_bounds_tree_query_time += started.elapsed();
+        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        let ((query, query_stats), elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.ui.hit_test.bounds_tree_query", root = ?root),
+            || {
+                self.hit_test_bounds_trees
+                    .query(root, position, self.debug_enabled)
+            },
+        );
+        if let Some(elapsed) = elapsed {
+            self.debug_stats.hit_test_bounds_tree_query_time += elapsed;
         }
         if self.debug_enabled {
             self.debug_stats.hit_test_bounds_tree_queries = self
@@ -256,20 +297,37 @@ impl<H: UiHost> UiTree<H> {
 
         match query {
             super::bounds_tree::HitTestBoundsTreeQuery::Disabled => {
-                let started = self.debug_enabled.then(fret_core::time::Instant::now);
-                let hit = self.hit_test(root, position);
-                if let Some(started) = started {
-                    self.debug_stats.hit_test_fallback_traversal_time += started.elapsed();
+                let (hit, elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || tracing::trace_span!("fret.ui.hit_test.fallback_traversal", root = ?root),
+                    || self.hit_test(root, position),
+                );
+                if let Some(elapsed) = elapsed {
+                    self.debug_stats.hit_test_fallback_traversal_time += elapsed;
                 }
                 hit
             }
             super::bounds_tree::HitTestBoundsTreeQuery::Miss => None,
             super::bounds_tree::HitTestBoundsTreeQuery::Hit(candidate) => {
-                let started = self.debug_enabled.then(fret_core::time::Instant::now);
-                let accepted = self.hit_test_node_self_only(candidate, position)
-                    && self.hit_test_candidate_reachable_from_root(root, candidate, position);
-                if let Some(started) = started {
-                    self.debug_stats.hit_test_candidate_self_only_time += started.elapsed();
+                let (accepted, elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.hit_test.candidate_self_only",
+                            root = ?root,
+                            candidate = ?candidate,
+                        )
+                    },
+                    || {
+                        self.hit_test_node_self_only(candidate, position)
+                            && self
+                                .hit_test_candidate_reachable_from_root(root, candidate, position)
+                    },
+                );
+                if let Some(elapsed) = elapsed {
+                    self.debug_stats.hit_test_candidate_self_only_time += elapsed;
                 }
                 if accepted {
                     Some(candidate)
@@ -280,10 +338,20 @@ impl<H: UiHost> UiTree<H> {
                             .hit_test_bounds_tree_candidate_rejected
                             .saturating_add(1);
                     }
-                    let started = self.debug_enabled.then(fret_core::time::Instant::now);
-                    let hit = self.hit_test(root, position);
-                    if let Some(started) = started {
-                        self.debug_stats.hit_test_fallback_traversal_time += started.elapsed();
+                    let (hit, elapsed) = fret_perf::measure_span(
+                        self.debug_enabled,
+                        trace_enabled,
+                        || {
+                            tracing::trace_span!(
+                                "fret.ui.hit_test.fallback_traversal",
+                                root = ?root,
+                                rejected_candidate = ?candidate,
+                            )
+                        },
+                        || self.hit_test(root, position),
+                    );
+                    if let Some(elapsed) = elapsed {
+                        self.debug_stats.hit_test_fallback_traversal_time += elapsed;
                     }
                     hit
                 }

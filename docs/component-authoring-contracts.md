@@ -70,6 +70,58 @@ Practical pattern (recommended):
 2. Implement your rendering as an inherent `into_element(self, cx)` method (or `RenderOnce` if needed).
 3. Implement `UiPatchTarget` by delegating to your existing `refine_style/refine_layout` methods.
 
+If your type already has `refine_style/refine_layout` and an inherent `into_element(self, cx)`,
+prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
+
+- `fret_ui_kit::ui_component_chrome_layout!(MyType);`
+- `fret_ui_kit::ui_component_layout_only!(MyType);`
+- `fret_ui_kit::ui_component_*_patch_only!(MyType);` (patch-only; see below)
+- `fret_ui_kit::ui_into_element_render_once!(MyType);` (when a type implements `RenderOnce`)
+
+#### Adapter strategy (RenderOnce vs UiIntoElement)
+
+Near-term decision:
+
+- Prefer explicit `UiIntoElement` impls for component types that can render directly into `AnyElement`.
+- For types that already implement `fret_ui::element::RenderOnce`, use `fret_ui_kit::ui_into_element_render_once!(MyType);`.
+- We intentionally do **not** provide a blanket impl `UiIntoElement for T: RenderOnce` today due to Rust coherence constraints
+  (see `ONB-macro-052` in the onboarding workstream TODO). This keeps the ecosystem surface explicit and avoids surprising
+  overlap with existing impls.
+
+In-tree example:
+
+- `ecosystem/fret-ui-ai/src/elements/message.rs`
+- `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs`
+
+### Patch-only types (when you should use them)
+
+Sometimes a type should be **patchable** (so it can participate in the `.ui()` dialect and accept
+`LayoutRefinement` / `ChromeRefinement`), but should **not** be directly renderable as an element.
+Typical examples:
+
+- configuration structs ("props") that are passed into another function/component,
+- “part” configuration for a composite component (content/trigger/viewport styles),
+- surfaces that must not be used as children directly (to avoid accidental tree structure changes).
+
+In these cases:
+
+- implement `UiPatchTarget` (+ `UiSupports*`) **without** implementing `UiIntoElement`,
+- use `UiBuilder::build()` to produce the patched value, then pass it into the owning component.
+
+The `ui_component_*_patch_only!` macros exist to make this a 1-liner.
+
+Minimal usage pattern:
+
+```rust
+use fret_ui_kit::UiExt as _;
+
+// Patch a props/config value (not an element).
+let inner = WorkflowPanelInner::default().ui().w_full().min_w_0().build();
+
+// Pass the patched value into the owning component.
+let panel = WorkflowPanel::new(children).inner(inner).ui().max_w(Px(640.0));
+```
+
 ### Children collection rule (ecosystem convention)
 
 Public constructors/setters that accept children should use:

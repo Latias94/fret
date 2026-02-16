@@ -370,10 +370,12 @@ mod tests {
 
     #[test]
     fn key_includes_constraints() {
-        let mut a = TextConstraints::default();
-        a.scale_factor = 1.0;
-        a.wrap = TextWrap::Word;
-        a.overflow = TextOverflow::Clip;
+        let a = TextConstraints {
+            scale_factor: 1.0,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            ..Default::default()
+        };
 
         let mut b = a;
         b.scale_factor = 2.0;
@@ -564,7 +566,7 @@ mod tests {
             order: fret_core::DrawOrder(0),
             origin: fret_core::Point::new(Px(0.0), Px(0.0)),
             text: prepared.blob,
-            color: fret_core::Color::TRANSPARENT,
+            paint: fret_core::Color::TRANSPARENT.into(),
         }];
 
         cache.begin_frame(); // frame 2

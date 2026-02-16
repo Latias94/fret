@@ -466,11 +466,11 @@ pub fn drive_spring_f32<H: UiHost>(
                     st.snap_to_target = snap_to_target;
                     st.animating = true;
 
-                    if let Some(kick) = kick {
-                        if kick.id != st.last_kick_id {
-                            st.velocity = kick.velocity;
-                            st.last_kick_id = kick.id;
-                        }
+                    if let Some(kick) = kick
+                        && kick.id != st.last_kick_id
+                    {
+                        st.velocity = kick.velocity;
+                        st.last_kick_id = kick.id;
                     }
                 }
 

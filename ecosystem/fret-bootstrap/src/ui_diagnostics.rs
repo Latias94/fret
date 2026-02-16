@@ -1907,7 +1907,6 @@ impl UiDiagnosticsService {
                                         remaining_frames: timeout_frames,
                                         request_id,
                                         window_ffi,
-                                        last_result_trigger_stamp: None,
                                     });
                                 } else {
                                     force_dump_label = Some(format!(
@@ -1937,7 +1936,6 @@ impl UiDiagnosticsService {
                             let trigger_stamp =
                                 read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
                             let completed = trigger_stamp.is_some()
-                                && trigger_stamp != state.last_result_trigger_stamp
                                 && screenshot_request_completed(
                                     &self.cfg.screenshot_result_path,
                                     &state.request_id,
@@ -1962,7 +1960,6 @@ impl UiDiagnosticsService {
                                     remaining_frames: state.remaining_frames.saturating_sub(1),
                                     request_id: state.request_id,
                                     window_ffi: state.window_ffi,
-                                    last_result_trigger_stamp: trigger_stamp,
                                 });
                                 output.request_redraw = true;
                             }
@@ -2187,6 +2184,10 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::RunnerAccessibilityActivated => app
+                            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                            .and_then(|store| store.snapshot(window))
+                            .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
                         }
@@ -2407,6 +2408,10 @@ impl UiDiagnosticsService {
                             .per_window
                             .get(&window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::RunnerAccessibilityActivated => app
+                            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                            .and_then(|store| store.snapshot(window))
+                            .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
                         }
@@ -7061,7 +7066,7 @@ impl UiDiagnosticsService {
         &mut self,
         label: Option<&str>,
         dump_max_snapshots_override: Option<usize>,
-        request_id: Option<u64>,
+        _request_id: Option<u64>,
     ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -9250,7 +9255,6 @@ struct ScreenshotWaitState {
     remaining_frames: u32,
     request_id: String,
     window_ffi: u64,
-    last_result_trigger_stamp: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9404,6 +9408,11 @@ pub struct UiTreeDebugSnapshotV1 {
     /// are dropping and recreating surfaces as expected.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner_surface_lifecycle: Option<UiRunnerSurfaceLifecycleSnapshotV1>,
+    /// Runner accessibility activation evidence, sourced from `RunnerAccessibilityDiagnosticsStore`.
+    ///
+    /// This records when the OS accessibility stack activates the AccessKit adapter for a window.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_accessibility: Option<UiRunnerAccessibilitySnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -9442,6 +9451,15 @@ pub struct UiRunnerSurfaceLifecycleSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_destroy_surfaces_unix_ms: Option<u64>,
     pub surfaces_available: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiRunnerAccessibilitySnapshotV1 {
+    pub activation_requests: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_activation_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_activation_frame_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9636,6 +9654,18 @@ impl UiTreeDebugSnapshotV1 {
                 last_destroy_surfaces_unix_ms: snapshot.last_destroy_surfaces_unix_ms,
                 surfaces_available: snapshot.surfaces_available,
             });
+
+        let runner_accessibility = Some({
+            let snapshot = app
+                .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                .and_then(|store| store.snapshot(window))
+                .unwrap_or_default();
+            UiRunnerAccessibilitySnapshotV1 {
+                activation_requests: snapshot.activation_requests,
+                last_activation_unix_ms: snapshot.last_activation_unix_ms,
+                last_activation_frame_id: snapshot.last_activation_frame_id.map(|id| id.0),
+            }
+        });
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -9816,6 +9846,7 @@ impl UiTreeDebugSnapshotV1 {
             window_insets,
             text_input,
             runner_surface_lifecycle,
+            runner_accessibility,
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
@@ -9909,6 +9940,7 @@ pub enum UiDockDropResolveSourceV1 {
     InvertDocking,
     OutsideWindow,
     FloatZone,
+    EmptyDockSpace,
     LayoutBoundsMiss,
     LatchedPreviousHover,
     TabBar,
@@ -9924,6 +9956,7 @@ impl UiDockDropResolveSourceV1 {
             fret_runtime::DockDropResolveSource::InvertDocking => Self::InvertDocking,
             fret_runtime::DockDropResolveSource::OutsideWindow => Self::OutsideWindow,
             fret_runtime::DockDropResolveSource::FloatZone => Self::FloatZone,
+            fret_runtime::DockDropResolveSource::EmptyDockSpace => Self::EmptyDockSpace,
             fret_runtime::DockDropResolveSource::LayoutBoundsMiss => Self::LayoutBoundsMiss,
             fret_runtime::DockDropResolveSource::LatchedPreviousHover => Self::LatchedPreviousHover,
             fret_runtime::DockDropResolveSource::TabBar => Self::TabBar,
@@ -11697,6 +11730,12 @@ impl UiCacheRootStatsV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineSolveV1 {
     pub root_node: u64,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub root_element_kind: Option<String>,
+    #[serde(default)]
+    pub root_element_path: Option<String>,
     pub solve_time_us: u64,
     pub measure_calls: u64,
     pub measure_cache_hits: u64,
@@ -11710,6 +11749,9 @@ impl UiLayoutEngineSolveV1 {
     fn from_solve(s: &fret_ui::tree::UiDebugLayoutEngineSolve) -> Self {
         Self {
             root_node: s.root.data().as_ffi(),
+            root_element: s.root_element.map(|id| id.0),
+            root_element_kind: s.root_element_kind.map(|s| s.to_string()),
+            root_element_path: s.root_element_path.clone(),
             solve_time_us: s.solve_time.as_micros().min(u64::MAX as u128) as u64,
             measure_calls: s.measure_calls,
             measure_cache_hits: s.measure_cache_hits,
@@ -11747,6 +11789,10 @@ pub struct UiLayoutHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub layout_time_us: u64,
     #[serde(default)]
@@ -11758,6 +11804,8 @@ impl UiLayoutHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             layout_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -11770,6 +11818,10 @@ pub struct UiWidgetMeasureHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub measure_time_us: u64,
     #[serde(default)]
@@ -11781,6 +11833,8 @@ impl UiWidgetMeasureHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             measure_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -12603,6 +12657,16 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_encode_scene_us: u64,
     #[serde(default)]
+    pub renderer_ensure_pipelines_us: u64,
+    #[serde(default)]
+    pub renderer_plan_compile_us: u64,
+    #[serde(default)]
+    pub renderer_upload_us: u64,
+    #[serde(default)]
+    pub renderer_record_passes_us: u64,
+    #[serde(default)]
+    pub renderer_encoder_finish_us: u64,
+    #[serde(default)]
     pub renderer_prepare_svg_us: u64,
     #[serde(default)]
     pub renderer_prepare_text_us: u64,
@@ -12985,6 +13049,11 @@ impl UiFrameStatsV1 {
             renderer_frame_id: 0,
             renderer_frames: 0,
             renderer_encode_scene_us: 0,
+            renderer_ensure_pipelines_us: 0,
+            renderer_plan_compile_us: 0,
+            renderer_upload_us: 0,
+            renderer_record_passes_us: 0,
+            renderer_encoder_finish_us: 0,
             renderer_prepare_svg_us: 0,
             renderer_prepare_text_us: 0,
             renderer_svg_uploads: 0,
@@ -13061,6 +13130,11 @@ impl UiFrameStatsV1 {
             out.renderer_frame_id = sample.frame_id;
             out.renderer_frames = sample.perf.frames;
             out.renderer_encode_scene_us = sample.perf.encode_scene_us;
+            out.renderer_ensure_pipelines_us = sample.perf.ensure_pipelines_us;
+            out.renderer_plan_compile_us = sample.perf.plan_compile_us;
+            out.renderer_upload_us = sample.perf.upload_us;
+            out.renderer_record_passes_us = sample.perf.record_passes_us;
+            out.renderer_encoder_finish_us = sample.perf.encoder_finish_us;
             out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
             out.renderer_prepare_text_us = sample.perf.prepare_text_us;
             out.renderer_svg_uploads = sample.perf.svg_uploads;
@@ -16274,6 +16348,7 @@ fn eval_predicate(
         }
         UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
         UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
+        UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
@@ -16524,6 +16599,7 @@ fn eval_predicate(
                 fret_runtime::DockDropResolveSource::InvertDocking => "invert_docking",
                 fret_runtime::DockDropResolveSource::OutsideWindow => "outside_window",
                 fret_runtime::DockDropResolveSource::FloatZone => "float_zone",
+                fret_runtime::DockDropResolveSource::EmptyDockSpace => "empty_dock_space",
                 fret_runtime::DockDropResolveSource::LayoutBoundsMiss => "layout_bounds_miss",
                 fret_runtime::DockDropResolveSource::LatchedPreviousHover => {
                     "latched_previous_hover"

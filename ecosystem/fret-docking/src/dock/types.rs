@@ -29,7 +29,16 @@ pub(super) struct DockTabsDragPayload {
 #[derive(Debug, Clone, PartialEq)]
 pub(super) enum DockDropTarget {
     Dock(HoverTarget),
-    Float { window: AppWindowId },
+    Float {
+        window: AppWindowId,
+    },
+    /// A drop target representing an empty dock space (no window root tabs).
+    ///
+    /// This enables docking into a window that currently has no dock root, matching editor-grade
+    /// behavior where an empty host can still accept a drop to create the initial tab stack.
+    EmptyDockSpace {
+        window: AppWindowId,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +58,11 @@ pub(super) enum DockDropIntent {
         zone: DropZone,
         insert_index: Option<usize>,
     },
+    MovePanelToEmptyDockSpace {
+        source_window: AppWindowId,
+        panel: PanelKey,
+        target_window: AppWindowId,
+    },
     MoveTabs {
         source_window: AppWindowId,
         source_tabs: DockNodeId,
@@ -56,6 +70,11 @@ pub(super) enum DockDropIntent {
         target_tabs: DockNodeId,
         zone: DropZone,
         insert_index: Option<usize>,
+    },
+    MoveTabsToEmptyDockSpace {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        target_window: AppWindowId,
     },
     FloatPanelInWindow {
         source_window: AppWindowId,
@@ -71,6 +90,12 @@ pub(super) enum DockDropIntent {
     },
     RequestFloatPanelToNewWindow {
         source_window: AppWindowId,
+        panel: PanelKey,
+        anchor: Option<fret_core::WindowAnchor>,
+    },
+    RequestFloatTabsToNewWindow {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
         panel: PanelKey,
         anchor: Option<fret_core::WindowAnchor>,
     },

@@ -38,6 +38,8 @@ Related:
   - [x] define initial `test_id` anchor(s) for scripted repro
   - Evidence: `apps/fret-demo/src/bin/imui_editor_proof_demo.rs` (runnable bin target)
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.drag-value-demo`)
+- [x] Keep scripted diag runs deterministic (avoid screenshot-step hangs):
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (screenshot request-id completion)
 
 Feature intent matrix (recommended):
 
@@ -81,7 +83,7 @@ Deliverables:
 - [~] `PropertyRow` composite:
   - [x] label slot + value slot + actions slot
   - [x] reset-to-default affordance (UI only; callback provided by caller)
-  - [x] stable identity for auto layout heuristics (`id_source` for loop-built rows)
+  - [x] explicit per-row identity opt-in (`id_source`) for loop-built rows (do not key by callsite by default)
   - Evidence: `ecosystem/fret-ui-editor/src/composites/property_row.rs`
 
 Optional (if `fret-undo` integration is ready):
@@ -135,7 +137,7 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
   - [x] Editor input surfaces remain visible even when the active theme uses transparent input backgrounds.
     - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
   - [x] EnumSelect overlay dismissal is reliable (outside press / trigger press) and does not leave ghosting artifacts.
-    - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs` (dismissible popover + auto-sized anchored panel wrapper)
     - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (invalidate base root on hide)
     - Evidence: `tools/diag-scripts/imui-editor-proof-enum-select-dismiss-and-close.json`
   - [x] `PropertyGroup` header has a background and divider for visual grouping.
@@ -209,8 +211,10 @@ adding new runtime contracts unless evidence demands it.
   - [x] axis labels + axis color tokens
   - [x] per-axis reset hooks
   - [x] responsive layout: auto-stack axes vertically in narrow inspectors (token: `editor.vec.auto_stack_below`)
+  - [x] responsive layout: derive a minimum readable per-axis width (token: `editor.vec.axis_min_width`)
+  - [x] axis reset affordance uses semantic `ui.reset` (icon-pack mapped)
   - [x] per-instance internal state keying (`id_source` or default `(callsite, model ids)`) to prevent cross-widget interference
-  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `ecosystem/fret-ui-editor/src/theme.rs`, `ecosystem/fret-ui-editor/src/controls/drag_value.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
+  - Evidence: `ecosystem/fret-ui-editor/src/controls/vec_edit.rs`, `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`, `ecosystem/fret-ui-editor/src/primitives/style.rs`, `ecosystem/fret-ui-editor/src/primitives/tokens.rs`, `ecosystem/fret-ui-editor/src/theme.rs`, `ecosystem/fret-icons/src/lib.rs`, `ecosystem/fret-icons-lucide/src/lib.rs`, `ecosystem/fret-icons-radix/src/lib.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`, `docs/workstreams/ui-editor-v1.md`
 - [~] `TransformEdit` (position/rotation/scale composite):
   - [x] layout variants (row/column)
   - [x] link scale toggle (optional)

@@ -127,13 +127,21 @@ pub struct WindowedRowsSurfaceProps {
 
 impl Default for WindowedRowsSurfaceProps {
     fn default() -> Self {
-        let mut scroll = ScrollProps::default();
-        scroll.axis = ScrollAxis::Y;
-        scroll.layout.size.width = Length::Fill;
-        scroll.layout.size.height = Length::Fill;
-        // This surface's paint output depends on the scroll offset (visible window changes), so
-        // scroll-handle updates must be allowed to invalidate view-cache reuse.
-        scroll.windowed_paint = true;
+        let scroll = ScrollProps {
+            axis: ScrollAxis::Y,
+            layout: fret_ui::element::LayoutStyle {
+                size: fret_ui::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            // This surface's paint output depends on the scroll offset (visible window changes), so
+            // scroll-handle updates must be allowed to invalidate view-cache reuse.
+            windowed_paint: true,
+            ..Default::default()
+        };
 
         let mut canvas = CanvasProps::default();
         canvas.layout.size.width = Length::Fill;

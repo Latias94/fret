@@ -430,7 +430,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(300.0), Px(200.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let wrapper_id_out: std::cell::Cell<Option<GlobalElementId>> = std::cell::Cell::new(None);
 

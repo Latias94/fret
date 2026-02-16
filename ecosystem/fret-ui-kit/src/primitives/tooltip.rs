@@ -700,9 +700,7 @@ pub fn tooltip_update_interaction<H: UiHost>(
         st.was_focused = trigger_focused;
         let blurred = was && !trigger_focused;
 
-        let close_delay_ticks = if blurred {
-            0
-        } else if trigger_focused {
+        let close_delay_ticks = if blurred || trigger_focused {
             0
         } else {
             cfg.close_delay_ticks_override.unwrap_or(0)

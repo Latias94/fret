@@ -64,9 +64,11 @@ js-sys = "0.3"
 web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "File", "FilePropertyBag", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "UrlSearchParams", "VisualViewport", "Window", "console"] }
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "macos"))'.dependencies]
-cocoa.workspace = true
 objc.workspace = true
 keyboard-types.workspace = true
+objc2 = { version = "0.6.3", features = ["relax-sign-encoding"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSString", "objc2-core-foundation"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSEvent", "NSMenu", "NSMenuItem", "NSResponder", "NSScreen"] }
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "windows"))'.dependencies]
 windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Storage_FileSystem", "Win32_System_LibraryLoader", "Win32_System_Registry", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }

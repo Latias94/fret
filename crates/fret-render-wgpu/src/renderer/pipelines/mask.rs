@@ -11,6 +11,18 @@ impl Renderer {
             return;
         }
 
+        let create_span = tracing::enabled!(tracing::Level::TRACE)
+            .then(|| {
+                let reason = if self.mask_pipeline.is_none() {
+                    "missing"
+                } else {
+                    "format_changed"
+                };
+                tracing::trace_span!("fret.renderer.pipeline.create.mask", format = ?format, reason)
+            })
+            .unwrap_or_else(tracing::Span::none);
+        let _create_guard = create_span.enter();
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret mask shader"),
             source: wgpu::ShaderSource::Wgsl(MASK_SHADER.into()),
