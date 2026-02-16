@@ -170,6 +170,9 @@ where
                                  test_id: &'static str,
                                  dir: f32,
                                  visible: bool| {
+                if !visible {
+                    return None;
+                }
                 let handle_for_pressable = handle.clone();
                 let handle_for_wheel = handle.clone();
                 let theme = theme.clone();
@@ -289,8 +292,7 @@ where
                     move |_cx| vec![pressable],
                 );
 
-                let gated = cx.interactivity_gate(true, visible, |_cx| vec![pressable]);
-                cx.opacity(if visible { 1.0 } else { 0.0 }, |_cx| vec![gated])
+                Some(pressable)
             };
 
             let handle_for_stack = handle.clone();
@@ -431,23 +433,27 @@ where
             );
 
             if has_scroll {
-                vec![
-                    scroll_button(
-                        cx,
-                        ids::ui::CHEVRON_UP,
-                        "select-scroll-up-button",
-                        -1.0,
-                        show_up,
-                    ),
-                    stack,
-                    scroll_button(
-                        cx,
-                        ids::ui::CHEVRON_DOWN,
-                        "select-scroll-down-button",
-                        1.0,
-                        show_down,
-                    ),
-                ]
+                let mut out = Vec::with_capacity(3);
+                if let Some(btn) = scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_UP,
+                    "select-scroll-up-button",
+                    -1.0,
+                    show_up,
+                ) {
+                    out.push(btn);
+                }
+                out.push(stack);
+                if let Some(btn) = scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_DOWN,
+                    "select-scroll-down-button",
+                    1.0,
+                    show_down,
+                ) {
+                    out.push(btn);
+                }
+                out
             } else {
                 vec![stack]
             }
