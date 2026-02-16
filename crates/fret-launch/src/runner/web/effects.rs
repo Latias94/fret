@@ -343,9 +343,46 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     });
                     window.request_redraw();
                 }
-                Effect::ClipboardSetText { text: _ } => {
-                    // Best-effort: clipboard access is platform-dependent on web and may be
-                    // restricted. For now, treat as unsupported.
+                Effect::ClipboardSetText { text } => {
+                    if self.diag_clipboard_force_unavailable {
+                        continue;
+                    }
+
+                    let Some(window) = web_sys::window() else {
+                        continue;
+                    };
+                    let navigator =
+                        match Reflect::get(window.as_ref(), &JsValue::from_str("navigator")) {
+                            Ok(v) => v,
+                            Err(_) => continue,
+                        };
+                    let clipboard = match Reflect::get(&navigator, &JsValue::from_str("clipboard"))
+                    {
+                        Ok(v) => v,
+                        Err(_) => continue,
+                    };
+                    let write_fn = match Reflect::get(&clipboard, &JsValue::from_str("writeText"))
+                        .ok()
+                        .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        Some(v) => v,
+                        None => continue,
+                    };
+
+                    // Important: call `navigator.clipboard.writeText(...)` synchronously while
+                    // draining effects so the invocation can inherit a browser user-activation
+                    // gesture when applicable (similar to `navigator.share`).
+                    let promise = match write_fn.call1(&clipboard, &JsValue::from_str(&text)) {
+                        Ok(v) => match v.dyn_into::<Promise>() {
+                            Ok(p) => p,
+                            Err(_) => continue,
+                        },
+                        Err(_) => continue,
+                    };
+
+                    spawn_local(async move {
+                        let _ = JsFuture::from(promise).await;
+                    });
                 }
                 Effect::ClipboardGetText {
                     window: target_window,
@@ -354,9 +391,90 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     if target_window != self.app_window {
                         continue;
                     }
-                    self.pending_events
-                        .push(Event::ClipboardTextUnavailable { token });
-                    window.request_redraw();
+
+                    if self.diag_clipboard_force_unavailable {
+                        self.pending_events
+                            .push(Event::ClipboardTextUnavailable { token });
+                        window.request_redraw();
+                        continue;
+                    }
+
+                    let Some(window_handle) = web_sys::window() else {
+                        self.pending_events
+                            .push(Event::ClipboardTextUnavailable { token });
+                        window.request_redraw();
+                        continue;
+                    };
+                    let navigator =
+                        match Reflect::get(window_handle.as_ref(), &JsValue::from_str("navigator"))
+                        {
+                            Ok(v) => v,
+                            Err(_) => {
+                                self.pending_events
+                                    .push(Event::ClipboardTextUnavailable { token });
+                                window.request_redraw();
+                                continue;
+                            }
+                        };
+                    let clipboard = match Reflect::get(&navigator, &JsValue::from_str("clipboard"))
+                    {
+                        Ok(v) => v,
+                        Err(_) => {
+                            self.pending_events
+                                .push(Event::ClipboardTextUnavailable { token });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+                    let read_fn = match Reflect::get(&clipboard, &JsValue::from_str("readText"))
+                        .ok()
+                        .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        Some(v) => v,
+                        None => {
+                            self.pending_events
+                                .push(Event::ClipboardTextUnavailable { token });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    // Important: call `navigator.clipboard.readText(...)` synchronously while
+                    // draining effects so the invocation can inherit a browser user-activation
+                    // gesture when applicable.
+                    let promise = match read_fn.call0(&clipboard) {
+                        Ok(v) => match v.dyn_into::<Promise>() {
+                            Ok(p) => p,
+                            Err(_) => {
+                                self.pending_events
+                                    .push(Event::ClipboardTextUnavailable { token });
+                                window.request_redraw();
+                                continue;
+                            }
+                        },
+                        Err(_) => {
+                            self.pending_events
+                                .push(Event::ClipboardTextUnavailable { token });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    let pending = self.pending_async_events.clone();
+                    let proxy = self.event_loop_proxy.clone();
+                    spawn_local(async move {
+                        let event = match JsFuture::from(promise).await {
+                            Ok(v) => {
+                                let text = v.as_string().unwrap_or_default();
+                                Event::ClipboardText { token, text }
+                            }
+                            Err(_) => Event::ClipboardTextUnavailable { token },
+                        };
+                        pending.borrow_mut().push(event);
+                        if let Some(proxy) = proxy {
+                            proxy.wake_up();
+                        }
+                    });
                 }
                 Effect::PrimarySelectionSetText { text: _ } => {}
                 Effect::PrimarySelectionGetText {
