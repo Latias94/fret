@@ -62,14 +62,15 @@ impl<H: UiHost> UiTree<H> {
         if let Some(window) = self.window
             && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
         {
-            let record_started = self.debug_enabled.then(Instant::now);
-            let visual = rect_aabb_transformed(bounds, current_transform);
-            crate::elements::record_visual_bounds_for_element(app, window, element, visual);
-            if let Some(record_started) = record_started {
+            let (_, record_elapsed) = fret_perf::measure(self.debug_enabled, || {
+                let visual = rect_aabb_transformed(bounds, current_transform);
+                crate::elements::record_visual_bounds_for_element(app, window, element, visual);
+            });
+            if let Some(record_elapsed) = record_elapsed {
                 self.debug_stats.paint_record_visual_bounds_time = self
                     .debug_stats
                     .paint_record_visual_bounds_time
-                    .saturating_add(record_started.elapsed());
+                    .saturating_add(record_elapsed);
                 self.debug_stats.paint_record_visual_bounds_calls = self
                     .debug_stats
                     .paint_record_visual_bounds_calls
@@ -77,11 +78,12 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let key_started = self.debug_enabled.then(Instant::now);
-        let theme_revision = Theme::global(&*app).revision();
-        let children_render_transform = self.node_children_render_transform(node);
-        let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
-        let key = PaintCacheKey::new(bounds, sf, theme_revision, child_transform);
+        let (key, key_elapsed) = fret_perf::measure(self.debug_enabled, || {
+            let theme_revision = Theme::global(&*app).revision();
+            let children_render_transform = self.node_children_render_transform(node);
+            let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
+            PaintCacheKey::new(bounds, sf, theme_revision, child_transform)
+        });
         let relax_view_cache_gating = super::paint_cache_relax_view_cache_gating();
         let allow_hit_test_only = super::paint_cache_allow_hit_test_only();
         let cache_enabled = self.paint_cache_enabled()
@@ -89,11 +91,11 @@ impl<H: UiHost> UiTree<H> {
             && (!self.view_cache_active()
                 || relax_view_cache_gating
                 || self.nodes.get(node).is_some_and(|n| n.view_cache.enabled));
-        if let Some(key_started) = key_started {
+        if let Some(key_elapsed) = key_elapsed {
             self.debug_stats.paint_cache_key_time = self
                 .debug_stats
                 .paint_cache_key_time
-                .saturating_add(key_started.elapsed());
+                .saturating_add(key_elapsed);
         }
 
         let replay_allowed_by_hit_test_only_gate =
@@ -106,216 +108,262 @@ impl<H: UiHost> UiTree<H> {
                     .paint_cache_hit_test_only_replay_allowed
                     .saturating_add(1);
             }
-            let hit_check_started = self.debug_enabled.then(Instant::now);
-            if let Some(prev) = prev_cache
-                && prev.generation == self.paint_cache.source_generation
-                && prev.key == key
-                && prev_bounds_origin.is_some_and(|origin| {
+            struct PaintCacheReplayCtx {
+                range_start: usize,
+                range_end: usize,
+                delta: Point,
+                delta_visual: Point,
+            }
+
+            let (replay_ctx, hit_check_elapsed) = fret_perf::measure(self.debug_enabled, || {
+                let Some(prev) = prev_cache else {
+                    return None;
+                };
+                if prev.generation != self.paint_cache.source_generation {
+                    return None;
+                }
+                if prev.key != key {
+                    return None;
+                }
+                if !prev_bounds_origin.is_some_and(|origin| {
                     (origin.x.0 - prev.origin.x.0).abs() <= 0.01
                         && (origin.y.0 - prev.origin.y.0).abs() <= 0.01
-                })
-            {
-                let start = scene.ops_len();
-                let range = prev.start as usize..prev.end as usize;
-                if range.start <= range.end && range.end <= self.paint_cache.prev_ops.len() {
-                    let delta = Point::new(
-                        bounds.origin.x - prev.origin.x,
-                        bounds.origin.y - prev.origin.y,
-                    );
-                    let delta_visual = if let Some(window) = self.window
-                        && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
-                        && let Some(prev_visual) =
-                            crate::elements::with_window_state(app, window, |st| {
-                                st.last_visual_bounds(element)
-                            }) {
-                        let current_visual = rect_aabb_transformed(bounds, current_transform);
-                        let size_dx =
-                            (current_visual.size.width.0 - prev_visual.size.width.0).abs();
-                        let size_dy =
-                            (current_visual.size.height.0 - prev_visual.size.height.0).abs();
-                        if size_dx <= 0.01 && size_dy <= 0.01 {
-                            Point::new(
-                                current_visual.origin.x - prev_visual.origin.x,
-                                current_visual.origin.y - prev_visual.origin.y,
-                            )
-                        } else {
-                            Point::new(Px(0.0), Px(0.0))
-                        }
+                }) {
+                    return None;
+                }
+
+                let range_start = prev.start as usize;
+                let range_end = prev.end as usize;
+                if range_start > range_end || range_end > self.paint_cache.prev_ops.len() {
+                    return None;
+                }
+
+                let delta = Point::new(
+                    bounds.origin.x - prev.origin.x,
+                    bounds.origin.y - prev.origin.y,
+                );
+                let delta_visual = if let Some(window) = self.window
+                    && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
+                    && let Some(prev_visual) =
+                        crate::elements::with_window_state(app, window, |st| {
+                            st.last_visual_bounds(element)
+                        }) {
+                    let current_visual = rect_aabb_transformed(bounds, current_transform);
+                    let size_dx = (current_visual.size.width.0 - prev_visual.size.width.0).abs();
+                    let size_dy = (current_visual.size.height.0 - prev_visual.size.height.0).abs();
+                    if size_dx <= 0.01 && size_dy <= 0.01 {
+                        Point::new(
+                            current_visual.origin.x - prev_visual.origin.x,
+                            current_visual.origin.y - prev_visual.origin.y,
+                        )
                     } else {
                         Point::new(Px(0.0), Px(0.0))
-                    };
-                    if let Some(hit_check_started) = hit_check_started {
-                        self.debug_stats.paint_cache_hit_check_time = self
-                            .debug_stats
-                            .paint_cache_hit_check_time
-                            .saturating_add(hit_check_started.elapsed());
                     }
-                    let replay_span = if tracing::enabled!(tracing::Level::TRACE) {
+                } else {
+                    Point::new(Px(0.0), Px(0.0))
+                };
+
+                Some(PaintCacheReplayCtx {
+                    range_start,
+                    range_end,
+                    delta,
+                    delta_visual,
+                })
+            });
+            if let Some(hit_check_elapsed) = hit_check_elapsed {
+                self.debug_stats.paint_cache_hit_check_time = self
+                    .debug_stats
+                    .paint_cache_hit_check_time
+                    .saturating_add(hit_check_elapsed);
+            }
+
+            if let Some(ctx) = replay_ctx {
+                let PaintCacheReplayCtx {
+                    range_start,
+                    range_end,
+                    delta,
+                    delta_visual,
+                } = ctx;
+
+                let start = scene.ops_len();
+                let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+                let ((), replay_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_enabled,
+                    || {
                         tracing::trace_span!(
                             "fret.ui.paint_cache.replay",
                             node = ?node,
                             ops = tracing::field::Empty,
                             scale_factor = sf,
                         )
-                    } else {
-                        tracing::Span::none()
-                    };
-                    let _replay_guard = replay_span.enter();
-                    let replay_started = self.debug_enabled.then(Instant::now);
-                    scene.replay_ops_translated(&self.paint_cache.prev_ops[range.clone()], delta);
-                    if let Some(replay_started) = replay_started {
-                        self.debug_stats.paint_cache_replay_time = self
-                            .debug_stats
-                            .paint_cache_replay_time
-                            .saturating_add(replay_started.elapsed());
-                    }
-                    let end = scene.ops_len();
-                    replay_span.record("ops", (end - start) as u64);
-                    self.debug_record_paint_cache_replay(node, (end - start) as u32);
-
-                    if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
-                        let prev = n.invalidation;
-                        n.paint_cache = Some(PaintCacheEntry {
-                            generation: self.paint_cache.target_generation,
-                            key,
-                            origin: bounds.origin,
-                            start: start as u32,
-                            end: end as u32,
-                        });
-                        n.invalidation.paint = false;
-                        n.paint_invalidated_by_hit_test_only = false;
-                        (prev, n.invalidation)
-                    }) {
-                        self.update_invalidation_counters(prev, next);
-                    }
-
-                    if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
-                        // Paint-cache replay translates recorded draw ops by `delta` without visiting
-                        // descendants. Keep hit-testing and semantics consistent by translating the
-                        // retained subtree bounds too (mirrors the layout-only translation fast path).
-                        //
-                        // Without this, cached subtrees that move (e.g. due to parent layout changes)
-                        // can render correctly while their descendant bounds remain stale, causing
-                        // incorrect pointer routing and stale semantics geometry.
-                        let translate_started = self.debug_enabled.then(Instant::now);
-                        let mut translated_nodes: u32 = 0;
-                        let window = self.window;
-                        let paint_pass = self.paint_pass;
-                        let mut stack = self.take_scratch_node_stack();
-                        stack.clear();
-                        let mut i = 0usize;
-                        loop {
-                            let child = self
-                                .nodes
-                                .get(node)
-                                .and_then(|n| n.children.get(i))
-                                .copied();
-                            let Some(child) = child else {
-                                break;
-                            };
-                            stack.push(child);
-                            i += 1;
-                        }
-
-                        while let Some(id) = stack.pop() {
-                            let Some(n) = self.nodes.get_mut(id) else {
-                                continue;
-                            };
-                            if n.bounds_written_paint_pass == paint_pass {
-                                continue;
-                            }
-                            translated_nodes = translated_nodes.saturating_add(1);
-                            n.bounds.origin = Point::new(
-                                n.bounds.origin.x + delta.x,
-                                n.bounds.origin.y + delta.y,
-                            );
-                            n.bounds_written_paint_pass = paint_pass;
-                            if let Some(mut cache) = n.paint_cache {
-                                cache.origin =
-                                    Point::new(cache.origin.x + delta.x, cache.origin.y + delta.y);
-                                n.paint_cache = Some(cache);
-                            }
-                            if let Some(window) = window
-                                && let Some(element) = n.element
-                            {
-                                crate::elements::record_bounds_for_element(
-                                    app, window, element, n.bounds,
-                                );
-                            }
-                            for &child in &n.children {
-                                stack.push(child);
-                            }
-                        }
-                        self.restore_scratch_node_stack(stack);
-                        if let Some(translate_started) = translate_started {
-                            self.debug_stats.paint_cache_bounds_translate_time = self
-                                .debug_stats
-                                .paint_cache_bounds_translate_time
-                                .saturating_add(translate_started.elapsed());
-                            self.debug_stats.paint_cache_bounds_translated_nodes = self
-                                .debug_stats
-                                .paint_cache_bounds_translated_nodes
-                                .saturating_add(translated_nodes);
-                        }
-                    }
-                    if delta_visual.x.0 != 0.0 || delta_visual.y.0 != 0.0 {
-                        // Paint-cache replay can run under a different accumulated transform than
-                        // the previous frame (e.g. scroll containers apply a children-only render
-                        // transform). Without visiting descendants, their last-frame visual bounds
-                        // would remain stale even while the subtree is rendered under the updated
-                        // transform. Translate descendant visual bounds by the same delta so
-                        // anchored overlays and hit-tested geometry stay consistent.
-                        let window = self.window;
-                        let mut stack: Vec<NodeId> = Vec::new();
-                        let mut i = 0usize;
-                        loop {
-                            let child = self
-                                .nodes
-                                .get(node)
-                                .and_then(|n| n.children.get(i))
-                                .copied();
-                            let Some(child) = child else {
-                                break;
-                            };
-                            stack.push(child);
-                            i += 1;
-                        }
-
-                        while let Some(id) = stack.pop() {
-                            let Some(n) = self.nodes.get(id) else {
-                                continue;
-                            };
-                            if let Some(window) = window
-                                && let Some(element) = n.element
-                                && let Some(prev_visual) =
-                                    crate::elements::with_window_state(app, window, |st| {
-                                        st.last_visual_bounds(element)
-                                    })
-                            {
-                                let visual = Rect::new(
-                                    Point::new(
-                                        prev_visual.origin.x + delta_visual.x,
-                                        prev_visual.origin.y + delta_visual.y,
-                                    ),
-                                    prev_visual.size,
-                                );
-                                crate::elements::record_visual_bounds_for_element(
-                                    app, window, element, visual,
-                                );
-                            }
-                            for &child in &n.children {
-                                stack.push(child);
-                            }
-                        }
-                    }
-
-                    self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);
-                    self.paint_cache.replayed_ops = self
-                        .paint_cache
-                        .replayed_ops
-                        .saturating_add((end - start) as u32);
-                    return;
+                    },
+                    || {
+                        scene.replay_ops_translated(
+                            &self.paint_cache.prev_ops[range_start..range_end],
+                            delta,
+                        );
+                    },
+                );
+                if let Some(replay_elapsed) = replay_elapsed {
+                    self.debug_stats.paint_cache_replay_time = self
+                        .debug_stats
+                        .paint_cache_replay_time
+                        .saturating_add(replay_elapsed);
                 }
+                let end = scene.ops_len();
+                if trace_enabled {
+                    tracing::Span::current().record("ops", (end - start) as u64);
+                }
+                self.debug_record_paint_cache_replay(node, (end - start) as u32);
+
+                if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
+                    let prev = n.invalidation;
+                    n.paint_cache = Some(PaintCacheEntry {
+                        generation: self.paint_cache.target_generation,
+                        key,
+                        origin: bounds.origin,
+                        start: start as u32,
+                        end: end as u32,
+                    });
+                    n.invalidation.paint = false;
+                    n.paint_invalidated_by_hit_test_only = false;
+                    (prev, n.invalidation)
+                }) {
+                    self.update_invalidation_counters(prev, next);
+                }
+
+                if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
+                    // Paint-cache replay translates recorded draw ops by `delta` without visiting
+                    // descendants. Keep hit-testing and semantics consistent by translating the
+                    // retained subtree bounds too (mirrors the layout-only translation fast path).
+                    //
+                    // Without this, cached subtrees that move (e.g. due to parent layout changes)
+                    // can render correctly while their descendant bounds remain stale, causing
+                    // incorrect pointer routing and stale semantics geometry.
+                    let (translated_nodes, translate_elapsed) =
+                        fret_perf::measure(self.debug_enabled, || {
+                            let mut translated_nodes: u32 = 0;
+                            let window = self.window;
+                            let paint_pass = self.paint_pass;
+                            let mut stack = self.take_scratch_node_stack();
+                            stack.clear();
+                            let mut i = 0usize;
+                            loop {
+                                let child = self
+                                    .nodes
+                                    .get(node)
+                                    .and_then(|n| n.children.get(i))
+                                    .copied();
+                                let Some(child) = child else {
+                                    break;
+                                };
+                                stack.push(child);
+                                i += 1;
+                            }
+
+                            while let Some(id) = stack.pop() {
+                                let Some(n) = self.nodes.get_mut(id) else {
+                                    continue;
+                                };
+                                if n.bounds_written_paint_pass == paint_pass {
+                                    continue;
+                                }
+                                translated_nodes = translated_nodes.saturating_add(1);
+                                n.bounds.origin = Point::new(
+                                    n.bounds.origin.x + delta.x,
+                                    n.bounds.origin.y + delta.y,
+                                );
+                                n.bounds_written_paint_pass = paint_pass;
+                                if let Some(mut cache) = n.paint_cache {
+                                    cache.origin = Point::new(
+                                        cache.origin.x + delta.x,
+                                        cache.origin.y + delta.y,
+                                    );
+                                    n.paint_cache = Some(cache);
+                                }
+                                if let Some(window) = window
+                                    && let Some(element) = n.element
+                                {
+                                    crate::elements::record_bounds_for_element(
+                                        app, window, element, n.bounds,
+                                    );
+                                }
+                                for &child in &n.children {
+                                    stack.push(child);
+                                }
+                            }
+                            self.restore_scratch_node_stack(stack);
+                            translated_nodes
+                        });
+                    if let Some(translate_elapsed) = translate_elapsed {
+                        self.debug_stats.paint_cache_bounds_translate_time = self
+                            .debug_stats
+                            .paint_cache_bounds_translate_time
+                            .saturating_add(translate_elapsed);
+                        self.debug_stats.paint_cache_bounds_translated_nodes = self
+                            .debug_stats
+                            .paint_cache_bounds_translated_nodes
+                            .saturating_add(translated_nodes);
+                    }
+                }
+                if delta_visual.x.0 != 0.0 || delta_visual.y.0 != 0.0 {
+                    // Paint-cache replay can run under a different accumulated transform than
+                    // the previous frame (e.g. scroll containers apply a children-only render
+                    // transform). Without visiting descendants, their last-frame visual bounds
+                    // would remain stale even while the subtree is rendered under the updated
+                    // transform. Translate descendant visual bounds by the same delta so
+                    // anchored overlays and hit-tested geometry stay consistent.
+                    let window = self.window;
+                    let mut stack: Vec<NodeId> = Vec::new();
+                    let mut i = 0usize;
+                    loop {
+                        let child = self
+                            .nodes
+                            .get(node)
+                            .and_then(|n| n.children.get(i))
+                            .copied();
+                        let Some(child) = child else {
+                            break;
+                        };
+                        stack.push(child);
+                        i += 1;
+                    }
+
+                    while let Some(id) = stack.pop() {
+                        let Some(n) = self.nodes.get(id) else {
+                            continue;
+                        };
+                        if let Some(window) = window
+                            && let Some(element) = n.element
+                            && let Some(prev_visual) =
+                                crate::elements::with_window_state(app, window, |st| {
+                                    st.last_visual_bounds(element)
+                                })
+                        {
+                            let visual = Rect::new(
+                                Point::new(
+                                    prev_visual.origin.x + delta_visual.x,
+                                    prev_visual.origin.y + delta_visual.y,
+                                ),
+                                prev_visual.size,
+                            );
+                            crate::elements::record_visual_bounds_for_element(
+                                app, window, element, visual,
+                            );
+                        }
+                        for &child in &n.children {
+                            stack.push(child);
+                        }
+                    }
+                }
+
+                self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);
+                self.paint_cache.replayed_ops = self
+                    .paint_cache
+                    .replayed_ops
+                    .saturating_add((end - start) as u32);
+                return;
             }
             if replay_allowed_by_hit_test_only_gate
                 && self.debug_enabled
@@ -330,12 +378,6 @@ impl<H: UiHost> UiTree<H> {
                     .saturating_add(1);
             }
             self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
-            if let Some(hit_check_started) = hit_check_started {
-                self.debug_stats.paint_cache_hit_check_time = self
-                    .debug_stats
-                    .paint_cache_hit_check_time
-                    .saturating_add(hit_check_started.elapsed());
-            }
         }
 
         // Clear the "dirty" flag before invoking widget paint so that paint-triggered invalidations
@@ -365,68 +407,68 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.paint_nodes_performed.saturating_add(1);
         }
 
-        let widget_started = self.debug_enabled.then(Instant::now);
         let mut widget_type: &'static str = "<unknown>";
-        if self.debug_enabled {
-            self.debug_paint_stack.push(DebugPaintStackFrame {
-                child_inclusive_time: Duration::default(),
-                child_inclusive_scene_ops_delta: 0,
+        let (start, widget_elapsed) = fret_perf::measure(self.debug_enabled, || {
+            if self.debug_enabled {
+                self.debug_paint_stack.push(DebugPaintStackFrame {
+                    child_inclusive_time: Duration::default(),
+                    child_inclusive_scene_ops_delta: 0,
+                });
+            }
+            let start = scene.ops_len();
+            self.with_widget_mut(node, |widget, tree| {
+                if tree.debug_enabled {
+                    widget_type = widget.debug_type_name();
+                }
+                let children_render_transform = widget
+                    .children_render_transform(bounds)
+                    .filter(|t| t.inverse().is_some());
+                let mut children_buf = SmallNodeList::<32>::default();
+                if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
+                    children_buf.set(children);
+                }
+                let window = tree.window;
+                let focus = tree.focus;
+                let mut cx = PaintCx {
+                    app,
+                    node,
+                    window,
+                    focus,
+                    children: children_buf.as_slice(),
+                    bounds,
+                    scale_factor: sf,
+                    accumulated_transform: current_transform,
+                    children_render_transform,
+                    services: &mut *services,
+                    observe_model: &mut observe_model,
+                    observe_global: &mut observe_global,
+                    scene,
+                    tree,
+                };
+                let transform = widget.render_transform(bounds);
+                let pushed_transform = if let Some(transform) = transform
+                    && transform.inverse().is_some()
+                {
+                    cx.scene.push(SceneOp::PushTransform { transform });
+                    true
+                } else {
+                    false
+                };
+
+                cx.tree.debug_paint_widget_exclusive_resume();
+                widget.paint(&mut cx);
+                let _ = cx.tree.debug_paint_widget_exclusive_pause();
+
+                if pushed_transform {
+                    cx.scene.push(SceneOp::PopTransform);
+                }
             });
-        }
-
-        let start = scene.ops_len();
-        self.with_widget_mut(node, |widget, tree| {
-            if tree.debug_enabled {
-                widget_type = widget.debug_type_name();
-            }
-            let children_render_transform = widget
-                .children_render_transform(bounds)
-                .filter(|t| t.inverse().is_some());
-            let mut children_buf = SmallNodeList::<32>::default();
-            if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
-                children_buf.set(children);
-            }
-            let window = tree.window;
-            let focus = tree.focus;
-            let mut cx = PaintCx {
-                app,
-                node,
-                window,
-                focus,
-                children: children_buf.as_slice(),
-                bounds,
-                scale_factor: sf,
-                accumulated_transform: current_transform,
-                children_render_transform,
-                services: &mut *services,
-                observe_model: &mut observe_model,
-                observe_global: &mut observe_global,
-                scene,
-                tree,
-            };
-            let transform = widget.render_transform(bounds);
-            let pushed_transform = if let Some(transform) = transform
-                && transform.inverse().is_some()
-            {
-                cx.scene.push(SceneOp::PushTransform { transform });
-                true
-            } else {
-                false
-            };
-
-            cx.tree.debug_paint_widget_exclusive_resume();
-            widget.paint(&mut cx);
-            let _ = cx.tree.debug_paint_widget_exclusive_pause();
-
-            if pushed_transform {
-                cx.scene.push(SceneOp::PopTransform);
-            }
+            start
         });
         let end = scene.ops_len();
 
-        if let Some(widget_started) = widget_started {
+        if let Some(inclusive_time) = widget_elapsed {
             const MAX_PAINT_WIDGET_HOTSPOTS: usize = 16;
-            let inclusive_time = widget_started.elapsed();
             let inclusive_scene_ops_delta = end.saturating_sub(start).min(u32::MAX as usize) as u32;
             let (child_inclusive_time, child_inclusive_scene_ops_delta) = self
                 .debug_paint_stack
@@ -490,15 +532,16 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let obs_started = self.debug_enabled.then(Instant::now);
-        self.observed_in_paint.record(node, observations.as_slice());
-        self.observed_globals_in_paint
-            .record(node, global_observations.as_slice());
-        if let Some(obs_started) = obs_started {
+        let (_, obs_elapsed) = fret_perf::measure(self.debug_enabled, || {
+            self.observed_in_paint.record(node, observations.as_slice());
+            self.observed_globals_in_paint
+                .record(node, global_observations.as_slice());
+        });
+        if let Some(obs_elapsed) = obs_elapsed {
             self.debug_stats.paint_observation_record_time = self
                 .debug_stats
                 .paint_observation_record_time
-                .saturating_add(obs_started.elapsed());
+                .saturating_add(obs_elapsed);
         }
         if let Some(n) = self.nodes.get_mut(node) {
             if cache_enabled {
