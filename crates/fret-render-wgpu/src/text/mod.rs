@@ -5649,6 +5649,58 @@ mod tests {
     }
 
     #[test]
+    fn grapheme_wrapped_measure_matches_prepare_under_fractional_scale_factor() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content =
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let scale_factor = 1.5_f32;
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(13.0),
+            ..Default::default()
+        };
+
+        let measured = text.measure(content, &style, constraints);
+        let (_blob_id, prepared) = text.prepare(content, &style, constraints);
+
+        let eps = 0.01_f32;
+        assert!(
+            (measured.size.width.0 - prepared.size.width.0).abs() <= eps,
+            "expected measure width to match prepare (scale={scale_factor}), got measured={:?} prepared={:?}",
+            measured,
+            prepared
+        );
+        assert!(
+            (measured.size.height.0 - prepared.size.height.0).abs() <= eps,
+            "expected measure height to match prepare (scale={scale_factor}), got measured={:?} prepared={:?}",
+            measured,
+            prepared
+        );
+        assert!(
+            (measured.baseline.0 - prepared.baseline.0).abs() <= eps,
+            "expected measure baseline to match prepare (scale={scale_factor}), got measured={:?} prepared={:?}",
+            measured,
+            prepared
+        );
+    }
+
+    #[test]
     fn decorations_are_pixel_snapped_under_non_integer_scale_factor() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
