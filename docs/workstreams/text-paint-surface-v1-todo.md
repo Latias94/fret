@@ -33,6 +33,8 @@ renderer conformance tests for correctness-sensitive semantics.
 
 ## M2 — Conformance (required)
 
+- [x] TPS-test-190 Lock a deterministic font source for conformance gates (no system fonts).
+  - Evidence: `crates/fret-render-wgpu/tests/text_font_source_determinism.rs`
 - [ ] TPS-test-200 Add GPU readback conformance for text paint:
   - linear gradient has expected left/right coverage on glyph shapes
   - stability across scale factors
@@ -42,4 +44,3 @@ renderer conformance tests for correctness-sensitive semantics.
 
 - [ ] TPS-adopt-300 Wire one real consumer to use non-solid text paint:
   - pick a small demo surface (ui-gallery / editor diagnostics) to validate ergonomics.
-
