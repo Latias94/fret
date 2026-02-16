@@ -7,7 +7,7 @@ use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollAxis,
-    ScrollProps, SemanticsProps, StackProps, WheelRegionProps,
+    ScrollProps, SemanticsProps, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -117,20 +117,16 @@ where
     C: FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
-    cx.flex(
-        FlexProps {
+    cx.container(
+        ContainerProps {
             layout: {
                 let mut layout = LayoutStyle::default();
+                layout.position = PositionStyle::Relative;
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
                 layout
             },
-            direction: fret_core::Axis::Vertical,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
-            wrap: false,
+            ..Default::default()
         },
         move |cx| {
             let handle = scroll_handle.clone();
@@ -146,9 +142,9 @@ where
 
             let max = handle.max_offset();
             let offset = handle.offset();
-            // Guard against fractional max offsets (layout rounding) causing scroll affordances to
-            // appear when content visually fits.
-            let scroll_epsilon = Px(0.5);
+            // Guard against fractional offsets (layout rounding) causing scroll affordances to
+            // flicker when content visually fits.
+            let scroll_epsilon = Px(1.0);
             let has_scroll = predicted_has_scroll || max.y.0 > scroll_epsilon.0;
             let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
             // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
@@ -164,13 +160,16 @@ where
                 );
             }
 
-            set_scroll_up_visible(show_up);
+            // Base UI scroll arrows are absolutely positioned and do not affect popup flow layout.
+            // Keep item-aligned state from assuming that scroll-arrow visibility shifts the viewport.
+            set_scroll_up_visible(false);
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
                                  test_id: &'static str,
                                  dir: f32,
-                                 visible: bool| {
+                                 visible: bool,
+                                 inset: InsetStyle| {
                 if !visible {
                     return None;
                 }
@@ -182,7 +181,7 @@ where
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
-                            layout.size.height = Length::Px(scroll_button_h);
+                            layout.size.height = Length::Fill;
                             layout
                         },
                         enabled: true,
@@ -280,12 +279,22 @@ where
                 // In the DOM, wheel events scroll the nearest scrollable ancestor even if the
                 // pointer is over non-scrollable affordances (like Radix's scroll buttons).
                 //
-                // Our buttons are siblings of the scroll viewport, so wrap them in a wheel region
-                // bound to the same scroll handle to avoid "stuck" scrolling when the pointer lands
-                // over the button strip. `WheelRegion` also ensures scroll-handle bindings get the
-                // correct invalidation (hit-test + paint) under view-cache reuse.
+                // In our renderer the arrows are layered over the scroll viewport; wrap them in a
+                // wheel region bound to the same scroll handle so wheel scrolling continues to work
+                // even when the pointer is over the arrow strip.
                 let pressable = cx.wheel_region(
                     WheelRegionProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Px(scroll_button_h);
+                            layout.position = PositionStyle::Absolute;
+                            layout.inset.left = inset.left;
+                            layout.inset.right = inset.right;
+                            layout.inset.top = inset.top;
+                            layout.inset.bottom = inset.bottom;
+                            layout
+                        },
                         axis: ScrollAxis::Y,
                         scroll_handle: handle_for_wheel.clone(),
                         ..Default::default()
@@ -296,168 +305,156 @@ where
                 Some(pressable)
             };
 
-            let handle_for_stack = handle.clone();
-            let stack = cx.stack_props(
-                StackProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(0.0));
-                        layout.flex.grow = 1.0;
-                        layout.flex.shrink = 1.0;
-                        layout.flex.basis = Length::Px(Px(0.0));
-                        layout
-                    },
+            active_element_id_out.set(None);
+            let active_element_ref = active_element_id_out;
+
+            let mut scroll_layout = LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = Overflow::Clip;
+
+            let handle_for_scroll = handle.clone();
+            let scroll = cx.scroll(
+                ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(handle_for_scroll.clone()),
+                    ..Default::default()
                 },
                 move |cx| {
-                    active_element_id_out.set(None);
-                    let active_element_ref = active_element_id_out;
-
-                    let mut scroll_layout = LayoutStyle::default();
-                    scroll_layout.size.width = Length::Fill;
-                    scroll_layout.size.height = Length::Fill;
-                    scroll_layout.overflow = Overflow::Clip;
-
-                    let scroll = cx.scroll(
-                        ScrollProps {
-                            layout: scroll_layout,
-                            scroll_handle: Some(handle_for_stack.clone()),
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout
+                            },
+                            padding: Edges::all(Px(0.0)),
                             ..Default::default()
                         },
-                        move |cx| {
-                            vec![cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout
-                                    },
-                                    padding: Edges::all(Px(0.0)),
-                                    ..Default::default()
-                                },
-                                move |cx| {
-                                    content(cx, active_element_ref)
-                                        .into_iter()
-                                        .collect::<Vec<_>>()
-                                },
-                            )]
-                        },
-                    );
-                    viewport_id_out.set(Some(scroll.id));
-
-                    let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
-                    let scroll = if let Some(active_element) = active_element_ref.get() {
-                        scroll.attach_semantics(
-                            fret_ui::element::SemanticsDecoration::default()
-                                .active_descendant_element(active_element.0),
-                        )
-                    } else {
-                        scroll
-                    };
-
-                    if let Some(active_element) = active_element_ref.get() {
-                        let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
-                            let (Some(viewport), Some(child)) = (
-                                cx.last_bounds_for_element(scroll.id),
-                                cx.last_bounds_for_element(active_element),
-                            ) else {
-                                return false;
-                            };
-
-                            // Compute positions in scroll-content coordinates (stable even when we don't
-                            // have paint-space bounds for scrolled children).
-                            let child_top = Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
-                            let child_h = Px(child.size.height.0.max(0.0));
-                            let child_bottom = Px(child_top.0 + child_h.0);
-                            let viewport_h = Px(viewport.size.height.0.max(0.0));
-                            if viewport_h.0 <= 0.01 {
-                                return false;
-                            }
-
-                            let prev = handle_for_stack.offset();
-                            let view_top = prev.y;
-                            let view_bottom = Px(prev.y.0 + viewport_h.0);
-
-                            // If the active row is taller than the viewport, we can't make it fully visible;
-                            // match "nearest" semantics by aligning the top edge.
-                            let target_y = if child_h.0 >= viewport_h.0 - 0.01 {
-                                child_top
-                            } else if child_top.0 < view_top.0 {
-                                child_top
-                            } else if child_bottom.0 > view_bottom.0 {
-                                Px(child_bottom.0 - viewport_h.0)
-                            } else {
-                                view_top
-                            };
-
-                            if (target_y.0 - prev.y.0).abs() <= 0.01 {
-                                return false;
-                            }
-                            handle_for_stack.set_offset(Point::new(prev.x, target_y));
-                            true
-                        };
-
-                        if has_scroll && !did_initial_scroll && should_align_active_to_top() {
-                            let did = active_desc::scroll_active_element_align_top_y(
-                                cx,
-                                &handle_for_stack,
-                                scroll.id,
-                                active_element,
-                            );
-                            if did {
-                                on_aligned_active_to_top();
-                            } else if let (Some(viewport), Some(child)) = (
-                                cx.last_bounds_for_element(scroll.id),
-                                cx.last_bounds_for_element(active_element),
-                            ) {
-                                let delta = (child.origin.y.0 - viewport.origin.y.0).abs();
-                                if delta <= 0.01 {
-                                    on_aligned_active_to_top();
-                                }
-                            }
-
-                        } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
-                            let _ = scroll_active_nearest(cx);
-                            on_focused_selected_item();
-                        } else {
-                            // Match Radix Select: only keep the active option in view when the
-                            // active row changes via keyboard/typeahead. Do not continuously
-                            // "chase" the active row during wheel scrolling.
-                            if consume_pending_active_scroll_into_view() {
-                                let _ = scroll_active_nearest(cx);
-                            }
-                        }
-                    }
-
-                    vec![scroll]
+                        move |cx| content(cx, active_element_ref).into_iter().collect::<Vec<_>>(),
+                    )]
                 },
             );
+            viewport_id_out.set(Some(scroll.id));
 
+            let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
+            let scroll = if let Some(active_element) = active_element_ref.get() {
+                scroll.attach_semantics(
+                    fret_ui::element::SemanticsDecoration::default()
+                        .active_descendant_element(active_element.0),
+                )
+            } else {
+                scroll
+            };
+
+            if let Some(active_element) = active_element_ref.get() {
+                let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
+                    let (Some(viewport), Some(child)) = (
+                        cx.last_bounds_for_element(scroll.id),
+                        cx.last_bounds_for_element(active_element),
+                    ) else {
+                        return false;
+                    };
+
+                    // Compute positions in scroll-content coordinates (stable even when we don't have
+                    // paint-space bounds for scrolled children).
+                    let child_top = Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
+                    let child_h = Px(child.size.height.0.max(0.0));
+                    let child_bottom = Px(child_top.0 + child_h.0);
+                    let viewport_h = Px(viewport.size.height.0.max(0.0));
+                    if viewport_h.0 <= 0.01 {
+                        return false;
+                    }
+
+                    let prev = handle_for_scroll.offset();
+                    let view_top = prev.y;
+                    let view_bottom = Px(prev.y.0 + viewport_h.0);
+
+                    // If the active row is taller than the viewport, we can't make it fully visible;
+                    // match "nearest" semantics by aligning the top edge.
+                    let target_y = if child_h.0 >= viewport_h.0 - 0.01 {
+                        child_top
+                    } else if child_top.0 < view_top.0 {
+                        child_top
+                    } else if child_bottom.0 > view_bottom.0 {
+                        Px(child_bottom.0 - viewport_h.0)
+                    } else {
+                        view_top
+                    };
+
+                    if (target_y.0 - prev.y.0).abs() <= 0.01 {
+                        return false;
+                    }
+                    handle_for_scroll.set_offset(Point::new(prev.x, target_y));
+                    true
+                };
+
+                if has_scroll && !did_initial_scroll && should_align_active_to_top() {
+                    let did = active_desc::scroll_active_element_align_top_y(
+                        cx,
+                        &handle_for_scroll,
+                        scroll.id,
+                        active_element,
+                    );
+                    if did {
+                        on_aligned_active_to_top();
+                    } else if let (Some(viewport), Some(child)) = (
+                        cx.last_bounds_for_element(scroll.id),
+                        cx.last_bounds_for_element(active_element),
+                    ) {
+                        let delta = (child.origin.y.0 - viewport.origin.y.0).abs();
+                        if delta <= 0.01 {
+                            on_aligned_active_to_top();
+                        }
+                    }
+                } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
+                    let _ = scroll_active_nearest(cx);
+                    on_focused_selected_item();
+                } else {
+                    // Match Radix Select: only keep the active option in view when the active row
+                    // changes via keyboard/typeahead. Do not continuously "chase" the active row
+                    // during wheel scrolling.
+                    if consume_pending_active_scroll_into_view() {
+                        let _ = scroll_active_nearest(cx);
+                    }
+                }
+            }
+
+            let mut out = Vec::with_capacity(3);
+            out.push(scroll);
             if has_scroll {
-                let mut out = Vec::with_capacity(3);
                 if let Some(btn) = scroll_button(
                     cx,
                     ids::ui::CHEVRON_UP,
                     "select-scroll-up-button",
                     -1.0,
                     show_up,
+                    InsetStyle {
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)),
+                        bottom: None,
+                    },
                 ) {
                     out.push(btn);
                 }
-                out.push(stack);
                 if let Some(btn) = scroll_button(
                     cx,
                     ids::ui::CHEVRON_DOWN,
                     "select-scroll-down-button",
                     1.0,
                     show_down,
+                    InsetStyle {
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        top: None,
+                        bottom: Some(Px(0.0)),
+                    },
                 ) {
                     out.push(btn);
                 }
-                out
-            } else {
-                vec![stack]
             }
+            out
         },
     )
 }
@@ -1165,6 +1162,10 @@ fn select_impl<H: UiHost>(
         if matches!(trigger_layout.size.width, Length::Auto) {
             trigger_layout.flex.align_self = Some(CrossAlign::Start);
         }
+        // In narrow containers (e.g. dialog headers), allow the trigger to shrink so surrounding
+        // text does not get forced into extreme wrapping.
+        trigger_layout.size.min_width = Some(Px(0.0));
+        trigger_layout.flex.shrink = 1.0;
 
         let mut border = resolved.border_color;
         let mut border_focus = resolved.border_color_focused;
@@ -7091,6 +7092,124 @@ mod tests {
         assert!(
             up_is_hit_testable,
             "expected scroll up to become hit-testable after wheel scrolling down; bounds={up_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn select_scroll_viewport_height_stable_when_scroll_buttons_toggle() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..80)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node");
+        let viewport_id = viewport.id;
+        let viewport_bounds = ui
+            .debug_node_bounds(viewport_id)
+            .expect("select viewport bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(
+                    Px(viewport_bounds.origin.x.0 + viewport_bounds.size.width.0 * 0.5),
+                    Px(viewport_bounds.origin.y.0 + viewport_bounds.size.height.0 * 0.5),
+                ),
+                delta: fret_core::Point::new(Px(0.0), Px(-120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport_after = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node after scroll");
+        let viewport_after_bounds = ui
+            .debug_node_bounds(viewport_after.id)
+            .expect("select viewport bounds after scroll");
+
+        // After scrolling, the scroll-up affordance may appear. Ensure it does not change the
+        // viewport's layout height (prevents hover/layout jumps).
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-up-button")),
+            "expected scroll-up button to become visible after wheel scrolling"
+        );
+        let delta_h = (viewport_after_bounds.size.height.0 - viewport_bounds.size.height.0).abs();
+        assert!(
+            delta_h <= 0.01,
+            "expected viewport height to remain stable when scroll buttons toggle (delta_h={delta_h})"
         );
     }
 
