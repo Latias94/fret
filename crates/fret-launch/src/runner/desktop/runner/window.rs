@@ -6,6 +6,8 @@ use fret_core::{Point, Scene};
 use fret_render::SurfaceState;
 #[cfg(target_os = "windows")]
 use std::collections::HashMap;
+#[cfg(target_os = "macos")]
+use std::collections::HashMap;
 use winit::{
     dpi::{PhysicalPosition, Position},
     window::Window,
@@ -292,6 +294,112 @@ pub(super) fn outer_pos_for_cursor_grab(
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
+
+    #[cfg(target_os = "macos")]
+    fn ns_window_number_for_window(window: &dyn Window) -> Option<i32> {
+        use cocoa::base::id;
+        use objc::{msg_send, sel, sel_impl};
+        use winit::raw_window_handle::HasWindowHandle as _;
+
+        let ns_window: id = match window.window_handle() {
+            Ok(handle) => match handle.as_raw() {
+                winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    if ns_view.is_null() {
+                        std::ptr::null_mut()
+                    } else {
+                        unsafe { msg_send![ns_view, window] }
+                    }
+                }
+                _ => std::ptr::null_mut(),
+            },
+            Err(_) => std::ptr::null_mut(),
+        };
+        if ns_window.is_null() {
+            return None;
+        }
+
+        let number: i32 = unsafe { msg_send![ns_window, windowNumber] };
+        Some(number)
+    }
+
+    #[cfg(target_os = "macos")]
+    fn ordered_ns_window_numbers_front_to_back() -> Vec<i32> {
+        use cocoa::base::id;
+        use objc::runtime::Class;
+        use objc::{msg_send, sel, sel_impl};
+
+        unsafe {
+            let Some(class) = Class::get("NSApplication") else {
+                return Vec::new();
+            };
+            let app: id = msg_send![class, sharedApplication];
+            if app.is_null() {
+                return Vec::new();
+            }
+            let ordered: id = msg_send![app, orderedWindows];
+            if ordered.is_null() {
+                return Vec::new();
+            }
+
+            let count: usize = msg_send![ordered, count];
+            let mut out: Vec<i32> = Vec::with_capacity(count);
+            for idx in 0..count {
+                let w: id = msg_send![ordered, objectAtIndex: idx];
+                if w.is_null() {
+                    continue;
+                }
+                let number: i32 = msg_send![w, windowNumber];
+                out.push(number);
+            }
+            out
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn window_under_cursor_macos(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> Option<fret_core::AppWindowId> {
+        let mut number_to_window: HashMap<i32, fret_core::AppWindowId> = HashMap::new();
+        for (window, state) in self.windows.iter() {
+            let Some(number) = Self::ns_window_number_for_window(state.window.as_ref()) else {
+                continue;
+            };
+            number_to_window.insert(number, window);
+        }
+
+        if number_to_window.is_empty() {
+            return None;
+        }
+
+        let prefer_not_number = prefer_not
+            .and_then(|w| self.windows.get(w))
+            .and_then(|state| Self::ns_window_number_for_window(state.window.as_ref()));
+
+        let ordered = Self::ordered_ns_window_numbers_front_to_back();
+        if ordered.is_empty() {
+            return None;
+        }
+
+        let mut fallback: Option<fret_core::AppWindowId> = None;
+        for number in ordered {
+            let Some(&window) = number_to_window.get(&number) else {
+                continue;
+            };
+            if !self.screen_pos_in_window(window, screen_pos) {
+                continue;
+            }
+            if prefer_not_number.is_some_and(|p| p == number) {
+                fallback = Some(window);
+                continue;
+            }
+            return Some(window);
+        }
+
+        fallback
+    }
 
     #[cfg(target_os = "windows")]
     fn hwnd_for_window(window: &dyn Window) -> Option<isize> {
@@ -618,6 +726,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
+        #[cfg(target_os = "macos")]
+        if let Some(window) = self.window_under_cursor_macos(screen_pos, prefer_not) {
+            return Some(window);
+        }
+
         #[cfg(target_os = "windows")]
         if let Some(window) = self.window_under_cursor_win32(screen_pos, prefer_not) {
             return Some(window);
