@@ -196,6 +196,7 @@ fn text_input_middle_click_pastes_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
         linux_primary_selection: true,
+        ..Default::default()
     });
     let mut caps = fret_runtime::PlatformCapabilities::default();
     caps.clipboard.text = true;
