@@ -23,6 +23,7 @@
 //! ```
 
 pub mod capabilities;
+pub mod clipboard_diagnostics;
 pub mod command;
 pub mod commands;
 pub mod docking_settings;
@@ -67,6 +68,7 @@ pub use capabilities::{
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
     WindowHoverDetectionQuality, WindowSetOuterPositionQuality, WindowZLevelQuality,
 };
+pub use clipboard_diagnostics::{ClipboardReadDiagnostics, WindowClipboardDiagnosticsStore};
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
 pub use docking_settings::{

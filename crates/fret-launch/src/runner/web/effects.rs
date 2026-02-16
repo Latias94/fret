@@ -395,7 +395,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     if self.diag_clipboard_force_unavailable {
                         self.pending_events.push(Event::ClipboardTextUnavailable {
                             token,
-                            message: None,
+                            message: Some("diagnostics forced clipboard unavailable".to_string()),
                         });
                         window.request_redraw();
                         continue;
@@ -404,7 +404,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     let Some(window_handle) = web_sys::window() else {
                         self.pending_events.push(Event::ClipboardTextUnavailable {
                             token,
-                            message: None,
+                            message: Some("window is unavailable for clipboard read".to_string()),
                         });
                         window.request_redraw();
                         continue;
@@ -416,7 +416,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             Err(_) => {
                                 self.pending_events.push(Event::ClipboardTextUnavailable {
                                     token,
-                                    message: None,
+                                    message: Some(
+                                        "navigator is unavailable for clipboard read".to_string(),
+                                    ),
                                 });
                                 window.request_redraw();
                                 continue;
@@ -428,7 +430,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Err(_) => {
                             self.pending_events.push(Event::ClipboardTextUnavailable {
                                 token,
-                                message: None,
+                                message: Some("navigator.clipboard is unavailable".to_string()),
                             });
                             window.request_redraw();
                             continue;
@@ -442,7 +444,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         None => {
                             self.pending_events.push(Event::ClipboardTextUnavailable {
                                 token,
-                                message: None,
+                                message: Some(
+                                    "navigator.clipboard.readText is unavailable".to_string(),
+                                ),
                             });
                             window.request_redraw();
                             continue;
@@ -458,7 +462,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             Err(_) => {
                                 self.pending_events.push(Event::ClipboardTextUnavailable {
                                     token,
-                                    message: None,
+                                    message: Some(
+                                        "navigator.clipboard.readText did not return a Promise"
+                                            .to_string(),
+                                    ),
                                 });
                                 window.request_redraw();
                                 continue;
@@ -467,7 +474,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Err(_) => {
                             self.pending_events.push(Event::ClipboardTextUnavailable {
                                 token,
-                                message: None,
+                                message: Some(
+                                    "navigator.clipboard.readText threw synchronously".to_string(),
+                                ),
                             });
                             window.request_redraw();
                             continue;
@@ -482,9 +491,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 let text = v.as_string().unwrap_or_default();
                                 Event::ClipboardText { token, text }
                             }
-                            Err(_) => Event::ClipboardTextUnavailable {
+                            Err(err) => Event::ClipboardTextUnavailable {
                                 token,
-                                message: None,
+                                message: Some(js_error_string(&err)),
                             },
                         };
                         pending.borrow_mut().push(event);
