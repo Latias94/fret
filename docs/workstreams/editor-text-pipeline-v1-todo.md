@@ -123,6 +123,10 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`pointer_down_cancels_preedit_replacement_and_snaps_to_replace_start`)
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`triple_click_selects_logical_line_on_inlay_only_row_under_soft_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`triple_click_cancels_preedit_replacement_and_selects_logical_line`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`home_end_move_within_wrapped_display_rows`)
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
