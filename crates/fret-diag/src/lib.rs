@@ -7017,7 +7017,9 @@ See: `docs/tracy.md`.\n";
                 || devtools_token.is_some()
                 || devtools_session_id.is_some();
             if use_devtools_ws && (launch.is_some() || reuse_launch) {
-                return Err("--launch/--reuse-launch is not supported with --devtools-ws-url".to_string());
+                return Err(
+                    "--launch/--reuse-launch is not supported with --devtools-ws-url".to_string(),
+                );
             }
             let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
                 let ws_url = devtools_ws_url.clone().ok_or_else(|| {
@@ -7419,11 +7421,7 @@ See: `docs/tracy.md`.\n";
                         bundle_path.map(|p| {
                             let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
                             let stable = run_dir.join("bundle.json");
-                            if stable.is_file() {
-                                stable
-                            } else {
-                                p
-                            }
+                            if stable.is_file() { stable } else { p }
                         })
                     } else {
                         let mut result = run_script_and_wait(
@@ -8291,11 +8289,7 @@ See: `docs/tracy.md`.\n";
                         bundle_path.map(|p| {
                             let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
                             let stable = run_dir.join("bundle.json");
-                            if stable.is_file() {
-                                stable
-                            } else {
-                                p
-                            }
+                            if stable.is_file() { stable } else { p }
                         })
                     } else {
                         let mut result = run_script_and_wait(
@@ -13355,7 +13349,9 @@ fn devtools_select_session_id(
         return Err(if known.is_empty() {
             "no DevTools sessions available (is the app connected?)".to_string()
         } else {
-            format!("no DevTools app sessions available (is the app connected?) (sessions: {known})")
+            format!(
+                "no DevTools app sessions available (is the app connected?) (sessions: {known})"
+            )
         });
     } else {
         non_tooling
