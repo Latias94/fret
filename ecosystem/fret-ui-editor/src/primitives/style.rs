@@ -18,6 +18,7 @@ pub(crate) struct EditorStyle<'a> {
     theme: &'a Theme,
     pub(crate) density: EditorDensity,
     pub(crate) vec_auto_stack_below: Px,
+    pub(crate) vec_axis_min_width: Px,
     pub(crate) property_auto_stack_below: Px,
 }
 
@@ -28,6 +29,9 @@ impl<'a> EditorStyle<'a> {
         let vec_auto_stack_below = theme
             .metric_by_key(EditorTokenKeys::VEC_AUTO_STACK_BELOW)
             .unwrap_or(Px(420.0));
+        let vec_axis_min_width = theme
+            .metric_by_key(EditorTokenKeys::VEC_AXIS_MIN_WIDTH)
+            .unwrap_or(Px(140.0));
         let property_auto_stack_below = theme
             .metric_by_key(EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW)
             .unwrap_or(Px(520.0));
@@ -36,6 +40,7 @@ impl<'a> EditorStyle<'a> {
             theme,
             density,
             vec_auto_stack_below,
+            vec_axis_min_width,
             property_auto_stack_below,
         }
     }

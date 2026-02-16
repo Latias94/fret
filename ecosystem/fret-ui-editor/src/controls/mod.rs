@@ -14,7 +14,7 @@ pub mod text_field;
 pub mod transform_edit;
 pub mod vec_edit;
 
-pub use axis_drag_value::{AxisDragValue, AxisDragValueOptions};
+pub use axis_drag_value::{AxisDragValue, AxisDragValueOptions, AxisDragValueResetAction};
 pub use checkbox::{Checkbox, CheckboxOptions};
 pub use color_edit::{ColorEdit, ColorEditOptions};
 pub use drag_value::DragValue;

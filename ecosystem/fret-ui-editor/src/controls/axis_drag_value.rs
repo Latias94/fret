@@ -10,7 +10,8 @@ use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Color, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{
-    ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost, UiFocusActionHost,
+    ActionCx, OnActivate, PointerDownCx, PressablePointerDownResult, UiActionHost,
+    UiFocusActionHost,
 };
 use fret_ui::element::{
     AnyElement, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
@@ -23,9 +24,9 @@ use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericVal
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_axis_segment, editor_input_group_divider,
-    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
-    editor_input_group_row,
+    EditorInputGroupFrameOverrides, editor_axis_segment, editor_icon_button_segment,
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
+    editor_input_group_inset, editor_input_group_row,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::EditorFrameState;
@@ -35,6 +36,14 @@ use crate::primitives::{DragValueCore, DragValueCoreOptions};
 enum AxisDragValueMode {
     Scrub,
     Typing,
+}
+
+#[derive(Clone)]
+pub struct AxisDragValueResetAction {
+    pub icon: fret_icons::IconId,
+    pub a11y_label: Arc<str>,
+    pub test_id: Option<Arc<str>>,
+    pub on_activate: OnActivate,
 }
 
 #[derive(Debug)]
@@ -56,7 +65,7 @@ impl Default for AxisDragValueState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AxisDragValueOptions {
     pub layout: LayoutStyle,
     /// Explicit identity source for internal state (scrub/typing focus restore, draft string).
@@ -64,6 +73,7 @@ pub struct AxisDragValueOptions {
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
     pub id_source: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
+    pub reset: Option<AxisDragValueResetAction>,
     pub enabled: bool,
     pub focusable: bool,
     pub size: Size,
@@ -87,6 +97,7 @@ impl Default for AxisDragValueOptions {
             },
             id_source: None,
             test_id: None,
+            reset: None,
             enabled: true,
             focusable: true,
             size: Size::Small,
@@ -206,6 +217,8 @@ where
 
         let axis_label = self.axis_label.clone();
         let axis_tint = self.axis_tint;
+        let enabled_for_paint = self.options.enabled;
+        let reset_action = self.options.reset.clone();
         let state_for_scrub_record = state.clone();
         let scrub = DragValueCore::new(value, on_change_live)
             .a11y_label(value_text.clone())
@@ -290,7 +303,22 @@ where
                         let value =
                             editor_input_group_inset(cx, frame_chrome.padding, value_text_el);
 
-                        vec![editor_input_group_row(cx, Px(0.0), vec![axis, sep, value])]
+                        let mut segments = vec![axis, sep, value];
+                        if let Some(reset) = reset_action.clone() {
+                            segments.push(editor_input_group_divider(cx, divider));
+                            segments.push(editor_icon_button_segment(
+                                cx,
+                                density,
+                                enabled_for_paint,
+                                reset.a11y_label.clone(),
+                                reset.icon,
+                                Some(Px(12.0)),
+                                reset.test_id.clone(),
+                                reset.on_activate.clone(),
+                            ));
+                        }
+
+                        vec![editor_input_group_row(cx, Px(0.0), segments)]
                     },
                 )]
             });
@@ -446,6 +474,8 @@ where
             let theme = Theme::global(&*cx.app);
             let divider = frame_chrome.border;
             let error_border = theme.color_token("destructive");
+            let reset_action = self.options.reset.clone();
+            let enabled_for_paint = self.options.enabled;
 
             editor_input_group_frame_with_overrides(
                 cx,
@@ -476,11 +506,22 @@ where
                     // Wrap the text input so the group padding applies, without adding its own padding.
                     let input_wrap = editor_input_group_inset(cx, frame_chrome.padding, input);
 
-                    vec![editor_input_group_row(
-                        cx,
-                        Px(0.0),
-                        vec![axis, sep, input_wrap],
-                    )]
+                    let mut segments = vec![axis, sep, input_wrap];
+                    if let Some(reset) = reset_action {
+                        segments.push(editor_input_group_divider(cx, divider));
+                        segments.push(editor_icon_button_segment(
+                            cx,
+                            density,
+                            enabled_for_paint,
+                            reset.a11y_label,
+                            reset.icon,
+                            Some(Px(12.0)),
+                            reset.test_id,
+                            reset.on_activate,
+                        ));
+                    }
+
+                    vec![editor_input_group_row(cx, Px(0.0), segments)]
                 },
             )
         };

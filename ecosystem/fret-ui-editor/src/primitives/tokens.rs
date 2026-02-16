@@ -36,6 +36,7 @@ impl EditorTokenKeys {
     pub const AXIS_W_COLOR: &'static str = "editor.axis.w_color";
 
     pub const VEC_AUTO_STACK_BELOW: &'static str = "editor.vec.auto_stack_below";
+    pub const VEC_AXIS_MIN_WIDTH: &'static str = "editor.vec.axis_min_width";
 
     pub const COLOR_SWATCH_SIZE: &'static str = "editor.color.swatch_size";
     pub const COLOR_POPUP_PADDING: &'static str = "editor.color.popup_padding";

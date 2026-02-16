@@ -94,7 +94,7 @@ This avoids long-term dependency cycles and keeps the editor surface reusable ou
 
 Guidelines:
 
-- Components should prefer semantic IDs (`ui.chevron.down`, `ui.close`, …) rather than vendor IDs.
+- Components should prefer semantic IDs (`ui.chevron.down`, `ui.close`, `ui.reset`, …) rather than vendor IDs.
 - Apps should install an icon pack (e.g. `ecosystem/fret-icons-lucide`) or provide their own mapping.
 - The editor-proof demo installs the lucide pack to avoid “missing icon” placeholders.
 
@@ -216,6 +216,7 @@ Notes:
 | `editor.axis.z_color` | color | Axis label color (Z) | blue-ish |
 | `editor.axis.w_color` | color | Axis label color (W) | muted |
 | `editor.vec.auto_stack_below` | metric | Stack vec axes vertically below this width | tuned per inspector width |
+| `editor.vec.axis_min_width` | metric | Minimum per-axis group width (row layout) | tuned to keep vec inputs readable |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
 | `editor.slider.track_height` | metric | Slider track thickness | small (3–6px) |
@@ -239,10 +240,16 @@ They are tracked here to keep the workstream grounded in “what feels broken”
   Owner: mechanisms (`crates/fret-ui` / renderer invalidation), with local repros in `ecosystem/fret-ui-editor`.
 - **Dismiss policy confidence**: outside-press dismissal should be reliable for mouse and touch; trigger press should
   close menu overlays without requiring “disable outside pointer events” occlusion policies.
-  EnumSelect now uses dismissible popover policy; see `ecosystem/fret-ui-editor/src/controls/enum_select.rs`.
+  EnumSelect now uses dismissible popover policy, and its anchored panel wrapper is auto-sized so the listbox does
+  not claim the full window for hit testing (keeps outside press dismissal correct even when the popper flips).
+  See `ecosystem/fret-ui-editor/src/controls/enum_select.rs` and `tools/diag-scripts/imui-editor-proof-enum-select-dismiss-and-close.json`.
   Owner: `fret-ui-kit` overlay substrates + editor policies.
+- **Layout safety hardening**: layout engine `set_children` must never panic due to duplicate children edges (taffy
+  assumes consistent parent/child sets). We currently dedupe and warn to keep demos runnable while root-cause
+  identity issues are fixed in policy layers; see `crates/fret-ui/src/layout/engine.rs`.
 - **State keying discipline**: stateful controls must key their internal state per instance (stable key preference:
-  explicit `id_source` then `(callsite, model.id())`), otherwise multiple widgets can fight over drag/typing state.
+  explicit `id_source` then `(callsite, model.id())`; never callsite-only for loop-built widgets), otherwise multiple
+  widgets can fight over drag/typing state.
   `test_id` is for diagnostics/automation and must not be treated as widget identity.
   This applies to demo harness state helpers too: any `with_state`-backed model helper must be `named/keyed`
   (see `apps/fret-examples/src/imui_editor_proof_demo.rs`, `named_demo_state`).

@@ -1907,7 +1907,6 @@ impl UiDiagnosticsService {
                                         remaining_frames: timeout_frames,
                                         request_id,
                                         window_ffi,
-                                        last_result_trigger_stamp: None,
                                     });
                                 } else {
                                     force_dump_label = Some(format!(
@@ -1937,7 +1936,6 @@ impl UiDiagnosticsService {
                             let trigger_stamp =
                                 read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
                             let completed = trigger_stamp.is_some()
-                                && trigger_stamp != state.last_result_trigger_stamp
                                 && screenshot_request_completed(
                                     &self.cfg.screenshot_result_path,
                                     &state.request_id,
@@ -1962,7 +1960,6 @@ impl UiDiagnosticsService {
                                     remaining_frames: state.remaining_frames.saturating_sub(1),
                                     request_id: state.request_id,
                                     window_ffi: state.window_ffi,
-                                    last_result_trigger_stamp: trigger_stamp,
                                 });
                                 output.request_redraw = true;
                             }
@@ -7069,7 +7066,7 @@ impl UiDiagnosticsService {
         &mut self,
         label: Option<&str>,
         dump_max_snapshots_override: Option<usize>,
-        request_id: Option<u64>,
+        _request_id: Option<u64>,
     ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -9258,7 +9255,6 @@ struct ScreenshotWaitState {
     remaining_frames: u32,
     request_id: String,
     window_ffi: u64,
-    last_result_trigger_stamp: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

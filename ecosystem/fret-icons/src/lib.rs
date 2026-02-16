@@ -63,6 +63,7 @@ pub mod ids {
         pub const PLUS: IconId = IconId::new_static("ui.plus");
         pub const PLAY: IconId = IconId::new_static("ui.play");
         pub const SEARCH: IconId = IconId::new_static("ui.search");
+        pub const RESET: IconId = IconId::new_static("ui.reset");
         pub const SETTINGS: IconId = IconId::new_static("ui.settings");
         pub const SLASH: IconId = IconId::new_static("ui.slash");
         pub const STATUS_FAILED: IconId = IconId::new_static("ui.status.failed");
