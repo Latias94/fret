@@ -144,7 +144,7 @@ portable crates):
 
 Option A (recommended): keep it inside `crates/fret-runner-winit`
 
-- Add a new module (e.g. `accessibility_accesskit_xplat.rs`).
+- Add a new module (e.g. `accessibility_accesskit_platform.rs`).
 - Keep `WinitAccessibility` as the runner-facing facade used by `fret-launch`.
 
 Option B: introduce a dedicated crate (e.g. `crates/fret-a11y-accesskit-xplat`)
@@ -229,4 +229,3 @@ Minimum gates for landing the xplat adapter:
   - runner call sites: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
   - manual checklist: `docs/a11y-acceptance-checklist.md`
   - reference inspiration: `repo-ref/blitz/packages/accesskit_xplat`
-

@@ -1,6 +1,6 @@
 ---
 name: fret-external-app-mode
-description: "Use Fret skills from an external app repo (outside the Fret mono-repo): what works without `tools/` and `fretboard`, how to keep anchors clickable, and how to run mono-repo tooling when needed."
+description: "This skill should be used when the user asks to \"use Fret from an external app repo\", \"run Fret mono-repo tooling from another project\", or \"keep evidence anchors clickable\". Provides a workflow for applying Fret skills outside the mono-repo, including what works without `tools/`/`fretboard` and how to bridge when needed."
 ---
 
 # Fret external app mode (framework users)

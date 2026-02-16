@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{AppWindowId, NodeId, Rect};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -163,6 +165,31 @@ pub enum SemanticsValidationErrorKind {
         start: u32,
         end: u32,
     },
+    DuplicateNodeId {
+        id: NodeId,
+    },
+    MissingReferencedNode {
+        field: SemanticsReferenceField,
+        referenced: NodeId,
+    },
+    InvalidCollectionMetadata {
+        pos_in_set: Option<u32>,
+        set_size: Option<u32>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SemanticsReferenceField {
+    Root,
+    BarrierRoot,
+    FocusBarrierRoot,
+    Focus,
+    Captured,
+    Parent,
+    ActiveDescendant,
+    LabelledBy,
+    DescribedBy,
+    Controls,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -184,8 +211,100 @@ impl SemanticsNode {
 
 impl SemanticsSnapshot {
     pub fn validate(&self) -> Result<(), SemanticsValidationError> {
+        let mut ids = HashSet::with_capacity(self.nodes.len());
+        for node in &self.nodes {
+            if !ids.insert(node.id) {
+                return Err(SemanticsValidationError {
+                    node: node.id,
+                    kind: SemanticsValidationErrorKind::DuplicateNodeId { id: node.id },
+                });
+            }
+        }
+
+        let check_ref = |node: NodeId,
+                         field: SemanticsReferenceField,
+                         referenced: NodeId,
+                         ids: &HashSet<NodeId>|
+         -> Result<(), SemanticsValidationError> {
+            if ids.contains(&referenced) {
+                return Ok(());
+            }
+            Err(SemanticsValidationError {
+                node,
+                kind: SemanticsValidationErrorKind::MissingReferencedNode { field, referenced },
+            })
+        };
+
+        for root in &self.roots {
+            check_ref(root.root, SemanticsReferenceField::Root, root.root, &ids)?;
+        }
+        if let Some(barrier_root) = self.barrier_root {
+            check_ref(
+                barrier_root,
+                SemanticsReferenceField::BarrierRoot,
+                barrier_root,
+                &ids,
+            )?;
+        }
+        if let Some(focus_barrier_root) = self.focus_barrier_root {
+            check_ref(
+                focus_barrier_root,
+                SemanticsReferenceField::FocusBarrierRoot,
+                focus_barrier_root,
+                &ids,
+            )?;
+        }
+        if let Some(focus) = self.focus {
+            check_ref(focus, SemanticsReferenceField::Focus, focus, &ids)?;
+        }
+        if let Some(captured) = self.captured {
+            check_ref(captured, SemanticsReferenceField::Captured, captured, &ids)?;
+        }
+
         for node in &self.nodes {
             node.validate()?;
+
+            if node.pos_in_set.is_some() ^ node.set_size.is_some() {
+                return Err(SemanticsValidationError {
+                    node: node.id,
+                    kind: SemanticsValidationErrorKind::InvalidCollectionMetadata {
+                        pos_in_set: node.pos_in_set,
+                        set_size: node.set_size,
+                    },
+                });
+            }
+            if let (Some(pos_in_set), Some(set_size)) = (node.pos_in_set, node.set_size) {
+                if pos_in_set == 0 || set_size == 0 || pos_in_set > set_size {
+                    return Err(SemanticsValidationError {
+                        node: node.id,
+                        kind: SemanticsValidationErrorKind::InvalidCollectionMetadata {
+                            pos_in_set: Some(pos_in_set),
+                            set_size: Some(set_size),
+                        },
+                    });
+                }
+            }
+
+            if let Some(parent) = node.parent {
+                check_ref(node.id, SemanticsReferenceField::Parent, parent, &ids)?;
+            }
+            if let Some(active) = node.active_descendant {
+                check_ref(
+                    node.id,
+                    SemanticsReferenceField::ActiveDescendant,
+                    active,
+                    &ids,
+                )?;
+            }
+            for id in &node.labelled_by {
+                check_ref(node.id, SemanticsReferenceField::LabelledBy, *id, &ids)?;
+            }
+            for id in &node.described_by {
+                check_ref(node.id, SemanticsReferenceField::DescribedBy, *id, &ids)?;
+            }
+            for id in &node.controls {
+                check_ref(node.id, SemanticsReferenceField::Controls, *id, &ids)?;
+            }
         }
         Ok(())
     }
@@ -281,6 +400,24 @@ mod tests {
 
     fn node(id: u64) -> NodeId {
         NodeId::from(KeyData::from_ffi(id))
+    }
+
+    fn snapshot_with_nodes(nodes: Vec<SemanticsNode>) -> SemanticsSnapshot {
+        SemanticsSnapshot {
+            window: AppWindowId::default(),
+            roots: vec![SemanticsRoot {
+                root: nodes.first().expect("at least one node").id,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes,
+        }
     }
 
     #[test]
@@ -404,6 +541,164 @@ mod tests {
             SemanticsValidationErrorKind::InvalidRangeOrder {
                 field: SemanticsValidationField::TextComposition,
                 ..
+            }
+        ));
+    }
+
+    #[test]
+    fn rejects_duplicate_node_ids_in_snapshot() {
+        let n1 = SemanticsNode {
+            id: node(1),
+            parent: None,
+            role: SemanticsRole::Window,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+        };
+        let snap = snapshot_with_nodes(vec![n1.clone(), n1]);
+        let err = snap.validate().expect_err("duplicate node ids should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::DuplicateNodeId { .. }
+        ));
+    }
+
+    #[test]
+    fn rejects_missing_references() {
+        let root = SemanticsNode {
+            id: node(1),
+            parent: None,
+            role: SemanticsRole::Window,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+        };
+        let child = SemanticsNode {
+            id: node(2),
+            parent: Some(node(999)),
+            role: SemanticsRole::Group,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: Some(node(998)),
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: vec![node(997)],
+            described_by: vec![node(996)],
+            controls: vec![node(995)],
+        };
+
+        let snap = snapshot_with_nodes(vec![root, child]);
+        let err = snap.validate().expect_err("missing references should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::MissingReferencedNode { .. }
+        ));
+    }
+
+    #[test]
+    fn rejects_invalid_collection_metadata() {
+        let root = SemanticsNode {
+            id: node(1),
+            parent: None,
+            role: SemanticsRole::Window,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+        };
+
+        let bad_missing_peer = SemanticsNode {
+            id: node(2),
+            parent: Some(node(1)),
+            role: SemanticsRole::ListItem,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: Some(1),
+            set_size: None,
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+        };
+        let snap = snapshot_with_nodes(vec![root.clone(), bad_missing_peer]);
+        let err = snap.validate().expect_err("missing set_size should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::InvalidCollectionMetadata { .. }
+        ));
+
+        let bad_bounds = SemanticsNode {
+            id: node(2),
+            parent: Some(node(1)),
+            role: SemanticsRole::ListItem,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: Some(2),
+            set_size: Some(1),
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+        };
+        let snap = snapshot_with_nodes(vec![root, bad_bounds]);
+        let err = snap
+            .validate()
+            .expect_err("pos_in_set > set_size should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::InvalidCollectionMetadata {
+                pos_in_set: Some(2),
+                set_size: Some(1),
             }
         ));
     }
