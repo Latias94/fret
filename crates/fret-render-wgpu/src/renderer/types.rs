@@ -185,6 +185,14 @@ pub struct RenderPerfSnapshot {
     pub image_uploads: u64,
     pub image_upload_bytes: u64,
 
+    // Imported render targets (best-effort). These counters expose the declared ingestion strategy
+    // for `RenderTargetId` updates applied before the UI render pass.
+    pub render_target_updates_ingest_unknown: u64,
+    pub render_target_updates_ingest_owned: u64,
+    pub render_target_updates_ingest_external_zero_copy: u64,
+    pub render_target_updates_ingest_gpu_copy: u64,
+    pub render_target_updates_ingest_cpu_upload: u64,
+
     // SVG raster cache (best-effort). These are intended to distinguish one-time warmup from
     // steady-state thrash (e.g. budget-driven eviction + repeated re-upload).
     pub svg_raster_budget_bytes: u64,
@@ -237,6 +245,11 @@ pub struct RenderPerfSnapshot {
     pub draw_calls: u64,
     pub quad_draw_calls: u64,
     pub viewport_draw_calls: u64,
+    pub viewport_draw_calls_ingest_unknown: u64,
+    pub viewport_draw_calls_ingest_owned: u64,
+    pub viewport_draw_calls_ingest_external_zero_copy: u64,
+    pub viewport_draw_calls_ingest_gpu_copy: u64,
+    pub viewport_draw_calls_ingest_cpu_upload: u64,
     pub image_draw_calls: u64,
     pub text_draw_calls: u64,
     pub path_draw_calls: u64,
@@ -289,6 +302,12 @@ pub(super) struct RenderPerfStats {
     pub(super) image_uploads: u64,
     pub(super) image_upload_bytes: u64,
 
+    pub(super) render_target_updates_ingest_unknown: u64,
+    pub(super) render_target_updates_ingest_owned: u64,
+    pub(super) render_target_updates_ingest_external_zero_copy: u64,
+    pub(super) render_target_updates_ingest_gpu_copy: u64,
+    pub(super) render_target_updates_ingest_cpu_upload: u64,
+
     pub(super) svg_raster_budget_bytes: u64,
     pub(super) svg_rasters_live: u64,
     pub(super) svg_standalone_bytes_live: u64,
@@ -336,6 +355,11 @@ pub(super) struct RenderPerfStats {
     pub(super) draw_calls: u64,
     pub(super) quad_draw_calls: u64,
     pub(super) viewport_draw_calls: u64,
+    pub(super) viewport_draw_calls_ingest_unknown: u64,
+    pub(super) viewport_draw_calls_ingest_owned: u64,
+    pub(super) viewport_draw_calls_ingest_external_zero_copy: u64,
+    pub(super) viewport_draw_calls_ingest_gpu_copy: u64,
+    pub(super) viewport_draw_calls_ingest_cpu_upload: u64,
     pub(super) image_draw_calls: u64,
     pub(super) text_draw_calls: u64,
     pub(super) path_draw_calls: u64,

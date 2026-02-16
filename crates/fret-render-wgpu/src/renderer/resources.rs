@@ -594,6 +594,8 @@ impl Renderer {
             perf_svg_raster_budget_evictions: 0,
             perf_svg_mask_atlas_page_evictions: 0,
             perf_svg_mask_atlas_entries_evicted: 0,
+            perf_pending_render_target_updates_by_ingest: [0;
+                fret_render_core::RenderTargetIngestStrategy::COUNT],
             perf: RenderPerfStats::default(),
             last_frame_perf: None,
             last_render_plan_segment_report: None,
@@ -667,6 +669,11 @@ impl Renderer {
         &mut self,
         desc: RenderTargetDescriptor,
     ) -> fret_core::RenderTargetId {
+        if self.perf_enabled {
+            let ix = render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
+            self.perf_pending_render_target_updates_by_ingest[ix] =
+                self.perf_pending_render_target_updates_by_ingest[ix].saturating_add(1);
+        }
         let id = self.render_targets.register(desc);
         self.render_target_revisions.insert(id, 1);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
@@ -708,6 +715,11 @@ impl Renderer {
         id: fret_core::RenderTargetId,
         desc: RenderTargetDescriptor,
     ) -> bool {
+        if self.perf_enabled {
+            let ix = render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
+            self.perf_pending_render_target_updates_by_ingest[ix] =
+                self.perf_pending_render_target_updates_by_ingest[ix].saturating_add(1);
+        }
         if !self.render_targets.update(id, desc) {
             return false;
         }

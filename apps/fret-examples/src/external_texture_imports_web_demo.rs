@@ -15,10 +15,12 @@ use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
 use fret_launch::{
-    EngineFrameUpdate, ImportedViewportRenderTarget, WinitAppDriver, WinitEventContext,
-    WinitRenderContext, WinitRunnerConfig,
+    EngineFrameKeepalive, EngineFrameUpdate, ImportedViewportRenderTarget, WinitAppDriver,
+    WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
+use fret_render::{
+    RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer, WgpuContext,
+};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
@@ -394,27 +396,37 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
         Self::record_external_source_into_texture(state, context, secs);
 
         if let Some(view) = state.view.as_ref() {
+            let mut metadata = RenderTargetMetadata::default();
+            metadata.ingest_strategy = RenderTargetIngestStrategy::GpuCopy;
+
             #[cfg(target_arch = "wasm32")]
             {
                 if let Some(ext) = state.external.as_ref() {
-                    state.target.push_update_with_keepalive(
+                    state.target.push_update_with_metadata_and_keepalive(
                         &mut update,
                         view.clone(),
                         state.target_px_size,
-                        ext.canvas.clone(),
+                        metadata,
+                        EngineFrameKeepalive::new(ext.canvas.clone()),
                     );
                 } else {
-                    state
-                        .target
-                        .push_update(&mut update, view.clone(), state.target_px_size);
+                    state.target.push_update_with_metadata(
+                        &mut update,
+                        view.clone(),
+                        state.target_px_size,
+                        metadata,
+                    );
                 }
             }
 
             #[cfg(not(target_arch = "wasm32"))]
             {
-                state
-                    .target
-                    .push_update(&mut update, view.clone(), state.target_px_size);
+                state.target.push_update_with_metadata(
+                    &mut update,
+                    view.clone(),
+                    state.target_px_size,
+                    metadata,
+                );
             }
         }
 

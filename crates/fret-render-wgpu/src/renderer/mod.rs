@@ -6,6 +6,7 @@ pub(super) use fret_core::{
     geometry::{Point, Px, Rect, Size, Transform2D},
     scene::{Color, Scene, SceneOp, UvRect},
 };
+use fret_render_core::RenderTargetIngestStrategy;
 use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -211,6 +212,7 @@ pub struct Renderer {
     perf_svg_raster_budget_evictions: u64,
     perf_svg_mask_atlas_page_evictions: u64,
     perf_svg_mask_atlas_entries_evicted: u64,
+    perf_pending_render_target_updates_by_ingest: [u64; RenderTargetIngestStrategy::COUNT],
     perf: RenderPerfStats,
     last_frame_perf: Option<RenderPerfSnapshot>,
     last_render_plan_segment_report: Option<Vec<RenderPlanSegmentReport>>,

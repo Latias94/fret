@@ -25,8 +25,8 @@ pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImage
 pub use error::RenderError;
 pub use fret_core::ImageColorSpace;
 pub use fret_render_core::{
-    RenderTargetAlphaMode, RenderTargetColorSpace, RenderTargetMetadata, RenderTargetOrientation,
-    RenderTargetRotation,
+    RenderTargetAlphaMode, RenderTargetColorSpace, RenderTargetIngestStrategy,
+    RenderTargetMetadata, RenderTargetOrientation, RenderTargetRotation,
 };
 pub use images::{
     ImageDescriptor, ImageRegistry, UploadedRgba8Image, create_rgba8_image_storage,

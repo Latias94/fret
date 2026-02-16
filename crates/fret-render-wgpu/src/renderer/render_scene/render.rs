@@ -101,6 +101,15 @@ impl Renderer {
             frame_perf.image_upload_bytes = frame_perf
                 .image_upload_bytes
                 .saturating_add(counters.image_upload_bytes);
+
+            let pending = self.perf_pending_render_target_updates_by_ingest;
+            frame_perf.render_target_updates_ingest_unknown = pending[0];
+            frame_perf.render_target_updates_ingest_owned = pending[1];
+            frame_perf.render_target_updates_ingest_external_zero_copy = pending[2];
+            frame_perf.render_target_updates_ingest_gpu_copy = pending[3];
+            frame_perf.render_target_updates_ingest_cpu_upload = pending[4];
+            self.perf_pending_render_target_updates_by_ingest =
+                [0; fret_render_core::RenderTargetIngestStrategy::COUNT];
         }
 
         #[cfg(debug_assertions)]
@@ -1175,6 +1184,43 @@ impl Renderer {
                                             frame_perf.draw_calls.saturating_add(1);
                                         frame_perf.viewport_draw_calls =
                                             frame_perf.viewport_draw_calls.saturating_add(1);
+                                        let metadata = self
+                                            .render_targets
+                                            .metadata(draw.target)
+                                            .unwrap_or_default();
+                                        match metadata.ingest_strategy {
+                                            fret_render_core::RenderTargetIngestStrategy::Unknown => {
+                                                frame_perf.viewport_draw_calls_ingest_unknown =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_unknown
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::Owned => {
+                                                frame_perf.viewport_draw_calls_ingest_owned =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_owned
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::ExternalZeroCopy => {
+                                                frame_perf
+                                                    .viewport_draw_calls_ingest_external_zero_copy =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_external_zero_copy
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::GpuCopy => {
+                                                frame_perf.viewport_draw_calls_ingest_gpu_copy =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_gpu_copy
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::CpuUpload => {
+                                                frame_perf.viewport_draw_calls_ingest_cpu_upload =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_cpu_upload
+                                                        .saturating_add(1);
+                                            }
+                                        }
                                     }
                                 }
                                 OrderedDraw::Image(draw) => {
@@ -3711,6 +3757,27 @@ impl Renderer {
                 .image_upload_bytes
                 .saturating_add(frame_perf.image_upload_bytes);
 
+            self.perf.render_target_updates_ingest_unknown = self
+                .perf
+                .render_target_updates_ingest_unknown
+                .saturating_add(frame_perf.render_target_updates_ingest_unknown);
+            self.perf.render_target_updates_ingest_owned = self
+                .perf
+                .render_target_updates_ingest_owned
+                .saturating_add(frame_perf.render_target_updates_ingest_owned);
+            self.perf.render_target_updates_ingest_external_zero_copy = self
+                .perf
+                .render_target_updates_ingest_external_zero_copy
+                .saturating_add(frame_perf.render_target_updates_ingest_external_zero_copy);
+            self.perf.render_target_updates_ingest_gpu_copy = self
+                .perf
+                .render_target_updates_ingest_gpu_copy
+                .saturating_add(frame_perf.render_target_updates_ingest_gpu_copy);
+            self.perf.render_target_updates_ingest_cpu_upload = self
+                .perf
+                .render_target_updates_ingest_cpu_upload
+                .saturating_add(frame_perf.render_target_updates_ingest_cpu_upload);
+
             self.perf.svg_raster_budget_bytes = frame_perf.svg_raster_budget_bytes;
             self.perf.svg_rasters_live =
                 self.perf.svg_rasters_live.max(frame_perf.svg_rasters_live);
@@ -3871,6 +3938,26 @@ impl Renderer {
                 .perf
                 .viewport_draw_calls
                 .saturating_add(frame_perf.viewport_draw_calls);
+            self.perf.viewport_draw_calls_ingest_unknown = self
+                .perf
+                .viewport_draw_calls_ingest_unknown
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_unknown);
+            self.perf.viewport_draw_calls_ingest_owned = self
+                .perf
+                .viewport_draw_calls_ingest_owned
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_owned);
+            self.perf.viewport_draw_calls_ingest_external_zero_copy = self
+                .perf
+                .viewport_draw_calls_ingest_external_zero_copy
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_external_zero_copy);
+            self.perf.viewport_draw_calls_ingest_gpu_copy = self
+                .perf
+                .viewport_draw_calls_ingest_gpu_copy
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_gpu_copy);
+            self.perf.viewport_draw_calls_ingest_cpu_upload = self
+                .perf
+                .viewport_draw_calls_ingest_cpu_upload
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_cpu_upload);
             self.perf.image_draw_calls = self
                 .perf
                 .image_draw_calls
@@ -4009,6 +4096,15 @@ impl Renderer {
                 svg_upload_bytes: frame_perf.svg_upload_bytes,
                 image_uploads: frame_perf.image_uploads,
                 image_upload_bytes: frame_perf.image_upload_bytes,
+                render_target_updates_ingest_unknown: frame_perf
+                    .render_target_updates_ingest_unknown,
+                render_target_updates_ingest_owned: frame_perf.render_target_updates_ingest_owned,
+                render_target_updates_ingest_external_zero_copy: frame_perf
+                    .render_target_updates_ingest_external_zero_copy,
+                render_target_updates_ingest_gpu_copy: frame_perf
+                    .render_target_updates_ingest_gpu_copy,
+                render_target_updates_ingest_cpu_upload: frame_perf
+                    .render_target_updates_ingest_cpu_upload,
                 svg_raster_budget_bytes: frame_perf.svg_raster_budget_bytes,
                 svg_rasters_live: frame_perf.svg_rasters_live,
                 svg_standalone_bytes_live: frame_perf.svg_standalone_bytes_live,
@@ -4062,6 +4158,13 @@ impl Renderer {
                 draw_calls: frame_perf.draw_calls,
                 quad_draw_calls: frame_perf.quad_draw_calls,
                 viewport_draw_calls: frame_perf.viewport_draw_calls,
+                viewport_draw_calls_ingest_unknown: frame_perf.viewport_draw_calls_ingest_unknown,
+                viewport_draw_calls_ingest_owned: frame_perf.viewport_draw_calls_ingest_owned,
+                viewport_draw_calls_ingest_external_zero_copy: frame_perf
+                    .viewport_draw_calls_ingest_external_zero_copy,
+                viewport_draw_calls_ingest_gpu_copy: frame_perf.viewport_draw_calls_ingest_gpu_copy,
+                viewport_draw_calls_ingest_cpu_upload: frame_perf
+                    .viewport_draw_calls_ingest_cpu_upload,
                 image_draw_calls: frame_perf.image_draw_calls,
                 text_draw_calls: frame_perf.text_draw_calls,
                 path_draw_calls: frame_perf.path_draw_calls,
