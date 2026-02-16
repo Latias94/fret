@@ -81,6 +81,7 @@ Evidence (current):
 - `apps/fret-examples/src/cjk_conformance_demo.rs` (example: `ui::children!` replaces `vec![...]` root return)
 - `apps/fret-examples/src/emoji_conformance_demo.rs` (example: `ui::children!` replaces `vec![...]` root return)
 - `apps/fret-examples/src/genui_demo.rs` (example: replace `vec![...]` child lists with arrays/`ui::children!`)
+- `apps/fret-examples/src/hello_counter_demo.rs` (example: reduce `.into_element(cx)` noise via `UiIntoElement` children)
 
 Acceptance:
 
