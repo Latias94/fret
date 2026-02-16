@@ -23,6 +23,9 @@ pub struct UiDebugLayoutEngineMeasureChildHotspot {
 #[derive(Debug, Clone)]
 pub struct UiDebugLayoutEngineSolve {
     pub root: NodeId,
+    pub root_element: Option<GlobalElementId>,
+    pub root_element_kind: Option<&'static str>,
+    pub root_element_path: Option<String>,
     pub solve_time: Duration,
     pub measure_calls: u64,
     pub measure_cache_hits: u64,

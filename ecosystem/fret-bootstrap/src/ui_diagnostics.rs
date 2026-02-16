@@ -11508,6 +11508,12 @@ impl UiCacheRootStatsV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineSolveV1 {
     pub root_node: u64,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub root_element_kind: Option<String>,
+    #[serde(default)]
+    pub root_element_path: Option<String>,
     pub solve_time_us: u64,
     pub measure_calls: u64,
     pub measure_cache_hits: u64,
@@ -11521,6 +11527,9 @@ impl UiLayoutEngineSolveV1 {
     fn from_solve(s: &fret_ui::tree::UiDebugLayoutEngineSolve) -> Self {
         Self {
             root_node: s.root.data().as_ffi(),
+            root_element: s.root_element.map(|id| id.0),
+            root_element_kind: s.root_element_kind.map(|s| s.to_string()),
+            root_element_path: s.root_element_path.clone(),
             solve_time_us: s.solve_time.as_micros().min(u64::MAX as u128) as u64,
             measure_calls: s.measure_calls,
             measure_cache_hits: s.measure_cache_hits,

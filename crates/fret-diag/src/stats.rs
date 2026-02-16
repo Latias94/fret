@@ -1090,6 +1090,9 @@ pub(super) struct BundleStatsCacheRoot {
 #[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsLayoutEngineSolve {
     pub(super) root_node: u64,
+    pub(super) root_element: Option<u64>,
+    pub(super) root_element_kind: Option<String>,
+    pub(super) root_element_path: Option<String>,
     pub(super) solve_time_us: u64,
     pub(super) measure_calls: u64,
     pub(super) measure_cache_hits: u64,
@@ -1750,6 +1753,19 @@ impl BundleStatsReport {
                             && !role.is_empty()
                         {
                             out.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(kind) = s.root_element_kind.as_deref()
+                            && !kind.is_empty()
+                        {
+                            out.push_str(&format!(" root.kind={kind}"));
+                        }
+                        if let Some(el) = s.root_element {
+                            out.push_str(&format!(" root.element={el}"));
+                        }
+                        if let Some(path) = s.root_element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            out.push_str(&format!(" root.path={path}"));
                         }
                         if let Some(m) = s.top_measures.first() {
                             if m.measure_time_us > 0 && m.node != 0 {
@@ -3290,6 +3306,24 @@ impl BundleStatsReport {
                     .map(|s| {
                         let mut s_obj = Map::new();
                         s_obj.insert("root_node".to_string(), Value::from(s.root_node));
+                        s_obj.insert(
+                            "root_element".to_string(),
+                            s.root_element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        s_obj.insert(
+                            "root_element_kind".to_string(),
+                            s.root_element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        s_obj.insert(
+                            "root_element_path".to_string(),
+                            s.root_element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
                         s_obj.insert("solve_time_us".to_string(), Value::from(s.solve_time_us));
                         s_obj.insert("measure_calls".to_string(), Value::from(s.measure_calls));
                         s_obj.insert(
@@ -10831,6 +10865,15 @@ fn snapshot_layout_engine_solves(
 
             BundleStatsLayoutEngineSolve {
                 root_node: s.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
+                root_element: s.get("root_element").and_then(|v| v.as_u64()),
+                root_element_kind: s
+                    .get("root_element_kind")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                root_element_path: s
+                    .get("root_element_path")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
                 solve_time_us: s.get("solve_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
                 measure_calls: s.get("measure_calls").and_then(|v| v.as_u64()).unwrap_or(0),
                 measure_cache_hits: s
