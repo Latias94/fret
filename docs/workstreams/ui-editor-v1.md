@@ -85,7 +85,7 @@ This avoids long-term dependency cycles and keeps the editor surface reusable ou
 
 Guidelines:
 
-- Components should prefer semantic IDs (`ui.chevron.down`, `ui.close`, …) rather than vendor IDs.
+- Components should prefer semantic IDs (`ui.chevron.down`, `ui.close`, `ui.reset`, …) rather than vendor IDs.
 - Apps should install an icon pack (e.g. `ecosystem/fret-icons-lucide`) or provide their own mapping.
 - The editor-proof demo installs the lucide pack to avoid “missing icon” placeholders.
 
@@ -207,6 +207,7 @@ Notes:
 | `editor.axis.z_color` | color | Axis label color (Z) | blue-ish |
 | `editor.axis.w_color` | color | Axis label color (W) | muted |
 | `editor.vec.auto_stack_below` | metric | Stack vec axes vertically below this width | tuned per inspector width |
+| `editor.vec.axis_min_width` | metric | Minimum per-axis group width (row layout) | tuned to keep vec inputs readable |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
 | `editor.slider.track_height` | metric | Slider track thickness | small (3–6px) |

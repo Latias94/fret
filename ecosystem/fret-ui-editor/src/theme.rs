@@ -36,6 +36,8 @@ pub fn apply_editor_theme_patch_v1<H: UiHost>(app: &mut H) {
         // Vec edit responsiveness (stack axes vertically in narrow inspectors).
         cfg.metrics
             .insert(EditorTokenKeys::VEC_AUTO_STACK_BELOW.to_string(), 420.0);
+        cfg.metrics
+            .insert(EditorTokenKeys::VEC_AXIS_MIN_WIDTH.to_string(), 140.0);
 
         // Property grid responsiveness (stack label/value vertically in narrow inspectors).
         cfg.metrics.insert(

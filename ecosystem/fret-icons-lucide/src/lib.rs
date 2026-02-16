@@ -83,6 +83,7 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::MINUS, IconId::new("lucide.minus"));
         let _ = reg.alias(ids::ui::PLUS, IconId::new("lucide.plus"));
         let _ = reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));
+        let _ = reg.alias(ids::ui::RESET, IconId::new("lucide.rotate-ccw"));
         let _ = reg.alias(ids::ui::SETTINGS, IconId::new("lucide.settings"));
         let _ = reg.alias(ids::ui::PLAY, IconId::new("lucide.play"));
         let _ = reg.alias(ids::ui::SLASH, IconId::new("lucide.slash"));
