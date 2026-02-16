@@ -67,6 +67,84 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
         "expected bound panel node to be focusable and receive pointer events"
     );
 }
+
+#[test]
+fn render_and_bind_dock_panels_includes_viewport_panel_when_registry_returns_a_node() {
+    let window = AppWindowId::default();
+    let panel = fret_core::PanelKey::new("demo.viewport.left");
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let dock_space = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(dock_space);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    app.with_global_mut(
+        DockPanelRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(CachedRetainedPanelRegistry::new()));
+        },
+    );
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel, || crate::DockPanel {
+            title: "Viewport Left".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: Some(ViewportPanel {
+                target: fret_core::RenderTargetId::from(KeyData::from_ffi(1)),
+                target_px_size: (960, 540),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+    });
+
+    let mut services = FakeTextService;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(120.0)),
+    );
+
+    render_and_bind_dock_panels(&mut ui, &mut app, &mut services, window, bounds, dock_space);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let node = app
+        .global::<DockPanelContentService>()
+        .and_then(|svc| svc.get(window, &panel))
+        .expect("expected viewport panel node to be bound when the registry returns a node");
+
+    let b = ui
+        .debug_node_bounds(node)
+        .expect("expected viewport panel node bounds");
+    let pos = Point::new(Px(b.origin.x.0 + 1.0), Px(b.origin.y.0 + 1.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(node),
+        "expected bound viewport panel node to be focusable and receive pointer events"
+    );
+}
+
 #[test]
 fn dock_space_layout_assigns_active_panel_content_bounds_via_panel_nodes() {
     let window = AppWindowId::default();

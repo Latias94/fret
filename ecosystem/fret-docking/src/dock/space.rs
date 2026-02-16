@@ -1743,6 +1743,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             active: usize,
             grab_offset: Point,
             start_tick: fret_runtime::TickId,
+            tear_off_requested: bool,
+            tear_off_oob_start_frame: Option<fret_runtime::FrameId>,
             dock_previews_enabled: bool,
         }
 
@@ -1832,18 +1834,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             // Reduce preview flicker: only show/allow docking previews when hovering over a
             // tab bar or one of the hint-pad rectangles (inner/outer).
-            if let Some(&root_rect) = layout.get(&root)
-                && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
-                && root != leaf_tabs
-                && let Some(zone) = super::layout::dock_hint_pick_zone(
-                    root_rect,
-                    hint_font_size_outer,
-                    true,
-                    position,
-                )
-                && zone != DropZone::Center
-            {
-                if let Some(candidates) = candidates.as_deref_mut() {
+            //
+            // Diagnostics note: always publish the hint-pad rectangles as candidates when
+            // possible, even if the current pointer position does not currently select a hint.
+            // This keeps bundle triage explainable and makes scripted repro adjustments easier.
+            if let Some(candidates) = candidates.as_deref_mut() {
+                if let Some(&root_rect) = layout.get(&root) {
                     candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                         kind: fret_runtime::DockDropCandidateRectKind::RootRect,
                         zone: None,
@@ -1861,6 +1857,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         });
                     }
                 }
+                if let Some((_tabs_node, rect, _tab_count)) = leaf {
+                    for (z, r) in
+                        super::layout::dock_hint_rects_with_font(rect, hint_font_size_inner, false)
+                    {
+                        candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                            kind: fret_runtime::DockDropCandidateRectKind::InnerHintRect,
+                            zone: Some(z),
+                            rect: r,
+                        });
+                    }
+                }
+            }
+
+            if let Some(&root_rect) = layout.get(&root)
+                && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
+                && root != leaf_tabs
+                && let Some(zone) = super::layout::dock_hint_pick_zone(
+                    root_rect,
+                    hint_font_size_outer,
+                    true,
+                    position,
+                )
+                && zone != DropZone::Center
+            {
                 return Some((
                     HoverTarget {
                         tabs: root,
@@ -1879,17 +1899,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 && let Some(zone) =
                     super::layout::dock_hint_pick_zone(rect, hint_font_size_inner, false, position)
             {
-                if let Some(candidates) = candidates.as_deref_mut() {
-                    for (z, r) in
-                        super::layout::dock_hint_rects_with_font(rect, hint_font_size_inner, false)
-                    {
-                        candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
-                            kind: fret_runtime::DockDropCandidateRectKind::InnerHintRect,
-                            zone: Some(z),
-                            rect: r,
-                        });
-                    }
-                }
                 return Some((
                     HoverTarget {
                         tabs: tabs_node,
@@ -2310,7 +2319,25 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
                     }
                 }
-                None => DockDropIntent::None,
+                None => {
+                    let wants_tear_off = allow_tear_off && !window_bounds.contains(position);
+                    if wants_tear_off {
+                        if drag.tear_off_requested || mark_drag_tear_off_requested {
+                            DockDropIntent::None
+                        } else {
+                            DockDropIntent::RequestFloatPanelToNewWindow {
+                                source_window: drag.source_window,
+                                panel: drag.panel.clone(),
+                                anchor: Some(fret_core::WindowAnchor {
+                                    window: target_window,
+                                    position: drag.grab_offset,
+                                }),
+                            }
+                        }
+                    } else {
+                        DockDropIntent::None
+                    }
+                }
             }
         }
 
@@ -2487,6 +2514,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     active: p.active,
                     grab_offset: p.grab_offset,
                     start_tick: p.start_tick,
+                    tear_off_requested: p.tear_off_requested,
+                    tear_off_oob_start_frame: p.tear_off_oob_start_frame,
                     dock_previews_enabled: p.dock_previews_enabled,
                 })
             })
@@ -3425,6 +3454,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 active,
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
+                                                tear_off_requested: false,
+                                                tear_off_oob_start_frame: None,
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
@@ -4357,7 +4388,77 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                                                 requested_tear_off
                                             }
-                                            DockDragSnapshot::Tabs(_) => false,
+                                            DockDragSnapshot::Tabs(drag) => {
+                                                let margin = Px(10.0);
+                                                let oob = is_outside_bounds_with_margin(
+                                                    window_bounds,
+                                                    position,
+                                                    margin,
+                                                );
+                                                if allow_tear_off && drag.source_window == self.window
+                                                {
+                                                    match (oob, drag.tear_off_oob_start_frame) {
+                                                        (true, None) => {
+                                                            set_drag_tear_off_oob_start_frame =
+                                                                Some(Some(now_frame));
+                                                        }
+                                                        (false, Some(_)) => {
+                                                            set_drag_tear_off_oob_start_frame =
+                                                                Some(None);
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                }
+
+                                                let stable_oob = oob
+                                                    && drag
+                                                        .tear_off_oob_start_frame
+                                                        .is_some_and(|f| f != now_frame);
+
+                                                if let Some(panel) =
+                                                    drag.tabs.get(drag.active).cloned()
+                                                {
+                                                    let allow_tear_off = allow_tear_off
+                                                        && docking_policy
+                                                            .as_deref()
+                                                            .is_none_or(|policy| {
+                                                                policy.allow_tear_off(
+                                                                    drag.source_window,
+                                                                    &panel,
+                                                                    dock.panels.get(&panel),
+                                                                )
+                                                            });
+                                                    let requested_tear_off = allow_tear_off
+                                                        && drag.source_window == self.window
+                                                        && stable_oob
+                                                        && !drag.tear_off_requested
+                                                        && !mark_drag_tear_off_requested;
+
+                                                    if requested_tear_off {
+                                                        mark_drag_tear_off_requested = true;
+                                                        pending_effects.push(Effect::Dock(
+                                                            DockOp::RequestFloatPanelToNewWindow {
+                                                                source_window: drag.source_window,
+                                                                panel: panel.clone(),
+                                                                anchor: Some(
+                                                                    fret_core::WindowAnchor {
+                                                                        window: self.window,
+                                                                        position: drag.grab_offset,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ));
+                                                        invalidate_layout = true;
+                                                        dock.hover = None;
+                                                        pending_redraws.push(self.window);
+                                                        invalidate_paint = true;
+                                                    }
+
+                                                    requested_tear_off
+                                                } else {
+                                                    false
+                                                }
+                                            }
                                         };
 
                                         if !requested_tear_off {
@@ -4706,6 +4807,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 if let Some(next) = set_drag_tear_off_oob_start_frame {
                     payload.tear_off_oob_start_frame = next;
                 }
+            } else if let Some(payload) = drag.payload_mut::<DockTabsDragPayload>() {
+                if mark_drag_tear_off_requested {
+                    payload.tear_off_requested = true;
+                    payload.tear_off_oob_start_frame = None;
+                }
+                if let Some(next) = set_drag_tear_off_oob_start_frame {
+                    payload.tear_off_oob_start_frame = next;
+                }
             }
         }
 
@@ -4860,7 +4969,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         };
         let now_tick = cx.app.tick_id();
         let now_frame = cx.app.frame_id();
-        let allow_split_motion = self.divider_drag.is_none();
+        let allow_split_motion = self.divider_drag.is_none()
+            && frame_delta.is_some_and(|dt| dt >= std::time::Duration::from_millis(1));
 
         fret_ui::internal_drag::set_route(
             cx.app,
@@ -5091,7 +5201,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         };
         let now_tick = cx.app.tick_id();
         let now_frame = cx.app.frame_id();
-        let allow_split_motion = self.divider_drag.is_none();
+        let allow_split_motion = self.divider_drag.is_none()
+            && frame_delta.is_some_and(|dt| dt >= std::time::Duration::from_millis(1));
         let (split_overrides, split_motion_active) = cx
             .app
             .global::<DockManager>()

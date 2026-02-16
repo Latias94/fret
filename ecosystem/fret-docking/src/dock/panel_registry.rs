@@ -129,7 +129,7 @@ fn sort_panel_keys(a: &PanelKey, b: &PanelKey) -> std::cmp::Ordering {
     })
 }
 
-/// Render and bind all non-viewport panel UI nodes for a window.
+/// Render and bind dock panel UI nodes for a window.
 ///
 /// Call this once per frame **before** `UiTree::layout_all`/`paint_all`.
 ///
@@ -137,6 +137,8 @@ fn sort_panel_keys(a: &PanelKey, b: &PanelKey) -> std::cmp::Ordering {
 /// - uses the dock graph (`DockManager`) as the source of truth for which panels exist,
 /// - renders panel roots via the installed `DockPanelRegistryService`,
 /// - falls back to a generic placeholder if a non-viewport panel has no UI implementation,
+/// - skips viewport panels unless the registry returns a UI node (viewport panels may be "pure"
+///   render targets with no tree nodes),
 /// - updates `DockPanelContentService` for the window,
 /// - sets the `DockSpace` node children to the rendered panel roots.
 pub fn render_and_bind_dock_panels<H: UiHost + 'static>(
@@ -172,15 +174,15 @@ pub fn render_and_bind_dock_panels<H: UiHost + 'static>(
     let mut rendered: Vec<(PanelKey, NodeId)> = Vec::new();
 
     for (panel, is_viewport_panel) in panels {
-        if is_viewport_panel {
-            continue;
-        }
+        let node = registry
+            .as_ref()
+            .and_then(|registry| registry.render_panel(ui, app, services, window, bounds, &panel));
 
-        let node = match registry.as_ref() {
-            Some(registry) => registry.render_panel(ui, app, services, window, bounds, &panel),
-            None => None,
-        }
-        .unwrap_or_else(|| render_missing_panel(ui, app, services, window, bounds, &panel));
+        let node = match (is_viewport_panel, node) {
+            (_, Some(node)) => node,
+            (true, None) => continue,
+            (false, None) => render_missing_panel(ui, app, services, window, bounds, &panel),
+        };
 
         rendered.push((panel, node));
     }
