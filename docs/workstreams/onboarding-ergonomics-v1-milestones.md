@@ -65,6 +65,11 @@ Deliverables:
 - `simple-todo` template can be authored without repetitive `.into_element(cx)` for common components.
   - Either by `children![...]`, and/or by ecosystem constructors accepting `UiIntoElement` children.
 
+Evidence (current):
+
+- `ecosystem/fret-ui-kit/src/lib.rs` (`children!`)
+- `apps/fretboard/src/scaffold/templates.rs` (`simple-todo` template)
+
 Acceptance:
 
 - A reviewer can scan `simple-todo` and not see “adapter noise” dominate the code (goal: composition reads first).
@@ -102,6 +107,13 @@ Deliverables:
 - `macro_rules!` helpers exist in `fret-ui-kit` to implement `UiPatchTarget`/`UiSupports*`/`UiIntoElement` in one line.
 - The “IntoElement-like adapter” posture is decided for third-party components:
   - blanket impl (preferred) or derive (fallback) is documented with the coherence constraint.
+
+Evidence (current):
+
+- `ecosystem/fret-ui-kit/src/lib.rs` (`ui_component_*` helpers)
+- `docs/component-authoring-contracts.md` (recommended usage + patch-only)
+- `ecosystem/fret-ui-ai/src/elements/message.rs` (external-style sample)
+- `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs` (patch-only sample)
 
 Acceptance:
 
