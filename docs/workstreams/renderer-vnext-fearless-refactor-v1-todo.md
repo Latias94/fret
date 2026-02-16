@@ -201,9 +201,10 @@ renderer semantics that are either missing today or only available via approxima
 here as a backlog so we can spin them into dedicated workstreams (3-doc format: purpose/TODO/
 milestones) when implementation begins.
 
-- [ ] REN-VNEXT-sem-010 Path fill paint surface: allow `SceneOp::Path` to accept `Paint` (gradients/materials).
+- [x] REN-VNEXT-sem-010 Path fill paint surface: allow `SceneOp::Path` to accept `Paint` (gradients/materials).
   - Current: `SceneOp::Path` is solid-only (`color: Color`).
   - Risk: binding surface + key space growth; needs bounded, capability-gated fallbacks (wasm/mobile).
+  - Tracking: `docs/workstreams/path-paint-surface-v1.md`
 - [x] REN-VNEXT-sem-020 General path stroke: introduce a “stroke arbitrary vector paths” surface with bounded stroke style.
   - Landed via: `PathStyle::StrokeV2(StrokeStyleV2)` for vector path preparation + `SceneOp::Path` rendering.
   - Evidence: `docs/workstreams/path-stroke-style-v2.md`, `crates/fret-core/src/vector_path.rs`.
