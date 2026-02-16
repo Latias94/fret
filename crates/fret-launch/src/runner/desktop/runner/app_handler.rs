@@ -297,7 +297,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     return;
                 }
 
-                // On macOS, releasing the mouse button outside any window may not deliver a
+                // Releasing the mouse button outside any window may not deliver a
                 // `WindowEvent::MouseInput` to the source window. Use device events to still
                 // terminate cross-window dock drags (Unity/ImGui-style tear-off).
                 let (source_window, current_window, dragging) = {
@@ -314,24 +314,36 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
                 ));
 
-                #[cfg(target_os = "macos")]
+                if self.saw_left_mouse_release_this_turn
+                    || !self.is_left_mouse_down_for_window(source_window)
                 {
-                    if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
-                        return;
-                    }
-                    if let Some(d) = self.app.drag_mut(pointer_id)
-                        && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
-                    {
-                        d.dragging = true;
-                    }
-                    // Route the drop using the current cursor position, so docking into another
-                    // window works even when the `MouseInput` event is missing.
-                    self.route_internal_drag_drop_from_cursor();
-                    dock_tearoff_log(format_args!(
-                        "[device-drop] dispatched target={:?}",
-                        source_window
-                    ));
+                    return;
                 }
+
+                #[cfg(target_os = "macos")]
+                if macos_is_left_mouse_down() {
+                    return;
+                }
+
+                // We didn't observe a window-scoped mouse release, so clear the runner's cached
+                // button state to avoid getting stuck in a "mouse down" state.
+                self.left_mouse_down = false;
+                for state in self.windows.values_mut() {
+                    state.platform.input.pressed_buttons.left = false;
+                }
+
+                if let Some(d) = self.app.drag_mut(pointer_id)
+                    && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
+                {
+                    d.dragging = true;
+                }
+                // Route the drop using the current cursor position, so docking into another
+                // window works even when the `MouseInput` event is missing.
+                self.route_internal_drag_drop_from_cursor();
+                dock_tearoff_log(format_args!(
+                    "[device-drop] dispatched target={:?}",
+                    source_window
+                ));
                 if self
                     .app
                     .drag(pointer_id)
