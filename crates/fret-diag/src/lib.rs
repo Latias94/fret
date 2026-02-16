@@ -7258,15 +7258,14 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &perf_capabilities_check_path,
                         )
-                        .map_err(|err| {
+                        .inspect_err(|err| {
                             write_tooling_failure_script_result_if_missing(
                                 &resolved_script_result_path,
                                 "tooling.run.failed",
-                                &err,
+                                err,
                                 "tooling_error",
                                 Some(script_key.clone()),
                             );
-                            err
                         })?;
 
                         match result.stage {
@@ -7492,15 +7491,14 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &perf_capabilities_check_path,
                         )
-                        .map_err(|err| {
+                        .inspect_err(|err| {
                             write_tooling_failure_script_result_if_missing(
                                 &resolved_script_result_path,
                                 "tooling.run.failed",
-                                &err,
+                                err,
                                 "tooling_error",
                                 Some(script_key.clone()),
                             );
-                            err
                         })?;
 
                         match result.stage {
@@ -7543,21 +7541,26 @@ See: `docs/tracy.md`.\n";
                             timeout_ms,
                             poll_ms,
                         );
-                        if let Ok(summary) = &result
-                            && summary.stage.as_deref() == Some("failed")
-                        {
-                            if let Some(dir) = wait_for_failure_dump_bundle(
-                                &resolved_out_dir,
-                                summary,
-                                timeout_ms,
-                                poll_ms,
-                            ) {
-                                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                    if let Ok(summary) = result.as_mut() {
-                                        summary.last_bundle_dir = Some(name.to_string());
-                                    }
-                                }
+                        let last_bundle_dir_name = match result.as_ref() {
+                            Ok(summary) if summary.stage.as_deref() == Some("failed") => {
+                                wait_for_failure_dump_bundle(
+                                    &resolved_out_dir,
+                                    summary,
+                                    timeout_ms,
+                                    poll_ms,
+                                )
+                                .and_then(|dir| {
+                                    dir.file_name()
+                                        .and_then(|s| s.to_str())
+                                        .map(ToString::to_string)
+                                })
                             }
+                            _ => None,
+                        };
+                        if let Some(name) = last_bundle_dir_name
+                            && let Ok(summary) = result.as_mut()
+                        {
+                            summary.last_bundle_dir = Some(name);
                         }
                         let result = match result {
                             Ok(v) => v,
@@ -8399,15 +8402,14 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &perf_capabilities_check_path,
                         )
-                        .map_err(|err| {
+                        .inspect_err(|err| {
                             write_tooling_failure_script_result_if_missing(
                                 &resolved_script_result_path,
                                 "tooling.run.failed",
-                                &err,
+                                err,
                                 "tooling_error",
                                 Some(src.display().to_string()),
                             );
-                            err
                         })?;
 
                         match result.stage {
@@ -8450,21 +8452,26 @@ See: `docs/tracy.md`.\n";
                             timeout_ms,
                             poll_ms,
                         );
-                        if let Ok(summary) = &result
-                            && summary.stage.as_deref() == Some("failed")
-                        {
-                            if let Some(dir) = wait_for_failure_dump_bundle(
-                                &resolved_out_dir,
-                                summary,
-                                timeout_ms,
-                                poll_ms,
-                            ) {
-                                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                    if let Ok(summary) = result.as_mut() {
-                                        summary.last_bundle_dir = Some(name.to_string());
-                                    }
-                                }
+                        let last_bundle_dir_name = match result.as_ref() {
+                            Ok(summary) if summary.stage.as_deref() == Some("failed") => {
+                                wait_for_failure_dump_bundle(
+                                    &resolved_out_dir,
+                                    summary,
+                                    timeout_ms,
+                                    poll_ms,
+                                )
+                                .and_then(|dir| {
+                                    dir.file_name()
+                                        .and_then(|s| s.to_str())
+                                        .map(ToString::to_string)
+                                })
                             }
+                            _ => None,
+                        };
+                        if let Some(name) = last_bundle_dir_name
+                            && let Ok(summary) = result.as_mut()
+                        {
+                            summary.last_bundle_dir = Some(name);
                         }
                         let result = match result {
                             Ok(v) => v,

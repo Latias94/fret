@@ -6,16 +6,11 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::reduced_motion_queries;
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MarqueeDirection {
+    #[default]
     Left,
     Right,
-}
-
-impl Default for MarqueeDirection {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 #[derive(Debug, Clone)]

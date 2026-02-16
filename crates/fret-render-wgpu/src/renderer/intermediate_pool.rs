@@ -69,20 +69,20 @@ impl IntermediatePool {
             };
         }
 
-        let alloc_span = tracing::enabled!(tracing::Level::TRACE)
-            .then(|| {
-                tracing::trace_span!(
-                    "fret.renderer.pool.allocate_texture",
-                    label,
-                    w = size.0,
-                    h = size.1,
-                    bytes,
-                    format = ?format,
-                    usage_bits = usage.bits(),
-                    sample_count,
-                )
-            })
-            .unwrap_or_else(tracing::Span::none);
+        let alloc_span = if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace_span!(
+                "fret.renderer.pool.allocate_texture",
+                label,
+                w = size.0,
+                h = size.1,
+                bytes,
+                format = ?format,
+                usage_bits = usage.bits(),
+                sample_count,
+            )
+        } else {
+            tracing::Span::none()
+        };
         let _alloc_guard = alloc_span.enter();
         self.perf.allocations = self.perf.allocations.saturating_add(1);
         let texture = device.create_texture(&wgpu::TextureDescriptor {
@@ -117,15 +117,15 @@ impl IntermediatePool {
 
     pub(super) fn enforce_budget(&mut self, budget_bytes: u64) {
         if budget_bytes == 0 {
-            let clear_span = tracing::enabled!(tracing::Level::TRACE)
-                .then(|| {
-                    tracing::trace_span!(
-                        "fret.renderer.pool.clear",
-                        free_bytes = self.free_bytes,
-                        free_textures = self.free.values().map(|v| v.len() as u64).sum::<u64>(),
-                    )
-                })
-                .unwrap_or_else(tracing::Span::none);
+            let clear_span = if tracing::enabled!(tracing::Level::TRACE) {
+                tracing::trace_span!(
+                    "fret.renderer.pool.clear",
+                    free_bytes = self.free_bytes,
+                    free_textures = self.free.values().map(|v| v.len() as u64).sum::<u64>(),
+                )
+            } else {
+                tracing::Span::none()
+            };
             let _clear_guard = clear_span.enter();
             self.free.clear();
             self.free_bytes = 0;
@@ -137,17 +137,17 @@ impl IntermediatePool {
         }
 
         let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
-        let enforce_span = trace_enabled
-            .then(|| {
-                tracing::trace_span!(
-                    "fret.renderer.pool.enforce_budget",
-                    budget_bytes,
-                    free_bytes_before = self.free_bytes,
-                    free_bytes_after = tracing::field::Empty,
-                    evictions = tracing::field::Empty,
-                )
-            })
-            .unwrap_or_else(tracing::Span::none);
+        let enforce_span = if trace_enabled {
+            tracing::trace_span!(
+                "fret.renderer.pool.enforce_budget",
+                budget_bytes,
+                free_bytes_before = self.free_bytes,
+                free_bytes_after = tracing::field::Empty,
+                evictions = tracing::field::Empty,
+            )
+        } else {
+            tracing::Span::none()
+        };
         let _enforce_guard = enforce_span.enter();
         let mut evictions: u64 = 0;
 
@@ -188,8 +188,8 @@ impl IntermediatePool {
             self.perf.evictions = self.perf.evictions.saturating_add(1);
         }
 
-        enforce_span.record("free_bytes_after", &self.free_bytes);
-        enforce_span.record("evictions", &evictions);
+        enforce_span.record("free_bytes_after", self.free_bytes);
+        enforce_span.record("evictions", evictions);
     }
 
     fn pick_eviction_key(&self) -> Option<PoolKey> {

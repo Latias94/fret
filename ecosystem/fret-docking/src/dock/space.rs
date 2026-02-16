@@ -1434,6 +1434,7 @@ impl DockSpace {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn paint_dock_drag_modifier_hint(
         &mut self,
         services: &mut dyn fret_core::UiServices,
@@ -2763,6 +2764,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
         }
 
+        #[allow(clippy::too_many_arguments)]
         fn resolve_dock_drop_intent_tabs<F>(
             target: Option<DockDropTarget>,
             drag: &DockTabsDragSnapshot,
@@ -3326,23 +3328,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             if *button == fret_core::MouseButton::Left
                                 && dock_bounds.contains(*position)
                             {
-                                if float_zone_rect.contains(*position) {
-                                    if let Some(root) = root
-                                        && let Some(op) = self.float_zone_click_op(
-                                            &dock.graph,
-                                            root,
-                                            dock_bounds,
-                                            self.last_bounds,
-                                        )
-                                    {
-                                        pending_effects.push(Effect::Dock(op));
-                                        invalidate_layout = true;
-                                        invalidate_paint = true;
-                                        pending_redraws.push(self.window);
-                                        dock.hover = None;
-                                        stop_propagation = true;
-                                        handled = true;
-                                    }
+                                if float_zone_rect.contains(*position)
+                                    && let Some(root) = root
+                                    && let Some(op) = self.float_zone_click_op(
+                                        &dock.graph,
+                                        root,
+                                        dock_bounds,
+                                        self.last_bounds,
+                                    )
+                                {
+                                    pending_effects.push(Effect::Dock(op));
+                                    invalidate_layout = true;
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                    dock.hover = None;
+                                    stop_propagation = true;
+                                    handled = true;
                                 }
 
                                 let mut layout_all = root
@@ -5136,37 +5137,35 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 } else if !released_capture {
                                     let (_chrome, dock_bounds) =
                                         dock_space_regions(self.last_bounds);
-                                    if dock_bounds.contains(*position) {
-                                        if let Some(root) = root {
-                                            let layout = compute_layout_map(
-                                                &dock.graph,
-                                                root,
-                                                dock_bounds,
-                                                split_handle_gap,
-                                                split_handle_hit_thickness,
-                                            );
-                                            if let Some(hit) = hit_test_active_viewport_panel(
-                                                &dock.graph,
-                                                &dock.panels,
-                                                &layout,
-                                                *position,
-                                            ) && let Some(e) = viewport_input_from_hit(
-                                                self.window,
-                                                hit,
-                                                pixels_per_point,
-                                                pointer_id,
-                                                *pointer_type,
-                                                *position,
-                                                ViewportInputKind::PointerUp {
-                                                    button: *button,
-                                                    modifiers: *modifiers,
-                                                    is_click: *is_click,
-                                                    click_count: *click_count,
-                                                },
-                                            ) {
-                                                pending_effects.push(Effect::ViewportInput(e));
-                                                pending_redraws.push(self.window);
-                                            }
+                                    if dock_bounds.contains(*position) && let Some(root) = root {
+                                        let layout = compute_layout_map(
+                                            &dock.graph,
+                                            root,
+                                            dock_bounds,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
+                                        );
+                                        if let Some(hit) = hit_test_active_viewport_panel(
+                                            &dock.graph,
+                                            &dock.panels,
+                                            &layout,
+                                            *position,
+                                        ) && let Some(e) = viewport_input_from_hit(
+                                            self.window,
+                                            hit,
+                                            pixels_per_point,
+                                            pointer_id,
+                                            *pointer_type,
+                                            *position,
+                                            ViewportInputKind::PointerUp {
+                                                button: *button,
+                                                modifiers: *modifiers,
+                                                is_click: *is_click,
+                                                click_count: *click_count,
+                                            },
+                                        ) {
+                                            pending_effects.push(Effect::ViewportInput(e));
+                                            pending_redraws.push(self.window);
                                         }
                                     }
                                     dock.hover = None;

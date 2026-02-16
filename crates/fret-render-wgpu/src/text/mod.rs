@@ -7808,13 +7808,15 @@ mod tests {
 
         fn shape_with_calt(text: &str, calt: u16) -> Vec<u32> {
             use std::borrow::Cow;
-            let mut fcx = parley::FontContext::default();
-            fcx.collection =
-                parley::fontique::Collection::new(parley::fontique::CollectionOptions {
-                    shared: false,
-                    system_fonts: false,
-                });
-            fcx.source_cache = parley::fontique::SourceCache::default();
+            let mut fcx = parley::FontContext {
+                collection: parley::fontique::Collection::new(
+                    parley::fontique::CollectionOptions {
+                        shared: false,
+                        system_fonts: false,
+                    },
+                ),
+                source_cache: parley::fontique::SourceCache::default(),
+            };
             fcx.collection.register_fonts(
                 parley::fontique::Blob::<u8>::from(INTER_ROMAN.to_vec()),
                 None,
@@ -7875,12 +7877,13 @@ mod tests {
         let text = "->";
         use std::borrow::Cow;
 
-        let mut fcx = parley::FontContext::default();
-        fcx.collection = parley::fontique::Collection::new(parley::fontique::CollectionOptions {
-            shared: false,
-            system_fonts: false,
-        });
-        fcx.source_cache = parley::fontique::SourceCache::default();
+        let mut fcx = parley::FontContext {
+            collection: parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+                shared: false,
+                system_fonts: false,
+            }),
+            source_cache: parley::fontique::SourceCache::default(),
+        };
         fcx.collection.register_fonts(
             parley::fontique::Blob::<u8>::from(INTER_ROMAN.to_vec()),
             None,
@@ -7892,9 +7895,11 @@ mod tests {
             let root = parley::style::TextStyle::default();
             let mut builder = lcx.tree_builder(&mut fcx, 1.0, true, &root);
 
-            let mut base = parley::style::TextStyle::default();
-            base.font_stack = parley::style::FontStack::Source(Cow::Borrowed("Inter"));
-            base.font_size = 32.0;
+            let base = parley::style::TextStyle {
+                font_stack: parley::style::FontStack::Source(Cow::Borrowed("Inter")),
+                font_size: 32.0,
+                ..Default::default()
+            };
 
             builder.push_style_span(base);
 

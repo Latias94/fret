@@ -31,10 +31,10 @@ fn demo_id_to_native_bin(demo: &str, native_bins: &[String]) -> Option<String> {
         "external_texture_imports_web_demo" => Some("external_texture_imports_demo"),
         _ => None,
     };
-    if let Some(bin) = override_bin {
-        if native_bins.iter().any(|b| b == bin) {
-            return Some(bin.to_string());
-        }
+    if let Some(bin) = override_bin
+        && native_bins.iter().any(|b| b == bin)
+    {
+        return Some(bin.to_string());
     }
 
     let normalized = demo.replace('-', "_");
@@ -310,11 +310,11 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     // Prefer running native demos by `--bin` even when the user passed a web-style `--demo` id.
     // This keeps behavior consistent (feature flags, hotpatch/watch support, etc.), and avoids
     // relying on the `apps/fret-demo` selection shell having perfect parity with web ids.
-    if let Some(demo_id) = demo.as_deref() {
-        if let Some(mapped) = demo_id_to_native_bin(demo_id, &demos) {
-            bin = Some(mapped);
-            demo = None;
-        }
+    if let Some(demo_id) = demo.as_deref()
+        && let Some(mapped) = demo_id_to_native_bin(demo_id, &demos)
+    {
+        bin = Some(mapped);
+        demo = None;
     }
 
     let demo_needs_bin = demo.is_some()

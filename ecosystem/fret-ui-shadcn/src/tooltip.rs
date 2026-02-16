@@ -775,7 +775,7 @@ impl Tooltip {
             let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
                 tooltip_anchor_with_cursor_axis(anchor, cursor_for_anchor, track_cursor_axis)
             });
-            let floating_bounds = anchor_bounds.and_then(|anchor| {
+            let floating_bounds = anchor_bounds.map(|anchor| {
                 let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
                 let estimated_size = Size::new(Px(240.0), Px(44.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
@@ -814,7 +814,7 @@ impl Tooltip {
                 // Use the panel rect (not the wrapper rect that includes motion insets) for hover
                 // and pointer-transit policies. This keeps Radix-like grace areas from becoming
                 // overly permissive during shadcn enter/exit motion.
-                Some(layout.rect)
+                layout.rect
             });
 
             let update = radix_tooltip::tooltip_update_interaction(

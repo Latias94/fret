@@ -263,7 +263,6 @@ pub fn list<H: UiHost>(
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
-            ..Default::default()
         },
         move |cx| {
             items
@@ -272,7 +271,7 @@ pub fn list<H: UiHost>(
                     let mut row_layout = LayoutStyle::default();
                     row_layout.size.width = Length::Fill;
                     let item_style = item_style.clone();
-                    let row = cx.flex(
+                    cx.flex(
                         FlexProps {
                             layout: row_layout,
                             direction: fret_core::Axis::Horizontal,
@@ -281,7 +280,6 @@ pub fn list<H: UiHost>(
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
-                            ..Default::default()
                         },
                         move |cx| {
                             vec![
@@ -294,8 +292,7 @@ pub fn list<H: UiHost>(
                                 )),
                             ]
                         },
-                    );
-                    row
+                    )
                 })
                 .collect::<Vec<_>>()
         },
