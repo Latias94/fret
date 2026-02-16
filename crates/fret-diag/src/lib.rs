@@ -13225,17 +13225,13 @@ fn run_script_over_transport(
 
             // Transport-agnostic streaming hook: persist incremental script progress so external
             // tooling can observe long runs without waiting for completion.
-            //
-            // Note: in filesystem transport mode the app owns `script.result.json` and advances
-            // `script.result.touch`. Writing here can clobber an in-flight app update and cause the
-            // tooling poller to miss the terminal stage.
-            if connected.devtools.client().kind() != crate::transport::DiagTransportKind::FileSystem
-            {
-                let _ = write_json_value(
-                    script_result_path,
-                    &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
-                );
-            }
+            // Note: `script_result_path` is a tooling output file (not the in-app filesystem
+            // transport `runtime.script.result.json`), so it is safe to update it even when the
+            // underlying transport is filesystem-based.
+            let _ = write_json_value(
+                script_result_path,
+                &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
+            );
             write_run_id_script_result(out_dir, parsed.run_id, &parsed);
 
             if matches!(
