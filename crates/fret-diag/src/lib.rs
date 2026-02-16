@@ -15,8 +15,9 @@ use std::process::Child;
 use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, UiArtifactStatsV1, UiCapabilitiesCheckV1,
-    UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1, UiArtifactStatsV1,
+    UiCapabilitiesCheckV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1,
+    UiScriptStageV1,
 };
 
 use zip::write::FileOptions;
@@ -13554,6 +13555,17 @@ fn run_script_over_transport(
 
     let mut result = 'wait: loop {
         while let Some(msg) = connected.devtools.try_recv() {
+            if msg.r#type == "session.removed"
+                && let Ok(removed) =
+                    serde_json::from_value::<DevtoolsSessionRemovedV1>(msg.payload.clone())
+                && removed.session_id == connected.selected_session_id
+            {
+                return Err(format!(
+                    "DevTools session disconnected while waiting for script result (session_id={}). Hint: refresh the page and re-run `cargo run -p fret-diag-export -- --list-sessions --token <token>`.",
+                    connected.selected_session_id
+                ));
+            }
+
             if msg.r#type != "script.result"
                 || msg.session_id.as_deref() != Some(&connected.selected_session_id)
             {
