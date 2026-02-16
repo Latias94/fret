@@ -234,12 +234,13 @@ Design note:
 
 ## G. Demo shells (reduce redundancy)
 
-- [ ] ONB-demo-060 Decide the canonical demo shells for native + wasm.
+- [x] ONB-demo-060 Decide the canonical demo shells for native + wasm.
   - Proposed:
     - `apps/fret-demo` (native)
     - `apps/fret-demo-web` (wasm; already used by `fretboard dev web`)
   - Evidence:
     - `apps/fretboard/src/dev.rs` (web dev shells into `apps/fret-demo-web`)
+    - `docs/workstreams/onboarding-ergonomics-v1.md` (Decisions)
 
 - [ ] ONB-demo-061 Make “core onboarding” demos runnable on both native + wasm via the same selection mechanism.
   - Targets:
@@ -272,6 +273,8 @@ Design note:
     - `.into_element(cx)` occurrences in `ecosystem/fret-ui-shadcn/src`
     - `impl_ui_patch_*!(...)` count in `ecosystem/fret-ui-shadcn/src/ui_ext`
 
-- [ ] ONB-metrics-072 Define target thresholds for `simple-todo` (composition readability) and enforce them in review.
+- [x] ONB-metrics-072 Define target thresholds for `simple-todo` (composition readability) and enforce them in review.
   - Example target (bikesheddable):
     - “< 10 explicit `.into_element(cx)` calls in template UI code” (conversion moves into ecosystem boundaries).
+  - Evidence:
+    - `apps/fretboard/src/scaffold/templates.rs` (template test asserts `<= 10`)
