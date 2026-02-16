@@ -594,8 +594,11 @@ impl Renderer {
             perf_svg_raster_budget_evictions: 0,
             perf_svg_mask_atlas_page_evictions: 0,
             perf_svg_mask_atlas_entries_evicted: 0,
+            perf_pending_render_target_updates_requested_by_ingest: [0;
+                fret_render_core::RenderTargetIngestStrategy::COUNT],
             perf_pending_render_target_updates_by_ingest: [0;
                 fret_render_core::RenderTargetIngestStrategy::COUNT],
+            perf_pending_render_target_updates_ingest_fallbacks: 0,
             perf: RenderPerfStats::default(),
             last_frame_perf: None,
             last_render_plan_segment_report: None,
@@ -670,9 +673,22 @@ impl Renderer {
         desc: RenderTargetDescriptor,
     ) -> fret_core::RenderTargetId {
         if self.perf_enabled {
-            let ix = render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
-            self.perf_pending_render_target_updates_by_ingest[ix] =
-                self.perf_pending_render_target_updates_by_ingest[ix].saturating_add(1);
+            let effective_ix =
+                render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
+            self.perf_pending_render_target_updates_by_ingest[effective_ix] =
+                self.perf_pending_render_target_updates_by_ingest[effective_ix].saturating_add(1);
+
+            let requested_ix =
+                render_target_ingest_strategy_perf_index(desc.metadata.requested_ingest_strategy);
+            self.perf_pending_render_target_updates_requested_by_ingest[requested_ix] = self
+                .perf_pending_render_target_updates_requested_by_ingest[requested_ix]
+                .saturating_add(1);
+
+            if desc.metadata.requested_ingest_strategy != desc.metadata.ingest_strategy {
+                self.perf_pending_render_target_updates_ingest_fallbacks = self
+                    .perf_pending_render_target_updates_ingest_fallbacks
+                    .saturating_add(1);
+            }
         }
         let id = self.render_targets.register(desc);
         self.render_target_revisions.insert(id, 1);
@@ -716,9 +732,22 @@ impl Renderer {
         desc: RenderTargetDescriptor,
     ) -> bool {
         if self.perf_enabled {
-            let ix = render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
-            self.perf_pending_render_target_updates_by_ingest[ix] =
-                self.perf_pending_render_target_updates_by_ingest[ix].saturating_add(1);
+            let effective_ix =
+                render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
+            self.perf_pending_render_target_updates_by_ingest[effective_ix] =
+                self.perf_pending_render_target_updates_by_ingest[effective_ix].saturating_add(1);
+
+            let requested_ix =
+                render_target_ingest_strategy_perf_index(desc.metadata.requested_ingest_strategy);
+            self.perf_pending_render_target_updates_requested_by_ingest[requested_ix] = self
+                .perf_pending_render_target_updates_requested_by_ingest[requested_ix]
+                .saturating_add(1);
+
+            if desc.metadata.requested_ingest_strategy != desc.metadata.ingest_strategy {
+                self.perf_pending_render_target_updates_ingest_fallbacks = self
+                    .perf_pending_render_target_updates_ingest_fallbacks
+                    .saturating_add(1);
+            }
         }
         if !self.render_targets.update(id, desc) {
             return false;

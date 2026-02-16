@@ -102,14 +102,28 @@ impl Renderer {
                 .image_upload_bytes
                 .saturating_add(counters.image_upload_bytes);
 
-            let pending = self.perf_pending_render_target_updates_by_ingest;
-            frame_perf.render_target_updates_ingest_unknown = pending[0];
-            frame_perf.render_target_updates_ingest_owned = pending[1];
-            frame_perf.render_target_updates_ingest_external_zero_copy = pending[2];
-            frame_perf.render_target_updates_ingest_gpu_copy = pending[3];
-            frame_perf.render_target_updates_ingest_cpu_upload = pending[4];
+            let pending_effective = self.perf_pending_render_target_updates_by_ingest;
+            frame_perf.render_target_updates_ingest_unknown = pending_effective[0];
+            frame_perf.render_target_updates_ingest_owned = pending_effective[1];
+            frame_perf.render_target_updates_ingest_external_zero_copy = pending_effective[2];
+            frame_perf.render_target_updates_ingest_gpu_copy = pending_effective[3];
+            frame_perf.render_target_updates_ingest_cpu_upload = pending_effective[4];
             self.perf_pending_render_target_updates_by_ingest =
                 [0; fret_render_core::RenderTargetIngestStrategy::COUNT];
+
+            let pending_requested = self.perf_pending_render_target_updates_requested_by_ingest;
+            frame_perf.render_target_updates_requested_ingest_unknown = pending_requested[0];
+            frame_perf.render_target_updates_requested_ingest_owned = pending_requested[1];
+            frame_perf.render_target_updates_requested_ingest_external_zero_copy =
+                pending_requested[2];
+            frame_perf.render_target_updates_requested_ingest_gpu_copy = pending_requested[3];
+            frame_perf.render_target_updates_requested_ingest_cpu_upload = pending_requested[4];
+            self.perf_pending_render_target_updates_requested_by_ingest =
+                [0; fret_render_core::RenderTargetIngestStrategy::COUNT];
+
+            frame_perf.render_target_updates_ingest_fallbacks =
+                self.perf_pending_render_target_updates_ingest_fallbacks;
+            self.perf_pending_render_target_updates_ingest_fallbacks = 0;
         }
 
         #[cfg(debug_assertions)]
@@ -3778,6 +3792,34 @@ impl Renderer {
                 .render_target_updates_ingest_cpu_upload
                 .saturating_add(frame_perf.render_target_updates_ingest_cpu_upload);
 
+            self.perf.render_target_updates_requested_ingest_unknown = self
+                .perf
+                .render_target_updates_requested_ingest_unknown
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_unknown);
+            self.perf.render_target_updates_requested_ingest_owned = self
+                .perf
+                .render_target_updates_requested_ingest_owned
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_owned);
+            self.perf
+                .render_target_updates_requested_ingest_external_zero_copy = self
+                .perf
+                .render_target_updates_requested_ingest_external_zero_copy
+                .saturating_add(
+                    frame_perf.render_target_updates_requested_ingest_external_zero_copy,
+                );
+            self.perf.render_target_updates_requested_ingest_gpu_copy = self
+                .perf
+                .render_target_updates_requested_ingest_gpu_copy
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_gpu_copy);
+            self.perf.render_target_updates_requested_ingest_cpu_upload = self
+                .perf
+                .render_target_updates_requested_ingest_cpu_upload
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_cpu_upload);
+            self.perf.render_target_updates_ingest_fallbacks = self
+                .perf
+                .render_target_updates_ingest_fallbacks
+                .saturating_add(frame_perf.render_target_updates_ingest_fallbacks);
+
             self.perf.svg_raster_budget_bytes = frame_perf.svg_raster_budget_bytes;
             self.perf.svg_rasters_live =
                 self.perf.svg_rasters_live.max(frame_perf.svg_rasters_live);
@@ -4105,6 +4147,18 @@ impl Renderer {
                     .render_target_updates_ingest_gpu_copy,
                 render_target_updates_ingest_cpu_upload: frame_perf
                     .render_target_updates_ingest_cpu_upload,
+                render_target_updates_requested_ingest_unknown: frame_perf
+                    .render_target_updates_requested_ingest_unknown,
+                render_target_updates_requested_ingest_owned: frame_perf
+                    .render_target_updates_requested_ingest_owned,
+                render_target_updates_requested_ingest_external_zero_copy: frame_perf
+                    .render_target_updates_requested_ingest_external_zero_copy,
+                render_target_updates_requested_ingest_gpu_copy: frame_perf
+                    .render_target_updates_requested_ingest_gpu_copy,
+                render_target_updates_requested_ingest_cpu_upload: frame_perf
+                    .render_target_updates_requested_ingest_cpu_upload,
+                render_target_updates_ingest_fallbacks: frame_perf
+                    .render_target_updates_ingest_fallbacks,
                 svg_raster_budget_bytes: frame_perf.svg_raster_budget_bytes,
                 svg_rasters_live: frame_perf.svg_rasters_live,
                 svg_standalone_bytes_live: frame_perf.svg_standalone_bytes_live,

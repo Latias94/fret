@@ -56,6 +56,24 @@ impl Renderer {
             render_target_updates_ingest_cpu_upload: self
                 .perf
                 .render_target_updates_ingest_cpu_upload,
+            render_target_updates_requested_ingest_unknown: self
+                .perf
+                .render_target_updates_requested_ingest_unknown,
+            render_target_updates_requested_ingest_owned: self
+                .perf
+                .render_target_updates_requested_ingest_owned,
+            render_target_updates_requested_ingest_external_zero_copy: self
+                .perf
+                .render_target_updates_requested_ingest_external_zero_copy,
+            render_target_updates_requested_ingest_gpu_copy: self
+                .perf
+                .render_target_updates_requested_ingest_gpu_copy,
+            render_target_updates_requested_ingest_cpu_upload: self
+                .perf
+                .render_target_updates_requested_ingest_cpu_upload,
+            render_target_updates_ingest_fallbacks: self
+                .perf
+                .render_target_updates_ingest_fallbacks,
             svg_raster_budget_bytes: self.perf.svg_raster_budget_bytes,
             svg_rasters_live: self.perf.svg_rasters_live,
             svg_standalone_bytes_live: self.perf.svg_standalone_bytes_live,

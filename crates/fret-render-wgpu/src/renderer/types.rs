@@ -192,6 +192,14 @@ pub struct RenderPerfSnapshot {
     pub render_target_updates_ingest_external_zero_copy: u64,
     pub render_target_updates_ingest_gpu_copy: u64,
     pub render_target_updates_ingest_cpu_upload: u64,
+    // Imported render targets (best-effort). Requested vs effective ingestion strategy is tracked
+    // so capability-gated fallbacks become visible in perf/diagnostics snapshots.
+    pub render_target_updates_requested_ingest_unknown: u64,
+    pub render_target_updates_requested_ingest_owned: u64,
+    pub render_target_updates_requested_ingest_external_zero_copy: u64,
+    pub render_target_updates_requested_ingest_gpu_copy: u64,
+    pub render_target_updates_requested_ingest_cpu_upload: u64,
+    pub render_target_updates_ingest_fallbacks: u64,
 
     // SVG raster cache (best-effort). These are intended to distinguish one-time warmup from
     // steady-state thrash (e.g. budget-driven eviction + repeated re-upload).
@@ -307,6 +315,12 @@ pub(super) struct RenderPerfStats {
     pub(super) render_target_updates_ingest_external_zero_copy: u64,
     pub(super) render_target_updates_ingest_gpu_copy: u64,
     pub(super) render_target_updates_ingest_cpu_upload: u64,
+    pub(super) render_target_updates_requested_ingest_unknown: u64,
+    pub(super) render_target_updates_requested_ingest_owned: u64,
+    pub(super) render_target_updates_requested_ingest_external_zero_copy: u64,
+    pub(super) render_target_updates_requested_ingest_gpu_copy: u64,
+    pub(super) render_target_updates_requested_ingest_cpu_upload: u64,
+    pub(super) render_target_updates_ingest_fallbacks: u64,
 
     pub(super) svg_raster_budget_bytes: u64,
     pub(super) svg_rasters_live: u64,

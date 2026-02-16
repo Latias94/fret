@@ -11,6 +11,11 @@ Current status (as of 2026-02-16):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
 - Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
+- External texture imports v2 planning and observability landed:
+  - ADR 0282 (requested: zero/low-copy import path with deterministic fallbacks).
+  - Renderer perf snapshot surfaces per-update ingest strategy breakdown for imported render targets
+    (requested vs effective) and a downgrade counter.
+  - Diagnostics bundle (`UiFrameStatsV1`) exposes the same ingest counters for devtools/perf baselines.
 - Sweep gradient paint v1 landed:
   - ADR 0280 (`Paint::SweepGradient`).
   - GPU readback conformance is exercised via `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`.

@@ -279,3 +279,11 @@ milestones) when implementation begins.
   - Tracking: `docs/workstreams/external-texture-imports-v1.md` (see `EXT-web-perf-131`).
   - Gate (web copy path): `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
   - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json` (recorded 2026-02-15).
+  - Landed observability (2026-02-16):
+    - `RenderTargetMetadata.requested_ingest_strategy` (requested) and `RenderTargetMetadata.ingest_strategy`
+      (effective) are surfaced in renderer perf snapshots for both:
+      - `render_target_updates_ingest_*` (pre-render update churn), and
+      - `viewport_draw_calls_ingest_*` (draw-side attribution).
+    - `render_target_updates_ingest_fallbacks` counts requested != effective at update time (best-effort).
+    - This is a *best-effort* diagnostic signal: it does not change ingest behavior yet.
+  - Next (v2): use these counters in perf baselines to enforce that any fallback-only path stays within budget.

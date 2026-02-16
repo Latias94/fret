@@ -397,6 +397,7 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
 
         if let Some(view) = state.view.as_ref() {
             let mut metadata = RenderTargetMetadata::default();
+            metadata.requested_ingest_strategy = RenderTargetIngestStrategy::ExternalZeroCopy;
             metadata.ingest_strategy = RenderTargetIngestStrategy::GpuCopy;
 
             #[cfg(target_arch = "wasm32")]

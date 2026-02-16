@@ -89,6 +89,24 @@ Progress record (internal refactor: per-frame GPU buffer rings):
   - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
   - `cargo test -p fret-render-wgpu --test text_paint_conformance`
 
+Progress record (external imports observability: ingest strategy counters):
+
+- Date: 2026-02-16
+- Commit: e3929d6a
+- Scope: renderer perf + diagnostics bundle plumbing (no contract changes; no ingest behavior changes)
+- Evidence anchors:
+  - `crates/fret-render-core/src/lib.rs` (`RenderTargetIngestStrategy`, `RenderTargetMetadata.ingest_strategy`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (counts declared ingest strategy for `register/update_render_target`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (snapshot plumbing + viewport draw attribution)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` fields)
+  - `apps/fret-examples/src/external_texture_imports_{demo,web_demo}.rs` (demo metadata tags)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-core`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo check -p fret-bootstrap`
+  - `cargo check -p fret-examples`
+
 ## M2 — Isolated opacity (saveLayerAlpha) v1
 
 Deliverables:

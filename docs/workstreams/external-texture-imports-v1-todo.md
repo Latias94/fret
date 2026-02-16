@@ -20,8 +20,12 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - and a minimal perf-gate checklist is recorded for wasm/mobile.
 
 - [x] EXT-diag-210 Surface per-frame ingestion strategy counters in renderer perf snapshots:
-      record declared `RenderTargetMetadata.ingest_strategy` counts for `RenderTargetId` updates and
+      record declared `RenderTargetMetadata` ingestion strategy counts for `RenderTargetId` updates and
       viewport sampling, and include them in UI diagnostics bundles for perf attribution.
+  - Notes:
+    - `RenderTargetMetadata.requested_ingest_strategy` (requested) and `RenderTargetMetadata.ingest_strategy`
+      (effective) are both surfaced so capability-gated fallbacks are measurable.
+    - `render_target_updates_ingest_fallbacks` counts requested != effective at update time (best-effort).
   - Evidence anchors:
     - `crates/fret-render-core/src/lib.rs` (`RenderTargetIngestStrategy`)
     - `crates/fret-render-wgpu/src/renderer/resources.rs` (`perf_pending_render_target_updates_by_ingest`)

@@ -183,6 +183,7 @@ impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
         let mut metadata = RenderTargetMetadata::default();
+        metadata.requested_ingest_strategy = RenderTargetIngestStrategy::Owned;
         metadata.ingest_strategy = RenderTargetIngestStrategy::Owned;
         Ok(NativeExternalImportedFrame {
             view,
@@ -466,6 +467,7 @@ fn record_engine_frame(
         ExternalTextureImportsMode::CheckerGpu => RenderTargetIngestStrategy::Owned,
         ExternalTextureImportsMode::DecodedPngCpuCopy => RenderTargetIngestStrategy::CpuUpload,
     };
+    metadata.requested_ingest_strategy = metadata.ingest_strategy;
 
     if st.use_native_adapter {
         let renderer_caps = app

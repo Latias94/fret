@@ -70,6 +70,11 @@ impl Default for RenderTargetOrientation {
 pub struct RenderTargetMetadata {
     pub alpha_mode: RenderTargetAlphaMode,
     pub orientation: RenderTargetOrientation,
+    /// Requested ingestion strategy (what the caller wanted).
+    ///
+    /// This is a diagnostic hint for capability-gated fallback behavior. Renderers may
+    /// report when `requested_ingest_strategy` differs from `ingest_strategy`.
+    pub requested_ingest_strategy: RenderTargetIngestStrategy,
     pub ingest_strategy: RenderTargetIngestStrategy,
 
     /// Optional frame timestamp hint for diagnostics/telemetry, in monotonic nanoseconds.
@@ -84,6 +89,7 @@ impl Default for RenderTargetMetadata {
         Self {
             alpha_mode: RenderTargetAlphaMode::Premultiplied,
             orientation: RenderTargetOrientation::default(),
+            requested_ingest_strategy: RenderTargetIngestStrategy::Unknown,
             ingest_strategy: RenderTargetIngestStrategy::Unknown,
             frame_timestamp_ns: None,
         }
