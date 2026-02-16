@@ -194,6 +194,10 @@ where
         let placeholder = options.placeholder.clone();
         let focusable = options.focusable;
         let error_display = options.error_display;
+        let error_icon_test_id = options
+            .test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{}.error", id.as_ref())));
 
         let frame_bg = frame_chrome.bg;
         let field = editor_joined_input_frame_with_overrides(
@@ -389,13 +393,17 @@ where
                     .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
                     .unwrap_or_else(|| theme.color_token("destructive"));
 
-                vec![editor_icon_segment(
+                let mut icon = editor_icon_segment(
                     cx,
                     density,
                     fret_icons::ids::ui::STATUS_FAILED,
                     Some(Px(12.0)),
                     Some(fret_ui_kit::ColorRef::Color(error_border)),
-                )]
+                );
+                if let Some(test_id) = error_icon_test_id.as_ref() {
+                    icon = icon.test_id(test_id.clone());
+                }
+                vec![icon]
             },
         );
 

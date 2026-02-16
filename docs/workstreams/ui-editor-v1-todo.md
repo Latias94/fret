@@ -71,10 +71,12 @@ Deliverables:
   - [x] joined input-group chrome (matches `TextField` / `MiniSearchBox`)
   - [x] error state tints the joined frame border/bg (tokens)
   - [x] configurable error presentation (inline text vs trailing status icon)
+  - [x] derive a stable error icon test anchor (`${test_id}.error`) when `test_id` is provided
   - Evidence: `ecosystem/fret-ui-editor/src/controls/numeric_input.rs`
 - [~] `DragValue<T>` control:
   - [x] scalar abstraction (`DragValueScalar` for `f32`/`f64`/`i32`)
   - [x] double-click to type (switch to `NumericInput`)
+  - [x] use trailing-icon error display for typing mode (avoid row height changes)
   - Evidence: `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
 - [~] `PropertyRow` composite:
   - [x] label slot + value slot + actions slot
@@ -177,6 +179,7 @@ adding new runtime contracts unless evidence demands it.
 - [x] Add an editor-facing `Slider<T>` control:
   - horizontal first; clamping + step policy
   - value display + double-click typing mode (via `NumericInput`)
+  - [x] use trailing-icon error display for typing mode (avoid row height changes)
   - [x] Key internal state per slider instance (avoid cross-widget drag/typing interference).
   - Evidence: `ecosystem/fret-ui-editor/src/controls/slider.rs`
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.material.roughness`, `imui-editor-proof.editor.material.metallic`)

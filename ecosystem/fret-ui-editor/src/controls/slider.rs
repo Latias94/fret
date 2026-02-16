@@ -10,8 +10,8 @@ use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use crate::controls::numeric_input::{
-    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
-    NumericValidateFn,
+    NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
+    NumericInputOutcome, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::drag_value_core::DragValueScalar;
@@ -788,6 +788,9 @@ where
                 enabled: enabled && typing,
                 focusable: enabled && typing,
                 test_id: self.options.test_id.clone(),
+                // Avoid growing the row height when a commit-time validation error occurs.
+                // A small trailing status icon keeps the inspector layout stable.
+                error_display: NumericInputErrorDisplay::TrailingIcon,
                 ..Default::default()
             })
             .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
