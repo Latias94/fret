@@ -73,3 +73,6 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Keep v1 copy-path baselines green:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+    - Evidence (2026-02-16): web DevTools WS perf gate run is runnable end-to-end again:
+      - `fix(web): wake redraw on DevTools WS inbox`
+      - `fretboard diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json ... --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
