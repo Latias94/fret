@@ -4,6 +4,8 @@ use std::rc::Rc;
 
 use fret_core::{AppWindowId, Event, ExternalDropReadLimits, TimerToken};
 use fret_runtime::{Effect, PlatformCapabilities};
+use js_sys::Reflect;
+use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::Event as WebSysEvent;
 use web_sys::{Document, HtmlElement};
@@ -21,6 +23,21 @@ fn window() -> Option<web_sys::Window> {
 
 fn document() -> Option<Document> {
     window().and_then(|w| w.document())
+}
+
+fn js_error_string(err: &JsValue) -> Option<String> {
+    let name = Reflect::get(err, &JsValue::from_str("name"))
+        .ok()
+        .and_then(|v| v.as_string());
+    let message = Reflect::get(err, &JsValue::from_str("message"))
+        .ok()
+        .and_then(|v| v.as_string());
+    match (name, message) {
+        (Some(name), Some(message)) if !message.is_empty() => Some(format!("{name}: {message}")),
+        (Some(name), _) => Some(name),
+        (_, Some(message)) if !message.is_empty() => Some(message),
+        _ => None,
+    }
 }
 
 /// Web-specific platform services for `fret-runtime::Effect`s that require browser APIs.
@@ -207,7 +224,7 @@ impl WebPlatformServices {
                         .global::<PlatformCapabilities>()
                         .cloned()
                         .unwrap_or_default();
-                    if !caps.clipboard.text {
+                    if !caps.clipboard.text.write {
                         continue;
                     }
                     let Some(window) = window() else {
@@ -216,7 +233,13 @@ impl WebPlatformServices {
                     let clipboard = window.navigator().clipboard();
                     let wake = self.waker.clone();
                     spawn_local(async move {
-                        let _ = JsFuture::from(clipboard.write_text(&text)).await;
+                        if let Err(err) = JsFuture::from(clipboard.write_text(&text)).await {
+                            let msg = js_error_string(&err)
+                                .unwrap_or_else(|| "clipboard write failed".to_string());
+                            web_sys::console::warn_1(&JsValue::from_str(&format!(
+                                "fret: navigator.clipboard.writeText failed: {msg}"
+                            )));
+                        }
                         if let Some(wake) = wake.as_ref() {
                             wake();
                         }
@@ -227,17 +250,25 @@ impl WebPlatformServices {
                         .global::<PlatformCapabilities>()
                         .cloned()
                         .unwrap_or_default();
-                    if !caps.clipboard.text {
+                    if !caps.clipboard.text.read {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable { token });
+                            .push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some("clipboard text read is unavailable".to_string()),
+                            });
                         continue;
                     }
 
                     let Some(window) = window() else {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable { token });
+                            .push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some(
+                                    "window is unavailable for clipboard read".to_string(),
+                                ),
+                            });
                         continue;
                     };
                     let clipboard = window.navigator().clipboard();
@@ -250,7 +281,10 @@ impl WebPlatformServices {
                                 token,
                                 text: v.as_string().unwrap_or_default(),
                             },
-                            Err(_) => Event::ClipboardTextUnavailable { token },
+                            Err(err) => Event::ClipboardTextUnavailable {
+                                token,
+                                message: js_error_string(&err),
+                            },
                         };
                         let _ = queue.try_borrow_mut().map(|mut q| q.push(event));
                         if let Some(wake) = wake.as_ref() {

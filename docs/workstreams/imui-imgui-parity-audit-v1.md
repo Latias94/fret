@@ -1,5 +1,14 @@
 # imui ↔ Dear ImGui Parity Audit (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (audit note; not an ADR)
 Last updated: 2026-02-10
 

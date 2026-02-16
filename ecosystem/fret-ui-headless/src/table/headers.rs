@@ -148,8 +148,8 @@ fn create_header_group(
     headers_to_group: Vec<usize>,
     depth: usize,
     meta: &HashMap<Arc<str>, ColumnMeta>,
-    leaf_visible: &dyn Fn(&str) -> bool,
-    visible_cache: &mut HashMap<Arc<str>, bool>,
+    _leaf_visible: &dyn Fn(&str) -> bool,
+    _visible_cache: &mut HashMap<Arc<str>, bool>,
     header_family: Option<&str>,
     header_groups: &mut Vec<(usize, Arc<str>, Vec<usize>)>,
     arena: &mut Vec<HeaderNode>,
@@ -178,11 +178,11 @@ fn create_header_group(
             is_placeholder = true;
         }
 
-        if let Some(&latest_idx) = pending_parent_headers.last() {
-            if arena[latest_idx].column_id.as_ref() == parent_column_id.as_ref() {
-                arena[latest_idx].sub_headers.push(header_to_group_idx);
-                continue;
-            }
+        if let Some(&latest_idx) = pending_parent_headers.last()
+            && arena[latest_idx].column_id.as_ref() == parent_column_id.as_ref()
+        {
+            arena[latest_idx].sub_headers.push(header_to_group_idx);
+            continue;
         }
 
         let placeholder_id = if is_placeholder {
@@ -224,8 +224,8 @@ fn create_header_group(
             pending_parent_headers,
             depth - 1,
             meta,
-            leaf_visible,
-            visible_cache,
+            _leaf_visible,
+            _visible_cache,
             header_family,
             header_groups,
             arena,

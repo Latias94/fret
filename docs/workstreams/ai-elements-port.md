@@ -5,6 +5,15 @@ date: 2026-02-12
 scope: ecosystem/fret-ui-ai, shadcn recipes reuse, diag gates
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Vercel AI Elements: https://github.com/vercel/ai-elements
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # AI Elements Port (`fret-ui-ai`) — Workstream
 
 This workstream tracks the port of Vercel's **AI Elements** component taxonomy into Fret’s ecosystem:
@@ -43,7 +52,7 @@ providing engine-backed demos without breaking layering:
 ## Version stamp (upstream reference)
 
 The upstream spec for this workstream is the pinned local checkout under
-`$FRET_REPO_REF_ROOT/ai-elements` (default in this dev environment: `F:/SourceCodes/Rust/fret/repo-ref`).
+`$FRET_REPO_REF_ROOT/ai-elements` (local repo-ref root; see `docs/repo-ref.md`).
 
 Note: `repo-ref` is a local developer asset store and is not required to build the workspace.
 

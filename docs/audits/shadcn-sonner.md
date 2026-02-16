@@ -1,5 +1,14 @@
 # shadcn/ui v4 Audit — Sonner (Toast)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret’s shadcn-aligned `Sonner` surface against the upstream shadcn/ui v4
 integration of `sonner` (toast notifications) in `repo-ref/ui`.
 

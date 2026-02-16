@@ -5,6 +5,7 @@ mod host;
 mod store;
 
 slotmap::new_key_type! {
+    /// Opaque identifier for a model entry stored in a [`ModelStore`].
     pub struct ModelId;
 }
 

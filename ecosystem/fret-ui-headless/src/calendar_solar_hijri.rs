@@ -184,8 +184,8 @@ fn jal_cal(jy: i32, without_leap: bool) -> JalCal {
         panic!("invalid Solar Hijri year {jy}");
     }
 
-    for i in 1..(bl as usize) {
-        jm = BREAKS[i];
+    for &next_break in BREAKS.iter().take(bl as usize).skip(1) {
+        jm = next_break;
         jump = jm - jp;
         if jy < jm {
             break;

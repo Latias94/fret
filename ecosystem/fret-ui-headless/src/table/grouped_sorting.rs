@@ -181,10 +181,7 @@ fn compare_for_spec<TData>(
         && matches!(rb.kind, GroupedRowKind::Leaf { .. });
 
     if ord.is_none() && both_leaf {
-        let extract_u64 = col
-            .value_u64_fn
-            .as_ref()
-            .or_else(|| col.facet_key_fn.as_ref());
+        let extract_u64 = col.value_u64_fn.as_ref().or(col.facet_key_fn.as_ref());
         if let Some(extract_u64) = extract_u64 {
             let idx_a = row_data_index(&ra.kind, row_index_by_key);
             let idx_b = row_data_index(&rb.kind, row_index_by_key);
@@ -206,15 +203,16 @@ fn compare_for_spec<TData>(
         }
     }
 
-    if ord.is_none() && both_leaf {
-        if let Some(get_value) = col.sort_value.as_ref() {
-            let idx_a = row_data_index(&ra.kind, row_index_by_key);
-            let idx_b = row_data_index(&rb.kind, row_index_by_key);
-            if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
-                let va = get_value(&data[idx_a]);
-                let vb = get_value(&data[idx_b]);
-                ord = Some(compare_basic_tanstack(&va, &vb));
-            }
+    if ord.is_none()
+        && both_leaf
+        && let Some(get_value) = col.sort_value.as_ref()
+    {
+        let idx_a = row_data_index(&ra.kind, row_index_by_key);
+        let idx_b = row_data_index(&rb.kind, row_index_by_key);
+        if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
+            let va = get_value(&data[idx_a]);
+            let vb = get_value(&data[idx_b]);
+            ord = Some(compare_basic_tanstack(&va, &vb));
         }
     }
 

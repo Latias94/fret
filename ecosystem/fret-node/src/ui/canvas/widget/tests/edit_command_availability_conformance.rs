@@ -5,7 +5,8 @@ fn availability_cx<'a>(
     tree: &'a fret_ui::UiTree<TestUiHostImpl>,
 ) -> fret_ui::retained_bridge::CommandAvailabilityCx<'a, TestUiHostImpl> {
     let mut input_ctx = fret_runtime::InputContext::default();
-    input_ctx.caps.clipboard.text = true;
+    input_ctx.caps.clipboard.text.read = true;
+    input_ctx.caps.clipboard.text.write = true;
 
     fret_ui::retained_bridge::CommandAvailabilityCx {
         app: host,

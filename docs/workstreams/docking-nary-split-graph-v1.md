@@ -68,13 +68,13 @@ These are useful for aligning design intent, not for copying code:
 
 - `egui_tiles` (N-ary linear containers + shares + simplification rules):
   - Upstream: https://github.com/rerun-io/egui_tiles
-  - Local (repo-ref checkout): `F:\SourceCodes\Rust\fret\repo-ref\egui_tiles\`
+  - Local (repo-ref checkout, optional): `repo-ref/egui_tiles/`
   - `repo-ref/egui_tiles/src/container/linear.rs` (`Linear`, `Shares`)
   - `repo-ref/egui_tiles/src/lib.rs` (`SimplificationOptions`, “two-pass layout + ui” note)
   - `repo-ref/egui_tiles/src/behavior.rs` (`Behavior` trait: overrideable policy surface)
 - `dockview` (layout tree + panel state map separation; float/popout state organization):
   - Upstream: https://github.com/mathuo/dockview
-  - Local (repo-ref checkout): `F:\SourceCodes\Rust\fret\repo-ref\dockview\`
+  - Local (repo-ref checkout, optional): `repo-ref/dockview/`
   - `repo-ref/dockview/packages/dockview-core/src/dockview/dockviewComponent.ts`
 
 ### Floating model comparison (Fret vs dockview vs ImGui)

@@ -18,17 +18,12 @@ pub struct GridLayout {
     pub rect: Rect,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum AxisOrientation {
+    #[default]
     Horizontal,
     Vertical,
-}
-
-impl Default for AxisOrientation {
-    fn default() -> Self {
-        Self::Horizontal
-    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]

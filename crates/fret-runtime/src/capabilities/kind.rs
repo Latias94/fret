@@ -11,6 +11,8 @@ pub const KNOWN_BOOL_CAPABILITY_KEYS: &[&str] = &[
     keys::UI_WINDOW_TEAR_OFF,
     keys::UI_CURSOR_ICONS,
     keys::CLIPBOARD_TEXT,
+    keys::CLIPBOARD_TEXT_READ,
+    keys::CLIPBOARD_TEXT_WRITE,
     keys::CLIPBOARD_FILES,
     keys::CLIPBOARD_PRIMARY_TEXT,
     keys::DND_EXTERNAL,

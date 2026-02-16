@@ -2,6 +2,15 @@
 
 # MVP: SVG Icons (Alpha Mask + Tint)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: **ICON-0/ICON-1/ICON-2/IMG-0 implemented**
 
 This document is intentionally standalone to avoid interfering with other in-flight docs.

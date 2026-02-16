@@ -5,6 +5,38 @@ use super::{
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+pub struct ClipboardTextCapabilities {
+    pub read: bool,
+    pub write: bool,
+}
+
+impl<'de> Deserialize<'de> for ClipboardTextCapabilities {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Compat {
+            // Legacy shape: `"clipboard": { "text": true }`
+            Bool(bool),
+            // New shape: `"clipboard": { "text": { "read": true, "write": false } }`
+            Struct {
+                #[serde(default)]
+                read: bool,
+                #[serde(default)]
+                write: bool,
+            },
+        }
+
+        Ok(match Compat::deserialize(deserializer)? {
+            Compat::Bool(v) => Self { read: v, write: v },
+            Compat::Struct { read, write } => Self { read, write },
+        })
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiCapabilities {
@@ -20,7 +52,7 @@ pub struct UiCapabilities {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ClipboardCapabilities {
-    pub text: bool,
+    pub text: ClipboardTextCapabilities,
     pub files: bool,
     /// Linux/X11/Wayland primary selection text support.
     ///

@@ -206,6 +206,94 @@ fn text_input_hover_sets_text_cursor_effect() {
 }
 
 #[test]
+fn right_click_focuses_and_preserves_selection_for_context_menus() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut widget = TextInput::new();
+    widget.text = "hello world".to_string();
+    widget.caret = 5;
+    widget.selection_anchor = 0;
+    widget.set_chrome_style(crate::TextInputStyle {
+        padding: fret_core::Edges::all(Px(0.0)),
+        ..Default::default()
+    });
+    let input = ui.create_node(widget);
+    ui.set_root(input);
+    ui.set_focus(None);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = ImeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(2.0), Px(10.0)),
+            button: fret_core::MouseButton::Right,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(input),
+        "expected right-click to focus the text input so context menu commands target it"
+    );
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let snap0 = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after paint");
+    assert_eq!(
+        snap0.selection_utf16,
+        Some((0, 5)),
+        "expected right-click inside selection to preserve it"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(8.0), Px(10.0)),
+            button: fret_core::MouseButton::Right,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let snap1 = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after paint");
+    assert_eq!(
+        snap1.selection_utf16,
+        Some((8, 8)),
+        "expected right-click outside selection to collapse it to the caret position"
+    );
+}
+
+#[test]
 fn text_input_double_click_selection_respects_text_boundary_mode() {
     let window = AppWindowId::default();
     let node = fret_core::NodeId::default();
@@ -274,6 +362,60 @@ fn text_input_double_click_selection_respects_text_boundary_mode() {
         (input.selection_anchor, input.caret),
         (0, 3),
         "Identifier mode should stop at the apostrophe"
+    );
+}
+
+#[test]
+fn text_input_command_availability_tracks_selection_and_clipboard_caps() {
+    let window = AppWindowId::default();
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.caret = 0;
+    input.selection_anchor = 0;
+    let node = ui.create_node(input);
+    ui.set_root(node);
+    ui.set_focus(Some(node));
+
+    let mut app = TestHost::new();
+    let mut caps = PlatformCapabilities::default();
+    caps.clipboard.text.read = true;
+    caps.clipboard.text.write = true;
+    app.set_global(caps);
+
+    assert_eq!(
+        ui.command_availability(&mut app, &CommandId::from("edit.copy")),
+        crate::widget::CommandAvailability::Blocked,
+        "expected copy to be blocked without a selection"
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.caret = 5;
+    input.selection_anchor = 0;
+    let node = ui.create_node(input);
+    ui.set_root(node);
+    ui.set_focus(Some(node));
+
+    assert_eq!(
+        ui.command_availability(&mut app, &CommandId::from("edit.copy")),
+        crate::widget::CommandAvailability::Available,
+        "expected copy to be available with a selection"
+    );
+
+    let mut caps = PlatformCapabilities::default();
+    caps.clipboard.text.read = false;
+    caps.clipboard.text.write = false;
+    app.set_global(caps);
+
+    assert_eq!(
+        ui.command_availability(&mut app, &CommandId::from("edit.copy")),
+        crate::widget::CommandAvailability::Blocked,
+        "expected copy to be blocked when clipboard text is unavailable"
     );
 }
 

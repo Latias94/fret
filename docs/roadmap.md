@@ -1,5 +1,17 @@
 # Fret Roadmap (Draft)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- fret-ui-precision: (internal reference; no public upstream link)
+- gpui-component: https://github.com/longbridge/gpui-component
+- Tailwind CSS: https://github.com/tailwindlabs/tailwindcss
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This roadmap focuses on building an editor-grade UI framework with docking, tear-off windows, and multiple engine viewports. The goal is to keep early work aligned with long-term constraints (multi-window, wgpu/WebGPU, plugins) to minimize future rewrites.
 
 Key contracts are captured in ADRs under `docs/adr/`.

@@ -1,5 +1,15 @@
 # `fret-ui-editor` — ImGui / `fret-ui-precision` Alignment Inventory v1
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- fret-ui-precision: (internal reference; no public upstream link)
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active inventory (workstream note; not an ADR)  
 Last updated: 2026-02-15
 

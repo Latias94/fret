@@ -1,5 +1,14 @@
 # ImPlot3D Alignment (Fret Plot3D)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- ImPlot3D: https://github.com/brenocq/implot3d
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document tracks *conceptual* parity between:
 
 - ImPlot3D (reference: `repo-ref/implot3d` @ `5981bc5`)

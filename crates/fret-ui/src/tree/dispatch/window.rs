@@ -78,6 +78,26 @@ impl<H: UiHost> UiTree<H> {
                 .and_then(|svc| svc.snapshot(window))
                 .map(|s| s.now_monotonic);
 
+            match event {
+                Event::ClipboardText { token, .. } => {
+                    app.with_global_mut_untracked(
+                        fret_runtime::WindowClipboardDiagnosticsStore::default,
+                        |svc, _host| {
+                            svc.record_read_ok(window, frame_id, *token);
+                        },
+                    );
+                }
+                Event::ClipboardTextUnavailable { token, message } => {
+                    app.with_global_mut_untracked(
+                        fret_runtime::WindowClipboardDiagnosticsStore::default,
+                        |svc, _host| {
+                            svc.record_read_unavailable(window, frame_id, *token, message.clone());
+                        },
+                    );
+                }
+                _ => {}
+            }
+
             let update_pointer = |app: &mut H,
                                   pointer_id: fret_core::PointerId,
                                   position: Point| {

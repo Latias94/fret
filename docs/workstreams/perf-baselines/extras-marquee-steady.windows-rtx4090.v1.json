@@ -2,7 +2,7 @@
   "generated_unix_ms": 1770654502315,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "F:\\SourceCodes\\Rust\\fret-worktrees\\shadcn-extras\\docs/workstreams/perf-baselines/extras-marquee-steady.windows-rtx4090.v1.json",
+  "out_path": "docs/workstreams/perf-baselines/extras-marquee-steady.windows-rtx4090.v1.json",
   "repeat": 7,
   "rows": [
     {

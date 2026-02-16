@@ -7,6 +7,22 @@
 //! force a specific async runtime in its public contract surface.
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-app/README.md`.
+//!
+//! ## Where to start
+//!
+//! - [`App`]: the main app container (globals, models, commands, effects)
+//! - Config files: [`load_layered_settings`], [`load_layered_keymap`], [`load_layered_menu_bar`]
+//! - Menus: [`Menu`], [`MenuBar`], [`MenuItem`]
+//!
+//! ## Minimal example
+//!
+//! ```
+//! use fret_app::{App, CommandId, CommandMeta};
+//!
+//! let mut app = App::new();
+//! app.commands_mut()
+//!     .register(CommandId::from("app.quit"), CommandMeta::new("Quit"));
+//! ```
 
 pub mod app;
 pub mod app_display_name;

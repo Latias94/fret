@@ -1,3 +1,12 @@
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- TanStack Table: https://github.com/TanStack/table
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 Status: Active (workstream tracker; not a contract)
 
 This document is the **capability inventory** for the TanStack Table v8 `table-core` parity
@@ -6,7 +15,7 @@ method-name parity.
 
 Upstream reference (local checkout):
 
-- `F:/SourceCodes/Rust/fret/repo-ref/table/packages/table-core`
+- `repo-ref/table/packages/table-core`
 - Baseline: `@tanstack/table-core@8.21.3` (commit `e172109fca4cc403a07236ed8fa103450ceba5e9`)
 
 Fret implementation:
@@ -496,12 +505,13 @@ This is a **raw** inventory of instance members assigned on upstream `table`, `c
 objects. It is intentionally redundant and includes some underscore-prefixed internals, because those often correspond
 to observable behavior (memo caches / queues / derived model hooks).
 
-Source (local): `F:/SourceCodes/Rust/fret/repo-ref/table/packages/table-core/src/**/*.ts`.
+Source (repo-ref): `repo-ref/table/packages/table-core/src/**/*.ts`.
 
 Extraction command (PowerShell; requires ripgrep `rg` with `--pcre2`):
 
 ```ps1
-$root='F:\SourceCodes\Rust\fret\repo-ref\table\packages\table-core\src'
+$ws = git rev-parse --show-toplevel
+$root = Join-Path $ws 'repo-ref/table/packages/table-core/src'
 cd $root
 rg --pcre2 -o "table\.[A-Za-z0-9_]+"  -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique
 rg --pcre2 -o "column\.[A-Za-z0-9_]+" -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique

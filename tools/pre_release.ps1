@@ -15,6 +15,9 @@ param(
   [switch]$SkipReleaseClosure,
 
   [Parameter(Mandatory = $false)]
+  [switch]$SkipPortableTime,
+
+  [Parameter(Mandatory = $false)]
   [switch]$SkipDiffCheck
 )
 
@@ -37,39 +40,40 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
 Invoke-Checked `
   "ADR ID uniqueness" `
-  "pwsh" `
+  "python" `
   @(
-    "-NoProfile",
-    "-File",
-    (Join-Path $repoRoot "tools/check_adr_numbers.ps1")
+    (Join-Path $repoRoot "tools/check_adr_numbers.py")
   )
 
 Invoke-Checked `
   "Workspace layering policy" `
-  "pwsh" `
+  "python" `
   @(
-    "-NoProfile",
-    "-File",
-    (Join-Path $repoRoot "tools/check_layering.ps1")
+    (Join-Path $repoRoot "tools/check_layering.py")
   )
 
 Invoke-Checked `
   "Execution surface policy" `
-  "pwsh" `
+  "python" `
   @(
-    "-NoProfile",
-    "-File",
-    (Join-Path $repoRoot "tools/check_execution_surface.ps1")
+    (Join-Path $repoRoot "tools/check_execution_surface.py")
   )
 
 Invoke-Checked `
   "Stringly command parsing policy" `
-  "pwsh" `
+  "python" `
   @(
-    "-NoProfile",
-    "-File",
-    (Join-Path $repoRoot "tools/check_stringly_command_parsing.ps1")
+    (Join-Path $repoRoot "tools/check_stringly_command_parsing.py")
   )
+
+if (-not $SkipPortableTime) {
+  Invoke-Checked `
+    "Portable time sources (prefer fret_core::time::Instant)" `
+    "python" `
+    @(
+      (Join-Path $repoRoot "tools/check_portable_time.py")
+    )
+}
 
 if (-not $SkipReleaseClosure) {
   Invoke-Checked `
@@ -77,22 +81,20 @@ if (-not $SkipReleaseClosure) {
     "python" `
     @(
       (Join-Path $repoRoot "tools/release_closure_check.py"),
+      "--config",
+      "release-plz.toml",
       "--write-order",
       "docs/release/v0.1.0-publish-order.txt"
     )
 }
 
 if (-not $SkipIcons) {
-  $iconArgs = @(
-    "-NoProfile",
-    "-File",
-    (Join-Path $repoRoot "tools/pre_release_icons.ps1")
-  )
+  $iconArgs = @((Join-Path $repoRoot "tools/pre_release_icons.py"))
   if ($SkipDiffCheck) {
-    $iconArgs += "-SkipDiffCheck"
+    $iconArgs += "--skip-diff-check"
   }
 
-  Invoke-Checked "icons checks" "pwsh" $iconArgs
+  Invoke-Checked "icons checks" "python" $iconArgs
 }
 
 if (-not $SkipFmt) {

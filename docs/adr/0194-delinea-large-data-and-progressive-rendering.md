@@ -1,5 +1,15 @@
 # ADR 0194: `delinea` Large Data + Progressive Rendering Strategy (P0/P1 Baseline)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context
@@ -125,8 +135,8 @@ P1:
 
 ## References
 
-- ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
+- ECharts scheduler/progressive pipeline: `repo-ref/echarts/src/core/Scheduler.ts`
 - ADR 0190: `docs/adr/0190-delinea-headless-chart-engine.md`
 - ADR 0191: `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
-- Zed/GPUI reference: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\zed\\crates\\gpui\\src\\window.rs` (`Window::request_animation_frame`)
+- Zed/GPUI reference: `repo-ref/zed/crates/gpui/src/window.rs` (`Window::request_animation_frame`)

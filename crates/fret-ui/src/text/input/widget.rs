@@ -6,7 +6,10 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect};
 
 use super::TextInput;
-use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, PlatformTextInputCx, Widget};
+use crate::widget::{
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
+    PlatformTextInputCx, Widget,
+};
 use crate::{Invalidation, UiHost};
 
 impl<H: UiHost> Widget<H> for TextInput {
@@ -562,6 +565,48 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
+                MouseButton::Right => {
+                    if *pointer_type != fret_core::PointerType::Mouse {
+                        return;
+                    }
+                    cx.request_focus(cx.node);
+                    self.last_sent_cursor = None;
+
+                    // Avoid mutating selection/caret during IME composition; a context menu should
+                    // not disrupt an in-progress preedit session.
+                    if self.is_ime_composing() {
+                        return;
+                    }
+
+                    let (sel_start, sel_end) = crate::text_edit::buffer::selection_range(
+                        self.selection_anchor,
+                        self.caret,
+                    );
+
+                    let padding = self.chrome_style.padding.left;
+                    let local_x = Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)
+                        + self.offset_x.0)
+                        .max(0.0));
+                    let caret_at_point = self
+                        .text_blob
+                        .map(|blob| cx.services.hit_test_x(blob, local_x))
+                        .unwrap_or_else(|| self.caret_from_x(local_x));
+
+                    // Preserve an existing selection when right-clicking inside it so "Copy" and
+                    // friends remain enabled in upstream context menus.
+                    if sel_start != sel_end
+                        && caret_at_point >= sel_start
+                        && caret_at_point <= sel_end
+                    {
+                        return;
+                    }
+
+                    self.caret = caret_at_point;
+                    self.selection_anchor = caret_at_point;
+                    self.clear_ime_composition();
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
                 MouseButton::Middle => {
                     if *pointer_type != fret_core::PointerType::Mouse {
                         return;
@@ -869,7 +914,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.request_redraw();
                 }
             }
-            Event::ClipboardTextUnavailable { token } => {
+            Event::ClipboardTextUnavailable { token, .. } => {
                 if self.pending_clipboard_token == Some(*token) {
                     self.pending_clipboard_token = None;
                 }
@@ -986,6 +1031,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.copy" => {
+                if !cx.input_ctx.caps.clipboard.text.write {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -999,6 +1047,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.cut" => {
+                if !cx.input_ctx.caps.clipboard.text.write {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -1015,6 +1066,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.paste" => {
+                if !cx.input_ctx.caps.clipboard.text.read {
+                    return true;
+                }
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
                     cmd,
@@ -1096,6 +1150,59 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
+        }
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> CommandAvailability {
+        if !self.enabled {
+            return CommandAvailability::NotHandled;
+        }
+        if cx.focus != Some(cx.node) {
+            return CommandAvailability::NotHandled;
+        }
+
+        let cmd = match command.as_str() {
+            "edit.copy" => "text.copy",
+            "edit.cut" => "text.cut",
+            "edit.paste" => "text.paste",
+            "edit.select_all" => "text.select_all",
+            other => other,
+        };
+        if !cmd.starts_with("text.") {
+            return CommandAvailability::NotHandled;
+        }
+
+        let clipboard_read = cx.input_ctx.caps.clipboard.text.read;
+        let clipboard_write = cx.input_ctx.caps.clipboard.text.write;
+        match cmd {
+            "text.copy" | "text.cut" => {
+                if !clipboard_write {
+                    return CommandAvailability::Blocked;
+                }
+                if self.has_selection() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            "text.paste" => {
+                if !clipboard_read {
+                    return CommandAvailability::Blocked;
+                }
+                CommandAvailability::Available
+            }
+            "text.select_all" | "text.clear" => {
+                if !self.text.is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            _ => CommandAvailability::NotHandled,
         }
     }
 
@@ -1378,6 +1485,18 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
+        let window_focused = cx
+            .app
+            .global::<fret_core::WindowMetricsService>()
+            .and_then(|svc| svc.focused(window))
+            .unwrap_or(true);
+        let selection_color = if focused || self.chrome_override {
+            self.chrome_style.selection_color
+        } else if !window_focused {
+            theme.color_token("selection.window_inactive.background")
+        } else {
+            theme.color_token("selection.inactive.background")
+        };
         if self.has_selection() && !self.is_ime_composing() {
             let (a, b) = self.selection_range();
             let start_x = self
@@ -1401,7 +1520,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0).max(0.0)),
                     ),
                 ),
-                background: Paint::Solid(self.chrome_style.selection_color),
+                background: Paint::Solid(selection_color),
                 border: fret_core::geometry::Edges::all(Px(0.0)),
                 border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: self.chrome_style.corner_radii,

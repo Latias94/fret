@@ -1,3 +1,13 @@
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Compose Multiplatform (core): https://github.com/JetBrains/compose-multiplatform-core
+- Material Web: https://github.com/material-components/material-web
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 ## Material 3 / Expressive — Next Wave (v2)
 
 Status: Work-in-progress

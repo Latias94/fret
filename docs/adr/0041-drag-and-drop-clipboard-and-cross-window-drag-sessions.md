@@ -1,5 +1,14 @@
 # ADR 0041: Drag-and-Drop, Clipboard, and Cross-Window Drag Sessions (Editor-Grade Docking UX)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- imgui-rs: https://github.com/imgui-rs/imgui-rs
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

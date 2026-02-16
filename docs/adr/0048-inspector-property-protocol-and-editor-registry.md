@@ -1,5 +1,14 @@
 # ADR 0048: Inspector Property Protocol and Custom Editor Registry
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Godot: https://github.com/godotengine/godot
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 Scope: Example editor layer (out of scope for the Fret framework)
 

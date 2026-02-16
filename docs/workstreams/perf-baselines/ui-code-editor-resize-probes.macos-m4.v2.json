@@ -2,7 +2,7 @@
   "generated_unix_ms": 1770517285792,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "/Users/frankorz/codes/rust/fret/target/fret-diag-baseline-select-ui-code-editor-resize-probes-v2/candidate-2.baseline.json",
+  "out_path": "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json",
   "repeat": 7,
   "rows": [
     {

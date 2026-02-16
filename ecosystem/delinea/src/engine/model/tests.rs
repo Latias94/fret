@@ -441,13 +441,12 @@ fn replace_merge_keeps_and_merges_matching_ids() {
     assert!(!report.structure_changed);
     assert!(report.marks_changed);
     assert_eq!(model.series_order, vec![crate::ids::SeriesId::new(1)]);
-    assert_eq!(
-        model
+    assert!(
+        !model
             .series
             .get(&crate::ids::SeriesId::new(1))
             .unwrap()
-            .visible,
-        false
+            .visible
     );
 }
 
@@ -585,12 +584,11 @@ fn merge_series_visibility_updates_visual_without_structure() {
 
     assert!(!report.structure_changed);
     assert!(report.marks_changed);
-    assert_eq!(
-        model
+    assert!(
+        !model
             .series
             .get(&crate::ids::SeriesId::new(1))
             .unwrap()
-            .visible,
-        false
+            .visible
     );
 }

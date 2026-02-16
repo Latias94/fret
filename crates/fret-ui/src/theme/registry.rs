@@ -67,6 +67,9 @@ fn canonicalize_color_key(key: &str) -> &str {
         // Keep historic dotted aliases accepted by some ports.
         "input.border" => "input",
 
+        // Editor-style selection key used by Zed themes.
+        "selection" => "selection.background",
+
         "primary.background" => "primary",
         "primary.foreground" => "primary-foreground",
 

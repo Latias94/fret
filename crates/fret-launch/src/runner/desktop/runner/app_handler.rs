@@ -3,6 +3,7 @@
 use super::*;
 use std::sync::{Mutex, OnceLock};
 
+use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
 
 #[cfg(feature = "diag-screenshots")]

@@ -28,6 +28,10 @@ impl<'a> DataTableView<'a> {
         self.selection.view_len(self.table.row_count())
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn get_raw_index(&self, view_index: usize) -> Option<usize> {
         self.selection
             .get_raw_index(self.table.row_count(), view_index)

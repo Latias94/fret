@@ -1,5 +1,17 @@
 # ADR 0096: Plot Widgets and Crate Placement (`fret-plot`)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- egui_plot: https://github.com/emilk/egui_plot
+- gpui-component: https://github.com/longbridge/gpui-component
+- ImPlot: https://github.com/epezent/implot
+- ImPlot3D: https://github.com/brenocq/implot3d
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

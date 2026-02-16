@@ -1,5 +1,14 @@
 # Shadcn Extras (`fret-ui-shadcn::extras`) — TODO Tracker
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- kibo: https://github.com/haydenbleasel/kibo
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document tracks executable TODOs for adding a small “extras” surface to `fret-ui-shadcn`.
 
 Narrative + boundaries: `docs/workstreams/shadcn-extras.md`  

@@ -1,5 +1,19 @@
 # Runtime Contract Matrix (fret-ui)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Floating UI: https://github.com/floating-ui/floating-ui
+- gpui-component: https://github.com/longbridge/gpui-component
+- Tailwind CSS: https://github.com/tailwindlabs/tailwindcss
+- shadcn/ui: https://github.com/shadcn-ui/ui
+- virtualizer (Rust): https://github.com/Latias94/virtualizer
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document is a *living checklist* for what the `crates/fret-ui` runtime provides, why it
 exists, and which mature ecosystem reference we align with.
 

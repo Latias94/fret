@@ -1,6 +1,6 @@
+use fret_core::time::{Duration, Instant};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{

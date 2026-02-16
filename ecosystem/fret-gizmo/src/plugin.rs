@@ -255,29 +255,29 @@ impl GizmoPluginManager {
                 );
             }
 
-            if input.drag_started {
-                if let Some(h) = self.state.hovered {
-                    self.state.active = Some(h);
-                    self.state.drag_start_cursor_px = input.cursor_px;
-                    self.state.drag_has_started = false;
+            if input.drag_started
+                && let Some(h) = self.state.hovered
+            {
+                self.state.active = Some(h);
+                self.state.drag_start_cursor_px = input.cursor_px;
+                self.state.drag_has_started = false;
 
-                    if self.config.drag_start_threshold_px <= 0.0 {
-                        let out = self.route_update(
-                            view_projection,
-                            viewport,
-                            depth_range,
-                            input,
-                            GizmoPhase::Begin,
-                            active_target,
-                            targets,
-                            h,
-                            properties,
-                        );
-                        if out.is_some() {
-                            self.state.drag_has_started = true;
-                        }
-                        return out;
+                if self.config.drag_start_threshold_px <= 0.0 {
+                    let out = self.route_update(
+                        view_projection,
+                        viewport,
+                        depth_range,
+                        input,
+                        GizmoPhase::Begin,
+                        active_target,
+                        targets,
+                        h,
+                        properties,
+                    );
+                    if out.is_some() {
+                        self.state.drag_has_started = true;
                     }
+                    return out;
                 }
             }
 

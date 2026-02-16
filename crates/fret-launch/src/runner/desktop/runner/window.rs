@@ -1,9 +1,7 @@
 use super::*;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Duration};
 
+use fret_core::time::Instant;
 use fret_core::{Point, Scene};
 use fret_render::SurfaceState;
 use winit::{

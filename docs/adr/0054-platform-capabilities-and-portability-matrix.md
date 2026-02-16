@@ -1,5 +1,14 @@
 # ADR 0054: Platform Capabilities and Portability Matrix (Runtime, Not cfg)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Makepad: https://github.com/makepad/makepad
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 Scope: `fret-platform-*` + runner contracts; consumed by commands/UI via `InputContext`/`when`
 
@@ -97,8 +106,11 @@ We define a minimal set of booleans/enums that cover the “hard portability” 
       - `best_effort` (may work inconsistently; avoid relying on AlwaysOnTop during drags)
       - `reliable` (z-level requests behave predictably)
 - **Clipboard**
-  - `clipboard.text`: `bool`
+  - `clipboard.text`: `bool` (legacy shorthand; true when both read/write are supported)
+  - `clipboard.text_read`: `bool`
+  - `clipboard.text_write`: `bool`
   - `clipboard.files`: `bool` (future; often false on web)
+  - `clipboard.primary_text`: `bool` (Linux primary selection; distinct from explicit clipboard)
 - **External drag-and-drop**
   - `dnd.external`: `bool`
   - `dnd.external_payload`: enum:

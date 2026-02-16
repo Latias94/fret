@@ -1,5 +1,14 @@
 # Radix Primitives Audit — Scroll Area
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's Radix-aligned scroll-area substrate against the upstream Radix
 `@radix-ui/react-scroll-area` primitive implementation pinned in `repo-ref/primitives`.
 

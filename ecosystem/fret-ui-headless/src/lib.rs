@@ -3,6 +3,14 @@
 //! This crate intentionally avoids theme/recipe policy and contains only reusable logic that can
 //! be shared across UI kits and component ecosystems.
 
+// This crate is intentionally "logic dense" (state machines, snapshot helpers, and parity code),
+// where refactors to satisfy certain style lints can harm readability without improving correctness.
+#![allow(
+    clippy::field_reassign_with_default,
+    clippy::too_many_arguments,
+    clippy::type_complexity
+)]
+
 pub mod calendar;
 pub mod calendar_solar_hijri;
 pub mod carousel;

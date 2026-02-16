@@ -43,7 +43,7 @@ fn decimal_count(step: f32) -> u32 {
     let s = step.to_string();
     let mut exp = 0i32;
     let mut base = s.as_str();
-    if let Some(exp_at) = s.find(|c: char| c == 'e' || c == 'E') {
+    if let Some(exp_at) = s.find(['e', 'E']) {
         base = &s[..exp_at];
         exp = s[exp_at + 1..].parse::<i32>().unwrap_or(0);
     }

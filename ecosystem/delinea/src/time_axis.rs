@@ -293,7 +293,7 @@ fn add_months(dt: OffsetDateTime, months: i32) -> OffsetDateTime {
     let year = date.year();
     let month0 = date.month() as i32 - 1;
 
-    let total = year as i32 * 12 + month0 + months;
+    let total = year * 12 + month0 + months;
     let year = total.div_euclid(12);
     let month0 = total.rem_euclid(12);
     let month = Month::try_from((month0 + 1) as u8).unwrap_or(Month::January);

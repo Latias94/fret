@@ -4,6 +4,24 @@
 //! - it composes `fret-bootstrap` (golden-path wiring) with a default component surface,
 //! - it enables a practical desktop-first default stack,
 //! - it remains optional: advanced users can depend on `fret-framework` + `fret-bootstrap` directly.
+//!
+//! ## Getting started (desktop)
+//!
+//! ```no_run
+//! use fret::prelude::*;
+//!
+//! fn init_window(_app: &mut App, _window: AppWindowId) -> () {
+//!     ()
+//! }
+//!
+//! fn view<'a>(cx: &mut ElementContext<'a, App>, _st: &mut ()) -> ViewElements {
+//!     ui::text("Hello, Fret!").into_element(cx).into()
+//! }
+//!
+//! fn main() -> fret::Result<()> {
+//!     fret::run("hello", init_window, view)
+//! }
+//! ```
 
 #[cfg(all(feature = "icons-lucide", feature = "icons-radix"))]
 compile_error!("`fret` features `icons-lucide` and `icons-radix` are mutually exclusive.");
@@ -108,6 +126,7 @@ pub mod prelude {
 }
 
 #[derive(Debug, thiserror::Error)]
+/// Public error type for the `fret` facade.
 pub enum Error {
     #[error(transparent)]
     Bootstrap(#[from] BootstrapError),
@@ -115,6 +134,7 @@ pub enum Error {
     Runner(#[from] RunnerError),
 }
 
+/// Result type used by the `fret` facade.
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]

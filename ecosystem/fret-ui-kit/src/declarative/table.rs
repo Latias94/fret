@@ -149,7 +149,7 @@ pub struct TableViewProps {
     /// When `None`, the default heuristic is `overscan * 2`.
     ///
     /// Larger values reduce remount/layout churn when the window oscillates across boundaries
-    /// (e.g. scroll 閳ユ競ounce閳?patterns), at the cost of retaining more offscreen subtrees.
+    /// (e.g. scroll bounce patterns), at the cost of retaining more offscreen subtrees.
     pub keep_alive: Option<usize>,
     pub default_column_width: Px,
     pub min_column_width: Px,
@@ -500,7 +500,8 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut caps = fret_runtime::PlatformCapabilities::default();
-        caps.clipboard.text = true;
+        caps.clipboard.text.read = true;
+        caps.clipboard.text.write = true;
         app.set_global(caps);
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -3707,7 +3708,7 @@ where
                         if !acx.focus_in_subtree {
                             return fret_ui::CommandAvailability::NotHandled;
                         }
-                        if !acx.input_ctx.caps.clipboard.text {
+                        if !acx.input_ctx.caps.clipboard.text.write {
                             return fret_ui::CommandAvailability::Blocked;
                         }
 

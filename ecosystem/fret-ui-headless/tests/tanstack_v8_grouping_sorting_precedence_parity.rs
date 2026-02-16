@@ -7,6 +7,13 @@ use fret_ui_headless::table::{
 };
 use serde::Deserialize;
 
+type RowIndexByKey = HashMap<RowKey, usize>;
+type GroupAggsU64 = HashMap<RowKey, std::sync::Arc<[(std::sync::Arc<str>, u64)]>>;
+type GroupAggsAny = HashMap<
+    RowKey,
+    std::sync::Arc<[(std::sync::Arc<str>, fret_ui_headless::table::TanStackValue)]>,
+>;
+
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureRow {
     id: u64,
@@ -41,7 +48,7 @@ struct Fixture {
     snapshots: Vec<FixtureSnapshot>,
 }
 
-fn row_index_by_key(table: &Table<'_, FixtureRow>) -> HashMap<RowKey, usize> {
+fn row_index_by_key(table: &Table<'_, FixtureRow>) -> RowIndexByKey {
     let mut out = HashMap::new();
     let core = table.core_row_model();
     for &row_index in core.flat_rows() {
@@ -87,18 +94,28 @@ fn snapshot_sorted_grouped_ids(
             .map(|row| row.id.as_ref().to_string())
             .collect::<Vec<_>>()
     } else {
+        struct WalkCtx<'a> {
+            sorting: &'a [fret_ui_headless::table::SortSpec],
+            columns: &'a [ColumnDef<FixtureRow>],
+            data: &'a [FixtureRow],
+            row_index_by_key: &'a RowIndexByKey,
+            group_aggs_u64: &'a GroupAggsU64,
+            group_aggs_any: &'a GroupAggsAny,
+        }
+
+        let ctx = WalkCtx {
+            sorting: table.state().sorting.as_slice(),
+            columns,
+            data,
+            row_index_by_key: &row_index_by_key,
+            group_aggs_u64: table.grouped_u64_aggregations(),
+            group_aggs_any: table.grouped_aggregations_any(),
+        };
+
         fn walk_sorted(
             model: &fret_ui_headless::table::GroupedRowModel,
             indices: &[GroupedRowIndex],
-            sorting: &[fret_ui_headless::table::SortSpec],
-            columns: &[ColumnDef<FixtureRow>],
-            data: &[FixtureRow],
-            row_index_by_key: &HashMap<RowKey, usize>,
-            group_aggs_u64: &HashMap<RowKey, std::sync::Arc<[(std::sync::Arc<str>, u64)]>>,
-            group_aggs_any: &HashMap<
-                RowKey,
-                std::sync::Arc<[(std::sync::Arc<str>, fret_ui_headless::table::TanStackValue)]>,
-            >,
+            ctx: &WalkCtx<'_>,
             out: &mut Vec<String>,
         ) {
             for &index in indices {
@@ -113,39 +130,19 @@ fn snapshot_sorted_grouped_ids(
                 sort_grouped_row_indices_in_place(
                     model,
                     children.as_mut_slice(),
-                    sorting,
-                    columns,
-                    data,
-                    row_index_by_key,
-                    group_aggs_u64,
-                    group_aggs_any,
+                    ctx.sorting,
+                    ctx.columns,
+                    ctx.data,
+                    ctx.row_index_by_key,
+                    ctx.group_aggs_u64,
+                    ctx.group_aggs_any,
                 );
-                walk_sorted(
-                    model,
-                    children.as_slice(),
-                    sorting,
-                    columns,
-                    data,
-                    row_index_by_key,
-                    group_aggs_u64,
-                    group_aggs_any,
-                    out,
-                );
+                walk_sorted(model, children.as_slice(), ctx, out);
             }
         }
 
         let mut out = Vec::new();
-        walk_sorted(
-            model,
-            roots.as_slice(),
-            table.state().sorting.as_slice(),
-            columns,
-            data,
-            &row_index_by_key,
-            table.grouped_u64_aggregations(),
-            table.grouped_aggregations_any(),
-            &mut out,
-        );
+        walk_sorted(model, roots.as_slice(), &ctx, &mut out);
         out
     };
 

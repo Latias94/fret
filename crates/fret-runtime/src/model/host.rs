@@ -7,16 +7,25 @@ use super::error::ModelUpdateError;
 use super::handle::Model;
 use super::store::ModelStore;
 
+/// Context passed to model update closures.
+///
+/// This provides access back to the host (often an `App`-like container) while a model lease is
+/// active, enabling updates that need to read/write other models or globals.
 pub struct ModelCx<'a, H: ModelHost + ?Sized> {
     pub(super) host: &'a mut H,
 }
 
 impl<'a, H: ModelHost + ?Sized> ModelCx<'a, H> {
+    /// Returns the underlying host.
     pub fn app(&mut self) -> &mut H {
         self.host
     }
 }
 
+/// Host surface required to read and update models stored in a [`ModelStore`].
+///
+/// This trait is intentionally portable and is implemented by higher-level containers like
+/// `fret-app::App`.
 pub trait ModelHost {
     fn models(&self) -> &ModelStore;
     fn models_mut(&mut self) -> &mut ModelStore;

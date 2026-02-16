@@ -1,5 +1,14 @@
 # ADR 0160: Unified Authoring Builder Surface (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 - Status: Proposed
 - Date: 2026-01-16
 

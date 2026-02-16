@@ -6,7 +6,9 @@ use fret_core::{AppWindowId, Point, PointerId};
 use crate::{CommandRegistry, DragKindId, DragSession, Effect, ModelHost, ModelId};
 
 pub trait GlobalsHost {
+    /// Sets a global value, replacing any existing value of the same type.
     fn set_global<T: Any>(&mut self, value: T);
+    /// Reads a global value by type.
     fn global<T: Any>(&self) -> Option<&T>;
 
     /// Returns a monotonically-increasing token for a global type.
@@ -50,44 +52,61 @@ pub trait GlobalsHost {
 }
 
 pub trait ModelsHost: ModelHost {
+    /// Returns and clears the list of models that were marked changed since the last call.
     fn take_changed_models(&mut self) -> Vec<ModelId>;
 }
 
 pub trait CommandsHost {
+    /// Returns the command registry used by this host.
     fn commands(&self) -> &CommandRegistry;
 }
 
 pub trait EffectSink {
+    /// Requests a redraw for the given window.
     fn request_redraw(&mut self, window: AppWindowId);
+    /// Enqueues a runtime effect to be handled by the runner/backend.
     fn push_effect(&mut self, effect: Effect);
 }
 
 pub trait TimeHost {
+    /// Current tick id (monotonically increasing).
     fn tick_id(&self) -> TickId;
+    /// Current frame id (monotonically increasing).
     fn frame_id(&self) -> FrameId;
+    /// Allocates the next timer token.
     fn next_timer_token(&mut self) -> TimerToken;
+    /// Allocates the next clipboard token.
     fn next_clipboard_token(&mut self) -> ClipboardToken;
+    /// Allocates the next share-sheet token.
     fn next_share_sheet_token(&mut self) -> ShareSheetToken;
+    /// Allocates the next image-upload token.
     fn next_image_upload_token(&mut self) -> ImageUploadToken;
 }
 
 pub trait DragHost {
+    /// Returns the drag session associated with the pointer, if any.
     fn drag(&self, pointer_id: PointerId) -> Option<&DragSession>;
+    /// Returns a mutable drag session associated with the pointer, if any.
     fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession>;
+    /// Cancels a drag session associated with the pointer, if any.
     fn cancel_drag(&mut self, pointer_id: PointerId);
 
+    /// Returns `true` if any active drag session matches the predicate.
     fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool;
 
+    /// Finds the first pointer id whose drag session matches the predicate.
     fn find_drag_pointer_id(
         &self,
         predicate: impl FnMut(&DragSession) -> bool,
     ) -> Option<PointerId>;
 
+    /// Cancels all drag sessions matching the predicate and returns their pointer ids.
     fn cancel_drag_sessions(
         &mut self,
         predicate: impl FnMut(&DragSession) -> bool,
     ) -> Vec<PointerId>;
 
+    /// Begins a drag session with a typed payload.
     fn begin_drag_with_kind<T: Any>(
         &mut self,
         pointer_id: PointerId,
@@ -97,6 +116,7 @@ pub trait DragHost {
         payload: T,
     );
 
+    /// Begins a cross-window drag session with a typed payload.
     fn begin_cross_window_drag_with_kind<T: Any>(
         &mut self,
         pointer_id: PointerId,
@@ -114,6 +134,32 @@ pub trait DragHost {
 ///
 /// Note: the individual service traits are intentionally split so hosts can implement them
 /// independently. `UiHost` remains the single bound used throughout `fret-ui`.
+///
+/// ## Typical driver flow (outline)
+///
+/// Runners/drivers typically perform the following steps on each tick/frame:
+///
+/// - Feed platform input into the UI runtime (event routing / command dispatch).
+/// - Drain incremental changes from the host:
+///   - model changes via [`ModelsHost::take_changed_models`],
+///   - global changes via host-specific tracking (either revision tokens from
+///     [`GlobalsHost::global_revision`] or an explicit changed-list if the host provides one).
+/// - Run layout/paint for the affected window(s).
+/// - Drain effects emitted by UI/services and forward them to the platform (clipboard, file
+///   dialogs, open-url, quit requests, etc.). The exact "drain" API is host-specific; for
+///   app-level hosts, this often looks like a `flush_effects()` method that returns a `Vec<Effect>`.
+///
+/// ```ignore
+/// // Pseudocode (simplified):
+/// let changed_models = host.take_changed_models();
+/// let theme_rev = host.global_revision_of::<fret_ui::ThemeConfig>();
+///
+/// // ...propagate changes into the window's UiTree and render...
+///
+/// for effect in host.flush_effects() {
+///     runner.handle_effect(effect);
+/// }
+/// ```
 pub trait UiHost:
     GlobalsHost + ModelsHost + CommandsHost + EffectSink + TimeHost + DragHost
 {

@@ -1,5 +1,15 @@
 # `fret-ui-editor` v1 — Egui / ImGui Capability Gap Matrix
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- egui: https://github.com/emilk/egui
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active gap analysis (workstream note; not an ADR)  
 Last updated: 2026-02-15
 

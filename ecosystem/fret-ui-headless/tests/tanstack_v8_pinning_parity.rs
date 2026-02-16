@@ -657,7 +657,7 @@ fn tanstack_v8_pinning_parity() {
                     RowPinPosition::Bottom => "bottom",
                 });
                 assert_eq!(
-                    pos.as_deref(),
+                    pos,
                     expected_pos.as_deref(),
                     "snapshot {} pin_position[{}] mismatch",
                     snap.id,

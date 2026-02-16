@@ -1,4 +1,4 @@
-use std::time::Instant;
+use fret_core::time::Instant;
 
 use fret_canvas::view::PanZoom2D;
 use fret_core::{MouseButton, Point};

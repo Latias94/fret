@@ -2,7 +2,7 @@
   "generated_unix_ms": 1770456340483,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "/Users/frankorz/codes/rust/fret/docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json",
+  "out_path": "docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json",
   "repeat": 7,
   "rows": [
     {

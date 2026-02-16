@@ -107,14 +107,14 @@ impl DataWindow {
                     return base;
                 }
             }
-        } else if next_span > base_span {
-            if let Some(max) = max_value_span {
-                if base_span <= max && next_span > max {
-                    return out.with_span(max, anchor);
-                }
-                if base_span > max && next_span > base_span {
-                    return base;
-                }
+        } else if next_span > base_span
+            && let Some(max) = max_value_span
+        {
+            if base_span <= max && next_span > max {
+                return out.with_span(max, anchor);
+            }
+            if base_span > max && next_span > base_span {
+                return base;
             }
         }
 
@@ -204,7 +204,7 @@ impl DataWindow {
             out.max = max;
         }
 
-        if !(out.max > out.min) {
+        if out.max.partial_cmp(&out.min) != Some(std::cmp::Ordering::Greater) {
             match (locked_min.is_some(), locked_max.is_some()) {
                 (true, false) => out.max = out.min + span,
                 (false, true) => out.min = out.max - span,

@@ -1,5 +1,16 @@
 # ADR 0051: Model Observation and UI Invalidation Propagation (P0)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Godot: https://github.com/godotengine/godot
+- gpui-component: https://github.com/longbridge/gpui-component
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 Scope: UI runtime contract (`fret-ui`) + app model store integration (`fret-app`)
 

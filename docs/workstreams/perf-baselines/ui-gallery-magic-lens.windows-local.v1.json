@@ -2,7 +2,7 @@
   "generated_unix_ms": 1770962177804,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "F:\\SourceCodes\\Rust\\fret-worktrees\\ws\\external-texture-imports-native-adapter-v1\\docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json",
+  "out_path": "docs/workstreams/perf-baselines/ui-gallery-magic-lens.windows-local.v1.json",
   "repeat": 3,
   "rows": [
     {

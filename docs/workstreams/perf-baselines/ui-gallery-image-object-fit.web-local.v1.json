@@ -2,7 +2,7 @@
   "generated_unix_ms": 1770642235901,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "F:\\SourceCodes\\Rust\\fret-worktrees\\image-object-fit-v1\\docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json",
+  "out_path": "docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json",
   "repeat": 3,
   "rows": [
     {

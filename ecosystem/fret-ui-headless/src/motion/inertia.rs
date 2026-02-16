@@ -104,12 +104,12 @@ fn find_hit(friction: &FrictionSimulation, bounds: InertiaBounds) -> Option<Hit>
     }
 
     let a = 1.0 + (bound - x0) * drag_log / v0;
-    if !(a > 0.0) || !a.is_finite() {
+    if !a.is_finite() || a <= 0.0 {
         return None;
     }
 
     let t = a.ln() / drag_log;
-    if !(t >= 0.0) || !t.is_finite() {
+    if !t.is_finite() || t < 0.0 {
         return None;
     }
 

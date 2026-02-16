@@ -1,5 +1,15 @@
 # GPUI Parity Refactor — TODO Tracker (Unafraid)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream tracker; keep updated during refactors)
 
 This document tracks executable TODOs for the GPUI parity refactor workstream. It is intentionally “task-first”:

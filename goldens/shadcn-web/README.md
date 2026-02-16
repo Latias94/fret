@@ -1,6 +1,8 @@
 # shadcn-web goldens
 
-This folder stores JSON goldens extracted from the upstream shadcn/ui React app (`repo-ref/ui`).
+This folder stores JSON goldens extracted from the upstream shadcn/ui React app.
+
+Upstream: https://github.com/shadcn-ui/ui
 
 ## Why JSON (not screenshots)
 
@@ -23,6 +25,6 @@ For `button-default`, a *healthy* web golden typically has:
 - `computedStyle.borderTopLeftRadius != "0px"` (Tailwind `rounded-md`)
 
 If you see browser defaults like `display: inline-block` + `borderTopWidth: 2px`, regenerate using a
-production server (`pnpm -C repo-ref/ui/apps/v4 build` + `pnpm -C repo-ref/ui/apps/v4 exec next start -p <port>`) instead of a dev server.
+production server (`pnpm -C <shadcn-ui-root>/apps/v4 build` + `pnpm -C <shadcn-ui-root>/apps/v4 exec next start -p <port>`) instead of a dev server.
 
 Current new-york-v4 snapshot count: `436` JSON files.

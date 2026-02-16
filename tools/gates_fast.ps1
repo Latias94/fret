@@ -29,11 +29,9 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 if (-not $SkipLayering) {
   Invoke-Checked `
     "Workspace layering policy" `
-    "pwsh" `
+    "python" `
     @(
-      "-NoProfile",
-      "-File",
-      (Join-Path $repoRoot "tools/check_layering.ps1")
+      (Join-Path $repoRoot "tools/check_layering.py")
     )
 }
 

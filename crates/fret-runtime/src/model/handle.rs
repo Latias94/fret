@@ -35,6 +35,7 @@ impl<T> Model<T> {
         self.id
     }
 
+    /// Returns a weak handle that can be upgraded if the model is still alive.
     pub fn downgrade(&self) -> WeakModel<T> {
         WeakModel {
             store: Rc::downgrade(&self.store.inner),
@@ -43,6 +44,10 @@ impl<T> Model<T> {
         }
     }
 
+    /// Reads the model value using the host's read path.
+    ///
+    /// This acquires a temporary lease and ensures the lease is released even if the closure
+    /// panics (when `panic=unwind`).
     pub fn read<H: ModelHost, R>(
         &self,
         host: &mut H,
@@ -54,6 +59,10 @@ impl<T> Model<T> {
         host.read(self, f)
     }
 
+    /// Updates the model value using the host's update path.
+    ///
+    /// The provided [`ModelCx`] exposes the host while the lease is active, allowing updates that
+    /// coordinate multiple models.
     #[track_caller]
     pub fn update<H: ModelHost, R>(
         &self,
@@ -99,6 +108,10 @@ impl<T> Model<T> {
         host.model_revision(self)
     }
 
+    /// Marks the model as changed without mutating its value.
+    ///
+    /// This is useful for "derived invalidation" cases where the model's internal state changes
+    /// via interior mutability or external resources and you still want observers to re-run.
     #[track_caller]
     pub fn notify<H: ModelHost>(&self, host: &mut H) -> Result<(), ModelUpdateError>
     where

@@ -108,7 +108,8 @@ pub fn row_starts_for_code_wrap(
             let next_i = i.saturating_add(ch.len_utf8()).min(text.len());
             col = col.saturating_add(1);
 
-            if fret_text_nav::is_grapheme_boundary(text, next_i) {
+            let is_boundary = fret_text_nav::is_grapheme_boundary(text, next_i);
+            if is_boundary {
                 last_grapheme_boundary = Some((next_i, col));
             }
 
@@ -119,19 +120,18 @@ pub fn row_starts_for_code_wrap(
             });
             if let Some(strength) =
                 preferred_break_after(prev_ch, ch, next_ch, next_next_ch, policy.knobs)
+                && is_boundary
             {
-                if fret_text_nav::is_grapheme_boundary(text, next_i) {
-                    let cand = BreakCandidate {
-                        byte: next_i,
-                        cols: col,
-                        strength,
-                    };
-                    if last_candidate.is_none_or(|prev| {
-                        cand.strength > prev.strength
-                            || (cand.strength == prev.strength && cand.byte > prev.byte)
-                    }) {
-                        last_candidate = Some(cand);
-                    }
+                let cand = BreakCandidate {
+                    byte: next_i,
+                    cols: col,
+                    strength,
+                };
+                if last_candidate.is_none_or(|prev| {
+                    cand.strength > prev.strength
+                        || (cand.strength == prev.strength && cand.byte > prev.byte)
+                }) {
+                    last_candidate = Some(cand);
                 }
             }
 
@@ -193,9 +193,7 @@ fn preferred_break_after(
     next_next: Option<char>,
     knobs: CodeWrapKnobs,
 ) -> Option<BreakStrength> {
-    let Some(next) = next else {
-        return None;
-    };
+    let next = next?;
 
     if ch.is_whitespace() && !next.is_whitespace() {
         return Some(BreakStrength::Whitespace);

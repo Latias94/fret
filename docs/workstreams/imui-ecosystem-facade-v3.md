@@ -1,5 +1,14 @@
 # imui Ecosystem Facade v3 (ImGui Parity + Ecosystem ABI + Perf Ceilings)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; not an ADR)
 Last updated: 2026-02-10
 

@@ -1,17 +1,11 @@
 //! ScrollArea shared types (Radix-aligned outcomes).
 
 /// Matches Radix ScrollArea `type` outcome.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ScrollAreaType {
     Auto,
     Always,
     Scroll,
+    #[default]
     Hover,
-}
-
-impl Default for ScrollAreaType {
-    fn default() -> Self {
-        // Radix default is `type="hover"`.
-        Self::Hover
-    }
 }

@@ -7,6 +7,8 @@
 //!
 //! For now, we keep the surface intentionally small and migrate behavior incrementally.
 
+#![allow(clippy::too_many_arguments)]
+
 mod data_view;
 mod dataset_transform;
 mod filter_plan;
@@ -543,7 +545,7 @@ fn fnv1a_step(hash: u64, value: u64) -> u64 {
 }
 
 fn rev_u64(rev: Revision) -> u64 {
-    rev.0 as u64
+    rev.0
 }
 
 fn hash_opt_f64(mut h: u64, v: Option<f64>) -> u64 {
@@ -582,8 +584,8 @@ fn y_percent_extents_signature(
     series: &[SeriesId],
 ) -> u64 {
     let mut h = FNV1A_OFFSET;
-    h = fnv1a_step(h, model.revs.spec.0 as u64);
-    h = fnv1a_step(h, view.revision.0 as u64);
+    h = fnv1a_step(h, model.revs.spec.0);
+    h = fnv1a_step(h, view.revision.0);
 
     for series_id in series {
         let Some(series_model) = model.series.get(series_id) else {

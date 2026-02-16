@@ -1220,7 +1220,7 @@ impl WebPlatformServices {
                         .global::<PlatformCapabilities>()
                         .cloned()
                         .unwrap_or_default();
-                    if !caps.clipboard.text {
+                    if !caps.clipboard.text.write {
                         continue;
                     }
                     let Some(window) = window() else {
@@ -1240,17 +1240,23 @@ impl WebPlatformServices {
                         .global::<PlatformCapabilities>()
                         .cloned()
                         .unwrap_or_default();
-                    if !caps.clipboard.text {
+                    if !caps.clipboard.text.read {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable { token });
+                            .push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: None,
+                            });
                         continue;
                     }
 
                     let Some(window) = window() else {
                         self.queued_events
                             .borrow_mut()
-                            .push(Event::ClipboardTextUnavailable { token });
+                            .push(Event::ClipboardTextUnavailable {
+                                token,
+                                message: None,
+                            });
                         continue;
                     };
                     let clipboard = window.navigator().clipboard();
@@ -1263,7 +1269,10 @@ impl WebPlatformServices {
                                 token,
                                 text: v.as_string().unwrap_or_default(),
                             },
-                            Err(_) => Event::ClipboardTextUnavailable { token },
+                            Err(_) => Event::ClipboardTextUnavailable {
+                                token,
+                                message: None,
+                            },
                         };
                         let _ = queue.try_borrow_mut().map(|mut q| q.push(event));
                         if let Some(wake) = wake.as_ref() {

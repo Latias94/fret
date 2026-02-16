@@ -6470,6 +6470,15 @@ impl UiDiagnosticsService {
             .global::<fret_runtime::WindowTextInputSnapshotService>()
             .and_then(|svc| svc.snapshot(window));
 
+        let clipboard = app
+            .global::<fret_runtime::WindowClipboardDiagnosticsStore>()
+            .and_then(|store| store.last_read_for_window(window, app.frame_id()))
+            .map(|entry| UiClipboardDiagnosticsSnapshotV1 {
+                last_read_token: entry.token.0,
+                last_read_unavailable: entry.unavailable,
+                last_read_message: entry.message.clone(),
+            });
+
         let wgpu_adapter = app
             .global::<fret_render::WgpuAdapterSelectionSnapshot>()
             .and_then(|snapshot| serde_json::to_value(snapshot).ok());
@@ -6496,13 +6505,14 @@ impl UiDiagnosticsService {
             occlusion_insets,
             focus_is_text_input: input_ctx.map(|c| c.focus_is_text_input),
             is_composing: window_text_input_snapshot.map(|s| s.is_composing),
+            clipboard,
             primary_pointer_type: ring
                 .last_pointer_type
                 .map(|t| viewport_pointer_type_label(t).to_string()),
             caps: input_ctx.map(|c| UiPlatformCapabilitiesSummaryV1 {
                 platform: c.platform.as_str().to_string(),
                 ui_window_hover_detection: c.caps.ui.window_hover_detection.as_str().to_string(),
-                clipboard_text: c.caps.clipboard.text,
+                clipboard_text: c.caps.clipboard.text.read && c.caps.clipboard.text.write,
                 clipboard_primary_text: c.caps.clipboard.primary_text,
                 ime: c.caps.ime.enabled,
                 ime_set_cursor_area: c.caps.ime.set_cursor_area,
@@ -7589,6 +7599,8 @@ pub struct UiDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_composing: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clipboard: Option<UiClipboardDiagnosticsSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub primary_pointer_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub caps: Option<UiPlatformCapabilitiesSummaryV1>,
@@ -7596,6 +7608,14 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub wgpu_adapter: Option<serde_json::Value>,
 
     pub debug: UiTreeDebugSnapshotV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiClipboardDiagnosticsSnapshotV1 {
+    pub last_read_token: u64,
+    pub last_read_unavailable: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_read_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

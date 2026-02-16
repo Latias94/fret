@@ -9,18 +9,13 @@ use glam::Vec4;
 use glam::{DMat4, DVec2, DVec3, DVec4};
 
 /// Depth range convention used by the camera projection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DepthRange {
     /// Normalized device coordinates Z is in `[-1, 1]` (OpenGL-style).
     NegOneToOne,
     /// Normalized device coordinates Z is in `[0, 1]` (wgpu/D3D/Vulkan-style).
+    #[default]
     ZeroToOne,
-}
-
-impl Default for DepthRange {
-    fn default() -> Self {
-        Self::ZeroToOne
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -43,7 +38,7 @@ pub fn project_point(
     }
     #[cfg(not(feature = "f64-math"))]
     {
-        return project_point_f32(view_projection, viewport, world, depth);
+        project_point_f32(view_projection, viewport, world, depth)
     }
 }
 
@@ -118,7 +113,7 @@ pub fn unproject_point(
     }
     #[cfg(not(feature = "f64-math"))]
     {
-        return unproject_point_f32(view_projection, viewport, screen, depth, z01);
+        unproject_point_f32(view_projection, viewport, screen, depth, z01)
     }
 }
 
@@ -163,7 +158,7 @@ pub fn ray_from_screen(
     }
     #[cfg(not(feature = "f64-math"))]
     {
-        return ray_from_screen_f32(view_projection, viewport, screen, depth);
+        ray_from_screen_f32(view_projection, viewport, screen, depth)
     }
 }
 

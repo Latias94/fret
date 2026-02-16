@@ -18,17 +18,12 @@ struct FixtureRow {
     tag: JsValue,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 enum JsValue {
+    #[default]
     Undefined,
     Null,
     Value(serde_json::Value),
-}
-
-impl Default for JsValue {
-    fn default() -> Self {
-        Self::Undefined
-    }
 }
 
 fn deserialize_js_value<'de, D>(deserializer: D) -> Result<JsValue, D::Error>
@@ -124,13 +119,7 @@ fn tanstack_value_from_json(value: &serde_json::Value) -> TanStackValue {
         serde_json::Value::Array(arr) => {
             TanStackValue::Array(arr.iter().map(tanstack_value_from_json).collect())
         }
-        serde_json::Value::Object(map) => {
-            if map.get("__fret").and_then(|v| v.as_str()) == Some("undefined") {
-                TanStackValue::Undefined
-            } else {
-                TanStackValue::Undefined
-            }
-        }
+        serde_json::Value::Object(_map) => TanStackValue::Undefined,
     }
 }
 

@@ -145,7 +145,11 @@ def main() -> int:
     ap.add_argument("--attempts", type=int, default=1)
     ap.add_argument("--release", action="store_true", default=True)
     ap.add_argument("--no-release", action="store_false", dest="release")
-    ap.add_argument("--cargo-target-dir", default="F:\\ct")
+    ap.add_argument(
+        "--cargo-target-dir",
+        default="",
+        help="Optional override for CARGO_TARGET_DIR (leave empty to use the workspace default).",
+    )
     ap.add_argument("--headroom-pct", type=int, default=0, help="Optional extra headroom on top of baseline thresholds.")
 
     args = ap.parse_args()
@@ -189,8 +193,9 @@ def main() -> int:
 
     gate_env = dict(os.environ)
     gate_env["FRET_RENDERER_PERF_PIPELINES"] = "1"
-    if str(args.cargo_target_dir).strip():
-        gate_env["CARGO_TARGET_DIR"] = str(args.cargo_target_dir).strip()
+    cargo_target_dir = str(args.cargo_target_dir).strip()
+    if cargo_target_dir:
+        gate_env["CARGO_TARGET_DIR"] = cargo_target_dir
 
     print(f"[gate] quad-material-stress-headless -> {out_dir_path} (attempts={int(args.attempts)})")
     print(f"[gate] baseline: {baseline_path}")

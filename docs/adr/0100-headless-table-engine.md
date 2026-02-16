@@ -1,5 +1,14 @@
 # ADR 0100: Headless Table Engine (TanStack-Aligned) and UI Recipes
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- TanStack Table: https://github.com/TanStack/table
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

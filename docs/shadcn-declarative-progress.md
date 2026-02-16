@@ -1,5 +1,15 @@
 # Shadcn Declarative Implementation Progress
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Tracks the ongoing work to rebuild Fret's shadcn-aligned component surface as a declarative-only API.
 
 ## Source of Truth

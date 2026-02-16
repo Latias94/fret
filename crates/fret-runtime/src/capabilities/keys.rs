@@ -11,6 +11,8 @@ pub const UI_WINDOW_SET_OUTER_POSITION: &str = "ui.window_set_outer_position";
 pub const UI_WINDOW_Z_LEVEL: &str = "ui.window_z_level";
 
 pub const CLIPBOARD_TEXT: &str = "clipboard.text";
+pub const CLIPBOARD_TEXT_READ: &str = "clipboard.text_read";
+pub const CLIPBOARD_TEXT_WRITE: &str = "clipboard.text_write";
 pub const CLIPBOARD_FILES: &str = "clipboard.files";
 pub const CLIPBOARD_PRIMARY_TEXT: &str = "clipboard.primary_text";
 

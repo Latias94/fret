@@ -91,7 +91,7 @@ mod tests {
         assert_eq!(visibility.get(&a).copied(), Some(false));
 
         set_column_visible(&mut visibility, &a, true);
-        assert!(visibility.get(&a).is_none());
+        assert!(!visibility.contains_key(&a));
         assert!(is_column_visible(&visibility, &a));
     }
 

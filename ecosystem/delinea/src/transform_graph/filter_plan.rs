@@ -37,8 +37,7 @@ pub fn build_filter_plan(model: &ChartModel) -> FilterPlan {
         grids.entry(axis.grid).or_default().push(*series_id);
     }
 
-    let mut steps: Vec<FilterPlanStep> = Vec::new();
-    steps.reserve(grids.len() * 5);
+    let mut steps: Vec<FilterPlanStep> = Vec::with_capacity(grids.len() * 5);
     for grid in grids.keys().copied() {
         steps.push(FilterPlanStep {
             grid,

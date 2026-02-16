@@ -493,8 +493,10 @@ fn mask_layer_is_paint_only_for_hit_testing_by_default() {
         };
 
         let root = render_root(ui, app, services, window, bounds, test_id, |cx| {
-            let mut mask_layout = crate::element::LayoutStyle::default();
-            mask_layout.position = crate::element::PositionStyle::Absolute;
+            let mut mask_layout = crate::element::LayoutStyle {
+                position: crate::element::PositionStyle::Absolute,
+                ..Default::default()
+            };
             mask_layout.inset.left = Some(Px(0.0));
             mask_layout.inset.top = Some(Px(0.0));
             mask_layout.size.width = Length::Px(Px(20.0));

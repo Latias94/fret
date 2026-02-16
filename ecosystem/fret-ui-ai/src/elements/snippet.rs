@@ -322,7 +322,6 @@ impl SnippetCopyButton {
 
         cx.pressable_with_id_props(move |cx, st, id| {
             let copied = feedback.lock().copied;
-            let label = if copied { "Copied" } else { "Copy" };
 
             cx.timer_on_timer_for(
                 id,
@@ -385,27 +384,24 @@ impl SnippetCopyButton {
             props.enabled = true;
             props.focusable = true;
             props.a11y.role = Some(SemanticsRole::Button);
-            props.a11y.label = Some(Arc::<str>::from(label));
+            props.a11y.label = Some(Arc::<str>::from("Copy"));
             props.a11y.test_id = test_id.clone();
 
-            let fg = theme.color_token("muted-foreground");
-            let bg_hover = theme
-                .color_by_key("color.menu.item.hover")
-                .unwrap_or_else(|| theme.color_token("secondary"));
-            let bg_pressed = theme
-                .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_token("secondary"));
+            let fg = theme.color_token("foreground");
+            let bg_hover = theme.color_token("accent");
+            let bg_active = theme.color_token("accent");
 
             let bg = if st.pressed {
-                alpha(bg_pressed, 0.9)
+                bg_active
             } else if st.hovered {
-                alpha(bg_hover, 0.9)
+                bg_hover
             } else {
                 Color::TRANSPARENT
             };
 
-            let size = Px(28.0);
-            let radius = theme.metric_token("metric.radius.sm");
+            // AI Elements uses InputGroupButton size="icon-sm" (8x8 Tailwind => 32px).
+            let size = Px(32.0);
+            let radius = theme.metric_token("metric.radius.md");
             let icon_id = if copied {
                 fret_icons::ids::ui::CHECK
             } else {
