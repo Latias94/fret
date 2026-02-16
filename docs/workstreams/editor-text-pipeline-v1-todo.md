@@ -164,6 +164,12 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - surrogate pairs (e.g. 😀) clamp correctly,
   - selection/composition map from UTF-8 (ADR 0071) to UTF-16 (platform bridge).
   - Evidence: `crates/fret-ui/src/declarative/tests/semantics.rs`
+- [x] Keep the editor-facing composed a11y window bounded for large documents:
+  - the a11y path must not materialize the entire rope for platform queries.
+  - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_source_does_not_materialize_whole_buffer_string`)
+  - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_composed_window_is_bounded_for_large_documents`)
 - [x] Wire `TextInputRegionProps.ime_cursor_area` from the editor caret geometry (data-only):
   - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs`
 - [x] Add a regression gate for `ime_cursor_area` correctness and stability:
@@ -198,6 +204,19 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - Replacement ranges that span a newline are clamped to the anchor logical line.
     - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
+  - [ ] Future: multi-line selection replacement composition (cross-newline ranges).
+    - Goal: accept replacement ranges that span logical lines without clamping, while keeping
+      mapping deterministic across the composed a11y window and the display-row paint path.
+    - Exit criteria:
+      - `replace_and_mark_text_in_range_utf16` supports cross-newline ranges in the composed view.
+      - The display-row preedit replacement materialization matches the platform-facing composed
+        window for the multi-line range (no measurement/paint drift during composition).
+      - Cancel/unmark semantics remain deterministic (restore saved selection; base buffer remains
+        unchanged until commit).
+      - Bounds/hit-test roundtrip gates remain green under multi-line composition.
+    - Required new gates (suggested):
+      - `platform_replace_and_mark_range_spanning_newline_updates_composed_view_deterministically`
+      - `platform_text_input_bounds_and_index_roundtrip_under_multiline_preedit_replacement_and_wrap`
 - [x] (Staging) Unify selection-replacing preedit across paint + platform-facing composed view:
   - the display-row text used for shaping/paint matches the platform-facing composed window while
     `preedit_replace_range` is active.

@@ -138,6 +138,12 @@ Exit criteria:
       - `ecosystem/fret-code-editor-view/src/lib.rs`
       - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
 
+Future work (deferred):
+
+- Multi-line selection replacement composition (cross-newline ranges) is not implemented yet.
+  - Current v1 staging clamps cross-newline ranges to the anchor logical line for determinism.
+  - Track implementation in `docs/workstreams/editor-text-pipeline-v1-todo.md` (M4).
+
 Evidence anchors:
 
 - Implementation:
@@ -147,6 +153,10 @@ Evidence anchors:
   - `crates/fret-ui/src/declarative/tests/semantics.rs` (`declarative_text_input_region_answers_platform_text_input_queries_in_utf16`)
   - `crates/fret-ui/src/declarative/tests/semantics.rs`
     (`declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_source_does_not_materialize_whole_buffer_string`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_composed_window_is_bounded_for_large_documents`)
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
     (`platform_replace_and_mark_empty_text_cancels_and_restores_selection`)
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`

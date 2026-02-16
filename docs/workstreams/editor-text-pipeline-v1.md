@@ -124,6 +124,43 @@ Notes:
 | Row geometry caching | stable `RowGeomKey` (ignores paint-only changes; buckets width) | Supported (baseline) | `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`) + tests |
 | Perf/diag guard | resize jitter catastrophic guard for code editor | Supported | `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json` + `tools/perf/diag_code_editor_resize_jitter_smoke_gate.py` |
 
+### Recently locked gates (2026-02-16)
+
+This is a convenience checklist of the most important “fearless refactor” regression gates that
+were recently landed. Prefer adding new items here only when they represent a new invariant we
+intend to keep stable across future refactors.
+
+- Renderer (mechanism):
+  - OpenType feature overrides are behavior-visible (not only cache-key-visible):
+    - `crates/fret-render-wgpu/src/text/mod.rs`
+      (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+    - `crates/fret-render-wgpu/src/text/mod.rs`
+      (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
+  - Soft-wrap trailing whitespace remains selectable under attributed text:
+    - `crates/fret-render-wgpu/src/text/mod.rs`
+      (`trailing_whitespace_run_at_soft_wrap_is_selectable_for_attributed_text`)
+- Editor (ecosystem):
+  - UTF-16 replace-by-range staging contract (cross-newline ranges clamp to the anchor line):
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
+  - Bounds/hit-test queries round-trip under wrap + IME composition, including the composed window
+    (`compose_inline_preedit=true`) and decorations (folds/inlays):
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap`)
+  - Display-row mapping changes invalidate row text/geometry caches (no stale row→text reuse after
+    policy-only `DisplayMap` rebuilds such as code-wrap):
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`code_wrap_policy_change_invalidates_row_text_cache`)
+  - A11y composed window remains bounded for large documents (no full-rope materialization):
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`a11y_source_does_not_materialize_whole_buffer_string`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`a11y_composed_window_is_bounded_for_large_documents`)
+
 ### Key gaps (what to build next)
 
 1) **Mapping contracts** for editor surfaces:
