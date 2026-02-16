@@ -1105,11 +1105,19 @@ impl ElementHostWidget {
                 let start = anchor.min(caret);
                 let end = anchor.max(caret);
                 if start < end {
+                    let window_focused = cx
+                        .app
+                        .global::<fret_core::WindowMetricsService>()
+                        .and_then(|svc| svc.focused(window))
+                        .unwrap_or(true);
                     let mut rects: Vec<fret_core::Rect> = Vec::new();
                     cx.services
                         .selection_rects_clipped(blob, (start, end), clip, &mut rects);
                     let sel_color = if focused {
                         cx.theme().color_token("selection.background")
+                    } else if !window_focused {
+                        cx.theme()
+                            .color_token("selection.window_inactive.background")
                     } else {
                         cx.theme().color_token("selection.inactive.background")
                     };

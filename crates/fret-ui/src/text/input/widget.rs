@@ -1485,8 +1485,15 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
+        let window_focused = cx
+            .app
+            .global::<fret_core::WindowMetricsService>()
+            .and_then(|svc| svc.focused(window))
+            .unwrap_or(true);
         let selection_color = if focused || self.chrome_override {
             self.chrome_style.selection_color
+        } else if !window_focused {
+            theme.color_token("selection.window_inactive.background")
         } else {
             theme.color_token("selection.inactive.background")
         };

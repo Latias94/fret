@@ -1480,8 +1480,19 @@ impl<H: UiHost> Widget<H> for TextArea {
             selection_clip,
             &mut self.selection_rects,
         );
+        let window_focused = cx
+            .window
+            .and_then(|window| {
+                cx.app
+                    .global::<fret_core::WindowMetricsService>()
+                    .and_then(|svc| svc.focused(window))
+            })
+            .unwrap_or(true);
         let selection_color = if cx.focus == Some(cx.node) || self.style_override {
             self.style.selection_color
+        } else if !window_focused {
+            cx.theme()
+                .color_token("selection.window_inactive.background")
         } else {
             cx.theme().color_token("selection.inactive.background")
         };
