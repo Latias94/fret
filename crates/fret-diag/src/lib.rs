@@ -10258,6 +10258,45 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // renderer.external_import_ingest_fallbacks
+        //
+        // This is intentionally an info-level hint. Many targets (notably wasm/WebGPU today) will
+        // legitimately fall back from a requested zero/low-copy strategy to a copy-based path.
+        // The purpose is to make this visible in triage/perf bundles so baselines can be
+        // interpreted correctly and regressions can be gated when desired.
+        if worst.renderer_render_target_updates_ingest_fallbacks > 0 {
+            out.push(json!({
+                "code": "renderer.external_import_ingest_fallbacks",
+                "severity": "info",
+                "message": "Imported render target ingestion fell back from the requested strategy (requested != effective).",
+                "evidence": {
+                    "render_target_updates_ingest_fallbacks": worst.renderer_render_target_updates_ingest_fallbacks,
+                    "render_target_updates_requested": {
+                        "unknown": worst.renderer_render_target_updates_requested_ingest_unknown,
+                        "owned": worst.renderer_render_target_updates_requested_ingest_owned,
+                        "external_zero_copy": worst.renderer_render_target_updates_requested_ingest_external_zero_copy,
+                        "gpu_copy": worst.renderer_render_target_updates_requested_ingest_gpu_copy,
+                        "cpu_upload": worst.renderer_render_target_updates_requested_ingest_cpu_upload,
+                    },
+                    "render_target_updates_effective": {
+                        "unknown": worst.renderer_render_target_updates_ingest_unknown,
+                        "owned": worst.renderer_render_target_updates_ingest_owned,
+                        "external_zero_copy": worst.renderer_render_target_updates_ingest_external_zero_copy,
+                        "gpu_copy": worst.renderer_render_target_updates_ingest_gpu_copy,
+                        "cpu_upload": worst.renderer_render_target_updates_ingest_cpu_upload,
+                    },
+                    "viewport_draw_calls": worst.renderer_viewport_draw_calls,
+                    "viewport_draw_calls_by_ingest": {
+                        "unknown": worst.renderer_viewport_draw_calls_ingest_unknown,
+                        "owned": worst.renderer_viewport_draw_calls_ingest_owned,
+                        "external_zero_copy": worst.renderer_viewport_draw_calls_ingest_external_zero_copy,
+                        "gpu_copy": worst.renderer_viewport_draw_calls_ingest_gpu_copy,
+                        "cpu_upload": worst.renderer_viewport_draw_calls_ingest_cpu_upload,
+                    },
+                }
+            }));
+        }
+
         out
     }
 
