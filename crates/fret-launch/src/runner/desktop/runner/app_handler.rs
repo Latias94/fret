@@ -2154,6 +2154,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
+        #[cfg(target_os = "windows")]
+        {
+            if self.maybe_finish_dock_drag_released_outside_windows() {
+                self.drain_effects(event_loop);
+            }
+        }
+
         let did_pending_front_work = self.process_pending_front_requests(now);
 
         let mut next_deadline: Option<Instant> = None;

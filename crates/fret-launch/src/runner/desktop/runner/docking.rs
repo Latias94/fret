@@ -64,6 +64,71 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         true
     }
 
+    #[cfg(target_os = "windows")]
+    pub(super) fn maybe_finish_dock_drag_released_outside_windows(&mut self) -> bool {
+        let Some(pointer_id) = self.dock_drag_pointer_id() else {
+            return false;
+        };
+
+        let (source_window, current_window, dragging) = {
+            let Some(drag) = self.app.drag(pointer_id) else {
+                return false;
+            };
+            if !drag.cross_window_hover
+                || (drag.kind != fret_runtime::DRAG_KIND_DOCK_PANEL
+                    && drag.kind != fret_runtime::DRAG_KIND_DOCK_TABS)
+                || win32::is_left_mouse_down()
+                || self.saw_left_mouse_release_this_turn
+            {
+                return false;
+            }
+            (drag.source_window, drag.current_window, drag.dragging)
+        };
+
+        if let Some(p) = win32::cursor_pos_physical() {
+            self.cursor_screen_pos = Some(p);
+        }
+
+        dock_tearoff_log(format_args!(
+            "[poll-up-win32] pointer={:?} source={:?} current={:?} screen_pos={:?} dragging={}",
+            pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
+        ));
+
+        // If the release was not delivered as a window-scoped `MouseInput`, finish the drag using
+        // the cursor-based drop routing (ImGui-style).
+        if let Some(d) = self.app.drag_mut(pointer_id)
+            && (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+        {
+            d.dragging = true;
+        }
+
+        self.route_internal_drag_drop_from_cursor();
+        dock_tearoff_log(format_args!(
+            "[poll-drop-win32] dispatched target={:?}",
+            source_window
+        ));
+
+        if self
+            .app
+            .drag(pointer_id)
+            .is_some_and(|d| d.cross_window_hover)
+        {
+            self.app.cancel_drag(pointer_id);
+            let _ = self.clear_internal_drag_hover_if_needed();
+        }
+
+        if self.dock_tearoff_follow.is_some() {
+            self.left_mouse_down = false;
+            for state in self.windows.values_mut() {
+                state.platform.input.pressed_buttons.left = false;
+            }
+            self.stop_dock_tearoff_follow(Instant::now(), false);
+        }
+
+        true
+    }
+
     pub(super) fn update_dock_tearoff_follow(&mut self) -> bool {
         let pointer_id = self.dock_drag_pointer_id();
         if self.dock_tearoff_follow.is_some() && pointer_id.is_none() {

@@ -31,9 +31,12 @@ const MONITOR_DEFAULTTONEAREST: u32 = 2;
 #[link(name = "user32")]
 unsafe extern "system" {
     fn GetCursorPos(lpPoint: *mut Point) -> i32;
+    fn GetAsyncKeyState(vKey: i32) -> i16;
     fn MonitorFromPoint(pt: Point, dwFlags: u32) -> isize;
     fn GetMonitorInfoW(hMonitor: isize, lpmi: *mut MonitorInfo) -> i32;
 }
+
+const VK_LBUTTON: i32 = 0x01;
 
 pub(super) fn cursor_pos_physical() -> Option<PhysicalPosition<f64>> {
     let mut p = Point::default();
@@ -42,6 +45,12 @@ pub(super) fn cursor_pos_physical() -> Option<PhysicalPosition<f64>> {
         return None;
     }
     Some(PhysicalPosition::new(p.x as f64, p.y as f64))
+}
+
+pub(super) fn is_left_mouse_down() -> bool {
+    // High-order bit is 1 when the key is down.
+    // https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getasynckeystate
+    (unsafe { GetAsyncKeyState(VK_LBUTTON) } as i32 & 0x8000) != 0
 }
 
 pub(super) fn monitor_work_area_for_point(point: PhysicalPosition<f64>) -> Option<MonitorRectF64> {
