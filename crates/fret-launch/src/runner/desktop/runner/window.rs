@@ -215,7 +215,11 @@ pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Wi
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn set_dock_drag_transparent_payload(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_dock_drag_transparent_payload(
+    window: &dyn Window,
+    enabled: bool,
+    alpha: f32,
+) -> bool {
     use cocoa::base::{id, nil};
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
@@ -239,7 +243,11 @@ pub(super) fn set_dock_drag_transparent_payload(window: &dyn Window, enabled: bo
     }
 
     unsafe {
-        let alpha: f64 = if enabled { 0.5 } else { 1.0 };
+        let alpha: f64 = if enabled {
+            (alpha.clamp(0.0, 1.0)) as f64
+        } else {
+            1.0
+        };
         let _: () = msg_send![ns_window, setAlphaValue: alpha];
         let ignore: bool = enabled;
         let _: () = msg_send![ns_window, setIgnoresMouseEvents: ignore];
@@ -255,7 +263,11 @@ pub(super) fn set_dock_drag_transparent_payload(window: &dyn Window, enabled: bo
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn set_dock_drag_transparent_payload(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_dock_drag_transparent_payload(
+    window: &dyn Window,
+    enabled: bool,
+    alpha: f32,
+) -> bool {
     use winit::raw_window_handle::HasWindowHandle as _;
 
     let hwnd: isize = match window.window_handle() {
@@ -269,14 +281,18 @@ pub(super) fn set_dock_drag_transparent_payload(window: &dyn Window, enabled: bo
         return false;
     }
 
-    let alpha = if enabled { 0.5 } else { 1.0 };
+    let alpha = if enabled { alpha } else { 1.0 };
     super::win32::set_window_alpha(hwnd, alpha);
     super::win32::set_window_mouse_passthrough(hwnd, enabled);
     true
 }
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-pub(super) fn set_dock_drag_transparent_payload(_window: &dyn Window, _enabled: bool) -> bool {
+pub(super) fn set_dock_drag_transparent_payload(
+    _window: &dyn Window,
+    _enabled: bool,
+    _alpha: f32,
+) -> bool {
     false
 }
 

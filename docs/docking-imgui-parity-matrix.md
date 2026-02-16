@@ -240,8 +240,9 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
     and `crates/fret-launch/src/runner/desktop/runner/window.rs` (`window_under_cursor`).
   - Optional (ImGui-style “transparent payload”):
     - ImGui: `ImGuiIO::ConfigDockingTransparentPayload` + `Platform_SetWindowAlpha` + `ImGuiViewportFlags_NoInputs`.
-    - Fret: `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1` makes the dock-floating follow window semi-transparent and
-      best-effort “no inputs” (ignore mouse) while following the cursor, to improve “peek behind” hand feel.
+    - Fret: enable via `DockingInteractionSettings::transparent_payload_during_follow` (default false), or force on via
+      `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`. This makes the dock-floating follow window semi-transparent and best-effort
+      “no inputs” (ignore mouse) while following the cursor, to improve “peek behind” hand feel.
       - Anchor: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`).
 
 - **Drop hint hit-testing uses a 5-way selection with hysteresis**

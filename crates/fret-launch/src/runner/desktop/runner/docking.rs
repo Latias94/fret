@@ -208,9 +208,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // - make the dock-floating window semi-transparent
         // - ignore mouse events so the backend can "peek behind" to resolve the hovered window
         //
-        // This is deliberately gated by an env var to keep the default policy conservative.
-        let want_transparent_payload = std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD")
-            .is_some()
+        // This is conservatively disabled by default (see `DockingInteractionSettings`), and can
+        // be forced on via env var for quick experimentation.
+        let settings = self
+            .app
+            .global::<fret_runtime::DockingInteractionSettings>()
+            .copied()
+            .unwrap_or_default();
+        let want_transparent_payload = (settings.transparent_payload_during_follow
+            || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some())
             && self.dock_floating_windows.contains(&window);
         if want_transparent_payload != transparent_payload_applied
             && let Some(state) = self.windows.get(window)
@@ -218,6 +224,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let _ = super::window::set_dock_drag_transparent_payload(
                 state.window.as_ref(),
                 want_transparent_payload,
+                settings.transparent_payload_alpha,
             );
             if let Some(follow) = self.dock_tearoff_follow.as_mut() {
                 follow.transparent_payload_applied = want_transparent_payload;
@@ -286,7 +293,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if follow.transparent_payload_applied
             && let Some(state) = self.windows.get(follow.window)
         {
-            let _ = super::window::set_dock_drag_transparent_payload(state.window.as_ref(), false);
+            let _ =
+                super::window::set_dock_drag_transparent_payload(state.window.as_ref(), false, 1.0);
         }
 
         if let Some(state) = self.windows.get(follow.window) {

@@ -109,6 +109,7 @@ Evidence anchors:
 - Optional “transparent payload” (ImGui-style):
   - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`
   - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`)
+  - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
 
 ## Cross-platform gaps (common failure modes)
 
