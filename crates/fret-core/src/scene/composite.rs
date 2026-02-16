@@ -11,6 +11,47 @@ pub enum BlendMode {
     Multiply,
     /// Screen blending (used for light overlays).
     Screen,
+    /// Channel-wise darken (`min(dst, src)` for color channels).
+    ///
+    /// This mode is bounded and portable because it maps to a fixed-function blend operation
+    /// (no destination sampling).
+    Darken,
+    /// Channel-wise lighten (`max(dst, src)` for color channels).
+    ///
+    /// This mode is bounded and portable because it maps to a fixed-function blend operation
+    /// (no destination sampling).
+    Lighten,
+    /// Subtract (`dst - src`, clamped to `[0, 1]`) for color channels.
+    ///
+    /// This mode is bounded and portable because it maps to a fixed-function blend operation
+    /// (no destination sampling).
+    Subtract,
+}
+
+impl BlendMode {
+    pub const COUNT: usize = 7;
+
+    pub const ALL: [BlendMode; Self::COUNT] = [
+        BlendMode::Over,
+        BlendMode::Add,
+        BlendMode::Multiply,
+        BlendMode::Screen,
+        BlendMode::Darken,
+        BlendMode::Lighten,
+        BlendMode::Subtract,
+    ];
+
+    pub const fn pipeline_index(self) -> usize {
+        match self {
+            BlendMode::Over => 0,
+            BlendMode::Add => 1,
+            BlendMode::Multiply => 2,
+            BlendMode::Screen => 3,
+            BlendMode::Darken => 4,
+            BlendMode::Lighten => 5,
+            BlendMode::Subtract => 6,
+        }
+    }
 }
 
 /// Descriptor for an isolated compositing group (ADR 0247).

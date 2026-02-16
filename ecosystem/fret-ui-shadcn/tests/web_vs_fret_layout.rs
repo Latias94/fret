@@ -1,6 +1,6 @@
 pub(crate) use fret_app::App;
 pub(crate) use fret_core::{
-    AppWindowId, Edges, Event, FrameId, ImageId, Modifiers, MouseButtons, NodeId, Point,
+    AppWindowId, Edges, Event, FrameId, ImageId, Modifiers, MouseButtons, NodeId, Paint, Point,
     PointerEvent, PointerId, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole,
     Size as CoreSize, TextOverflow, TextWrap, Transform2D,
 };

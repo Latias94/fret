@@ -12650,6 +12650,28 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_image_upload_bytes: u64,
     #[serde(default)]
+    pub renderer_render_target_updates_ingest_unknown: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_owned: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_external_zero_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_gpu_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_cpu_upload: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_unknown: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_owned: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_external_zero_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_gpu_copy: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_requested_ingest_cpu_upload: u64,
+    #[serde(default)]
+    pub renderer_render_target_updates_ingest_fallbacks: u64,
+    #[serde(default)]
     pub renderer_svg_raster_budget_bytes: u64,
     #[serde(default)]
     pub renderer_svg_rasters_live: u64,
@@ -12713,6 +12735,18 @@ pub struct UiFrameStatsV1 {
     pub renderer_text_draw_calls: u64,
     #[serde(default)]
     pub renderer_quad_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_unknown: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_owned: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_external_zero_copy: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_gpu_copy: u64,
+    #[serde(default)]
+    pub renderer_viewport_draw_calls_ingest_cpu_upload: u64,
     #[serde(default)]
     pub renderer_mask_draw_calls: u64,
     #[serde(default)]
@@ -12992,6 +13026,17 @@ impl UiFrameStatsV1 {
             renderer_svg_upload_bytes: 0,
             renderer_image_uploads: 0,
             renderer_image_upload_bytes: 0,
+            renderer_render_target_updates_ingest_unknown: 0,
+            renderer_render_target_updates_ingest_owned: 0,
+            renderer_render_target_updates_ingest_external_zero_copy: 0,
+            renderer_render_target_updates_ingest_gpu_copy: 0,
+            renderer_render_target_updates_ingest_cpu_upload: 0,
+            renderer_render_target_updates_requested_ingest_unknown: 0,
+            renderer_render_target_updates_requested_ingest_owned: 0,
+            renderer_render_target_updates_requested_ingest_external_zero_copy: 0,
+            renderer_render_target_updates_requested_ingest_gpu_copy: 0,
+            renderer_render_target_updates_requested_ingest_cpu_upload: 0,
+            renderer_render_target_updates_ingest_fallbacks: 0,
             renderer_svg_raster_budget_bytes: 0,
             renderer_svg_rasters_live: 0,
             renderer_svg_standalone_bytes_live: 0,
@@ -13024,6 +13069,12 @@ impl UiFrameStatsV1 {
             renderer_draw_calls: 0,
             renderer_text_draw_calls: 0,
             renderer_quad_draw_calls: 0,
+            renderer_viewport_draw_calls: 0,
+            renderer_viewport_draw_calls_ingest_unknown: 0,
+            renderer_viewport_draw_calls_ingest_owned: 0,
+            renderer_viewport_draw_calls_ingest_external_zero_copy: 0,
+            renderer_viewport_draw_calls_ingest_gpu_copy: 0,
+            renderer_viewport_draw_calls_ingest_cpu_upload: 0,
             renderer_mask_draw_calls: 0,
             renderer_pipeline_switches: 0,
             renderer_bind_group_switches: 0,
@@ -13051,6 +13102,30 @@ impl UiFrameStatsV1 {
             out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
             out.renderer_image_uploads = sample.perf.image_uploads;
             out.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
+            out.renderer_render_target_updates_ingest_unknown =
+                sample.perf.render_target_updates_ingest_unknown;
+            out.renderer_render_target_updates_ingest_owned =
+                sample.perf.render_target_updates_ingest_owned;
+            out.renderer_render_target_updates_ingest_external_zero_copy =
+                sample.perf.render_target_updates_ingest_external_zero_copy;
+            out.renderer_render_target_updates_ingest_gpu_copy =
+                sample.perf.render_target_updates_ingest_gpu_copy;
+            out.renderer_render_target_updates_ingest_cpu_upload =
+                sample.perf.render_target_updates_ingest_cpu_upload;
+            out.renderer_render_target_updates_requested_ingest_unknown =
+                sample.perf.render_target_updates_requested_ingest_unknown;
+            out.renderer_render_target_updates_requested_ingest_owned =
+                sample.perf.render_target_updates_requested_ingest_owned;
+            out.renderer_render_target_updates_requested_ingest_external_zero_copy = sample
+                .perf
+                .render_target_updates_requested_ingest_external_zero_copy;
+            out.renderer_render_target_updates_requested_ingest_gpu_copy =
+                sample.perf.render_target_updates_requested_ingest_gpu_copy;
+            out.renderer_render_target_updates_requested_ingest_cpu_upload = sample
+                .perf
+                .render_target_updates_requested_ingest_cpu_upload;
+            out.renderer_render_target_updates_ingest_fallbacks =
+                sample.perf.render_target_updates_ingest_fallbacks;
             out.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
             out.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
             out.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;
@@ -13087,6 +13162,17 @@ impl UiFrameStatsV1 {
             out.renderer_draw_calls = sample.perf.draw_calls;
             out.renderer_text_draw_calls = sample.perf.text_draw_calls;
             out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
+            out.renderer_viewport_draw_calls = sample.perf.viewport_draw_calls;
+            out.renderer_viewport_draw_calls_ingest_unknown =
+                sample.perf.viewport_draw_calls_ingest_unknown;
+            out.renderer_viewport_draw_calls_ingest_owned =
+                sample.perf.viewport_draw_calls_ingest_owned;
+            out.renderer_viewport_draw_calls_ingest_external_zero_copy =
+                sample.perf.viewport_draw_calls_ingest_external_zero_copy;
+            out.renderer_viewport_draw_calls_ingest_gpu_copy =
+                sample.perf.viewport_draw_calls_ingest_gpu_copy;
+            out.renderer_viewport_draw_calls_ingest_cpu_upload =
+                sample.perf.viewport_draw_calls_ingest_cpu_upload;
             out.renderer_mask_draw_calls = sample.perf.mask_draw_calls;
             out.renderer_pipeline_switches = sample.perf.pipeline_switches;
             out.renderer_bind_group_switches = sample.perf.bind_group_switches;

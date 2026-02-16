@@ -120,11 +120,13 @@ fn web_vs_fret_layout_tabs_demo_inactive_tab_text_color_matches_web() {
 
     let mut actual: Option<Rgba> = None;
     for op in scene.ops() {
-        if let SceneOp::Text { origin, color, .. } = *op
+        if let SceneOp::Text { origin, paint, .. } = *op
             && tab.bounds.contains(origin)
         {
-            actual = Some(color_to_rgba(color));
-            break;
+            if let Paint::Solid(color) = paint {
+                actual = Some(color_to_rgba(color));
+                break;
+            }
         }
     }
     let actual = actual.expect("fret inactive tab text color");
@@ -169,11 +171,13 @@ fn web_vs_fret_layout_tabs_demo_active_tab_text_color_matches_web() {
 
     let mut actual: Option<Rgba> = None;
     for op in scene.ops() {
-        if let SceneOp::Text { origin, color, .. } = *op
+        if let SceneOp::Text { origin, paint, .. } = *op
             && tab.bounds.contains(origin)
         {
-            actual = Some(color_to_rgba(color));
-            break;
+            if let Paint::Solid(color) = paint {
+                actual = Some(color_to_rgba(color));
+                break;
+            }
         }
     }
     let actual = actual.expect("fret active tab text color");

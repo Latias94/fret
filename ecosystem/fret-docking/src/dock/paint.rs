@@ -233,7 +233,7 @@ pub(super) fn paint_dock(
                     order: fret_core::DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: title.blob,
-                    color: text_color,
+                    paint: (text_color).into(),
                 });
                 scene.push(SceneOp::PopClip);
             }
@@ -289,7 +289,7 @@ pub(super) fn paint_dock(
                         order: fret_core::DrawOrder(6),
                         origin: Point::new(text_x, text_y),
                         text: glyph.blob,
-                        color,
+                        paint: (color).into(),
                     });
                 }
             }
@@ -342,7 +342,7 @@ pub(super) fn paint_dock(
                     order: fret_core::DrawOrder(11),
                     origin: Point::new(text_x, text_y),
                     text: glyph.blob,
-                    color,
+                    paint: (color).into(),
                 });
             }
         }
@@ -405,7 +405,7 @@ pub(super) fn paint_dock(
                             order: fret_core::DrawOrder(102),
                             origin: Point::new(text_x, text_y),
                             text: title.blob,
-                            color: text_color,
+                            paint: (text_color).into(),
                         });
                     }
                 }
@@ -661,7 +661,7 @@ pub(super) fn paint_drop_overlay(
                             order: fret_core::DrawOrder(9_996),
                             origin: Point::new(text_x, text_y),
                             text: title.blob,
-                            color: Color { a: 0.92, ..fg },
+                            paint: (Color { a: 0.92, ..fg }).into(),
                         });
                         scene.push(SceneOp::PopClip);
                     }

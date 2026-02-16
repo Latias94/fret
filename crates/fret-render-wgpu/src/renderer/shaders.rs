@@ -707,6 +707,18 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
+  if (FRET_FILL_KIND == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
   if (FRET_FILL_KIND == 3u) {
     let sampled = FRET_FILL_MATERIAL_SAMPLED != 0u;
     return material_eval(p, local_pos, sampled);
@@ -732,6 +744,18 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_BORDER_KIND == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
@@ -3757,6 +3781,18 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
   return vec4<f32>(0.0);
 }
 
@@ -4045,10 +4081,33 @@ struct MaskStack {
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
 
+const MAX_STOPS: u32 = 8u;
+
+struct Paint {
+  kind: u32,
+  tile_mode: u32,
+  color_space: u32,
+  stop_count: u32,
+  params0: vec4<f32>,
+  params1: vec4<f32>,
+  params2: vec4<f32>,
+  params3: vec4<f32>,
+  stop_colors: array<vec4<f32>, 8>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct TextPaints {
+  paints: array<Paint>,
+};
+
+@group(2) @binding(0) var<storage, read> text_paints: TextPaints;
+
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
-  @location(1) uv: vec2<f32>,
-  @location(2) color: vec4<f32>,
+  @location(1) local_pos_px: vec2<f32>,
+  @location(2) uv: vec2<f32>,
+  @location(3) color: vec4<f32>,
 };
 
 struct VsOut {
@@ -4056,6 +4115,8 @@ struct VsOut {
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
   @location(2) pixel_pos: vec2<f32>,
+  @location(3) local_pos_px: vec2<f32>,
+  @location(4) @interpolate(flat) paint_index: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -4120,6 +4181,78 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
+}
+
+fn paint_stop_offset(p: Paint, i: u32) -> f32 {
+  if (i < 4u) {
+    return p.stop_offsets0[i];
+  }
+  return p.stop_offsets1[i - 4u];
+}
+
+fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
+  let n = min(p.stop_count, MAX_STOPS);
+  if (n == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  var prev_offset = paint_stop_offset(p, 0u);
+  var prev_color = p.stop_colors[0u];
+  if (n == 1u || t <= prev_offset) {
+    return prev_color;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = paint_stop_offset(p, i);
+    let col = p.stop_colors[i];
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_color, col, u);
+    }
+    prev_offset = off;
+    prev_color = col;
+  }
+  return prev_color;
+}
+
+fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (p.kind == 0u) {
+    return p.params0;
+  }
+  if (p.kind == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  return vec4<f32>(0.0);
 }
 
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
@@ -4272,13 +4405,15 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
 }
 
 @vertex
-fn vs_main(input: VsIn) -> VsOut {
+fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   var out: VsOut;
   let clip_xy = to_clip_space(input.pos_px);
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.uv = input.uv;
   out.color = input.color;
   out.pixel_pos = input.pos_px;
+  out.local_pos_px = input.local_pos_px;
+  out.paint_index = instance_index;
   return out;
 }
 
@@ -4287,8 +4422,11 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
-  let coverage = apply_contrast_and_gamma_correction(tex.r, input.color.rgb);
-  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip * mask;
+  let p = text_paints.paints[input.paint_index];
+  let base = paint_eval(p, input.local_pos_px) * input.color;
+  let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
+  let coverage = apply_contrast_and_gamma_correction(tex.r, base_un);
+  let out = vec4<f32>(base.rgb * coverage, base.a * coverage) * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -4361,10 +4499,33 @@ struct MaskStack {
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
 
+const MAX_STOPS: u32 = 8u;
+
+struct Paint {
+  kind: u32,
+  tile_mode: u32,
+  color_space: u32,
+  stop_count: u32,
+  params0: vec4<f32>,
+  params1: vec4<f32>,
+  params2: vec4<f32>,
+  params3: vec4<f32>,
+  stop_colors: array<vec4<f32>, 8>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct TextPaints {
+  paints: array<Paint>,
+};
+
+@group(2) @binding(0) var<storage, read> text_paints: TextPaints;
+
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
-  @location(1) uv: vec2<f32>,
-  @location(2) color: vec4<f32>,
+  @location(1) local_pos_px: vec2<f32>,
+  @location(2) uv: vec2<f32>,
+  @location(3) color: vec4<f32>,
 };
 
 struct VsOut {
@@ -4372,6 +4533,8 @@ struct VsOut {
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
   @location(2) pixel_pos: vec2<f32>,
+  @location(3) local_pos_px: vec2<f32>,
+  @location(4) @interpolate(flat) paint_index: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -4436,6 +4599,78 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
+}
+
+fn paint_stop_offset(p: Paint, i: u32) -> f32 {
+  if (i < 4u) {
+    return p.stop_offsets0[i];
+  }
+  return p.stop_offsets1[i - 4u];
+}
+
+fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
+  let n = min(p.stop_count, MAX_STOPS);
+  if (n == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  var prev_offset = paint_stop_offset(p, 0u);
+  var prev_color = p.stop_colors[0u];
+  if (n == 1u || t <= prev_offset) {
+    return prev_color;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = paint_stop_offset(p, i);
+    let col = p.stop_colors[i];
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_color, col, u);
+    }
+    prev_offset = off;
+    prev_color = col;
+  }
+  return prev_color;
+}
+
+fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (p.kind == 0u) {
+    return p.params0;
+  }
+  if (p.kind == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  return vec4<f32>(0.0);
 }
 
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
@@ -4558,13 +4793,15 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
 }
 
 @vertex
-fn vs_main(input: VsIn) -> VsOut {
+fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   var out: VsOut;
   let clip_xy = to_clip_space(input.pos_px);
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.uv = input.uv;
   out.color = input.color;
   out.pixel_pos = input.pos_px;
+  out.local_pos_px = input.local_pos_px;
+  out.paint_index = instance_index;
   return out;
 }
 
@@ -4573,7 +4810,9 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
-  let a = tex.a * input.color.a;
+  let p = text_paints.paints[input.paint_index];
+  let base = paint_eval(p, input.local_pos_px) * input.color;
+  let a = tex.a * base.a;
   let out = vec4<f32>(tex.rgb * a, a) * clip * mask;
   return encode_output_premul(out);
 }
@@ -4647,10 +4886,33 @@ struct MaskStack {
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
 
+const MAX_STOPS: u32 = 8u;
+
+struct Paint {
+  kind: u32,
+  tile_mode: u32,
+  color_space: u32,
+  stop_count: u32,
+  params0: vec4<f32>,
+  params1: vec4<f32>,
+  params2: vec4<f32>,
+  params3: vec4<f32>,
+  stop_colors: array<vec4<f32>, 8>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct TextPaints {
+  paints: array<Paint>,
+};
+
+@group(2) @binding(0) var<storage, read> text_paints: TextPaints;
+
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
-  @location(1) uv: vec2<f32>,
-  @location(2) color: vec4<f32>,
+  @location(1) local_pos_px: vec2<f32>,
+  @location(2) uv: vec2<f32>,
+  @location(3) color: vec4<f32>,
 };
 
 struct VsOut {
@@ -4658,6 +4920,8 @@ struct VsOut {
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
   @location(2) pixel_pos: vec2<f32>,
+  @location(3) local_pos_px: vec2<f32>,
+  @location(4) @interpolate(flat) paint_index: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -4722,6 +4986,78 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
+}
+
+fn paint_stop_offset(p: Paint, i: u32) -> f32 {
+  if (i < 4u) {
+    return p.stop_offsets0[i];
+  }
+  return p.stop_offsets1[i - 4u];
+}
+
+fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
+  let n = min(p.stop_count, MAX_STOPS);
+  if (n == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  var prev_offset = paint_stop_offset(p, 0u);
+  var prev_color = p.stop_colors[0u];
+  if (n == 1u || t <= prev_offset) {
+    return prev_color;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = paint_stop_offset(p, i);
+    let col = p.stop_colors[i];
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_color, col, u);
+    }
+    prev_offset = off;
+    prev_color = col;
+  }
+  return prev_color;
+}
+
+fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  if (p.kind == 0u) {
+    return p.params0;
+  }
+  if (p.kind == 1u) {
+    let start = p.params0.xy;
+    let end = p.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 2u) {
+    let center = p.params0.xy;
+    let radius = max(p.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  return vec4<f32>(0.0);
 }
 
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
@@ -4870,13 +5206,15 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
 }
 
 @vertex
-fn vs_main(input: VsIn) -> VsOut {
+fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   var out: VsOut;
   let clip_xy = to_clip_space(input.pos_px);
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.uv = input.uv;
   out.color = input.color;
   out.pixel_pos = input.pos_px;
+  out.local_pos_px = input.local_pos_px;
+  out.paint_index = instance_index;
   return out;
 }
 
@@ -4885,9 +5223,12 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
-  let coverage = apply_contrast_and_gamma_correction3(tex.rgb, input.color.rgb);
+  let p = text_paints.paints[input.paint_index];
+  let base = paint_eval(p, input.local_pos_px) * input.color;
+  let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
+  let coverage = apply_contrast_and_gamma_correction3(tex.rgb, base_un);
   let a = max(max(coverage.r, coverage.g), coverage.b);
-  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * a) * clip * mask;
+  let out = vec4<f32>(base.rgb * coverage, base.a * a) * clip * mask;
   return encode_output_premul(out);
 }
 "#;

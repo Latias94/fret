@@ -743,12 +743,13 @@ impl WinitAppDriver for EffectsDemoDriver {
                         Px(bg_rect.origin.y.0 + pad_px.0 + metrics.baseline.0),
                     ),
                     text: blob,
-                    color: Color {
+                    paint: (Color {
                         r: 0.95,
                         g: 0.95,
                         b: 0.95,
                         a: 0.95,
-                    },
+                    })
+                    .into(),
                 });
             }
         }

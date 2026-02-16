@@ -92,6 +92,24 @@ Exit criteria:
   - a small set of common knobs is supported for app-specific tuning (paths/URLs, identifiers),
   - behavior is deterministic and covered by fixture-driven conformance tests.
 
+Status (baseline + no-drift gates exist):
+
+- Display-row segmentation uses the ecosystem policy:
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`compute_wrapped_row_start_cols`)
+- Policy conformance fixtures (JSON-driven):
+  - `ecosystem/fret-code-editor-view/tests/code_wrap_policy_fixtures.rs`
+  - `ecosystem/fret-code-editor-view/tests/fixtures/code_wrap_policy_v1.json`
+- Policy-aware byte ↔ display mapping gate:
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`byte_to_display_point_respects_code_wrap_policy_rows`)
+- No-drift navigation gates (selection + vertical movement):
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`move_caret_vertical_steps_through_code_wrap_policy_rows`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
+- No-drift pointer selection gates (inlays + preedit replacement):
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`pointer_down_double_click_selects_word_on_inlay_only_row_under_soft_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`pointer_down_double_click_cancels_preedit_replacement_and_selects_word`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`triple_click_selects_logical_line_on_inlay_only_row_under_soft_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`triple_click_cancels_preedit_replacement_and_selects_logical_line`)
+
 ## M4 — Platform text input interop (TextInputRegion UTF-16)
 
 Exit criteria:
@@ -120,6 +138,12 @@ Exit criteria:
       - `ecosystem/fret-code-editor-view/src/lib.rs`
       - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
 
+Future work (deferred):
+
+- Multi-line selection replacement composition (cross-newline ranges) is not implemented yet.
+  - Current v1 staging clamps cross-newline ranges to the anchor logical line for determinism.
+  - Track implementation in `docs/workstreams/editor-text-pipeline-v1-todo.md` (M4).
+
 Evidence anchors:
 
 - Implementation:
@@ -130,7 +154,19 @@ Evidence anchors:
   - `crates/fret-ui/src/declarative/tests/semantics.rs`
     (`declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates`)
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_source_does_not_materialize_whole_buffer_string`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`a11y_composed_window_is_bounded_for_large_documents`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
     (`platform_replace_and_mark_empty_text_cancels_and_restores_selection`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_text_input_bounds_and_index_roundtrip_under_preedit_replacement_and_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_and_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_window_with_decorations_and_wrap`)
 - Diag gates:
   - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`
   - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_a11y_composition_json`)
@@ -154,6 +190,8 @@ Evidence anchors (initial):
 - Geometry cache key:
   - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
+- Display-map epoch gate:
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`code_wrap_policy_change_invalidates_row_text_cache`)
 - Paint-only stability gate:
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
 

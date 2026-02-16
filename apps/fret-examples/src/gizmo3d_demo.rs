@@ -4301,12 +4301,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         Px(bg_rect.origin.y.0 + pad.0),
                     ),
                     text: blob,
-                    color: Color {
+                    paint: (Color {
                         r: 0.92,
                         g: 0.92,
                         b: 0.94,
                         a: 0.95,
-                    },
+                    })
+                    .into(),
                 });
             }
         }
@@ -4404,12 +4405,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     Px(y - metrics.size.height.0 * 0.5),
                 ),
                 text: blob,
-                color: Color {
+                paint: (Color {
                     r: label.color.r,
                     g: label.color.g,
                     b: label.color.b,
                     a: label.color.a,
-                },
+                })
+                .into(),
             });
         }
 
@@ -4491,12 +4493,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         Px(bg_rect.origin.y.0 + pad.0),
                     ),
                     text: blob,
-                    color: Color {
+                    paint: (Color {
                         r: 0.92,
                         g: 0.92,
                         b: 0.94,
                         a: 0.95,
-                    },
+                    })
+                    .into(),
                 });
             }
         }

@@ -48,6 +48,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/config.rs` (perf snapshot output),
     `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (JSON dump: estimated peak bytes + degradations list),
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (segment stability counters: changed segments + pass growth).
+- [x] REN-VNEXT-perf-110 Unify per-frame GPU buffer rotation for quad instances and vertex streams (viewport/text/path).
+  - Goal: remove duplicated capacity growth + frame-rotation logic without changing bind group indices or shader semantics.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`RingBuffer<T>`, `StorageRingBuffer<T>`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (initialization)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (uploads + `next_pair`/`next_buffer`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (layout access via ring)
+  - Gates (2026-02-16):
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo test -p fret-render-wgpu --test text_paint_conformance`
 - [x] REN-VNEXT-plan-004 Introduce a switch to run old vs new paths and compare results for a small fixed scene set.
   - Note: This was a temporary safety rail during rollout and has been removed after completing `REN-VNEXT-plan-005`.
 
@@ -208,16 +219,51 @@ milestones) when implementation begins.
 - [x] REN-VNEXT-sem-020 General path stroke: introduce a “stroke arbitrary vector paths” surface with bounded stroke style.
   - Landed via: `PathStyle::StrokeV2(StrokeStyleV2)` for vector path preparation + `SceneOp::Path` rendering.
   - Evidence: `docs/workstreams/path-stroke-style-v2.md`, `crates/fret-core/src/vector_path.rs`.
-- [~] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter + dash semantics (and constant-px stroke width semantics as an explicit follow-up).
+- [x] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter + dash semantics (and constant-px stroke width semantics as an explicit follow-up).
   - Landed: join/cap/miter + dash for vector path strokes (deterministic, scale-aware).
   - Deferred: constant-px stroke width under non-uniform transforms (requires a transform-aware contract).
   - Tracking: `docs/workstreams/path-stroke-style-v2.md`.
-- [ ] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient` (or a minimal equivalent).
-  - Current: only linear + radial gradients exist.
-- [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
+  - Evidence:
+    - `crates/fret-core/src/vector_path.rs` (`StrokeStyleV2`, `PathStyle::StrokeV2`)
+    - `crates/fret-render-wgpu/src/renderer/path.rs` (`build_dashed_lyon_path`, `tessellate_path_commands`)
+    - `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`
+- [x] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient`.
+  - Contract: `docs/adr/0280-sweep-gradient-paint-v1.md`
+  - Evidence:
+    - `crates/fret-core/src/scene/paint.rs` (`SweepGradient`, sanitize)
+    - `crates/fret-core/src/scene/{validate.rs,fingerprint.rs}`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/{quad.rs,path.rs,text.rs}`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`paint_eval*`, `paint_eval_{fill,border}`)
+    - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (`gpu_sweep_gradient_smoke_conformance`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo test -p fret-render-wgpu --test paint_gradient_conformance`
+- [x] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
+  - Landed (v2 fixed-function subset): `Darken`, `Lighten`, `Subtract`.
+  - Contract: `docs/adr/0281-compositing-blend-modes-v2-bounded.md`
+  - Evidence:
+    - `crates/fret-core/src/scene/composite.rs` (`BlendMode` + `pipeline_index`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/composite.rs` (`blend_state_for_mode`)
+    - `crates/fret-render-wgpu/tests/composite_group_conformance.rs` (`gpu_composite_group_blend_modes_v2_smoke_conformance`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo test -p fret-render-wgpu --test composite_group_conformance`
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
-- [ ] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
-  - Current: `SceneOp::Text` is solid-color only; effects-based recipes exist but are not contract-level.
+- [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
+  - Status (2026-02-16): v1 landed for painted text fills (solid + gradients), staged by ADR 0279.
+    - Landed (v1): `SceneOp::Text` carries `paint: Paint` with bounded, deterministic degradations.
+    - Landed (v1): GPU readback conformance gate for text gradient paint.
+    - Landed (adoption): ui-gallery probe uses `Paint::LinearGradient` for text.
+    - Landed (prep): unified paint→GPU encoding helper (quad/path/text) with explicit material policy
+      (text/path still deterministically degrade materials to a solid base color).
+    - Deferred (v2+): text outline/stroke and text shadow as first-class contract surfaces.
+  - Tracking: `docs/workstreams/text-paint-surface-v1.md` (purpose/TODO/milestones)
+  - ADR: `docs/adr/0279-text-paint-surface-v1.md`
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`paint_to_gpu`, `PaintMaterialPolicy`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (uses shared helper; material still degrades)
 - [ ] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` and/or image/pattern paints.
   - Current: sanitize degrades repeat/mirror to clamp for determinism.
 - [ ] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
@@ -242,3 +288,11 @@ milestones) when implementation begins.
   - Tracking: `docs/workstreams/external-texture-imports-v1.md` (see `EXT-web-perf-131`).
   - Gate (web copy path): `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
   - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json` (recorded 2026-02-15).
+  - Landed observability (2026-02-16):
+    - `RenderTargetMetadata.requested_ingest_strategy` (requested) and `RenderTargetMetadata.ingest_strategy`
+      (effective) are surfaced in renderer perf snapshots for both:
+      - `render_target_updates_ingest_*` (pre-render update churn), and
+      - `viewport_draw_calls_ingest_*` (draw-side attribution).
+    - `render_target_updates_ingest_fallbacks` counts requested != effective at update time (best-effort).
+    - This is a *best-effort* diagnostic signal: it does not change ingest behavior yet.
+  - Next (v2): use these counters in perf baselines to enforce that any fallback-only path stays within budget.

@@ -99,6 +99,34 @@ fn mix_paint(mut state: u64, p: Paint) -> u64 {
             }
             state
         }
+        Paint::SweepGradient(g) => {
+            state = mix_u64(state, 5);
+            state = mix_point(state, g.center);
+            state = mix_f32(state, g.start_angle_turns);
+            state = mix_f32(state, g.end_angle_turns);
+            state = mix_u64(
+                state,
+                match g.tile_mode {
+                    TileMode::Clamp => 1,
+                    TileMode::Repeat => 2,
+                    TileMode::Mirror => 3,
+                },
+            );
+            state = mix_u64(
+                state,
+                match g.color_space {
+                    ColorSpace::Srgb => 1,
+                    ColorSpace::Oklab => 2,
+                },
+            );
+            state = mix_u64(state, u64::from(g.stop_count));
+            let n = usize::from(g.stop_count).min(MAX_STOPS);
+            for i in 0..n {
+                state = mix_f32(state, g.stops[i].offset);
+                state = mix_color(state, g.stops[i].color);
+            }
+            state
+        }
         Paint::Material { id, params } => {
             state = mix_u64(state, 4);
             state = mix_u64(state, id.data().as_ffi());
@@ -336,6 +364,9 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                     BlendMode::Add => 2,
                     BlendMode::Multiply => 3,
                     BlendMode::Screen => 4,
+                    BlendMode::Darken => 5,
+                    BlendMode::Lighten => 6,
+                    BlendMode::Subtract => 7,
                 },
             );
             mix_u64(
@@ -521,13 +552,13 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             order,
             origin,
             text,
-            color,
+            paint,
         } => {
             let mut state = mix_u64(state, 5);
             state = mix_u64(state, u64::from(order.0));
             state = mix_point(state, origin);
             state = mix_u64(state, text.data().as_ffi());
-            mix_color(state, color)
+            mix_paint(state, paint)
         }
         SceneOp::Path {
             order,
