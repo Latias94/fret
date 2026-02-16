@@ -4,6 +4,23 @@
 //! force a global async runtime (Tokio, etc.).
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-runtime/README.md`.
+//!
+//! ## Where to start
+//!
+//! - Commands: [`CommandId`], [`CommandRegistry`], [`CommandMeta`]
+//! - Models/state: [`Model`], [`ModelStore`], [`ModelCx`]
+//! - Effects: [`Effect`]
+//! - Host integration: [`UiHost`], [`GlobalsHost`], [`ModelsHost`]
+//! - Portability contracts: [`PlatformCapabilities`]
+//!
+//! ## Minimal example
+//!
+//! ```
+//! use fret_runtime::{CommandId, CommandMeta, CommandRegistry};
+//!
+//! let mut commands = CommandRegistry::default();
+//! commands.register(CommandId::from("app.quit"), CommandMeta::new("Quit"));
+//! ```
 
 pub mod capabilities;
 pub mod command;
