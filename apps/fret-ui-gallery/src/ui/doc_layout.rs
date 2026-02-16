@@ -1,6 +1,6 @@
-use super::super::super::*;
+use super::*;
 
-pub(super) struct DocSection {
+pub(in crate::ui) struct DocSection {
     pub title: &'static str,
     pub description: Option<&'static str>,
     pub preview: AnyElement,
@@ -9,13 +9,13 @@ pub(super) struct DocSection {
     pub test_id_prefix: Option<&'static str>,
 }
 
-pub(super) struct DocCodeBlock {
+pub(in crate::ui) struct DocCodeBlock {
     pub language: &'static str,
     pub code: &'static str,
 }
 
 impl DocSection {
-    pub(super) fn new(title: &'static str, preview: AnyElement) -> Self {
+    pub(in crate::ui) fn new(title: &'static str, preview: AnyElement) -> Self {
         Self {
             title,
             description: None,
@@ -26,28 +26,28 @@ impl DocSection {
         }
     }
 
-    pub(super) fn description(mut self, description: &'static str) -> Self {
+    pub(in crate::ui) fn description(mut self, description: &'static str) -> Self {
         self.description = Some(description);
         self
     }
 
-    pub(super) fn code(mut self, language: &'static str, code: &'static str) -> Self {
+    pub(in crate::ui) fn code(mut self, language: &'static str, code: &'static str) -> Self {
         self.code = Some(DocCodeBlock { language, code });
         self
     }
 
-    pub(super) fn max_w(mut self, max_w: Px) -> Self {
+    pub(in crate::ui) fn max_w(mut self, max_w: Px) -> Self {
         self.max_w = max_w;
         self
     }
 
-    pub(super) fn test_id_prefix(mut self, test_id_prefix: &'static str) -> Self {
+    pub(in crate::ui) fn test_id_prefix(mut self, test_id_prefix: &'static str) -> Self {
         self.test_id_prefix = Some(test_id_prefix);
         self
     }
 }
 
-pub(super) fn render_doc_page(
+pub(in crate::ui) fn render_doc_page(
     cx: &mut ElementContext<'_, App>,
     intro: Option<&'static str>,
     sections: Vec<DocSection>,

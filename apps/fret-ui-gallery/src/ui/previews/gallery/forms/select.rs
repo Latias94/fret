@@ -5,7 +5,7 @@ pub(in crate::ui) fn preview_select(
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
 ) -> Vec<AnyElement> {
-    use super::super::doc_layout::{self, DocSection};
+    use crate::ui::doc_layout::{self, DocSection};
 
     #[derive(Default)]
     struct SelectPageModels {
