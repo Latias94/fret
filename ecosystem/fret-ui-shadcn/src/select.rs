@@ -2308,6 +2308,7 @@ fn select_impl<H: UiHost>(
                                  state.content.set_active_row(None);
                                  state.pending_active_align_top_scroll = false;
                                 state.opened_by_pointer = false;
+                                state.opened_by_touch = false;
                             }
 
                             state.content.active_row()
