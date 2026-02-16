@@ -5369,6 +5369,31 @@ mod tests {
     }
 
     #[test]
+    fn text_measure_key_includes_width_for_wrap_grapheme() {
+        let style = TextStyle::default();
+
+        let a = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let b = TextConstraints {
+            max_width: Some(Px(320.0)),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        assert_ne!(
+            TextMeasureKey::new(&style, a, 7),
+            TextMeasureKey::new(&style, b, 7)
+        );
+    }
+
+    #[test]
     fn sanitize_spans_extends_missing_tail() {
         let text = "hello";
         let spans = vec![TextSpan {
