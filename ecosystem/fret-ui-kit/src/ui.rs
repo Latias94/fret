@@ -19,6 +19,16 @@ use crate::{
     UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
+fn collect_ui_children<H: UiHost, I>(cx: &mut ElementContext<'_, H>, iter: I) -> Vec<AnyElement>
+where
+    I: IntoIterator,
+    I::Item: UiIntoElement,
+{
+    iter.into_iter()
+        .map(|child| crate::UiIntoElement::into_element(child, cx))
+        .collect()
+}
+
 /// A patchable flex layout constructor for authoring ergonomics.
 ///
 /// This is an ecosystem-only helper intended to reduce runtime-props boilerplate in layout-only
@@ -115,7 +125,8 @@ impl<H, B> UiSupportsLayout for FlexBoxBuild<H, B> {}
 impl<H: UiHost, F, I> FlexBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -136,7 +147,10 @@ where
 
         let children = self.children.expect("expected flex children closure");
         cx.container(container, move |cx| {
-            vec![cx.flex(flex_props, move |cx| children(cx))]
+            vec![cx.flex(flex_props, move |cx| {
+                let children = children(cx);
+                collect_ui_children(cx, children)
+            })]
         })
     }
 }
@@ -183,7 +197,8 @@ pub fn h_flex<H: UiHost, F, I>(
 ) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     UiBuilder::new(FlexBox::new(Axis::Horizontal, children))
 }
@@ -209,7 +224,8 @@ pub fn v_flex<H: UiHost, F, I>(
 ) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     UiBuilder::new(FlexBox::new(Axis::Vertical, children))
 }
@@ -295,14 +311,18 @@ impl<H, B> UiSupportsLayout for ContainerBoxBuild<H, B> {}
 impl<H: UiHost, F, I> ContainerBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let container = decl_style::container_props(theme, self.chrome, self.layout);
         let children = self.children.expect("expected container children closure");
-        cx.container(container, move |cx| children(cx))
+        cx.container(container, move |cx| {
+            let children = children(cx);
+            collect_ui_children(cx, children)
+        })
     }
 }
 
@@ -333,7 +353,8 @@ pub fn container<H: UiHost, F, I>(
 ) -> UiBuilder<ContainerBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     UiBuilder::new(ContainerBox::new(children))
 }
@@ -432,7 +453,8 @@ impl<H, B> UiSupportsLayout for ScrollAreaBoxBuild<H, B> {}
 impl<H: UiHost, F, I> ScrollAreaBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -476,7 +498,10 @@ where
                     scroll_handle: Some(handle.clone()),
                     ..Default::default()
                 },
-                children,
+                move |cx| {
+                    let children = children(cx);
+                    collect_ui_children(cx, children)
+                },
             );
 
             let scroll_id = scroll.id;
@@ -739,7 +764,8 @@ pub fn scroll_area<H: UiHost, F, I>(
 ) -> UiBuilder<ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     UiBuilder::new(ScrollAreaBox::new(children))
 }
@@ -792,7 +818,8 @@ impl<H, F> UiSupportsLayout for StackBox<H, F> {}
 impl<H: UiHost, F, I> StackBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -801,7 +828,10 @@ where
         let children = self.children.expect("expected stack children closure");
 
         cx.container(container, move |cx| {
-            vec![cx.stack_props(StackProps::default(), move |cx| children(cx))]
+            vec![cx.stack_props(StackProps::default(), move |cx| {
+                let children = children(cx);
+                collect_ui_children(cx, children)
+            })]
         })
     }
 }
@@ -816,7 +846,8 @@ pub fn stack<H: UiHost, F, I>(
 ) -> UiBuilder<StackBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     UiBuilder::new(StackBox::new(children))
 }
@@ -1073,6 +1104,15 @@ mod tests {
     use super::*;
     use crate::UiExt;
     use crate::{LengthRefinement, MetricRef};
+
+    // Compile-only: ensure `ui::*` layout constructors accept `UiIntoElement` children
+    // (e.g. `UiBuilder<TextBox>`) without requiring call-site `.into_element(cx)`.
+    #[allow(dead_code)]
+    fn h_flex_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
+            .gap(Space::N2)
+            .into_element(cx)
+    }
 
     #[test]
     fn container_box_accepts_ui_patches() {

@@ -968,7 +968,8 @@ impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
 impl<H: UiHost, F, I> UiBuilder<crate::ui::FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -999,7 +1000,8 @@ where
 impl<H: UiHost, F, I> UiBuilder<crate::ui::ContainerBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1010,7 +1012,8 @@ where
 impl<H: UiHost, F, I> UiBuilder<crate::ui::StackBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1021,7 +1024,8 @@ where
 impl<H: UiHost, F, I> UiBuilder<crate::ui::ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
