@@ -118,9 +118,8 @@
     },
     {
       "query": {
-        "anchor_test_id": "ui-gallery-select-trigger",
-        "content_test_id": "select-scroll-viewport",
-        "kind": "anchored_panel"
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-select-trigger"
       },
       "timeout_frames": 240,
       "type": "wait_overlay_placement_trace"
