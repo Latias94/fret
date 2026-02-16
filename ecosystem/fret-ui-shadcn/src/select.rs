@@ -108,6 +108,7 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     theme: Theme,
     item_step: Px,
     predicted_has_scroll: bool,
+    allow_hover_scroll_arrows: bool,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
@@ -276,23 +277,31 @@ where
                             fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
                         }));
 
+                        let clear_active_for_move = clear_active_for_hover.clone();
                         let auto_scroll_state_for_move = auto_scroll_state.clone();
                         cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
-                            let mut st = auto_scroll_state_for_move
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            st.hovered = true;
+                            let token = {
+                                let mut st = auto_scroll_state_for_move
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                st.hovered = true;
 
-                            let did_move = st.last_pos.map_or(true, |p| p != mv.position);
-                            st.last_pos = Some(mv.position);
-                            if !did_move || st.token.is_some() {
-                                return false;
-                            }
+                                let did_move = st.last_pos.map_or(true, |p| p != mv.position);
+                                st.last_pos = Some(mv.position);
+                                if !did_move || st.token.is_some() {
+                                    return false;
+                                }
 
-                            // Base UI scroll arrows start a 40ms scroll timer on mouse move rather
-                            // than scrolling immediately on hover.
-                            let token = host.next_timer_token();
-                            st.token = Some(token);
+                                // Base UI scroll arrows start a 40ms scroll timer on mouse move rather
+                                // than scrolling immediately on hover.
+                                let token = host.next_timer_token();
+                                st.token = Some(token);
+                                token
+                            };
+
+                            // Base UI clears the active index on pointer move over scroll arrows.
+                            clear_active_for_move(host, action_cx);
+
                             host.push_effect(Effect::SetTimer {
                                 window: Some(action_cx.window),
                                 token,
@@ -527,7 +536,7 @@ where
 
             let mut out = Vec::with_capacity(3);
             out.push(scroll);
-            if has_scroll {
+            if has_scroll && allow_hover_scroll_arrows {
                 if let Some(btn) = scroll_button(
                     cx,
                     ids::ui::CHEVRON_UP,
@@ -1307,6 +1316,7 @@ fn select_impl<H: UiHost>(
             content: radix_select::SelectContentKeyState,
             was_open: bool,
             opened_by_pointer: bool,
+            opened_by_touch: bool,
             scroll_handle: fret_ui::scroll::ScrollHandle,
             value_node: Option<GlobalElementId>,
             viewport: Option<GlobalElementId>,
@@ -1336,6 +1346,7 @@ fn select_impl<H: UiHost>(
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
                     opened_by_pointer: false,
+                    opened_by_touch: false,
                     scroll_handle: fret_ui::scroll::ScrollHandle::default(),
                     value_node: None,
                     viewport: None,
@@ -1438,6 +1449,7 @@ fn select_impl<H: UiHost>(
                 state.pending_active_align_top_scroll = false;
                 state.pending_active_scroll_into_view = false;
                 state.opened_by_pointer = false;
+                state.opened_by_touch = false;
             }
 
             let state_for_timer = trigger_state.clone();
@@ -1498,6 +1510,7 @@ fn select_impl<H: UiHost>(
                     let now_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
                     if !was_open && now_open {
                         state.opened_by_pointer = false;
+                        state.opened_by_touch = false;
                     }
                     let after = host
                         .models_mut()
@@ -1592,6 +1605,10 @@ fn select_impl<H: UiHost>(
                 }
                 if !was_open && now_open {
                     state.opened_by_pointer = true;
+                    state.opened_by_touch = matches!(
+                        down.pointer_type,
+                        fret_core::PointerType::Touch | fret_core::PointerType::Pen
+                    );
                 }
                 state.trigger.clear_typeahead(host);
 
@@ -1662,6 +1679,7 @@ fn select_impl<H: UiHost>(
                         if !was_open && now_open {
                             radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_pointer_up);
                             state.opened_by_pointer = true;
+                            state.opened_by_touch = true;
                             let has_selected_item_in_list = host
                                 .models_mut()
                                 .read(&model_for_pointer_up, |selected| {
@@ -2461,6 +2479,13 @@ fn select_impl<H: UiHost>(
                                         let state_for_consume_active_scroll_into_view =
                                             trigger_state_for_overlay_in_content.clone();
 
+                                        let allow_hover_scroll_arrows = {
+                                            let state = trigger_state_for_overlay_in_content
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            !state.opened_by_touch
+                                        };
+
                                         let scroll = select_scroll_with_buttons(
                                             cx,
                                             theme_for_overlay.clone(),
@@ -2468,6 +2493,7 @@ fn select_impl<H: UiHost>(
                                             item_len > 0
                                                 && Px(item_h.0 * item_len as f32).0
                                                     > desired_content_h.0 + 0.5,
+                                            allow_hover_scroll_arrows,
                                             scroll_handle,
                                             initial_scroll_to_y,
                                             viewport_id_out,
@@ -5746,6 +5772,118 @@ mod tests {
             app.models().get_copied(&open),
             Some(true),
             "touch up inside trigger should open"
+        );
+    }
+
+    #[test]
+    fn select_touch_open_hides_scroll_arrows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = (1..=40)
+            .map(|i| {
+                SelectItem::new(
+                    Arc::from(format!("item-{i:02}")),
+                    Arc::from(format!("Item {i:02}")),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(13),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(13),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Allow the overlay to mount and the scroll handle to observe content overflow.
+        for _ in 0..3 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-viewport")),
+            "expected select overlay content to mount"
+        );
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-up-button")),
+            "scroll arrows are hover-only; touch-opened select should not render them"
+        );
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-down-button")),
+            "scroll arrows are hover-only; touch-opened select should not render them"
         );
     }
 
