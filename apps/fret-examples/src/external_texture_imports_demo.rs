@@ -463,11 +463,12 @@ fn record_engine_frame(
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
     let mut metadata = RenderTargetMetadata::default();
-    metadata.ingest_strategy = match st.mode {
+    let effective_strategy = match st.mode {
         ExternalTextureImportsMode::CheckerGpu => RenderTargetIngestStrategy::Owned,
         ExternalTextureImportsMode::DecodedPngCpuCopy => RenderTargetIngestStrategy::CpuUpload,
     };
-    metadata.requested_ingest_strategy = metadata.ingest_strategy;
+    metadata.requested_ingest_strategy = effective_strategy;
+    metadata.ingest_strategy = effective_strategy;
 
     if st.use_native_adapter {
         let renderer_caps = app
@@ -477,13 +478,17 @@ fn record_engine_frame(
             texture: texture.clone(),
             size: st.target_px_size,
         });
-        if let Err(err) = st.target.push_native_external_import_update(
-            renderer,
-            &mut update,
-            context,
-            &renderer_caps,
-            frame,
-        ) {
+        if let Err(err) = st
+            .target
+            .push_native_external_import_update_with_requested_ingest_strategy(
+                renderer,
+                &mut update,
+                context,
+                &renderer_caps,
+                effective_strategy,
+                frame,
+            )
+        {
             tracing::warn!(
                 ?err,
                 "native external import adapter path failed; falling back"

@@ -396,37 +396,43 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
         Self::record_external_source_into_texture(state, context, secs);
 
         if let Some(view) = state.view.as_ref() {
-            let mut metadata = RenderTargetMetadata::default();
-            metadata.requested_ingest_strategy = RenderTargetIngestStrategy::ExternalZeroCopy;
-            metadata.ingest_strategy = RenderTargetIngestStrategy::GpuCopy;
+            let metadata = RenderTargetMetadata::default();
 
             #[cfg(target_arch = "wasm32")]
             {
                 if let Some(ext) = state.external.as_ref() {
-                    state.target.push_update_with_metadata_and_keepalive(
+                    state.target.push_update_with_ingest_strategies(
                         &mut update,
                         view.clone(),
                         state.target_px_size,
                         metadata,
-                        EngineFrameKeepalive::new(ext.canvas.clone()),
+                        RenderTargetIngestStrategy::ExternalZeroCopy,
+                        RenderTargetIngestStrategy::GpuCopy,
                     );
+                    update
+                        .keepalive
+                        .push(EngineFrameKeepalive::new(ext.canvas.clone()));
                 } else {
-                    state.target.push_update_with_metadata(
+                    state.target.push_update_with_ingest_strategies(
                         &mut update,
                         view.clone(),
                         state.target_px_size,
                         metadata,
+                        RenderTargetIngestStrategy::ExternalZeroCopy,
+                        RenderTargetIngestStrategy::GpuCopy,
                     );
                 }
             }
 
             #[cfg(not(target_arch = "wasm32"))]
             {
-                state.target.push_update_with_metadata(
+                state.target.push_update_with_ingest_strategies(
                     &mut update,
                     view.clone(),
                     state.target_px_size,
                     metadata,
+                    RenderTargetIngestStrategy::ExternalZeroCopy,
+                    RenderTargetIngestStrategy::GpuCopy,
                 );
             }
         }
