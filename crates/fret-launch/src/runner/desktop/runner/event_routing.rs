@@ -271,7 +271,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     .then(|| self.window_under_cursor(screen_pos, prefer_not))
                     .flatten()
             })
-            .or(self.internal_drag_hover_window);
+            .or(self
+                .internal_drag_hover_window
+                .filter(|w| Some(*w) != prefer_not));
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
         let target = target.unwrap_or(drag_source_window);
