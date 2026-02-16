@@ -140,6 +140,24 @@ Existing v1 anchors (copy paths):
   - `tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json`
   - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
 
+## Draft exit criteria (before marking Accepted)
+
+This ADR can move out of Draft once the following are true:
+
+1. The strategy selection is **fully deterministic** and bounded:
+   - for each target class (web/wasm, native desktop, mobile), the ordered fallback chain is
+     explicit and does not depend on timing or opportunistic resource availability.
+2. The metadata semantics are **complete enough for correctness reasoning**:
+   - alpha mode + orientation must be explicitly preserved across all strategies,
+   - and any non-preservable metadata must have a deterministic “drop/approximate” rule plus an
+     explicit counter/hint.
+3. The perf gates are **actionable**:
+   - at least one steady-state baseline exists per landed strategy,
+   - and the “requested vs effective” ingest attribution is validated in the baseline notes.
+4. The web zero-copy status is **truthful and capability-gated**:
+   - it remains explicitly blocked until backend support exists, with the copy-path baselines kept
+     green as anchors.
+
 ## Consequences
 
 - The framework gains a clear, portable, performance-oriented story for video/camera/streaming UI.
