@@ -1,5 +1,15 @@
 # Primitives Interaction Semantics Alignment v1 — Combobox (Audit Sheet)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- MUI Base UI: https://github.com/mui/base-ui
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream note; not a contract)
 
 This sheet audits `Combobox` against Base UI outcomes (baseline via shadcn/ui v4), mapped onto

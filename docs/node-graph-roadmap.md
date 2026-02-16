@@ -1,5 +1,17 @@
 # Node Graph Roadmap (fret-node)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- egui-snarl: https://github.com/zakarumych/egui-snarl
+- Unity Graphics (ShaderGraph): https://github.com/Unity-Technologies/Graphics
+- imgui-node-editor: https://github.com/thedmd/imgui-node-editor
+- XYFlow: https://github.com/xyflow/xyflow
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This is a living implementation roadmap (not an ADR). Contracts are defined by ADRs; this file
 tracks staged work, prioritization, and concrete TODOs for the node graph substrate and editor UI.
 

@@ -1,5 +1,15 @@
 # ADR 0009: Scene Ordering and Renderer Batching
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Vello: https://github.com/linebender/vello
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

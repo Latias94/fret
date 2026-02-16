@@ -1,5 +1,14 @@
 # ADR 0118: Renderer Intermediate Budgets and Effect Degradation (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Bevy: https://github.com/bevyengine/bevy
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (initial implementation landed)
 
 ## Context

@@ -1,5 +1,16 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- imgui-rs: https://github.com/imgui-rs/imgui-rs
+- egui: https://github.com/emilk/egui
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; not an ADR)
 Last updated: 2026-02-09
 

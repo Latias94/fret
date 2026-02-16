@@ -1,5 +1,14 @@
 # Animata Recipes Alignment (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Animata: https://github.com/codse/animata
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (semantic-first; v1 semantics frozen; outcomes gated with deterministic diag scripts)
 
 See:

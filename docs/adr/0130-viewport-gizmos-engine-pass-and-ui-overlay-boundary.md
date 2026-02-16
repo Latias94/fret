@@ -1,5 +1,15 @@
 # ADR 0130: Viewport Gizmos — Engine-pass Rendering and UI Overlay Boundary
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Godot: https://github.com/godotengine/godot
+- transform-gizmo: https://github.com/urholaukkarinen/transform-gizmo
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context

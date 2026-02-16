@@ -1,5 +1,14 @@
 # ADR 0054: Platform Capabilities and Portability Matrix (Runtime, Not cfg)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Makepad: https://github.com/makepad/makepad
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 Scope: `fret-platform-*` + runner contracts; consumed by commands/UI via `InputContext`/`when`
 

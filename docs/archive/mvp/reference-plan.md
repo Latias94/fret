@@ -2,6 +2,19 @@
 
 # MVP Plan (Historical Snapshot)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- fret-ui-precision: (internal reference; no public upstream link)
+- gpui-component: https://github.com/longbridge/gpui-component
+- Makepad: https://github.com/makepad/makepad
+- shadcn/ui: https://github.com/shadcn-ui/ui
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document is a historical snapshot of an older execution plan. It is no longer maintained as an active plan.
 
 Completed stage definitions are archived in `docs/archive/mvp-archive.md` to keep this file actionable.

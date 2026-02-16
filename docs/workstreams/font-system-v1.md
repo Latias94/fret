@@ -1,5 +1,16 @@
 # Workstream: Font System v1 (Fontique Audit + Roadmap)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Parley: https://github.com/linebender/parley
+- Xilem: https://github.com/linebender/xilem
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: In progress
 
 This workstream focuses on the *font system* (not the entire text pipeline):

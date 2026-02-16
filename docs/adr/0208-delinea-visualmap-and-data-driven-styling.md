@@ -1,5 +1,14 @@
 # ADR 0208: `delinea` VisualMap + Data-Driven Styling Contract (ECharts-Inspired)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed (P0 decision gate)
 
 ## Context

@@ -1,5 +1,15 @@
 # ADR 0185: Code Editor Ecosystem v1 (Buffer/View/Surface Contracts)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Monaco Editor: https://github.com/microsoft/monaco-editor
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 - Status: Proposed
 - Date: 2026-01-27
 

@@ -1,5 +1,14 @@
 # Shadcn Web Goldens (JSON)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Goal: generate stable, reviewable JSON “goldens” from the upstream shadcn/ui (React) rendering,
 capturing both layout geometry (DOM rects) and computed styles, so Fret can validate its typed
 Tailwind + Radix-aligned primitives without relying on eyeballing.

@@ -2,6 +2,16 @@
 title: "ADR 0129: Tooltip Scroll Dismissal (Radix-aligned)"
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # ADR 0129: Tooltip Scroll Dismissal (Radix-aligned)
 
 ## Status

@@ -1,5 +1,14 @@
 # Material 3 (and Expressive) Refactor Plan
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Compose Multiplatform (core): https://github.com/JetBrains/compose-multiplatform-core
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Complete (foundation landed; migration complete; follow-ups tracked in `docs/workstreams/material3-next-wave-v2.md`)
 
 This document is the **execution plan** for a “fearless refactor” of Material 3 alignment in Fret.

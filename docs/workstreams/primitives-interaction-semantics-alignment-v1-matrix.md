@@ -1,5 +1,16 @@
 # Primitives Interaction Semantics Alignment v1 — Audit Matrix
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- MUI Base UI: https://github.com/mui/base-ui
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream note; not a contract)
 
 This matrix is the **progress tracker** for auditing primitives + shadcn recipes against upstream

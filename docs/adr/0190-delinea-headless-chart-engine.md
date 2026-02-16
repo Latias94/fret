@@ -1,5 +1,15 @@
 # ADR 0190: `delinea` Headless Chart Engine (ECharts-Inspired, Fret-Native)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Charming (ECharts helper): https://github.com/ecomfe/charming
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

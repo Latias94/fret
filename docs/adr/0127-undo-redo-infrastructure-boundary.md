@@ -1,5 +1,14 @@
 # ADR 0127: Undo/Redo Infrastructure Boundary (Framework Hooks vs App Policy)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 Scope: Framework-level infrastructure (portable); undo history policy remains app-owned.
 

@@ -1,5 +1,14 @@
 # ADR 0038: Engine Render Hook and Submission Coordinator (Viewport Recording Without Queue Ownership)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Vello: https://github.com/linebender/vello
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

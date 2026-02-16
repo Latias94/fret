@@ -5,6 +5,15 @@ date: 2026-02-13
 scope: fret-core scene ops, fret-ui container chrome, fret-render-wgpu quad shader, shadcn parity
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # Quad Border Styles v1 (Dashed Borders) — Workstream
 
 This workstream adds **first-class dashed borders** to Fret’s default rendering stack, with two

@@ -1,5 +1,15 @@
 # shadcn/ui v4 Audit - Command (cmdk)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- cmdk: https://github.com/pacocoursey/cmdk
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's shadcn-aligned `Command` surface (backed by cmdk-style behavior) against
 the upstream shadcn/ui v4 docs and registry implementations, focusing on **behavioral outcomes**
 instead of API compatibility.

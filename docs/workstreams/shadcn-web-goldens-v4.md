@@ -1,5 +1,14 @@
 # Shadcn Web Goldens v4 (new-york-v4) — Workstream Plan
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream note; not a contract)
 
 This workstream drives strict **1:1 parity** between:

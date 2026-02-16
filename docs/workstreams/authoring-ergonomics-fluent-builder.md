@@ -1,5 +1,14 @@
 # Authoring Ergonomics: Fluent Builder Coverage Audit (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; not an ADR)
 
 This document audits the current fluent authoring surface in Fret (ecosystem layer) and outlines a v1 plan to close the

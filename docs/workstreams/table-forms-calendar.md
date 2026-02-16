@@ -1,5 +1,27 @@
 # Table / Forms / Calendar Roadmap (Workstream)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- WAI-ARIA Authoring Practices: https://github.com/w3c/aria-practices
+- Floating UI: https://github.com/floating-ui/floating-ui
+- Glide Data Grid: https://github.com/glideapps/glide-data-grid
+- gpui-component: https://github.com/longbridge/gpui-component
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- react-day-picker: https://github.com/gpbl/react-day-picker
+- react-hook-form: https://github.com/react-hook-form/react-hook-form
+- react-virtualized: https://github.com/bvaughn/react-virtualized
+- react-virtuoso: https://github.com/petyosi/react-virtuoso
+- Tailwind CSS: https://github.com/tailwindlabs/tailwindcss
+- TanStack Table: https://github.com/TanStack/table
+- TanStack Virtual: https://github.com/TanStack/virtual
+- Zed: https://github.com/zed-industries/zed
+- zod: https://github.com/colinhacks/zod
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (tracking only; ADRs remain the source of truth)
 
 This document tracks the implementation plan and progress for:

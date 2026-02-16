@@ -1,3 +1,12 @@
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- TanStack Table: https://github.com/TanStack/table
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 Status: Active (workstream tracker; not a contract)
 
 This document is the **capability inventory** for the TanStack Table v8 `table-core` parity
@@ -6,7 +15,7 @@ method-name parity.
 
 Upstream reference (local checkout):
 
-- `F:/SourceCodes/Rust/fret/repo-ref/table/packages/table-core`
+- `repo-ref/table/packages/table-core`
 - Baseline: `@tanstack/table-core@8.21.3` (commit `e172109fca4cc403a07236ed8fa103450ceba5e9`)
 
 Fret implementation:

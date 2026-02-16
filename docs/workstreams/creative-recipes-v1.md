@@ -1,5 +1,14 @@
 # Creative Recipes (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Magic UI: https://github.com/magicuidesign/magicui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This workstream turns the “creative visuals” ADR set into an implementable, ecosystem-friendly
 surface without turning the kernel into a shader zoo.
 

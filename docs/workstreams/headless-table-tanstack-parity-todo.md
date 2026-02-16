@@ -1,3 +1,12 @@
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- TanStack Table: https://github.com/TanStack/table
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 Status: Active (workstream tracker; keep updated as parity gates land)
 
 This document tracks executable TODOs for the TanStack Table v8 `table-core` parity workstream.

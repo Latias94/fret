@@ -1,5 +1,14 @@
 # Text Integration v1 — Layout, Selection, and Platform Interop
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Completed (2026-01-31) (tracking UI gallery regressions; complements `docs/workstreams/text-system-v2-parley.md`).
 
 This workstream is closed: the tracked regressions and baseline integration contracts have landed.

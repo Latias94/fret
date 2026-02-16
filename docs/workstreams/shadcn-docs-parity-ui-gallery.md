@@ -1,5 +1,15 @@
 # shadcn/ui docs parity (UI Gallery)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 ## Goal
 
 Make `apps/fret-ui-gallery` behave like a shadcn/ui doc site:

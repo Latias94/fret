@@ -1,5 +1,18 @@
 # Motion Foundation (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Animata: https://github.com/codse/animata
+- Flutter: https://github.com/flutter/flutter
+- Material Web: https://github.com/material-components/material-web
+- Motion: https://github.com/motiondivision/motion
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (notes only; ADRs remain the source of truth)
 
 See:

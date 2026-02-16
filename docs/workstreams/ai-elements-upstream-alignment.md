@@ -5,6 +5,15 @@ date: 2026-02-12
 scope: ecosystem/fret-ui-ai, repo-ref/ai-elements
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Vercel AI Elements: https://github.com/vercel/ai-elements
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # AI Elements upstream alignment (inventory + mapping)
 
 This document is the mechanical source-of-truth for **what exists upstream** and how it maps into

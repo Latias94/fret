@@ -1,5 +1,16 @@
 # ADR 0056: Component Size/Density System (Tailwind-like Scales, GPUI-Inspired)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+- shadcn/ui: https://github.com/shadcn-ui/ui
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 Scope: Component ecosystem (`fret-components-*`), built on top of `fret-ui` + theme tokens (ADR 0032 / ADR 0050)
 

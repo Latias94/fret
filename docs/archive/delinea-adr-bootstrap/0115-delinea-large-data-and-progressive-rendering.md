@@ -1,5 +1,14 @@
 # ADR 0132: `delinea` Large Data + Progressive Rendering Strategy (P0/P1 Baseline)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context

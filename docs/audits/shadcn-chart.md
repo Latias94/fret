@@ -1,5 +1,14 @@
 # shadcn/ui chart audit (New York v4)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document tracks parity work for shadcn/ui **Chart** surfaces (and related legend/tooltip/axis behavior).
 
 ## Status

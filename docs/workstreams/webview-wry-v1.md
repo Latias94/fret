@@ -5,6 +5,15 @@ date: 2026-02-11
 scope: crates/fret-webview, crates/fret-webview-wry, WebPreview backend
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- gpui-component: https://github.com/longbridge/gpui-component
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # WebView integration (native wry) — v1
 
 This workstream defines how we integrate an embedded WebView into Fret **without breaking crate
@@ -14,7 +23,7 @@ Primary consumer (initial): `ecosystem/fret-ui-ai` (`WebPreview`).
 
 ## Upstream reference notes (gpui-component)
 
-We keep a local reference checkout under `F:/SourceCodes/Rust/fret/repo-ref/gpui-component`.
+We keep an optional local reference checkout under `repo-ref/gpui-component`.
 
 Relevant observations (as of the pinned snapshot in that folder):
 

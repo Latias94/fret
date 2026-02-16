@@ -1,5 +1,14 @@
 # UI Performance: Zed-level Smoothness (v1) — Workstream Plan
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; ADRs remain the source of truth)
 
 This workstream focuses on closing the **performance smoothness** gap between Fret and the Zed/GPUI reference

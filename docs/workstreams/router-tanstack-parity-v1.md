@@ -1,5 +1,14 @@
 # Router (TanStack Parity) v1 (Ecosystem Workstream)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- TanStack Router: https://github.com/TanStack/router
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (design targets; ADRs remain the source of truth)
 
 Related workstreams:

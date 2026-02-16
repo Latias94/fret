@@ -1,5 +1,14 @@
 # Node Graph - XyFlow Parity Matrix (fret-node)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- XYFlow: https://github.com/xyflow/xyflow
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document is the **detailed** capability-by-capability parity map between:
 
 - **XyFlow** (React Flow / Svelte Flow / `@xyflow/system`) and
