@@ -248,6 +248,7 @@ pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     semantics_test_id: Option<&'static str>,
     diag_env_enabled: bool,
+    allow_multi_window_tear_off: bool,
     last_bounds: Rect,
     prepaint_wants_animation_frames: bool,
     dock_drop_resolve_diagnostics: Option<fret_runtime::DockDropResolveDiagnostics>,
@@ -357,6 +358,7 @@ impl DockSpace {
             window,
             semantics_test_id: None,
             diag_env_enabled,
+            allow_multi_window_tear_off: false,
             last_bounds: Rect::default(),
             prepaint_wants_animation_frames: false,
             dock_drop_resolve_diagnostics: None,
@@ -423,6 +425,11 @@ impl DockSpace {
             last_active_tabs: None,
             hovered_float_zone: false,
         }
+    }
+
+    pub fn with_allow_multi_window_tear_off(mut self, allow: bool) -> Self {
+        self.allow_multi_window_tear_off = allow;
+        self
     }
 
     fn prefers_reduced_motion<H: UiHost>(app: &H, window: fret_core::AppWindowId) -> bool {
@@ -2622,6 +2629,38 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     .global::<DockingPolicyService>()
                     .and_then(|svc| svc.policy());
 
+                let allow_tear_off_for_panel =
+                    |source_window: fret_core::AppWindowId, panel: &PanelKey| -> bool {
+                        if !allow_tear_off {
+                            return false;
+                        }
+
+                        // Avoid creating chains of empty one-panel windows once docking is already
+                        // in a multi-window session. Moving the only panel out of a window should
+                        // behave like a cross-window drag/drop (or window move), not a new tear-off.
+                        if dock.graph.windows().len() > 1
+                            && dock.graph.collect_panels_in_window(source_window).len() == 1
+                        {
+                            return false;
+                        }
+
+                        let info = dock.panels.get(panel);
+                        let policy_allows = docking_policy.as_deref().is_none_or(|policy| {
+                            policy.allow_tear_off(source_window, panel, info)
+                        });
+                        if !policy_allows {
+                            return false;
+                        }
+
+                        if dock.graph.windows().len() <= 1 || self.allow_multi_window_tear_off {
+                            return true;
+                        }
+
+                        docking_policy.as_deref().is_some_and(|policy| {
+                            policy.allow_multi_window_tear_off(source_window, panel, info)
+                        })
+                    };
+
                 match event {
                     fret_core::Event::Pointer(p) => match p {
                         fret_core::PointerEvent::Down {
@@ -4174,16 +4213,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                                         let intent = match drag {
                                             DockDragSnapshot::Panel(drag) => {
-                                                let allow_tear_off = allow_tear_off
-                                                    && docking_policy.as_deref().is_none_or(
-                                                        |policy| {
-                                                            policy.allow_tear_off(
-                                                                drag.source_window,
-                                                                &drag.panel,
-                                                                dock.panels.get(&drag.panel),
-                                                            )
-                                                        },
-                                                    );
+                                                let allow_tear_off = allow_tear_off_for_panel(
+                                                    drag.source_window,
+                                                    &drag.panel,
+                                                );
                                                 resolve_dock_drop_intent_panel(
                                                     target,
                                                     drag,
@@ -4359,23 +4392,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                             .collect_panels_in_window(self.window)
                                                             .len()
                                                             == 1;
-                                                let allow_tear_off = allow_tear_off
-                                                    && docking_policy.as_deref().is_none_or(
-                                                        |policy| {
-                                                            policy.allow_tear_off(
-                                                                drag.source_window,
-                                                                &drag.panel,
-                                                                dock.panels.get(&drag.panel),
-                                                            )
-                                                        },
-                                                    );
+                                                let allow_tear_off = allow_tear_off_for_panel(
+                                                    drag.source_window,
+                                                    &drag.panel,
+                                                );
                                                 let requested_tear_off = allow_tear_off
                                                     && drag.source_window == self.window
                                                     && stable_oob
-                                                    // Stable OOB tear-off is currently single-window-only: once any additional
-                                                    // docking OS window exists, rely on cross-window drag/drop instead of
-                                                    // chaining more tear-off requests.
-                                                    && dock.graph.windows().len() <= 1
                                                     // Avoid creating chains of empty 1-panel windows when already in a multi-window
                                                     // session. Dragging the only panel out of a window should behave like a
                                                     // cross-window drag / window move, not a new tear-off.
@@ -4437,23 +4460,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 if let Some(panel) =
                                                     drag.tabs.get(drag.active).cloned()
                                                 {
-                                                    let allow_tear_off = allow_tear_off
-                                                        && docking_policy
-                                                            .as_deref()
-                                                            .is_none_or(|policy| {
-                                                                policy.allow_tear_off(
-                                                                    drag.source_window,
-                                                                    &panel,
-                                                                    dock.panels.get(&panel),
-                                                                )
-                                                            });
+                                                    let allow_tear_off = allow_tear_off_for_panel(
+                                                        drag.source_window,
+                                                        &panel,
+                                                    );
                                                     let requested_tear_off = allow_tear_off
                                                         && drag.source_window == self.window
                                                         && stable_oob
-                                                        // Stable OOB tear-off is currently single-window-only: once any additional
-                                                        // docking OS window exists, rely on cross-window drag/drop instead of
-                                                        // chaining more tear-off requests.
-                                                        && dock.graph.windows().len() <= 1
                                                         // Avoid creating chains of empty 1-tab windows: if this tab strip only has
                                                         // one panel and we're already in a multi-window session, treat out-of-bounds
                                                         // movement as a cross-window drag instead of requesting another tear-off.
@@ -4659,16 +4672,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
                                         let intent = match drag {
                                             DockDragSnapshot::Panel(drag) => {
-                                                let allow_tear_off = allow_tear_off
-                                                    && docking_policy.as_deref().is_none_or(
-                                                        |policy| {
-                                                            policy.allow_tear_off(
-                                                                drag.source_window,
-                                                                &drag.panel,
-                                                                dock.panels.get(&drag.panel),
-                                                            )
-                                                        },
-                                                    );
+                                                let allow_tear_off = allow_tear_off_for_panel(
+                                                    drag.source_window,
+                                                    &drag.panel,
+                                                );
                                                 resolve_dock_drop_intent_panel(
                                                     target,
                                                     drag,
