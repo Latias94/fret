@@ -167,19 +167,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     grab_offset,
                     manual_follow: true,
                     last_outer_pos: None,
+                    transparent_payload_applied: false,
                 });
             }
         }
 
-        let (window, grab_offset, manual_follow, last_outer_pos) = match self.dock_tearoff_follow {
-            Some(follow) => (
-                follow.window,
-                follow.grab_offset,
-                follow.manual_follow,
-                follow.last_outer_pos,
-            ),
-            None => return false,
-        };
+        let (window, grab_offset, manual_follow, last_outer_pos, transparent_payload_applied) =
+            match self.dock_tearoff_follow {
+                Some(follow) => (
+                    follow.window,
+                    follow.grab_offset,
+                    follow.manual_follow,
+                    follow.last_outer_pos,
+                    follow.transparent_payload_applied,
+                ),
+                None => return false,
+            };
 
         if !manual_follow {
             return false;
@@ -199,6 +202,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if self.windows.get(window).is_none() {
             self.dock_tearoff_follow = None;
             return false;
+        }
+
+        // Optional ImGui-style "transparent payload" behavior while following the cursor:
+        // - make the dock-floating window semi-transparent
+        // - ignore mouse events so the backend can "peek behind" to resolve the hovered window
+        //
+        // This is deliberately gated by an env var to keep the default policy conservative.
+        let want_transparent_payload = std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD")
+            .is_some()
+            && self.dock_floating_windows.contains(&window);
+        if want_transparent_payload != transparent_payload_applied
+            && let Some(state) = self.windows.get(window)
+        {
+            let _ = super::window::set_dock_drag_transparent_payload(
+                state.window.as_ref(),
+                want_transparent_payload,
+            );
+            if let Some(follow) = self.dock_tearoff_follow.as_mut() {
+                follow.transparent_payload_applied = want_transparent_payload;
+            }
         }
 
         let Some(pos) = self.compute_window_outer_position_from_cursor_grab(window, grab_offset)
@@ -259,6 +282,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .global::<PlatformCapabilities>()
             .cloned()
             .unwrap_or_default();
+
+        if follow.transparent_payload_applied
+            && let Some(state) = self.windows.get(follow.window)
+        {
+            let _ = super::window::set_dock_drag_transparent_payload(state.window.as_ref(), false);
+        }
 
         if let Some(state) = self.windows.get(follow.window) {
             if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None {

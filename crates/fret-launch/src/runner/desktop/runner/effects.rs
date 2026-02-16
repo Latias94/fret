@@ -1564,6 +1564,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             grab_offset,
                                             manual_follow: true,
                                             last_outer_pos: None,
+                                            transparent_payload_applied: false,
                                         });
                                         // Do not call `drag_window()` here. ImGui drives multi-viewport
                                         // window movement by updating the platform window position in

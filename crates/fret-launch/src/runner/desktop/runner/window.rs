@@ -67,6 +67,7 @@ pub(super) struct DockTearoffFollow {
     pub(super) grab_offset: Point,
     pub(super) manual_follow: bool,
     pub(super) last_outer_pos: Option<PhysicalPosition<i32>>,
+    pub(super) transparent_payload_applied: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -210,6 +211,72 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
 pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Window>) -> bool {
     window.focus_window();
     true
+}
+
+#[cfg(target_os = "macos")]
+pub(super) fn set_dock_drag_transparent_payload(window: &dyn Window, enabled: bool) -> bool {
+    use cocoa::base::{id, nil};
+    use objc::{msg_send, sel, sel_impl};
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let ns_window: id = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                let ns_view: id = h.ns_view.as_ptr() as id;
+                if ns_view.is_null() {
+                    std::ptr::null_mut()
+                } else {
+                    unsafe { msg_send![ns_view, window] }
+                }
+            }
+            _ => std::ptr::null_mut(),
+        },
+        Err(_) => std::ptr::null_mut(),
+    };
+    if ns_window.is_null() {
+        return false;
+    }
+
+    unsafe {
+        let alpha: f64 = if enabled { 0.5 } else { 1.0 };
+        let _: () = msg_send![ns_window, setAlphaValue: alpha];
+        let ignore: bool = enabled;
+        let _: () = msg_send![ns_window, setIgnoresMouseEvents: ignore];
+
+        // When disabling, nudge the window ordering to avoid rare cases where a previously
+        // ignoring-mouse window does not immediately resume receiving pointer events.
+        if !enabled {
+            let _: () = msg_send![ns_window, orderFront: nil];
+        }
+    }
+
+    true
+}
+
+#[cfg(target_os = "windows")]
+pub(super) fn set_dock_drag_transparent_payload(window: &dyn Window, enabled: bool) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
+
+    let alpha = if enabled { 0.5 } else { 1.0 };
+    super::win32::set_window_alpha(hwnd, alpha);
+    super::win32::set_window_mouse_passthrough(hwnd, enabled);
+    true
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+pub(super) fn set_dock_drag_transparent_payload(_window: &dyn Window, _enabled: bool) -> bool {
+    false
 }
 
 pub(super) fn client_origin_screen(
