@@ -104,6 +104,10 @@ Design note:
   - Acceptance:
     - `simple-todo` template can be authored without `.into_element(cx)` for common components.
 
+- [x] ONB-auth-025 Migrate `simple-todo` template to `ui::children!` + `.ui()` (reduce adapter noise).
+  - Evidence:
+    - `apps/fretboard/src/scaffold/templates.rs`
+
 - [x] ONB-auth-024 Add an iced-like `children![...]` macro for heterogeneous child lists.
   - Goal: remove repetitive `.into_element(cx)` calls without redesigning all constructors.
   - Reference:

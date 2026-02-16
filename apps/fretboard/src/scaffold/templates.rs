@@ -891,8 +891,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState, msg: &mut MessageR
 
     let header_actions = ui::h_flex(cx, |cx| ui::children![cx; progress, clear_done_btn])
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
 __ADD_BTN_DEF__
 
@@ -903,8 +902,7 @@ __ADD_BTN_DEF__
     let input_row = ui::h_flex(cx, |cx| ui::children![cx; input, add_btn])
         .gap(Space::N2)
         .items_center()
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
     let rows = ui::v_flex_build(cx, |cx, out| {
         for t in &todos {
@@ -913,13 +911,11 @@ __ADD_BTN_DEF__
         }
     })
     .gap(Space::N3)
-    .w_full()
-    .into_element(cx);
+    .w_full();
 
     let content = ui::v_flex(cx, |cx| ui::children![cx; input_row, rows])
         .gap(Space::N4)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
     let card = shadcn::Card::new(ui::children![cx;
         shadcn::CardHeader::new(ui::children![cx;
@@ -936,7 +932,7 @@ __ADD_BTN_DEF__
     .border_color(ColorRef::Color(theme.color_token("border")))
     .w_full()
     .max_w(Px(520.0))
-    .into_element(cx);
+    ;
 
     let page = ui::container(cx, |cx| {
         ui::children![cx;
@@ -945,16 +941,16 @@ __ADD_BTN_DEF__
                 .h_full()
                 .justify_center()
                 .items_center()
-                .into_element(cx),
+                ,
         ]
     })
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .w_full()
     .h_full()
-    .into_element(cx);
+    ;
 
-    page.into()
+    page.into_element(cx).into()
 }
 
 fn todo_row(
