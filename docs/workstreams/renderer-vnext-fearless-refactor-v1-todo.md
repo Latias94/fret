@@ -206,8 +206,10 @@ milestones) when implementation begins.
   - Risk: binding surface + key space growth; needs bounded, capability-gated fallbacks (wasm/mobile).
 - [ ] REN-VNEXT-sem-020 General path stroke: introduce a `SceneOp::StrokePath` (or equivalent) with bounded stroke style.
   - Current: only `StrokeRRect` exists; no stroke for arbitrary prepared paths.
+  - Tracking: `docs/workstreams/path-stroke-style-v2.md` (v2 join/cap/miter/dash contract + renderer support).
 - [ ] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter, dash, and constant-px stroke width semantics.
   - Current: `StrokeStyleV1` only supports dash.
+  - Tracking: `docs/workstreams/path-stroke-style-v2.md` (vector path stroke style v2; constant-px under transforms is likely deferred).
 - [ ] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient` (or a minimal equivalent).
   - Current: only linear + radial gradients exist.
 - [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
