@@ -77,6 +77,8 @@ Evidence (current):
 - `ecosystem/fret-ui-kit/src/lib.rs` (`children!`)
 - `ecosystem/fret-ui-kit/src/ui.rs` (`ui::*` layout constructors accept `UiIntoElement` children)
 - `apps/fretboard/src/scaffold/templates.rs` (`simple-todo` template)
+- `apps/fret-examples/src/assets_demo.rs` (example: `ui::children!` replaces `vec![...]` in panel builder)
+- `apps/fret-examples/src/cjk_conformance_demo.rs` (example: `ui::children!` replaces `vec![...]` root return)
 
 Acceptance:
 

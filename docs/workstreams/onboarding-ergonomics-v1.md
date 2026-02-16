@@ -63,6 +63,9 @@ These are the decisions agreed in discussion so far:
 - Authoring surface posture: keep the ecosystem `UiPatch` / `UiBuilder` design (ADR 0160); do not remove it.
 - Macro posture (v1): prioritize “composition macros” that reduce call-site adapters (GPUI/iced style),
   avoid DSL macros that create a hard-to-change dialect.
+- Hotpatch posture (v1): ergonomics changes must remain compatible with Subsecond-style reload boundaries (ADR 0105 / 0110).
+  - Avoid large stack-heavy view literals in the “first hour” templates (e.g. very large `vec![...]` child lists).
+  - Prefer push-based helpers like `ui::children![...]` that are easier on stack probing under Windows hotpatch.
 
 ---
 
