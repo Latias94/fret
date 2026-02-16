@@ -320,13 +320,13 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             color: snap_color(color),
         },
         SceneOp::Path { origin, paint, .. } => {
-            let color = match *paint {
+            let color = match paint {
                 fret_core::Paint::Solid(c) => c,
                 _ => fret_core::scene::Color::TRANSPARENT,
             };
             SnapSceneOp::Path {
                 origin: snap_point(origin),
-                color: snap_color(&color),
+                color: snap_color(color),
             }
         }
         SceneOp::ViewportSurface { rect, opacity, .. } => SnapSceneOp::ViewportSurface {
