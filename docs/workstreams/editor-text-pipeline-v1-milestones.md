@@ -104,6 +104,11 @@ Status (baseline + no-drift gates exist):
 - No-drift navigation gates (selection + vertical movement):
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`move_caret_vertical_steps_through_code_wrap_policy_rows`)
   - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
+- No-drift pointer selection gates (inlays + preedit replacement):
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`pointer_down_double_click_selects_word_on_inlay_only_row_under_soft_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`pointer_down_double_click_cancels_preedit_replacement_and_selects_word`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`triple_click_selects_logical_line_on_inlay_only_row_under_soft_wrap`)
+  - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`triple_click_cancels_preedit_replacement_and_selects_logical_line`)
 
 ## M4 — Platform text input interop (TextInputRegion UTF-16)
 
